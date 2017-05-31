@@ -17,15 +17,19 @@
 package crypto
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"encoding/hex"
 	"errors"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
+	Mrand "math/rand"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
@@ -181,6 +185,7 @@ func zeroBytes(bytes []byte) {
 	}
 }
 
+///////////////////////////////////以下为新加内容/////////////////////////////////////
 //PublicKeyToInt for json 把公钥数组点转int数组，(0放x，1放y)
 //PublicKeys[n]数组时，调用 outInt=PublicKeyToInt(PublicKeys...），
 //单个公钥KeyImage时，调用outInt=PublicKeyToInt（KeyImage),    outInt[0]为返回值
@@ -193,4 +198,282 @@ func PublicKeyToInt(PublicKeys ...*ecdsa.PublicKey) []*hexutil.Big {
 	}
 
 	return outInt
+}
+
+//IntToPublicKey from json 把int数组点转公钥数组点
+func IntToPublicKey(in ...*big.Int) []*ecdsa.PublicKey {
+	n := len(in)
+	PublicKeys := make([]*ecdsa.PublicKey, n/2)
+	for i := 0; i < n/2; i++ {
+		//PublicKeys[i] = ToECDSAPub(in[i].Bytes())
+		PublicKeys[i] = new(ecdsa.PublicKey)
+		PublicKeys[i].X = in[2*i]
+		PublicKeys[i].Y = in[2*i+1]
+		PublicKeys[i].Curve = S256()
+	}
+	return PublicKeys
+}
+
+//2528 Shi TeemoGuo
+func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	// AES-128 is selected due to size of encryptKey.
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	stream := cipher.NewCTR(aesBlock, iv)
+	outText := make([]byte, len(inText))
+	stream.XORKeyStream(outText, inText)
+	return outText, err
+}
+
+//2528 Shi TeemoGuo
+func AesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	return aesCTRXOR(key, inText, iv)
+}
+
+//2528 add
+
+var bigOne = big.NewInt(1)
+var bigZero = big.NewInt(0)
+var one = new(big.Int).SetInt64(1)
+
+func modInverse(a, n *big.Int) (ia *big.Int, ok bool) {
+	g := new(big.Int)
+	x := new(big.Int)
+	y := new(big.Int)
+	g.GCD(x, y, a, n)
+	if g.Cmp(bigOne) != 0 {
+		// In this case, a and n aren't coprime and we cannot calculate
+		// the inverse. This happens because the values of n are nearly
+		// prime (being the product of two primes) rather than truly
+		// prime.
+		return
+	}
+
+	if x.Cmp(bigOne) < 0 {
+		// 0 is not the multiplicative inverse of any element so, if x
+		// < 1, then x is negative.
+		x.Add(x, n)
+	}
+
+	return x, true
+}
+
+//2528 add
+func Rsa_encrypt(c *big.Int, pub *rsa.PublicKey, m *big.Int) *big.Int {
+	e := big.NewInt(int64(pub.E))
+	c.Exp(m, e, pub.N)
+	return c
+}
+
+func Rsa_decrypt(random io.Reader, priv *rsa.PrivateKey, c *big.Int) (m *big.Int, err error) {
+	// TODO(agl): can we get away with reusing blinds?
+	if c.Cmp(priv.N) > 0 {
+		err = rsa.ErrDecryption
+		return
+	}
+	if priv.N.Sign() == 0 {
+		return nil, rsa.ErrDecryption
+	}
+
+	var ir *big.Int
+	if random != nil {
+		// Blinding enabled. Blinding involves multiplying c by r^e.
+		// Then the decryption operation performs (m^e * r^e)^d mod n
+		// which equals mr mod n. The factor of r can then be removed
+		// by multiplying by the multiplicative inverse of r.
+
+		var r *big.Int
+
+		for {
+			r, err = rand.Int(random, priv.N)
+			if err != nil {
+				return
+			}
+			if r.Cmp(bigZero) == 0 {
+				r = bigOne
+			}
+			var ok bool
+			ir, ok = modInverse(r, priv.N)
+			if ok {
+				break
+			}
+		}
+		bigE := big.NewInt(int64(priv.E))
+		rpowe := new(big.Int).Exp(r, bigE, priv.N) // N != 0
+		cCopy := new(big.Int).Set(c)
+		cCopy.Mul(cCopy, rpowe)
+		cCopy.Mod(cCopy, priv.N)
+		c = cCopy
+	}
+
+	if priv.Precomputed.Dp == nil {
+		m = new(big.Int).Exp(c, priv.D, priv.N)
+	} else {
+		// We have the precalculated values needed for the CRT.
+		m = new(big.Int).Exp(c, priv.Precomputed.Dp, priv.Primes[0])
+		m2 := new(big.Int).Exp(c, priv.Precomputed.Dq, priv.Primes[1])
+		m.Sub(m, m2)
+		if m.Sign() < 0 {
+			m.Add(m, priv.Primes[0])
+		}
+		m.Mul(m, priv.Precomputed.Qinv)
+		m.Mod(m, priv.Primes[0])
+		m.Mul(m, priv.Primes[1])
+		m.Add(m, m2)
+
+		for i, values := range priv.Precomputed.CRTValues {
+			prime := priv.Primes[2+i]
+			m2.Exp(c, values.Exp, prime)
+			m2.Sub(m2, m)
+			m2.Mul(m2, values.Coeff)
+			m2.Mod(m2, prime)
+			if m2.Sign() < 0 {
+				m2.Add(m2, prime)
+			}
+			m2.Mul(m2, values.R)
+			m.Add(m, m2)
+		}
+	}
+
+	if ir != nil {
+		// Unblind.
+		m.Mul(m, ir)
+		m.Mod(m, priv.N)
+	}
+
+	return
+}
+
+func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
+	params := S256().Params()
+	b := make([]byte, params.BitSize/8+8)
+	_, err = io.ReadFull(rand, b)
+	if err != nil {
+		return
+	}
+	k = new(big.Int).SetBytes(b)
+	n := new(big.Int).Sub(params.N, one)
+	k.Mod(k, n)
+	k.Add(k, one)
+
+	return
+}
+
+///calc [x]Hash(P)
+func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
+	KeyImg := new(ecdsa.PublicKey)
+	I = new(ecdsa.PublicKey)
+	KeyImg.X, KeyImg.Y = S256().ScalarBaseMult(Keccak256(FromECDSAPub(pub))) //Hash(P)
+	I.X, I.Y = S256().ScalarMult(KeyImg.X, KeyImg.Y, x)
+	I.Curve = S256()
+	return
+}
+
+//明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
+//2528 Pengbo add Shi TeemoGuo revise
+func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+	//	n := len(PublicKeys)
+	//	fmt.Println(n)
+	n := 10
+	I := xScalarHashP(x.Bytes(), PublicKeys[0]) //Key Image
+	s := Mrand.Intn(n)                          //s位放主签名公钥
+	if s > 0 {
+		//s = s - 1
+		PublicKeys[0], PublicKeys[s] = PublicKeys[s], PublicKeys[0] //交换位置
+	}
+	//fmt.Println("s=", s)
+
+	//PublicKeys[n] = &P.PublicKey//P的公钥放在第n位,0....n
+
+	var (
+		q = make([]*big.Int, n)
+		w = make([]*big.Int, n)
+		//q = *new([10]*big.Int)
+		//w = *new([10]*big.Int)
+	)
+	SumC := new(big.Int).SetInt64(0)
+	Lpub := new(ecdsa.PublicKey)
+	d := sha3.NewKeccak256()
+	d.Write(M)
+	//hash(M,Li,Ri)
+	for i := 0; i < n; i++ {
+		q[i], _ = randFieldElement2528(rand.Reader)
+		w[i], _ = randFieldElement2528(rand.Reader)
+
+		Lpub.X, Lpub.Y = S256().ScalarBaseMult(q[i].Bytes()) //[qi]G
+		if i != s {
+			Ppub := new(ecdsa.PublicKey)
+			Ppub.X, Ppub.Y = S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, w[i].Bytes()) //[wi]Pi
+			Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y)                        //[qi]G+[wi]Pi
+
+			SumC.Add(SumC, w[i])
+			SumC.Mod(SumC, secp256k1_N)
+		}
+		//fmt.Printf("L%d\t%x\n", i, FromECDSAPub(Lpub))
+		d.Write(FromECDSAPub(Lpub))
+	}
+	Rpub := new(ecdsa.PublicKey)
+	for i := 0; i < n; i++ {
+		Rpub = xScalarHashP(q[i].Bytes(), PublicKeys[i]) //[qi]HashPi
+		if i != s {
+			Ppub := new(ecdsa.PublicKey)
+			Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, w[i].Bytes())  //[wi]I
+			Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
+		}
+		//fmt.Printf("R%d\t%x\n", i, FromECDSAPub(Rpub))
+
+		d.Write(FromECDSAPub(Rpub))
+	}
+	Cs := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
+
+	Cs.Sub(Cs, SumC)
+	Cs.Mod(Cs, secp256k1_N)
+
+	tmp := new(big.Int).Mul(Cs, x)
+	Rs := new(big.Int).Sub(q[s], tmp)
+	Rs.Mod(Rs, secp256k1_N)
+	w[s] = Cs
+	q[s] = Rs
+
+	return PublicKeys, I, w, q
+}
+
+//VerifyRingSign 验证环签名
+func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
+	ret := false
+	n := len(PublicKeys)
+	SumC := new(big.Int).SetInt64(0)
+	Lpub := new(ecdsa.PublicKey)
+	d := sha3.NewKeccak256()
+	d.Write(M)
+	//hash(M,Li,Ri)
+	for i := 0; i < n; i++ {
+		Lpub.X, Lpub.Y = S256().ScalarBaseMult(r[i].Bytes()) //[ri]G
+
+		Ppub := new(ecdsa.PublicKey)
+		Ppub.X, Ppub.Y = S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, c[i].Bytes()) //[ci]Pi
+		Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y)                        //[ri]G+[ci]Pi
+		SumC.Add(SumC, c[i])
+		SumC.Mod(SumC, secp256k1_N)
+		d.Write(FromECDSAPub(Lpub))
+		//fmt.Printf("L'%d\t%x\n", i, FromECDSAPub(Lpub))
+	}
+	Rpub := new(ecdsa.PublicKey)
+	for i := 0; i < n; i++ {
+		Rpub = xScalarHashP(r[i].Bytes(), PublicKeys[i]) //[qi]HashPi
+		Ppub := new(ecdsa.PublicKey)
+		Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, c[i].Bytes())  //[wi]I
+		Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
+		//fmt.Printf("R'%d\t%x\n", i, FromECDSAPub(Rpub))
+
+		d.Write(FromECDSAPub(Rpub))
+	}
+	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
+	hash.Mod(hash, secp256k1_N)
+	if hash.Cmp(SumC) == 0 {
+		ret = true
+	}
+	return ret
 }

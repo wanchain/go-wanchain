@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"crypto/ecdsa"
+	//"crypto/ecdsa"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -56,6 +56,7 @@ type Transaction struct {
 }
 
 type txdata struct {
+	Txtype       uint64          `json:"Txtype"    gencodec:"required"`
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`
@@ -63,18 +64,21 @@ type txdata struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
+
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
 
-	PublicKeys []*ecdsa.PublicKey `json:"publicKeys,omitempty"`
-	KeyImage   *ecdsa.PublicKey   `json:"keyImage,omitempty"`
-	W_random   []*big.Int         `json:"w_random,omitempty"`
-	Q_random   []*big.Int         `json:"q_random,omitempty"`
-
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	//PublicKeys []*ecdsa.PublicKey `json:"publicKeys,omitempty"`
+	//KeyImage   *ecdsa.PublicKey   `json:"keyImage,omitempty"`
+	PublicKeys []*hexutil.Big `json:"publicKeys,omitempty" rlp:"nil"`
+	KeyImage   []*hexutil.Big   `json:"keyImage,omitempty" rlp:"nil"`
+	W_random   []*hexutil.Big         `json:"w_random,omitempty" rlp:"nil"`
+	Q_random   []*hexutil.Big     `json:"q_random,omitempty" rlp:"nil"`
 }
 
 //r@zy: 如果这个自动生成的对transaction的marshal和unmarshal不能条件生成的话，那就。。。。
@@ -88,10 +92,18 @@ type txdataMarshaling struct {
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
+	PublicKeys   []*hexutil.Big
+	KeyImage     []*hexutil.Big
+	Wrandom      []*hexutil.Big
+	Qrandom      []*hexutil.Big
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
+}
+
+func NewOTATransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	return newOTATransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
 func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
@@ -99,13 +111,11 @@ func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data
 }
 
 func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
-	if 0 == nonce{
-		return newOTATransaction(nonce, to, amount, gasLimit,gasPrice,data);
-	}
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
+		Txtype: 1,
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -129,12 +139,13 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	return &Transaction{data: d}
 }
 
-//cr@zy****:  newOneTimeTransaction
+//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
+		Txtype: 0,
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -221,6 +232,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Txtype() uint64      { return tx.data.Txtype }
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }

@@ -591,6 +591,10 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 	return w.ledgerSign(path, account.Address, tx, chainID)
 }
 
+func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account)([]string, error) {
+	return nil, nil
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
 // data is not supported for Ledger wallets, so this method will always return
 // an error.

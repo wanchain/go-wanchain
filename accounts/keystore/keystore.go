@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 var (
@@ -279,9 +280,24 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey, nil)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
+	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, nil)
+}
+
+func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	ret :=  []string {hexutil.Encode(unlockedKey.PrivateKey.PublicKey.X.Bytes()),
+		hexutil.Encode(unlockedKey.PrivateKey.PublicKey.Y.Bytes()),
+		hexutil.Encode(unlockedKey.PrivateKey2.PublicKey.X.Bytes()),
+		hexutil.Encode(unlockedKey.PrivateKey2.PublicKey.X.Bytes())}
+	return ret, nil
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -307,9 +323,9 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey, nil)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
+	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey, nil)
 }
 
 // Unlock unlocks the given account indefinitely.

@@ -112,6 +112,8 @@ type Wallet interface {
 	// the account in a keystore).
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
+	GetPublicKeysRawStr(account Account)([]string, error)
+
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
 	//

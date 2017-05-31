@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -52,14 +53,52 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 //cr@zy-OTA: TODO:不知道在一起性地址的交易情况下是不是需要有改动
 
+// TeemoGuo revise: 扩充函数参数，增加OTA交易类型的签名，todo 外部增加扫链程序，提供SignTx的参数PublicKeys
 // SignTx signs the transaction using the given signer and private key
-func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+// TODO:
+func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
 	h := s.Hash(tx)
-	sig, err := crypto.Sign(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return s.WithSignature(tx, sig)
+	if tx.data.Txtype != 0 {
+		sig, err := crypto.Sign(h[:], prv)
+		if err != nil {
+			return nil, err
+		}
+		return s.WithSignature(tx, sig)
+	} else {//OTA类型交易环签名
+
+		//tx.data.PublicKeys = PublicKeys
+		// need help:为了测试先请吧环签名里面用于混淆的publickeys写死用几个测试用，暂时不从外面动态获取
+		sig, err := crypto.Sign(h[:], prv)
+		if err != nil {
+			return nil, err
+		}
+		tx, err = s.WithSignature(tx, sig)
+
+		testPublicKeys := *new([]*ecdsa.PublicKey)
+		for i:=0; i< 10; i++{
+			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
+		}
+		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h[:], prv.D, testPublicKeys)
+		cpy := &Transaction{data: tx.data}
+		cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
+
+		W_random := *new([]*hexutil.Big)
+		Q_random := *new([]*hexutil.Big)
+
+		for i := 0; i < len(PublicKeys); i++ {
+			w := w_random[i]
+			q := q_random[i]
+
+			W_random = append(W_random, (*hexutil.Big)(w))
+			Q_random = append(Q_random, (*hexutil.Big)(q))
+		}
+		keyImage := crypto.PublicKeyToInt(KeyImage)
+
+		cpy.data.KeyImage = keyImage
+		cpy.data.W_random = W_random
+		cpy.data.Q_random = Q_random
+		return cpy, nil
+	}	
 }
 
 // Sender derives the sender from the tx using the signer derivation
@@ -72,6 +111,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // Sender may cache the address, allowing it to be used regardless of
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
+// TeemoGuo revise: 环签名下无法知道发送者，如何修改程序 todo
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
@@ -128,6 +168,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 	return ok && eip155.chainId.Cmp(s.chainId) == 0
 }
 
+// TeemoGuo revise: 环签名下无法知道发送者，如何修改程序 todo
 func (s EIP155Signer) PublicKey(tx *Transaction) ([]byte, error) {
 	// if the transaction is not protected fall back to homestead signer
 	if !tx.Protected() {
@@ -163,6 +204,7 @@ func (s EIP155Signer) PublicKey(tx *Transaction) ([]byte, error) {
 
 // WithSignature returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
+// wlcomment:
 func (s EIP155Signer) WithSignature(tx *Transaction, sig []byte) (*Transaction, error) {
 	if len(sig) != 65 {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
@@ -179,15 +221,18 @@ func (s EIP155Signer) WithSignature(tx *Transaction, sig []byte) (*Transaction, 
 
 	//cr@zy
 	//if nonce == 0 在这里对一次性地址交易特殊处理
+	//TeemoGuo: 已经在SignTx函数中做了处理
 	return cpy, nil
 }
 
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
+// TeemoGuo revise: OTA交易格式下如何修改程序 todo
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	//cr@zy: 为OneTimeAddressTx的hash
 	//if tx.nonce == 0
 	return rlpHash([]interface{}{
+		tx.data.Txtype,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -220,6 +265,7 @@ func (hs HomesteadSigner) WithSignature(tx *Transaction, sig []byte) (*Transacti
 	return cpy, nil
 }
 
+// TeemoGuo revise: OTA交易格式下如何修改程序 todo
 func (hs HomesteadSigner) PublicKey(tx *Transaction) ([]byte, error) {
 	if tx.data.V.BitLen() > 8 {
 		return nil, ErrInvalidSig
@@ -267,10 +313,12 @@ func (fs FrontierSigner) WithSignature(tx *Transaction, sig []byte) (*Transactio
 	return cpy, nil
 }
 
+// TeemoGuo revise: OTA交易格式下如何修改程序 todo
 // Hash returns the hash to be sned by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.data.Txtype,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -280,6 +328,7 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	})
 }
 
+// TeemoGuo revise: OTA交易格式下如何修改程序 todo
 func (fs FrontierSigner) PublicKey(tx *Transaction) ([]byte, error) {
 	if tx.data.V.BitLen() > 8 {
 		return nil, ErrInvalidSig

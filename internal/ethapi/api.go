@@ -287,7 +287,8 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 		return common.Address{}, err
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(crypto.ToECDSA(hexkey), password)
+	//cr&zy TODO:
+	acc, err := fetchKeystore(s.am).ImportECDSA(crypto.ToECDSA(hexkey), crypto.ToECDSA(hexkey), password)
 	return acc.Address, err
 }
 
@@ -1151,6 +1152,10 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
 }
 
+func (args *SendTxArgs) toOTATransaction() *types.Transaction {
+	return types.NewOTATransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
+}
+
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
 	if err := b.SendTx(ctx, tx); err != nil {
@@ -1193,6 +1198,47 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, signed)
+}
+
+func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
+	signed, err := wallet.SignTx(account, tx, chainID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, signed)
+}
+
+func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+
+	sS, err2 := wallet.GetPublicKeysRawStr(account)
+	if err2 != nil{
+		return "", err2
+	}
+
+	return strings.Join(sS[:], "+"), nil
 }
 
 // SendRawTransaction will add the signed transaction to the transaction pool.

@@ -267,6 +267,10 @@ func (pool *TxPool) SetLocal(tx *types.Transaction) {
 // to the consensus rules.
 //cr@zy: add validatetx for OTATx
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
+	if tx.Txtype() == 0 {
+		return nil
+	}
+
 	local := pool.localTx.contains(tx.Hash())
 	// Drop transactions under our own minimal accepted gas price
 	if !local && pool.minGasPrice.Cmp(tx.GasPrice()) > 0 {
@@ -282,7 +286,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
-	// Last but not least check for nonce errors
+	// Last but not least check for nonce einrrors
 	if currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonce
 	}
@@ -302,6 +306,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
+	log.Error("validateTx from:" + from.String())
 	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
@@ -513,10 +518,12 @@ func (pool *TxPool) promoteExecutables(state *state.StateDB) {
 		// Drop all transactions that are too costly (low balance)
 		drops, _ := list.Filter(state.GetBalance(addr))
 		for _, tx := range drops {
-			hash := tx.Hash()
-			log.Debug("Removed unpayable queued transaction", "hash", hash)
-			delete(pool.all, hash)
-			queuedNofundsCounter.Inc(1)
+			if tx.Txtype() != 0 {
+				hash := tx.Hash()
+				log.Debug("Removed unpayable queued transaction", "hash", hash)
+				delete(pool.all, hash)
+				queuedNofundsCounter.Inc(1)
+			}
 		}
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {

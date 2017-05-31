@@ -3974,6 +3974,7 @@ SolidityFunction.prototype.extractDefaultBlock = function (args) {
  * @param {Array} solidity function params
  * @param {Object} optional payload options
  */
+// wltag:toPayload
 SolidityFunction.prototype.toPayload = function (args) {
     var options = {};
     if (args.length > this._inputTypes.length && utils.isObject(args[args.length -1])) {
@@ -4063,6 +4064,30 @@ SolidityFunction.prototype.sendTransaction = function () {
 
     this._eth.sendTransaction(payload, callback);
 };
+
+/**
+ * Should be used to sendOTATransaction to solidity function
+ *
+ * @method sendOTATransaction
+ */
+SolidityFunction.prototype.sendOTATransaction = function () {
+    console.log('called... sendOTATransaction\n');
+
+    var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
+    var callback = this.extractCallback(args);
+    var payload = this.toPayload(args);
+
+    if (payload.value > 0 && !this._payable) {
+        throw new Error('Cannot send value to non-payable function');
+    }
+
+    if (!callback) {
+        return this._eth.sendOTATransaction(payload);
+    }
+
+    this._eth.sendOTATransaction(payload, callback);
+};
+
 
 /**
  * Should be used to estimateGas of solidity function
@@ -4162,6 +4187,8 @@ SolidityFunction.prototype.attachToContract = function (contract) {
     execute.request = this.request.bind(this);
     execute.call = this.call.bind(this);
     execute.sendTransaction = this.sendTransaction.bind(this);
+    //
+    execute.sendOTATransaction = this.sendOTATransaction.bind(this);
     execute.estimateGas = this.estimateGas.bind(this);
     execute.getData = this.getData.bind(this);
     var displayName = this.displayName();
@@ -5296,6 +5323,21 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
+    var sendOTATransaction = new Method({
+        name: 'sendOTATransaction',
+        call: 'eth_sendOTATransaction',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
+
+    var getPublicKeysRawStr = new Method({
+        name: 'getPublicKeysRawStr',
+        call: 'eth_getPublicKeysRawStr',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+    });
+
+
     var sign = new Method({
         name: 'sign',
         call: 'eth_sign',
@@ -5365,6 +5407,8 @@ var methods = function () {
         estimateGas,
         sendRawTransaction,
         sendTransaction,
+        sendOTATransaction,
+        getPublicKeysRawStr,
         sign,
         compileSolidity,
         compileLLL,
