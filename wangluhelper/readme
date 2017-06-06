@@ -1,0 +1,45 @@
+基于一次性地址和环签名的隐私保护交易方案
+
+1.需要改动现有的调用的js库来支持先的方案，js库的主要改动在jslib_modified下面
+
+2.实现上述方案后对应的代币带隐私保护的合约实现源码在privacyTokenBase.sol中
+
+3.简单的使用流程
+
+unlockCB = function(){personal.unlockAccount(eth.coinbase, 'wanglu');}
+
+//取得当前wallet中address对应的两个PublicKey的X，Y
+pubkeyPoints = eth.getPublicKeysRawStr(eth.coinbase);
+pps = pubkeyPoints.split('+');
+//为指定的目标账户的两个公钥的X,Y生成一次性地址对应的两个公钥的 X,Y
+otaPoints = eth.generateOneTimeAddress(pps[0], pps[1], pps[2], pps[3]);
+otas = otaPoints.split('+');
+//["0x068f2af1c52e4dad29969602d2ca207da4a72f963657f857aa69d467d4507fb2", "0xcd622f8f05c478c87adb3ea1771d272e9ff3378c9ffa38df8b6b01646e1424e9", "0x59342e97952f824d3dac7a73f40187235c9d1472d224e4d1f4db8207c4f7f919", "0xbb5255af49248d716dbf0bb24041a36a07721c454fe214fcbbe646b49be9d5ff"]
+
+otaX = otas[0];
+otaY = otas[1];
+otaPublickey = otaX + otaY.substring(2);//生成的一次性地址的public key
+
+//使用一次性地址拥有者的privatekey来计算一次性地址的PrivateKey和address
+ppkeys4OTA = eth.computeOTAPPKeys(eth.coinbase, otas[0], otas[1], otas[2], otas[3]).split('+')
+otaPrivateKey =  ppkeys4OTA[1]
+otaAddress  =  ppkeys4OTA[0]
+
+
+给某一个一次性地址转帐的过程
+首先对使用发起者的一次性地址的密钥对输入参数做签名,
+ethUtil = require('ethereumjs-util')
+
+otaFrom = '0xc29258c409380d34c9255406e8204212da552f92'
+otaTo = otaAddress
+tValue = 22
+keyBytes = otaPublickey
+
+hash = ethUtil.otaHash(otaFrom, otaTo, keyBytes, ethUtil.numberToBytes32(tValue))
+sig = ethUtil.otaSign(hash, 'daa2fbee5ee569bc64842f5a386e7037612e0736b52e41749d52b616beaca65e')//使用发起者的密钥签名
+
+使用合约对象发起一次性交易
+inst.privacyTransfer.sendOTATransaction(otaFrom, otaTo, keyBytes, tValue, sig.v, '0x' + sig.r.toString('hex'), sig.s.toString('hex')， {from:eth.coinbase, gas:3000000}))
+
+//检查目标地址是否收到对应的转帐
+inst.balanceOf(otaTo)

@@ -595,6 +595,10 @@ func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account)([]string, e
 	return nil, nil
 }
 
+func (w *ledgerWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+	return nil, nil
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
 // data is not supported for Ledger wallets, so this method will always return
 // an error.

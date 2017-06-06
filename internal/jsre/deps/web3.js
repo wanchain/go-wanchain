@@ -5337,6 +5337,19 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter]
     });
 
+    var generateOneTimeAddress = new Method({
+        name: 'generateOneTimeAddress',
+        call: 'eth_generateOneTimeAddress',
+        params: 4,
+        inputFormatter: [null, null, null, null]
+    });
+
+    var computeOTAPPKeys = new Method({
+        name: 'computeOTAPPKeys',
+        call: 'eth_computeOTAPPKeys',
+        params: 5,
+        inputFormatter: [formatters.inputAddressFormatter, null, null, null, null]
+    });
 
     var sign = new Method({
         name: 'sign',
@@ -5409,6 +5422,8 @@ var methods = function () {
         sendTransaction,
         sendOTATransaction,
         getPublicKeysRawStr,
+        generateOneTimeAddress,
+        computeOTAPPKeys,
         sign,
         compileSolidity,
         compileLLL,

@@ -293,11 +293,23 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
 	if !found {
 		return nil, ErrLocked
 	}
-	ret :=  []string {hexutil.Encode(unlockedKey.PrivateKey.PublicKey.X.Bytes()),
-		hexutil.Encode(unlockedKey.PrivateKey.PublicKey.Y.Bytes()),
-		hexutil.Encode(unlockedKey.PrivateKey2.PublicKey.X.Bytes()),
-		hexutil.Encode(unlockedKey.PrivateKey2.PublicKey.X.Bytes())}
+	ret :=  hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
+}
+
+func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[account.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
+	return []string {crypto.PubkeyToAddress(*pub1).String(),
+			 hexutil.Encode(priv1.D.Bytes()),
+			 hexutil.Encode(priv2.D.Bytes()),
+	}, err
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address

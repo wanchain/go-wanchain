@@ -120,6 +120,16 @@ func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account)([]string,
 	return w.keystore.GetPublicKeysRawStr(account)
 }
 
+func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY);
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, attempting to sign the
 // given hash with the given account using passphrase as extra authentication.
 func (w *keystoreWallet) SignHashWithPassphrase(account accounts.Account, passphrase string, hash []byte) ([]byte, error) {

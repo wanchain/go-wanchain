@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"crypto/ecdsa"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
@@ -233,4 +234,17 @@ func mapError(err error) error {
 		return ErrOddLength
 	}
 	return err
+}
+
+func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) ([]string) {
+	return []string {Encode(pkey.X.Bytes()),
+		  Encode(pkey.Y.Bytes())}
+}
+
+func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) ([]string) {
+	return []string {Encode(A.X.Bytes()),
+			 Encode(A.Y.Bytes()),
+		         Encode(B.X.Bytes()),
+		         Encode(B.Y.Bytes()),
+	}
 }

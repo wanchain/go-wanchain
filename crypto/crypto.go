@@ -477,3 +477,98 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	}
 	return ret
 }
+
+// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]A)]G+B
+func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKey {
+	A1 := new(ecdsa.PublicKey)
+	A1.X, A1.Y = S256().ScalarMult(A.X, A.Y, r)   //A1=[r]A
+	A1Bytes := Keccak256(FromECDSAPub(A1)) //hash([r]A)
+	A1.X, A1.Y = S256().ScalarBaseMult(A1Bytes)   //[hash([r]A)]G
+	A1.X, A1.Y = S256().Add(A1.X, A1.Y, B.X, B.Y) //A1=[hash([r]A)]G+B
+	A1.Curve = S256()
+	return *A1
+}
+
+// 2528 Pengbo add TeemoGuo revise
+func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.PublicKey, R *ecdsa.PublicKey, err error) {
+	RPrivateKey, err := GenerateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+	R = &RPrivateKey.PublicKey
+	A1 = new(ecdsa.PublicKey)
+	*A1 = generateA1(RPrivateKey.D.Bytes(), A, B)
+	return A1, R, err
+}
+
+func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error){
+	bytesAX, err := hexutil.Decode(AX)
+	if err != nil{
+		return
+	}
+	bytesAY, err := hexutil.Decode(AY)
+	if err != nil {
+		return
+	}
+	bytesBX, err := hexutil.Decode(BX)
+	if err != nil{
+		return
+	}
+	bytesBY, err := hexutil.Decode(BY)
+	if err != nil {
+		return
+	}
+	bnAX := new(big.Int).SetBytes(bytesAX)
+	bnAY := new(big.Int).SetBytes(bytesAY)
+	bnBX := new(big.Int).SetBytes(bytesBX)
+	bnBY := new(big.Int).SetBytes(bytesBY)
+
+	pa := &ecdsa.PublicKey{X: bnAX, Y: bnAY}
+	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
+
+	generatedA1, generatedR, err := generateOneTimeKey2528(pa, pb)
+	return  hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
+}
+
+func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string)(retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+	bytesAX, err := hexutil.Decode(AX)
+	if err != nil{
+		return
+	}
+	bytesAY, err := hexutil.Decode(AY)
+	if err != nil {
+		return
+	}
+	bytesBX, err := hexutil.Decode(BX)
+	if err != nil{
+		return
+	}
+	bytesBY, err := hexutil.Decode(BY)
+	if err != nil {
+		return
+	}
+	bnAX := new(big.Int).SetBytes(bytesAX)
+	bnAY := new(big.Int).SetBytes(bytesAY)
+	bnBX := new(big.Int).SetBytes(bytesBX)
+	bnBY := new(big.Int).SetBytes(bytesBY)
+
+	retPub = &ecdsa.PublicKey{X: bnAX, Y: bnAY}
+	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
+        retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
+	return
+}
+
+func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey,destPubA *ecdsa.PublicKey, destPubB *ecdsa.PublicKey)(retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+	pub := new(ecdsa.PublicKey)
+	pub.X, pub.Y = S256().ScalarMult(destPubA.X, destPubA.Y, privateKey.D.Bytes()) //[a]R
+	k := new(big.Int).SetBytes(Keccak256(FromECDSAPub(pub)))                                                                    //hash([a]R)
+	k.Add(k, privateKey2.D)                                                                                                               //hash([a]R)+b
+	k.Mod(k, S256().Params().N)                                                                                                        //mod to feild N
+
+	retPriv1 = new(ecdsa.PrivateKey)
+	retPriv2 = new(ecdsa.PrivateKey)
+
+	retPriv1.D = k
+	retPriv2.D = new(big.Int).SetInt64(0)
+	return retPriv1, retPriv2, nil
+}

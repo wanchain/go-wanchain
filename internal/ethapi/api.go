@@ -1241,6 +1241,30 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	return strings.Join(sS[:], "+"), nil
 }
 
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, AX string, AY string, BX string, BY string) (string, error) {
+	sS, err := crypto.GenerateOneTimeKey(AX, AY, BX, BY)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Join(sS[:], "+"), nil
+}
+
+// 根据一次性地址拥有者的private key信息计算对应地址的两个private key
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+
+	sS, err2 := wallet.ComputeOTAPPKeys(account,AX, AY, BX, BY)
+
+	return strings.Join(sS[:], "+"), err2
+}
+
+//func (s *PublicTransactionPoolAPI) GenerateSignature(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
+
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (string, error) {

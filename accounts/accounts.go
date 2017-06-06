@@ -114,6 +114,8 @@ type Wallet interface {
 
 	GetPublicKeysRawStr(account Account)([]string, error)
 
+	ComputeOTAPPKeys(account Account, AX string, AY string, BX string, BY string)([]string, error)
+
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
 	//
