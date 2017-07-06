@@ -1,7 +1,7 @@
 # This Dockfile is for WANChain Developer
 # After download WANChain main code from  Github, user can build docker image
 # sudo docker build -t="wanchain/alpine:1.0" -f ./DOCKER/Dockfile.Develop
-# sudo docker run -it -v .:/wanchain/src wachain/alpine_go:1.0 sh
+# sudo docker run -it -v absolute_path4src:/wanchain/src wachain/alpine_go:1.0 sh
 #  
 
 FROM alpine:3.6
