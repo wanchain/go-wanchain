@@ -1,9 +1,9 @@
 ## WANChain Go
 
-prerequisition: Docker
+Requirement: Docker
 
-For develop wanchain: after git clone this repo, run dev_setup.sh,
-and in running docker container, run /wanchain/chainbatch.sh to start wanchain
+1. For wanchain: git clone this repo, then run dev_setup.sh.
+   In docker container, run /wanchain/chainbatch.sh to start wanchain
 
-For develop other tools with wanchain,for example: wanwallet or wanchain explorer , just run release_mkimg.sh
-and then run a docker container: docker run -d wanchainrelease
+2. For other tools in wanchain such as wanwallet or wanchain explorer, just run release_mkimg.sh
+   and then run a docker container: docker run -d wanchainrelease
