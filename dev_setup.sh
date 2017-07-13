@@ -12,5 +12,5 @@
 SRCDIR="$(pwd)"
 
 docker build -t wanchaindev -f ./Dockerfile.Develop .
-docker run -it -v $SRCDIR:/wanchain/src -p 8545:8545 wanchaindev sh
+docker run -it -v $SRCDIR:/wanchain/src -p 8545:8545 wanchaindev 
 
