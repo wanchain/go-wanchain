@@ -15,5 +15,5 @@ EXPOSE 8545
 EXPOSE 30303
 EXPOSE 30303/udp
 
-ENTRYPOINT ["geth", "--verbosity", "5", "--datadir", "/wanchain/data", "--etherbase", "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e", "--networkid", "5201314", "--mine", "--minerthreads", "1", "--nodiscover", "--rpc"]
+# ENTRYPOINT ["geth", "--verbosity", "5", "--datadir", "/wanchain/data", "--etherbase", "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e", "--networkid", "5201314", "--mine", "--minerthreads", "1", "--nodiscover", "--rpc"]
 
