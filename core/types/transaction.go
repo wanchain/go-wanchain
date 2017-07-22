@@ -84,6 +84,7 @@ type txdata struct {
 //r@zy: 如果这个自动生成的对transaction的marshal和unmarshal不能条件生成的话，那就。。。。
 
 type txdataMarshaling struct {
+	Txtype       hexutil.Uint64
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
