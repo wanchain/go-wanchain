@@ -64,7 +64,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 //TeemoGuo: todo  如何适应OTA格式交易
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		Txtype       *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
+		Txtype       *hexutil.Uint64 `json:"Txtype"    gencodec:"required"`
 		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
