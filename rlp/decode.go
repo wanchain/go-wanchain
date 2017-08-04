@@ -385,10 +385,10 @@ func decodeByteArray(s *Stream, val reflect.Value) error {
 	switch kind {
 	case Byte:
 		if vlen == 0 {
-			return &decodeError{msg: "input string too long", typ: val.Type()}
+			return &decodeError{msg: "input byte too long", typ: val.Type()}
 		}
 		if vlen > 1 {
-			return &decodeError{msg: "input string too short", typ: val.Type()}
+			return &decodeError{msg: "input byte too short", typ: val.Type()}
 		}
 		bv, _ := s.Uint()
 		val.Index(0).SetUint(bv)
