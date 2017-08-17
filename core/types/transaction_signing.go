@@ -55,7 +55,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 // TeemoGuo revise: 扩充函数参数，增加OTA交易类型的签名，todo 外部增加扫链程序，提供SignTx的参数PublicKeys
 // SignTx signs the transaction using the given signer and private key
-// TODO:
+// TODO: Additional parameters added on SignTx, causes a conflict with test case in bench_test.go
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
 	h := s.Hash(tx)
 	if tx.data.Txtype != 0 {
