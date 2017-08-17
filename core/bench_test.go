@@ -81,6 +81,7 @@ var (
 // genValueTx returns a block generator that includes a single
 // value-transfer transaction with n bytes of extra data in each
 // block.
+// possible argument mismatch on types.SignTx
 func genValueTx(nbytes int) func(int, *BlockGen) {
 	return func(i int, gen *BlockGen) {
 		toaddr := common.Address{}
