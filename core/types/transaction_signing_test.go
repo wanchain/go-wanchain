@@ -30,7 +30,7 @@ func TestEIP155Signing(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), new(big.Int), new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), new(big.Int), new(big.Int), nil), signer, key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestEIP155ChainId(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), new(big.Int), new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), new(big.Int), new(big.Int), nil), signer, key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestEIP155ChainId(t *testing.T) {
 	}
 
 	tx = NewTransaction(0, addr, new(big.Int), new(big.Int), new(big.Int), nil)
-	tx, err = SignTx(tx, HomesteadSigner{}, key)
+	tx, err = SignTx(tx, HomesteadSigner{}, key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestChainId(t *testing.T) {
 	tx := NewTransaction(0, common.Address{}, new(big.Int), new(big.Int), new(big.Int), nil)
 
 	var err error
-	tx, err = SignTx(tx, NewEIP155Signer(big.NewInt(1)), key)
+	tx, err = SignTx(tx, NewEIP155Signer(big.NewInt(1)), key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
