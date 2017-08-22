@@ -393,7 +393,7 @@ var decodeTests = []decodeTest{
 	{input: "850102030405", ptr: new([5]byte), value: [5]byte{1, 2, 3, 4, 5}},
 
 	// byte array errors
-	{input: "02", ptr: new([5]byte), error: "rlp: input string too short for [5]uint8"},
+	{input: "02", ptr: new([5]byte), error: "rlp: input byte too short for [5]uint8"},
 	{input: "80", ptr: new([5]byte), error: "rlp: input string too short for [5]uint8"},
 	{input: "820000", ptr: new([5]byte), error: "rlp: input string too short for [5]uint8"},
 	{input: "C0", ptr: new([5]byte), error: "rlp: expected input string or byte for [5]uint8"},
@@ -404,7 +404,7 @@ var decodeTests = []decodeTest{
 
 	// zero sized byte arrays
 	{input: "80", ptr: new([0]byte), value: [0]byte{}},
-	{input: "01", ptr: new([0]byte), error: "rlp: input string too long for [0]uint8"},
+	{input: "01", ptr: new([0]byte), error: "rlp: input byte too long for [0]uint8"},
 	{input: "8101", ptr: new([0]byte), error: "rlp: input string too long for [0]uint8"},
 
 	// strings
