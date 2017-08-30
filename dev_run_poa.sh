@@ -16,4 +16,4 @@ geth --datadir /wanchain/data_poa init ./genesis_example/genesis_poa.json
 nohup geth --verbosity 4 --gasprice '200000' --datadir /wanchain/data_poa --nat none \
 	--nodiscover --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/passwd.txt \
 	--mine --minerthreads 1  --targetgaslimit 900000000  \
-	--etherbase '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e' --networkid 718  --rpc --rpcaddr 0.0.0.0 --rpccorsdomain '*' $@  &
+	--etherbase '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e' --networkid 718  --rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin" --rpccorsdomain '*' $@  &
