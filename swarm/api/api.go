@@ -25,9 +25,9 @@ import (
 	"sync"
 
 	"bytes"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/swarm/storage"
 	"mime"
 	"path/filepath"
 	"time"

@@ -22,13 +22,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/mclock"
+	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/light"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 const (

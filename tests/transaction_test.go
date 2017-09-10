@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 //func TestTransactions(t *testing.T) {

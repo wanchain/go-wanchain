@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/rlp"
 )
 
 func init() {

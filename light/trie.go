@@ -19,9 +19,9 @@ package light
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/trie"
 )
 
 // LightTrie is an ODR-capable wrapper around trie.SecureTrie

@@ -22,17 +22,17 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/eth/downloader"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/event"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 // Backend wraps all methods required for mining.

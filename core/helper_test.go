@@ -20,11 +20,11 @@ import (
 	"container/list"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	// "github.com/ethereum/go-ethereum/crypto"
+	"github.com/wanchain/go-wanchain/core/types"
+	// "github.com/wanchain/go-wanchain/crypto"
 
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/event"
 )
 
 // Implement our EthTest Manager

@@ -19,7 +19,7 @@ package params
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 // TestNetDAOForkBlock is the block number where the DAO hard-fork commences on

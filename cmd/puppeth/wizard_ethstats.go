@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 // deployEthstats queries the user for various input on deploying an ethstats

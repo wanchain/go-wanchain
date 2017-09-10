@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/wanchain/go-wanchain/p2p"
+	"github.com/wanchain/go-wanchain/p2p/discover"
 )
 
 type testPeer struct {

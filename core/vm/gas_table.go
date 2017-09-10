@@ -20,9 +20,9 @@ import (
 	gmath "math"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/math"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so

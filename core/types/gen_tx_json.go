@@ -8,9 +8,9 @@ import (
 	"math/big"
 	//"crypto/ecdsa"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	//"github.com/ethereum/go-ethereum/crypto"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	//"github.com/wanchain/go-wanchain/crypto"
 )
 //r@zy:如果不能实现根据条件的自动marshal,unmarshal部分字段，就把这个硬编码
 //TeemoGuo: todo  如何适应OTA格式交易

@@ -27,13 +27,13 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/event"
+	"github.com/wanchain/go-wanchain/internal/debug"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/p2p"
+	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 )
 

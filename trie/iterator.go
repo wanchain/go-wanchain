@@ -21,7 +21,7 @@ import (
 	"container/heap"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 var iteratorEnd = errors.New("end of iteration")

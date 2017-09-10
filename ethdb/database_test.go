@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 func newDb() *LDBDatabase {
