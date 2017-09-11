@@ -161,6 +161,10 @@ var (
 		Name:  "rinkeby",
 		Usage: "Rinkeby network: pre-configured proof-of-authority test network",
 	}
+	RinkebyFlag = cli.BoolFlag{
+		Name:  "pluto",
+		Usage: "Pluto network: pre-configured proof-of-authority test network",
+	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
