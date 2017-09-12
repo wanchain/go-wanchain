@@ -48,10 +48,10 @@ var RinkebyBootnodes = []string{
 // PlutoBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Pluto test network.
 var PlutoBootnodes = []string{
-	"enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@118.190.71.27:30303", // IE
+	"enode://d679abf4d539f6d4100a3a801fb8e2dfd523afbe86f0bf3b62b3022f9913d43c451abadb0d64a6f6628bfd38713fb76348f8e62ddfd6fd597ce11d73eaa98a3c@118.190.71.27:30303",
 }
 var PlutoV5ootnodes = []string{
-	"enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@118.190.71.27:30303?discport=30304", // IE
+	"enode://d679abf4d539f6d4100a3a801fb8e2dfd523afbe86f0bf3b62b3022f9913d43c451abadb0d64a6f6628bfd38713fb76348f8e62ddfd6fd597ce11d73eaa98a3c@118.190.71.27:30303?discport=30304",
 }
 // RinkebyV5Bootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Rinkeby test network for the experimental RLPx v5 topic-discovery network.
