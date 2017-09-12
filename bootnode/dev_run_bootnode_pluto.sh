@@ -9,7 +9,7 @@
 
 
 echo "run geth in pluto bootnode testnet"
-mkdir -p ./data_pluto
+mkdir -p ./data_pluto/keystore
 echo "wanglu" > ./passwd.txt
 cp -rf ./UTC* ./data_pluto/keystore/
 #rm -rf /wanchain/src/data_pluto/geth/chaindata

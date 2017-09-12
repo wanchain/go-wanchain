@@ -68,11 +68,11 @@ var (
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(6),
-		HomesteadBlock: big.NewInt(1),
+		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
 		DAOForkSupport: true,
-		EIP150Block:    big.NewInt(2),
-		EIP150Hash:     common.HexToHash("0x9b095b36c15eaf13044373aef8ee0bd3a382a5abb92e402afa44b8249c3a90e9"),
+		EIP150Block:    big.NewInt(0),
+		EIP150Hash:     common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177"),
 		EIP155Block:    big.NewInt(3),
 		EIP158Block:    big.NewInt(3),
 		Pluto: &PlutoConfig{
