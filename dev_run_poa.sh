@@ -15,7 +15,7 @@ cp -rf /wanchain/data/keystore /wanchain/src/data_pluto
 #rm -rf /wanchain/src/data_pluto/geth/chaindata
 #geth --datadir /wanchain/src/data_pluto init ./genesis_example/genesis_poa.json
 networkid='--pluto'
-/wanchain/src/build/bin/geth ${networkid}  --verbosity 4 --gasprice '200000' --datadir /wanchain/src/data_pluto  \
+/wanchain/src/build/bin/geth ${networkid} --nat none --verbosity 4 --gasprice '200000' --datadir /wanchain/src/data_pluto  \
 	 --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/passwd.txt \
 	 --targetgaslimit 900000000  --port 30303  \
    	--rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin" --rpccorsdomain '*' 
