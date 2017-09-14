@@ -1241,8 +1241,13 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	return strings.Join(sS[:], "+"), nil
 }
 
-func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, AX string, AY string, BX string, BY string) (string, error) {
-	sS, err := crypto.GenerateOneTimeKey(AX, AY, BX, BY)
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, publicKeyRawStr string) (string, error) {
+	strs := strings.Split(publicKeyRawStr, "+")
+	if len(strs) != 4 {
+		return "", errors.New("invalid public key raw string!")
+	}
+
+	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {
 		return "", err
 	}

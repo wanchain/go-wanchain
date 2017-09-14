@@ -5340,8 +5340,8 @@ var methods = function () {
     var generateOneTimeAddress = new Method({
         name: 'generateOneTimeAddress',
         call: 'eth_generateOneTimeAddress',
-        params: 4,
-        inputFormatter: [null, null, null, null]
+        params: 1,
+        inputFormatter: [null]
     });
 
     var computeOTAPPKeys = new Method({
