@@ -5347,8 +5347,8 @@ var methods = function () {
     var computeOTAPPKeys = new Method({
         name: 'computeOTAPPKeys',
         call: 'eth_computeOTAPPKeys',
-        params: 5,
-        inputFormatter: [formatters.inputAddressFormatter, null, null, null, null]
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var sign = new Method({

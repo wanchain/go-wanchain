@@ -1256,14 +1256,20 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, p
 }
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
-func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
+// (A1, S1) + (a, b) --> sk
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, OTAAdress string) (string, error) {
+	strs := strings.Split(OTAAdress, "+")
+	if len(strs) != 4 {
+		return "", errors.New("invalid OTA adress string!")
+	}
+
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return "", err
 	}
 
-	sS, err2 := wallet.ComputeOTAPPKeys(account,AX, AY, BX, BY)
+	sS, err2 := wallet.ComputeOTAPPKeys(account, strs[0], strs[1], strs[2], strs[3])
 
 	return strings.Join(sS[:], "+"), err2
 }

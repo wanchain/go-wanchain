@@ -305,6 +305,10 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 	if !found {
 		return nil, ErrLocked
 	}
+
+	// check OTA belong to current account
+	// *************************
+
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
 	return []string {crypto.PubkeyToAddress(*pub1).String(),
 			 hexutil.Encode(priv1.D.Bytes()),
