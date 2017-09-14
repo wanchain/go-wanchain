@@ -31,6 +31,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
+	"encoding/json"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -291,14 +292,17 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 }
 
 // DefaultPlutoGenesisBlock returns the Pluto network genesis block.
+
+
+
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
 		Timestamp:  1492009146,
 		ExtraData:  hexutil.MustDecode("0x74686973206973206120746573740000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   4700000,
+		GasLimit:   900000000,
 		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(plutoAllocData),
+		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
 }
 
@@ -321,6 +325,14 @@ func decodePrealloc(data string) GenesisAlloc {
 	ga := make(GenesisAlloc, len(p))
 	for _, account := range p {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+	}
+	return ga
+}
+
+func jsonPrealloc(data string) GenesisAlloc {
+	var ga GenesisAlloc
+	if err:=json.Unmarshal([]byte(data), &ga); err!=nil{
+		panic(err)
 	}
 	return ga
 }
