@@ -374,9 +374,9 @@ func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 //明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
 //2528 Pengbo add Shi TeemoGuo revise
 func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
-	//	n := len(PublicKeys)
+	n := len(PublicKeys)
 	//	fmt.Println(n)
-	n := 10
+	//n := 10
 	I := xScalarHashP(x.Bytes(), PublicKeys[0]) //Key Image
 	s := Mrand.Intn(n)                          //s位放主签名公钥
 	if s > 0 {
@@ -448,6 +448,9 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	Lpub := new(ecdsa.PublicKey)
 	d := sha3.NewKeccak256()
 	d.Write(M)
+
+
+
 	//hash(M,Li,Ri)
 	for i := 0; i < n; i++ {
 		Lpub.X, Lpub.Y = S256().ScalarBaseMult(r[i].Bytes()) //[ri]G

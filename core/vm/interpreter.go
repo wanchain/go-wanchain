@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+
 )
 
 // Config are the configuration options for the Interpreter
@@ -84,10 +85,18 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 	evm.env.depth++
 	defer func() { evm.env.depth-- }()
 
+	code := contract.CodeAddr
+
+	if code!=nil {
+		fmt.Print("code is not nil")
+	}
+
 	if contract.CodeAddr != nil {
-		if p := PrecompiledContracts[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract)
+
+		if p := PrecompiledContracts[*code]; p != nil {
+			return RunPrecompiledContract(p, input, contract,evm)
 		}
+
 	}
 
 	// Don't bother with the execution if there's no code.

@@ -1200,7 +1200,44 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, signed)
 }
 
+
+//jqg modified
 func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
+
+
+	signed, err := wallet.SignTx(account, tx, chainID)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+
+
+	return submitTransaction(ctx, s.b, signed)
+}
+
+//zy modified
+func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
@@ -1212,6 +1249,9 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 	if err != nil {
 		return common.Hash{}, err
 	}
+
+
+
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()
 

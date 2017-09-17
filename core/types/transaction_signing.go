@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"bytes"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -56,7 +57,118 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // TeemoGuo revise: 扩充函数参数，增加OTA交易类型的签名，todo 外部增加扫链程序，提供SignTx的参数PublicKeys
 // SignTx signs the transaction using the given signer and private key
 // TODO: Additional parameters added on SignTx, causes a conflict with test case in bench_test.go
+//jqg
+
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
+
+	h := s.Hash(tx)
+	if tx.data.Txtype != 0 {
+		sig, err := crypto.Sign(h[:], prv)
+		if err != nil {
+			return nil, err
+		}
+		return s.WithSignature(tx, sig)
+	} else {//OTA类型交易环签名
+
+		//tx.data.PublicKeys = PublicKeys
+		// need help:为了测试先请吧环签名里面用于混淆的publickeys写死用几个测试用，暂时不从外面动态获取
+		sig, err := crypto.Sign(h[:], prv)
+		if err != nil {
+			return nil, err
+		}
+		tx, err = s.WithSignature(tx, sig)
+
+		testPublicKeys := *new([]*ecdsa.PublicKey)
+		for i:=0; i< 3; i++{
+			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
+		}
+
+		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h[:], prv.D, testPublicKeys)
+
+		cpy := &Transaction{data: tx.data}
+
+		cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
+
+		W_random := *new([]*hexutil.Big)
+		Q_random := *new([]*hexutil.Big)
+
+		for i := 0; i < len(PublicKeys); i++ {
+			w := w_random[i]
+			q := q_random[i]
+
+			W_random = append(W_random, (*hexutil.Big)(w))
+			Q_random = append(Q_random, (*hexutil.Big)(q))
+		}
+
+		keyImage := crypto.PublicKeyToInt(KeyImage)
+
+
+		cpy.data.KeyImage = keyImage
+		cpy.data.W_random = W_random
+		cpy.data.Q_random = Q_random
+
+		if tx.Value().Cmp(new(big.Int).SetBytes([]byte{0}))==0 {
+			//byte[0],the number used for ring sign public key num
+			//byte[1:]
+			//			pub []byte, 1 byte length,value
+			// 			w []byte,   1 byte length,value
+			// 			q []byte    1 byte length,value
+			//			keyImage []byte 1 byte legth,value
+
+			txpld := []byte("")
+			pubsLen := len(PublicKeys)
+
+			txpld = append(txpld,byte(pubsLen))//occupy one
+
+			all := make([][]byte,pubsLen*(3 + 2 + 2) + 5) //one public key,w,q ramdom is 2 segment
+			all[0] = cpy.data.Payload
+			all[1] = txpld
+
+			var i int
+			var idx int
+
+			for i = 0; i < pubsLen; i++ {
+				idx = i*7 + 2
+
+				pubk := PublicKeys[i]
+				x := pubk.X.Bytes()
+				y := pubk.Y.Bytes()
+				lenxy := len(x) + len(y)
+				all[idx] = []byte{byte(lenxy)}
+				all[idx+1] = x
+				all[idx+2] = y
+
+
+				w := w_random[i].Bytes()
+				lenw := len(w)
+				all[idx+3] = []byte{byte(lenw)}
+				all[idx+4] = w
+
+
+				q := q_random[i].Bytes()
+				lenq := len(q)
+				all[idx+5] = []byte{byte(lenq)}
+				all[idx+6] = q
+			}
+
+			idx = i*7 + 2
+			//occupy 3
+			kiX := KeyImage.X.Bytes()
+			kiY := KeyImage.Y.Bytes()
+			lenkixy := len(kiX) + len(kiY)
+			all[idx] = []byte{byte(lenkixy)}
+			all[idx+1] = kiX
+			all[idx+2] = kiY
+
+			sep := []byte("")
+			cpy.data.Payload = bytes.Join(all,sep)
+		}
+
+		return cpy, nil
+	}
+}
+//zhangy
+func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
 	h := s.Hash(tx)
 	if tx.data.Txtype != 0 {
 		sig, err := crypto.Sign(h[:], prv)
@@ -80,6 +192,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecds
 		}
 		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h[:], prv.D, testPublicKeys)
 		cpy := &Transaction{data: tx.data}
+
 		cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
 
 		W_random := *new([]*hexutil.Big)
@@ -93,6 +206,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecds
 			Q_random = append(Q_random, (*hexutil.Big)(q))
 		}
 		keyImage := crypto.PublicKeyToInt(KeyImage)
+
 
 		cpy.data.KeyImage = keyImage
 		cpy.data.W_random = W_random

@@ -140,8 +140,69 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	return &Transaction{data: d}
 }
 
-//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
+//jqg****
+
+const(
+	stampSCAddress 	 = 5;
+	wancoinSCAddress = 6;
+	//stampSCAddress = "0x0000000000000000000000000000000000000005";
+	//wancoinSCAddress = "0x0000000000000000000000000000000000000006";
+	WANCOIN_BUY    = byte(0)
+	WANCOIN_GET_COINS = byte(1)
+	WANCOIN_REFUND = byte(2)
+
+	HashLength    = 32
+	AddressLength = 20
+)
+
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	var temp []byte
+
+	if amount.Cmp(new(big.Int).SetBytes([]byte{0}))==0 {
+		length := len(data) + 1
+		temp = make([]byte,length)
+		temp[0] = WANCOIN_REFUND
+		copy(temp[1:],data)
+		amount,_= new (big.Int).SetString("10000000000000000000",10)
+	} else {
+		length := len(data) + 1 + len(to.Bytes())
+		temp = make([]byte,length)
+		temp[0] = WANCOIN_BUY
+		copy(temp[1:],data)
+		copy(temp[1+len(data):],to.Bytes())
+
+	}
+
+
+	addressDst := common.BytesToAddress([]byte{wancoinSCAddress})
+
+	d := txdata{
+		Txtype: 0,
+		AccountNonce: nonce,
+		Recipient:	  &addressDst ,
+		Payload:      temp,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Price:        new(big.Int),
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	return &Transaction{data: d}
+}
+
+//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
+func newOTATransaction_zy(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
