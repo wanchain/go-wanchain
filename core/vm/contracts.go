@@ -414,7 +414,54 @@ func (c *wanCoinSC) getCoins(in []byte,contract *Contract,evm *Interpreter) []by
 
 
 func (c *wanCoinSC) refund(in []byte,contract *Contract,evm *Interpreter) []byte {
+	func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
+	length := len(all)
+	temp := make([]byte,length)
+	copy(temp,all[:])
+
+	val := contract.value.String()
+	mapRef := c.wanCoin[val]
+	if mapRef == nil {
+		return nil
+	}
+
+	pubsLen := int(all[1])
+
+	var i int
+	idx := 2
+
+	for i = 0; i < pubsLen; i++ {
+		lenxy := int(all[idx])
+		x := make([]byte,lenxy>>1)
+		y := make([]byte,lenxy>>1)
+		_ = copy(x,all[idx:])
+		idx = idx + (lenxy>>1)
+		_ = copy(y,all[idx:])
+		idx = idx + (lenxy>>1)
+
+		lenw :=  int(all[idx])
+		w := make([]byte,lenw)
+		_ = copy(w,all[idx:])
+		idx = idx + lenw
+
+
+		lenq :=  int(all[idx])
+		q := make([]byte,lenq)
+		_ = copy(q,all[idx:])
+		idx = idx + lenq
+	}
+
+	lenkixy := int(all[idx])
+	x := make([]byte,lenkixy>>1)
+	y := make([]byte,lenkixy>>1)
+	_ = copy(x,all[idx:])
+	idx = idx + (lenkixy>>1)
+	_ = copy(y,all[idx:])
+	idx = idx + (lenkixy>>1)
+
+
 	return nil
+}
 }
 
 
