@@ -3718,6 +3718,27 @@ var inputTransactionFormatter = function (options){
 };
 
 /**
+ * Formats the input of a OTA to OTA transaction and converts all values to HEX
+ *
+ * @method inputOTA2OTATransactionFormatter
+ * @param {Object} transaction options
+ * @returns object
+ */
+var inputOTA2OTATransactionFormatter = function (options){
+
+    options.from = options.from || config.defaultAccount;
+    options.from = inputAddressFormatter(options.from);
+
+    ['gasPrice', 'gas', 'value', 'nonce', 'stampValue'].filter(function (key) {
+        return options[key] !== undefined;
+    }).forEach(function(key){
+        options[key] = utils.fromDecimal(options[key]);
+    });
+
+    return options;
+};
+
+/**
  * Formats the output of a transaction to its proper values
  *
  * @method outputTransactionFormatter
@@ -3898,6 +3919,7 @@ module.exports = {
     inputBlockNumberFormatter: inputBlockNumberFormatter,
     inputCallFormatter: inputCallFormatter,
     inputTransactionFormatter: inputTransactionFormatter,
+    inputOTA2OTATransactionFormatter: inputOTA2OTATransactionFormatter,
     inputAddressFormatter: inputAddressFormatter,
     inputPostFormatter: inputPostFormatter,
     outputBigNumberFormatter: outputBigNumberFormatter,
@@ -4086,6 +4108,29 @@ SolidityFunction.prototype.sendOTATransaction = function () {
     }
 
     this._eth.sendOTATransaction(payload, callback);
+};
+
+/**
+ * Should be used to sendTransFromOTA2OTA to solidity function
+ *
+ * @method sendOTATransaction
+ */
+SolidityFunction.prototype.sendTransFromOTA2OTA = function () {
+    console.log('called... sendTransFromOTA2OTA\n');
+
+    var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
+    var callback = this.extractCallback(args);
+    var payload = this.toPayload(args);
+
+    if (payload.value > 0 && !this._payable) {
+        throw new Error('Cannot send value to non-payable function');
+    }
+
+    if (!callback) {
+        return this._eth.sendTransFromOTA2OTA(payload);
+    }
+
+    this._eth.sendTransFromOTA2OTA(payload, callback);
 };
 
 
@@ -5330,6 +5375,27 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
+    var scanOTAInfos = new Method({
+        name: 'scanOTAInfos',
+        call: 'eth_scanOTAInfos',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+    });
+
+    var withdrawOTA = new Method({
+        name: 'withdrawOTA',
+        call: 'eth_withdrawOTA',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+    });
+
+    var sendTransFromOTA2OTA = new Method({
+        name: 'sendTransFromOTA2OTA',
+        call: 'eth_sendTransFromOTA2OTA',
+        params: 1,
+        inputFormatter: [formatters.inputOTA2OTATransactionFormatter]
+    });
+
     var getPublicKeysRawStr = new Method({
         name: 'getPublicKeysRawStr',
         call: 'eth_getPublicKeysRawStr',
@@ -5421,6 +5487,9 @@ var methods = function () {
         sendRawTransaction,
         sendTransaction,
         sendOTATransaction,
+        scanOTAInfos,
+        withdrawOTA,
+        sendTransFromOTA2OTA,
         getPublicKeysRawStr,
         generateOneTimeAddress,
         computeOTAPPKeys,

@@ -1120,6 +1120,18 @@ type SendTxArgs struct {
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 }
 
+// OTASendOTATxArgs represents the arguments to sumbit a new OTA 2 OTA transaction into the transaction pool.
+type OTASendOTATxArgs struct {
+	From     common.Address  `json:"from"`
+	To       *string         `json:"to"`
+	Gas      *hexutil.Big    `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Value    *hexutil.Big    `json:"value"`
+	Data     hexutil.Bytes   `json:"data"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+	StampValue *hexutil.Big  `json:"stampValue"`
+}
+
 // prepareSendTxArgs is a helper function that fills in default values for unspecified tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
@@ -1201,6 +1213,11 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	publicKeysRawStr := string(args.Data[:])
+	OTAStr, err := s.GenerateOneTimeAddress(ctx, publicKeysRawStr)
+	args.Data = []byte(OTAStr)
+
+
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
@@ -1272,6 +1289,27 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	sS, err2 := wallet.ComputeOTAPPKeys(account, strs[0], strs[1], strs[2], strs[3])
 
 	return strings.Join(sS[:], "+"), err2
+}
+
+// scan all OTA and return OTA infos belong to the specific account
+func (s *PublicTransactionPoolAPI) ScanOTAInfos(ctx context.Context, address common.Address) ([]common.OTAInfo, error)  {
+	OTAInfos := make([]common.OTAInfo, 0)
+	// *************************Wait for dependencies
+	return OTAInfos, nil
+}
+
+// withdraw all balance from OTA to owner account
+func (s *PublicTransactionPoolAPI) WithdrawOTA(ctx context.Context, address common.Address) (*big.Int, error) {
+	ret := new(big.Int)
+	// **************************Wait for dependencies
+	return ret, nil
+}
+
+// send stransaction from OTA to OTA
+func (s *PublicTransactionPoolAPI) SendTransFromOTA2OTA(ctx context.Context, args OTASendOTATxArgs) (common.Hash, error) {
+	log.Info( fmt.Sprintf("SendTransFromOTA2OTA begin, args:", args))
+	// **************************Wait for dependencies
+	return common.Hash{},nil
 }
 
 //func (s *PublicTransactionPoolAPI) GenerateSignature(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {

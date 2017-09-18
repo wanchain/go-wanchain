@@ -206,3 +206,9 @@ func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
+
+/////////// OTA
+type OTAInfo struct {
+	Address string
+	Value *big.Int
+}
