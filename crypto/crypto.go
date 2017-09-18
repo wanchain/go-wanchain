@@ -28,13 +28,13 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"os"
 	Mrand "math/rand"
+	"os"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
@@ -482,16 +482,16 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKey {
 	A1 := new(ecdsa.PublicKey)
 	A1.X, A1.Y = S256().ScalarMult(B.X, B.Y, r)   //A1=[r]B
-	A1Bytes := Keccak256(FromECDSAPub(A1)) //hash([r]B)
+	A1Bytes := Keccak256(FromECDSAPub(A1))        //hash([r]B)
 	A1.X, A1.Y = S256().ScalarBaseMult(A1Bytes)   //[hash([r]B)]G
 	A1.X, A1.Y = S256().Add(A1.X, A1.Y, A.X, A.Y) //A1=[hash([r]B)]G+A
 	A1.Curve = S256()
 	return *A1
 }
 
-function CompareA1(b []byte, A *ecdsa.PublicKey, S1 *ecdsa.PublicKey, A1 *ecdsa.PublicKey) bool {
-	A1n = generateA1(b, A, S1)
-	if A1.X.Cmp(A1n.X)==0 && A1.Y.Cmp(A1n.Y)==0 {
+func CompareA1(b []byte, A *ecdsa.PublicKey, S1 *ecdsa.PublicKey, A1 *ecdsa.PublicKey) bool {
+	A1n := generateA1(b, A, S1)
+	if A1.X.Cmp(A1n.X) == 0 && A1.Y.Cmp(A1n.Y) == 0 {
 		return true
 	}
 	return false
@@ -509,9 +509,9 @@ func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.P
 	return A1, R, err
 }
 
-func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error){
+func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error) {
 	bytesAX, err := hexutil.Decode(AX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesAY, err := hexutil.Decode(AY)
@@ -519,7 +519,7 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 		return
 	}
 	bytesBX, err := hexutil.Decode(BX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesBY, err := hexutil.Decode(BY)
@@ -535,12 +535,12 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
 
 	generatedA1, generatedR, err := generateOneTimeKey2528(pa, pb)
-	return  hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
+	return hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
 }
 
-func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string)(retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string) (retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
 	bytesAX, err := hexutil.Decode(AX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesAY, err := hexutil.Decode(AY)
@@ -548,7 +548,7 @@ func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.Priva
 		return
 	}
 	bytesBX, err := hexutil.Decode(BX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesBY, err := hexutil.Decode(BY)
@@ -562,16 +562,16 @@ func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.Priva
 
 	retPub = &ecdsa.PublicKey{X: bnAX, Y: bnAY}
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
-        retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
+	retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
 	return
 }
 
-func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey,destPubA *ecdsa.PublicKey, destPubB *ecdsa.PublicKey)(retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, destPubA *ecdsa.PublicKey, destPubB *ecdsa.PublicKey) (retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
 	pub := new(ecdsa.PublicKey)
 	pub.X, pub.Y = S256().ScalarMult(destPubB.X, destPubB.Y, privateKey2.D.Bytes()) //[b]R
-	k := new(big.Int).SetBytes(Keccak256(FromECDSAPub(pub)))                                                                    //hash([b]R)
-	k.Add(k, privateKey.D)                                                                                                               //hash([b]R)+a
-	k.Mod(k, S256().Params().N)                                                                                                        //mod to feild N
+	k := new(big.Int).SetBytes(Keccak256(FromECDSAPub(pub)))                        //hash([b]R)
+	k.Add(k, privateKey.D)                                                          //hash([b]R)+a
+	k.Mod(k, S256().Params().N)                                                     //mod to feild N
 
 	retPriv1 = new(ecdsa.PrivateKey)
 	retPriv2 = new(ecdsa.PrivateKey)
