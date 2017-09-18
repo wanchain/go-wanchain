@@ -5330,6 +5330,14 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
+    var scanOTAbyAccount = new Method ({
+        name: 'scanOTAbyAccount',
+        call: 'eth_scanOTAbyAccount',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
+    })
+
+
     var getPublicKeysRawStr = new Method({
         name: 'getPublicKeysRawStr',
         call: 'eth_getPublicKeysRawStr',
@@ -5420,6 +5428,7 @@ var methods = function () {
         estimateGas,
         sendRawTransaction,
         sendTransaction,
+        scanOTAbyAccount,
         sendOTATransaction,
         getPublicKeysRawStr,
         generateOneTimeAddress,

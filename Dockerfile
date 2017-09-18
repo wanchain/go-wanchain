@@ -7,7 +7,7 @@ ADD ./DOCKER/data /wanchain/data
 ADD . /wanchain/src
 
 RUN \
-  apk add --update git go make gcc musl-dev linux-headers && \
+  apk add --update git go make gcc musl-dev linux-headers gdb && \
   (cd wanchain/src && make geth)                              && \
   cp /wanchain/src/build/bin/geth /usr/local/bin/
 

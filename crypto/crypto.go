@@ -489,6 +489,14 @@ func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKe
 	return *A1
 }
 
+function CompareA1(b []byte, A *ecdsa.PublicKey, S1 *ecdsa.PublicKey, A1 *ecdsa.PublicKey) bool {
+	A1n = generateA1(b, A, S1)
+	if A1.X.Cmp(A1n.X)==0 && A1.Y.Cmp(A1n.Y)==0 {
+		return true
+	}
+	return false
+}
+
 // 2528 Pengbo add TeemoGuo revise
 func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.PublicKey, R *ecdsa.PublicKey, err error) {
 	RPrivateKey, err := GenerateKey()

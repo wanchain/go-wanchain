@@ -31,6 +31,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/karalabe/hid"
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -38,7 +39,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/karalabe/hid"
 )
 
 // Maximum time between wallet health checks to detect USB unplugs.
@@ -591,11 +591,13 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 	return w.ledgerSign(path, account.Address, tx, chainID)
 }
 
-func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account)([]string, error) {
+func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account) ([]string, error) {
 	return nil, nil
 }
-
-func (w *ledgerWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+func (w *ledgerWallet) ScanOTAbyAccount(account accounts.Account, b map[string]interface{}) ([]string, error) {
+	return nil, nil
+}
+func (w *ledgerWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
 	return nil, nil
 }
 

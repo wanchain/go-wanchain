@@ -35,10 +35,10 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/event"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
@@ -285,7 +285,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, nil)
 }
 
-func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
+func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -293,11 +293,45 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
 	if !found {
 		return nil, ErrLocked
 	}
-	ret :=  hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
+	ret := hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
 }
+func (ks *KeyStore) ScanOTAbyAccount(a accounts.Account, block map[string]interface{}) ([]string, error) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
 
-func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+	/*
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	A := &unlockedKey.PrivateKey.PublicKey
+	B := &unlockedKey.PrivateKey2.PublicKey
+	*/
+	otas := []string{}
+	element := block["transactions"]
+	if txs,ok := element.([]interface{}); ok{
+		for i:=0; i<len(txs); i++ {
+			if tx,ok := txs[i].(map[string]interface{});ok{
+				/* TODO where the dest ota store in a tx */
+				if txto,ok := tx["To"].(string); ok{
+					otas = append(otas,txto)
+				}
+				
+				//*A1 = crypto.CompareA1(RPrivateKey.D.Bytes(), A?, B?)
+
+			}
+		}
+	}else{
+		return otas,errors.New("fetch txs failed")
+	}
+
+
+	// hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
+	return otas, nil
+}
+
+func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -310,9 +344,9 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 	// *************************
 
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
-	return []string {crypto.PubkeyToAddress(*pub1).String(),
-			 hexutil.Encode(priv1.D.Bytes()),
-			 hexutil.Encode(priv2.D.Bytes()),
+	return []string{crypto.PubkeyToAddress(*pub1).String(),
+		hexutil.Encode(priv1.D.Bytes()),
+		hexutil.Encode(priv2.D.Bytes()),
 	}, err
 }
 

@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -42,8 +44,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const (
@@ -1226,6 +1226,27 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 	return submitTransaction(ctx, s.b, signed)
 }
 
+func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
+	otas :=  make([]string,8)
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return otas, err
+	}
+
+	curBlock,err := s.GetBlockByNumber(ctx, n, true)
+	if err != nil {
+		return otas, err
+	}
+	sS, err2 := wallet.ScanOTAbyAccount(account, curBlock)
+	if err2 != nil {
+		return otas, err2
+	}
+
+	return sS[:],nil		
+
+
+}
 func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
@@ -1234,7 +1255,7 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	}
 
 	sS, err2 := wallet.GetPublicKeysRawStr(account)
-	if err2 != nil{
+	if err2 != nil {
 		return "", err2
 	}
 
