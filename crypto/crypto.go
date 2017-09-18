@@ -35,6 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"fmt"
 )
 
 var (
@@ -442,14 +443,29 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 
 //VerifyRingSign 验证环签名
 func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
+
 	ret := false
 	n := len(PublicKeys)
+
+	fmt.Printf("R'%d\t%x\n", 0, M)
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 1, FromECDSAPub(PublicKeys[i]))
+	}
+
+	fmt.Printf("R'%d\t%x\n", 2, FromECDSAPub(I))
+
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 3, c[i].Bytes())
+	}
+
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 4, r[i].Bytes())
+	}
+
 	SumC := new(big.Int).SetInt64(0)
 	Lpub := new(ecdsa.PublicKey)
 	d := sha3.NewKeccak256()
 	d.Write(M)
-
-
 
 	//hash(M,Li,Ri)
 	for i := 0; i < n; i++ {
@@ -474,7 +490,12 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		d.Write(FromECDSAPub(Rpub))
 	}
 	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
+	//fmt.Printf("R'%d\t%x\n", 0, hash.Bytes())
+
 	hash.Mod(hash, secp256k1_N)
+	//fmt.Printf("R'%d\t%x\n", 2,hash.Bytes())
+
+	//fmt.Printf("R'%d\t%x\n", 3, SumC.Bytes())
 	if hash.Cmp(SumC) == 0 {
 		ret = true
 	}

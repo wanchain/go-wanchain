@@ -143,8 +143,8 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 //jqg****
 
 const(
-	stampSCAddress 	 = 5;
-	wancoinSCAddress = 6;
+	stampSCAddress 	 = 5
+	wancoinSCAddress = 6
 	//stampSCAddress = "0x0000000000000000000000000000000000000005";
 	//wancoinSCAddress = "0x0000000000000000000000000000000000000006";
 	WANCOIN_BUY    = byte(0)
@@ -159,11 +159,13 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 	var temp []byte
 
 	if amount.Cmp(new(big.Int).SetBytes([]byte{0}))==0 {
-		length := len(data) + 1
-		temp = make([]byte,length)
+		length := len(data)
+		temp = make([]byte,length+2)
 		temp[0] = WANCOIN_REFUND
-		copy(temp[1:],data)
-		amount,_= new (big.Int).SetString("10000000000000000000",10)
+		temp[1] = byte(length)
+		copy(temp[2:],data)
+		//need to remove,not it is test
+		 amount,_= new (big.Int).SetString("10000000000000000",10)
 	} else {
 		length := len(data) + 1 + len(to.Bytes())
 		temp = make([]byte,length)

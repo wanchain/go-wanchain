@@ -28,6 +28,7 @@ import (
     "math/rand"
 	"bytes"
 	"strconv"
+	"crypto/ecdsa"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -270,7 +271,7 @@ const (
 )
 
 type wanCoinSC struct{
-	usedRingSignI	map[string]map[int][]byte
+	usedRingSignI	map[string][]byte
 	wanCoin map[string]map[int][]byte
 	wanCoinValues map[int] *big.Int
 }
@@ -279,7 +280,7 @@ type wanCoinSC struct{
 func (c *wanCoinSC) init()  {
 	c.wanCoin =  make(map[string]map[int][]byte)
 	c.wanCoinValues = make(map[int] *big.Int)
-
+	c.usedRingSignI = make(map[string][]byte)
 	//0.1
 	val := strconv.Itoa(int(1)) + "0000000000000000"
 	valBig,_ := new(big.Int).SetString(val,10)
@@ -351,7 +352,7 @@ func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
 	} else if in[0]==WANCOIN_GET_COINS {
 		return c.getCoins(in[1:],contract,evm)
 	} else if in[0]==WANCOIN_REFUND {
-		return c.refund(in[1:],contract,evm)
+		return c.refund(in[0:],contract,evm)
 	}
 
 	return  nil
@@ -413,11 +414,7 @@ func (c *wanCoinSC) getCoins(in []byte,contract *Contract,evm *Interpreter) []by
 
 
 
-func (c *wanCoinSC) refund(in []byte,contract *Contract,evm *Interpreter) []byte {
-	func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
-	length := len(all)
-	temp := make([]byte,length)
-	copy(temp,all[:])
+func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
 
 	val := contract.value.String()
 	mapRef := c.wanCoin[val]
@@ -425,43 +422,74 @@ func (c *wanCoinSC) refund(in []byte,contract *Contract,evm *Interpreter) []byte
 		return nil
 	}
 
-	pubsLen := int(all[1])
+	idx := 2
+	pubsLen := int(all[2])
+	idx = idx + 1
+
+	PublicKeySet := *new([]*ecdsa.PublicKey)
+	W_random := *new([]*big.Int)
+	Q_random := *new([]*big.Int)
+
 
 	var i int
-	idx := 2
-
 	for i = 0; i < pubsLen; i++ {
 		lenxy := int(all[idx])
-		x := make([]byte,lenxy>>1)
-		y := make([]byte,lenxy>>1)
-		_ = copy(x,all[idx:])
-		idx = idx + (lenxy>>1)
-		_ = copy(y,all[idx:])
-		idx = idx + (lenxy>>1)
+		idx = idx + 1
+
+		x := make([]byte,lenxy)
+		copy(x,all[idx:])
+		puk := crypto.ToECDSAPub(x)
+		PublicKeySet = append(PublicKeySet, puk)//convert []byte to public key
+		idx = idx + lenxy
+
 
 		lenw :=  int(all[idx])
+		idx = idx + 1
+
 		w := make([]byte,lenw)
-		_ = copy(w,all[idx:])
+		copy(w,all[idx:])
+		rndw := new (big.Int).SetBytes(w)
+		W_random = append(W_random, rndw) //convert []byte to random
 		idx = idx + lenw
 
 
+
 		lenq :=  int(all[idx])
+		idx = idx + 1
+
 		q := make([]byte,lenq)
-		_ = copy(q,all[idx:])
+		copy(q,all[idx:])
+		rndq := new (big.Int).SetBytes(q)
+		Q_random = append(Q_random, rndq)//convert []byte to random
 		idx = idx + lenq
 	}
 
 	lenkixy := int(all[idx])
-	x := make([]byte,lenkixy>>1)
-	y := make([]byte,lenkixy>>1)
-	_ = copy(x,all[idx:])
-	idx = idx + (lenkixy>>1)
-	_ = copy(y,all[idx:])
-	idx = idx + (lenkixy>>1)
+	idx = idx + 1
+
+	kix := make([]byte,lenkixy)
+	copy(kix,all[idx:])
+	KeyImage := crypto.ToECDSAPub(kix)
+	idx = idx + lenkixy
+
+	txHashLen := all[idx]
+	idx = idx + 1
+	txhashBytes :=  make([]byte,txHashLen)
+	copy(txhashBytes,all[idx:])
+
+	kistr := string(kix)
+	if c.usedRingSignI[kistr]== nil {
+
+		//func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool
+	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
+
+		if verifyRes {
+			return []byte("1")
+		}
+	}
 
 
 	return nil
-}
 }
 
 
