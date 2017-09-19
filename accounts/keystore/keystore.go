@@ -269,7 +269,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 }
 
 // SignTx signs the given transaction with the requested account.
-func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int,keys [] string) (*types.Transaction, error) {
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -280,9 +280,10 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey, nil)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey, keys)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, nil)
+
+	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, keys)
 }
 
 func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
@@ -297,6 +298,7 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
 	return ret, nil
 }
 
+
 func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -306,7 +308,9 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 		return nil, ErrLocked
 	}
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
-	return []string {crypto.PubkeyToAddress(*pub1).String(),
+	return []string {
+			 hexutil.Encode(pub1.X.Bytes()),
+			 hexutil.Encode(pub1.Y.Bytes()),
 			 hexutil.Encode(priv1.D.Bytes()),
 			 hexutil.Encode(priv2.D.Bytes()),
 	}, err
@@ -433,8 +437,8 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
-func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+func (ks *KeyStore) NewAccount(passphrase string,ota bool) (accounts.Account, error) {
+	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase,ota)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -474,7 +478,7 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
-	key := newKeyFromECDSA(priv, priv2)
+	key := newKeyFromECDSA(priv, priv2,false)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}

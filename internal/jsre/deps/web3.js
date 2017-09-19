@@ -3717,6 +3717,25 @@ var inputTransactionFormatter = function (options){
     return options;
 };
 
+var inputOTATransactionFormatter = function (options){
+
+        options.from = options.from || config.defaultAccount;
+        options.from = inputAddressFormatter(options.from);
+
+        if (options.to) { // it might be contract creation
+            options.to = inputAddressFormatter(options.to);
+        }
+
+        ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+            return options[key] !== undefined;
+        }).forEach(function(key){
+            //options[key] = utils.fromDecimal(options[key]);
+        });
+
+        return options;
+};
+
+
 /**
  * Formats the output of a transaction to its proper values
  *
@@ -3898,6 +3917,7 @@ module.exports = {
     inputBlockNumberFormatter: inputBlockNumberFormatter,
     inputCallFormatter: inputCallFormatter,
     inputTransactionFormatter: inputTransactionFormatter,
+    inputOTATransactionFormatter:inputOTATransactionFormatter,
     inputAddressFormatter: inputAddressFormatter,
     inputPostFormatter: inputPostFormatter,
     outputBigNumberFormatter: outputBigNumberFormatter,
@@ -5330,6 +5350,13 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
+    var sendOTARefundTransaction = new Method({
+        name: 'sendOTARefundTransaction',
+        call: 'eth_sendOTARefundTransaction',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
+
     var getPublicKeysRawStr = new Method({
         name: 'getPublicKeysRawStr',
         call: 'eth_getPublicKeysRawStr',
@@ -5340,15 +5367,15 @@ var methods = function () {
     var generateOneTimeAddress = new Method({
         name: 'generateOneTimeAddress',
         call: 'eth_generateOneTimeAddress',
-        params: 4,
-        inputFormatter: [null, null, null, null]
+        params: 1,
+        inputFormatter: [null]
     });
 
     var computeOTAPPKeys = new Method({
         name: 'computeOTAPPKeys',
         call: 'eth_computeOTAPPKeys',
-        params: 5,
-        inputFormatter: [formatters.inputAddressFormatter, null, null, null, null]
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var sign = new Method({
@@ -5421,6 +5448,7 @@ var methods = function () {
         sendRawTransaction,
         sendTransaction,
         sendOTATransaction,
+        sendOTARefundTransaction,
         getPublicKeysRawStr,
         generateOneTimeAddress,
         computeOTAPPKeys,
@@ -5607,6 +5635,14 @@ var methods = function () {
         inputFormatter: [null]
     });
 
+    var newOTAAccount = new Method({
+        name: 'newOTAAccount',
+        call: 'personal_newOTAAccount',
+        params: 1,
+        inputFormatter: [null]
+    });
+
+
     var unlockAccount = new Method({
         name: 'unlockAccount',
         call: 'personal_unlockAccount',
@@ -5630,6 +5666,7 @@ var methods = function () {
 
     return [
         newAccount,
+        newOTAAccount,
         unlockAccount,
         sendTransaction,
         lockAccount

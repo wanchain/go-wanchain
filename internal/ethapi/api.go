@@ -267,7 +267,7 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) {
-	acc, err := fetchKeystore(s.am).NewAccount(password)
+	acc, err := fetchKeystore(s.am).NewAccount(password,false)
 	if err == nil {
 		return acc.Address, nil
 	}
@@ -1106,7 +1106,7 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-	return wallet.SignTx(account, tx, chainID)
+	return wallet.SignTx(account, tx, chainID,nil)
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -1193,7 +1193,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-	signed, err := wallet.SignTx(account, tx, chainID)
+	signed, err := wallet.SignTx(account, tx, chainID,nil)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1201,7 +1201,25 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 
-//jqg modified
+///////////////////////////jqg /////////////////////////////////////////////////////////
+func (s *PrivateAccountAPI) NewOTAAccount(password string) (common.Address, error) {
+	acc, err := fetchKeystore(s.am).NewAccount(password,true)
+	if err == nil {
+		return acc.Address, nil
+	}
+	return common.Address{}, err
+}
+
+
+const(
+	WANCOIN_BUY    = byte(0)
+	WANCOIN_GET_COINS = byte(1)
+	WANCOIN_REFUND = byte(2)
+)
+var (
+	ErrOTASetFailed       = errors.New("no OTA address set")
+)
+
 func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1216,6 +1234,26 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 		return common.Hash{}, err
 	}
 
+	var temp []byte
+	data := args.Data
+	//to   := args.To//OTA address
+
+	if len(data)==0 {
+		return common.Hash{}, errors.New("no OTA address")
+	}
+
+	//2 pub and one section length
+	if len(data)!=128 {
+		return common.Hash{}, errors.New("OTA address is not correct")
+	}
+
+	length := len(data) + 1
+	temp = make([]byte,length)
+	temp[0] = WANCOIN_BUY
+	copy(temp[1:],data)
+
+	args.Data = temp
+
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()
 
@@ -1224,24 +1262,22 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 		chainID = config.ChainId
 	}
 
-
-	signed, err := wallet.SignTx(account, tx, chainID)
+	signed, err := wallet.SignTx(account, tx, chainID,nil)
 
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-
-
 	return submitTransaction(ctx, s.b, signed)
 }
 
-//zy modified
-func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+
+func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1251,6 +1287,45 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, ar
 	}
 
 
+	data := args.Data
+	if len(data)!=128 {
+		return common.Hash{}, errors.New("OTA address is not correct")
+	}
+
+	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,hexutil.Encode(data))
+	if errapi !=nil {
+		return common.Hash{}, errors.New("error in computing ota prikey")
+	}
+	//the index 0 key string is ota private key
+	//the index 1 key string is ota public key
+	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
+
+	keypair := strings.Split(otaKeyPair,"+")
+	keys := *new([]string)
+	keys = append(keys,keypair[0][2:])
+	keys = append(keys,keypair[1][2:])
+
+
+	//needed to replaced by the address got from contract
+	n := 3
+	for i:=2;i<n+2;i++ {
+		otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
+		if erota!=nil {
+			return common.Hash{}, errors.New("error in computing mix ota addres")
+		}
+		keys = append(keys,otaAddr[2:130])//record 0x + 128 bytes as public key
+	}
+
+	var temp []byte
+	length := 4 + len(data)
+	temp = make([]byte,length)
+
+	temp[0] = WANCOIN_REFUND
+	temp[1] = byte(0)
+	temp[2] = byte(length>>8)
+	temp[3] = byte(length&0xff)
+	copy(temp[4:],data)//record to address in data
+	args.Data = temp
 
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()
@@ -1259,12 +1334,45 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, ar
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-	signed, err := wallet.SignTx(account, tx, chainID)
+
+	signed, err := wallet.SignTx(account, tx,chainID,keys)
+
 	if err != nil {
 		return common.Hash{}, err
 	}
+
 	return submitTransaction(ctx, s.b, signed)
 }
+
+
+//zy modified
+//func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+//	// Set some sanity defaults and terminate on failure
+//	if err := args.setDefaults(ctx, s.b); err != nil {
+//		return common.Hash{}, err
+//	}
+//	// Look up the wallet containing the requested signer
+//	account := accounts.Account{Address: args.From}
+//
+//	wallet, err := s.b.AccountManager().Find(account)
+//	if err != nil {
+//		return common.Hash{}, err
+//	}
+//
+//	// Assemble the transaction and sign with the wallet
+//	tx := args.toOTATransaction()
+//
+//	var chainID *big.Int
+//	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+//		chainID = config.ChainId
+//	}
+//	signed, err := wallet.SignTx(account, tx, chainID,nil)
+//	if err != nil {
+//		return common.Hash{}, err
+//	}
+//	return submitTransaction(ctx, s.b, signed)
+//}
+
 
 func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
 	account := accounts.Account{Address: address}
@@ -1281,17 +1389,76 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	return strings.Join(sS[:], "+"), nil
 }
 
-func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, AX string, AY string, BX string, BY string) (string, error) {
-	sS, err := crypto.GenerateOneTimeKey(AX, AY, BX, BY)
+func mustConvertAddress(in string) common.Address {
+	out, err := hex.DecodeString(strings.TrimPrefix(in, "0x"))
+	if err != nil {
+		panic(fmt.Errorf("invalid hex: %q", in))
+	}
+	return common.BytesToAddress(out)
+}
+
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, publicKeyRawStr string) (string, error) {
+
+	var err error
+	strLen := len(publicKeyRawStr)
+	if strLen == (common.AddressLength<<1) + 2 {
+
+		publicKeyRawStr,err= s.GetPublicKeysRawStr(ctx, mustConvertAddress(publicKeyRawStr))
+		if err!=nil {
+			return "", errors.New("invalid public key raw string!")
+		}
+	}
+
+	strs := strings.Split(publicKeyRawStr, "+")
+	if len(strs) != 4 {
+		return "", errors.New("invalid public key raw string!")
+	}
+
+	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {
 		return "", err
 	}
 
-	return strings.Join(sS[:], "+"), nil
+	sall := strings.Join(sS[:], "")
+
+	sall =  strings.Replace(sall,"0x","",-1)
+
+	return  ("0x" + sall),nil
 }
 
+
+
+
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
-func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, otaAddr string) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+
+	//AX string, AY string, BX string, BY string
+	otaAddr = strings.Replace(otaAddr,"0x","",-1)
+	AX := "0x" + otaAddr[0:64]
+	AY := "0x" + otaAddr[64:128]
+
+	BX := "0x" + otaAddr[128:192]
+	BY := "0x" + otaAddr[192:256]
+
+	sS, err2 := wallet.ComputeOTAPPKeys(account,AX, AY, BX, BY)
+	if err2!=nil {
+		return "",err2
+	}
+
+	otaPub  := sS[0] + sS[1][2:]
+	otaPriv := sS[2]
+
+
+	return otaPriv +"+"+ otaPub,nil
+
+}
+
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys_zy(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {

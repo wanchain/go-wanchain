@@ -57,58 +57,44 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // TeemoGuo revise: 扩充函数参数，增加OTA交易类型的签名，todo 外部增加扫链程序，提供SignTx的参数PublicKeys
 // SignTx signs the transaction using the given signer and private key
 // TODO: Additional parameters added on SignTx, causes a conflict with test case in bench_test.go
-//jqg
+//jqg  keys [] string defining is for transfer OTA private key
 
-func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
+func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*Transaction, error) {
 
 	if tx.data.Txtype != 0 {
+
 		h := s.Hash(tx)
 		sig, err := crypto.Sign(h[:], prv)
 		if err != nil {
 			return nil, err
 		}
 		return s.WithSignature(tx, sig)
+
 	} else {//OTA类型交易环签名
-
-
-		testPublicKeys := *new([]*ecdsa.PublicKey)
-		for i:=0; i< 3; i++{
-			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
-		}
-
 		h := s.Hash(tx)
+		if tx.Data()[0]== WANCOIN_REFUND {
 
-		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h.Bytes(), prv.D, testPublicKeys)
+			otaPrivD,_:= new (big.Int).SetString(keys[0],16)
 
-		res := crypto.VerifyRingSign(h.Bytes(),PublicKeys,KeyImage,w_random,q_random)
+			keysLen := len(keys)
+			publicKeys := *new([]*ecdsa.PublicKey)
 
-		if res {
-			fmt.Println("verify passed")
-		}
+			for i:=1;i<keysLen;i++ {
+				x  := keys[i][0:64]
+				xb,_:= new(big.Int).SetString(x,16)
+				y := keys[i][64:]
+				yb,_:= new(big.Int).SetString(y,16)
+				tk:= &ecdsa.PublicKey{X: xb, Y: yb}
+				publicKeys = append(publicKeys,tk)
+			}
 
-		//cpy := &Transaction{data: tx.data}
+			PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h.Bytes(), otaPrivD, publicKeys)
+			//res := crypto.VerifyRingSign(h.Bytes(),PublicKeys,KeyImage,w_random,q_random)
+			//if res {
+			//	fmt.Println("verify passed")
+			//}
 
-		//cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
-
-		W_random := *new([]*hexutil.Big)
-		Q_random := *new([]*hexutil.Big)
-
-		for i := 0; i < len(PublicKeys); i++ {
-			w := w_random[i]
-			q := q_random[i]
-
-			W_random = append(W_random, (*hexutil.Big)(w))
-			Q_random = append(Q_random, (*hexutil.Big)(q))
-		}
-
-		//keyImage := crypto.PublicKeyToInt(KeyImage)
-
-
-		//cpy.data.KeyImage = keyImage
-		//cpy.data.W_random = W_random
-		//cpy.data.Q_random = Q_random
-
-		if tx.data.Payload[0]== WANCOIN_REFUND {
+			//if tx.data.Payload[0] == WANCOIN_REFUND {
 			var idx int
 			//byte[0],the number used for ring sign public key num
 			//byte[1:]
@@ -122,14 +108,14 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecds
 			orgLen := len(tx.data.Payload) //value
 
 			puklen := len(crypto.FromECDSAPub(PublicKeys[0])) + 1 //length + value
-			rndlen := len(w_random[0].Bytes()) + 1 //length + value
-			txHashLen := len(h.Bytes()) + 1//length + value
+			rndlen := len(w_random[0].Bytes()) + 1                //length + value
+			txHashLen := len(h.Bytes()) + 1                       //length + value
 
-			all := make([]byte,orgLen + pubsLen*(puklen + rndlen + rndlen ) + puklen + txHashLen + 1) //one public key,w,q ramdom is 2 segment
+			all := make([]byte, orgLen+pubsLen*(puklen+rndlen+rndlen )+puklen+txHashLen+1) //one public key,w,q ramdom is 2 segment
 
 			//copy orginal data
-			copy(all,tx.data.Payload)
-			//record the
+			copy(all, tx.data.Payload)
+				//record the
 			idx = orgLen
 			all[idx] = byte(pubsLen)
 			idx = idx + 1
@@ -142,22 +128,21 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecds
 				lenxy := len(byteArray)
 				all[idx] = byte(lenxy)
 				idx = idx + 1
-				copy(all[idx:],byteArray)
+				copy(all[idx:], byteArray)
 				idx = idx + lenxy
 
 				w := w_random[i].Bytes()
 				lenw := len(w)
 				all[idx] = byte(lenw)
 				idx = idx + 1
-				copy(all[idx:],w)
+				copy(all[idx:], w)
 				idx = idx + lenw
-
 
 				q := q_random[i].Bytes()
 				lenq := len(q)
 				all[idx] = byte(lenq)
 				idx = idx + 1
-				copy(all[idx:],q)
+				copy(all[idx:], q)
 				idx = idx + lenq
 			}
 
@@ -166,18 +151,20 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecds
 
 			all[idx] = byte(lenkixy)
 			idx = idx + 1
-			copy(all[idx:],byteArray)
+			copy(all[idx:], byteArray)
 			idx = idx + lenkixy
 
 			all[idx] = byte(len(h.Bytes()))
 			idx = idx + 1
 			txhashBytes := h.Bytes()
-			copy(all[idx:],txhashBytes)
+			copy(all[idx:], txhashBytes)
 
 			tx.data.Payload = all
+			//}
+
+			h = s.Hash(tx)
 		}
 
-		h = s.Hash(tx)
 		sig, err := crypto.Sign(h[:], prv)
 		if err != nil {
 			return nil, err
@@ -210,6 +197,7 @@ func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*e
 		for i:=0; i< 10; i++{
 			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
 		}
+
 		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h[:], prv.D, testPublicKeys)
 		cpy := &Transaction{data: tx.data}
 

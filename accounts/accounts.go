@@ -24,6 +24,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/event"
+
 )
 
 // Account represents an Ethereum account located at a specific location defined
@@ -110,7 +111,7 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignTxWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
-	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+	SignTx(account Account, tx *types.Transaction, chainID *big.Int,keys [] string) (*types.Transaction, error)
 
 	GetPublicKeysRawStr(account Account)([]string, error)
 

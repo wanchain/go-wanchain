@@ -334,7 +334,6 @@ func (c *wanCoinSC) init()  {
 	valBig,_ = new(big.Int).SetString(val,10)
 	c.wanCoinValues[int(1000)] = valBig
 	c.wanCoin[val] = make(map[int][]byte)
-
 }
 
 
@@ -422,8 +421,11 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		return nil
 	}
 
-	idx := 2
-	pubsLen := int(all[2])
+	otaLen := int(all[2]<<8|all[3])
+	//otaAddr := all[4:otaLen]
+
+	idx := otaLen
+	pubsLen := int(all[idx])
 	idx = idx + 1
 
 	PublicKeySet := *new([]*ecdsa.PublicKey)
@@ -477,6 +479,8 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	txhashBytes :=  make([]byte,txHashLen)
 	copy(txhashBytes,all[idx:])
 
+
+
 	kistr := string(kix)
 	if c.usedRingSignI[kistr]== nil {
 
@@ -484,7 +488,11 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
 
 		if verifyRes {
+
+			addrSrc := contract.CallerAddress
+			evm.env.StateDB.AddBalance(addrSrc, contract.value)
 			return []byte("1")
+
 		}
 	}
 

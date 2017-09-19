@@ -156,25 +156,6 @@ const(
 )
 
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
-	var temp []byte
-
-	if amount.Cmp(new(big.Int).SetBytes([]byte{0}))==0 {
-		length := len(data)
-		temp = make([]byte,length+2)
-		temp[0] = WANCOIN_REFUND
-		temp[1] = byte(length)
-		copy(temp[2:],data)
-		//need to remove,not it is test
-		 amount,_= new (big.Int).SetString("10000000000000000",10)
-	} else {
-		length := len(data) + 1 + len(to.Bytes())
-		temp = make([]byte,length)
-		temp[0] = WANCOIN_BUY
-		copy(temp[1:],data)
-		copy(temp[1+len(data):],to.Bytes())
-
-	}
-
 
 	addressDst := common.BytesToAddress([]byte{wancoinSCAddress})
 
@@ -182,7 +163,7 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 		Txtype: 0,
 		AccountNonce: nonce,
 		Recipient:	  &addressDst ,
-		Payload:      temp,
+		Payload:      data,
 		Amount:       new(big.Int),
 		GasLimit:     new(big.Int),
 		Price:        new(big.Int),
