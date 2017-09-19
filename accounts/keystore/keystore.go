@@ -296,39 +296,28 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 	ret := hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
 }
-func (ks *KeyStore) ScanOTAbyAccount(a accounts.Account, block map[string]interface{}) ([]string, error) {
+
+
+func (ks *KeyStore) WaddressToPublicKey(ota common.WAddress)(*ecdsa.PublicKey, *ecdsa.PublicKey, error){
+	return nil, nil, nil
+}
+func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr common.WAddress) (bool, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
-	/*
+	res := false
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
-		return nil, ErrLocked
+		return res, ErrLocked
 	}
 	A := &unlockedKey.PrivateKey.PublicKey
-	B := &unlockedKey.PrivateKey2.PublicKey
-	*/
-	otas := []string{}
-	element := block["transactions"]
-	if txs,ok := element.([]interface{}); ok{
-		for i:=0; i<len(txs); i++ {
-			if tx,ok := txs[i].(map[string]interface{});ok{
-				/* TODO where the dest ota store in a tx */
-				if txto,ok := tx["To"].(string); ok{
-					otas = append(otas,txto)
-				}
-				
-				//*A1 = crypto.CompareA1(RPrivateKey.D.Bytes(), A?, B?)
-
-			}
-		}
-	}else{
-		return otas,errors.New("fetch txs failed")
+	A1,S1,err := ks.WaddressToPublicKey(otaddr);
+	if(err != nil){
+		return res, err
 	}
+	res = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1,A1)
+	return res,nil
 
-
-	// hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
-	return otas, nil
 }
 
 func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {

@@ -44,6 +44,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	//"github.com/tendermint/go-crypto/keys/tx"
 )
 
 const (
@@ -1227,25 +1228,31 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 }
 
 func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
-	otas :=  make([]string,8)
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return otas, err
-	}
-
+	otas := []string{}
 	curBlock,err := s.GetBlockByNumber(ctx, n, true)
 	if err != nil {
 		return otas, err
 	}
-	sS, err2 := wallet.ScanOTAbyAccount(account, curBlock)
-	if err2 != nil {
-		return otas, err2
+
+	element := curBlock["transactions"]
+	if txs,ok := element.([]interface{}); ok{
+		for i:=0; i<len(txs); i++ {
+			txi := txs[i]
+			if txrpc,ok2 := txi.(*RPCTransaction);ok2{
+				/* TODO where the dest ota store in a tx */
+				//if wallet.CheckOTAdress(address, txrpc.input) == true {
+					//TODO txrpc.which field? 
+					otas = append(otas,string(txrpc.To.Hex()))
+				//}
+			}
+		}
+
+
+	}else{
+		return otas,errors.New("fetch txs failed")
 	}
-
-	return sS[:],nil		
-
-
+	
+	return otas,nil
 }
 func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
 	account := accounts.Account{Address: address}

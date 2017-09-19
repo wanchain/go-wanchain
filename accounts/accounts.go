@@ -113,7 +113,7 @@ type Wallet interface {
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
 	GetPublicKeysRawStr(account Account) ([]string, error)
-	ScanOTAbyAccount(account Account, b map[string]interface{}) ([]string, error)
+	CheckOTAdress(account Account, b common.WAddress) (bool, error)
 
 	ComputeOTAPPKeys(account Account, AX string, AY string, BX string, BY string) ([]string, error)
 

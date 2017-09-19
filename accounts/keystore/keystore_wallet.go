@@ -21,6 +21,7 @@ import (
 
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
@@ -119,14 +120,14 @@ func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account) ([]string
 	}
 	return w.keystore.GetPublicKeysRawStr(account)
 }
-func (w *keystoreWallet) ScanOTAbyAccount(account accounts.Account, b map[string]interface{}) ([]string, error) {
+func (w *keystoreWallet) CheckOTAdress(account accounts.Account, b common.WAddress) (bool, error) {
 	if account.Address != w.account.Address {
-		return nil, accounts.ErrUnknownAccount
+		return false, accounts.ErrUnknownAccount
 	}
 	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
-		return nil, accounts.ErrUnknownAccount
+		return false, accounts.ErrUnknownAccount
 	}
-	return w.keystore.ScanOTAbyAccount(account, b)
+	return w.keystore.CheckOTAdress(account, b)
 }
 
 func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
