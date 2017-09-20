@@ -1254,6 +1254,11 @@ func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address comm
 	
 	return otas,nil
 }
+
+func (s *PublicBlockChainAPI) GenerateRingSignatureOTAs(ctx context.Context, addr string, n int) ([]string, error) {
+	return []string{"aaa", "bbb", "ccc", "ddd"}, nil
+}
+
 func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
