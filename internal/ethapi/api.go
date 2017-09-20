@@ -1317,15 +1317,23 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	}
 
 	var temp []byte
+
+	val,_:= args.Value.MarshalText()
+
 	length := 4 + len(data)
-	temp = make([]byte,length)
+	valLen := len(val)
+	temp = make([]byte,length + valLen)
 
 	temp[0] = WANCOIN_REFUND
-	temp[1] = byte(0)
+	temp[1] = byte(valLen)
 	temp[2] = byte(length>>8)
 	temp[3] = byte(length&0xff)
-	copy(temp[4:],data)//record to address in data
+	copy(temp[4:],data[:])//record to address in data
+
+	copy(temp[length:],val[:])
+
 	args.Data = temp
+	args.Value = (*hexutil.Big)(big.NewInt(0))
 
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()

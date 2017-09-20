@@ -29,6 +29,7 @@ import (
 	"bytes"
 	"strconv"
 	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -346,6 +347,8 @@ func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
 		c.init();
 	}
 
+
+
 	if in[0]==WANCOIN_BUY {
 		return c.buyCoin(in[1:],contract,evm)
 	} else if in[0]==WANCOIN_GET_COINS {
@@ -415,16 +418,21 @@ func (c *wanCoinSC) getCoins(in []byte,contract *Contract,evm *Interpreter) []by
 
 func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
 
-	val := contract.value.String()
-	mapRef := c.wanCoin[val]
+	valLen := int(all[1])
+	otaLen := int(all[2]<<8|all[3])
+	//otaAddr := all[4:otaLen]
+	val := all[otaLen:otaLen+valLen]
+	vb := new (hexutil.Big)
+	vb.UnmarshalText(val)
+	valStr := vb.ToInt().String()
+
+	mapRef := c.wanCoin[valStr]
+
 	if mapRef == nil {
 		return nil
 	}
-
-	otaLen := int(all[2]<<8|all[3])
-	//otaAddr := all[4:otaLen]
-
-	idx := otaLen
+	//evm.env.StateDB.SetState(,,)
+	idx := otaLen + valLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
@@ -490,7 +498,7 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		if verifyRes {
 
 			addrSrc := contract.CallerAddress
-			evm.env.StateDB.AddBalance(addrSrc, contract.value)
+			evm.env.StateDB.AddBalance(addrSrc, vb.ToInt())
 			return []byte("1")
 
 		}
