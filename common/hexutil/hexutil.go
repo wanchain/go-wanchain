@@ -248,3 +248,12 @@ func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) ([]string) {
 		         Encode(B.Y.Bytes()),
 	}
 }
+
+
+func FourBigIntToHexSlice(AX,AY,BX,BY []byte) ([]string) {
+	return []string {Encode(AX),
+		Encode(AY),
+		Encode(BX),
+		Encode(BY),
+	}
+}

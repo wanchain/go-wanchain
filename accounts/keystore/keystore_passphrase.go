@@ -43,6 +43,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"crypto/ecdsa"
+	"errors"
 )
 
 const (
@@ -88,6 +89,36 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 	if key.Address != addr {
 		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
+
+	// lzh add
+	// Make sure waddress invalid
+	if !checkWaddressValid(key) {
+		return nil, fmt.Errorf("key waddress invalid! account %x", key.Address)
+	}
+
+	///////////////test
+	pk1, pk2, err := generatePublicKeyFromWadress(&key.WAddress)
+	if err != nil {
+		fmt.Println(pk1, pk2, err)
+	}
+	pk1 = pk2
+	///////////////test
+
+	return key, nil
+}
+
+func (ks keyStorePassphrase) GetKeyEncrypt(addr common.Address, filename string) (*Key, error) {
+	// Load the key from the keystore and decrypt its contents
+	keyjson, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	key, err := GenerateEncryptKey(keyjson)
+	if err != nil {
+		return nil, err
+	}
+
+	key.Address = addr
 	return key, nil
 }
 
@@ -164,10 +195,12 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		*cryptoStruct2,
 		key.Id.String(),
 		version,
+		hex.EncodeToString(key.WAddress[:]),
 	}
 	return json.Marshal(encryptedKeyJSONV3)
 }
 
+// lzh modify
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
 func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	// Parse the json into a simple map to fetch the key version
@@ -180,6 +213,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		keyBytes, keyId []byte
 		keyBytes2 []byte
 		err             error
+		waddressStr *string
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
@@ -196,6 +230,8 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		if err != nil{
 			return nil, err
 		}
+
+		waddressStr = &k.WAddress
 	}
 	// Handle any decryption errors and return the key
 	if err != nil {
@@ -203,12 +239,56 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	}
 	key := crypto.ToECDSA(keyBytes)
 	key2 := crypto.ToECDSA(keyBytes2)
+
+	// lzh add
+	waddress := common.WAddress{}
+	fmt.Println("waddress str len:", len(*waddressStr))
+	if waddressStr == nil || len(*waddressStr) != common.WAddressLength*2 {
+		return nil, errors.New("invalid waddress len!")
+	}
+
+	waddressB, err := hex.DecodeString(*waddressStr)
+	if err != nil {
+		return nil, err
+	}
+
+	copy(waddress[:], waddressB)
+
 	return &Key{
 		Id:         uuid.UUID(keyId),
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
 		PrivateKey: key,
 		PrivateKey2: key2,
+		WAddress: waddress,
 	}, nil
+}
+
+// lzh add
+func GenerateEncryptKey(keyjson []byte) (*Key, error) {
+	// Parse the json into a simple map to fetch the key version
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return nil, err
+	}
+
+	waddress, ok := m["waddress"].(string)
+	if !ok {
+		return nil, errors.New("invalid key store content! waddress not exit!")
+	}
+
+	waddressB, err := hex.DecodeString(waddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if CheckSum16(waddressB) != 0 {
+		return nil, errors.New("invalid waddress! checksum is not zero")
+	}
+
+	key := new(Key)
+	copy(key.WAddress[:], waddressB)
+
+	return key, nil
 }
 
 func decryptKeyV3Item(cryptoItem cryptoJSON, auth string) (keyBytes []byte, err error){

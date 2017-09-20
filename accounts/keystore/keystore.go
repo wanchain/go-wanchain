@@ -285,7 +285,8 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, nil)
 }
 
-func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
+// lzh modify
+func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -297,10 +298,22 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 	return ret, nil
 }
 
+// lzh modify
+func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
+	a, key, err := ks.getEncryptedKey(a)
+	if err != nil {
+		return ks.GetPublicKeysRawStrFromUnlock(a)
+	}
+
+	return key.GetTwoPublicKeyRawStrs()
+}
+
 
 func (ks *KeyStore) WaddressToPublicKey(ota common.WAddress)(*ecdsa.PublicKey, *ecdsa.PublicKey, error){
 	return nil, nil, nil
 }
+
+
 func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr common.WAddress) (bool, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -435,6 +448,16 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 		return a, nil, err
 	}
 	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
+	return a, key, err
+}
+
+// lzh
+func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
+	a, err := ks.Find(a)
+	if err != nil {
+		return a, nil, err
+	}
+	key, err := ks.storage.GetKeyEncrypt(a.Address, a.URL.Path)
 	return a, key, err
 }
 

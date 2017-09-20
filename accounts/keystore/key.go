@@ -33,6 +33,9 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/pborman/uuid"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"math/big"
+	"errors"
 )
 
 const (
@@ -47,11 +50,16 @@ type Key struct {
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
 	PrivateKey2  *ecdsa.PrivateKey
+
+	// lzh add (AX,AY,Bx,BY,checksum)
+	WAddress common.WAddress
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
+	// Loads the encrypt key from disk
+    GetKeyEncrypt(addr common.Address, filename string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -71,6 +79,7 @@ type encryptedKeyJSONV3 struct {
 	Crypto2 cryptoJSON `json:"crypto2"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
+	WAddress string    `json:"waddress"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -138,6 +147,30 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
+// lzh add
+func CheckSum16(data []byte) uint16 {
+	var (
+		sum    uint32
+		length int = len(data)
+		index  int
+	)
+
+	for length > 1 {
+		sum += (uint32(data[index])<<8) + (uint32(data[index+1]))
+		index += 2
+		length -= 2
+	}
+
+	if length > 0 {
+		sum += uint32(data[index])
+	}
+
+	sum = (sum >> 16) + (sum & 0xffff)
+	sum += (sum >> 16)
+
+	return uint16(^sum)
+}
+
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
@@ -146,8 +179,181 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.
 		PrivateKey: privateKeyECDSA,
 		PrivateKey2: privateKeyECDSA2,
 	}
+
+	// lzh add
+	if err := updateWaddress(key); err != nil {
+		return nil
+	}
+
 	return key
 }
+
+// lzh add
+func updateWaddress(k * Key) error  {
+	publicBytes := [4][]byte {
+		k.PrivateKey.PublicKey.X.Bytes(),
+		k.PrivateKey.PublicKey.Y.Bytes(),
+		k.PrivateKey2.PublicKey.X.Bytes(),
+		k.PrivateKey2.PublicKey.Y.Bytes(),
+	}
+
+	offset := 0
+	for i := 0; i < len(publicBytes); i++ {
+		copy(k.WAddress[offset:], publicBytes[i])
+		offset += len(publicBytes[i])
+
+		if offset >= common.WAddressLength {
+			return errors.New("update waddress fail! invalid public key len! over waddress len WAddressLength!")
+		}
+	}
+
+	if offset != common.WAddressLength - 2 {
+		return errors.New("update waddress fail! invalid public key len! public key total len is not WAddressLength-2!")
+	}
+
+	sum := CheckSum16(k.WAddress[0:offset])
+	k.WAddress[offset] = uint8(sum >> 8)
+	k.WAddress[offset+1] = uint8(sum & 0xff)
+	return nil
+}
+
+// lzh add
+func checkWaddressValid(k * Key) bool {
+
+	var tmpWaddress common.WAddress
+
+	publicBytes := [4][]byte {
+		k.PrivateKey.PublicKey.X.Bytes(),
+		k.PrivateKey.PublicKey.Y.Bytes(),
+		k.PrivateKey2.PublicKey.X.Bytes(),
+		k.PrivateKey2.PublicKey.Y.Bytes(),
+	}
+
+	offset := 0
+	for i := 0; i < len(publicBytes); i++ {
+		copy(tmpWaddress[offset:], publicBytes[i])
+		offset += len(publicBytes[i])
+
+		if offset >= common.WAddressLength {
+			return false
+		}
+	}
+
+	if offset != common.WAddressLength - 2 {
+		return false
+	}
+
+	sum := CheckSum16(tmpWaddress[0:offset])
+	tmpWaddress[offset] = uint8(sum >> 8)
+	tmpWaddress[offset+1] = uint8(sum & 0xff)
+
+	return k.WAddress == tmpWaddress
+}
+
+// lzh add
+func (k *Key)GetTwoPublicKeyRawStrs() ([]string, error) {
+	if CheckSum16(k.WAddress[:]) != 0 {
+		return nil, errors.New("invalid waddress! check sum is not zero!")
+	}
+
+	ret := hexutil.FourBigIntToHexSlice(k.WAddress[0:32], k.WAddress[32:64], k.WAddress[64:96], k.WAddress[96:128])
+	return ret, nil
+}
+
+// lzh add
+func (k *Key)GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
+	if k.PrivateKey != nil && k.PrivateKey2 != nil {
+		return &k.PrivateKey.PublicKey, &k.PrivateKey2.PublicKey, nil
+	}
+
+	if CheckSum16(k.WAddress[:]) != 0 {
+		return nil, nil, errors.New("invalid waddress! check sum is not zero!")
+	}
+
+	pk1 := new(ecdsa.PublicKey)
+	pk2 := new(ecdsa.PublicKey)
+
+	initPublicKeyFromWaddress(pk1, pk2, &k.WAddress)
+
+	return pk1, pk2, nil
+}
+
+// lzh add
+func generatePublicKeyFromWadress(waddress * common.WAddress) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
+	if CheckSum16(waddress[:]) != 0 {
+		return nil, nil, errors.New("invalid waddress! check sum is not zero!")
+	}
+
+	pk1 := new(ecdsa.PublicKey)
+	pk2 := new(ecdsa.PublicKey)
+
+	initPublicKeyFromWaddress(pk1, pk2, waddress)
+
+	return pk1, pk2, nil
+}
+
+// lzh add
+func initPublicKeyFromWaddress(pk1, pk2 * ecdsa.PublicKey, waddress * common.WAddress)  {
+	pk1.Curve = crypto.S256()
+	pk2.Curve = crypto.S256()
+
+	pk1.X = new(big.Int).SetBytes(waddress[0:32])
+	pk1.Y = new(big.Int).SetBytes(waddress[32:64])
+	pk2.X = new(big.Int).SetBytes(waddress[64:96])
+	pk2.Y = new(big.Int).SetBytes(waddress[96:128])
+}
+
+
+//// lzh add (ecdsa public key AX --> AY)
+//func GetEllipticYFromX(curve *elliptic.CurveParams, x *big.Int, positive bool) *big.Int  {
+//	// y² = x³ - 3x + b
+//	y2 := new(big.Int).Mul(x, x)
+//	y2.Mul(y2, x)
+//
+//	threeX := new(big.Int).Lsh(x, 1)
+//	threeX.Add(threeX, x)
+//
+//	y2.Sub(y2, threeX)
+//	y2.Add(y2, curve.B)
+//
+//	// ⌊√y2⌋ --> y
+//	y := new(big.Int).Sqrt(y2)
+//
+//
+//	if positive && y.Cmp(new(big.Int)) < 0 {
+//		y.Sub(new(big.Int), y)
+//	}
+//
+//	return y
+//}
+//
+//func TestGetEllipticYFromX() {
+//	xStr := "d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf"
+//	yStr := "6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+//
+//	x, ok := new(big.Int).SetString(xStr, 16)
+//	if !ok {
+//		return
+//	}
+//
+//	strstr := common.Bytes2Hex(x.Bytes())
+//
+//	exY, ok := new(big.Int).SetString(yStr, 16)
+//	if !ok {
+//		return
+//	}
+//
+//	strstr = common.Bytes2Hex(exY.Bytes())
+//
+//	y := GetEllipticYFromX(crypto.S256().Params(), x, false)
+//	strstr = common.Bytes2Hex(y.Bytes())
+//
+//	if y.Cmp(exY) == 0 {
+//		log.Info("TestGetEllipticYFromX suc!", strstr)
+//	} else {
+//		log.Info("TestGetEllipticYFromX fail!", strstr)
+//	}
+//}
 
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
@@ -241,3 +447,4 @@ func toISO8601(t time.Time) string {
 	}
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
+

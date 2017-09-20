@@ -125,7 +125,7 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 /////////// Address
 
 // a new wan addreess
-const WAddressLength = 68
+const WAddressLength = 130
 type WAddress [WAddressLength]byte
 
 // Address represents the 20 byte address of an Ethereum account.
