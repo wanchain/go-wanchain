@@ -1,0 +1,30 @@
+now the system only support cli wallet to transfer in Anonymous transaction mode
+
+here shows how to transfer from acount1 to account2 in Anonymous transaction mode in geth 
+
+1.there are at least 3 account in cli node and keep the balance>1 ether for each account
+	personal.newAccount("wanglu")
+
+2. check balance for account[2]
+  web3.fromWei(eth.getBalance(eth.accounts[2]))
+
+3. unlock Account1
+	personal.unlockAccount(eth.accounts[1],"wanglu",9999);
+	
+4  unlock account2
+	personal.unlockAccount(eth.accounts[2],"wanglu",9999);
+
+5. get anonymous address for account2
+   var pubs = eth.getPublicKeysRawStr(eth.accounts[2]);
+
+6. generate OTA address for account2  
+	var otaAddr = eth.generateOneTimeAddress(pubs)
+
+7. set the 	Anonymous contract address
+	var toAddr = "0x1000000000000000000000000000000000000006"
+
+8  transfer eth to the Anonymous contract
+	eth. sendOTATransaction({from: eth.accounts[1],to: toAddr,value: web3.toWei(1),data: otaAddr})
+
+9  account2 get balance from the anonymous contract
+	eth.sendOTARefundTransaction({from:eth.accounts[2],to:toAddr,value:web3.toWei(1),data: otaAddr})
