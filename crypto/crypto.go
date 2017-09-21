@@ -365,7 +365,7 @@ func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
 func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 	KeyImg := new(ecdsa.PublicKey)
 	I = new(ecdsa.PublicKey)
-	KeyImg.X, KeyImg.Y = S256().ScalarBaseMult(Keccak256(FromECDSAPub(pub))) //Hash(P)
+	KeyImg.X, KeyImg.Y = S256().ScalarMult(pub.X, pub.Y, Keccak256(FromECDSAPub(pub))) //Hash(P)
 	I.X, I.Y = S256().ScalarMult(KeyImg.X, KeyImg.Y, x)
 	I.Curve = S256()
 	return

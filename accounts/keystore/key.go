@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/btcsuite/btcd/btcec"
 	"math/big"
 	"errors"
 )
@@ -148,28 +149,23 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 }
 
 // lzh add
-func CheckSum16(data []byte) uint16 {
-	var (
-		sum    uint32
-		length int = len(data)
-		index  int
-	)
 
-	for length > 1 {
-		sum += (uint32(data[index])<<8) + (uint32(data[index+1]))
-		index += 2
-		length -= 2
+func checkSum16(data []byte) uint16 {
+	var sum    uint16
+	for i:=0; i<len(data); i+=1 {
+		sum += (uint16)(data[i])
 	}
 
-	if length > 0 {
-		sum += uint32(data[index])
-	}
-
-	sum = (sum >> 16) + (sum & 0xffff)
-	sum += (sum >> 16)
-
-	return uint16(^sum)
+	return sum
 }
+func VerifyWaddressCheckSum16(w []byte) bool {
+	sum := checkSum16(w[0:common.WAddressLength-2])
+	var wsum uint16
+	wsum += (uint16)(w[common.WAddressLength-2]) << 8
+	wsum += (uint16)(w[common.WAddressLength-1])
+	return sum == wsum
+}
+
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
@@ -180,129 +176,101 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.
 		PrivateKey2: privateKeyECDSA2,
 	}
 
-	// lzh add
-	if err := updateWaddress(key); err != nil {
-		return nil
-	}
+	updateWaddress(key)
 
 	return key
 }
-
-// lzh add
-func updateWaddress(k * Key) error  {
-	publicBytes := [4][]byte {
-		k.PrivateKey.PublicKey.X.Bytes(),
-		k.PrivateKey.PublicKey.Y.Bytes(),
-		k.PrivateKey2.PublicKey.X.Bytes(),
-		k.PrivateKey2.PublicKey.Y.Bytes(),
-	}
-
-	offset := 0
-	for i := 0; i < len(publicBytes); i++ {
-		copy(k.WAddress[offset:], publicBytes[i])
-		offset += len(publicBytes[i])
-
-		if offset >= common.WAddressLength {
-			return errors.New("update waddress fail! invalid public key len! over waddress len WAddressLength!")
-		}
-	}
-
-	if offset != common.WAddressLength - 2 {
-		return errors.New("update waddress fail! invalid public key len! public key total len is not WAddressLength-2!")
-	}
-
-	sum := CheckSum16(k.WAddress[0:offset])
-	k.WAddress[offset] = uint8(sum >> 8)
-	k.WAddress[offset+1] = uint8(sum & 0xff)
-	return nil
+// SerializeCompressed serializes a public key in a 33-byte compressed format. from btcec.
+func isOdd(a *big.Int) bool {
+	return a.Bit(0) == 1
 }
+func PubkeySerializeCompressed(p *ecdsa.PublicKey)  []byte {
+	const pubkeyCompressed   byte = 0x2
+	b := make([]byte, 0, 33)
+	format := pubkeyCompressed
+	if isOdd(p.Y) {
+		format |= 0x1
+	}
+	b = append(b, format)
+	b = append(b, p.X.Bytes()...)
+	return b
+}
+func (k *Key) GenerateWaddress()(common.WAddress) {
+	var tmpWaddress common.WAddress
+	copy(tmpWaddress[0:33], PubkeySerializeCompressed(&k.PrivateKey.PublicKey))
+	copy(tmpWaddress[33:66], PubkeySerializeCompressed(&k.PrivateKey2.PublicKey))
+	sum := checkSum16(tmpWaddress[0:66])
+	tmpWaddress[66] = (uint8)(sum>>8)
+	tmpWaddress[67] = (uint8)(sum&0xff)
+	return tmpWaddress
+}
+// lzh add
+func updateWaddress(k * Key)   {
+	k.WAddress = k.GenerateWaddress()
+}
+
 
 // lzh add
 func checkWaddressValid(k * Key) bool {
-
-	var tmpWaddress common.WAddress
-
-	publicBytes := [4][]byte {
-		k.PrivateKey.PublicKey.X.Bytes(),
-		k.PrivateKey.PublicKey.Y.Bytes(),
-		k.PrivateKey2.PublicKey.X.Bytes(),
-		k.PrivateKey2.PublicKey.Y.Bytes(),
-	}
-
-	offset := 0
-	for i := 0; i < len(publicBytes); i++ {
-		copy(tmpWaddress[offset:], publicBytes[i])
-		offset += len(publicBytes[i])
-
-		if offset >= common.WAddressLength {
-			return false
-		}
-	}
-
-	if offset != common.WAddressLength - 2 {
-		return false
-	}
-
-	sum := CheckSum16(tmpWaddress[0:offset])
-	tmpWaddress[offset] = uint8(sum >> 8)
-	tmpWaddress[offset+1] = uint8(sum & 0xff)
-
-	return k.WAddress == tmpWaddress
+	return k.WAddress == k.GenerateWaddress()
 }
 
 // lzh add
 func (k *Key)GetTwoPublicKeyRawStrs() ([]string, error) {
-	if CheckSum16(k.WAddress[:]) != 0 {
-		return nil, errors.New("invalid waddress! check sum is not zero!")
+	if VerifyWaddressCheckSum16(k.WAddress[:]) != true {
+		return nil, errors.New("invalid waddress! check sum is not correct!")
 	}
-
-	ret := hexutil.FourBigIntToHexSlice(k.WAddress[0:32], k.WAddress[32:64], k.WAddress[64:96], k.WAddress[96:128])
+	PK1,PK2,err := k.GetTwoPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	ret := hexutil.TwoPublicKeyToHexSlice(PK1, PK2)
 	return ret, nil
 }
 
 // lzh add
 func (k *Key)GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
-	if k.PrivateKey != nil && k.PrivateKey2 != nil {
-		return &k.PrivateKey.PublicKey, &k.PrivateKey2.PublicKey, nil
-	}
-
-	if CheckSum16(k.WAddress[:]) != 0 {
-		return nil, nil, errors.New("invalid waddress! check sum is not zero!")
-	}
-
-	pk1 := new(ecdsa.PublicKey)
-	pk2 := new(ecdsa.PublicKey)
-
-	initPublicKeyFromWaddress(pk1, pk2, &k.WAddress)
-
-	return pk1, pk2, nil
+	return generatePublicKeyFromWadress(&k.WAddress)
 }
 
 // lzh add
-func generatePublicKeyFromWadress(waddress * common.WAddress) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
-	if CheckSum16(waddress[:]) != 0 {
-		return nil, nil, errors.New("invalid waddress! check sum is not zero!")
+func generatePublicKeyFromWadress(waddr *common.WAddress) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
+	if VerifyWaddressCheckSum16(waddr[:]) != true {
+		return nil, nil, errors.New("invalid waddress! check sum is not correct!")
 	}
 
-	pk1 := new(ecdsa.PublicKey)
-	pk2 := new(ecdsa.PublicKey)
-
-	initPublicKeyFromWaddress(pk1, pk2, waddress)
-
-	return pk1, pk2, nil
+    pb := make([]byte, 33)
+    copy(pb[0:33], waddr[0:33])
+    curve := btcec.S256()
+    pk1, err := btcec.ParsePubKey(pb, curve)
+    if err != nil {
+        return nil,nil, err
+    }
+    copy(pb[0:33], waddr[33:66])
+    pk2, err2 := btcec.ParsePubKey(pb, curve)
+    if err2 != nil {
+        return nil,nil, err2
+    }
+    return (* ecdsa.PublicKey)(pk1), (* ecdsa.PublicKey)(pk2),nil
 }
 
 // lzh add
-func initPublicKeyFromWaddress(pk1, pk2 * ecdsa.PublicKey, waddress * common.WAddress)  {
+func initPublicKeyFromWaddress(pk1, pk2 * ecdsa.PublicKey, waddress  *common.WAddress)(error)  {
+
+	PK1, PK2, err := generatePublicKeyFromWadress(waddress)
+	if(err != nil) {
+		return err
+	}
 	pk1.Curve = crypto.S256()
 	pk2.Curve = crypto.S256()
 
-	pk1.X = new(big.Int).SetBytes(waddress[0:32])
-	pk1.Y = new(big.Int).SetBytes(waddress[32:64])
-	pk2.X = new(big.Int).SetBytes(waddress[64:96])
-	pk2.Y = new(big.Int).SetBytes(waddress[96:128])
-}
+	pk1.X = PK1.X
+	pk1.Y = PK1.Y
+	pk2.X = PK2.X
+	pk2.Y = PK2.Y
 
+	return nil
+}
 
 //// lzh add (ecdsa public key AX --> AY)
 //func GetEllipticYFromX(curve *elliptic.CurveParams, x *big.Int, positive bool) *big.Int  {

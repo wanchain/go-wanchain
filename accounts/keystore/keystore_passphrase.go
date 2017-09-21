@@ -35,15 +35,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"crypto/ecdsa"
+	"errors"
+	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/randentropy"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
-	"crypto/ecdsa"
-	"errors"
 )
 
 const (
@@ -74,6 +74,7 @@ type keyStorePassphrase struct {
 	scryptN     int
 	scryptP     int
 }
+
 //r@zy:key的加载
 func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
@@ -211,9 +212,9 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	// Depending on the version try to parse one way or another
 	var (
 		keyBytes, keyId []byte
-		keyBytes2 []byte
+		keyBytes2       []byte
 		err             error
-		waddressStr *string
+		waddressStr     *string
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
@@ -226,8 +227,8 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
-		keyBytes, keyBytes2,keyId, err = decryptKeyV3(k, auth)
-		if err != nil{
+		keyBytes, keyBytes2, keyId, err = decryptKeyV3(k, auth)
+		if err != nil {
 			return nil, err
 		}
 
@@ -242,7 +243,6 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 	// lzh add
 	waddress := common.WAddress{}
-	fmt.Println("waddress str len:", len(*waddressStr))
 	if waddressStr == nil || len(*waddressStr) != common.WAddressLength*2 {
 		return nil, errors.New("invalid waddress len!")
 	}
@@ -255,11 +255,11 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	copy(waddress[:], waddressB)
 
 	return &Key{
-		Id:         uuid.UUID(keyId),
-		Address:    crypto.PubkeyToAddress(key.PublicKey),
-		PrivateKey: key,
+		Id:          uuid.UUID(keyId),
+		Address:     crypto.PubkeyToAddress(key.PublicKey),
+		PrivateKey:  key,
 		PrivateKey2: key2,
-		WAddress: waddress,
+		WAddress:    waddress,
 	}, nil
 }
 
@@ -281,7 +281,7 @@ func GenerateEncryptKey(keyjson []byte) (*Key, error) {
 		return nil, err
 	}
 
-	if CheckSum16(waddressB) != 0 {
+	if VerifyWaddressCheckSum16(waddressB) != true {
 		return nil, errors.New("invalid waddress! checksum is not zero")
 	}
 
@@ -291,11 +291,11 @@ func GenerateEncryptKey(keyjson []byte) (*Key, error) {
 	return key, nil
 }
 
-func decryptKeyV3Item(cryptoItem cryptoJSON, auth string) (keyBytes []byte, err error){
+func decryptKeyV3Item(cryptoItem cryptoJSON, auth string) (keyBytes []byte, err error) {
 	if cryptoItem.Cipher != "aes-128-ctr" {
 		return nil, fmt.Errorf("Cipher not supported: %v", cryptoItem.Cipher)
 	}
-	
+
 	mac, err := hex.DecodeString(cryptoItem.MAC)
 	if err != nil {
 		return nil, err
