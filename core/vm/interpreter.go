@@ -78,6 +78,8 @@ func NewInterpreter(env *EVM, cfg Config) *Interpreter {
 		gasTable: env.ChainConfig().GasTable(env.BlockNumber),
 		intPool:  newIntPool(),
 	}
+
+
 }
 
 // Run loops and evaluates the contract's code with the given input data
@@ -90,6 +92,8 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 	if code!=nil {
 		fmt.Print("code is not nil")
 	}
+
+
 
 	if contract.CodeAddr != nil {
 

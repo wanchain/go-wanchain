@@ -86,7 +86,9 @@ type StateDB struct {
 
 // Create a new state from a given trie
 func New(root common.Hash, db ethdb.Database) (*StateDB, error) {
+
 	tr, err := trie.NewSecure(root, db, MaxTrieCacheGen)
+
 	if err != nil {
 		return nil, err
 	}
@@ -305,6 +307,18 @@ func (self *StateDB) StorageTrie(a common.Address) *trie.SecureTrie {
 	}
 	cpy := stateObject.deepCopy(self, nil)
 	return cpy.updateTrie(self.db)
+}
+
+func (self *StateDB) StorageVmTrie(a common.Address) *trie.SecureTrie {
+
+	stateObject := self.getStateObject(a)
+	if stateObject == nil {
+		return nil
+	}
+
+	stateObject.updateTrie(self.db)
+
+	return stateObject.trie
 }
 
 func (self *StateDB) HasSuicided(addr common.Address) bool {

@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -277,77 +278,25 @@ type wanCoinSC struct{
 	wanCoinValues map[int] *big.Int
 }
 
-
-func (c *wanCoinSC) init()  {
-	c.wanCoin =  make(map[string]map[int][]byte)
-	c.wanCoinValues = make(map[int] *big.Int)
-	c.usedRingSignI = make(map[string][]byte)
-	//0.1
-	val := strconv.Itoa(int(1)) + "0000000000000000"
-	valBig,_ := new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(1)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//0.2
-	val = strconv.Itoa(int(2)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(2)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//0.5
-	val = strconv.Itoa(int(5)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(5)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-
-	//1
-	val = strconv.Itoa(int(10)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(10)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//2
-	val = strconv.Itoa(int(20)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(20)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//5
-	val = strconv.Itoa(int(50)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(50)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-
-	//10
-	val = strconv.Itoa(int(100)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(100)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//20
-	val = strconv.Itoa(int(200)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(200)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-	//50
-	val = strconv.Itoa(int(500)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(500)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-
-	//100
-	val = strconv.Itoa(int(1000)) + "0000000000000000"
-	valBig,_ = new(big.Int).SetString(val,10)
-	c.wanCoinValues[int(1000)] = valBig
-	c.wanCoin[val] = make(map[int][]byte)
-}
-
-
 func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
 	return params.EcrecoverGas
 }
 
+const (
+	pre0dot1 = "10000000000000000"//0.1
+	pre0dot2 = "20000000000000000"//0.2
+	pre0dot5 = "50000000000000000"//0.5
+	pre1 = 	   "100000000000000000"//1
+	pre2 = 	   "200000000000000000"//2
+	pre5 = 	   "500000000000000000"//5
+	pre10 =    "1000000000000000000"//10
+	pre20 =    "2000000000000000000"//20
+	pre50 =    "5000000000000000000"//50
+	pre100 =   "50000000000000000000"//100
+)
+
+
 func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
-	if c.wanCoin==nil {
-		c.init();
-	}
-
-
 
 	if in[0]==WANCOIN_BUY {
 		return c.buyCoin(in[1:],contract,evm)
@@ -365,20 +314,25 @@ var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
+
 func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byte {
 
 	length := len(in)
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	val := contract.value.String()
-	mapRef := c.wanCoin[val]
-	if mapRef == nil {
+	val := contract.value.Bytes()
+
+	trie := evm.env.StateDB.StorageVmTrie(contract.Address())
+	if trie==nil {
 		return nil
 	}
 
-	elNum := len(mapRef)
-	mapRef[elNum+1]= temp
+	err :=trie.TryUpdate(temp,val)
+	if err!=nil {
+		return nil
+	}
+	trie.Commit()
 
 	addrSrc := contract.CallerAddress
 
@@ -420,18 +374,25 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 
 	valLen := int(all[1])
 	otaLen := int(all[2]<<8|all[3])
-	//otaAddr := all[4:otaLen]
-	val := all[otaLen:otaLen+valLen]
-	vb := new (hexutil.Big)
-	vb.UnmarshalText(val)
-	valStr := vb.ToInt().String()
+	otaAddrBytes := all[4:otaLen]
 
-	mapRef := c.wanCoin[valStr]
+	refundValBytes := all[otaLen:otaLen+valLen]
 
-	if mapRef == nil {
+	trie := evm.env.StateDB.StorageVmTrie(contract.Address())
+
+	if trie==nil {
 		return nil
 	}
-	//evm.env.StateDB.SetState(,,)
+
+	sendValueBytes,err :=trie.TryGet(otaAddrBytes)
+	if err!=nil {
+		return nil
+	}
+
+	if !bytes.Equal(refundValBytes,sendValueBytes) {
+		return nil
+	}
+
 	idx := otaLen + valLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
@@ -487,16 +448,17 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	txhashBytes :=  make([]byte,txHashLen)
 	copy(txhashBytes,all[idx:])
 
-
-
-	kistr := string(kix)
-	if c.usedRingSignI[kistr]== nil {
+	sendValueBytes,erri :=trie.TryGet(kix)
+	if erri==nil&&sendValueBytes!=nil {
+		return nil
+	} else  {
 
 		//func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool
 	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
 
 		if verifyRes {
-
+			vb := new (hexutil.Big)
+			vb.UnmarshalText(refundValBytes)
 			addrSrc := contract.CallerAddress
 			evm.env.StateDB.AddBalance(addrSrc, vb.ToInt())
 			return []byte("1")
@@ -504,10 +466,26 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		}
 	}
 
-
 	return nil
+
 }
 
+
+//func saveOtaAddress (all []byte,contract *Contract,evm *Interpreter) {
+//
+//	//d := memory.Get(mStart.Int64(), mSize.Int64())
+//	trie := evm.env.StateDB.
+//
+//	evm.env.StateDB.AddLog(&types.Log{
+//		Address: contract.Address(),
+//		Topics:  topics,
+//		Data:    d,
+//		// This is a non-consensus field, but assigned here because
+//		// core/state doesn't know the current block number.
+//		BlockNumber: evm.env.BlockNumber.Uint64(),
+//	})
+//
+//}
 
 
 

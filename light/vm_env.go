@@ -23,6 +23,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/trie"
 )
 
 // VMState is a wrapper for the light state that holds the actual context and
@@ -191,4 +192,8 @@ func (s *VMState) HasSuicided(addr common.Address) bool {
 	res, err := s.state.HasSuicided(s.ctx, addr)
 	s.errHandler(err)
 	return res
+}
+
+func (s *VMState) StorageVmTrie(a common.Address) *trie.SecureTrie {
+ 	return nil
 }
