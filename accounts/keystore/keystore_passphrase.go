@@ -91,20 +91,6 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
 
-	// lzh add
-	// Make sure waddress invalid
-	if !checkWaddressValid(key) {
-		return nil, fmt.Errorf("key waddress invalid! account %x", key.Address)
-	}
-
-	///////////////test
-	pk1, pk2, err := generatePublicKeyFromWadress(&key.WAddress)
-	if err != nil {
-		fmt.Println(pk1, pk2, err)
-	}
-	pk1 = pk2
-	///////////////test
-
 	return key, nil
 }
 
@@ -241,17 +227,12 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	key := crypto.ToECDSA(keyBytes)
 	key2 := crypto.ToECDSA(keyBytes2)
 
-	// lzh add
-	waddress := common.WAddress{}
-	if waddressStr == nil || len(*waddressStr) != common.WAddressLength*2 {
-		return nil, errors.New("invalid waddress len!")
-	}
-
 	waddressB, err := hex.DecodeString(*waddressStr)
 	if err != nil {
 		return nil, err
 	}
 
+	var waddress common.WAddress
 	copy(waddress[:], waddressB)
 
 	return &Key{

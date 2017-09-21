@@ -5355,6 +5355,8 @@ var methods = function () {
         call: 'eth_sendOTARefundTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
+	});
+
     var scanOTAbyAccount = new Method ({
         name: 'scanOTAbyAccount',
         call: 'eth_scanOTAbyAccount',
