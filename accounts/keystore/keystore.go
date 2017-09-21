@@ -35,10 +35,10 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/event"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
@@ -286,7 +286,8 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, keys)
 }
 
-func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
+// lzh modify
+func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -294,12 +295,46 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error){
 	if !found {
 		return nil, ErrLocked
 	}
-	ret :=  hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
+	ret := hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
 }
 
+// lzh modify
+func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
+	a, key, err := ks.getEncryptedKey(a)
+	if err != nil {
+		return ks.GetPublicKeysRawStrFromUnlock(a)
+	}
 
-func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+	return key.GetTwoPublicKeyRawStrs()
+}
+
+
+func (ks *KeyStore) WaddressToPublicKey(ota common.WAddress)(*ecdsa.PublicKey, *ecdsa.PublicKey, error){
+	return nil, nil, nil
+}
+
+
+func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr common.WAddress) (bool, error) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	res := false
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return res, ErrLocked
+	}
+	A := &unlockedKey.PrivateKey.PublicKey
+	A1,S1,err := ks.WaddressToPublicKey(otaddr);
+	if(err != nil){
+		return res, err
+	}
+	res = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1,A1)
+	return res,nil
+
+}
+
+func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -307,12 +342,17 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 	if !found {
 		return nil, ErrLocked
 	}
+
+	// check OTA belong to current account
+	// *************************
+
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
 	return []string {
 			 hexutil.Encode(pub1.X.Bytes()),
 			 hexutil.Encode(pub1.Y.Bytes()),
 			 hexutil.Encode(priv1.D.Bytes()),
 			 hexutil.Encode(priv2.D.Bytes()),
+
 	}, err
 }
 
@@ -412,6 +452,16 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 		return a, nil, err
 	}
 	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
+	return a, key, err
+}
+
+// lzh
+func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
+	a, err := ks.Find(a)
+	if err != nil {
+		return a, nil, err
+	}
+	key, err := ks.storage.GetKeyEncrypt(a.Address, a.URL.Path)
 	return a, key, err
 }
 

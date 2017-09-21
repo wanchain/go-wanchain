@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -42,8 +44,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
+	//"github.com/tendermint/go-crypto/keys/tx"
 )
 
 const (
@@ -1381,6 +1382,37 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 //	return submitTransaction(ctx, s.b, signed)
 //}
 
+func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
+	otas := []string{}
+	curBlock,err := s.GetBlockByNumber(ctx, n, true)
+	if err != nil {
+		return otas, err
+	}
+
+	element := curBlock["transactions"]
+	if txs,ok := element.([]interface{}); ok{
+		for i:=0; i<len(txs); i++ {
+			txi := txs[i]
+			if txrpc,ok2 := txi.(*RPCTransaction);ok2{
+				/* TODO where the dest ota store in a tx */
+				//if wallet.CheckOTAdress(address, txrpc.input) == true {
+					//TODO txrpc.which field? 
+					otas = append(otas,string(txrpc.To.Hex()))
+				//}
+			}
+		}
+
+
+	}else{
+		return otas,errors.New("fetch txs failed")
+	}
+	
+	return otas,nil
+}
+
+func (s *PublicBlockChainAPI) GenerateRingSignatureOTAs(ctx context.Context, addr string, n int) ([]string, error) {
+	return []string{"aaa", "bbb", "ccc", "ddd"}, nil
+}
 
 func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
 	account := accounts.Account{Address: address}
@@ -1390,7 +1422,7 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	}
 
 	sS, err2 := wallet.GetPublicKeysRawStr(account)
-	if err2 != nil{
+	if err2 != nil {
 		return "", err2
 	}
 
@@ -1416,6 +1448,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, p
 			return "", errors.New("invalid public key raw string!")
 		}
 	}
+
 
 	strs := strings.Split(publicKeyRawStr, "+")
 	if len(strs) != 4 {
@@ -1467,13 +1500,14 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 }
 
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys_zy(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
+
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return "", err
 	}
 
-	sS, err2 := wallet.ComputeOTAPPKeys(account,AX, AY, BX, BY)
+	sS, err2 := wallet.ComputeOTAPPKeys(account, strs[0], strs[1], strs[2], strs[3])
 
 	return strings.Join(sS[:], "+"), err2
 }

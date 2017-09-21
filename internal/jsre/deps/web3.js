@@ -5355,6 +5355,18 @@ var methods = function () {
         call: 'eth_sendOTARefundTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
+    var scanOTAbyAccount = new Method ({
+        name: 'scanOTAbyAccount',
+        call: 'eth_scanOTAbyAccount',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
+    });
+
+
+    var generateRingSignatureOTAs = new Method({
+        name: 'generateRingSignatureOTAs',
+        call: 'eth_generateRingSignatureOTAs',
+        params: 2
     });
 
     var getPublicKeysRawStr = new Method({
@@ -5447,6 +5459,8 @@ var methods = function () {
         estimateGas,
         sendRawTransaction,
         sendTransaction,
+        scanOTAbyAccount,
+        generateRingSignatureOTAs,
         sendOTATransaction,
         sendOTARefundTransaction,
         getPublicKeysRawStr,

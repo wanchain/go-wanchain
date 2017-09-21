@@ -21,6 +21,7 @@ import (
 
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
@@ -110,7 +111,7 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 	return w.keystore.SignTx(account, tx, chainID,keys)
 }
 
-func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account)([]string, error){
+func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account) ([]string, error) {
 	if account.Address != w.account.Address {
 		return nil, accounts.ErrUnknownAccount
 	}
@@ -119,15 +120,24 @@ func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account)([]string,
 	}
 	return w.keystore.GetPublicKeysRawStr(account)
 }
+func (w *keystoreWallet) CheckOTAdress(account accounts.Account, b common.WAddress) (bool, error) {
+	if account.Address != w.account.Address {
+		return false, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return false, accounts.ErrUnknownAccount
+	}
+	return w.keystore.CheckOTAdress(account, b)
+}
 
-func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
 	if account.Address != w.account.Address {
 		return nil, accounts.ErrUnknownAccount
 	}
 	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
 		return nil, accounts.ErrUnknownAccount
 	}
-	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY);
+	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY)
 }
 
 // SignHashWithPassphrase implements accounts.Wallet, attempting to sign the
