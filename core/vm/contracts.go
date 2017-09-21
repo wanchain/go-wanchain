@@ -273,6 +273,8 @@ const (
 
 type wanCoinSC struct{
 	vmtrie *trie.SecureTrie
+
+	triesMap map[string]*trie.SecureTrie
 }
 
 func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
@@ -293,9 +295,39 @@ const (
 )
 
 func (c *wanCoinSC) init(in []byte,contract *Contract,evm *Interpreter){
-	common.StringToAddress("wanchainCoinSc")
+	//common.StringToAddress("wanchainCoinSc")
 	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
+	c.triesMap = make(map[string]*trie.SecureTrie)
 
+	temp := big.NewInt(10000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot1))
+
+	temp = big.NewInt(20000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot2))
+
+	temp = big.NewInt(50000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot5))
+
+	temp = big.NewInt(100000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre1))
+
+	temp = big.NewInt(200000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre2))
+
+	temp = big.NewInt(500000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre5))
+
+	temp = big.NewInt(100000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre10))
+
+	temp = big.NewInt(200000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre20))
+
+	temp = big.NewInt(500000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre50))
+
+	temp = big.NewInt(1000000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre100))
 }
 
 func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
@@ -327,8 +359,8 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 
 	val := contract.value.Bytes()
 
-	//common.BytesToAddress([]byte{1,2}
-	trie := c.vmtrie
+	//trie := c.vmtrie
+	trie := c.triesMap[contract.value.String()]
 	if trie==nil {
 		return nil
 	}
@@ -383,8 +415,10 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 
 	refundValBytes := all[otaLen:otaLen+valLen]
 
-	trie := c.vmtrie
-
+	//trie := c.vmtrie
+	vb := new (big.Int)
+	vb.SetBytes(refundValBytes)
+	trie := c.triesMap[vb.String()]
 	if trie==nil {
 		return nil
 	}
@@ -453,19 +487,17 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	txhashBytes :=  make([]byte,txHashLen)
 	copy(txhashBytes,all[idx:])
 
-	imageValue,erri :=trie.TryGet(kix)
+	imageValue,erri := c.vmtrie.TryGet(kix)
 
 	if len(imageValue)!=0&&erri==nil {
 		return nil
 	} else  {
 
-	   trie.Update(kix,sendValueBytes)
+		c.vmtrie.Update(kix,sendValueBytes)
 		//func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool
 	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
 
 		if verifyRes {
-			vb := new (big.Int)
-			vb.SetBytes(refundValBytes)
 
 			addrSrc := contract.CallerAddress
 			evm.env.StateDB.AddBalance(addrSrc, vb)
