@@ -155,10 +155,6 @@ func (t *Trie) TryGet(key []byte) ([]byte, error) {
 
 func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
 
-	if origNode==nil {
-		origNode = hashNode{}
-	}
-
 	switch n := (origNode).(type) {
 	case nil:
 		return nil, nil, false, nil

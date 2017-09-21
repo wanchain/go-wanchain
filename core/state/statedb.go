@@ -310,15 +310,9 @@ func (self *StateDB) StorageTrie(a common.Address) *trie.SecureTrie {
 }
 
 func (self *StateDB) StorageVmTrie(a common.Address) *trie.SecureTrie {
-
-	stateObject := self.getStateObject(a)
-	if stateObject == nil {
-		return nil
-	}
-
-	stateObject.updateTrie(self.db)
-
-	return stateObject.trie
+	stateObject := self.GetOrNewStateObject(a)
+	stateObject.GetState(self.db,common.BytesToHash(a.Bytes()))
+	return  stateObject.trie
 }
 
 func (self *StateDB) HasSuicided(addr common.Address) bool {

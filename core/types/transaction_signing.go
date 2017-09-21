@@ -89,7 +89,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			}
 
 			PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h.Bytes(), otaPrivD, publicKeys)
-			//res := crypto.VerifyRingSign(h.Bytes(),PublicKeys,KeyImage,w_random,q_random)
+			crypto.VerifyRingSign(h.Bytes(),PublicKeys,KeyImage,w_random,q_random)
 			//if res {
 			//	fmt.Println("verify passed")
 			//}

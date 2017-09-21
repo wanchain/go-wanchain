@@ -1318,7 +1318,7 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 
 	var temp []byte
 
-	val,_:= args.Value.MarshalText()
+	val := args.Value.ToInt().Bytes()
 
 	length := 4 + len(data)
 	valLen := len(val)
