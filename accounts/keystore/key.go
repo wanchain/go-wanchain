@@ -342,14 +342,14 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
-	key := newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2,false)
+	key := newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2)
 	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
 		return NewKeyForDirectICAP(rand)
 	}
 	return key
 }
 
-func newKey(rand io.Reader,ota bool) (*Key, error) {
+func newKey(rand io.Reader) (*Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
@@ -360,11 +360,11 @@ func newKey(rand io.Reader,ota bool) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2,ota), nil
+	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string,ota bool) (*Key, accounts.Account, error) {
-	key, err := newKey(rand,ota)
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+	key, err := newKey(rand)
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}

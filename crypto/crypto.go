@@ -35,7 +35,6 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"fmt"
 )
 

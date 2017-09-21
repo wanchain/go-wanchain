@@ -280,7 +280,7 @@ func accountCreate(ctx *cli.Context) error {
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	account, err := ks.NewAccount(password,false)
+	account, err := ks.NewAccount(password)
 	if err != nil {
 		utils.Fatalf("Failed to create account: %v", err)
 	}

@@ -268,7 +268,7 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) {
-	acc, err := fetchKeystore(s.am).NewAccount(password,false)
+	acc, err := fetchKeystore(s.am).NewAccount(password)
 	if err == nil {
 		return acc.Address, nil
 	}
@@ -1204,7 +1204,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 
 ///////////////////////////jqg /////////////////////////////////////////////////////////
 func (s *PrivateAccountAPI) NewOTAAccount(password string) (common.Address, error) {
-	acc, err := fetchKeystore(s.am).NewAccount(password,true)
+	acc, err := fetchKeystore(s.am).NewAccount(password)
 	if err == nil {
 		return acc.Address, nil
 	}
@@ -1499,18 +1499,6 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 
 }
 
-func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys_zy(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
-
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return "", err
-	}
-
-	sS, err2 := wallet.ComputeOTAPPKeys(account, strs[0], strs[1], strs[2], strs[3])
-
-	return strings.Join(sS[:], "+"), err2
-}
 
 //func (s *PublicTransactionPoolAPI) GenerateSignature(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
 
