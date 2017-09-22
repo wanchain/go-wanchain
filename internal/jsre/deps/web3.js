@@ -5356,6 +5356,12 @@ var methods = function () {
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
 	});
+    var buyOTAStamp = new Method({
+        name: 'buyOTAStamp',
+        call: 'eth_buyOTAStamp',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
 
     var scanOTAbyAccount = new Method ({
         name: 'scanOTAbyAccount',
@@ -5465,6 +5471,7 @@ var methods = function () {
         generateRingSignatureOTAs,
         sendOTATransaction,
         sendOTARefundTransaction,
+        buyOTAStamp,
         getPublicKeysRawStr,
         generateOneTimeAddress,
         computeOTAPPKeys,

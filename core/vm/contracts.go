@@ -25,9 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
-    "math/rand"
 	"bytes"
-	"strconv"
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/trie"
 )
@@ -145,6 +143,7 @@ func (c *dataCopy) RequiredGas(inputSize int) uint64 {
 }
 
 func (c *dataCopy) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+
 	return in
 }
 
@@ -159,29 +158,34 @@ func (c *dataCopy) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
  */
 
 const (
-	ACT_BUY_STAMP    = byte(0)
-	ACT_GET_STAMP    = byte(1)
-	ACT_REFUND_STAMP = byte(2)
+	WAN_CONTRACT_SEND_OTA = byte(0)
+	WAN_GET_STAMPSET = byte(1)
+	WAN_BUY_STAMP = byte(3)
+	WAN_VERIFY_STAMP = byte(4)
 
-	ONE_WAN_STAMP   = byte(1)
-	TWO_WAN_STAMP   = byte(2)
-	THREE_WAN_STAMP = byte(3)
-
+	WAN_STAMP_DOT1 = "10000000000000000"//0.1
+	WAN_STAMP_DOT2 = "20000000000000000"//0.2
+	WAN_STAMP_DOT5 = "50000000000000000"//0.5
 )
 
 type wanchainStampSC struct{
-	wanchainStamps map[*big.Int]map[int][]byte
-	wanchainStampValue map[int] *big.Int
+	vmtrie *trie.SecureTrie
+	triesMap map[string]*trie.SecureTrie
 }
 
-func (c *wanchainStampSC) init()  {
-	c.wanchainStamps =  make(map[*big.Int]map[int][]byte)
-	c.wanchainStampValue = make(map[int] *big.Int)
-	for i:=ONE_WAN_STAMP;i<=THREE_WAN_STAMP;i++ {
-		val := strconv.Itoa(int(i)) + "00000000000000000"
-		c.wanchainStampValue[int(i)] = new(big.Int).SetBytes([]byte(val))
-		c.wanchainStamps[new(big.Int).SetBytes([]byte(val))] = make(map[int][]byte)
-	}
+func (c *wanchainStampSC) init(in []byte,contract *Contract,evm *Interpreter)  {
+
+	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
+	c.triesMap = make(map[string]*trie.SecureTrie)
+
+	temp := big.NewInt(10000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT1))
+
+	temp = big.NewInt(20000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT2))
+
+	temp = big.NewInt(50000000000000000).String()
+	c.triesMap[temp] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT5))
 
 }
 
@@ -190,81 +194,161 @@ func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 }
 
 func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
-	if c.wanchainStamps==nil {
-		c.init();
+	if c.vmtrie==nil {
+		c.init(in,contract,evm);
 	}
 
-	if in[0]==ACT_BUY_STAMP {
+	if in[0]==WAN_BUY_STAMP {
 		return c.buyStamp(in[1:],contract,evm)
-	} else if in[0]==ACT_GET_STAMP {
+	} else if in[0]==WAN_CONTRACT_SEND_OTA{
 		return c.getStamps(in[1:],contract,evm)
-	} else {
-		return c.refund(in[1:],contract,evm)
+	} else if in[0]==WAN_VERIFY_STAMP{
+		return c.verifyStamp(in[0:],contract,evm)
+	}  else if in[0]==WAN_GET_STAMPSET{
+		return c.getStamps(in[0:],contract,evm)
 	}
 
 	return  nil
 }
 
-
 func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter) []byte {
 
 	length := len(in)
-	temp := make([]byte,length-1)
-	copy(temp,in[1:])
+	temp := make([]byte,length)
+	copy(temp,in[:])
 
-	mapRef := c.wanchainStamps[contract.value]
-	if mapRef == nil {
+	val := contract.value.Bytes()
+
+	//trie := c.vmtrie
+	trie := c.triesMap[contract.value.String()]
+	if trie==nil {
 		return nil
 	}
 
-	elNum := len(mapRef)
-	mapRef[elNum+1]= temp
-
-
-	addrSrc := contract.CallerAddress
-
-	balance := evm.env.StateDB.GetBalance(addrSrc)
-
-	if balance.Cmp(contract.value) >= 0{
-		evm.env.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte("1")
+	err :=trie.TryUpdate(temp,val)
+	if err!=nil {
+		return nil
 	}
+	trie.Commit()
 
 	return nil
 }
 
 func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interpreter) []byte {
+	return nil
+}
 
-	num := int(in[0])
-	var mapLen int
+func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpreter) []byte {
 
-	stamps := []byte("")
-	stampSet := make([][]byte, num)
+	valLen := int(all[1])
+	otaLen := int(all[2]<<8|all[3])
+	otaAddrBytes := all[4:otaLen]
 
-	mapRef := c.wanchainStamps[contract.value]
-	if mapRef == nil {
+	refundValBytes := all[otaLen:otaLen+valLen]
+
+	//trie := c.vmtrie
+	vb := new (big.Int)
+	vb.SetBytes(refundValBytes)
+	trie := c.triesMap[vb.String()]
+	if trie==nil {
 		return nil
 	}
 
-	for i:=0;i<num;i++ {
-		rnd := rand.Intn(mapLen)
-		stampSet[i] = mapRef[rnd]
+	sendValueBytes,err :=trie.TryGet(otaAddrBytes)
+	if err!=nil {
+		return nil
 	}
 
-	return bytes.Join(stampSet, stamps)
-}
+	if !bytes.Equal(refundValBytes,sendValueBytes) {
+		return nil
+	}
 
-func (c *wanchainStampSC) refund(in []byte,contract *Contract,evm *Interpreter) []byte {
+	idx := otaLen + valLen
+	pubsLen := int(all[idx])
+	idx = idx + 1
+
+	PublicKeySet := *new([]*ecdsa.PublicKey)
+	W_random := *new([]*big.Int)
+	Q_random := *new([]*big.Int)
+
+
+	var i int
+	for i = 0; i < pubsLen; i++ {
+		lenxy := int(all[idx])
+		idx = idx + 1
+
+		x := make([]byte,lenxy)
+		copy(x,all[idx:])
+		puk := crypto.ToECDSAPub(x)
+		PublicKeySet = append(PublicKeySet, puk)//convert []byte to public key
+		idx = idx + lenxy
+
+
+		lenw :=  int(all[idx])
+		idx = idx + 1
+
+		w := make([]byte,lenw)
+		copy(w,all[idx:])
+		rndw := new (big.Int).SetBytes(w)
+		W_random = append(W_random, rndw) //convert []byte to random
+		idx = idx + lenw
+
+
+
+		lenq :=  int(all[idx])
+		idx = idx + 1
+
+		q := make([]byte,lenq)
+		copy(q,all[idx:])
+		rndq := new (big.Int).SetBytes(q)
+		Q_random = append(Q_random, rndq)//convert []byte to random
+		idx = idx + lenq
+	}
+
+	lenkixy := int(all[idx])
+	idx = idx + 1
+
+	kix := make([]byte,lenkixy)
+	copy(kix,all[idx:])
+	KeyImage := crypto.ToECDSAPub(kix)
+	idx = idx + lenkixy
+
+	txHashLen := all[idx]
+	idx = idx + 1
+	txhashBytes :=  make([]byte,txHashLen)
+	copy(txhashBytes,all[idx:])
+
+	imageValue,erri := c.vmtrie.TryGet(kix)
+
+	if len(imageValue)!=0&&erri==nil {
+		return nil
+	} else  {
+
+		c.vmtrie.Update(kix,sendValueBytes)
+		//func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool
+		verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
+
+		if verifyRes {
+			//send the value to the miner
+			evm.env.StateDB.AddBalance(evm.env.Coinbase, new(big.Int).SetBytes(sendValueBytes))
+			return []byte("1")
+
+		}
+	}
+
 	return nil
 }
-///////////////////////////////////////////////////////////////////
+
+
+
+
+//////////////////////////genesis coin precompile contract/////////////////////////////////////////
 /*  byte[0]: 0->buy
  *			 1->refund
  *
  *  byte[2]: if action is stampSet, this is the set number
  *  byte[3:]:the OTA-Address
  */
-
 const (
 	WANCOIN_BUY    = byte(0)
 	WANCOIN_GET_COINS = byte(1)
@@ -273,7 +357,6 @@ const (
 
 type wanCoinSC struct{
 	vmtrie *trie.SecureTrie
-
 	triesMap map[string]*trie.SecureTrie
 }
 
@@ -509,26 +592,5 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	}
 
 	return nil
-
 }
-
-
-//func saveOtaAddress (all []byte,contract *Contract,evm *Interpreter) {
-//
-//	//d := memory.Get(mStart.Int64(), mSize.Int64())
-//	trie := evm.env.StateDB.
-//
-//	evm.env.StateDB.AddLog(&types.Log{
-//		Address: contract.Address(),
-//		Topics:  topics,
-//		Data:    d,
-//		// This is a non-consensus field, but assigned here because
-//		// core/state doesn't know the current block number.
-//		BlockNumber: evm.env.BlockNumber.Uint64(),
-//	})
-//
-//}
-
-
-
 
