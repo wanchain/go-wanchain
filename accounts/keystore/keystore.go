@@ -310,12 +310,17 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 }
 
 
-func (ks *KeyStore) WaddressToPublicKey(ota common.WAddress)(*ecdsa.PublicKey, *ecdsa.PublicKey, error){
-	return nil, nil, nil
+func VerifyWaddressCheckSum16(w []byte) bool {
+	sum := checkSum16(w[0:common.WAddressLength-2])
+	var wsum uint16
+	wsum += (uint16)(w[common.WAddressLength-2]) << 8
+	wsum += (uint16)(w[common.WAddressLength-1])
+	return sum == wsum
 }
 
 
-func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr common.WAddress) (bool, error) {
+
+func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr *common.WAddress) (bool, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -325,7 +330,7 @@ func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr common.WAddress) (b
 		return res, ErrLocked
 	}
 	A := &unlockedKey.PrivateKey.PublicKey
-	A1,S1,err := ks.WaddressToPublicKey(otaddr);
+	A1,S1,err := GeneratePublicKeyFromWadress(otaddr[:]);
 	if(err != nil){
 		return res, err
 	}

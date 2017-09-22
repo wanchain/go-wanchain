@@ -556,7 +556,7 @@ func (w *ledgerWallet) SignHash(acc accounts.Account, hash []byte) ([]byte, erro
 // Note, if the version of the Ethereum application running on the Ledger wallet is
 // too old to sign EIP-155 transactions, but such is requested nonetheless, an error
 // will be returned opposed to silently signing in Homestead mode.
-func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int,keys [] string) (*types.Transaction, error) {
+func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int, keys []string) (*types.Transaction, error) {
 	w.stateLock.RLock() // Comms have own mutex, this is for the state fields
 	defer w.stateLock.RUnlock()
 
@@ -594,7 +594,7 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account) ([]string, error) {
 	return nil, nil
 }
-func (w *ledgerWallet) CheckOTAdress(account accounts.Account, b common.WAddress) (bool, error) {
+func (w *ledgerWallet) CheckOTAdress(account accounts.Account, b *common.WAddress) (bool, error) {
 	return false, nil
 }
 func (w *ledgerWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
@@ -612,7 +612,7 @@ func (w *ledgerWallet) SignHashWithPassphrase(account accounts.Account, passphra
 // transaction with the given account using passphrase as extra authentication.
 // Since the Ledger does not support extra passphrases, it is silently ignored.
 func (w *ledgerWallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
-	return w.SignTx(account, tx, chainID,nil)
+	return w.SignTx(account, tx, chainID, nil)
 }
 
 // ledgerVersion retrieves the current version of the Ethereum wallet app running

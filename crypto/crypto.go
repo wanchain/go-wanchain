@@ -507,7 +507,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	return ret
 }
 
-// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]A)]G+B
+// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]B)]G+A
 func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKey {
 	A1 := new(ecdsa.PublicKey)
 	A1.X, A1.Y = S256().ScalarMult(B.X, B.Y, r)   //A1=[r]B

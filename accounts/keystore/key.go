@@ -158,14 +158,6 @@ func checkSum16(data []byte) uint16 {
 
 	return sum
 }
-func VerifyWaddressCheckSum16(w []byte) bool {
-	sum := checkSum16(w[0:common.WAddressLength-2])
-	var wsum uint16
-	wsum += (uint16)(w[common.WAddressLength-2]) << 8
-	wsum += (uint16)(w[common.WAddressLength-1])
-	return sum == wsum
-}
-
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
@@ -204,6 +196,15 @@ func (k *Key) GenerateWaddress()(common.WAddress) {
 	tmpWaddress[67] = (uint8)(sum&0xff)
 	return tmpWaddress
 }
+func GenerateWaddressFromPubkey(Pub1, Pub2 *ecdsa.PublicKey)common.WAddress{
+	var tmpWaddress common.WAddress
+	copy(tmpWaddress[0:33], PubkeySerializeCompressed(Pub1))
+	copy(tmpWaddress[33:66], PubkeySerializeCompressed(Pub2))
+	sum := checkSum16(tmpWaddress[0:66])
+	tmpWaddress[66] = (uint8)(sum>>8)
+	tmpWaddress[67] = (uint8)(sum&0xff)
+	return tmpWaddress
+}
 // lzh add
 func updateWaddress(k * Key)   {
 	k.WAddress = k.GenerateWaddress()
@@ -230,12 +231,12 @@ func (k *Key)GetTwoPublicKeyRawStrs() ([]string, error) {
 
 // lzh add
 func (k *Key)GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
-	return generatePublicKeyFromWadress(&k.WAddress)
+	return GeneratePublicKeyFromWadress(k.WAddress[:])
 }
 
 // lzh add
-func generatePublicKeyFromWadress(waddr *common.WAddress) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
-	if VerifyWaddressCheckSum16(waddr[:]) != true {
+func GeneratePublicKeyFromWadress(waddr []byte) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
+	if VerifyWaddressCheckSum16(waddr) != true {
 		return nil, nil, errors.New("invalid waddress! check sum is not correct!")
 	}
 
@@ -253,11 +254,36 @@ func generatePublicKeyFromWadress(waddr *common.WAddress) (* ecdsa.PublicKey, *e
     }
     return (* ecdsa.PublicKey)(pk1), (* ecdsa.PublicKey)(pk2),nil
 }
+func WaddrFromUncompressed(waddr []byte, raw []byte) error{
+	pub := make([]byte, 65)
+	pub[0] = 0x04
+	copy(pub[1:], raw[0:64])
+	A := crypto.ToECDSAPub(pub)
+	copy(pub[1:], raw[64:])
+	B := crypto.ToECDSAPub(pub)
+	wd:=GenerateWaddressFromPubkey(A, B)
+	copy(waddr, wd[:])
+	return nil
+}
+func WaddrToUncompressed(waddr []byte, raw []byte)error{
+	A, B, err := GeneratePublicKeyFromWadress(waddr)
+	if err != nil{
+		return err
+	}
+	u := make([]byte, 128)
+	u = append(u, A.X.Bytes()...)
+	u = append(u, A.Y.Bytes()...)
+	u = append(u, B.X.Bytes()...)
+	u = append(u, B.Y.Bytes()...)
+
+	copy(raw, u)
+	return nil
+}
 
 // lzh add
 func initPublicKeyFromWaddress(pk1, pk2 * ecdsa.PublicKey, waddress  *common.WAddress)(error)  {
 
-	PK1, PK2, err := generatePublicKeyFromWadress(waddress)
+	PK1, PK2, err := GeneratePublicKeyFromWadress(waddress[:])
 	if(err != nil) {
 		return err
 	}

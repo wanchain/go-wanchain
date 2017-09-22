@@ -1381,24 +1381,40 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 //	}
 //	return submitTransaction(ctx, s.b, signed)
 //}
-
+var privacyContract common.Address
 func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
 	otas := []string{}
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return otas, err
+	}
+
 	curBlock,err := s.GetBlockByNumber(ctx, n, true)
 	if err != nil {
 		return otas, err
 	}
 
 	element := curBlock["transactions"]
+	privacyContract[19] = 0x06
 	if txs,ok := element.([]interface{}); ok{
 		for i:=0; i<len(txs); i++ {
 			txi := txs[i]
 			if txrpc,ok2 := txi.(*RPCTransaction);ok2{
-				/* TODO where the dest ota store in a tx */
-				//if wallet.CheckOTAdress(address, txrpc.input) == true {
-					//TODO txrpc.which field? 
+				if privacyContract.Str() == txrpc.To.Str() {
 					otas = append(otas,string(txrpc.To.Hex()))
-				//}
+					var otaWAddr common.WAddress
+					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
+						return otas, err4
+					}
+					isMine, err := wallet.CheckOTAdress(account, &otaWAddr)
+					if err != nil {
+						return otas, err
+					}
+					if isMine ==true {
+						otas = append(otas,string(hexutil.Encode(txrpc.Input[1:])))
+					}
+				}
 			}
 		}
 
@@ -1406,7 +1422,7 @@ func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address comm
 	}else{
 		return otas,errors.New("fetch txs failed")
 	}
-	
+
 	return otas,nil
 }
 
