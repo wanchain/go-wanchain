@@ -145,19 +145,22 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 const(
 	stampSCAddress 	 = 5
 	wancoinSCAddress = 6
-	//stampSCAddress = "0x0000000000000000000000000000000000000005";
-	//wancoinSCAddress = "0x0000000000000000000000000000000000000006";
+
 	WANCOIN_BUY    = byte(0)
 	WANCOIN_GET_COINS = byte(1)
 	WANCOIN_REFUND = byte(2)
-
-	HashLength    = 32
-	AddressLength = 20
+	WAN_BUY_STAMP = byte(3)
 )
 
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	var addressDst common.Address
+	addressDst = *to
 
-	addressDst := common.BytesToAddress([]byte{wancoinSCAddress})
+	if data[0] == WANCOIN_BUY {
+		addressDst = common.BytesToAddress([]byte{wancoinSCAddress})
+	} else if data[0] == WAN_BUY_STAMP {
+		addressDst = common.BytesToAddress([]byte{stampSCAddress})
+	}
 
 	d := txdata{
 		Txtype: 0,

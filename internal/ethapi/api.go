@@ -1216,6 +1216,9 @@ const(
 	WANCOIN_BUY    = byte(0)
 	WANCOIN_GET_COINS = byte(1)
 	WANCOIN_REFUND = byte(2)
+	WAN_BUY_STAMP = byte(3)
+
+	wancoinScAddr = 6
 )
 var (
 	ErrOTASetFailed       = errors.New("no OTA address set")
@@ -1331,6 +1334,7 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	temp[3] = byte(length&0xff)
 	copy(temp[4:],data[:])//record to address in data
 
+	//record value in data,the acutal spend should be 0
 	copy(temp[length:],val[:])
 
 	args.Data = temp
@@ -1353,34 +1357,58 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	return submitTransaction(ctx, s.b, signed)
 }
 
+func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+	
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
 
-//zy modified
-//func (s *PublicTransactionPoolAPI) SendOTATransaction_zy(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-//	// Set some sanity defaults and terminate on failure
-//	if err := args.setDefaults(ctx, s.b); err != nil {
-//		return common.Hash{}, err
-//	}
-//	// Look up the wallet containing the requested signer
-//	account := accounts.Account{Address: args.From}
-//
-//	wallet, err := s.b.AccountManager().Find(account)
-//	if err != nil {
-//		return common.Hash{}, err
-//	}
-//
-//	// Assemble the transaction and sign with the wallet
-//	tx := args.toOTATransaction()
-//
-//	var chainID *big.Int
-//	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-//		chainID = config.ChainId
-//	}
-//	signed, err := wallet.SignTx(account, tx, chainID,nil)
-//	if err != nil {
-//		return common.Hash{}, err
-//	}
-//	return submitTransaction(ctx, s.b, signed)
-//}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	var temp []byte
+	data := args.Data
+	//to   := args.To//OTA address
+
+	if len(data)==0 {
+		return common.Hash{}, errors.New("no OTA address")
+	}
+
+	//2 pub and one section length
+	if len(data)!=128 {
+		return common.Hash{}, errors.New("OTA address is not correct")
+	}
+
+	length := len(data) + 1
+	temp = make([]byte,length)
+	temp[0] = WAN_BUY_STAMP
+	copy(temp[1:],data)
+
+	args.Data = temp
+
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
+
+	signed, err := wallet.SignTx(account, tx, chainID,nil)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, signed)
+
+}
+
 var privacyContract common.Address
 func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
 	otas := []string{}

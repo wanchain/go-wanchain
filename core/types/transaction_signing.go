@@ -72,7 +72,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 	} else {//OTA类型交易环签名
 		h := s.Hash(tx)
-		if tx.Data()[0]== WANCOIN_REFUND {
+		if tx.Data()[0] == WANCOIN_REFUND  {
 
 			otaPrivD,_:= new (big.Int).SetString(keys[0],16)
 
