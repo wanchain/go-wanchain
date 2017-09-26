@@ -1430,7 +1430,7 @@ func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address comm
 			txi := txs[i]
 			if txrpc,ok2 := txi.(*RPCTransaction);ok2{
 				if privacyContract.Str() == txrpc.To.Str() {
-					otas = append(otas,string(txrpc.To.Hex()))
+					//otas = append(otas,string(txrpc.To.Hex()))
 					var otaWAddr common.WAddress
 					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
 						return otas, err4
