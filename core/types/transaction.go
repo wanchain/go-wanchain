@@ -150,15 +150,16 @@ const(
 	WANCOIN_GET_COINS = byte(1)
 	WANCOIN_REFUND = byte(2)
 	WAN_BUY_STAMP = byte(3)
+	WAN_CONTRACT_OTA = byte(4)
 )
 
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	var addressDst common.Address
 	addressDst = *to
 
-	if data[0] == WANCOIN_BUY {
+	if data[0] == WANCOIN_BUY||data[0]==WANCOIN_REFUND {
 		addressDst = common.BytesToAddress([]byte{wancoinSCAddress})
-	} else if data[0] == WAN_BUY_STAMP {
+	} else if data[0] == WAN_BUY_STAMP || data[0] == WAN_CONTRACT_OTA {
 		addressDst = common.BytesToAddress([]byte{stampSCAddress})
 	}
 
