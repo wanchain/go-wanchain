@@ -310,16 +310,6 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 }
 
 
-func VerifyWaddressCheckSum16(w []byte) bool {
-	sum := checkSum16(w[0:common.WAddressLength-2])
-	var wsum uint16
-	wsum += (uint16)(w[common.WAddressLength-2]) << 8
-	wsum += (uint16)(w[common.WAddressLength-1])
-	return sum == wsum
-}
-
-
-
 func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr *common.WAddress) (bool, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()

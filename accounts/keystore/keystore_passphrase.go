@@ -262,10 +262,6 @@ func GenerateEncryptKey(keyjson []byte) (*Key, error) {
 		return nil, err
 	}
 
-	if VerifyWaddressCheckSum16(waddressB) != true {
-		return nil, errors.New("invalid waddress! checksum is not zero")
-	}
-
 	key := new(Key)
 	copy(key.WAddress[:], waddressB)
 

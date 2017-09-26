@@ -29,19 +29,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/wanchain/go-wanchain/crypto"
 	"math/big"
-	"errors"
 )
 
 const (
 	version = 3
 )
+
 //r@zy: 修改为新的结构
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
@@ -49,10 +49,9 @@ type Key struct {
 	Address common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
-	PrivateKey *ecdsa.PrivateKey
-	PrivateKey2  *ecdsa.PrivateKey
+	PrivateKey  *ecdsa.PrivateKey
+	PrivateKey2 *ecdsa.PrivateKey
 
-	// lzh add (AX,AY,Bx,BY,checksum)
 	WAddress common.WAddress
 }
 
@@ -60,7 +59,7 @@ type keyStore interface {
 	// Loads and decrypts the key from disk.
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
 	// Loads the encrypt key from disk
-    GetKeyEncrypt(addr common.Address, filename string) (*Key, error)
+	GetKeyEncrypt(addr common.Address, filename string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -75,12 +74,12 @@ type plainKeyJSON struct {
 }
 
 type encryptedKeyJSONV3 struct {
-	Address string     `json:"address"`
-	Crypto  cryptoJSON `json:"crypto"`
-	Crypto2 cryptoJSON `json:"crypto2"`
-	Id      string     `json:"id"`
-	Version int        `json:"version"`
-	WAddress string    `json:"waddress"`
+	Address  string     `json:"address"`
+	Crypto   cryptoJSON `json:"crypto"`
+	Crypto2  cryptoJSON `json:"crypto2"`
+	Id       string     `json:"id"`
+	Version  int        `json:"version"`
+	WAddress string     `json:"waddress"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -148,23 +147,12 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
-// lzh add
-
-func checkSum16(data []byte) uint16 {
-	var sum    uint16
-	for i:=0; i<len(data); i+=1 {
-		sum += (uint16)(data[i])
-	}
-
-	return sum
-}
-
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
-		Id:         id,
-		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
-		PrivateKey: privateKeyECDSA,
+		Id:          id,
+		Address:     crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		PrivateKey:  privateKeyECDSA,
 		PrivateKey2: privateKeyECDSA2,
 	}
 
@@ -172,12 +160,13 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.
 
 	return key
 }
+
 // SerializeCompressed serializes a public key in a 33-byte compressed format. from btcec.
 func isOdd(a *big.Int) bool {
 	return a.Bit(0) == 1
 }
-func PubkeySerializeCompressed(p *ecdsa.PublicKey)  []byte {
-	const pubkeyCompressed   byte = 0x2
+func PubkeySerializeCompressed(p *ecdsa.PublicKey) []byte {
+	const pubkeyCompressed byte = 0x2
 	b := make([]byte, 0, 33)
 	format := pubkeyCompressed
 	if isOdd(p.Y) {
@@ -187,41 +176,32 @@ func PubkeySerializeCompressed(p *ecdsa.PublicKey)  []byte {
 	b = append(b, p.X.Bytes()...)
 	return b
 }
-func (k *Key) GenerateWaddress()(common.WAddress) {
+func (k *Key) GenerateWaddress() common.WAddress {
 	var tmpWaddress common.WAddress
 	copy(tmpWaddress[0:33], PubkeySerializeCompressed(&k.PrivateKey.PublicKey))
 	copy(tmpWaddress[33:66], PubkeySerializeCompressed(&k.PrivateKey2.PublicKey))
-	sum := checkSum16(tmpWaddress[0:66])
-	tmpWaddress[66] = (uint8)(sum>>8)
-	tmpWaddress[67] = (uint8)(sum&0xff)
 	return tmpWaddress
 }
-func GenerateWaddressFromPubkey(Pub1, Pub2 *ecdsa.PublicKey)common.WAddress{
+func GenerateWaddressFromPubkey(Pub1, Pub2 *ecdsa.PublicKey) common.WAddress {
 	var tmpWaddress common.WAddress
 	copy(tmpWaddress[0:33], PubkeySerializeCompressed(Pub1))
 	copy(tmpWaddress[33:66], PubkeySerializeCompressed(Pub2))
-	sum := checkSum16(tmpWaddress[0:66])
-	tmpWaddress[66] = (uint8)(sum>>8)
-	tmpWaddress[67] = (uint8)(sum&0xff)
 	return tmpWaddress
 }
+
 // lzh add
-func updateWaddress(k * Key)   {
+func updateWaddress(k *Key) {
 	k.WAddress = k.GenerateWaddress()
 }
 
-
 // lzh add
-func checkWaddressValid(k * Key) bool {
+func checkWaddressValid(k *Key) bool {
 	return k.WAddress == k.GenerateWaddress()
 }
 
 // lzh add
-func (k *Key)GetTwoPublicKeyRawStrs() ([]string, error) {
-	if VerifyWaddressCheckSum16(k.WAddress[:]) != true {
-		return nil, errors.New("invalid waddress! check sum is not correct!")
-	}
-	PK1,PK2,err := k.GetTwoPublicKey()
+func (k *Key) GetTwoPublicKeyRawStrs() ([]string, error) {
+	PK1, PK2, err := k.GetTwoPublicKey()
 	if err != nil {
 		return nil, err
 	}
@@ -230,44 +210,40 @@ func (k *Key)GetTwoPublicKeyRawStrs() ([]string, error) {
 }
 
 // lzh add
-func (k *Key)GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
+func (k *Key) GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
 	return GeneratePublicKeyFromWadress(k.WAddress[:])
 }
 
 // lzh add
-func GeneratePublicKeyFromWadress(waddr []byte) (* ecdsa.PublicKey, *ecdsa.PublicKey, error)  {
-	if VerifyWaddressCheckSum16(waddr) != true {
-		return nil, nil, errors.New("invalid waddress! check sum is not correct!")
+func GeneratePublicKeyFromWadress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	pb := make([]byte, 33)
+	copy(pb[0:33], waddr[0:33])
+	curve := btcec.S256()
+	pk1, err := btcec.ParsePubKey(pb, curve)
+	if err != nil {
+		return nil, nil, err
 	}
-
-    pb := make([]byte, 33)
-    copy(pb[0:33], waddr[0:33])
-    curve := btcec.S256()
-    pk1, err := btcec.ParsePubKey(pb, curve)
-    if err != nil {
-        return nil,nil, err
-    }
-    copy(pb[0:33], waddr[33:66])
-    pk2, err2 := btcec.ParsePubKey(pb, curve)
-    if err2 != nil {
-        return nil,nil, err2
-    }
-    return (* ecdsa.PublicKey)(pk1), (* ecdsa.PublicKey)(pk2),nil
+	copy(pb[0:33], waddr[33:66])
+	pk2, err2 := btcec.ParsePubKey(pb, curve)
+	if err2 != nil {
+		return nil, nil, err2
+	}
+	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
 }
-func WaddrFromUncompressed(waddr []byte, raw []byte) error{
+func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	pub := make([]byte, 65)
 	pub[0] = 0x04
 	copy(pub[1:], raw[0:64])
 	A := crypto.ToECDSAPub(pub)
 	copy(pub[1:], raw[64:])
 	B := crypto.ToECDSAPub(pub)
-	wd:=GenerateWaddressFromPubkey(A, B)
+	wd := GenerateWaddressFromPubkey(A, B)
 	copy(waddr, wd[:])
 	return nil
 }
-func WaddrToUncompressed(waddr []byte, raw []byte)error{
+func WaddrToUncompressed(waddr []byte, raw []byte) error {
 	A, B, err := GeneratePublicKeyFromWadress(waddr)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	u := make([]byte, 128)
@@ -281,10 +257,10 @@ func WaddrToUncompressed(waddr []byte, raw []byte)error{
 }
 
 // lzh add
-func initPublicKeyFromWaddress(pk1, pk2 * ecdsa.PublicKey, waddress  *common.WAddress)(error)  {
+func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddress) error {
 
 	PK1, PK2, err := GeneratePublicKeyFromWadress(waddress[:])
-	if(err != nil) {
+	if err != nil {
 		return err
 	}
 	pk1.Curve = crypto.S256()
@@ -441,4 +417,3 @@ func toISO8601(t time.Time) string {
 	}
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
-
