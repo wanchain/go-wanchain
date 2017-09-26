@@ -72,9 +72,10 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 	} else {//OTA类型交易环签名
 		h := s.Hash(tx)
-		if tx.Data()[0] == WANCOIN_REFUND  {
+		var otaPrivD *big.Int
+		if tx.Data()[0] == WANCOIN_REFUND || tx.Data()[0] == WAN_CONTRACT_OTA {
 
-			otaPrivD,_:= new (big.Int).SetString(keys[0],16)
+			otaPrivD,_ = new (big.Int).SetString(keys[0],16)
 
 			keysLen := len(keys)
 			publicKeys := *new([]*ecdsa.PublicKey)
@@ -165,13 +166,24 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			h = s.Hash(tx)
 		}
 
-		sig, err := crypto.Sign(h[:], prv)
-		if err != nil {
-			return nil, err
-		}
-		tx, err = s.WithSignature(tx, sig)
+		if tx.Data()[0] == WAN_CONTRACT_OTA {
+			privD := crypto.ToECDSA(otaPrivD.Bytes())
+			sig, err := crypto.Sign(h[:], privD)
+			if err != nil {
+				return nil, err
+			}
+			tx, err = s.WithSignature(tx, sig)
+			return tx, nil
 
-		return tx, nil
+		} else {
+
+			sig, err := crypto.Sign(h[:], prv)
+			if err != nil {
+				return nil, err
+			}
+			tx, err = s.WithSignature(tx, sig)
+			return tx, nil
+		}
 	}
 }
 //zhangy
