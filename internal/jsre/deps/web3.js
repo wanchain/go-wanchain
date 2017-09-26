@@ -5391,6 +5391,13 @@ var methods = function () {
         inputFormatter: [null]
     });
 
+    var signOTAContractTransaction = new Method({
+        name: 'signOTAContractTransaction',
+        call: 'eth_signOTAContractTransaction',
+        params: 2,
+        inputFormatter: [formatters.inputTransactionFormatter,null]
+    });
+
     var computeOTAPPKeys = new Method({
         name: 'computeOTAPPKeys',
         call: 'eth_computeOTAPPKeys',
@@ -5472,6 +5479,7 @@ var methods = function () {
         sendOTATransaction,
         sendOTARefundTransaction,
         buyOTAStamp,
+        signOTAContractTransaction,
         getPublicKeysRawStr,
         generateOneTimeAddress,
         computeOTAPPKeys,

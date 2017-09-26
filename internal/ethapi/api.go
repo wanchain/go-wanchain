@@ -1217,7 +1217,7 @@ const(
 	WANCOIN_GET_COINS = byte(1)
 	WANCOIN_REFUND = byte(2)
 	WAN_BUY_STAMP = byte(3)
-
+	WAN_CONTRACT_OTA = byte(4)
 	wancoinScAddr = 6
 )
 var (
@@ -1511,6 +1511,124 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, p
 	return  ("0x" + sall),nil
 }
 
+
+//args.data store the call contract byte code
+func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,otaAddress string) (string, error) {
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return "", err
+	}
+
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+
+	data,otaerr:= hexutil.Decode(otaAddress)
+	if otaerr!=nil || len(data)!=128 {
+		return "", errors.New("OTA address is not correct")
+	}
+
+	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,hexutil.Encode(data))
+	if errapi !=nil {
+		return "", errors.New("error in computing ota prikey")
+	}
+	//the index 0 key string is ota private key
+	//the index 1 key string is ota public key
+	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
+
+	keypair := strings.Split(otaKeyPair,"+")
+	keys := *new([]string)
+	keys = append(keys,keypair[0][2:])
+	keys = append(keys,keypair[1][2:])
+
+
+	//needed to replaced by the address got from contract
+	n := 3
+	for i:=2;i<n+2;i++ {
+		otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
+		if erota!=nil {
+			return "", errors.New("error in computing mix ota addres")
+		}
+		keys = append(keys,otaAddr[2:130])//record 0x + 128 bytes as public key
+	}
+
+
+	var temp []byte
+
+	//val := args.Value.ToInt().Bytes()
+	length := 4 + len(data)
+	//valLen := len(val)
+	temp = make([]byte,length)
+
+	temp[0] = WAN_CONTRACT_OTA
+	temp[1] = byte(0)//keep it
+	temp[2] = byte(length>>8)
+	temp[3] = byte(length&0xff)
+	copy(temp[4:],data[:])//record to address in data
+
+	//record value in data,the acutal spend should be 0
+	//copy(temp[length:],val[:])
+
+	args.Data = temp
+	args.Value = (*hexutil.Big)(big.NewInt(0))
+
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
+
+	tx,sigErr :=  wallet.SignTx(account, tx,chainID,keys)
+	if sigErr!=nil {
+		return "", err
+	}
+
+	txBytes,berr := tx.MarshalJSON()
+	if berr!=nil {
+		return "", err
+	}
+
+	return hexutil.Encode(txBytes),nil
+
+}
+
+
+
+func (s *PublicTransactionPoolAPI) SendOTARawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (string, error) {
+
+
+	tx := new(types.Transaction)
+
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return "", err
+	}
+
+	if err := s.b.SendTx(ctx, tx); err != nil {
+		return "", err
+	}
+
+	////remove them because OTA raw
+	//signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
+	//if tx.To() == nil {
+	//	from, err := types.Sender(signer, tx)
+	//	if err != nil {
+	//		return "", err
+	//	}
+	//	addr := crypto.CreateAddress(from, tx.Nonce())
+	//	log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
+	//} else {
+	//	log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+	//}
+
+	return tx.Hash().Hex(), nil
+}
 
 
 
