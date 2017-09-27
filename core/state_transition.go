@@ -76,6 +76,8 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	TxType() uint64
+
 }
 
 func MessageCreatesContract(msg Message) bool {
@@ -183,6 +185,8 @@ func (self *StateTransition) buyGas() error {
 		state  = self.state
 		sender = self.from()
 	)
+
+
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
@@ -213,13 +217,20 @@ func (self *StateTransition) preCheck() error {
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
 func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
-	if err = self.preCheck(); err != nil {
-		return
+	//txtype 2 is contract trasaction
+	if self.msg.TxType()!=2 {
+		if err = self.preCheck(); err != nil {
+			return
+		}
+	} else {
+		fmt.Println("txType is 2")
 	}
+
 	msg := self.msg
 	sender := self.from() // err checked in preCheck
 
 	homestead := self.evm.ChainConfig().IsHomestead(self.evm.BlockNumber)
+
 	contractCreation := MessageCreatesContract(msg)
 	// Pay intrinsic gas
 	// TODO convert to uint64
@@ -227,8 +238,13 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, vm.ErrOutOfGas
 	}
-	if err = self.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, err
+
+	if self.msg.TxType()!=2 {
+		if err = self.useGas(intrinsicGas.Uint64()); err != nil {
+			return nil, nil, nil, err
+		}
+	} else {
+		fmt.Println("txType is 2")
 	}
 
 	var (
@@ -238,13 +254,17 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		// error.
 		vmerr error
 	)
+
 	if contractCreation {
 		ret, _, self.gas, vmerr = evm.Create(sender, self.data, self.gas, self.value)
 	} else {
 		// Increment the nonce for the next transaction
 		self.state.SetNonce(sender.Address(), self.state.GetNonce(sender.Address())+1)
+
 		ret, self.gas, vmerr = evm.Call(sender, self.to().Address(), self.data, self.gas, self.value)
 	}
+
+
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", err)
 		// The only possible consensus-error would be if there wasn't
@@ -256,8 +276,12 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	}
 	requiredGas = new(big.Int).Set(self.gasUsed())
 
-	self.refundGas()
-	self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))
+	if self.msg.TxType()!=2 {
+
+		self.refundGas()
+		self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))
+
+	}
 
 	return ret, requiredGas, self.gasUsed(), err
 }

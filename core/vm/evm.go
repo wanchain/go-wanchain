@@ -24,6 +24,8 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
 
+	"bytes"
+	"errors"
 )
 
 type (
@@ -131,6 +133,33 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	//added by jqg, for preconcompiled contract,transfer it not in here,here is for normal transfer
 	if PrecompiledContracts[to.Address()] == nil {
 		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	} else {
+		if bytes.Equal(common.BytesToAddress([]byte{5}).Bytes(),to.Address().Bytes()) {
+
+			if input[0] == WAN_VERIFY_STAMP {
+
+				contract := NewContract(caller, to, value, gas)
+				contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+				ret, err = evm.interpreter.Run(contract, input)
+
+				if err != nil {
+					return nil, 0, errors.New("error verify stamp")
+				} else {
+
+					crdLen := (input[2]<<8|input[3])
+					temp := make([]byte,crdLen)
+					copy(temp,input[4:crdLen])
+
+					craBytes := make([]byte,input[1])
+					copy(craBytes,input[crdLen:])
+
+					addr = common.BytesToAddress(craBytes)
+					to   = AccountRef(addr)
+					input = temp //recover the contract data
+					value = big.NewInt(-1)
+				}
+			}
+		}
 	}
 
 	// initialise a new contract and set the code that is to be used by the
@@ -146,7 +175,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
 		contract.UseGas(contract.Gas)
-
 		evm.StateDB.RevertToSnapshot(snapshot)
 	}
 

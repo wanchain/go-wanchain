@@ -61,7 +61,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*Transaction, error) {
 
-	if tx.data.Txtype != 0 {
+	if tx.data.Txtype != 0 &&tx.Txtype()!=2{
 
 		h := s.Hash(tx)
 		sig, err := crypto.Sign(h[:], prv)
@@ -172,6 +172,9 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			if err != nil {
 				return nil, err
 			}
+
+			tx.data.AccountNonce = 0
+
 			tx, err = s.WithSignature(tx, sig)
 			return tx, nil
 
@@ -189,7 +192,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 //zhangy
 func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
 	h := s.Hash(tx)
-	if tx.data.Txtype != 0 {
+	if tx.data.Txtype != 0 &&tx.Txtype() != 2{
 		sig, err := crypto.Sign(h[:], prv)
 		if err != nil {
 			return nil, err
