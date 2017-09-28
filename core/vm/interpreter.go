@@ -193,6 +193,7 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 		//fmt.Printf("%04d: %8v    cost = %-8d stack = %-8d\n", pc, op, cost, stack.len())
 
 		// execute the operation
+
 		res, err := operation.execute(&pc, evm.env, contract, mem, stack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.

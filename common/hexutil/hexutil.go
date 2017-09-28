@@ -37,6 +37,8 @@ import (
 	"math/big"
 	"strconv"
 	"crypto/ecdsa"
+	"bytes"
+	"encoding/binary"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
@@ -256,4 +258,32 @@ func FourBigIntToHexSlice(AX,AY,BX,BY []byte) ([]string) {
 		Encode(BX),
 		Encode(BY),
 	}
+}
+
+func BytesToInt(b []byte) int {
+	bytesBuffer := bytes.NewBuffer(b)
+	var tmp int32
+	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
+	return int(tmp)
+}
+
+func IntToBytes(n int) []byte {
+	tmp := int32(n)
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, tmp)
+	return bytesBuffer.Bytes()
+}
+
+func BytesToShort(b []byte) int16  {
+	bytesBuffer := bytes.NewBuffer(b)
+	var tmp int16
+	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
+	return int16 (tmp)
+}
+
+func ShortToBytes(n int16) []byte {
+	tmp := int16(n)
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, tmp)
+	return bytesBuffer.Bytes()
 }

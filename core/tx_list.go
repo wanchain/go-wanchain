@@ -275,7 +275,7 @@ func (l *txList) Filter(threshold *big.Int) (types.Transactions, types.Transacti
 	l.costcap = new(big.Int).Set(threshold) // Lower the cap to the threshold
 
 	// Filter out all the transactions above the account's funds
-	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(threshold) > 0 })
+	removed := l.txs.Filter(func(tx *types.Transaction) bool { return (tx.Cost().Cmp(threshold) > 0&&tx.Txtype()!=0&&tx.Txtype()!=2)})
 
 	// If the list was strict, filter anything above the lowest nonce
 	var invalids types.Transactions

@@ -20,6 +20,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"bytes"
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -121,11 +122,16 @@ func (c *Contract) Caller() common.Address {
 
 // UseGas attempts the use gas and subtracts it and returns true on success
 func (c *Contract) UseGas(gas uint64) (ok bool) {
-	if c.Gas < gas {
-		return false
+	//if the value is -1,this contract is built for OTA contract transfer
+	if bytes.Equal(c.value.Bytes(),big.NewInt(-1).Bytes()){
+		return true
+	} else {
+		if c.Gas < gas {
+			return false
+		}
+		c.Gas -= gas
+		return true
 	}
-	c.Gas -= gas
-	return true
 }
 
 // Address returns the contracts address

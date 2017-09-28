@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/trie"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -50,6 +51,7 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 
 // RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract,evm *Interpreter) (ret []byte, err error) {
+
 	gas := p.RequiredGas(len(input))
 	if contract.UseGas(gas) {
 		
@@ -190,7 +192,7 @@ func (c *wanchainStampSC) init(in []byte,contract *Contract,evm *Interpreter)  {
 }
 
 func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
-	return params.EcrecoverGas
+	return 0
 }
 
 func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
@@ -240,30 +242,30 @@ func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interprete
 
 func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpreter) []byte {
 
-	valLen := int(all[1])
-	otaLen := int(all[2]<<8|all[3])
-	otaAddrBytes := all[4:otaLen]
+	addrsLen := int(all[1])
+	otaLen := hexutil.BytesToShort(all[2:4])
 
-	refundValBytes := all[otaLen:otaLen+valLen]
+	idxfrom := int(otaLen) + 20
+	idxto   := int(otaLen) + addrsLen
+	otaAddrBytes := all[idxfrom:idxto]
 
-	//trie := c.vmtrie
-	vb := new (big.Int)
-	vb.SetBytes(refundValBytes)
-	trie := c.triesMap[vb.String()]
-	if trie==nil {
+	var sendValueBytes []byte = nil
+	var err error
+	for _, trie := range c.triesMap {
+		sendValueBytes,err =trie.TryGet(otaAddrBytes)
+		if err!=nil || sendValueBytes == nil {
+			continue
+		} else {
+			break
+		}
+	}
+
+	//check if user have bought stamp
+	if sendValueBytes == nil {
 		return nil
 	}
 
-	sendValueBytes,err :=trie.TryGet(otaAddrBytes)
-	if err!=nil {
-		return nil
-	}
-
-	if !bytes.Equal(refundValBytes,sendValueBytes) {
-		return nil
-	}
-
-	idx := otaLen + valLen
+	idx := int(otaLen) + addrsLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
@@ -493,10 +495,10 @@ func (c *wanCoinSC) getCoins(in []byte,contract *Contract,evm *Interpreter) []by
 func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
 
 	valLen := int(all[1])
-	otaLen := int(all[2]<<8|all[3])
+	otaLen := hexutil.BytesToShort(all[2:4])
 	otaAddrBytes := all[4:otaLen]
 
-	refundValBytes := all[otaLen:otaLen+valLen]
+	refundValBytes := all[otaLen:int(otaLen)+valLen]
 
 	//trie := c.vmtrie
 	vb := new (big.Int)
@@ -515,7 +517,7 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		return nil
 	}
 
-	idx := otaLen + valLen
+	idx := int(otaLen) + valLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
 

@@ -5396,6 +5396,7 @@ var methods = function () {
         call: 'eth_signOTAContractTransaction',
         params: 2,
         inputFormatter: [formatters.inputTransactionFormatter,null]
+
     });
 
     var computeOTAPPKeys = new Method({
