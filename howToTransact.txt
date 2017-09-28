@@ -21,7 +21,7 @@ here shows how to transfer from acount1 to account2 in Anonymous transaction mod
 	var otaAddr = eth.generateOneTimeAddress(pubs)
 
 7. set the 	Anonymous contract address
-	var toAddr = "0x1000000000000000000000000000000000000006"
+	var toAddr = "0x0000000000000000000000000000000000000006"
 
 8  transfer eth to the Anonymous contract
 	eth. sendOTATransaction({from: eth.accounts[1],to: toAddr,value: web3.toWei(1),data: otaAddr})
