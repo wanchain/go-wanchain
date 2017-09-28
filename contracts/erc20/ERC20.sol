@@ -4,7 +4,7 @@ contract ERC20 {
 
     mapping (address => uint256) balances;
 	
-	mapping (string => uint256) public otabalances;
+	mapping (string => uint256) otabalances;
 	 
     function mint(address _receiver, uint256 _amount) {
 	    balances[_receiver] += _amount;
@@ -35,5 +35,8 @@ contract ERC20 {
         return balances[_owner];
     }
 
+    function otabalanceOf(string _owner) constant returns (uint256 balance) {
+        return balances[_owner];
+    }
 }
 
