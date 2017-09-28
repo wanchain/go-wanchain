@@ -26,6 +26,7 @@ import (
 
 	"bytes"
 	"errors"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 type (
@@ -146,17 +147,33 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 					return nil, 0, errors.New("error verify stamp")
 				} else {
 
-					crdLen := (input[2]<<8|input[3])
+					crdLen := hexutil.BytesToShort(input[2:4])
 					temp := make([]byte,crdLen)
-					copy(temp,input[4:crdLen])
+					copy(temp,input[4:crdLen])//copy orignal contract input
 
-					craBytes := make([]byte,input[1])
-					copy(craBytes,input[crdLen:])
+					craBytes := make([]byte,20)//normal address length is 20
+					copy(craBytes,input[crdLen:])//copy contract address
 
 					addr = common.BytesToAddress(craBytes)
 					to   = AccountRef(addr)
 					input = temp //recover the contract data
 					value = big.NewInt(-1)
+
+					caller = AccountRef(common.BytesToAddress([]byte{0}))
+					contract := NewContract(caller, to, value, gas)
+					contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+
+
+					ret, err = evm.interpreter.Run(contract, input)
+					// When an error was returned by the EVM or when setting the creation code
+					// above we revert to the snapshot and consume any gas remaining. Additionally
+					// when we're in homestead this also counts for code storage gas errors.
+					if err != nil {
+						contract.UseGas(contract.Gas)
+						evm.StateDB.RevertToSnapshot(snapshot)
+					}
+
+					return ret, contract.Gas, err
 				}
 			}
 		}

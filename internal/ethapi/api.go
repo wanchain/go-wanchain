@@ -1333,10 +1333,12 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	valLen := len(val)
 	temp = make([]byte,length + valLen)
 
+	lenBytes := hexutil.ShortToBytes(int16(length))
+
 	temp[0] = WANCOIN_REFUND
 	temp[1] = byte(valLen)
-	temp[2] = byte(length>>8)
-	temp[3] = byte(length&0xff)
+	temp[2] = lenBytes[0]
+	temp[3] = lenBytes[1]
 	copy(temp[4:],data[:])//record to address in data
 
 	//record value in data,the acutal spend should be 0
@@ -1568,18 +1570,31 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	data := args.Data
 	length := 4 + len(data)
 
+	otaBytes,herr:= hex.DecodeString(otaAddress[2:])
+	if herr!=nil {
+		return nil, err
+	}
+	otaLen := len(otaBytes)
+
 	craBytes := args.To.Bytes()
 	craLen := len(craBytes)
-	temp = make([]byte,length + craLen)
 
+	temp = make([]byte,length + craLen + otaLen)//should be 20 + 128
+
+	craLenba := hexutil.ShortToBytes(int16(length))
 	temp[0] = WAN_CONTRACT_OTA
-	temp[1] = byte(craLen)//contract address length
-	temp[2] = byte(length>>8)
-	temp[3] = byte(length&0xff)
+	temp[1] = byte(craLen + otaLen) //contract address length + ota address
+	temp[2] = craLenba[0]
+	temp[3] = craLenba[1]
 	copy(temp[4:],data[:])//record contract data
+
+	dataLen := hexutil.BytesToShort(temp[2:4])
+	fmt.Println("%d",dataLen)
 
 	//record to contract addr in data,the acutal spend should be 0
 	copy(temp[length:],craBytes)
+	//copy ota addr after the contract address
+	copy(temp[length+craLen:],otaBytes)
 
 	args.Data = temp
 	args.Value = (*hexutil.Big)(big.NewInt(0))
@@ -1610,39 +1625,6 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	return &SignTransactionResult{txBytes, tx}, nil
 
 }
-
-
-
-func (s *PublicTransactionPoolAPI) SendOTARawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (string, error) {
-
-
-	tx := new(types.Transaction)
-
-	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return "", err
-	}
-
-	if err := s.b.SendTx(ctx, tx); err != nil {
-		return "", err
-	}
-
-	////remove them because OTA raw
-	//signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
-	//if tx.To() == nil {
-	//	from, err := types.Sender(signer, tx)
-	//	if err != nil {
-	//		return "", err
-	//	}
-	//	addr := crypto.CreateAddress(from, tx.Nonce())
-	//	log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
-	//} else {
-	//	log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
-	//}
-
-	return tx.Hash().Hex(), nil
-}
-
-
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, otaAddr string) (string, error) {

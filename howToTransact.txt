@@ -3,7 +3,7 @@ now the system only support cli wallet to transfer in Anonymous transaction mode
 here shows how to transfer from acount1 to account2 in Anonymous transaction mode in geth 
 
 1.there are at least 3 account in cli node and keep the balance>1 ether for each account
-  personal.newAccount("wanglu")
+	personal.newAccount("wanglu")
 
 2. check balance for account[2]
   web3.fromWei(eth.getBalance(eth.accounts[2]))
@@ -51,50 +51,3 @@ how to buy stamp
 
 7. buy a stamp
   eth.buyOTAStamp({from: eth.accounts[1],to: toAddr,value: web3.toWei(0.01),data: otaAddr})	
-  
-/////////////////////////////////////////////////////////////////////////////////////////////////  
-how to debug contract transfer
-
-personal.unlockAccount(eth.accounts[1],"wanglu",9999);
-personal.unlockAccount(eth.accounts[2],"wanglu",9999);
-
-//get anonymous address for account2
-var pubs = eth.getPublicKeysRawStr(eth.accounts[2]);
-
-//generate OTA address for account2  
-var otaAddr = eth.generateOneTimeAddress(pubs)
-
-var erc20simple_contract = web3.eth.contract([{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_receiver","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]);
-var erc20simple = erc20simple_contract.new(
-   {
-     from: web3.eth.accounts[1], 
-     data: '0x6060604052341561000f57600080fd5b6105818061001e6000396000f30060606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806323b872dd1461005e57806340c10f19146100d757806370a0823114610119578063a9059cbb1461016657600080fd5b341561006957600080fd5b6100bd600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190803573ffffffffffffffffffffffffffffffffffffffff169060200190919080359060200190919050506101c0565b604051808215151515815260200191505060405180910390f35b34156100e257600080fd5b610117600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190803590602001909190505061033f565b005b341561012457600080fd5b610150600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190505061038f565b6040518082815260200191505060405180910390f35b341561017157600080fd5b6101a6600480803573ffffffffffffffffffffffffffffffffffffffff169060200190919080359060200190919050506103d7565b604051808215151515815260200191505060405180910390f35b6000816000808673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020541015801561028d57506000808473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002054826000808673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000205401115b1561033357816000808573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008282540192505081905550816000808673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254039250508190555060019050610338565b600090505b9392505050565b806000808473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600082825401925050819055505050565b60008060008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020549050919050565b6000816000803373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002054101580156104a457506000808473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002054826000808673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000205401115b1561054a57816000803373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008282540392505081905550816000808573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600082825401925050819055506001905061054f565b600090505b929150505600a165627a7a7230582059685292a22d82bed9753f7ba17e95d419c625755ddc67ebb477b83514840fae0029', 
-     gas: '4700000'
-   }, function (e, contract){
-    console.log(e, contract);
-    if (typeof contract.address !== 'undefined') {
-         console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
-    }
- })
- 
- 
-Contract mined! address: 0x18f940983efda661f29b8b18609daf28d0cd5bff transactionHash: 0xf57160797b1cbe2c82f0ba2f8278eecedd22a9728c44f6b70ccbd27451c97aee
- 
-var erc20simple = erc20simple_contract.at("0xeaaefc601693d117e8f8881b4bba90efdaba1e6b")
-
-var acc1 = eth.accounts[1]
-var acc2 = eth.accounts[2]
-
-erc20simple.transfer.getData(acc2, 5)
-
-0xa9059cbb000000000000000000000000c50ab8afd7c67abb9ea67d1b6ab755f1556fdf190000000000000000000000000000000000000000000000000000000000000005
-
-var toAddr = "0x1000000000000000000000000000000000000006"
-
-eth.signOTAContractTransaction({from:acc2, to:toAddr, data:"0xa9059cbb000000000000000000000000c50ab8afd7c67abb9ea67d1b6ab755f1556fdf190000000000000000000000000000000000000000000000000000000000000005"},otaAddr)
-
-//get data
-
-var rawTx = "0xf903e4800483030d4083015f9094000000000000000000000000000000000000000580b9037a0400010630786233643339663064653839623962366133646632393265356233313765386439623930666161353535396638313763356161323466393838613639636663643765313230643166653363646133313131343266343036373032316234666465613762343038613933343464383337616330343834323962626664393333396631613066386136343335383430643264653363366233633130393366386564666565356562643663343238303033383839663631323163376165623564656361386338373237363234613634613131303161333266333564316261396530343962366461643162353231363932643630313838353064613036313839633235303104410477979f262643a73a71ec47b77a76b3800f86a341e2180eb115a365ee4a65fafb6b883f24ec198c5c6210d5db3aa991c5d87365f1d84403901e563e5f2bab85b220df637b00e7b0f37615a3bb9431d4bdefd409cde597c140cc864a0e98c4459c7820749c2775cba2b2a19468ef32702ce233f23755ecdd14556f5808cfd319286ba741041da71f298285fc5b8e42668d0a3f1df8ca750605b686ff347f7c97a16ee70aa452b4ef1753f223d1724391792391e5273df35728760edca57c3301f9d0577293204d4edaf32c6b41ce7e3dc1e07e4b712339702ee0e9f7bcf93d57736f9cc49d9120d2e8b51bca57eb047d948f7b23a0c5f6367186e47cfaf619276fef8492f2a1ac4104f397a2fbdbe6325eade7e1eb961859dbb21471b499477aaf4e1fbc01793d11780f460c9b6af1699d8ed9122a4aa034e5c0a73000f2dc7a13554c26d67057c373200e004ed18becafe72687bf201a04d943e4fde5cd47b7ac1e6c89bf21d8295b63209c595c072f28ba05ffdb4038667a17c4c7c51347d80fe1ca039cffbe5b36d5714104b3d39f0de89b9b6a3df292e5b317e8d9b90faa5559f817c5aa24f988a69cfcd7e120d1fe3cda311142f4067021b4fdea7b408a9344d837ac048429bbfd9339f1208bb0e4f658cb3e68182084ae6e3ee9189311c604b2c7ed402edc49518ee1e1aa205068bed6a9dc6f47d1405819b5634c064aca216e85dacbea1f576bc4ed65d30a41048288659ce3b784791e25b8885dd72826199d313167b3ad9baf58f757523788359437c14e58c8c19461bdb2be04a170401b8c838bba7cf5d8e113d79317f407cb2027ef9fb9a87a4e45e8c07cca2f889346dcdad654cb2d7c210a7c9715c51552921ba034952e324bd67777979d4f98be3ef8906591276e74ea952214e90760929f2c00a0283df9c913cba319ceb477574d802772359fcb4c93b43ac23f8f2168ad8d1aa8c0c0c0c0"
-
-eth.sendRawTransaction(rawTx)

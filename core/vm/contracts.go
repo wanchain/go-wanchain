@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/trie"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -241,9 +242,12 @@ func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interprete
 
 func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpreter) []byte {
 
-	valLen := int(all[1])
-	otaLen := int(all[2]<<8|all[3])
-	otaAddrBytes := all[4:otaLen]
+	addrsLen := int(all[1])
+	otaLen := hexutil.BytesToShort(all[2:4])
+
+	idxfrom := int(otaLen) + 20
+	idxto   := int(otaLen) + addrsLen
+	otaAddrBytes := all[idxfrom:idxto]
 
 	var sendValueBytes []byte = nil
 	var err error
@@ -258,10 +262,10 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 
 	//check if user have bought stamp
 	if sendValueBytes == nil {
-		//return nil
+		return nil
 	}
 
-	idx := otaLen + valLen
+	idx := int(otaLen) + addrsLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
@@ -491,10 +495,10 @@ func (c *wanCoinSC) getCoins(in []byte,contract *Contract,evm *Interpreter) []by
 func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
 
 	valLen := int(all[1])
-	otaLen := int(all[2]<<8|all[3])
+	otaLen := hexutil.BytesToShort(all[2:4])
 	otaAddrBytes := all[4:otaLen]
 
-	refundValBytes := all[otaLen:otaLen+valLen]
+	refundValBytes := all[otaLen:int(otaLen)+valLen]
 
 	//trie := c.vmtrie
 	vb := new (big.Int)
@@ -513,7 +517,7 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		return nil
 	}
 
-	idx := otaLen + valLen
+	idx := int(otaLen) + valLen
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
