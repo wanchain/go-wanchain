@@ -5356,12 +5356,28 @@ var methods = function () {
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
 	});
+
     var buyOTAStamp = new Method({
         name: 'buyOTAStamp',
         call: 'eth_buyOTAStamp',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
+
+    var getOTAMixSet = new Method({
+        name: 'getOTAMixSet',
+        call: 'eth_getOTAMixSet',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
+
+    var getStampMixSet = new Method({
+        name: 'getStampMixSet',
+        call: 'eth_getStampMixSet',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
+
 
     var scanOTAbyAccount = new Method ({
         name: 'scanOTAbyAccount',
@@ -5480,6 +5496,8 @@ var methods = function () {
         sendOTATransaction,
         sendOTARefundTransaction,
         buyOTAStamp,
+        getStampMixSet,
+        getOTAMixSet,
         signOTAContractTransaction,
         getPublicKeysRawStr,
         generateOneTimeAddress,

@@ -98,7 +98,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, err := ApplyMessage(vmenv, msg, gp)
+	ret, gas, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,6 +118,10 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	if tx.Txtype() == 0 {
+		receipt.Logs = append(receipt.Logs,&types.Log{Address:*tx.To() , Data: ret})
+	}
 
 	return receipt, gas, err
 }
