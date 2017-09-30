@@ -34,7 +34,7 @@ here shows how to transfer from acount1 to account2 in Anonymous transaction mod
 how to buy stamp
 
 1.there are at least 3 account in cli node and keep the balance>1 ether for each account
-	personal.newAccount("wanglu")
+	//personal.newAccount("wanglu")
 
 2. check balance for account[2]
   web3.fromWei(eth.getBalance(eth.accounts[2]))
@@ -50,9 +50,15 @@ how to buy stamp
 
 6. generate OTA address for account2  
 	var otaAddr = eth.generateOneTimeAddress(pubs)
-
-7. buy a stamp
+	
+7. set the 	Anonymous contract address
+	var toAddr = "0x0000000000000000000000000000000000000006"
+8. buy a stamp
   eth.buyOTAStamp({from: eth.accounts[1],to: toAddr,value: web3.toWei(0.01),data: otaAddr})	
+
+============================================================================================================
+to get ota stamp set
+9. eth.getStampMixSet({from: eth.accounts[1],to: toAddr,value: web3.toWei(0.01),data: otaAddr})	  
   
 ============================================================================================================  
 how to debug contract transfer

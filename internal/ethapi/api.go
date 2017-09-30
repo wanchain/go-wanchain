@@ -46,6 +46,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 	//"github.com/tendermint/go-crypto/keys/tx"
 	"strconv"
+
 )
 
 const (
@@ -1052,7 +1053,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
 	receipt := core.GetReceipt(s.b.ChainDb(), hash)
 	if receipt == nil {
-		log.Debug("Receipt not found for transaction", "hash", hash)
+		//log.Debug("Receipt not found for transaction", "hash", hash)
 		return nil, nil
 	}
 
@@ -1405,10 +1406,11 @@ func (s *PublicTransactionPoolAPI) GetOTASet (ctx context.Context, args SendTxAr
 	}
 
 	length := len(data) + 1
-	temp = make([]byte,length)
+	temp = make([]byte,length+1)
 	temp[0] = setType
 	copy(temp[1:],data)
 
+	temp[length] = byte(time.Microsecond&0xFF)
 	args.Data = temp
 
 	// Assemble the transaction and sign with the wallet
@@ -1430,23 +1432,55 @@ func (s *PublicTransactionPoolAPI) GetOTASet (ctx context.Context, args SendTxAr
 		return "", err
 	}
 
-	resMap, err:= s.GetTransactionReceipt(receipt)
-	if err != nil {
-		return "", err
+	cnum :=make(chan string)
+
+	go func() {
+
+		for {
+
+			resMap, _ := s.GetTransactionReceipt(receipt)
+			otadata := resMap["logs"]
+
+			otas, ok := otadata.([]*types.Log)
+			all := ""
+
+			if ok {
+
+				length := len(otas)
+				for i := 0; i < length; i++ {
+					log := *otas[i]
+					if bytes.Equal(log.Address.Bytes(), common.BytesToAddress([]byte{5}).Bytes()) || bytes.Equal(log.Address.Bytes(), common.BytesToAddress([]byte{6}).Bytes()) {
+						all = all + hex.EncodeToString(log.Data)
+					}
+				}
+
+				cnum<-all
+
+				break
+
+			}
+
+
+		}
+	}()
+
+	timeout := make(chan bool, 1)
+	go func() {
+		time.Sleep(time.Second*300)
+		timeout <- true
+	}()
+
+	select {
+		case data := <-cnum: //got result
+			fmt.Println("got ota" + data)
+			return data,nil
+		case <-timeout: //time out
+			fmt.Println("time out")
+			return "",nil
 	}
 
-	otadata := resMap["data"]
 
-	str, ok := otadata.(string)
-	if ok {
-		return str,nil
-	} else if d, ok := otadata.([]byte); ok {
 
-		return hex.EncodeToString(d),nil
-
-	}
-
-	return "",nil
 }
 
 func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxArgs) (common.Hash, error) {

@@ -208,7 +208,7 @@ func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []b
 	} else if in[0]==WAN_VERIFY_STAMP{
 		return c.verifyStamp(in[0:],contract,evm)
 	}  else if in[0]==WAN_STAMP_SET{
-		return c.getStamps(in[0:],contract,evm)
+		return c.getStamps(in[1:],contract,evm)
 	}
 
 	return  nil
@@ -220,15 +220,12 @@ func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	val := contract.value.Bytes()
-
-	//trie := c.vmtrie
 	trie := c.triesMap[contract.value.String()]
 	if trie==nil {
 		return nil
 	}
 
-	err :=trie.TryUpdate(temp,val)
+	err :=trie.TryUpdate(temp,temp)
 	if err!=nil {
 		return nil
 	}
@@ -450,15 +447,13 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	val := contract.value.Bytes()
-
 	//trie := c.vmtrie
 	trie := c.triesMap[contract.value.String()]
 	if trie==nil {
 		return nil
 	}
 
-	err :=trie.TryUpdate(temp,val)
+	err :=trie.TryUpdate(temp,temp)
 	if err!=nil {
 		return nil
 	}
@@ -605,20 +600,26 @@ func getOtaSet(dataTrie *trie.SecureTrie,stampNUm int, otaAddr []byte) []byte {
 	}
 
 	stampSet := make([]byte,stampNUm*OTA_ADDR_LEN)
-	rnd := rand.Intn(10)
+	rnd := rand.Intn(100) + 1
 
-	it := trie.NewIterator(dataTrie.NodeIterator(otaAddr))
+	it := trie.NewIterator(dataTrie.NodeIterator(nil))
 	count :=0
 	i := 0
 	for {
+
 		for it.Next() {
 			count ++
-			if count %rnd == 0 {
+			if count %rnd == 0&&i<stampNUm {
 				idx := i*OTA_ADDR_LEN
-				copy(stampSet[idx:],it.Key) //key is the ota address,value is the dump value
+				copy(stampSet[idx:],it.Value) //key is the ota address,value is the dump value
 				i++
 			}
 		}
+
+		if count == 0 || i>=stampNUm{
+			return  stampSet
+		}
+
 		it = trie.NewIterator(dataTrie.NodeIterator(nil))
 	}
 

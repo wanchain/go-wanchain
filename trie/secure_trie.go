@@ -124,6 +124,8 @@ func (t *SecureTrie) TryUpdate(key, value []byte) error {
 	return nil
 }
 
+
+
 // Delete removes any existing value for key from the trie.
 func (t *SecureTrie) Delete(key []byte) {
 	if err := t.TryDelete(key); err != nil {
