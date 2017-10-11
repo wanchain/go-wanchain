@@ -87,6 +87,23 @@ func Encode(b []byte) string {
 	return string(enc)
 }
 
+// Encode encodes b as a hex string with 0x prefix.
+// The out string with fix length(without pre '0x').
+func EncodeWithFixOutLen(b []byte, fixLen int) (string, error) {
+	if len(b)*2 > fixLen {
+		return "", ErrSyntax
+	}
+
+	enc := make([]byte, fixLen+2)
+	copy(enc[:], "0x")
+	for i := 2; i < (fixLen - len(b)*2 + 2); i++ {
+		enc[i] = '0'
+	}
+
+	hex.Encode(enc[fixLen-len(b)*2 + 2:], b)
+	return string(enc[:]), nil
+}
+
 // DecodeUint64 decodes a hex string with 0x prefix as a quantity.
 func DecodeUint64(input string) (uint64, error) {
 	raw, err := checkNumber(input)
@@ -244,20 +261,36 @@ func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) ([]string) {
 }
 
 func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) ([]string) {
-	return []string {Encode(A.X.Bytes()),
-			 Encode(A.Y.Bytes()),
-		         Encode(B.X.Bytes()),
-		         Encode(B.Y.Bytes()),
-	}
+	// lzh modify
+	//return []string {Encode(A.X.Bytes()),
+	//		 Encode(A.Y.Bytes()),
+	//	         Encode(B.X.Bytes()),
+	//	         Encode(B.Y.Bytes()),
+	//}
+
+	strAX, _ := EncodeWithFixOutLen(A.X.Bytes(), 64)
+	strAY, _ := EncodeWithFixOutLen(A.Y.Bytes(), 64)
+	strBX, _ := EncodeWithFixOutLen(B.X.Bytes(), 64)
+	strBY, _ := EncodeWithFixOutLen(B.Y.Bytes(), 64)
+
+	return []string {strAX, strAY, strBX, strBY}
 }
 
 
 func FourBigIntToHexSlice(AX,AY,BX,BY []byte) ([]string) {
-	return []string {Encode(AX),
-		Encode(AY),
-		Encode(BX),
-		Encode(BY),
-	}
+	// lzh modify
+	//return []string {Encode(AX),
+	//	Encode(AY),
+	//	Encode(BX),
+	//	Encode(BY),
+	//}
+
+	strAX, _ := EncodeWithFixOutLen(AX, 64)
+	strAY, _ := EncodeWithFixOutLen(AY, 64)
+	strBX, _ := EncodeWithFixOutLen(BX, 64)
+	strBY, _ := EncodeWithFixOutLen(BY, 64)
+
+	return []string {strAX, strAY, strBX, strBY}
 }
 
 func BytesToInt(b []byte) int {
