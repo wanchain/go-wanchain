@@ -38,6 +38,9 @@ func (self Code) String() string {
 
 type Storage map[common.Hash]common.Hash
 
+// lzh add
+type StorageByteArray map[common.Hash][]byte
+
 func (self Storage) String() (str string) {
 	for key, value := range self {
 		str += fmt.Sprintf("%X : %X\n", key, value)
@@ -48,6 +51,16 @@ func (self Storage) String() (str string) {
 
 func (self Storage) Copy() Storage {
 	cpy := make(Storage)
+	for key, value := range self {
+		cpy[key] = value
+	}
+
+	return cpy
+}
+
+// lzh add
+func (self StorageByteArray) Copy() StorageByteArray {
+	cpy := make(StorageByteArray)
 	for key, value := range self {
 		cpy[key] = value
 	}
@@ -79,6 +92,10 @@ type stateObject struct {
 
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+
+	// lzh add
+	cachedStorageByteArray StorageByteArray
+	dirtyStorageByteArray StorageByteArray
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -112,7 +129,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
-	return &stateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty}
+	return &stateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), cachedStorageByteArray: make(StorageByteArray), dirtyStorageByteArray: make(StorageByteArray), onDirty: onDirty}
 }
 
 // EncodeRLP implements rlp.Encoder.
@@ -180,6 +197,21 @@ func (self *stateObject) GetState(db trie.Database, key common.Hash) common.Hash
 	return value
 }
 
+// lzh add
+func (self *stateObject) GetStateByteArray(db trie.Database, key common.Hash) []byte {
+	value, exists := self.cachedStorageByteArray[key]
+	if exists {
+		return value
+	}
+	// Load from DB in case it is missing.
+	value = self.getTrie(db).Get(key[:])
+	if (len(value) != 0) {
+		self.cachedStorageByteArray[key] = value
+	}
+	return value
+}
+
+
 // SetState updates a value in account storage.
 func (self *stateObject) SetState(db trie.Database, key, value common.Hash) {
 	self.db.journal = append(self.db.journal, storageChange{
@@ -200,6 +232,29 @@ func (self *stateObject) setState(key, value common.Hash) {
 	}
 }
 
+// lzh add
+func (self *stateObject) SetStateByteArray(db trie.Database, key common.Hash, value []byte) {
+	self.db.journal = append(self.db.journal, storageByteArrayChange{
+		account:  &self.address,
+		key:      key,
+		prevalue: self.GetStateByteArray(db, key),
+	})
+	self.setStateByteArray(key, value)
+
+}
+
+// lzh add
+func (self *stateObject) setStateByteArray(key common.Hash, value []byte) {
+	self.cachedStorageByteArray[key] = value
+	self.dirtyStorageByteArray[key] = value
+
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db trie.Database) *trie.SecureTrie {
 	tr := self.getTrie(db)
@@ -212,6 +267,16 @@ func (self *stateObject) updateTrie(db trie.Database) *trie.SecureTrie {
 		// Encoding []byte cannot fail, ok to ignore the error.
 		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
 		tr.Update(key[:], v)
+	}
+
+	// lzh add
+	for key, value := range self.dirtyStorageByteArray {
+		delete(self.dirtyStorageByteArray, key)
+		if (len(value) == 0) {
+			tr.Delete(key[:])
+			continue
+		}
+		tr.Update(key[:], value)
 	}
 	return tr
 }
@@ -289,6 +354,8 @@ func (self *stateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
+	stateObject.dirtyStorageByteArray = self.dirtyStorageByteArray.Copy()
+	stateObject.cachedStorageByteArray = self.cachedStorageByteArray.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted

@@ -298,6 +298,17 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	return common.Hash{}
 }
 
+// lzh add
+func (self *StateDB) GetStateByteArray(a common.Address, b common.Hash) []byte {
+	stateObject := self.getStateObject(a)
+	if stateObject != nil {
+		return stateObject.GetStateByteArray(self.db, b)
+	}
+	return nil
+}
+
+
+
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.
 func (self *StateDB) StorageTrie(a common.Address) *trie.SecureTrie {
@@ -370,6 +381,15 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 		stateObject.SetState(self.db, key, value)
 	}
 }
+
+// lzh add
+func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, value []byte) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetStateByteArray(self.db, key, value)
+	}
+}
+
 
 // Suicide marks the given account as suicided.
 // This clears the account balance.

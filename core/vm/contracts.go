@@ -182,26 +182,26 @@ type wanchainStampSC struct{
 	triesMap map[string]*trie.SecureTrie
 }
 
-func (c *wanchainStampSC) init(in []byte,contract *Contract,evm *Interpreter)  {
-
-	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
-	c.triesMap = make(map[string]*trie.SecureTrie)
-
-	c.triesMap[WAN_STAMP_DOT1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT1))
-	c.triesMap[WAN_STAMP_DOT2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT2))
-	c.triesMap[WAN_STAMP_DOT5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT5))
-
-
-}
+//func (c *wanchainStampSC) init(in []byte,contract *Contract,evm *Interpreter)  {
+//
+//	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
+//	c.triesMap = make(map[string]*trie.SecureTrie)
+//
+//	c.triesMap[WAN_STAMP_DOT1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT1))
+//	c.triesMap[WAN_STAMP_DOT2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT2))
+//	c.triesMap[WAN_STAMP_DOT5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(WAN_STAMP_DOT5))
+//
+//
+//}
 
 func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 	return 0
 }
 
 func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
-	if c.vmtrie==nil {
-		c.init(in,contract,evm);
-	}
+	//if c.vmtrie==nil {
+	//	c.init(in,contract,evm);
+	//}
 
 	if in[0]==WAN_BUY_STAMP {
 		return c.buyStamp(in[1:],contract,evm)
@@ -220,17 +220,29 @@ func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	trie := c.triesMap[contract.value.String()]
-	if trie==nil {
+	// lzh modify
+	contractAddr := common.HexToAddress(contract.value.String())
+	otaAddrH := crypto.Keccak256Hash(temp)
+	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrH)
+
+	// prevent rebuy
+	if storagedOtaAddr != nil && bytes.Equal(storagedOtaAddr, temp) {
 		return nil
 	}
 
-	err :=trie.TryUpdate(temp,temp)
-	if err!=nil {
-		return nil
-	}
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrH, temp)
 
-	trie.Commit()
+	//trie := c.triesMap[contract.value.String()]
+	//if trie==nil {
+	//	return nil
+	//}
+	//
+	//err :=trie.TryUpdate(temp,temp)
+	//if err!=nil {
+	//	return nil
+	//}
+	//
+	//trie.Commit()
 
 	addrSrc := contract.CallerAddress
 	balance := evm.env.StateDB.GetBalance(addrSrc)
@@ -248,11 +260,13 @@ func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interprete
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	//trie := c.vmtrie
-	trie := c.triesMap[contract.value.String()]
-	if trie==nil {
-		return nil
-	}
+	//lzh modify
+	trie := evm.env.StateDB.StorageVmTrie(common.HexToAddress(contract.value.String()))
+	////trie := c.vmtrie
+	//trie := c.triesMap[contract.value.String()]
+	//if trie==nil {
+	//	return nil
+	//}
 
 	return getOtaSet(trie,3,temp)
 
@@ -268,15 +282,27 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	otaAddrBytes := all[idxfrom:idxto]
 
 	var sendValueBytes []byte = nil
-	var err error
-	for _, trie := range c.triesMap {
-		sendValueBytes,err =trie.TryGet(otaAddrBytes)
-		if err!=nil || sendValueBytes == nil {
-			continue
-		} else {
+
+	// lzh modify
+	//var err error
+	contractAddrStrs := []string{WAN_STAMP_DOT1,WAN_STAMP_DOT2,WAN_STAMP_DOT5}
+	for _, contractAddrStr := range contractAddrStrs {
+		contractAddr := common.HexToAddress(contractAddrStr)
+		key := crypto.Keccak256Hash(otaAddrBytes)
+		sendValueBytes = evm.env.StateDB.GetStateByteArray(contractAddr, key)
+		if sendValueBytes != nil {
 			break
 		}
 	}
+
+	//for _, trie := range c.triesMap {
+	//	sendValueBytes,err =trie.TryGet(otaAddrBytes)
+	//	if err!=nil || sendValueBytes == nil {
+	//		continue
+	//	} else {
+	//		break
+	//	}
+	//}
 
 	//check if user have bought stamp
 	if sendValueBytes == nil {
@@ -338,13 +364,18 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	txhashBytes :=  make([]byte,txHashLen)
 	copy(txhashBytes,all[idx:])
 
-	imageValue,erri := c.vmtrie.TryGet(kix)
+	// lzh modify
+	kixH := crypto.Keccak256Hash(kix)
+	imageValue := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
 
-	if len(imageValue)!=0&&erri==nil {
+	//imageValue,erri := c.vmtrie.TryGet(kix)
+	//if len(imageValue)!=0&&erri==nil {
+	if imageValue != nil && len(imageValue) != 0 {
 		return nil
 	} else  {
-
-		c.vmtrie.Update(kix,sendValueBytes)
+		// lzh modify
+		evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, sendValueBytes)
+		//c.vmtrie.Update(kix,sendValueBytes)
 		//func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool
 		verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
 
@@ -373,8 +404,8 @@ const (
 )
 
 type wanCoinSC struct{
-	vmtrie *trie.SecureTrie
-	triesMap map[string]*trie.SecureTrie
+	//vmtrie *trie.SecureTrie
+	//triesMap map[string]*trie.SecureTrie
 }
 
 func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
@@ -394,36 +425,36 @@ const (
 	pre100 =   "100000000000000000000"//100
 )
 
-func (c *wanCoinSC) init(in []byte,contract *Contract,evm *Interpreter){
-	//common.StringToAddress("wanchainCoinSc")
-	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
-	c.triesMap = make(map[string]*trie.SecureTrie)
-
-	c.triesMap[pre0dot1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot1))
-
-	c.triesMap[pre0dot2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot2))
-
-	c.triesMap[pre0dot5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot5))
-
-	c.triesMap[pre1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre1))
-
-	c.triesMap[pre2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre2))
-
-	c.triesMap[pre5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre5))
-
-	c.triesMap[pre10] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre10))
-
-	c.triesMap[pre20] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre20))
-
-	c.triesMap[pre50] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre50))
-
-	c.triesMap[pre100] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre100))
-}
+//func (c *wanCoinSC) init(in []byte,contract *Contract,evm *Interpreter){
+//	//common.StringToAddress("wanchainCoinSc")
+//	c.vmtrie = evm.env.StateDB.StorageVmTrie(contract.Address())
+//	c.triesMap = make(map[string]*trie.SecureTrie)
+//
+//	c.triesMap[pre0dot1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot1))
+//
+//	c.triesMap[pre0dot2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot2))
+//
+//	c.triesMap[pre0dot5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre0dot5))
+//
+//	c.triesMap[pre1] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre1))
+//
+//	c.triesMap[pre2] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre2))
+//
+//	c.triesMap[pre5] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre5))
+//
+//	c.triesMap[pre10] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre10))
+//
+//	c.triesMap[pre20] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre20))
+//
+//	c.triesMap[pre50] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre50))
+//
+//	c.triesMap[pre100] = evm.env.StateDB.StorageVmTrie(common.StringToAddress(pre100))
+//}
 
 func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
-	if c.vmtrie== nil {
-		c.init(nil,contract,evm)
-	}
+	//if c.vmtrie== nil {
+	//	c.init(nil,contract,evm)
+	//}
 
 	if in[0]==WANCOIN_BUY {
 		return c.buyCoin(in[1:],contract,evm)
@@ -447,17 +478,28 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 	temp := make([]byte,length)
 	copy(temp,in[:])
 
-	//trie := c.vmtrie
-	trie := c.triesMap[contract.value.String()]
-	if trie==nil {
-		return nil
+	// lzh modify
+	contractAddr := common.HexToAddress(contract.value.String())
+	otaAddrH := crypto.Keccak256Hash(temp)
+	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrH)
+
+	// prevent rebuy
+	if storagedOtaAddr != nil && bytes.Equal(storagedOtaAddr, temp) {
+		return  nil
 	}
 
-	err :=trie.TryUpdate(temp,temp)
-	if err!=nil {
-		return nil
-	}
-	trie.Commit()
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrH, temp)
+	////trie := c.vmtrie
+	//trie := c.triesMap[contract.value.String()]
+	//if trie==nil {
+	//	return nil
+	//}
+	//
+	//err :=trie.TryUpdate(temp,temp)
+	//if err!=nil {
+	//	return nil
+	//}
+	//trie.Commit()
 
 	addrSrc := contract.CallerAddress
 
@@ -482,7 +524,10 @@ func (c *wanCoinSC) getCoins(all []byte,contract *Contract,evm *Interpreter) []b
 	//trie := c.vmtrie
 	vb := new (big.Int)
 	vb.SetBytes(refundValBytes)
-	trie := c.triesMap[vb.String()]
+
+	// lzh modify
+	trie := evm.env.StateDB.StorageVmTrie(common.HexToAddress(vb.String()))
+	//trie := c.triesMap[vb.String()]
 	if trie==nil {
 		return nil
 	}
@@ -502,19 +547,28 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	//trie := c.vmtrie
 	vb := new (big.Int)
 	vb.SetBytes(refundValBytes)
-	trie := c.triesMap[vb.String()]
-	if trie==nil {
+
+	// lzh modify
+	otaContainerAddr := common.HexToAddress(vb.String())
+	otaAddrH := crypto.Keccak256Hash(otaAddrBytes)
+	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrH)
+	if !bytes.Equal(otaAddrBytes, storagedOtaAddr) {
 		return nil
 	}
 
-	sendValueBytes,err :=trie.TryGet(otaAddrBytes)
-	if err!=nil {
-		return nil
-	}
-
-	if !bytes.Equal(refundValBytes,sendValueBytes) {
-		return nil
-	}
+	//trie := c.triesMap[vb.String()]
+	//if trie==nil {
+	//	return nil
+	//}
+	//
+	//sendValueBytes,err :=trie.TryGet(otaAddrBytes)
+	//if err!=nil {
+	//	return nil
+	//}
+	//
+	//if !bytes.Equal(refundValBytes,sendValueBytes) {
+	//	return nil
+	//}
 
 	idx := int(otaLen) + valLen
 	pubsLen := int(all[idx])
@@ -571,13 +625,18 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	txhashBytes :=  make([]byte,txHashLen)
 	copy(txhashBytes,all[idx:])
 
-	imageValue,erri := c.vmtrie.TryGet(kix)
-
-	if len(imageValue)!=0&&erri==nil {
+	// lzh modify
+	kixH := crypto.Keccak256Hash(kix)
+	imageValue := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
+	//imageValue,erri := c.vmtrie.TryGet(kix)
+	//
+	//if len(imageValue)!=0&&erri==nil {
+	if imageValue != nil && len(imageValue) != 0 {
 		return nil
 	} else  {
-
-	   c.vmtrie.Update(kix,sendValueBytes)
+		// lzh modify
+	   //c.vmtrie.Update(kix,sendValueBytes)
+		evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, refundValBytes)
 
 	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
 		if verifyRes {
