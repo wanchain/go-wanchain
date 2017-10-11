@@ -1313,7 +1313,9 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
 
 	keypair := strings.Split(otaKeyPair,"+")
-	keys := *new([]string)
+	// lzh modify
+	keys := make([]string, 0)
+	//keys := *new([]string)
 	keys = append(keys,keypair[0][2:])
 	keys = append(keys,keypair[1][2:])
 
@@ -1669,8 +1671,8 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
 
 	keypair := strings.Split(otaKeyPair,"+")
+	keys := make([]string, 0)
 //	keys := *new([]string)
-	keys := make([]string, 0, 0)
 	keys = append(keys,keypair[0][2:])
 	keys = append(keys,keypair[1][2:])
 

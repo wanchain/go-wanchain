@@ -313,9 +313,13 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
-	PublicKeySet := *new([]*ecdsa.PublicKey)
-	W_random := *new([]*big.Int)
-	Q_random := *new([]*big.Int)
+	// lzh modify
+	PublicKeySet := make([]*ecdsa.PublicKey, 0)
+	W_random := make([]*big.Int, 0)
+	Q_random := make([]*big.Int, 0)
+	//PublicKeySet := *new([]*ecdsa.PublicKey)
+	//W_random := *new([]*big.Int)
+	//Q_random := *new([]*big.Int)
 
 
 	var i int
@@ -574,9 +578,13 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
-	PublicKeySet := *new([]*ecdsa.PublicKey)
-	W_random := *new([]*big.Int)
-	Q_random := *new([]*big.Int)
+	// lzh modify
+	PublicKeySet := make([]*ecdsa.PublicKey, 0)
+	W_random := make([]*big.Int, 0)
+	Q_random := make([]*big.Int, 0)
+	//PublicKeySet := *new([]*ecdsa.PublicKey)
+	//W_random := *new([]*big.Int)
+	//Q_random := *new([]*big.Int)
 
 
 	var i int

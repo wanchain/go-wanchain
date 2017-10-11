@@ -78,7 +78,9 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			otaPrivD,_ = new (big.Int).SetString(keys[0],16)
 
 			keysLen := len(keys)
-			publicKeys := *new([]*ecdsa.PublicKey)
+			//lzh modify
+			publicKeys := make([]*ecdsa.PublicKey, 0)
+			//publicKeys := *new([]*ecdsa.PublicKey)
 
 			for i:=1;i<keysLen;i++ {
 				x  := keys[i][0:64]
@@ -208,7 +210,9 @@ func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*e
 		}
 		tx, err = s.WithSignature(tx, sig)
 
-		testPublicKeys := *new([]*ecdsa.PublicKey)
+		// lzh modify
+		testPublicKeys := make([]*ecdsa.PublicKey, 0)
+		//testPublicKeys := *new([]*ecdsa.PublicKey)
 		for i:=0; i< 10; i++{
 			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
 		}
@@ -218,8 +222,11 @@ func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*e
 
 		cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
 
-		W_random := *new([]*hexutil.Big)
-		Q_random := *new([]*hexutil.Big)
+		// lzh modify
+		W_random := make([]*hexutil.Big, 0)
+		Q_random := make([]*hexutil.Big, 0)
+		//W_random := *new([]*hexutil.Big)
+		//Q_random := *new([]*hexutil.Big)
 
 		for i := 0; i < len(PublicKeys); i++ {
 			w := w_random[i]
