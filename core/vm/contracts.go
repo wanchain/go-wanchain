@@ -235,7 +235,7 @@ func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter
 
 	// lzh modify
 	contractAddr := common.HexToAddress(contract.value.String())
-	otaAddrKey := common.BytesToHash(otaAddr[0:32])
+	otaAddrKey := common.BytesToHash(otaAddr[0:64])
 
 	// prevent rebuy
 	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
@@ -278,7 +278,7 @@ func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interprete
 	stampVals := [...]string {WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
 	for _, stampVal := range stampVals {
 		contractAddr := common.HexToAddress(stampVal)
-		otaAddrKey := common.BytesToHash(otaAddr[0:32])
+		otaAddrKey := common.BytesToHash(otaAddr[0:64])
 		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
 		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
 			trie = evm.env.StateDB.StorageVmTrie(contractAddr)
@@ -334,7 +334,7 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	stampVals := [...]string {WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
 	for _, stampVal = range stampVals {
 		contractAddr := common.HexToAddress(stampVal)
-		otaAddrKey := common.BytesToHash(x[1:33])
+		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
 		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
 			trie = evm.env.StateDB.StorageVmTrie(contractAddr)
@@ -356,10 +356,13 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 		copy(x,all[idx:])
 
 		//verify the stamp in the set is from current stamp tree
-		t,err:= trie.TryGet(x[1:])
-		if err!=nil || t==nil || len(t)==0 {
+		contractAddr := common.HexToAddress(stampVal)
+		otaAddrKey := common.BytesToHash(x[1:])
+		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
+		//t,err:= trie.TryGet(x[1:])
+		if storagedOtaAddr==nil || len(storagedOtaAddr)==0 {
 			fmt.Print("not get stamp in the set")
-			//return nil
+			return nil
 		}
 
 		puk := crypto.ToECDSAPub(x)
@@ -534,7 +537,7 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 
 	// lzh modify
 	contractAddr := common.HexToAddress(contract.value.String())
-	otaAddrKey := common.BytesToHash(otaAddr[0:32])
+	otaAddrKey := common.BytesToHash(otaAddr[0:64])
 
 	// prevent rebuy
 	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
@@ -628,7 +631,7 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		//}
 
 		// lzh modify
-		otaAddrKey := common.BytesToHash(x[1:33])
+		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrKey)
 		if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
 			fmt.Print("not get coin in the set")
@@ -724,11 +727,13 @@ func getOtaSet(dataTrie *trie.SecureTrie,stampNUm int, otaAddr []byte) []byte {
 				copy(stampSet[idx:],it.Value) //key is the ota address,value is the dump value
 				i++
 			}
+
+			if i >= stampNUm{
+				return  stampSet
+			}
 		}
 
-		if count == 0 || i>=stampNUm{
-			return  stampSet
-		}
+
 
 		it = trie.NewIterator(dataTrie.NodeIterator(nil))
 	}
