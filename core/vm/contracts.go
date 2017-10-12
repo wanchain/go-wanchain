@@ -313,7 +313,7 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 
 	var storagedOtaAddr []byte = nil
 	//var err error
-	var trie *trie.SecureTrie
+	//var trie *trie.SecureTrie
 
 	lenxy := int(all[idx])
 	x := make([]byte,lenxy)
@@ -337,17 +337,18 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
 		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
-			trie = evm.env.StateDB.StorageVmTrie(contractAddr)
+			//trie = evm.env.StateDB.StorageVmTrie(contractAddr)
 			break
 		}
 	}
 
 	//check if user have bought stamp
-	if storagedOtaAddr == nil || trie == nil {
+	if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
 		return nil
 	}
 
 	var i int
+	contractAddr := common.HexToAddress(stampVal)
 	for i = 0; i < pubsLen; i++ {
 		lenxy = int(all[idx])
 		idx = idx + 1
@@ -356,7 +357,6 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 		copy(x,all[idx:])
 
 		//verify the stamp in the set is from current stamp tree
-		contractAddr := common.HexToAddress(stampVal)
 		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
 		//t,err:= trie.TryGet(x[1:])
