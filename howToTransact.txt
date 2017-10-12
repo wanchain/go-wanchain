@@ -28,6 +28,8 @@ here shows how to transfer from acount1 to account2 in Anonymous transaction mod
 
 9  account2 get balance from the anonymous contract
 	eth.sendOTARefundTransaction({from:eth.accounts[2],to:toAddr,value:web3.toWei(1),data: otaAddr})
+
+10 web3.fromWei(eth.getBalance(eth.accounts[2]));
 	
 ============================================================================================================
 
