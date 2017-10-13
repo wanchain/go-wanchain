@@ -547,6 +547,18 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	if err != nil {
 		return err
 	}
+	/*
+	if the current key has no second privateKey, we need create for it.
+	*/
+	if key.PrivateKey2 == nil {
+		var privateKeyECDSA2 *ecdsa.PrivateKey
+		privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), crand.Reader)
+		if err != nil {
+			return  err
+		}
+		key.PrivateKey2 = privateKeyECDSA2
+	}
+	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 

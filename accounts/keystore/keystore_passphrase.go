@@ -316,9 +316,18 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	/*
+	if the keystore file don't have cipher2, we should ignore this error.
+	because the user may copy the keystore file into the directory.
+	we should support unlock/update the old keystore file to our wanchain format.
+	*/
 	plainText2, err2 := decryptKeyV3Item(keyProtected.Crypto2, auth)
 	if err2 != nil {
-		return nil, nil, nil, err2
+		if "" == keyProtected.Crypto2.Cipher{
+			plainText2 = make([]byte, 0)
+		}else {
+			return nil, nil, nil, err2
+		}
 	}
 	return plainText, plainText2, keyId, err
 }
