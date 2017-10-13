@@ -1795,8 +1795,6 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 }
 
 
-//func (s *PublicTransactionPoolAPI) GenerateSignature(ctx context.Context, address common.Address, AX string, AY string, BX string, BY string) (string, error) {
-
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (string, error) {

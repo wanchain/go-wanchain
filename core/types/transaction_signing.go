@@ -27,6 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 
+	"bytes"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -161,10 +162,35 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			idx = idx + 1
 			txhashBytes := h.Bytes()
 			copy(all[idx:], txhashBytes)
+			idx = idx + len(h.Bytes())
 
-			tx.data.Payload = all
-			//}
+			//added the signature as verifing all data integrity to prevent replay attack
+			allLen := len(all)
+			allHash := common.BytesToHash(all[0:allLen])
+			privD := crypto.ToECDSA(otaPrivD.Bytes())
+			sig, err := crypto.Sign(allHash[:], privD)
+			if err != nil {
+				return nil, err
+			}
 
+			pubKey, err := crypto.SigToPub(allHash[:], sig)
+			if err != nil {
+				return nil,nil
+			}
+			if bytes.Equal(crypto.FromECDSAPub(pubKey), crypto.FromECDSAPub(&privD.PublicKey)) {
+				fmt.Println("verified ")
+			}
+
+			sigLen := len(sig)
+			allWithSig := make([]byte,allLen + sigLen + 1)
+			copy(allWithSig,all)
+
+			allWithSig[allLen] = byte(sigLen)
+			copy(allWithSig[allLen+1:],sig)
+
+			tx.data.Payload = allWithSig
+
+			//tx data is changed, so it is need to hash tx again
 			h = s.Hash(tx)
 		}
 
