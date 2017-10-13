@@ -20,17 +20,20 @@ package state
 import (
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sort"
 	"sync"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 	lru "github.com/hashicorp/golang-lru"
+	"errors"
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.
@@ -43,6 +46,8 @@ const (
 
 	// Number of codehash->size associations to keep.
 	codeSizeCacheSize = 100000
+
+	OTA_ADDR_LEN = 128
 )
 
 type revision struct {
@@ -245,6 +250,74 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	}
 	return common.Big0
 }
+
+// lzh add
+// GetOTASet get the set of ota, with the count as setting
+func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([]byte, error)  {
+	if otaAddr == nil || len(otaAddr) != OTA_ADDR_LEN {
+		return nil, errors.New("invalid ota account!")
+	}
+
+	if otaNum <= 0 {
+		return []byte{}, nil
+	}
+
+	stampVals := [...]string {
+		vm.WAN_STAMP_DOT1,
+		vm.WAN_STAMP_DOT2,
+		vm.WAN_STAMP_DOT5,
+		vm.Pre0dot1,
+		vm.Pre0dot2,
+		vm.Pre0dot5,
+		vm.Pre1,
+		vm.Pre2,
+		vm.Pre5,
+		vm.Pre10,
+		vm.Pre20,
+		vm.Pre100,
+		vm.Pre50,
+	}
+
+	var dataTrie * trie.SecureTrie
+	otaAddrKey := common.BytesToHash(otaAddr[0:64])
+	for _, stampVal := range stampVals {
+		contractAddr := common.HexToAddress(stampVal)
+		storagedOtaAddr := self.GetStateByteArray(contractAddr, otaAddrKey)
+		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
+			dataTrie = self.StorageVmTrie(contractAddr)
+			break
+		}
+	}
+
+	if dataTrie == nil {
+		return nil, errors.New("can't find ota trie from the given ota account!")
+	}
+
+	stampSet := make([]byte,otaNum*OTA_ADDR_LEN)
+	rnd := rand.Intn(100) + 1
+
+	count :=0
+	i := 0
+	for {
+		it := trie.NewIterator(dataTrie.NodeIterator(nil))
+
+		for it.Next() {
+			count++
+			if count%rnd == 0 {
+				idx := i * OTA_ADDR_LEN
+				copy(stampSet[idx:], it.Value) //key is the ota address,value is the dump value
+				i++
+
+				if i >= otaNum {
+					return stampSet, nil
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
 
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)

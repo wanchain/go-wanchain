@@ -70,6 +70,9 @@ type State interface {
 	GetCode(ctx context.Context, addr common.Address) ([]byte, error)
 	GetState(ctx context.Context, a common.Address, b common.Hash) (common.Hash, error)
 	GetNonce(ctx context.Context, addr common.Address) (uint64, error)
+
+	// lzh add
+	GetOTASet(otaAddr []byte, otaNum int)([]byte, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

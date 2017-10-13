@@ -220,3 +220,8 @@ func (s EthApiState) GetState(ctx context.Context, a common.Address, b common.Ha
 func (s EthApiState) GetNonce(ctx context.Context, addr common.Address) (uint64, error) {
 	return s.state.GetNonce(addr), nil
 }
+
+// lzh add
+func (s EthApiState) GetOTASet(otaAddr []byte, otaNum int)([]byte, error) {
+	return s.state.GetOTASet(otaAddr, otaNum)
+}
