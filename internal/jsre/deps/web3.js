@@ -3899,6 +3899,7 @@ var inputAddressFormatter = function (address) {
 };
 
 
+
 var outputSyncingFormatter = function(result) {
 
     result.startingBlock = utils.toDecimal(result.startingBlock);
@@ -3927,6 +3928,7 @@ module.exports = {
     outputLogFormatter: outputLogFormatter,
     outputPostFormatter: outputPostFormatter,
     outputSyncingFormatter: outputSyncingFormatter
+
 };
 
 
@@ -5391,6 +5393,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter]
     });
 
+    var getWanAddress = new Method({
+        name: 'getWanAddress',
+        call: 'eth_getWanAddress',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter],
+    });
+
     var generateOneTimeAddress = new Method({
         name: 'generateOneTimeAddress',
         call: 'eth_generateOneTimeAddress',
@@ -5490,6 +5499,7 @@ var methods = function () {
         getOTAMixSet,
         signOTAContractTransaction,
         getPublicKeysRawStr,
+        getWanAddress,
         generateOneTimeAddress,
         computeOTAPPKeys,
         sign,

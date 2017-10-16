@@ -317,7 +317,7 @@ func (self *LightState) GetRefund() *big.Int {
 
 
 // lzh add
-func (s LightState) GetOTASet(otaAddr []byte, otaNum int)([]byte, error) {
+func (s LightState) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error) {
 	// ********************* not yet implement
 	return nil, nil
 }

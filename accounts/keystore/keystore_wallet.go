@@ -120,6 +120,17 @@ func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account) ([]string
 	}
 	return w.keystore.GetPublicKeysRawStr(account)
 }
+
+func (w *keystoreWallet) GetWanAddress(account accounts.Account)(common.WAddress, error) {
+	if account.Address != w.account.Address {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	return w.keystore.GetWanAddress(account)
+}
+
 func (w *keystoreWallet) CheckOTAdress(account accounts.Account, b *common.WAddress) (bool, error) {
 	if account.Address != w.account.Address {
 		return false, accounts.ErrUnknownAccount

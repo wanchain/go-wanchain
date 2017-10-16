@@ -230,6 +230,7 @@ func GeneratePublicKeyFromWadress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.Public
 	}
 	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
 }
+
 func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	pub := make([]byte, 65)
 	pub[0] = 0x04
@@ -241,10 +242,11 @@ func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	copy(waddr, wd[:])
 	return nil
 }
-func WaddrToUncompressed(waddr []byte, raw []byte) error {
+
+func WaddrToUncompressed(waddr []byte) ( []byte, error) {
 	A, B, err := GeneratePublicKeyFromWadress(waddr)
 	if err != nil {
-		return err
+		return nil,err
 	}
 	u := make([]byte, 128)
 	u = append(u, A.X.Bytes()...)
@@ -252,8 +254,7 @@ func WaddrToUncompressed(waddr []byte, raw []byte) error {
 	u = append(u, B.X.Bytes()...)
 	u = append(u, B.Y.Bytes()...)
 
-	copy(raw, u)
-	return nil
+	return u,nil
 }
 
 // lzh add

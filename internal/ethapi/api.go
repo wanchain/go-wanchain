@@ -1232,6 +1232,20 @@ var (
 	ErrOTASetFailed       = errors.New("no OTA address set")
 )
 
+func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, address common.Address) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+	wanAddr, err2 := wallet.GetWanAddress(account)
+	if err2 != nil {
+		return "", err2
+	}
+
+	return hexutil.Encode(wanAddr[:]),nil
+}
+
 func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1320,20 +1334,14 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 
 
 	//needed to replaced by the address got from contract
-	//n := 3
-	otaStrs,err:= s.getOTAMixSet(ctx, data, 3)
+	otaSet, err:= s.getOTAMixSet(ctx, data, 3)
+	if err != nil {
+		return common.Hash{}, err
+	}
 
-	n := len(otaStrs)/256
-	for i:=2;i<n+2;i++ {
-		//otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
-		idx := i - 2
-
-		otaAddr := otaStrs[idx*256:(idx+1)*256]
-		if len(otaAddr)==0 {
-			return common.Hash{}, errors.New("error in computing mix ota addres")
-		}
-
-		keys = append(keys,otaAddr[0:128])//record 0x + 128 bytes as public key
+	for _, otaMix := range otaSet {
+		otaMixAddr := common.Bytes2Hex(otaMix)
+		keys = append(keys, otaMixAddr[0:128]) //record 0x + 128 bytes as public key
 	}
 
 	var temp []byte
@@ -1378,140 +1386,31 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	return submitTransaction(ctx, s.b, signed)
 }
 
-func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int)(string, error) {
-	otaAddrByte := common.FromHex(otaAddr)
-	return s.getOTAMixSet(ctx, otaAddrByte, setLen)
+func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int)([]string, error) {
+	orgOtaAddr := common.FromHex(otaAddr)
+
+	otaByteSet, err := s.getOTAMixSet(ctx, orgOtaAddr, setLen)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]string, 0)
+	for _, otaByte := range otaByteSet {
+		ret = append(ret, common.Bytes2Hex(otaByte))
+
+	}
+
+	return ret, nil
 }
 
-func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int)(string, error) {
+func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int)([][]byte, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
 	if state == nil || err != nil {
-		return "", err
+		return nil, err
 	}
 
-	otaSetByte, err := state.GetOTASet(otaAddr, setLen)
-	if err != nil {
-		return "", err
-	}
-
-	return common.Bytes2Hex(otaSetByte), nil
+	return state.GetOTASet(otaAddr, setLen)
 }
-
-
-
-//func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, args SendTxArgs) (string, error) {
-//	return s.GetOTASet(ctx,args,byte(WANCOIN_GET_COINS))
-//}
-//
-//func (s *PublicTransactionPoolAPI) GetStampMixSet(ctx context.Context, args SendTxArgs) (string, error) {
-//	return s.GetOTASet(ctx,args,byte(WAN_STAMP_SET))
-//}
-
-
-//func (s *PublicTransactionPoolAPI) GetOTASet (ctx context.Context, args SendTxArgs, setType byte) (string, error) {
-//	// Set some sanity defaults and terminate on failure
-//	if err := args.setDefaults(ctx, s.b); err != nil {
-//		return "", err
-//	}
-//
-//	// Look up the wallet containing the requested signer
-//	account := accounts.Account{Address: args.From}
-//
-//	wallet, err := s.b.AccountManager().Find(account)
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	var temp []byte
-//	data := args.Data
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	if len(data)==0 {
-//		return "", errors.New("no OTA address")
-//	}
-//
-//	//2 pub and one section length
-//	if len(data)!=128 {
-//		return "", errors.New("OTA address is not correct")
-//	}
-//
-//	length := len(data)
-//	temp = make([]byte,length+1)
-//	temp[0] = setType
-//	copy(temp[1:],data)
-//
-//	temp[length] = byte(time.Microsecond&0xFF)
-//	args.Data = temp
-//
-//	// Assemble the transaction and sign with the wallet
-//	tx := args.toOTATransaction()
-//
-//	var chainID *big.Int
-//	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-//		chainID = config.ChainId
-//	}
-//
-//	signed, err := wallet.SignTx(account, tx, chainID,nil)
-//
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	receipt, err := submitTransaction(ctx, s.b, signed)
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	cnum :=make(chan string)
-//
-//	go func() {
-//
-//		for {
-//
-//			resMap, _ := s.GetTransactionReceipt(receipt)
-//			otadata := resMap["logs"]
-//
-//			otas, ok := otadata.([]*types.Log)
-//			all := ""
-//
-//			if ok {
-//
-//				length := len(otas)
-//				for i := 0; i < length; i++ {
-//					log := *otas[i]
-//					if bytes.Equal(log.Address.Bytes(), common.BytesToAddress([]byte{5}).Bytes()) || bytes.Equal(log.Address.Bytes(), common.BytesToAddress([]byte{6}).Bytes()) {
-//						all = all + hex.EncodeToString(log.Data)
-//					}
-//				}
-//
-//				cnum<-all
-//
-//				break
-//
-//			}
-//
-//
-//		}
-//	}()
-//
-//	timeout := make(chan bool, 1)
-//	go func() {
-//		time.Sleep(time.Second*300)
-//		timeout <- true
-//	}()
-//
-//	select {
-//		case data := <-cnum: //got result
-//			fmt.Println("got ota " + data)
-//			return data,nil
-//		case <-timeout: //time out
-//			fmt.Println("time out")
-//			return "",nil
-//	}
-//
-//}
 
 func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
@@ -1628,32 +1527,26 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	return strings.Join(sS[:], "+"), nil
 }
 
-func mustConvertAddress(in string) common.Address {
-	out, err := hex.DecodeString(strings.TrimPrefix(in, "0x"))
-	if err != nil {
-		panic(fmt.Errorf("invalid hex: %q", in))
-	}
-	return common.BytesToAddress(out)
-}
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, wanAdress string) (string, error) {
 
-func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, publicKeyRawStr string) (string, error) {
+	strLen := len(wanAdress)
 
-	var err error
-	strLen := len(publicKeyRawStr)
-	if strLen == (common.AddressLength<<1) + 2 {
+	if strLen != (common.WAddressLength<<1) + 2 {
 
-//		publicKeyRawStr,err= s.GetPublicKeysRawStr(ctx, mustConvertAddress(publicKeyRawStr))
-		publicKeyRawStr,err= s.GetPublicKeysRawStr(ctx, common.HexToAddress(publicKeyRawStr))
-		if err!=nil {
-			return "", errors.New("invalid public key raw string!")
-		}
+		return "", errors.New("invalid wan address!")
 	}
 
-
-	strs := strings.Split(publicKeyRawStr, "+")
-	if len(strs) != 4 {
-		return "", errors.New("invalid public key raw string!")
+	pubBytes,err := hexutil.Decode(wanAdress)
+	if err!=nil {
+		return "", errors.New("fail to decode wan address!")
 	}
+
+	publicKeyA,publicKeyB,err := keystore.GeneratePublicKeyFromWadress(pubBytes);
+	if err!=nil {
+		return "", errors.New("fail to generate public key from wan address!")
+	}
+
+	strs := hexutil.TwoPublicKeyToHexSlice(publicKeyA,publicKeyB)
 
 	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {
@@ -1712,19 +1605,14 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	otaLen := len(otaBytes)
 
 	args.Data = otaBytes
-	otaStrs,err:= s.getOTAMixSet(ctx, otaBytes, 3)
-	n := len(otaStrs)/256
+	otaSet, err:= s.getOTAMixSet(ctx, otaBytes, 3)
+	if err != nil {
+		return nil, err
+	}
 
-	for i:=2;i<n+2;i++ {
-		//otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
-		idx := i - 2
-
-		otaAddr := otaStrs[idx*256:(idx+1)*256]
-		if len(otaAddr)==0 {
-			return nil, errors.New("error in computing mix ota addres")
-		}
-		//use the first pub as the ring signature
-		keys = append(keys,otaAddr[0:128])//record 0x + 128 bytes as public key
+	for _, otaMix := range otaSet {
+		otaMixAddr := common.Bytes2Hex(otaMix)
+		keys = append(keys, otaMixAddr[0:128]) //record 0x + 128 bytes as public key
 	}
 
 

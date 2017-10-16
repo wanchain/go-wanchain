@@ -67,6 +67,7 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 	} else {
 		return nil, ErrOutOfGas
 	}
+
 }
 
 // ECRECOVER implemented as a native contract
