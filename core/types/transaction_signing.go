@@ -26,8 +26,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-
-	"bytes"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -62,29 +60,53 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*Transaction, error) {
 
-	if tx.data.Txtype != 0 &&tx.Txtype()!=2{
+	txh := s.Hash(tx)
 
-		h := s.Hash(tx)
-		sig, err := crypto.Sign(h[:], prv)
+	if tx.data.Txtype != 0 &&tx.Txtype()!=2{
+		sig, err := crypto.Sign(txh[:], prv)
 		if err != nil {
 			return nil, err
 		}
 		return s.WithSignature(tx, sig)
 
 	} else {//OTA类型交易环签名
-		h := s.Hash(tx)
-
 
 		var otaPrivD *big.Int
+		var privReplace *ecdsa.PrivateKey
+
 		if tx.Data()[0] == WANCOIN_REFUND || tx.Data()[0] == WAN_CONTRACT_OTA {
 
+			if tx.Data()[0] == WAN_CONTRACT_OTA {
+				var err error
+				privReplace, err = crypto.GenerateKey()
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				//refund do not need change the sender because the balance of the ota need to send to sender
+				privReplace = prv
+			}
+
+			//used sender address and part of data as the rign sign hash check
+			var addr common.Address
+			pubkey := crypto.FromECDSAPub(&privReplace.PublicKey)
+			//caculate the address for replaced pub
+			copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
+
+			txData := tx.Data();
+			hashBytes := make([]byte,len(addr[:])+ len(txData))//the use addr and the tx.data[0:4] as the hash input for ring sig verify
+
+			copy(hashBytes,addr[:])
+			copy(hashBytes[common.AddressLength:],txData)
+
+			//this hash is used to veriy the sender
+			verifyHash := common.BytesToHash(hashBytes)
+
+
 			otaPrivD,_ = new (big.Int).SetString(keys[0],16)
-
 			keysLen := len(keys)
-			//lzh modify
-			publicKeys := make([]*ecdsa.PublicKey, 0)
-			//publicKeys := *new([]*ecdsa.PublicKey)
 
+			publicKeys := make([]*ecdsa.PublicKey, 0)
 			for i:=1;i<keysLen;i++ {
 				x  := keys[i][0:64]
 				xb,_:= new(big.Int).SetString(x,16)
@@ -94,13 +116,8 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 				publicKeys = append(publicKeys,tk)
 			}
 
-			PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h.Bytes(), otaPrivD, publicKeys)
-			crypto.VerifyRingSign(h.Bytes(),PublicKeys,KeyImage,w_random,q_random)
-			//if res {
-			//	fmt.Println("verify passed")
-			//}
-
-			//if tx.data.Payload[0] == WANCOIN_REFUND {
+			PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(verifyHash.Bytes(), otaPrivD, publicKeys)
+			crypto.VerifyRingSign(verifyHash.Bytes(),PublicKeys,KeyImage,w_random,q_random)
 			var idx int
 			//byte[0],the number used for ring sign public key num
 			//byte[1:]
@@ -108,16 +125,14 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			// 			w []byte,   1 byte length,value
 			// 			q []byte    1 byte length,value
 			//			keyImage []byte 1 byte legth,value
-
-			//txpld := []byte("")
 			pubsLen := len(PublicKeys)
 			orgLen := len(tx.data.Payload) //value
 
 			puklen := len(crypto.FromECDSAPub(PublicKeys[0])) + 1 //length + value
 			rndlen := len(w_random[0].Bytes()) + 1                //length + value
-			txHashLen := len(h.Bytes()) + 1                       //length + value
+			verifyHashLen := len(verifyHash.Bytes()) + 1                       //length + value
 
-			all := make([]byte, orgLen+pubsLen*(puklen+rndlen+rndlen )+puklen+txHashLen+1) //one public key,w,q ramdom is 2 segment
+			all := make([]byte, orgLen+pubsLen*(puklen+rndlen+rndlen )+puklen+verifyHashLen+1) //one public key,w,q ramdom is 2 segment
 
 			//copy orginal data
 			copy(all, tx.data.Payload)
@@ -160,45 +175,21 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			copy(all[idx:], byteArray)
 			idx = idx + lenkixy
 
-			all[idx] = byte(len(h.Bytes()))
+			all[idx] = byte(len(verifyHash.Bytes()))
 			idx = idx + 1
-			txhashBytes := h.Bytes()
-			copy(all[idx:], txhashBytes)
-			idx = idx + len(h.Bytes())
+			verifyhashBytes := verifyHash.Bytes()
+			copy(all[idx:], verifyhashBytes)
+			idx = idx + len(verifyHash.Bytes())
 
-			//added the signature as verifing all data integrity to prevent replay attack
-			allLen := len(all)
-			allHash := common.BytesToHash(all[0:allLen])
-			privD := crypto.ToECDSA(otaPrivD.Bytes())
-			sig, err := crypto.Sign(allHash[:], privD)
-			if err != nil {
-				return nil, err
-			}
-
-			pubKey, err := crypto.SigToPub(allHash[:], sig)
-			if err != nil {
-				return nil,nil
-			}
-			if bytes.Equal(crypto.FromECDSAPub(pubKey), crypto.FromECDSAPub(&privD.PublicKey)) {
-				fmt.Println("verified ")
-			}
-
-			sigLen := len(sig)
-			allWithSig := make([]byte,allLen + sigLen + 1)
-			copy(allWithSig,all)
-
-			allWithSig[allLen] = byte(sigLen)
-			copy(allWithSig[allLen+1:],sig)
-
-			tx.data.Payload = allWithSig
+			tx.data.Payload = all
 
 			//tx data is changed, so it is need to hash tx again
-			h = s.Hash(tx)
+			txh = s.Hash(tx)
 		}
 
 		if tx.Data()[0] == WAN_CONTRACT_OTA {
-			privD := crypto.ToECDSA(otaPrivD.Bytes())
-			sig, err := crypto.Sign(h[:], privD)
+
+			sig, err := crypto.Sign(txh[:], privReplace)
 			if err != nil {
 				return nil, err
 			}
@@ -210,10 +201,11 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 		} else {
 
-			sig, err := crypto.Sign(h[:], prv)
+			sig, err := crypto.Sign(txh[:], prv)
 			if err != nil {
 				return nil, err
 			}
+
 			tx, err = s.WithSignature(tx, sig)
 			return tx, nil
 		}

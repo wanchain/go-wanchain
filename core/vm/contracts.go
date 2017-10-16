@@ -261,6 +261,8 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	otaLen := hexutil.BytesToShort(all[2:4])
 
 	idx := int(otaLen) + addrsLen
+	verifyHsBegin := idx //duplicate for hash verify
+
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
@@ -348,7 +350,7 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	//idx = idx + 1 //sig data will not increase idx
 	sigBytes :=  make([]byte,sigLen)
 	copy(sigBytes,all[idx+1:])
-	res := verifySig(all[0:idx],PublicKeySet,sigBytes)
+	res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
 	if !res {
 		return nil
 	}
@@ -489,7 +491,10 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	vb.SetBytes(refundValBytes)
 	otaContainerAddr := common.HexToAddress(vb.String())
 
+
 	idx := int(otaLen) + valLen
+	verifyHsBegin := idx //duplicate for hash verify
+
 	pubsLen := int(all[idx])
 	idx = idx + 1
 
@@ -552,12 +557,7 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	copy(txhashBytes,all[idx:])
 	idx = idx + txHashLen
 
-	sigLen := all[idx]
-	//idx = idx + 1 //sig data will not increase idx
-	sigBytes :=  make([]byte,sigLen)
-	copy(sigBytes,all[idx+1:])
-
-	res := verifySig(all[0:idx],PublicKeySet,sigBytes)
+	res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
 	if !res {
 		return nil
 	}
@@ -634,5 +634,22 @@ func verifySig(hashData []byte,publicKeys []*ecdsa.PublicKey,sigData []byte) boo
 	}
 
 	return false
+
+}
+
+func verifyHash(all []byte,contract *Contract,evm *Interpreter,hashOrig []byte) bool {
+
+	from := contract.caller.Address()
+	hashBytes := make([]byte,len(from[:])+ len(all))//the use addr and the tx.data[0:4] as the hash input for ring sig verify
+	copy(hashBytes,from[:])
+	copy(hashBytes[common.AddressLength:],all)
+	//this hash is used to veriy the sender
+	hcal := common.BytesToHash(hashBytes).Bytes()
+
+	if bytes.Equal(hashOrig,hcal) {
+		return true
+	}
+
+	return  false
 
 }
