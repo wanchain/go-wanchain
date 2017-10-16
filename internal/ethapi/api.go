@@ -1269,7 +1269,7 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 	}
 
 	//2 pub and one section length
-	if len(data)!=66 {
+	if len(data)!=common.WAddressLength {
 		return common.Hash{}, errors.New("OTA address is not correct")
 	}
 
@@ -1340,20 +1340,13 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 
 	//needed to replaced by the address got from contract
 	num := 3
-	otaStrs,err:= s.GetOTAMixSet(ctx, data, num)
-	n := len(otaStrs)/(common.WAddressLength*2)
-	if n != num {
-		return common.Hash{}, errors.New("error in getting ota set")
+	otaByteSet,err:= s.getOTAMixSet(ctx, data, num)
+	if err != nil {
+		return common.Hash{}, err
 	}
 
-	for i:=2;i<n+2;i++ {
-		//otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
-		idx := i - 2
-
-		otaStr := otaStrs[idx*common.WAddressLength*2:(idx+1)*common.WAddressLength*2]
-		raw,_:= hexutil.Decode("0x"+otaStr)
-
-		otaAddr,_ := keystore.WaddrToUncompressed(raw)
+	for _, otaByte := range otaByteSet {
+		otaAddr,_ := keystore.WaddrToUncompressed(otaByte)
 
 		if len(otaAddr)==0 {
 			return common.Hash{}, errors.New("error in computing mix ota addres")
@@ -1453,7 +1446,7 @@ func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxA
 	}
 
 	//2 pub and one section length
-	if len(data)!=128 {
+	if len(data)!=common.WAddressLength {
 		return common.Hash{}, errors.New("OTA address is not correct")
 	}
 
@@ -1599,7 +1592,7 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 
 	data := args.Data
 
-	if len(otaAddress)!=256 + 2 {
+	if len(otaAddress) != ((common.WAddressLength<<1) + 2) {
 		fmt.Println("len="+ strconv.Itoa( len(otaAddress)))
 		return nil, errors.New("OTA address is not correct")
 	}

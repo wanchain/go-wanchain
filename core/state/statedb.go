@@ -253,13 +253,13 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 
 // lzh add
 // GetOTASet get the set of ota, with the count as setting
-func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([]byte, error)  {
+func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
 	if otaAddr == nil || len(otaAddr) != OTA_ADDR_LEN {
 		return nil, errors.New("invalid ota account!")
 	}
 
 	if otaNum <= 0 {
-		return []byte{}, nil
+		return [][]byte{}, nil
 	}
 
 	stampVals := [...]string {
@@ -293,7 +293,7 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([]byte, error)  {
 		return nil, errors.New("can't find ota trie from the given ota account!")
 	}
 
-	stampSet := make([]byte,otaNum*common.WAddressLength)
+	otaSet := make([][]byte, 0)
 	rnd := rand.Intn(100) + 1
 
 	count :=0
@@ -302,15 +302,18 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([]byte, error)  {
 		it := trie.NewIterator(dataTrie.NodeIterator(nil))
 
 		for it.Next() {
+			if it.Value == nil || len(it.Value) != common.WAddressLength {
+				return nil, errors.New("found invalid ota addr len from trie!")
+			}
+
 			count++
 			if count%rnd == 0 {
-				idx := i * common.WAddressLength
-				copy(stampSet[idx:], it.Value) //key is the ota address,value is the dump value
+				otaSet = append(otaSet, it.Value)
 				i++
 				rnd = rand.Intn(100) + 1
 
 				if i >= otaNum {
-					return stampSet, nil
+					return otaSet, nil
 				}
 			}
 		}
