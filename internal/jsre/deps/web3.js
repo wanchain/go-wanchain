@@ -5369,17 +5369,8 @@ var methods = function () {
     var getOTAMixSet = new Method({
         name: 'getOTAMixSet',
         call: 'eth_getOTAMixSet',
-        params: 1,
-        inputFormatter: [formatters.inputTransactionFormatter]
+        params: 2,
     });
-
-    var getStampMixSet = new Method({
-        name: 'getStampMixSet',
-        call: 'eth_getStampMixSet',
-        params: 1,
-        inputFormatter: [formatters.inputTransactionFormatter]
-    });
-
 
     var scanOTAbyAccount = new Method ({
         name: 'scanOTAbyAccount',
@@ -5505,7 +5496,6 @@ var methods = function () {
         sendOTATransaction,
         sendOTARefundTransaction,
         buyOTAStamp,
-        getStampMixSet,
         getOTAMixSet,
         signOTAContractTransaction,
         getPublicKeysRawStr,
