@@ -310,6 +310,7 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
 			if count%rnd == 0 {
 				otaSet = append(otaSet, it.Value)
 				i++
+				rnd = rand.Intn(100) + 1
 
 				if i >= otaNum {
 					return otaSet, nil
