@@ -358,13 +358,13 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 	// *************************
 
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
-	return []string {
-			 hexutil.Encode(pub1.X.Bytes()),
-			 hexutil.Encode(pub1.Y.Bytes()),
-			 hexutil.Encode(priv1.D.Bytes()),
-			 hexutil.Encode(priv2.D.Bytes()),
 
-	}, err
+	pub1X, _ := hexutil.EncodeWithFixOutLen(pub1.X.Bytes(), 64)
+	pub1Y, _ := hexutil.EncodeWithFixOutLen(pub1.Y.Bytes(), 64)
+	priv1D, _ := hexutil.EncodeWithFixOutLen(priv1.D.Bytes(), 64)
+	priv2D, _ := hexutil.EncodeWithFixOutLen(priv2.D.Bytes(), 64)
+
+	return []string { pub1X, pub1Y, priv1D, priv2D }, err
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
