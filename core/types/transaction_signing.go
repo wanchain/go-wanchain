@@ -73,6 +73,8 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 	} else {//OTA类型交易环签名
 		h := s.Hash(tx)
+
+
 		var otaPrivD *big.Int
 		if tx.Data()[0] == WANCOIN_REFUND || tx.Data()[0] == WAN_CONTRACT_OTA {
 
@@ -217,6 +219,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 		}
 	}
 }
+
 //zhangy
 func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
 	h := s.Hash(tx)

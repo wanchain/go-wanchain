@@ -287,6 +287,21 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 }
 
 // lzh modify
+func (ks *KeyStore) GetWanAddress(a accounts.Account)(common.WAddress, error) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return common.WAddress{}, ErrLocked
+	}
+
+	ret := unlockedKey.WAddress
+
+	return ret, nil
+}
+
+
 func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -295,6 +310,7 @@ func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string,
 	if !found {
 		return nil, ErrLocked
 	}
+
 	ret := hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
 }

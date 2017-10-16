@@ -594,6 +594,11 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 func (w *ledgerWallet) GetPublicKeysRawStr(account accounts.Account) ([]string, error) {
 	return nil, nil
 }
+
+func (w *ledgerWallet)  GetWanAddress(account accounts.Account)(common.WAddress, error)  {
+	return common.WAddress{}, nil
+}
+
 func (w *ledgerWallet) CheckOTAdress(account accounts.Account, b *common.WAddress) (bool, error) {
 	return false, nil
 }

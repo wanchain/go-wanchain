@@ -1232,6 +1232,20 @@ var (
 	ErrOTASetFailed       = errors.New("no OTA address set")
 )
 
+func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, address common.Address) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+	wanAddr, err2 := wallet.GetWanAddress(account)
+	if err2 != nil {
+		return "", err2
+	}
+
+	return hexutil.Encode(wanAddr[:]),nil
+}
+
 func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1622,32 +1636,26 @@ func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, addr
 	return strings.Join(sS[:], "+"), nil
 }
 
-func mustConvertAddress(in string) common.Address {
-	out, err := hex.DecodeString(strings.TrimPrefix(in, "0x"))
-	if err != nil {
-		panic(fmt.Errorf("invalid hex: %q", in))
-	}
-	return common.BytesToAddress(out)
-}
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, wanAdress string) (string, error) {
 
-func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, publicKeyRawStr string) (string, error) {
+	strLen := len(wanAdress)
 
-	var err error
-	strLen := len(publicKeyRawStr)
-	if strLen == (common.AddressLength<<1) + 2 {
+	if strLen != (common.WAddressLength<<1) + 2 {
 
-//		publicKeyRawStr,err= s.GetPublicKeysRawStr(ctx, mustConvertAddress(publicKeyRawStr))
-		publicKeyRawStr,err= s.GetPublicKeysRawStr(ctx, common.HexToAddress(publicKeyRawStr))
-		if err!=nil {
-			return "", errors.New("invalid public key raw string!")
-		}
+		return "", errors.New("invalid wan address!")
 	}
 
-
-	strs := strings.Split(publicKeyRawStr, "+")
-	if len(strs) != 4 {
-		return "", errors.New("invalid public key raw string!")
+	pubBytes,err := hexutil.Decode(wanAdress)
+	if err!=nil {
+		return "", errors.New("fail to decode wan address!")
 	}
+
+	publicKeyA,publicKeyB,err := keystore.GeneratePublicKeyFromWadress(pubBytes);
+	if err!=nil {
+		return "", errors.New("fail to generate public key from wan address!")
+	}
+
+	strs := hexutil.TwoPublicKeyToHexSlice(publicKeyA,publicKeyB)
 
 	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {
