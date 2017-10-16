@@ -25,8 +25,6 @@ here shows how to transfer from acount1 to account2 in Anonymous transaction mod
 
 8  transfer eth to the Anonymous contract
 	eth.sendOTATransaction({from: eth.accounts[1],to: toAddr,value: web3.toWei(1),data: otaAddr})
-
-
 	
 9  account2 get balance from the anonymous contract
 	eth.sendOTARefundTransaction({from:eth.accounts[2],to:toAddr,value:web3.toWei(1),data: otaAddr})
@@ -103,16 +101,16 @@ the sample contract is ERC20.sol in the folder ./go-wanchain/contracts/erc20 in 
 	var erc20simple = erc20simple_contract.at(contractAddr)
 
 7. get anonymous address for account1
-	var pubs1 = eth.getPublicKeysRawStr(eth.accounts[1]);
+	var wanAddr1 = eth.getWanAddress(eth.accounts[1]);
 
 8. generate OTA address for account1  
-	var otaAddr1 = eth.generateOneTimeAddress(pubs1)
+	var otaAddr1 = eth.generateOneTimeAddress(wanAddr1)
 
 9  get anonymous address for account2
-	var pubs2 = eth.getPublicKeysRawStr(eth.accounts[2]);
+	var wanAddr2 = eth.getWanAddress(eth.accounts[2]);
 
 10. generate OTA address for account2  
-	var otaAddr2 = eth.generateOneTimeAddress(pubs2)
+	var otaAddr2 = eth.generateOneTimeAddress(wanAddr2)
 
 11. generate data for call otatranfer
 	var callData = erc20simple.otatransfer.getData(otaAddr2,web3.toWei(1))

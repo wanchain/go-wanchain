@@ -243,12 +243,23 @@ func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	return nil
 }
 
+func ToWaddr(raw []byte)([]byte, error) {
+	pub := make([]byte, 65)
+	pub[0] = 0x04
+	copy(pub[1:], raw[0:64])
+	A := crypto.ToECDSAPub(pub)
+	copy(pub[1:], raw[64:])
+	B := crypto.ToECDSAPub(pub)
+	wd := GenerateWaddressFromPubkey(A, B)
+	return wd[:],nil
+}
+
 func WaddrToUncompressed(waddr []byte) ( []byte, error) {
 	A, B, err := GeneratePublicKeyFromWadress(waddr)
 	if err != nil {
 		return nil,err
 	}
-	u := make([]byte, 128)
+	u := make([]byte,0)
 	u = append(u, A.X.Bytes()...)
 	u = append(u, A.Y.Bytes()...)
 	u = append(u, B.X.Bytes()...)

@@ -1269,7 +1269,7 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 	}
 
 	//2 pub and one section length
-	if len(data)!=128 {
+	if len(data)!=66 {
 		return common.Hash{}, errors.New("OTA address is not correct")
 	}
 
@@ -1312,9 +1312,14 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	}
 
 
-	data := args.Data
-	if len(data)!=128 {
+	dataOrig := args.Data
+	if len(dataOrig)!=common.WAddressLength {
 		return common.Hash{}, errors.New("OTA address is not correct")
+	}
+
+	data,err := keystore.WaddrToUncompressed(dataOrig)
+	if err != nil {
+		return common.Hash{}, err
 	}
 
 	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,hexutil.Encode(data))
@@ -1334,14 +1339,27 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 
 
 	//needed to replaced by the address got from contract
-	otaSet, err:= s.getOTAMixSet(ctx, data, 3)
-	if err != nil {
-		return common.Hash{}, err
+	num := 3
+	otaStrs,err:= s.GetOTAMixSet(ctx, data, num)
+	n := len(otaStrs)/(common.WAddressLength*2)
+	if n != num {
+		return common.Hash{}, errors.New("error in getting ota set")
 	}
 
-	for _, otaMix := range otaSet {
-		otaMixAddr := common.Bytes2Hex(otaMix)
-		keys = append(keys, otaMixAddr[0:128]) //record 0x + 128 bytes as public key
+	for i:=2;i<n+2;i++ {
+		//otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
+		idx := i - 2
+
+		otaStr := otaStrs[idx*common.WAddressLength*2:(idx+1)*common.WAddressLength*2]
+		raw,_:= hexutil.Decode("0x"+otaStr)
+
+		otaAddr,_ := keystore.WaddrToUncompressed(raw)
+
+		if len(otaAddr)==0 {
+			return common.Hash{}, errors.New("error in computing mix ota addres")
+		}
+
+		keys = append(keys,hexutil.Encode(otaAddr)[2:130])//record 0x + 128 bytes as public key
 	}
 
 	var temp []byte
@@ -1554,10 +1572,12 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 	}
 
 	sall := strings.Join(sS[:], "")
-
 	sall =  strings.Replace(sall,"0x","",-1)
 
-	return  ("0x" + sall),nil
+	rawBytes,_ := hexutil.Decode("0x" + sall)
+	wbytes,_:= keystore.ToWaddr(rawBytes)
+
+	return hexutil.Encode(wbytes),nil
 }
 
 
