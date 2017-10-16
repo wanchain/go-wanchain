@@ -1321,9 +1321,9 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 
 	//needed to replaced by the address got from contract
 	//n := 3
-	otaStrs,err:= s.GetOTAMixSet(ctx, data, 3)
-	n := len(otaStrs)/256
+	otaStrs,err:= s.getOTAMixSet(ctx, data, 3)
 
+	n := len(otaStrs)/256
 	for i:=2;i<n+2;i++ {
 		//otaAddr,erota  := s.GenerateOneTimeAddress(ctx,account.Address.Hex())
 		idx := i - 2
@@ -1378,7 +1378,12 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	return submitTransaction(ctx, s.b, signed)
 }
 
-func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr []byte, setLen int)(string, error) {
+func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int)(string, error) {
+	otaAddrByte := common.FromHex(otaAddr)
+	return s.getOTAMixSet(ctx, otaAddrByte, setLen)
+}
+
+func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int)(string, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
 	if state == nil || err != nil {
 		return "", err
@@ -1386,11 +1391,12 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr []b
 
 	otaSetByte, err := state.GetOTASet(otaAddr, setLen)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return common.Bytes2Hex(otaSetByte), nil
 }
+
 
 
 //func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, args SendTxArgs) (string, error) {
@@ -1706,7 +1712,7 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	otaLen := len(otaBytes)
 
 	args.Data = otaBytes
-	otaStrs,err:= s.GetOTAMixSet(ctx, otaBytes, 3)
+	otaStrs,err:= s.getOTAMixSet(ctx, otaBytes, 3)
 	n := len(otaStrs)/256
 
 	for i:=2;i<n+2;i++ {
