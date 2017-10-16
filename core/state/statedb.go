@@ -307,6 +307,7 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([]byte, error)  {
 				idx := i * common.WAddressLength
 				copy(stampSet[idx:], it.Value) //key is the ota address,value is the dump value
 				i++
+				rnd = rand.Intn(100) + 1
 
 				if i >= otaNum {
 					return stampSet, nil
