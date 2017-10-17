@@ -204,20 +204,21 @@ func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []b
 
 func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter) []byte {
 
-	length := len(in)
-	otaAddr := make([]byte,length)
-	copy(otaAddr,in[:])
+	otaAddr,err:= keystore.WaddrToUncompressed(in)//input is wand address
+	if err!= nil {
+		return nil
+	}
 
 	contractAddr := common.HexToAddress(contract.value.String())
 	otaAddrKey := common.BytesToHash(otaAddr[0:64])
 
 	// prevent rebuy
 	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, otaAddr) {
+	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, in) {
 		return nil
 	}
 
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, otaAddr)
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, in)
 
 
 	addrSrc := contract.CallerAddress
@@ -347,10 +348,6 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	copy(txhashBytes,all[idx:])
 	idx = idx + txHashLen
 
-	sigLen := all[idx]
-	//idx = idx + 1 //sig data will not increase idx
-	sigBytes :=  make([]byte,sigLen)
-	copy(sigBytes,all[idx+1:])
 	res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
 	if !res {
 		return nil

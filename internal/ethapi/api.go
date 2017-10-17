@@ -1346,8 +1346,8 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	}
 
 	for _, otaByte := range otaByteSet {
-		otaAddr,_ := keystore.WaddrToUncompressed(otaByte)
 
+		otaAddr,_ := keystore.WaddrToUncompressed(otaByte)
 		if len(otaAddr)==0 {
 			return common.Hash{}, errors.New("error in computing mix ota addres")
 		}
@@ -1575,7 +1575,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 
 
 //args.data store the call contract byte code
-func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,otaAddress string) (*SignTransactionResult, error) {
+func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,wanAddress string) (*SignTransactionResult, error) {
 
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1592,11 +1592,18 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 
 	data := args.Data
 
-	if len(otaAddress) != ((common.WAddressLength<<1) + 2) {
-		fmt.Println("len="+ strconv.Itoa( len(otaAddress)))
+	if len(wanAddress) != ((common.WAddressLength<<1) + 2) {
+		fmt.Println("len="+ strconv.Itoa( len(wanAddress)))
 		return nil, errors.New("OTA address is not correct")
 	}
 
+	wanBytes,_:= hexutil.Decode(wanAddress)
+	otaBytes,err := keystore.WaddrToUncompressed(wanBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	otaAddress := hexutil.Encode(otaBytes)
 	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,otaAddress)
 	if errapi !=nil {
 		return nil, errors.New("error in computing ota prikey")
@@ -1624,7 +1631,13 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	}
 
 	for _, otaMix := range otaSet {
-		otaMixAddr := common.Bytes2Hex(otaMix)
+
+		otaAddr,err := keystore.WaddrToUncompressed(otaMix)
+		if err != nil {
+			return nil, err
+		}
+
+		otaMixAddr := common.Bytes2Hex(otaAddr)
 		keys = append(keys, otaMixAddr[0:128]) //record 0x + 128 bytes as public key
 	}
 
@@ -1679,8 +1692,6 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-
-
 
 	return &SignTransactionResult{txBytes, tx}, nil
 
