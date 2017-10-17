@@ -31,7 +31,6 @@ import (
 	"math/rand"
 	"fmt"
 	"bytes"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -438,21 +437,18 @@ var (
 
 func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byte {
 
-	otaAddr,err:= keystore.WaddrToUncompressed(in)//input is wand address
-	if err!= nil {
-		return nil
-	}
+	shortOtaAddr := in
 
 	contractAddr := common.HexToAddress(contract.value.String())
-	otaAddrKey := common.BytesToHash(otaAddr[0:64])
+	otaAddrKey := common.BytesToHash(shortOtaAddr[0:64])
 
 	// prevent rebuy
 	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, otaAddr) {
+	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, shortOtaAddr) {
 		return nil
 	}
 
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, in)
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, shortOtaAddr)
 
 	addrSrc := contract.CallerAddress
 

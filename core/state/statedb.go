@@ -254,7 +254,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 // lzh add
 // GetOTASet get the set of ota, with the count as setting
 func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
-	if otaAddr == nil || len(otaAddr) != OTA_ADDR_LEN {
+	if otaAddr == nil || len(otaAddr) != common.WAddressLength {
 		return nil, errors.New("invalid ota account!")
 	}
 
