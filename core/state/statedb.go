@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/trie"
 	lru "github.com/hashicorp/golang-lru"
 	"errors"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.
@@ -254,8 +255,17 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 // lzh add
 // GetOTASet get the set of ota, with the count as setting
 func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
-	if otaAddr == nil || len(otaAddr) != common.WAddressLength {
+	if otaAddr == nil || (len(otaAddr) != common.WAddressLength && len(otaAddr) != OTA_ADDR_LEN) {
 		return nil, errors.New("invalid ota account!")
+	}
+
+	var err error
+	otaLongAddr := otaAddr
+	if len(otaAddr) == common.WAddressLength {
+		otaLongAddr, err = keystore.WaddrToUncompressed(otaAddr)//input is wand address
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if otaNum <= 0 {
@@ -279,7 +289,7 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
 	}
 
 	var dataTrie * trie.SecureTrie
-	otaAddrKey := common.BytesToHash(otaAddr[0:64])
+	otaAddrKey := common.BytesToHash(otaLongAddr[0:64])
 	for _, stampVal := range stampVals {
 		contractAddr := common.HexToAddress(stampVal)
 		storagedOtaAddr := self.GetStateByteArray(contractAddr, otaAddrKey)
