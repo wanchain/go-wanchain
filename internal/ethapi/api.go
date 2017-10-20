@@ -1575,6 +1575,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 
 
 //args.data store the call contract byte code
+// revise by Anson5555555Lee
 func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,wanAddress string) (*SignTransactionResult, error) {
 
 	// Set some sanity defaults and terminate on failure
@@ -1658,7 +1659,7 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	copy(temp[4:],data[:])//record contract data
 
 	dataLen := hexutil.BytesToShort(temp[2:4])
-	fmt.Println("%d",dataLen)
+	fmt.Printf("%d",dataLen)
 
 	//record to contract addr in data,the acutal spend should be 0
 	copy(temp[length:],craBytes)

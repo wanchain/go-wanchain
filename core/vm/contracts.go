@@ -612,7 +612,7 @@ func getOtaSet(dataTrie *trie.SecureTrie,stampNUm int, otaAddr []byte) []byte {
 		it = trie.NewIterator(dataTrie.NodeIterator(nil))
 	}
 
-	return nil
+	//return nil
 }
 
 

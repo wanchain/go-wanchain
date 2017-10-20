@@ -329,7 +329,7 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
 		}
 	}
 
-	return nil, nil
+	//return nil, nil
 }
 
 
