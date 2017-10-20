@@ -24,7 +24,7 @@ contract ERC20 {
 		
     }	
 	
-    function otatransfer(string _from, string _to, uint256 _value,bytes memory sig) onlyMintCaller returns (bool success) {		
+    function otatransfer(string _from, string _to, uint256 _value) onlyMintCaller returns (bool success) {		
         if (otabalances[_from] >= _value && otabalances[_to] + _value > otabalances[_to]) {
             otabalances[_to] += _value;
             otabalances[_from] -= _value;
