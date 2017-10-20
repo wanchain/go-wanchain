@@ -2,11 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="459a3cc8-add8-4cf1-b5bf-ca0687482ff4" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/go-wanchain.iml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/modules.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/accounts/abi/bind/backends/simulated.go" afterPath="$PROJECT_DIR$/accounts/abi/bind/backends/simulated.go" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/state_transition.go" afterPath="$PROJECT_DIR$/core/state_transition.go" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/interfaces.go" afterPath="$PROJECT_DIR$/interfaces.go" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -17,11 +13,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="simulated.go" pinned="false" current-in-tab="false">
+      <file leaf-file-name="simulated.go" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/accounts/abi/bind/backends/simulated.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="116">
-              <caret line="260" column="40" lean-forward="false" selection-start-line="260" selection-start-column="40" selection-end-line="260" selection-end-column="40" />
+            <state relative-caret-position="674">
+              <caret line="291" column="51" lean-forward="true" selection-start-line="291" selection-start-column="51" selection-end-line="291" selection-end-column="51" />
               <folding />
             </state>
           </provider>
@@ -57,7 +53,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="transaction.go" pinned="false" current-in-tab="true">
+      <file leaf-file-name="transaction.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/core/types/transaction.go">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="602">
@@ -220,14 +216,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/accounts/abi/bind/backends/simulated.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="116">
-          <caret line="260" column="40" lean-forward="false" selection-start-line="260" selection-start-column="40" selection-end-line="260" selection-end-column="40" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/interfaces.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="416">
@@ -240,6 +228,14 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="602">
           <caret line="537" column="5" lean-forward="false" selection-start-line="537" selection-start-column="5" selection-end-line="537" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/accounts/abi/bind/backends/simulated.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="674">
+          <caret line="291" column="51" lean-forward="true" selection-start-line="291" selection-start-column="51" selection-end-line="291" selection-end-column="51" />
           <folding />
         </state>
       </provider>
