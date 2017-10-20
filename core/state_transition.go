@@ -77,7 +77,6 @@ type Message interface {
 	CheckNonce() bool
 	Data() []byte
 	TxType() uint64
-
 }
 
 func MessageCreatesContract(msg Message) bool {
