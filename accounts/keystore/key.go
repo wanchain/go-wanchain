@@ -259,11 +259,16 @@ func WaddrToUncompressed(waddr []byte) ( []byte, error) {
 	if err != nil {
 		return nil,err
 	}
-	u := make([]byte,0)
-	u = append(u, A.X.Bytes()...)
-	u = append(u, A.Y.Bytes()...)
-	u = append(u, B.X.Bytes()...)
-	u = append(u, B.Y.Bytes()...)
+
+	u := make([]byte,128)
+	temp :=  A.X.Bytes()
+	copy(u[0:],temp[0:32])
+	temp =  A.Y.Bytes()
+	copy(u[32:],temp[0:32])
+	temp =  B.X.Bytes()
+	copy(u[64:],temp[0:32])
+	temp =  B.Y.Bytes()
+	copy(u[96:],temp[0:32])
 
 	return u,nil
 }
