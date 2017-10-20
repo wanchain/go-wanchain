@@ -273,6 +273,27 @@ func WaddrToUncompressed(waddr []byte) ( []byte, error) {
 	return u,nil
 }
 
+func WaddrToUncompressedFromString(waddr string) ( []byte, error) {
+	waddrBytes, _ := hexutil.Decode(waddr)
+	A, B, err := GeneratePublicKeyFromWadress(waddrBytes)
+	if err != nil {
+		return nil,err
+	}
+
+	u := make([]byte,128)
+	temp :=  A.X.Bytes()
+	copy(u[0:],temp[0:32])
+	temp =  A.Y.Bytes()
+	copy(u[32:],temp[0:32])
+	temp =  B.X.Bytes()
+	copy(u[64:],temp[0:32])
+	temp =  B.Y.Bytes()
+	copy(u[96:],temp[0:32])
+
+	return u,nil
+}
+
+
 // lzh add
 func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddress) error {
 

@@ -20,26 +20,28 @@ import (
 	"crypto/sha256"
 	"math/big"
 
+	"bytes"
+	"crypto/ecdsa"
+	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"golang.org/x/crypto/ripemd160"
-	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/trie"
-	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"golang.org/x/crypto/ripemd160"
 	"math/rand"
-	"fmt"
-	"bytes"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"strings"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
 type PrecompiledContract interface {
-	RequiredGas(inputSize int) uint64 // RequiredPrice calculates the contract gas use
-	Run(input []byte,contract *Contract,evm *Interpreter) []byte          // Run runs the precompiled contract
+	RequiredGas(inputSize int) uint64                              // RequiredPrice calculates the contract gas use
+	Run(input []byte, contract *Contract, evm *Interpreter) []byte // Run runs the precompiled contract
 }
 
 // Precompiled contains the default set of ethereum contracts
@@ -53,13 +55,13 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 }
 
 // RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract,evm *Interpreter) (ret []byte, err error) {
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *Interpreter) (ret []byte, err error) {
 
 	gas := p.RequiredGas(len(input))
 	if contract.UseGas(gas) {
-		
-		ret = p.Run(input,contract,evm)
-		if ret!= nil {
+
+		ret = p.Run(input, contract, evm)
+		if ret != nil {
 			return ret, nil
 		} else {
 			return nil, ErrOutOfGas
@@ -78,7 +80,7 @@ func (c *ecrecover) RequiredGas(inputSize int) uint64 {
 	return params.EcrecoverGas
 }
 
-func (c *ecrecover) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *ecrecover) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
 	const ecRecoverInputLength = 128
 
 	in = common.RightPadBytes(in, ecRecoverInputLength)
@@ -116,7 +118,7 @@ type sha256hash struct{}
 func (c *sha256hash) RequiredGas(inputSize int) uint64 {
 	return uint64(inputSize+31)/32*params.Sha256WordGas + params.Sha256Gas
 }
-func (c *sha256hash) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *sha256hash) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
 	h := sha256.Sum256(in)
 	return h[:]
 }
@@ -131,7 +133,7 @@ type ripemd160hash struct{}
 func (c *ripemd160hash) RequiredGas(inputSize int) uint64 {
 	return uint64(inputSize+31)/32*params.Ripemd160WordGas + params.Ripemd160Gas
 }
-func (c *ripemd160hash) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *ripemd160hash) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
 	ripemd := ripemd160.New()
 	ripemd.Write(in)
 	return common.LeftPadBytes(ripemd.Sum(nil), 32)
@@ -148,7 +150,7 @@ func (c *dataCopy) RequiredGas(inputSize int) uint64 {
 	return uint64(inputSize+31)/32*params.IdentityWordGas + params.IdentityGas
 }
 
-func (c *dataCopy) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *dataCopy) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
 
 	return in
 }
@@ -166,46 +168,111 @@ func (c *dataCopy) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
 const (
 	WAN_CONTRACT_SEND_OTA = byte(0)
 
-	WAN_BUY_STAMP = byte(3)
+	WAN_BUY_STAMP    = byte(3)
 	WAN_VERIFY_STAMP = byte(4)
-	WAN_STAMP_SET = byte(5)
+	WAN_STAMP_SET    = byte(5)
 
-
-	WAN_STAMP_DOT1 = "10000000000000000"//0.01
-	WAN_STAMP_DOT2 = "20000000000000000"//0.02
-	WAN_STAMP_DOT5 = "50000000000000000"//0.05
+	WAN_STAMP_DOT1 = "10000000000000000" //0.01
+	WAN_STAMP_DOT2 = "20000000000000000" //0.02
+	WAN_STAMP_DOT5 = "50000000000000000" //0.05
 
 	OTA_ADDR_LEN = 128
 )
 
+var (
+	coinSCDefinition = `
+	[
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyCoinNote",
+    "outputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "refundCoin",
+    "outputs": [
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "getCoins",
+    "outputs": [
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  }
+]`
+	coinAbi, errCoinSCInit = abi.JSON(strings.NewReader(coinSCDefinition))
+	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
+)
 
+func init() {
+	if errCoinSCInit != nil {
+		// TODO: refact panic
+	}
 
-type wanchainStampSC struct{
-
+	copy(buyIdArr[:], coinAbi.Methods["buyCoinNote"].Id())
+	copy(refundIdArr[:], coinAbi.Methods["refundCoin"].Id())
+	copy(getCoinsIdArr[:], coinAbi.Methods["getCoins"].Id())
 }
 
+type wanchainStampSC struct {
+}
 
 func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 	return 0
 }
 
-func (c *wanchainStampSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
 
-	if in[0]==WAN_BUY_STAMP {
-		return c.buyStamp(in[1:],contract,evm)
-	} else if in[0]==WAN_VERIFY_STAMP{
-		return c.verifyStamp(in[0:],contract,evm)
-	}  else if in[0]==WAN_STAMP_SET{
-		return c.getStamps(in[1:],contract,evm)
+	if in[0] == WAN_BUY_STAMP {
+		return c.buyStamp(in[1:], contract, evm)
+	} else if in[0] == WAN_VERIFY_STAMP {
+		return c.verifyStamp(in[0:], contract, evm)
+	} else if in[0] == WAN_STAMP_SET {
+		return c.getStamps(in[1:], contract, evm)
 	}
 
-	return  nil
+	return nil
 }
 
-func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpreter) []byte {
 
-	otaAddr,err:= keystore.WaddrToUncompressed(in)//input is wand address
-	if err!= nil {
+	otaAddr, err := keystore.WaddrToUncompressed(in) //input is wand address
+	if err != nil {
 		return nil
 	}
 
@@ -220,10 +287,9 @@ func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter
 
 	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, in)
 
-
 	addrSrc := contract.CallerAddress
 	balance := evm.env.StateDB.GetBalance(addrSrc)
-	if balance.Cmp(contract.value) >= 0{
+	if balance.Cmp(contract.value) >= 0 {
 		evm.env.StateDB.SubBalance(addrSrc, contract.value)
 		return []byte("1")
 	}
@@ -231,14 +297,14 @@ func (c *wanchainStampSC) buyStamp(in []byte,contract *Contract,evm *Interpreter
 	return nil
 }
 
-func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanchainStampSC) getStamps(in []byte, contract *Contract, evm *Interpreter) []byte {
 
 	length := len(in)
-	otaAddr := make([]byte,length)
-	copy(otaAddr,in[:])
+	otaAddr := make([]byte, length)
+	copy(otaAddr, in[:])
 
-	var trie * trie.SecureTrie = nil
-	stampVals := [...]string {WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
+	var trie *trie.SecureTrie = nil
+	stampVals := [...]string{WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
 	for _, stampVal := range stampVals {
 		contractAddr := common.HexToAddress(stampVal)
 		otaAddrKey := common.BytesToHash(otaAddr[0:64])
@@ -249,15 +315,15 @@ func (c *wanchainStampSC) getStamps(in []byte,contract *Contract,evm *Interprete
 		}
 	}
 
-	if trie==nil {
+	if trie == nil {
 		return nil
 	}
 
-	return getOtaSet(trie,3,otaAddr)
+	return getOtaSet(trie, 3, otaAddr)
 
 }
 
-func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanchainStampSC) verifyStamp(all []byte, contract *Contract, evm *Interpreter) []byte {
 
 	addrsLen := int(all[1])
 	otaLen := hexutil.BytesToShort(all[2:4])
@@ -274,11 +340,11 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 
 	var storagedOtaAddr []byte = nil
 	lenxy := int(all[idx])
-	x := make([]byte,lenxy)
-	copy(x,all[idx+1:])
+	x := make([]byte, lenxy)
+	copy(x, all[idx+1:])
 
 	var stampVal string
-	stampVals := [...]string {WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
+	stampVals := [...]string{WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
 	for _, stampVal = range stampVals {
 		contractAddr := common.HexToAddress(stampVal)
 		otaAddrKey := common.BytesToHash(x[1:])
@@ -299,56 +365,55 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 		lenxy = int(all[idx])
 		idx = idx + 1
 
-		x := make([]byte,lenxy)
-		copy(x,all[idx:])
+		x := make([]byte, lenxy)
+		copy(x, all[idx:])
 
 		//verify the stamp in the set is from current stamp tree
 		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-		if storagedOtaAddr==nil || len(storagedOtaAddr)==0 {
+		if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
 			fmt.Print("not get stamp in the set")
 			return nil
 		}
 
 		puk := crypto.ToECDSAPub(x)
-		PublicKeySet = append(PublicKeySet, puk)//convert []byte to public key
+		PublicKeySet = append(PublicKeySet, puk) //convert []byte to public key
 		idx = idx + lenxy
 
-
-		lenw :=  int(all[idx])
+		lenw := int(all[idx])
 		idx = idx + 1
 
-		w := make([]byte,lenw)
-		copy(w,all[idx:])
-		rndw := new (big.Int).SetBytes(w)
+		w := make([]byte, lenw)
+		copy(w, all[idx:])
+		rndw := new(big.Int).SetBytes(w)
 		W_random = append(W_random, rndw) //convert []byte to random
 		idx = idx + lenw
 
-		lenq :=  int(all[idx])
+		lenq := int(all[idx])
 		idx = idx + 1
 
-		q := make([]byte,lenq)
-		copy(q,all[idx:])
-		rndq := new (big.Int).SetBytes(q)
-		Q_random = append(Q_random, rndq)//convert []byte to random
+		q := make([]byte, lenq)
+		copy(q, all[idx:])
+		rndq := new(big.Int).SetBytes(q)
+		Q_random = append(Q_random, rndq) //convert []byte to random
 		idx = idx + lenq
 	}
 
 	lenkixy := int(all[idx])
 	idx = idx + 1
 
-	kix := make([]byte,lenkixy)
-	copy(kix,all[idx:])
+	kix := make([]byte, lenkixy)
+	copy(kix, all[idx:])
 	KeyImage := crypto.ToECDSAPub(kix)
 	idx = idx + lenkixy
 
 	txHashLen := int(all[idx])
 	idx = idx + 1
-	txhashBytes :=  make([]byte,txHashLen)
-	copy(txhashBytes,all[idx:])
+	txhashBytes := make([]byte, txHashLen)
+	copy(txhashBytes, all[idx:])
 	idx = idx + txHashLen
 
-	res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
+	res := verifyHash(all[0:verifyHsBegin], contract, evm, txhashBytes)
 	if !res {
 		return nil
 	}
@@ -356,7 +421,7 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	sendValue, ok := new(big.Int).SetString(stampVal, 10)
 	if !ok {
 		log.Error("get stamp value big int fail:%s", stampVal)
-		return  nil
+		return nil
 	}
 
 	kixH := crypto.Keccak256Hash(kix)
@@ -364,9 +429,9 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 
 	if storagedSendValue != nil && len(storagedSendValue) != 0 {
 		return nil
-	} else  {
+	} else {
 
-		verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
+		verifyRes := crypto.VerifyRingSign(txhashBytes, PublicKeySet, KeyImage, []*big.Int(W_random), []*big.Int(Q_random))
 		if verifyRes {
 
 			evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, sendValue.Bytes())
@@ -389,13 +454,12 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
  *  byte[3:]:the OTA-Address
  */
 const (
-	WANCOIN_BUY    = byte(0)
+	WANCOIN_BUY       = byte(0)
 	WANCOIN_GET_COINS = byte(1)
-	WANCOIN_REFUND = byte(2)
+	WANCOIN_REFUND    = byte(2)
 )
 
-type wanCoinSC struct{
-
+type wanCoinSC struct {
 }
 
 func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
@@ -403,40 +467,50 @@ func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
 }
 
 const (
-	Pre0dot1 = "100000000000000000"//0.1
-	Pre0dot2 = "200000000000000000"//0.2
-	Pre0dot5 = "500000000000000000"//0.5
-	Pre1 = 	   "1000000000000000000"//1
-	Pre2 = 	   "2000000000000000000"//2
-	Pre5 = 	   "5000000000000000000"//5
-	Pre10 =    "10000000000000000000"//10
-	Pre20 =    "20000000000000000000"//20
-	Pre50 =    "50000000000000000000"//50
-	Pre100 =   "100000000000000000000"//100
+	Pre0dot1 = "100000000000000000"    //0.1
+	Pre0dot2 = "200000000000000000"    //0.2
+	Pre0dot5 = "500000000000000000"    //0.5
+	Pre1     = "1000000000000000000"   //1
+	Pre2     = "2000000000000000000"   //2
+	Pre5     = "5000000000000000000"   //5
+	Pre10    = "10000000000000000000"  //10
+	Pre20    = "20000000000000000000"  //20
+	Pre50    = "50000000000000000000"  //50
+	Pre100   = "100000000000000000000" //100
 )
 
-func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+	var methodIdArr [4]byte
+	copy(methodIdArr[:], in[:4])
 
-	if in[0]==WANCOIN_BUY {
-		return c.buyCoin(in[1:],contract,evm)
-	} else if in[0]==WANCOIN_GET_COINS {
-		return c.getCoins(in[0:],contract,evm)
-	} else if in[0]==WANCOIN_REFUND {
-		return c.refund(in[0:],contract,evm)
+	if methodIdArr == buyIdArr {
+		return c.buyCoin(in[4:], contract, evm)
+	} else if methodIdArr == getCoinsIdArr {
+		return c.getCoins(in[4:], contract, evm)
+	} else if methodIdArr == refundIdArr {
+		return c.refund(in[4:], contract, evm)
 	}
 
-	return  nil
+	return nil
 }
 
 var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
+func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []byte {
+	var outStruct struct{
+		OtaAddr string
+		Value *big.Int
+	}
 
-func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byte {
+	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
+	if err != nil {
+		return nil
+	}
 
-	otaAddr,err:= keystore.WaddrToUncompressed(in)//input is wand address
-	if err!= nil {
+	otaAddr, err := keystore.WaddrToUncompressedFromString(outStruct.OtaAddr) //input is wand address
+	if err != nil {
 		return nil
 	}
 
@@ -455,7 +529,8 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 
 	balance := evm.env.StateDB.GetBalance(addrSrc)
 
-	if balance.Cmp(contract.value) >= 0{
+	if balance.Cmp(contract.value) >= 0 {
+		// Need check contract value in  build in value sets
 		evm.env.StateDB.SubBalance(addrSrc, contract.value)
 		return []byte("1")
 	}
@@ -463,33 +538,30 @@ func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byt
 	return nil
 }
 
-
-func (c *wanCoinSC) getCoins(all []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanCoinSC) getCoins(all []byte, contract *Contract, evm *Interpreter) []byte {
 	length := len(all)
-	temp := make([]byte,length)
-	copy(temp,all[:])
+	temp := make([]byte, length)
+	copy(temp, all[:])
 
 	contractAddr := common.HexToAddress(contract.value.String())
 	trie := evm.env.StateDB.StorageVmTrie(contractAddr)
-	if trie==nil {
+	if trie == nil {
 		return nil
 	}
 
-	return getOtaSet(trie,3,temp)
+	return getOtaSet(trie, 3, temp)
 }
 
-
-func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []byte {
 
 	valLen := int(all[1])
 	otaLen := hexutil.BytesToShort(all[2:4])
 
-	refundValBytes := all[otaLen:int(otaLen)+valLen]
+	refundValBytes := all[otaLen : int(otaLen)+valLen]
 
-	vb := new (big.Int)
+	vb := new(big.Int)
 	vb.SetBytes(refundValBytes)
 	otaContainerAddr := common.HexToAddress(vb.String())
-
 
 	idx := int(otaLen) + valLen
 	verifyHsBegin := idx //duplicate for hash verify
@@ -501,14 +573,13 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	W_random := *new([]*big.Int)
 	Q_random := *new([]*big.Int)
 
-
 	var i int
 	for i = 0; i < pubsLen; i++ {
 		lenxy := int(all[idx])
 		idx = idx + 1
 
-		x := make([]byte,lenxy)
-		copy(x,all[idx:])
+		x := make([]byte, lenxy)
+		copy(x, all[idx:])
 
 		otaAddrKey := common.BytesToHash(x[1:])
 		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrKey)
@@ -518,45 +589,43 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 		}
 
 		puk := crypto.ToECDSAPub(x)
-		PublicKeySet = append(PublicKeySet, puk)//convert []byte to public key
+		PublicKeySet = append(PublicKeySet, puk) //convert []byte to public key
 		idx = idx + lenxy
 
-
-		lenw :=  int(all[idx])
+		lenw := int(all[idx])
 		idx = idx + 1
 
-		w := make([]byte,lenw)
-		copy(w,all[idx:])
-		rndw := new (big.Int).SetBytes(w)
+		w := make([]byte, lenw)
+		copy(w, all[idx:])
+		rndw := new(big.Int).SetBytes(w)
 		W_random = append(W_random, rndw) //convert []byte to random
 		idx = idx + lenw
 
-
-		lenq :=  int(all[idx])
+		lenq := int(all[idx])
 		idx = idx + 1
 
-		q := make([]byte,lenq)
-		copy(q,all[idx:])
-		rndq := new (big.Int).SetBytes(q)
-		Q_random = append(Q_random, rndq)//convert []byte to random
+		q := make([]byte, lenq)
+		copy(q, all[idx:])
+		rndq := new(big.Int).SetBytes(q)
+		Q_random = append(Q_random, rndq) //convert []byte to random
 		idx = idx + lenq
 	}
 
 	lenkixy := int(all[idx])
 	idx = idx + 1
 
-	kix := make([]byte,lenkixy)
-	copy(kix,all[idx:])
+	kix := make([]byte, lenkixy)
+	copy(kix, all[idx:])
 	KeyImage := crypto.ToECDSAPub(kix)
 	idx = idx + lenkixy
 
 	txHashLen := int(all[idx])
 	idx = idx + 1
-	txhashBytes :=  make([]byte,txHashLen)
-	copy(txhashBytes,all[idx:])
+	txhashBytes := make([]byte, txHashLen)
+	copy(txhashBytes, all[idx:])
 	idx = idx + txHashLen
 
-	res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
+	res := verifyHash(all[0:verifyHsBegin], contract, evm, txhashBytes)
 	if !res {
 		return nil
 	}
@@ -565,12 +634,12 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	storagedRefundVal := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
 	if storagedRefundVal != nil && len(storagedRefundVal) != 0 {
 		return nil
-	} else  {
+	} else {
 
-	   verifyRes := crypto.VerifyRingSign(txhashBytes,PublicKeySet,KeyImage,[]*big.Int(W_random),[]*big.Int(Q_random))
-	   if verifyRes {
+		verifyRes := crypto.VerifyRingSign(txhashBytes, PublicKeySet, KeyImage, []*big.Int(W_random), []*big.Int(Q_random))
+		if verifyRes {
 
-		    evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, refundValBytes)
+			evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, refundValBytes)
 			addrSrc := contract.CallerAddress
 			evm.env.StateDB.AddBalance(addrSrc, vb)
 			return []byte("1")
@@ -581,31 +650,29 @@ func (c *wanCoinSC) refund(all []byte,contract *Contract,evm *Interpreter) []byt
 	return nil
 }
 
-
-
-func getOtaSet(dataTrie *trie.SecureTrie,stampNUm int, otaAddr []byte) []byte {
+func getOtaSet(dataTrie *trie.SecureTrie, stampNUm int, otaAddr []byte) []byte {
 	if dataTrie == nil {
 		return nil
 	}
 
-	stampSet := make([]byte,stampNUm*OTA_ADDR_LEN)
+	stampSet := make([]byte, stampNUm*OTA_ADDR_LEN)
 	rnd := rand.Intn(100) + 1
 
 	it := trie.NewIterator(dataTrie.NodeIterator(nil))
-	count :=0
+	count := 0
 	i := 0
 	for {
 
 		for it.Next() {
-			count ++
-			if count %rnd == 0&&i<stampNUm {
-				idx := i*OTA_ADDR_LEN
-				copy(stampSet[idx:],it.Value) //key is the ota address,value is the dump value
+			count++
+			if count%rnd == 0 && i < stampNUm {
+				idx := i * OTA_ADDR_LEN
+				copy(stampSet[idx:], it.Value) //key is the ota address,value is the dump value
 				i++
 			}
 
-			if i >= stampNUm{
-				return  stampSet
+			if i >= stampNUm {
+				return stampSet
 			}
 		}
 
@@ -615,8 +682,7 @@ func getOtaSet(dataTrie *trie.SecureTrie,stampNUm int, otaAddr []byte) []byte {
 	return nil
 }
 
-
-func verifySig(hashData []byte,publicKeys []*ecdsa.PublicKey,sigData []byte) bool {
+func verifySig(hashData []byte, publicKeys []*ecdsa.PublicKey, sigData []byte) bool {
 
 	allHash := common.BytesToHash(hashData)
 	pubLen := len(publicKeys)
@@ -626,9 +692,9 @@ func verifySig(hashData []byte,publicKeys []*ecdsa.PublicKey,sigData []byte) boo
 	}
 
 	i := 0
-	for i = 0;i < pubLen; i++ {
+	for i = 0; i < pubLen; i++ {
 		if bytes.Equal(crypto.FromECDSAPub(pubKey), crypto.FromECDSAPub(publicKeys[i])) {
-			return  true
+			return true
 		}
 	}
 
@@ -636,19 +702,19 @@ func verifySig(hashData []byte,publicKeys []*ecdsa.PublicKey,sigData []byte) boo
 
 }
 
-func verifyHash(all []byte,contract *Contract,evm *Interpreter,hashOrig []byte) bool {
+func verifyHash(all []byte, contract *Contract, evm *Interpreter, hashOrig []byte) bool {
 
 	from := contract.caller.Address()
-	hashBytes := make([]byte,len(from[:])+ len(all))//the use addr and the tx.data[0:4] as the hash input for ring sig verify
-	copy(hashBytes,from[:])
-	copy(hashBytes[common.AddressLength:],all)
+	hashBytes := make([]byte, len(from[:])+len(all)) //the use addr and the tx.data[0:4] as the hash input for ring sig verify
+	copy(hashBytes, from[:])
+	copy(hashBytes[common.AddressLength:], all)
 	//this hash is used to veriy the sender
 	hcal := common.BytesToHash(hashBytes).Bytes()
 
-	if bytes.Equal(hashOrig,hcal) {
+	if bytes.Equal(hashOrig, hcal) {
 		return true
 	}
 
-	return  false
+	return false
 
 }

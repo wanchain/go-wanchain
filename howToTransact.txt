@@ -25,9 +25,18 @@ here shows how to transfer from acount1 to account2 in Anonymous transaction mod
 
 8  transfer eth to the Anonymous contract
 	eth.sendOTATransaction({from: eth.accounts[1],to: toAddr,value: web3.toWei(1),data: otaAddr})
+/****************************
+S. txBuyCoinData = eth.buyCoinNote.getData(otaAddr, value)
+S1. eth.sendTransaction({from:eth.accounts[2],to:toAddr,value:web3.toWei(1),data: txBuyCoinData, gas:})
+****************************/
 	
 9  account2 get balance from the anonymous contract
 	eth.sendOTARefundTransaction({from:eth.accounts[2],to:toAddr,value:web3.toWei(1),data: otaAddr})
+/****************************
+S.txRefundData = eth.refundCoin.getData(otaAddr, [value])
+ringData = eth.genRingSign('stamp/coin', 'privatekey4ota')
+S2.eth.sendOTATransaction({from:receiver, to:, data: ringdata + txRefundData})
+****************************/
 
 10 get balance
    web3.fromWei(eth.getBalance(eth.accounts[2]));
@@ -59,6 +68,9 @@ how to buy stamp
 8. buy a stamp
   eth.buyOTAStamp({from: eth.accounts[1],to: toAddr,value: web3.toWei(0.01),data: otaAddr})	
 
+/****************************
+S3. txBuyCoinData = eth.buyStamp.getData(otaAddr, value)
+****************************/
 ============================================================================================================
 to get ota stamp set
 
