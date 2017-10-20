@@ -64,6 +64,7 @@ func (i *Interface) SetBigInt(bigint *BigInt)      { i.object = &bigint.bigint }
 func (i *Interface) SetBigInts(bigints *BigInts)   { i.object = &bigints.bigints }
 
 // lzh modify
+// Anson5555555Lee fix
 func (i *Interface) SetDefaultBool()      { i.object = new(bool) }
 func (i *Interface) SetDefaultBools()     { i.object = &make([]bool, 0) }
 //func (i *Interface) SetDefaultBools()     { i.object = new([]bool) }
