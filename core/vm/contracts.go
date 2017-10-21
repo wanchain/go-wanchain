@@ -509,7 +509,12 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
-	otaAddr, err := keystore.WaddrToUncompressedFromString(outStruct.OtaAddr) //input is wand address
+	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
+	if err != nil{
+		return nil
+	}
+
+	otaAddr, err := keystore.WaddrToUncompressed(wanAddr) //input is wand address
 	if err != nil {
 		return nil
 	}
@@ -523,7 +528,7 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, in)
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, wanAddr)
 
 	addrSrc := contract.CallerAddress
 

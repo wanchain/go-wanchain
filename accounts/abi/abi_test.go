@@ -1239,3 +1239,137 @@ func TestUnmarshal(t *testing.T) {
 		t.Fatal("expected error:", err)
 	}
 }
+
+func TestWanchain(t *testing.T){
+	definition := `[{"constant":false,"inputs":[{"name":"otaPubKey","type":"address"}],"name":"buyStamp","outputs":[{"name":"otaPubKey","type":"address"}],"payable":true,"type":"function","stateMutability":"payable"},{"constant":false,"inputs":[{"name":"rsPublickeySet","type":"bytes1[]"},{"name":"w","type":"string"},{"name":"q","type":"string"},{"name":"kimage","type":"string"}],"name":"refund","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"}]`
+	//inStr := "000d33890000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"
+	inStr := "0000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"
+	inBytes := common.Hex2Bytes(inStr)
+
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var	A common.Address
+
+	err = abi.Unpack(&A, "buyStamp", inBytes)
+	if err != nil {
+		t.Fatal("didn't expect error:", err)
+	}
+	fmt.Println("expected %x", A)
+	fmt.Println("..............")
+}
+
+//"0x6f20d9250000000000000000000000000000000000000000000000000000000000000058000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"
+
+func TestWan(t *testing.T){
+	definition := `[{"constant":false,"inputs":[{"name":"otaPubKey","type":"address"}],"name":"buyStamp","outputs":[
+	  {
+        "name": "III",
+        "type": "uint256"
+      },
+      {
+        "name": "OtaPubKey",
+        "type": "address[]"
+      }
+],"payable":true,"type":"function","stateMutability":"payable"},{"constant":false,"inputs":[{"name":"rsPublickeySet","type":"bytes1[]"},{"name":"w","type":"string"},{"name":"q","type":"string"},{"name":"kimage","type":"string"}],"name":"refund","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"}]`
+	//inStr := "0x6f20d9250000000000000000000000000000000000000000000000000000000000000058000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"
+	inStr := "0000000000000000000000000000000000000000000000000000000000000058000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"
+	inBytes := common.Hex2Bytes(inStr)
+
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outAddrStruct struct {
+		III *big.Int
+		OtaPubKey []common.Address
+	}
+
+
+	err = abi.Unpack(&outAddrStruct, "buyStamp", inBytes)
+	if err != nil {
+		t.Fatal("didn't expect error:", err)
+	}
+	fmt.Println("iii:", outAddrStruct.III)
+	fmt.Println(outAddrStruct.OtaPubKey)
+}
+
+func TestJia(t* testing.T){
+    definition := `[{"constant":false,"inputs":[{"name":"_from","type":"string"},{"name":"_to","type":"string"},{"name":"_value","type":"uint256"}],"name":"otatransfer","outputs":[{"name":"From","type":"string"},{"name":"To","type":"string"},{"name":"Value","type":"uint256"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_receiver","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"_owner","type":"string"}],"name":"otabalanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[],"name":"MINT_CALLER","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":false,"inputs":[{"name":"_receiver","type":"string"},{"name":"_amount","type":"uint256"}],"name":"otamint","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"}]`
+    inStr := "000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000001bc16d674ec80000000000000000000000000000000000000000000000000000000000000000008630783032623565363962376331383032663231333161383031363839326439626339623563343866346230366639326565353831353864353432363765306335613735323033316162316434633933333564623235636131623237613637353862633664636332343732633366316163633933613163633363363963383936396138666635390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008630783032393433376232373262613762393331393138393434643635333431626366383330396464393135396465333366626266613764373639393464383036393638303032306438343130363766326133613132336234613637656437363338366430653631643463303132623161643036393633313364613137666335336262383830610000000000000000000000000000000000000000000000000000"
+
+    inBytes := common.Hex2Bytes(inStr)
+    abi, err := JSON(strings.NewReader(definition))
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    var outStruct struct{
+        From string
+        To string
+        Value *big.Int
+    }
+    err = abi.Unpack(&outStruct, "otatransfer", inBytes)
+    if err != nil {
+        t.Fatal("didn't expect error:", err)
+    }
+}
+
+var (
+
+)
+
+func TestRefactor(t* testing.T){
+	definition := `
+	[
+	  {
+		"constant": false,
+		"inputs": [],
+		"name": "otatransfer",
+		"outputs": [
+		  {
+			"name": "From",
+			"type": "string"
+		  },
+		  {
+			"name": "To",
+			"type": "string"
+		  },
+		  {
+			"name": "Value",
+			"type": "uint256"
+		  }
+		]
+	  }
+  ]`
+
+	inStr := "000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000001bc16d674ec80000000000000000000000000000000000000000000000000000000000000000008630783032623565363962376331383032663231333161383031363839326439626339623563343866346230366639326565353831353864353432363765306335613735323033316162316434633933333564623235636131623237613637353862633664636332343732633366316163633933613163633363363963383936396138666635390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008630783032393433376232373262613762393331393138393434643635333431626366383330396464393135396465333366626266613764373639393464383036393638303032306438343130363766326133613132336234613637656437363338366430653631643463303132623161643036393633313364613137666335336262383830610000000000000000000000000000000000000000000000000000"
+
+	inBytes := common.Hex2Bytes(inStr)
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outStruct struct{
+		From string
+		To string
+		Value *big.Int
+	}
+	//if _, ok := abi.Methods[""], ok {
+	//
+	//}
+	//abi.Methods[]
+	err = abi.Unpack(&outStruct, "otatransfer", inBytes)
+	if err != nil {
+		t.Fatal("didn't expect error:", err)
+	}
+	fmt.Println(".....................")
+	fmt.Println(outStruct.From)
+	fmt.Println(outStruct.To)
+	fmt.Println(outStruct.Value)
+	fmt.Println(".....................")
+}

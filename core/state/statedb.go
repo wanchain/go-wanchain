@@ -254,6 +254,8 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 
 // lzh add
 // GetOTASet get the set of ota, with the count as setting
+// TODO: verify?,is possible one OTA exist in stamp and coin at the same time, cause bug
+// TODO: improve time complexity from O(n*log) to O(log),get mix set by value, and type(stamp/coin)
 func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
 	if otaAddr == nil || (len(otaAddr) != common.WAddressLength && len(otaAddr) != OTA_ADDR_LEN) {
 		return nil, errors.New("invalid ota account!")
