@@ -1,0 +1,38 @@
+{
+    "address": "08d972cc3a0246bda92cdffb28051dd5914faeeb",
+    "crypto": {
+        "cipher": "aes-128-ctr",
+        "ciphertext": "24a252e982495b902e6a5af4a30e34f0e7847985c5c5f1314b378efd56c1e5cc",
+        "cipherparams": {
+            "iv": "a203acc3ea2e3d73b25bef28860768e0"
+        },
+        "kdf": "scrypt",
+        "kdfparams": {
+            "dklen": 32,
+            "n": 262144,
+            "p": 1,
+            "r": 8,
+            "salt": "6949d474354959b17d06dc728a2e12ecc7ce145c23b526fb96025582f74e19fb"
+        },
+        "mac": "b55c1cd552ac6afbf6b333a36a0cc3087f671c657e6abb707d47bb0d0c8f8136"
+    },
+    "crypto2": {
+        "cipher": "aes-128-ctr",
+        "ciphertext": "e6d195679f2f1d339d2777dfc57e8d7337b6fcbd158c54d728b0b9f42de348d9",
+        "cipherparams": {
+            "iv": "9081c6cf52af8fc05fc56cff4f886cd1"
+        },
+        "kdf": "scrypt",
+        "kdfparams": {
+            "dklen": 32,
+            "n": 262144,
+            "p": 1,
+            "r": 8,
+            "salt": "629eb6916c3a317b1793196cd55e03752021bf3f503fe83c66f5e3dfb6cf2ac9"
+        },
+        "mac": "fd70de689dc5cb23bcee1e6725a97afabb3c25764e32b23362763ff82402af51"
+    },
+    "id": "0a7dfa8f-da0d-45b6-8e2a-fb6119862773",
+    "version": 3,
+    "waddress": "0340721B2B6C7970A443B215951C7BAa4c41c35E2b591EA51016Eae523f5E123760354b82CccbEdC5c84F16D63414d44F595d85FD9e46C617E29e3AE2e82C5F7bDA9"
+}
