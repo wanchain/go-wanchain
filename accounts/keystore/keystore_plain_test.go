@@ -25,7 +25,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -179,16 +178,17 @@ func TestV1_1(t *testing.T) {
 func TestV1_2(t *testing.T) {
 	t.Parallel()
 	ks := &keyStorePassphrase{"testdata/v1", LightScryptN, LightScryptP}
-	addr := common.HexToAddress("cb61d5a9c4896fb9658090b597ef0e7be6f7b67e")
-	file := "testdata/v1/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e"
-	k, err := ks.GetKey(addr, file, "g")
+	addr := common.HexToAddress("08d972cc3a0246bda92cdffb28051dd5914faeeb")
+	file := "testdata/v1/08d972cc3a0246bda92cdffb28051dd5914faeeb/08d972cc3a0246bda92cdffb28051dd5914faeeb"
+	k, err := ks.GetKey(addr, file, "wanglu")
 	if err != nil {
 		t.Fatal(err)
 	}
 	privHex := hex.EncodeToString(crypto.FromECDSA(k.PrivateKey))
-	expectedHex := "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d"
-	if privHex != expectedHex {
-		t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedHex))
+	expectedSKHex := "6beda987fed54eb86d339d48069e5861c673d76fc216873be0e87b6c3db1bc4a"
+	fmt.Printf("Decrypted sk is: %s\n", privHex)
+	if privHex != expectedSKHex {
+		t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedSKHex))
 	}
 }
 
