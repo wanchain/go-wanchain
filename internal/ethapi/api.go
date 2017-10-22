@@ -1423,6 +1423,54 @@ func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []b
 	return state.GetOTASet(otaAddr, setLen)
 }
 
+type RingSignedData struct{
+	PublicKeys []*ecdsa.PublicKey
+	KeyImage   *ecdsa.PublicKey
+	Ws         []*big.Int
+	Qs         []*big.Int
+}
+
+func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) ([]byte, error){
+	// TODO: input params check
+
+	hmsg, _ := hexutil.Decode(hashMsg)
+	privkey, _ := hexutil.Decode(privateKey)
+	wanAddresses := strings.Split(mixWanAdresses, "+")
+	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
+	if err != nil {
+		return nil, err
+	}
+
+	return genRingSignData(hmsg, privkey, &ecdsaPrivateKey.PublicKey,wanAddresses)
+}
+
+func  genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) ([]byte, error){
+	// TODO: input params check
+
+	otaPrivD := new (big.Int).SetBytes(privateKey)
+
+	publicKeys := make([]*ecdsa.PublicKey, 0)
+	publicKeys = append(publicKeys, actualPub)
+	for _, strWanAddr := range mixWanAdress {
+		pubBytes,err := hexutil.Decode(strWanAddr)
+		if err!=nil {
+			return nil, errors.New("fail to decode wan address!")
+		}
+
+		publicKeyA,_,err := keystore.GeneratePublicKeyFromWadress(pubBytes)
+		if err!=nil {
+			return nil, errors.New("fail to generate public key from wan address!")
+		}
+
+		publicKeys = append(publicKeys,publicKeyA)
+	}
+
+	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+
+	return rlp.EncodeToBytes(&RingSignedData{PublicKeys:retPublicKeys, KeyImage: keyImage, Ws: w_random, Qs: q_random})
+}
+
+
 func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1698,12 +1746,20 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 }
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
-func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, otaAddr string) (string, error) {
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return "", err
 	}
+
+	wanBytes,_:= hexutil.Decode(inOtaAddr)
+	otaBytes,err := keystore.WaddrToUncompressed(wanBytes)
+	if err != nil {
+		return "", err
+	}
+
+	otaAddr := hexutil.Encode(otaBytes)
 
 	//AX string, AY string, BX string, BY string
 	otaAddr = strings.Replace(otaAddr,"0x","",-1)

@@ -5372,6 +5372,13 @@ var methods = function () {
         params: 2,
     });
 
+    var genRingSignData = new Method({
+        name: 'genRingSignData',
+        call: 'eth_genRingSignData',
+        params: 3,
+    });
+
+
     var scanOTAbyAccount = new Method ({
         name: 'scanOTAbyAccount',
         call: 'eth_scanOTAbyAccount',
@@ -5497,6 +5504,7 @@ var methods = function () {
         sendOTARefundTransaction,
         buyOTAStamp,
         getOTAMixSet,
+        genRingSignData,
         signOTAContractTransaction,
         getPublicKeysRawStr,
         getWanAddress,
