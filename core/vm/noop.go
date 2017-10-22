@@ -21,6 +21,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/trie"
 )
 
 func NoopCanTransfer(db StateDB, from common.Address, balance *big.Int) bool {
@@ -68,3 +69,8 @@ func (NoopStateDB) Snapshot() int                                               
 func (NoopStateDB) AddLog(*types.Log)                                                  {}
 func (NoopStateDB) AddPreimage(common.Hash, []byte)                                    {}
 func (NoopStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) {}
+
+// Anson5555555Lee adds
+func(NoopStateDB) GetStateByteArray(common.Address, common.Hash) []byte                { return nil }
+func(NoopStateDB) SetStateByteArray(common.Address, common.Hash, []byte)             {}
+func(NoopStateDB) StorageVmTrie(common.Address) *trie.SecureTrie                       { return nil }
