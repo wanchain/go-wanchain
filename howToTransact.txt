@@ -92,10 +92,10 @@ the sample contract is ERC20.sol in the folder ./go-wanchain/contracts/erc20 in 
    })
  
   will get the data like following
-  Contract mined! address: 0x32f7fa4f6ac3e2a5782479a1093e2be046878103 transactionHash: 0xcdb24a1484c925c199c71d7741bb4b0c65b3c9d0797c0184271db63ea869d736
+  Contract mined! address: 0x844ec8e0680a05e8d9a6f9b3d78eedd0b3dab63a transactionHash: 0xcdb24a1484c925c199c71d7741bb4b0c65b3c9d0797c0184271db63ea869d736
 
 5. set the contract address
-	var contractAddr = "0x32f7fa4f6ac3e2a5782479a1093e2be046878103" 
+	var contractAddr = "0x844ec8e0680a05e8d9a6f9b3d78eedd0b3dab63a" 
  
 6. set the contract instance referrence
 	var erc20simple = erc20simple_contract.at(contractAddr)
