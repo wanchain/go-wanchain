@@ -35,7 +35,8 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
-	"math/big"
+	"github.com/wanchain/go-wanchain/common/math"
+	//"math/big"
 )
 
 const (
@@ -162,18 +163,19 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.
 }
 
 // SerializeCompressed serializes a public key in a 33-byte compressed format. from btcec.
-func isOdd(a *big.Int) bool {
-	return a.Bit(0) == 1
-}
+//func isOdd(a *big.Int) bool {
+//	return a.Bit(0) == 1
+//}
 func PubkeySerializeCompressed(p *ecdsa.PublicKey) []byte {
 	const pubkeyCompressed byte = 0x2
 	b := make([]byte, 0, 33)
 	format := pubkeyCompressed
-	if isOdd(p.Y) {
+	if p.Y.Bit(0) == 1 {
 		format |= 0x1
 	}
 	b = append(b, format)
-	b = append(b, p.X.Bytes()...)
+	//b = append(b, p.X.Bytes()...)
+	b = append(b, math.PaddedBigBytes(p.X, 32)...)
 	return b
 }
 func (k *Key) GenerateWaddress() common.WAddress {
@@ -261,17 +263,26 @@ func WaddrToUncompressed(waddr []byte) ( []byte, error) {
 	}
 
 	u := make([]byte,128)
-	temp :=  A.X.Bytes()
-	copy(u[0:],temp[0:32])
-	temp =  A.Y.Bytes()
-	copy(u[32:],temp[0:32])
-	temp =  B.X.Bytes()
-	copy(u[64:],temp[0:32])
-	temp =  B.Y.Bytes()
-	copy(u[96:],temp[0:32])
+	ax := math.PaddedBigBytes(A.X, 32)
+	ay := math.PaddedBigBytes(A.Y, 32)
+	bx := math.PaddedBigBytes(B.X, 32)
+	by := math.PaddedBigBytes(B.Y, 32)
+	copy(u[0:],ax[0:32])
+	copy(u[32:],ay[0:32])
+	copy(u[64:],bx[0:32])
+	copy(u[96:],by[0:32])
 
 	return u,nil
 }
+
+func WaddrToUncompressedFromString(waddr string) ( []byte, error) {
+	waddrBytes, err := hexutil.Decode(waddr)
+	if err != nil {
+		return nil, err
+	}
+	return WaddrToUncompressed(waddrBytes)
+}
+
 
 // lzh add
 func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddress) error {

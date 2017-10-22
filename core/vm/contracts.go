@@ -32,6 +32,8 @@ import (
 	"fmt"
 	"bytes"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"strings"
+	abi "github.com/wanchain/go-wanchain/accounts/abi"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -342,6 +344,21 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 	KeyImage := crypto.ToECDSAPub(kix)
 	idx = idx + lenkixy
 
+	//txHashLen := int(all[idx])
+	//idx = idx + 1
+	//txhashBytes :=  make([]byte,txHashLen)
+	//copy(txhashBytes,all[idx:])
+	//idx = idx + txHashLen
+	//
+	//sigLen := all[idx]
+	////idx = idx + 1 //sig data will not increase idx
+	//sigBytes :=  make([]byte,sigLen)
+	//copy(sigBytes,all[idx+1:])
+	//res := verifyHash(all[0:verifyHsBegin],contract,evm,txhashBytes)
+	//if !res {
+	//	return nil
+	//}
+
 	txHashLen := int(all[idx])
 	idx = idx + 1
 	txhashBytes :=  make([]byte,txHashLen)
@@ -651,4 +668,41 @@ func verifyHash(all []byte,contract *Contract,evm *Interpreter,hashOrig []byte) 
 
 	return  false
 
+}
+
+
+func verifyContractOtaSender(callData []byte,sig []byte) bool {
+
+	inputAbi, err := abi.JSON(strings.NewReader(`[{"constant":false,"inputs":[{"name":"_from","type":"string"},{"name":"_to","type":"string"},{"name":"_value","type":"uint256"}],"name":"otatransfer","outputs":[{"name":"From","type":"string"},{"name":"To","type":"string"},{"name":"Value","type":"uint256"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_receiver","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"_owner","type":"string"}],"name":"otabalanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[],"name":"MINT_CALLER","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":false,"inputs":[{"name":"_receiver","type":"string"},{"name":"_amount","type":"uint256"}],"name":"otamint","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"}]`))
+
+	var outStruct struct{
+		From string
+		To string
+		Value *big.Int
+	}
+
+	err = inputAbi.Unpack(&outStruct, "otatransfer", callData[4:])
+	if err != nil {
+		return false
+	}
+
+	callHash := common.BytesToHash(callData)
+	pubKey, err := crypto.SigToPub(callHash[:], sig)
+	if err != nil {
+		return false
+	}
+
+	pubBytes := crypto.FromECDSAPub(pubKey)
+	senderBytes,_:= keystore.WaddrToUncompressed( common.Hex2Bytes(outStruct.From[2:]))
+
+	if bytes.Equal(pubBytes[1:65],senderBytes[0:64]) {
+		return true
+	}
+
+	return false
+
+}
+
+func VerifyContractOtaSender(callData []byte,sig []byte) bool {
+	return verifyContractOtaSender(callData,sig)
 }

@@ -635,6 +635,7 @@ func ExampleJSON() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	out, err := abi.Pack("isBar", common.HexToAddress("01"))
 	if err != nil {
 		log.Fatalln(err)
