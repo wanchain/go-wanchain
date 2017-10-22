@@ -36,6 +36,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"math/big"
+	//"github.com/ethereum/go-ethereum/common/math"
 )
 
 const (
