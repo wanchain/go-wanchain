@@ -247,18 +247,91 @@ var (
     ]
   }
 ]`
+	stampSCDefinition = `
+	[
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyStamp",
+    "outputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "inputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "refundCoin",
+    "outputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "getCoins",
+    "outputs": [
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  }
+]`
+
 	coinAbi, errCoinSCInit = abi.JSON(strings.NewReader(coinSCDefinition))
 	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
+
+	stampAbi, errStampSCInit = abi.JSON(strings.NewReader(stampSCDefinition))
+	stBuyId [4]byte
 )
 
 func init() {
-	if errCoinSCInit != nil {
+	if errCoinSCInit != nil || errStampSCInit != nil {
 		// TODO: refact panic
 	}
 
 	copy(buyIdArr[:], coinAbi.Methods["buyCoinNote"].Id())
 	copy(refundIdArr[:], coinAbi.Methods["refundCoin"].Id())
 	copy(getCoinsIdArr[:], coinAbi.Methods["getCoins"].Id())
+
+	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
 }
 
 type wanchainStampSC struct {
@@ -269,21 +342,33 @@ func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+    var methodId [4]byte
+	copy(methodId[:], in[:4])
 
-	if in[0] == WAN_BUY_STAMP {
-		return c.buyStamp(in[1:], contract, evm)
-	} else if in[0] == WAN_VERIFY_STAMP {
-		return c.verifyStamp(in[0:], contract, evm)
-	} else if in[0] == WAN_STAMP_SET {
-		return c.getStamps(in[1:], contract, evm)
+	if methodId == stBuyId{
+		return c.buyStamp(in[4:], contract, evm)
 	}
 
 	return nil
 }
 
 func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpreter) []byte {
+	var StampInput struct{
+		OtaAddr string
+		Value   *big.Int
+	}
 
-	otaAddr, err := keystore.WaddrToUncompressed(in) //input is wand address
+	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
+	if err != nil {
+		return nil
+	}
+
+	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
+	if err != nil{
+		return nil
+	}
+
+	otaAddr, err := keystore.WaddrToUncompressed(wanAddr) //input is wand address
 	if err != nil {
 		return nil
 	}
@@ -293,15 +378,18 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpret
 
 	// prevent rebuy
 	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, in) {
+	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, otaAddr) {
 		return nil
 	}
 
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, in)
+	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, wanAddr)
 
 	addrSrc := contract.CallerAddress
+
 	balance := evm.env.StateDB.GetBalance(addrSrc)
+
 	if balance.Cmp(contract.value) >= 0 {
+		// Need check contract value in  build in value sets
 		evm.env.StateDB.SubBalance(addrSrc, contract.value)
 		return []byte("1")
 	}
