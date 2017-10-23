@@ -45,7 +45,8 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 	//"github.com/tendermint/go-crypto/keys/tx"
-	"strconv"
+	//"strconv"
+	"crypto/ecdsa"
 )
 
 const (
@@ -1430,7 +1431,7 @@ type RingSignedData struct{
 	Qs         []*big.Int
 }
 
-func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) ([]byte, error){
+func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error){
 	// TODO: input params check
 
 	hmsg, _ := hexutil.Decode(hashMsg)
@@ -1438,13 +1439,14 @@ func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg 
 	wanAddresses := strings.Split(mixWanAdresses, "+")
 	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return genRingSignData(hmsg, privkey, &ecdsaPrivateKey.PublicKey,wanAddresses)
 }
 
-func  genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) ([]byte, error){
+
+func  genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error){
 	// TODO: input params check
 
 	otaPrivD := new (big.Int).SetBytes(privateKey)
@@ -1454,20 +1456,45 @@ func  genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.Public
 	for _, strWanAddr := range mixWanAdress {
 		pubBytes,err := hexutil.Decode(strWanAddr)
 		if err!=nil {
-			return nil, errors.New("fail to decode wan address!")
+			return "", errors.New("fail to decode wan address!")
 		}
 
 		publicKeyA,_,err := keystore.GeneratePublicKeyFromWadress(pubBytes)
 		if err!=nil {
-			return nil, errors.New("fail to generate public key from wan address!")
+			return "", errors.New("fail to generate public key from wan address!")
 		}
 
 		publicKeys = append(publicKeys,publicKeyA)
 	}
 
 	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+	//b := crypto.VerifyRingSign(hashMsg, retPublicKeys, keyImage, w_random, q_random)
+	// fmt.Println(b)
 
-	return rlp.EncodeToBytes(&RingSignedData{PublicKeys:retPublicKeys, KeyImage: keyImage, Ws: w_random, Qs: q_random})
+	return encodeRingSignOut(retPublicKeys,keyImage, w_random, q_random)
+}
+
+//  encode all ring sign out data to a string
+func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int)(string, error){
+	pa := make([]string, 0)
+	for _, pk := range publicKeys {
+		pa = append(pa, common.ToHex(crypto.FromECDSAPub(pk)))
+	}
+	ps := strings.Join(pa, "&")
+	k  := common.ToHex(crypto.FromECDSAPub(keyimage))
+	wa := make([]string, 0)
+	for _, wi := range Ws {
+		wa = append(wa, hexutil.EncodeBig(wi))
+	}
+	ws := strings.Join(wa, "&")
+	qa := make([]string, 0)
+	for _, qi := range Qs {
+		qa = append(qa, hexutil.EncodeBig(qi))
+	}
+	qs := strings.Join(qa, "&")
+	outs := strings.Join([]string{ps, k, ws, qs}, "+")
+	//decodeRingSignOut(outs)
+	return outs, nil
 }
 
 

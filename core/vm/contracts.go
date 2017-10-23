@@ -211,10 +211,22 @@ var (
   {
     "constant": false,
     "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
     "name": "refundCoin",
     "outputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
       {
         "name": "Value",
         "type": "uint256"
@@ -557,100 +569,64 @@ func (c *wanCoinSC) getCoins(all []byte, contract *Contract, evm *Interpreter) [
 	return getOtaSet(trie, 3, temp)
 }
 
+func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int){
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _,pi := range pa {
+		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+	}
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, _ := hexutil.DecodeBig(wi)
+		w = append(w, bi)
+	}
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, _ := hexutil.DecodeBig(qi)
+		q = append(q, bi)
+	}
+	return nil, publickeys, keyimgae, w, q
+}
+
 func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []byte {
-
-	valLen := int(all[1])
-	otaLen := hexutil.BytesToShort(all[2:4])
-
-	refundValBytes := all[otaLen : int(otaLen)+valLen]
-
-	vb := new(big.Int)
-	vb.SetBytes(refundValBytes)
-	otaContainerAddr := common.HexToAddress(vb.String())
-
-	idx := int(otaLen) + valLen
-	verifyHsBegin := idx //duplicate for hash verify
-
-	pubsLen := int(all[idx])
-	idx = idx + 1
-
-	PublicKeySet := *new([]*ecdsa.PublicKey)
-	W_random := *new([]*big.Int)
-	Q_random := *new([]*big.Int)
-
-	var i int
-	for i = 0; i < pubsLen; i++ {
-		lenxy := int(all[idx])
-		idx = idx + 1
-
-		x := make([]byte, lenxy)
-		copy(x, all[idx:])
-
-		otaAddrKey := common.BytesToHash(x[1:])
-		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrKey)
-		if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
-			fmt.Print("not get coin in the set")
-			return nil
-		}
-
-		puk := crypto.ToECDSAPub(x)
-		PublicKeySet = append(PublicKeySet, puk) //convert []byte to public key
-		idx = idx + lenxy
-
-		lenw := int(all[idx])
-		idx = idx + 1
-
-		w := make([]byte, lenw)
-		copy(w, all[idx:])
-		rndw := new(big.Int).SetBytes(w)
-		W_random = append(W_random, rndw) //convert []byte to random
-		idx = idx + lenw
-
-		lenq := int(all[idx])
-		idx = idx + 1
-
-		q := make([]byte, lenq)
-		copy(q, all[idx:])
-		rndq := new(big.Int).SetBytes(q)
-		Q_random = append(Q_random, rndq) //convert []byte to random
-		idx = idx + lenq
+	var RefundStruct struct{
+		RingSignedData string
+		Value *big.Int
 	}
 
-	lenkixy := int(all[idx])
-	idx = idx + 1
-
-	kix := make([]byte, lenkixy)
-	copy(kix, all[idx:])
-	KeyImage := crypto.ToECDSAPub(kix)
-	idx = idx + lenkixy
-
-	txHashLen := int(all[idx])
-	idx = idx + 1
-	txhashBytes := make([]byte, txHashLen)
-	copy(txhashBytes, all[idx:])
-	idx = idx + txHashLen
-
-	res := verifyHash(all[0:verifyHsBegin], contract, evm, txhashBytes)
-	if !res {
+	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
+	if err != nil {
 		return nil
 	}
 
-	kixH := crypto.Keccak256Hash(kix)
-	storagedRefundVal := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
-	if storagedRefundVal != nil && len(storagedRefundVal) != 0 {
+	err, publickeys, keyimgae, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
+	if err != nil {
 		return nil
-	} else {
-
-		verifyRes := crypto.VerifyRingSign(txhashBytes, PublicKeySet, KeyImage, []*big.Int(W_random), []*big.Int(Q_random))
-		if verifyRes {
-
-			evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, refundValBytes)
-			addrSrc := contract.CallerAddress
-			evm.env.StateDB.AddBalance(addrSrc, vb)
-			return []byte("1")
-
-		}
 	}
+
+	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimgae, ws, qs)
+	if !b {
+		return nil
+	} else { // For test
+		addrSrc := contract.CallerAddress
+		evm.env.StateDB.AddBalance(addrSrc, RefundStruct.Value)
+		return []byte("1")
+	}
+
+	//TODO: check all publickeys in corrsponding deposit value tree
+
+	//TODO: check keyimage have not appear
+
+	//TODO: ADD Balance
 
 	return nil
 }
@@ -685,26 +661,6 @@ func getOtaSet(dataTrie *trie.SecureTrie, stampNUm int, otaAddr []byte) []byte {
 	}
 
 	return nil
-}
-
-func verifySig(hashData []byte, publicKeys []*ecdsa.PublicKey, sigData []byte) bool {
-
-	allHash := common.BytesToHash(hashData)
-	pubLen := len(publicKeys)
-	pubKey, err := crypto.SigToPub(allHash[:], sigData)
-	if err != nil {
-		return false
-	}
-
-	i := 0
-	for i = 0; i < pubLen; i++ {
-		if bytes.Equal(crypto.FromECDSAPub(pubKey), crypto.FromECDSAPub(publicKeys[i])) {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 func verifyHash(all []byte, contract *Contract, evm *Interpreter, hashOrig []byte) bool {
