@@ -181,6 +181,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			copy(all[idx:], verifyhashBytes)
 			idx = idx + len(verifyHash.Bytes())
 
+
 			tx.data.Payload = all
 
 			//tx data is changed, so it is need to hash tx again

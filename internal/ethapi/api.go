@@ -1238,6 +1238,14 @@ func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, address co
 	if err != nil {
 		return "", err
 	}
+	//{
+	//	data,_:= hexutil.Decode("0x0a00885c000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000001bc16d674ec80000000000000000000000000000000000000000000000000000000000000000008630783032623565363962376331383032663231333161383031363839326439626339623563343866346230366639326565353831353864353432363765306335613735323033316162316434633933333564623235636131623237613637353862633664636332343732633366316163633933613163633363363963383936396138666635390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008630783032393433376232373262613762393331393138393434643635333431626366383330396464393135396465333366626266613764373639393464383036393638303032306438343130363766326133613132336234613637656437363338366430653631643463303132623161643036393633313364613137666335336262383830610000000000000000000000000000000000000000000000000000")
+	//	res := vm.VerifyContractOtaSender(data, nil)
+	//	if res {
+	//		fmt.Println("test verify sig pass")
+	//	}
+	//}
+
 	wanAddr, err2 := wallet.GetWanAddress(account)
 	if err2 != nil {
 		return "", err2
@@ -1428,7 +1436,7 @@ func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxA
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1574,9 +1582,10 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 }
 
 
+
+
 //args.data store the call contract byte code
-// revise by Anson5555555Lee
-func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,wanAddress string) (*SignTransactionResult, error) {
+func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs,wanSignerAddress string,stampAddress string) (*SignTransactionResult, error) {
 
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1593,37 +1602,72 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 
 	data := args.Data
 
-	if len(wanAddress) != ((common.WAddressLength<<1) + 2) {
-		fmt.Println("len="+ strconv.Itoa( len(wanAddress)))
-		return nil, errors.New("OTA address is not correct")
+	if len(wanSignerAddress) != ((common.WAddressLength<<1) + 2) {
+		fmt.Println("len="+ strconv.Itoa( len(wanSignerAddress)))
+		return nil, errors.New(" address is not correct")
 	}
 
-	wanBytes,_:= hexutil.Decode(wanAddress)
-	otaBytes,err := keystore.WaddrToUncompressed(wanBytes)
+	wanSignerBytes,_:= hexutil.Decode(wanSignerAddress)
+	otaSignerBytes,err := keystore.WaddrToUncompressed(wanSignerBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	otaAddress := hexutil.Encode(otaBytes)
-	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,otaAddress)
+	otaSignerAddress := hexutil.Encode(otaSignerBytes)
+	otaSignerKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,otaSignerAddress)
 	if errapi !=nil {
 		return nil, errors.New("error in computing ota prikey")
 	}
-	//the index 0 key string is ota private key
-	//the index 1 key string is ota public key
-	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
 
+	signerKeypair := strings.Split(otaSignerKeyPair,"+")
+
+	otaPrivD,_:= new (big.Int).SetString(signerKeypair[0][2:],16)
+	signPriv := crypto.ToECDSA(otaPrivD.Bytes())
+	callDataHash := common.BytesToHash(data)
+	sig, err := crypto.Sign(callDataHash[:], signPriv)
+	if err != nil {
+		return nil, err
+	}
+	sigLen := len(sig)
+
+	//for test code
+	res :=vm.VerifyContractOtaSender(data,sig)
+	if res {
+		fmt.Println("test verify sig pass")
+	}
+
+	//begin to get stamp set
+	if len(stampAddress) != ((common.WAddressLength<<1) + 2) {
+		fmt.Println("len="+ strconv.Itoa( len(stampAddress)))
+		return nil, errors.New("OTA address is not correct")
+	}
+
+	stampBytes,_:= hexutil.Decode(stampAddress)
+	stampOTABytes,err := keystore.WaddrToUncompressed(stampBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	stampOTAAddress := hexutil.Encode(stampOTABytes)
+	otaKeyPair,errapi := s.ComputeOTAPPKeys(ctx,args.From,stampOTAAddress)
+	if errapi !=nil {
+		return nil, errors.New("error in computing ota prikey")
+	}
+
+	//the index 0 key string is stamp ota private key
+	//the index 1 key string is stamp ota public key
+	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
 	keypair := strings.Split(otaKeyPair,"+")
+
 	keys := make([]string, 0)
-//	keys := *new([]string)
 	keys = append(keys,keypair[0][2:])
 	keys = append(keys,keypair[1][2:])
 
-	otaBytes,herr:= hex.DecodeString(otaAddress[2:])
+	otaBytes,herr:= hex.DecodeString(stampOTAAddress[2:])
 	if herr!=nil {
 		return nil, err
 	}
-	otaLen := len(otaBytes)
+	//otaLen := len(otaBytes)
 
 	args.Data = otaBytes
 	otaSet, err:= s.getOTAMixSet(ctx, otaBytes, 3)
@@ -1649,22 +1693,22 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	craBytes := args.To.Bytes()
 	craLen := len(craBytes)
 
-	temp = make([]byte,length + craLen + otaLen)//should be 20 + 128
+	temp = make([]byte,length + craLen + sigLen)//should be 20 + 128
 
 	craLenba := hexutil.ShortToBytes(int16(length))
 	temp[0] = WAN_CONTRACT_OTA
-	temp[1] = byte(craLen + otaLen) //contract address length + ota address
+	temp[1] = byte(craLen + sigLen) //contract address length + ota address
 	temp[2] = craLenba[0]
 	temp[3] = craLenba[1]
-	copy(temp[4:],data[:])//record contract data
+	copy(temp[4:],data[:])//record contract data for call ota function
 
 	dataLen := hexutil.BytesToShort(temp[2:4])
-	fmt.Printf("%d",dataLen)
+	fmt.Println("%d",dataLen)
 
 	//record to contract addr in data,the acutal spend should be 0
 	copy(temp[length:],craBytes)
-	//copy ota addr after the contract address
-	//copy(temp[length+craLen:],otaBytes)
+	//record the sig data signed by the priv of the from parameter in cotract ota function
+	copy(temp[length+craLen:],sig)
 
 	args.Data = temp
 	args.Value = (*hexutil.Big)(big.NewInt(0))

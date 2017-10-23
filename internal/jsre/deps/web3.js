@@ -5410,8 +5410,8 @@ var methods = function () {
     var signOTAContractTransaction = new Method({
         name: 'signOTAContractTransaction',
         call: 'eth_signOTAContractTransaction',
-        params: 2,
-        inputFormatter: [formatters.inputTransactionFormatter,null]
+        params: 3,
+        inputFormatter: [formatters.inputTransactionFormatter,null,null]
 
     });
 
