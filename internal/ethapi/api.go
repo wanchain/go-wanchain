@@ -1703,7 +1703,7 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	copy(temp[4:],data[:])//record contract data for call ota function
 
 	dataLen := hexutil.BytesToShort(temp[2:4])
-	fmt.Println("%d",dataLen)
+	fmt.Printf("%d",dataLen)
 
 	//record to contract addr in data,the acutal spend should be 0
 	copy(temp[length:],craBytes)
