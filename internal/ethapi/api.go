@@ -1565,7 +1565,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 		return "", errors.New("fail to generate public key from wan address!")
 	}
 
-	strs := hexutil.TwoPublicKeyToHexSlice(publicKeyA,publicKeyB)
+	strs := common.TwoPublicKeyToHexSlice(publicKeyA,publicKeyB)
 
 	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {

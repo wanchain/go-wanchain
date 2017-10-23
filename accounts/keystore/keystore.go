@@ -269,7 +269,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 }
 
 // SignTx signs the given transaction with the requested account.
-func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int,keys [] string) (*types.Transaction, error) {
+func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int, keys []string) (*types.Transaction, error) {
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -286,25 +286,20 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, keys)
 }
 
-
-func (ks *KeyStore) GetWanAddress(a accounts.Account)(common.WAddress, error) {
+// lzh modify
+func (ks *KeyStore) GetWanAddress(a accounts.Account) (common.WAddress, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
-		_,ksen,err := ks.getEncryptedKey(a);
-		if err!= nil {
-			return common.WAddress{}, ErrLocked
-		}
-
-		return ksen.WAddress,nil
+		return common.WAddress{}, ErrLocked
 	}
 
 	ret := unlockedKey.WAddress
+
 	return ret, nil
 }
-
 
 func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string, error) {
 	ks.mu.RLock()
@@ -315,7 +310,7 @@ func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string,
 		return nil, ErrLocked
 	}
 
-	ret := hexutil.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
+	ret := common.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
 	return ret, nil
 }
 
@@ -329,7 +324,6 @@ func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
 	return key.GetTwoPublicKeyRawStrs()
 }
 
-
 func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr *common.WAddress) (bool, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -340,12 +334,12 @@ func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr *common.WAddress) (
 		return res, ErrLocked
 	}
 	A := &unlockedKey.PrivateKey.PublicKey
-	A1,S1,err := GeneratePublicKeyFromWadress(otaddr[:]);
-	if(err != nil){
+	A1, S1, err := GeneratePublicKeyFromWadress(otaddr[:])
+	if err != nil {
 		return res, err
 	}
-	res = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1,A1)
-	return res,nil
+	res = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1, A1)
+	return res, nil
 
 }
 
@@ -363,12 +357,12 @@ func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY str
 
 	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
 
-	pub1X, _ := hexutil.EncodeWithFixOutLen(pub1.X.Bytes(), 64)
-	pub1Y, _ := hexutil.EncodeWithFixOutLen(pub1.Y.Bytes(), 64)
-	priv1D, _ := hexutil.EncodeWithFixOutLen(priv1.D.Bytes(), 64)
-	priv2D, _ := hexutil.EncodeWithFixOutLen(priv2.D.Bytes(), 64)
+	pub1X := hexutil.Encode(common.LeftPadBytes(pub1.X.Bytes(), 32))
+	pub1Y := hexutil.Encode(common.LeftPadBytes(pub1.Y.Bytes(), 32))
+	priv1D := hexutil.Encode(common.LeftPadBytes(priv1.D.Bytes(), 32))
+	priv2D := hexutil.Encode(common.LeftPadBytes(priv2.D.Bytes(), 32))
 
-	return []string { pub1X, pub1Y, priv1D, priv2D }, err
+	return []string{pub1X, pub1Y, priv1D, priv2D}, err
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -568,13 +562,13 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 		return err
 	}
 	/*
-	if the current key has no second privateKey, we need create for it.
+		if the current key has no second privateKey, we need create for it.
 	*/
 	if key.PrivateKey2 == nil {
 		var privateKeyECDSA2 *ecdsa.PrivateKey
 		privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), crand.Reader)
 		if err != nil {
-			return  err
+			return err
 		}
 		key.PrivateKey2 = privateKeyECDSA2
 	}

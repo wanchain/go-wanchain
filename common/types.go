@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"reflect"
 
+	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
@@ -126,6 +127,7 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 
 // a new wan addreess, the format is compressed_PubkeyA compressed_PubkeyB checksum16
 const WAddressLength = 66
+
 type WAddress [WAddressLength]byte
 
 // Address represents the 20 byte address of an Ethereum account.
@@ -209,4 +211,29 @@ func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
 // MarshalText encodes the address as hex.
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
+}
+
+func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) []string {
+	return []string{
+		hexutil.Encode(LeftPadBytes(pkey.X.Bytes(), 32)),
+		hexutil.Encode(LeftPadBytes(pkey.Y.Bytes(), 32)),
+	}
+}
+
+func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) []string {
+	return []string{
+		hexutil.Encode(LeftPadBytes(A.X.Bytes(), 32)),
+		hexutil.Encode(LeftPadBytes(A.Y.Bytes(), 32)),
+		hexutil.Encode(LeftPadBytes(B.X.Bytes(), 32)),
+		hexutil.Encode(LeftPadBytes(B.Y.Bytes(), 32)),
+	}
+}
+
+func FourBigIntToHexSlice(AX, AY, BX, BY []byte) []string {
+	return []string{
+		hexutil.Encode(LeftPadBytes(AX, 32)),
+		hexutil.Encode(LeftPadBytes(AY, 32)),
+		hexutil.Encode(LeftPadBytes(BX, 32)),
+		hexutil.Encode(LeftPadBytes(BY, 32)),
+	}
 }

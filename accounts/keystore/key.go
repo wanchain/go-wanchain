@@ -207,7 +207,7 @@ func (k *Key) GetTwoPublicKeyRawStrs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	ret := hexutil.TwoPublicKeyToHexSlice(PK1, PK2)
+	ret := common.TwoPublicKeyToHexSlice(PK1, PK2)
 	return ret, nil
 }
 
