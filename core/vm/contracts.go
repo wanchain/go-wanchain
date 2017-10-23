@@ -432,7 +432,7 @@ const (
 	Pre100 =   "100000000000000000000"//100
 )
 
-func (c *wanCoinSC) Run(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanCoinSC) Run(in []byte, contract *Contract,evm *Interpreter) []byte {
 
 	if in[0]==WANCOIN_BUY {
 		return c.buyCoin(in[1:],contract,evm)
