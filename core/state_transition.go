@@ -26,6 +26,11 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"strings"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 var (
@@ -212,6 +217,73 @@ func (self *StateTransition) preCheck() error {
 	return self.buyGas()
 }
 
+var (
+	utilAbiDefinition = `[{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}],"name":"combine","outputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}]}]`
+
+	utilAbi, errAbiInit = abi.JSON(strings.NewReader(utilAbiDefinition))
+)
+func init(){
+	if errAbiInit != nil {
+		panic(errAbiInit)
+	}
+}
+
+func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int){
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _,pi := range pa {
+		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+	}
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, _ := hexutil.DecodeBig(wi)
+		w = append(w, bi)
+	}
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, _ := hexutil.DecodeBig(qi)
+		q = append(q, bi)
+	}
+	return nil, publickeys, keyimgae, w, q
+}
+
+func preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage *ecdsa.PublicKey, err error){
+	var TxDataWithRing struct{
+		RingSignedData string
+		CxtCallParams   []byte
+	}
+
+	err = utilAbi.Unpack(&TxDataWithRing, "combine", in)
+	if err != nil {
+		return
+	}
+	callData = TxDataWithRing.CxtCallParams[:]
+
+	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	if err != nil {
+		return
+	}
+
+	b := crypto.VerifyRingSign(hashInput, publickeys, keyimage, ws, qs)
+	if !b {
+		err = errors.New("ring sign is invalid!")
+	}
+
+	//TODO: check all publickeys in corrsponding deposit value tree
+
+	//TODO: check keyimage have not appear
+    return
+}
+
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
@@ -260,6 +332,13 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		// Increment the nonce for the next transaction
 		self.state.SetNonce(sender.Address(), self.state.GetNonce(sender.Address())+1)
 
+		if self.msg.TxType() == 1 {
+			pureCallData, _, err := preProcessPrivacyTx(sender.Address().Bytes(), self.data)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			self.data = pureCallData[:]
+		}
 		ret, self.gas, vmerr = evm.Call(sender, self.to().Address(), self.data, self.gas, self.value)
 	}
 

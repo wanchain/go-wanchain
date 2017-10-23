@@ -162,16 +162,6 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 	addressDst = *to
 	txType := TX_PRI_ORI_COIN
 
-	if data[0] == WANCOIN_BUY || data[0] == WANCOIN_REFUND || data[0] == WANCOIN_GET_COINS {
-		addressDst = common.BytesToAddress([]byte{wancoinSCAddress})
-	} else if data[0] == WAN_BUY_STAMP || data[0] == WAN_CONTRACT_OTA || data[0] == WAN_STAMP_SET{
-		addressDst = common.BytesToAddress([]byte{stampSCAddress})
-	}
-
-	if data[0] == WAN_CONTRACT_OTA {
-		txType = TX_PRI_CONTRACT_CALL
-	}
-
 	d := txdata{
 		Txtype: uint64(txType),
 		AccountNonce: nonce,

@@ -5359,6 +5359,13 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
 	});
 
+    var sendPrivacyCxtTransaction = new Method({
+        name: 'sendPrivacyCxtTransaction',
+        call: 'eth_sendPrivacyCxtTransaction',
+        params: 2,
+        inputFormatter: [formatters.inputTransactionFormatter, null]
+    });
+
     var buyOTAStamp = new Method({
         name: 'buyOTAStamp',
         call: 'eth_buyOTAStamp',
@@ -5502,6 +5509,7 @@ var methods = function () {
         generateRingSignatureOTAs,
         sendOTATransaction,
         sendOTARefundTransaction,
+        sendPrivacyCxtTransaction,
         buyOTAStamp,
         getOTAMixSet,
         genRingSignData,

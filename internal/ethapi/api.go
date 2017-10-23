@@ -1398,6 +1398,38 @@ func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context,
 	return submitTransaction(ctx, s.b, signed)
 }
 
+
+func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
+
+	privateKey, err := crypto.HexToECDSA(sPrivateKey)
+
+    var signed *types.Transaction
+	if chainID != nil {
+		signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey, nil)
+	} else {
+		signed, err = types.SignTx(tx, types.HomesteadSigner{}, privateKey, nil)
+	}
+
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, signed)
+}
+
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int)([]string, error) {
 	orgOtaAddr := common.FromHex(otaAddr)
 
