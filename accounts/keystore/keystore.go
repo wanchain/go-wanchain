@@ -286,18 +286,22 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, keys)
 }
 
-// lzh modify
+
 func (ks *KeyStore) GetWanAddress(a accounts.Account)(common.WAddress, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
-		return common.WAddress{}, ErrLocked
+		_,ksen,err := ks.getEncryptedKey(a);
+		if err!= nil {
+			return common.WAddress{}, ErrLocked
+		}
+
+		return ksen.WAddress,nil
 	}
 
 	ret := unlockedKey.WAddress
-
 	return ret, nil
 }
 
