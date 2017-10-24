@@ -262,7 +262,7 @@ func preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage 
 		CxtCallParams   []byte
 	}
 
-	err = utilAbi.Unpack(&TxDataWithRing, "combine", in)
+	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
 	if err != nil {
 		return
 	}
@@ -289,7 +289,7 @@ func preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage 
 // failed. An error indicates a consensus issue.
 func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
 	//txtype 2 is contract trasaction
-	if self.msg.TxType()!=2 {
+	if self.msg.TxType()!=6 {
 		if err = self.preCheck(); err != nil {
 			return
 		}
@@ -310,7 +310,7 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		return nil, nil, nil, vm.ErrOutOfGas
 	}
 
-	if self.msg.TxType()!=2 {
+	if self.msg.TxType()!=6 {
 		if err = self.useGas(intrinsicGas.Uint64()); err != nil {
 			return nil, nil, nil, err
 		}
@@ -332,11 +332,13 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		// Increment the nonce for the next transaction
 		self.state.SetNonce(sender.Address(), self.state.GetNonce(sender.Address())+1)
 
-		if self.msg.TxType() == 1 {
+		if self.msg.TxType() == 6 {
 			pureCallData, _, err := preProcessPrivacyTx(sender.Address().Bytes(), self.data)
 			if err != nil {
 				return nil, nil, nil, err
 			}
+			// TODO: set gas correponding stamp value
+			self.gas = 1000000
 			self.data = pureCallData[:]
 		}
 		ret, self.gas, vmerr = evm.Call(sender, self.to().Address(), self.data, self.gas, self.value)
@@ -354,7 +356,7 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	}
 	requiredGas = new(big.Int).Set(self.gasUsed())
 
-	if self.msg.TxType()!=2 {
+	if self.msg.TxType()!= 6 {
 
 		self.refundGas()
 		self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))

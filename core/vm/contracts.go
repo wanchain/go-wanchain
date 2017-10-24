@@ -22,7 +22,6 @@ import (
 
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -420,129 +419,6 @@ func (c *wanchainStampSC) getStamps(in []byte, contract *Contract, evm *Interpre
 	}
 
 	return getOtaSet(trie, 3, otaAddr)
-
-}
-
-func (c *wanchainStampSC) verifyStamp(all []byte, contract *Contract, evm *Interpreter) []byte {
-
-	addrsLen := int(all[1])
-	otaLen := hexutil.BytesToShort(all[2:4])
-
-	idx := int(otaLen) + addrsLen
-	verifyHsBegin := idx //duplicate for hash verify
-
-	pubsLen := int(all[idx])
-	idx = idx + 1
-
-	PublicKeySet := *new([]*ecdsa.PublicKey)
-	W_random := *new([]*big.Int)
-	Q_random := *new([]*big.Int)
-
-	var storagedOtaAddr []byte = nil
-	lenxy := int(all[idx])
-	x := make([]byte, lenxy)
-	copy(x, all[idx+1:])
-
-	var stampVal string
-	stampVals := [...]string{WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
-	for _, stampVal = range stampVals {
-		contractAddr := common.HexToAddress(stampVal)
-		otaAddrKey := common.BytesToHash(x[1:])
-		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
-			break
-		}
-	}
-
-	//check if user have bought stamp
-	if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
-		return nil
-	}
-
-	var i int
-	contractAddr := common.HexToAddress(stampVal)
-	for i = 0; i < pubsLen; i++ {
-		lenxy = int(all[idx])
-		idx = idx + 1
-
-		x := make([]byte, lenxy)
-		copy(x, all[idx:])
-
-		//verify the stamp in the set is from current stamp tree
-		otaAddrKey := common.BytesToHash(x[1:])
-		storagedOtaAddr = evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-		if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
-			fmt.Print("not get stamp in the set")
-			return nil
-		}
-
-		puk := crypto.ToECDSAPub(x)
-		PublicKeySet = append(PublicKeySet, puk) //convert []byte to public key
-		idx = idx + lenxy
-
-		lenw := int(all[idx])
-		idx = idx + 1
-
-		w := make([]byte, lenw)
-		copy(w, all[idx:])
-		rndw := new(big.Int).SetBytes(w)
-		W_random = append(W_random, rndw) //convert []byte to random
-		idx = idx + lenw
-
-		lenq := int(all[idx])
-		idx = idx + 1
-
-		q := make([]byte, lenq)
-		copy(q, all[idx:])
-		rndq := new(big.Int).SetBytes(q)
-		Q_random = append(Q_random, rndq) //convert []byte to random
-		idx = idx + lenq
-	}
-
-	lenkixy := int(all[idx])
-	idx = idx + 1
-
-	kix := make([]byte, lenkixy)
-	copy(kix, all[idx:])
-	KeyImage := crypto.ToECDSAPub(kix)
-	idx = idx + lenkixy
-
-	txHashLen := int(all[idx])
-	idx = idx + 1
-	txhashBytes := make([]byte, txHashLen)
-	copy(txhashBytes, all[idx:])
-	idx = idx + txHashLen
-
-	res := verifyHash(all[0:verifyHsBegin], contract, evm, txhashBytes)
-	if !res {
-		return nil
-	}
-
-	sendValue, ok := new(big.Int).SetString(stampVal, 10)
-	if !ok {
-		log.Error("get stamp value big int fail:%s", stampVal)
-		return nil
-	}
-
-	kixH := crypto.Keccak256Hash(kix)
-	storagedSendValue := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
-
-	if storagedSendValue != nil && len(storagedSendValue) != 0 {
-		return nil
-	} else {
-
-		verifyRes := crypto.VerifyRingSign(txhashBytes, PublicKeySet, KeyImage, []*big.Int(W_random), []*big.Int(Q_random))
-		if verifyRes {
-
-			evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, sendValue.Bytes())
-			//send the value to the miner
-			evm.env.StateDB.AddBalance(evm.env.Coinbase, sendValue)
-			return []byte("1")
-
-		}
-	}
-
-	return nil
 
 }
 

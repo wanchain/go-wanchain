@@ -296,4 +296,4 @@ func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
 func (m callmsg) Gas() *big.Int        { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
 func (m callmsg) Data() []byte         { return m.CallMsg.Data }
-func (m callmsg) TxType() uint64       { return m.TxType() }
+func (m callmsg) TxType() uint64       { return m.CallMsg.TxType }

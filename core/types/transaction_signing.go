@@ -25,7 +25,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -66,62 +65,6 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 		return nil, err
 	}
 	return s.WithSignature(tx, sig)
-}
-
-//zhangy
-func SignTx_zy(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, PublicKeys []*ecdsa.PublicKey) (*Transaction, error) {
-	h := s.Hash(tx)
-	if tx.data.Txtype != 0 &&tx.Txtype() != 2{
-		sig, err := crypto.Sign(h[:], prv)
-		if err != nil {
-			return nil, err
-		}
-		return s.WithSignature(tx, sig)
-	} else {//OTA类型交易环签名
-
-		//tx.data.PublicKeys = PublicKeys
-		// need help:为了测试先请吧环签名里面用于混淆的publickeys写死用几个测试用，暂时不从外面动态获取
-		sig, err := crypto.Sign(h[:], prv)
-		if err != nil {
-			return nil, err
-		}
-		tx, err = s.WithSignature(tx, sig)
-
-		// lzh modify
-		testPublicKeys := make([]*ecdsa.PublicKey, 0)
-		//testPublicKeys := *new([]*ecdsa.PublicKey)
-		for i:=0; i< 10; i++{
-			testPublicKeys = append(testPublicKeys, &prv.PublicKey)
-		}
-
-		PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(h[:], prv.D, testPublicKeys)
-		cpy := &Transaction{data: tx.data}
-
-		cpy.data.PublicKeys = crypto.PublicKeyToInt(PublicKeys...)
-
-		// lzh modify
-		W_random := make([]*hexutil.Big, 0)
-		Q_random := make([]*hexutil.Big, 0)
-		//W_random := *new([]*hexutil.Big)
-		//Q_random := *new([]*hexutil.Big)
-
-		for i := 0; i < len(PublicKeys); i++ {
-			w := w_random[i]
-			q := q_random[i]
-
-			W_random = append(W_random, (*hexutil.Big)(w))
-			Q_random = append(Q_random, (*hexutil.Big)(q))
-		}
-
-		keyImage := crypto.PublicKeyToInt(KeyImage)
-
-
-		cpy.data.KeyImage = keyImage
-		cpy.data.W_random = W_random
-		cpy.data.Q_random = Q_random
-
-		return cpy, nil
-	}	
 }
 
 // Sender derives the sender from the tx using the signer derivation

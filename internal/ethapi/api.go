@@ -1413,7 +1413,7 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		chainID = config.ChainId
 	}
 
-	privateKey, err := crypto.HexToECDSA(sPrivateKey)
+	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
 
     var signed *types.Transaction
 	if chainID != nil {

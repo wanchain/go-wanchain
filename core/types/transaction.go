@@ -160,7 +160,7 @@ const(
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	var addressDst common.Address
 	addressDst = *to
-	txType := TX_PRI_ORI_COIN
+	txType := 6
 
 	d := txdata{
 		Txtype: uint64(txType),
