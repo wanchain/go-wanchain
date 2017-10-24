@@ -28,11 +28,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	//"time"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core/types"
 	"time"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
+	"strings"
 )
 
 // Tests that the account management snippets work correctly.
@@ -52,16 +54,6 @@ func TestAccountManagement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new account: %v", err)
 	}
-
-	// unlock this new account
-	ks.Unlock(newAcc, "Creation password")
-
-	// retrieve the WanAddress for the account
-	wanAddr, err := ks.GetWanAddress(newAcc)
-	if err != nil {
-		t.Fatalf("Failed to get WanAddress for new generated account: %v", err)
-	}
-	
 
 	// Export the newly created account with a different passphrase. The returned
 	// data from this method invocation is a JSON encoded, encrypted key-file
@@ -92,14 +84,6 @@ func TestAccountManagement(t *testing.T) {
 		t.Fatalf("Failed to create signer account: %v", err)
 	}
 
-	//chain := big.NewInt(1)
-	//
-	//tx := types.Transaction{
-	//	data： types.txdata{
-	//	TxType: uint64(1),
-	//	},
-	//}
-
 	tx, chain := new(types.Transaction), big.NewInt(1)
 
 
@@ -126,4 +110,49 @@ func TestAccountManagement(t *testing.T) {
 	if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
 		t.Fatalf("Failed to sign with time unlocked account: %v", err)
 	}
+
+	// //////////////////////////////////////////////////////////////////////////////////
+	// wanchain native coin transfer tests
+	// //////////////////////////////////////////////////////////////////////////////////
+
+	// Create a new account with the specified encryption passphrase
+	wanAcc, err := ks.NewAccount("Wanchain Test Password")
+	if err != nil {
+		t.Fatalf("Failed to create new account: %v", err)
+	}
+
+	// unlock this new account
+	ks.Unlock(wanAcc, "Wanchain Test Password")
+
+	// retrieve the WanAddress for the account
+	wanAddr, err := ks.GetWanAddress(wanAcc)
+	if err != nil {
+		t.Fatalf("Failed to get WanAddress for new generated account: %v", err)
+	}
+
+	// retrieve pubkey byte slices
+	//PKBytes, err := hexutil.Decode(string(wanAddr))
+	PKA, PKB, err := keystore.GeneratePublicKeyFromWadress(wanAddr[:])
+
+	if err!=nil {
+		t.Fatalf("Failed to generate public key from wan address!\n")
+	}
+
+	strArr := hexutil.TwoPublicKeyToHexSlice(PKA, PKB)
+
+	SK, err := crypto.GenerateOneTimeKey(strArr[0], strArr[1], strArr[2], strArr[3])
+	if err != nil {
+		t.Fatalf("Failed to generate One Time Key!\n")
+	}
+
+	strCombined := strings.Join(SK, "")
+	strCombined = strings.Replace(strCombined, "0x", "", -1)
+
+	rawBytes,_ := hexutil.Decode("0x" + strCombined)
+	wbytes,_:= keystore.ToWaddr(rawBytes)
+
+	if len(wbytes) != 66 {
+		t.Fatal("Failed to generate One Time Key from Secret Key")
+	}
+
 }
