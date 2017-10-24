@@ -53,6 +53,16 @@ func TestAccountManagement(t *testing.T) {
 		t.Fatalf("Failed to create new account: %v", err)
 	}
 
+	// unlock this new account
+	ks.Unlock(newAcc, "Creation password")
+
+	// retrieve the WanAddress for the account
+	wanAddr, err := ks.GetWanAddress(newAcc)
+	if err != nil {
+		t.Fatalf("Failed to get WanAddress for new generated account: %v", err)
+	}
+	
+
 	// Export the newly created account with a different passphrase. The returned
 	// data from this method invocation is a JSON encoded, encrypted key-file
 	jsonAcc, err := ks.Export(newAcc, "Creation password", "Export password")
