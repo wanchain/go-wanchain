@@ -51,7 +51,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	return signer
 }
 
-//cr@zy-OTA: TODO:不知道在一起性地址的交易情况下是不是需要有改动
+//cr@zy-OTA: TODO:不知道在一次性地址的交易情况下是不是需要有改动
 
 // TeemoGuo revise: 扩充函数参数，增加OTA交易类型的签名，todo 外部增加扫链程序，提供SignTx的参数PublicKeys
 // SignTx signs the transaction using the given signer and private key
@@ -62,7 +62,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 	txh := s.Hash(tx)
 
-	if tx.data.Txtype != 0 &&tx.Txtype()!=2{
+	if len(tx.Data()) == 0 || (tx.data.Txtype != 0 &&tx.Txtype()!=2) {
 		sig, err := crypto.Sign(txh[:], prv)
 		if err != nil {
 			return nil, err

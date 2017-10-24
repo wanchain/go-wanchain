@@ -24,19 +24,18 @@ package guide
 
 import (
 	"io/ioutil"
-	//"math/big"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 	//"time"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
-	//"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/types"
 )
 
 // Tests that the account management snippets work correctly.
 func TestAccountManagement(t *testing.T) {
-	//keys := []string{}
 	// Create a temporary folder to work with
 	workdir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -52,56 +51,68 @@ func TestAccountManagement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new account: %v", err)
 	}
+
 	// Export the newly created account with a different passphrase. The returned
 	// data from this method invocation is a JSON encoded, encrypted key-file
 	jsonAcc, err := ks.Export(newAcc, "Creation password", "Export password")
 	if err != nil {
 		t.Fatalf("Failed to export account: %v", err)
 	}
+
 	// Update the passphrase on the account created above inside the local keystore
 	if err := ks.Update(newAcc, "Creation password", "Update password"); err != nil {
 		t.Fatalf("Failed to update account: %v", err)
 	}
+
 	// Delete the account updated above from the local keystore
 	if err := ks.Delete(newAcc, "Update password"); err != nil {
 		t.Fatalf("Failed to delete account: %v", err)
 	}
+
 	// Import back the account we've exported (and then deleted) above with yet
 	// again a fresh passphrase
 	if _, err := ks.Import(jsonAcc, "Export password", "Import password"); err != nil {
 		t.Fatalf("Failed to import account: %v", err)
 	}
+
 	// Create a new account to sign transactions with
 	signer, err := ks.NewAccount("Signer password")
 	if err != nil {
 		t.Fatalf("Failed to create signer account: %v", err)
 	}
-	//tx, chain := new(types.Transaction), big.NewInt(1)
+
+	//chain := big.NewInt(1)
+	//
+	//tx := types.Transaction{
+	//	data： types.txdata{
+	//	TxType: uint64(1),
+	//	},
+	//}
+
+	tx, chain := new(types.Transaction), big.NewInt(1)
+
 
 	// Sign a transaction with a single authorization
-	//if _, err := ks.SignTxWithPassphrase(signer, "Signer password", tx, chain); err != nil {
-	//	t.Fatalf("Failed to sign with passphrase: %v", err)
-	//}
-	// Sign a transaction with multiple manually cancelled authorizations
-	if err := ks.Unlock(signer, "Signer password"); err != nil {
-		t.Fatalf("Failed to unlock account: %v", err)
+	if _, err := ks.SignTxWithPassphrase(signer, "Signer password", tx, chain); err != nil {
+		t.Fatalf("Failed to sign with passphrase: %v", err)
 	}
-	// Create a new account to sign transactions with
-	//sender, err := ks.NewAccount("OTA Sender")
-	//if err := ks.Unlock(sender, "OTA Sender"); err != nil {
+
+	// Sign a transaction with multiple manually cancelled authorizations
+	//if err := ks.Unlock(signer, "Signer password"); err != nil {
 	//	t.Fatalf("Failed to unlock account: %v", err)
 	//}
-	//if _, err := ks.SignTx(sender, tx, chain, keys); err != nil {
+	//if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
 	//	t.Fatalf("Failed to sign with unlocked account: %v", err)
 	//}
-	//if err := ks.Lock(sender.Address); err != nil {
+	//if err := ks.Lock(signer.Address); err != nil {
 	//	t.Fatalf("Failed to lock account: %v", err)
 	//}
+
 	// Sign a transaction with multiple automatically cancelled authorizations
 	//if err := ks.TimedUnlock(signer, "Signer password", time.Second); err != nil {
 	//	t.Fatalf("Failed to time unlock account: %v", err)
 	//}
-	//if _, err := ks.SignTx(signer, tx, chain, keys); err != nil {
+	//if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
 	//	t.Fatalf("Failed to sign with time unlocked account: %v", err)
 	//}
 }
