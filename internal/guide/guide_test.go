@@ -32,6 +32,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core/types"
+	"time"
 )
 
 // Tests that the account management snippets work correctly.
@@ -98,21 +99,21 @@ func TestAccountManagement(t *testing.T) {
 	}
 
 	// Sign a transaction with multiple manually cancelled authorizations
-	//if err := ks.Unlock(signer, "Signer password"); err != nil {
-	//	t.Fatalf("Failed to unlock account: %v", err)
-	//}
-	//if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
-	//	t.Fatalf("Failed to sign with unlocked account: %v", err)
-	//}
-	//if err := ks.Lock(signer.Address); err != nil {
-	//	t.Fatalf("Failed to lock account: %v", err)
-	//}
+	if err := ks.Unlock(signer, "Signer password"); err != nil {
+		t.Fatalf("Failed to unlock account: %v", err)
+	}
+	if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
+		t.Fatalf("Failed to sign with unlocked account: %v", err)
+	}
+	if err := ks.Lock(signer.Address); err != nil {
+		t.Fatalf("Failed to lock account: %v", err)
+	}
 
 	// Sign a transaction with multiple automatically cancelled authorizations
-	//if err := ks.TimedUnlock(signer, "Signer password", time.Second); err != nil {
-	//	t.Fatalf("Failed to time unlock account: %v", err)
-	//}
-	//if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
-	//	t.Fatalf("Failed to sign with time unlocked account: %v", err)
-	//}
+	if err := ks.TimedUnlock(signer, "Signer password", time.Second); err != nil {
+		t.Fatalf("Failed to time unlock account: %v", err)
+	}
+	if _, err := ks.SignTx(signer, tx, chain, nil); err != nil {
+		t.Fatalf("Failed to sign with time unlocked account: %v", err)
+	}
 }
