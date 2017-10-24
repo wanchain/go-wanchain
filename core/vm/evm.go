@@ -115,6 +115,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
+
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance
 	}
@@ -141,11 +142,16 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 				contract := NewContract(caller, to, value, gas)
 				contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-				ret, err = evm.interpreter.Run(contract, input)
+				retBytes, err := evm.interpreter.Run(contract, input)
 
 				if err != nil {
 					return nil, 0, errors.New("error verify stamp")
 				} else {
+
+					gasStamp := new (big.Int)
+					gasStamp.SetBytes(retBytes)
+					gasStamp = gasStamp.Div(gasStamp,evm.GasPrice)
+
 
 					crdLen := hexutil.BytesToShort(input[2:4])
 					temp := make([]byte,(crdLen - 4))
@@ -172,12 +178,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 					}
 
 					caller = AccountRef(common.BytesToAddress([]byte{0}))
-					contract := NewContract(caller, to, value, gas)
+					contract := NewContract(caller, to, value, gasStamp.Uint64())
 					contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 
 
 					ret, err := evm.interpreter.Run(contract, callData)
-
 
 					// When an error was returned by the EVM or when setting the creation code
 					// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -187,7 +192,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 						evm.StateDB.RevertToSnapshot(snapshot)
 					}
 
-					return ret, contract.Gas, err
+					return ret, gasStamp.Uint64(), err
 				}
 			}
 		}

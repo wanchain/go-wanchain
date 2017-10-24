@@ -274,16 +274,16 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 			return nil, nil, nil, vmerr
 		}
 	}
-	requiredGas = new(big.Int).Set(self.gasUsed())
 
 	if self.msg.TxType()!=2 {
-
+		requiredGas = new(big.Int).Set(self.gasUsed())
 		self.refundGas()
 		self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))
-
+		return ret, requiredGas, self.gasUsed(), err
+	} else {
+		return ret, big.NewInt(int64(self.gas)),big.NewInt(int64(self.gas)), err
 	}
 
-	return ret, requiredGas, self.gasUsed(), err
 }
 
 func (self *StateTransition) refundGas() {

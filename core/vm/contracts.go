@@ -290,6 +290,8 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 		}
 	}
 
+
+
 	//check if user have bought stamp
 	if storagedOtaAddr == nil || len(storagedOtaAddr) == 0 {
 		return nil
@@ -389,7 +391,9 @@ func (c *wanchainStampSC) verifyStamp(all []byte,contract *Contract,evm *Interpr
 			evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, sendValue.Bytes())
 			//send the value to the miner
 			evm.env.StateDB.AddBalance(evm.env.Coinbase, sendValue)
-			return []byte("1")
+
+
+			return sendValue.Bytes();
 
 		}
 	}
@@ -706,3 +710,4 @@ func verifyContractOtaSender(callData []byte,sig []byte) bool {
 func VerifyContractOtaSender(callData []byte,sig []byte) bool {
 	return verifyContractOtaSender(callData,sig)
 }
+

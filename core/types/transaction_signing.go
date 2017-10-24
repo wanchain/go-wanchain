@@ -62,7 +62,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 
 	txh := s.Hash(tx)
 
-	if tx.data.Txtype != 0 &&tx.Txtype()!=2{
+	if len(tx.Data())==0 || (tx.data.Txtype != 0 &&tx.Txtype()!=2){
 		sig, err := crypto.Sign(txh[:], prv)
 		if err != nil {
 			return nil, err
