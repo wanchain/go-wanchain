@@ -33,13 +33,13 @@ func TestGetOtaBalance(t *testing.T) {
 
 	t.Logf("otaShortAddr len:%d", len(otaShortAddr))
 	otaAX := otaShortAddr[1:common.HashLength]
-	balance, err := GetOtaBalance(statedb, otaAX)
+	balance, err := GetOtaBalanceFromAX(statedb, otaAX)
 	if err == nil || balance != nil {
 		t.Errorf("otaAX len:%d, err:%s", len(otaAX), err.Error())
 	}
 
 	otaAX = otaShortAddr[1 : 1+common.HashLength]
-	balance, err = GetOtaBalance(statedb, otaAX)
+	balance, err = GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}
@@ -54,13 +54,13 @@ func TestGetOtaBalance(t *testing.T) {
 		return
 	}
 
-	balance, err = GetOtaBalance(statedb, otaAX)
+	balance, err = GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
-		t.Errorf("GetOtaBalance err:%s", err.Error())
+		t.Errorf("GetOtaBalanceFromAX err:%s", err.Error())
 	}
 
 	if balance == nil || balance.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("GetOtaBalance balance:%v", balance)
+		t.Errorf("GetOtaBalanceFromAX balance:%v", balance)
 	}
 }
 
@@ -214,7 +214,7 @@ func TestSetOTA(t *testing.T) {
 		t.Errorf("err:%s", err.Error())
 	}
 
-	balance, err := GetOtaBalance(statedb, otaAX)
+	balance, err := GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}
@@ -254,7 +254,7 @@ func TestAddOTAIfNotExit(t *testing.T) {
 		t.Errorf("add is true!")
 	}
 
-	balance, err := GetOtaBalance(statedb, otaAX)
+	balance, err := GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}

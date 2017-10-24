@@ -15,11 +15,22 @@ var (
 	OTAImageStorageAddr = crypto.Keccak256([]byte(string("OTA image storage addr")))
 )
 
-func GetOtaBalance(statedb vm.StateDB, otaAX []byte) (*big.Int, error) {
+func GetOtaBalanceFromAX(statedb vm.StateDB, otaAX []byte) (*big.Int, error) {
 	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
-		return nil, errors.New("getOtaBalance， invalid input param!")
+		return nil, errors.New("GetOtaBalanceFromAX， invalid input param!")
 	}
 
+	balance := statedb.GetBalance(common.BytesToAddress(otaAX))
+
+	return balance, nil
+}
+
+func GetOtaBalanceFromWanAddr(statedb vm.StateDB, otaWanAddr []byte) (*big.Int, error) {
+	if statedb == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
+		return nil, errors.New("GetOtaBalanceFromWanAddr， invalid input param!")
+	}
+
+	otaAX := otaWanAddr[1 : 1+common.HashLength]
 	balance := statedb.GetBalance(common.BytesToAddress(otaAX))
 
 	return balance, nil
@@ -32,7 +43,7 @@ func CheckOTAExit(statedb vm.StateDB, otaAX []byte) (exit bool, balance *big.Int
 	}
 
 	otaAddrKey := common.BytesToHash(otaAX)
-	balance, err = GetOtaBalance(statedb, otaAddrKey[:])
+	balance, err = GetOtaBalanceFromAX(statedb, otaAddrKey[:])
 	if err != nil {
 		return false, nil, err
 	} else if balance.Cmp(big.NewInt(0)) == 0 {
@@ -64,7 +75,7 @@ func BatCheckOTAExit(statedb vm.StateDB, otaAXs [][]byte) (exit bool, balance *b
 		}
 
 		otaAddrKey := common.BytesToHash(otaAX)
-		balanceTmp, err := GetOtaBalance(statedb, otaAddrKey[:])
+		balanceTmp, err := GetOtaBalanceFromAX(statedb, otaAddrKey[:])
 		if err != nil {
 			return false, nil, otaAX, err
 		} else if balanceTmp.Cmp(big.NewInt(0)) == 0 {
@@ -97,7 +108,7 @@ func SetOTA(statedb vm.StateDB, balance *big.Int, otaShortAddr []byte) error {
 	//fmt.Println("otaLongAddr:", common.ToHex(otaLongAddr))
 	otaAddrKey := otaShortAddr[1 : 1+common.HashLength]
 	//fmt.Println("otaAddrKey:", common.ToHex(otaAddrKey))
-	balanceOld, err := GetOtaBalance(statedb, otaAddrKey)
+	balanceOld, err := GetOtaBalanceFromAX(statedb, otaAddrKey)
 	if err != nil {
 		return err
 	}
@@ -110,32 +121,8 @@ func SetOTA(statedb vm.StateDB, balance *big.Int, otaShortAddr []byte) error {
 	statedb.SetStateByteArray(mptAddr, common.BytesToHash(otaAddrKey), otaShortAddr)
 	statedb.AddBalance(common.BytesToAddress(otaAddrKey), balance)
 
-	/////////////////test
-	// CountTrieItemCount(statedb, balance)
-	/////////////////test
-
 	return nil
 }
-
-/////////////////test
-func CountTrieItemCount(statedb vm.StateDB, balance *big.Int) {
-	mptAddr := common.HexToAddress(balance.String())
-
-	dataTrie := statedb.StorageVmTrie(mptAddr)
-	if dataTrie == nil {
-		fmt.Println("CountTrieItemCount. cant find trie, mptAddr:", balance.String())
-	}
-
-	count := 0
-	it := trie.NewIterator(dataTrie.NodeIterator(nil))
-	for it.Next() {
-		count++
-	}
-
-	fmt.Println("CountTrieItemCount. count:", count, ", mptAddr:", balance.String())
-}
-
-/////////////////test
 
 func AddOTAIfNotExit(statedb vm.StateDB, balance *big.Int, otaShortAddr []byte) (bool, error) {
 	if statedb == nil || balance == nil || otaShortAddr == nil || len(otaShortAddr) != common.WAddressLength {
@@ -166,7 +153,7 @@ func GetOTAInfoFromAX(statedb vm.StateDB, otaAX []byte) (otaShortAddr []byte, ba
 	}
 
 	otaAddrKey := common.BytesToHash(otaAX)
-	balance, err = GetOtaBalance(statedb, otaAddrKey[:])
+	balance, err = GetOtaBalanceFromAX(statedb, otaAddrKey[:])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -190,7 +177,7 @@ func GetOTASet(statedb vm.StateDB, otaAX []byte, otaNum int) (otaShortAddrs [][]
 		return nil, nil, errors.New("GetOTASet, invalid input param!")
 	}
 
-	balance, err = GetOtaBalance(statedb, otaAX)
+	balance, err = GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		return nil, nil, err
 	} else if balance == nil || balance.Cmp(big.NewInt(0)) == 0 {
