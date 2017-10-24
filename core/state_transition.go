@@ -337,8 +337,10 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 			if err != nil {
 				return nil, nil, nil, err
 			}
-			// TODO: set gas correponding stamp value
-			self.gas = 1000000
+			// TODO: set gas correponding stamp value, stamp_value / gas_price
+			//       and sub gas used by ring sign
+			self.gas = 200000
+			self.initialGas.SetUint64(200000)
 			self.data = pureCallData[:]
 		}
 		ret, self.gas, vmerr = evm.Call(sender, self.to().Address(), self.data, self.gas, self.value)
