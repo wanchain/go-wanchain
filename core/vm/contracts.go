@@ -561,6 +561,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	return nil, publickeys, keyimgae, w, q
 }
 
+
 func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []byte {
 	var RefundStruct struct{
 		RingSignedData string
@@ -577,20 +578,34 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
+	otaContainerAddr := common.BytesToAddress(RefundStruct.Value.Bytes())
+	for i := 0; i < len(publickeys); i++ {
+		pkBytes := crypto.FromECDSAPub(publickeys[i])
+		otaAddrKey := common.BytesToHash(pkBytes[1:])
+		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrKey)
+		if storagedOtaAddr==nil || len(storagedOtaAddr)==0 {
+			fmt.Print("not get stamp in the set")
+			return nil
+		}
+	}
+
+	kix := crypto.FromECDSAPub(keyimgae)
+	kixH := crypto.Keccak256Hash(kix)
+	storagedRefundVal := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
+	if storagedRefundVal != nil && len(storagedRefundVal) != 0 {
+		return nil
+	}
+
+
 	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimgae, ws, qs)
 	if !b {
 		return nil
 	} else { // For test
+		evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, RefundStruct.Value.Bytes())
 		addrSrc := contract.CallerAddress
 		evm.env.StateDB.AddBalance(addrSrc, RefundStruct.Value)
 		return []byte("1")
 	}
-
-	//TODO: check all publickeys in corrsponding deposit value tree
-
-	//TODO: check keyimage have not appear
-
-	//TODO: ADD Balance
 
 	return nil
 }
