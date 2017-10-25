@@ -1729,11 +1729,6 @@ func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Contex
 	}
 	sigLen := len(sig)
 
-	//for test code
-	res :=vm.VerifyContractOtaSender(data,sig)
-	if res {
-		fmt.Println("test verify sig pass")
-	}
 
 	//begin to get stamp set
 	if len(stampAddress) != ((common.WAddressLength<<1) + 2) {
