@@ -72,7 +72,8 @@ type State interface {
 	GetNonce(ctx context.Context, addr common.Address) (uint64, error)
 
 	// lzh add
-	GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)
+	GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error)
+	GetOTABalance(otaWAddr []byte) (*big.Int, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

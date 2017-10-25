@@ -22,16 +22,13 @@ import (
 
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/trie"
-	"github.com/wanchain/go-wanchain/accounts/abi"
 	"golang.org/x/crypto/ripemd160"
-	"math/rand"
 	"strings"
 )
 
@@ -314,11 +311,11 @@ var (
   }
 ]`
 
-	coinAbi, errCoinSCInit = abi.JSON(strings.NewReader(coinSCDefinition))
+	coinAbi, errCoinSCInit               = abi.JSON(strings.NewReader(coinSCDefinition))
 	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
 
 	stampAbi, errStampSCInit = abi.JSON(strings.NewReader(stampSCDefinition))
-	stBuyId [4]byte
+	stBuyId                  [4]byte
 )
 
 func init() {
@@ -341,10 +338,10 @@ func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
-    var methodId [4]byte
+	var methodId [4]byte
 	copy(methodId[:], in[:4])
 
-	if methodId == stBuyId{
+	if methodId == stBuyId {
 		return c.buyStamp(in[4:], contract, evm)
 	}
 
@@ -352,7 +349,7 @@ func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) [
 }
 
 func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpreter) []byte {
-	var StampInput struct{
+	var StampInput struct {
 		OtaAddr string
 		Value   *big.Int
 	}
@@ -363,25 +360,14 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpret
 	}
 
 	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
-	if err != nil{
-		return nil
-	}
-
-	otaAddr, err := keystore.WaddrToUncompressed(wanAddr) //input is wand address
 	if err != nil {
 		return nil
 	}
 
-	contractAddr := common.HexToAddress(contract.value.String())
-	otaAddrKey := common.BytesToHash(otaAddr[0:64])
-
-	// prevent rebuy
-	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, otaAddr) {
+	add, err := AddOTAIfNotExit(evm.env.StateDB, contract.value, wanAddr)
+	if err != nil || !add {
 		return nil
 	}
-
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, wanAddr)
 
 	addrSrc := contract.CallerAddress
 
@@ -397,29 +383,19 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpret
 }
 
 func (c *wanchainStampSC) getStamps(in []byte, contract *Contract, evm *Interpreter) []byte {
-
-	length := len(in)
-	otaAddr := make([]byte, length)
-	copy(otaAddr, in[:])
-
-	var trie *trie.SecureTrie = nil
-	stampVals := [...]string{WAN_STAMP_DOT1, WAN_STAMP_DOT2, WAN_STAMP_DOT5}
-	for _, stampVal := range stampVals {
-		contractAddr := common.HexToAddress(stampVal)
-		otaAddrKey := common.BytesToHash(otaAddr[0:64])
-		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
-			trie = evm.env.StateDB.StorageVmTrie(contractAddr)
-			break
-		}
-	}
-
-	if trie == nil {
+	setEleNum := 3
+	otaAX := in[:common.HashLength]
+	otaWanAddrs, _, err := GetOTASet(evm.env.StateDB, otaAX, setEleNum)
+	if err != nil {
 		return nil
 	}
 
-	return getOtaSet(trie, 3, otaAddr)
+	retBuf := make([]byte, 0, common.WAddressLength*setEleNum)
+	for _, otaWanAddr := range otaWanAddrs {
+		retBuf = append(retBuf, otaWanAddr...)
+	}
 
+	return retBuf
 }
 
 //////////////////////////genesis coin precompile contract/////////////////////////////////////////
@@ -475,9 +451,9 @@ var (
 )
 
 func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []byte {
-	var outStruct struct{
+	var outStruct struct {
 		OtaAddr string
-		Value *big.Int
+		Value   *big.Int
 	}
 
 	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
@@ -486,25 +462,14 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []b
 	}
 
 	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
-	if err != nil{
-		return nil
-	}
-
-	otaAddr, err := keystore.WaddrToUncompressed(wanAddr) //input is wand address
 	if err != nil {
 		return nil
 	}
 
-	contractAddr := common.HexToAddress(contract.value.String())
-	otaAddrKey := common.BytesToHash(otaAddr[0:64])
-
-	// prevent rebuy
-	storagedOtaAddr := evm.env.StateDB.GetStateByteArray(contractAddr, otaAddrKey)
-	if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 && bytes.Equal(storagedOtaAddr, otaAddr) {
+	add, err := AddOTAIfNotExit(evm.env.StateDB, contract.value, wanAddr)
+	if err != nil || !add {
 		return nil
 	}
-
-	evm.env.StateDB.SetStateByteArray(contractAddr, otaAddrKey, wanAddr)
 
 	addrSrc := contract.CallerAddress
 
@@ -520,20 +485,22 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []b
 }
 
 func (c *wanCoinSC) getCoins(all []byte, contract *Contract, evm *Interpreter) []byte {
-	length := len(all)
-	temp := make([]byte, length)
-	copy(temp, all[:])
-
-	contractAddr := common.HexToAddress(contract.value.String())
-	trie := evm.env.StateDB.StorageVmTrie(contractAddr)
-	if trie == nil {
+	setEleNum := 3
+	otaAX := all[:common.HashLength]
+	otaWanAddrs, _, err := GetOTASet(evm.env.StateDB, otaAX, setEleNum)
+	if err != nil {
 		return nil
 	}
 
-	return getOtaSet(trie, 3, temp)
+	retBuf := make([]byte, 0, common.WAddressLength*setEleNum)
+	for _, otaWanAddr := range otaWanAddrs {
+		retBuf = append(retBuf, otaWanAddr...)
+	}
+
+	return retBuf
 }
 
-func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int){
+func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	ps := ss[0]
 	k := ss[1]
@@ -542,7 +509,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 
 	pa := strings.Split(ps, "&")
 	publickeys := make([]*ecdsa.PublicKey, 0)
-	for _,pi := range pa {
+	for _, pi := range pa {
 		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
 	}
 	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
@@ -561,11 +528,10 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	return nil, publickeys, keyimgae, w, q
 }
 
-
 func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []byte {
-	var RefundStruct struct{
+	var RefundStruct struct {
 		RingSignedData string
-		Value *big.Int
+		Value          *big.Int
 	}
 
 	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
@@ -578,65 +544,42 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
-	otaContainerAddr := common.BytesToAddress(RefundStruct.Value.Bytes())
+	otaAXs := make([][]byte, 0, len(publickeys))
 	for i := 0; i < len(publickeys); i++ {
 		pkBytes := crypto.FromECDSAPub(publickeys[i])
-		otaAddrKey := common.BytesToHash(pkBytes[1:])
-		storagedOtaAddr := evm.env.StateDB.GetStateByteArray(otaContainerAddr, otaAddrKey)
-		if storagedOtaAddr==nil || len(storagedOtaAddr)==0 {
-			fmt.Print("not get stamp in the set")
-			return nil
+		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+	}
+
+	exit, balanceGet, unexit, err := BatCheckOTAExit(evm.env.StateDB, otaAXs)
+	if !exit || balanceGet == nil || balanceGet.Cmp(RefundStruct.Value) != 0 {
+		if err != nil {
+			log.Warn("verify mix ota fail. err:%s", err.Error())
 		}
+		if unexit != nil {
+			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		}
+		if balanceGet != nil && balanceGet.Cmp(RefundStruct.Value) != 0 {
+			log.Warn("balance getting from ota is wrong! get:%s, expect:%s",
+				balanceGet.String(), RefundStruct.Value.String())
+		}
+
+		return nil
 	}
 
 	kix := crypto.FromECDSAPub(keyimgae)
-	kixH := crypto.Keccak256Hash(kix)
-	storagedRefundVal := evm.env.StateDB.GetStateByteArray(contract.Address(), kixH)
-	if storagedRefundVal != nil && len(storagedRefundVal) != 0 {
+	exit, _, err = CheckOTAImageExit(evm.env.StateDB, kix)
+	if err != nil || exit {
 		return nil
 	}
-
 
 	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimgae, ws, qs)
 	if !b {
-		return nil
 	} else { // For test
-		evm.env.StateDB.SetStateByteArray(contract.Address(), kixH, RefundStruct.Value.Bytes())
+		AddOTAImage(evm.env.StateDB, kix, RefundStruct.Value.Bytes())
+
 		addrSrc := contract.CallerAddress
 		evm.env.StateDB.AddBalance(addrSrc, RefundStruct.Value)
 		return []byte("1")
-	}
-
-	return nil
-}
-
-func getOtaSet(dataTrie *trie.SecureTrie, stampNUm int, otaAddr []byte) []byte {
-	if dataTrie == nil {
-		return nil
-	}
-
-	stampSet := make([]byte, stampNUm*OTA_ADDR_LEN)
-	rnd := rand.Intn(100) + 1
-
-	it := trie.NewIterator(dataTrie.NodeIterator(nil))
-	count := 0
-	i := 0
-	for {
-
-		for it.Next() {
-			count++
-			if count%rnd == 0 && i < stampNUm {
-				idx := i * OTA_ADDR_LEN
-				copy(stampSet[idx:], it.Value) //key is the ota address,value is the dump value
-				i++
-			}
-
-			if i >= stampNUm {
-				return stampSet
-			}
-		}
-
-		it = trie.NewIterator(dataTrie.NodeIterator(nil))
 	}
 
 	return nil

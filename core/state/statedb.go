@@ -20,10 +20,11 @@ package state
 import (
 	"fmt"
 	"math/big"
-	"math/rand"
 	"sort"
 	"sync"
 
+	"errors"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -32,9 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
-	lru "github.com/hashicorp/golang-lru"
-	"errors"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.
@@ -256,84 +254,32 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 // GetOTASet get the set of ota, with the count as setting
 // TODO: verify?,is possible one OTA exist in stamp and coin at the same time, cause bug
 // TODO: improve time complexity from O(n*log) to O(log),get mix set by value, and type(stamp/coin)
-func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error)  {
+func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error) {
 	if otaAddr == nil || (len(otaAddr) != common.WAddressLength && len(otaAddr) != OTA_ADDR_LEN) {
 		return nil, errors.New("invalid ota account!")
-	}
-
-	var err error
-	otaLongAddr := otaAddr
-	if len(otaAddr) == common.WAddressLength {
-		otaLongAddr, err = keystore.WaddrToUncompressed(otaAddr)//input is wand address
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if otaNum <= 0 {
 		return [][]byte{}, nil
 	}
 
-	stampVals := [...]string {
-		vm.WAN_STAMP_DOT1,
-		vm.WAN_STAMP_DOT2,
-		vm.WAN_STAMP_DOT5,
-		vm.Pre0dot1,
-		vm.Pre0dot2,
-		vm.Pre0dot5,
-		vm.Pre1,
-		vm.Pre2,
-		vm.Pre5,
-		vm.Pre10,
-		vm.Pre20,
-		vm.Pre100,
-		vm.Pre50,
+	otaAX := otaAddr[:common.HashLength]
+	if len(otaAddr) == common.WAddressLength {
+		otaAX = otaAX[1 : 1+common.HashLength]
 	}
 
-	var dataTrie * trie.SecureTrie
-	otaAddrKey := common.BytesToHash(otaLongAddr[0:64])
-	for _, stampVal := range stampVals {
-		contractAddr := common.HexToAddress(stampVal)
-		storagedOtaAddr := self.GetStateByteArray(contractAddr, otaAddrKey)
-		if storagedOtaAddr != nil && len(storagedOtaAddr) != 0 {
-			dataTrie = self.StorageVmTrie(contractAddr)
-			break
-		}
-	}
-
-	if dataTrie == nil {
-		return nil, errors.New("can't find ota trie from the given ota account!")
-	}
-
-	otaSet := make([][]byte, 0)
-	rnd := rand.Intn(100) + 1
-
-	count :=0
-	i := 0
-	for {
-		it := trie.NewIterator(dataTrie.NodeIterator(nil))
-
-		for it.Next() {
-			if it.Value == nil || len(it.Value) != common.WAddressLength {
-				return nil, errors.New("found invalid ota addr len from trie!")
-			}
-
-			count++
-			if count%rnd == 0 {
-				otaSet = append(otaSet, it.Value)
-				i++
-				rnd = rand.Intn(100) + 1
-
-				if i >= otaNum {
-					return otaSet, nil
-				}
-			}
-		}
-	}
-
-	return nil, nil
+	otaWAddrs, _, err := vm.GetOTASet(self, otaAX, otaNum)
+	return otaWAddrs, err
 }
 
+func (self *StateDB) GetOTABalance(otaWAddr []byte) (*big.Int, error) {
+	if otaWAddr == nil || len(otaWAddr) != common.WAddressLength {
+		return nil, errors.New("invalid ota wan address!")
+	}
+
+	otaAX := otaWAddr[1 : 1+common.HashLength]
+	return vm.GetOtaBalanceFromAX(self, otaAX)
+}
 
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
@@ -396,8 +342,6 @@ func (self *StateDB) GetStateByteArray(a common.Address, b common.Hash) []byte {
 	return nil
 }
 
-
-
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.
 func (self *StateDB) StorageTrie(a common.Address) *trie.SecureTrie {
@@ -411,8 +355,8 @@ func (self *StateDB) StorageTrie(a common.Address) *trie.SecureTrie {
 
 func (self *StateDB) StorageVmTrie(a common.Address) *trie.SecureTrie {
 	stateObject := self.GetOrNewStateObject(a)
-	stateObject.GetState(self.db,common.BytesToHash(a.Bytes()))
-	return  stateObject.trie
+	stateObject.GetState(self.db, common.BytesToHash(a.Bytes()))
+	return stateObject.trie
 }
 
 func (self *StateDB) HasSuicided(addr common.Address) bool {
@@ -478,7 +422,6 @@ func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, val
 		stateObject.SetStateByteArray(self.db, key, value)
 	}
 }
-
 
 // Suicide marks the given account as suicided.
 // This clears the account balance.

@@ -222,6 +222,10 @@ func (s EthApiState) GetNonce(ctx context.Context, addr common.Address) (uint64,
 }
 
 // lzh add
-func (s EthApiState) GetOTASet(otaAddr []byte, otaNum int)([][]byte, error) {
+func (s EthApiState) GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error) {
 	return s.state.GetOTASet(otaAddr, otaNum)
+}
+
+func (s EthApiState) GetOTABalance(otaWAddr []byte) (*big.Int, error) {
+	return s.state.GetOTABalance(otaWAddr)
 }
