@@ -2477,6 +2477,7 @@ module.exports={
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
 var Eth = require('./web3/methods/eth');
+var Wan = require('./web3/methods/wan');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
@@ -2499,6 +2500,7 @@ function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
     this.eth = new Eth(this);
+    this.wan = new Wan(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
@@ -2598,7 +2600,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/wan":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -5424,8 +5426,8 @@ var methods = function () {
     var signOTAContractTransaction = new Method({
         name: 'signOTAContractTransaction',
         call: 'eth_signOTAContractTransaction',
-        params: 2,
-        inputFormatter: [formatters.inputTransactionFormatter,null]
+        params: 3,
+        inputFormatter: [formatters.inputTransactionFormatter,null,null]
 
     });
 
@@ -13614,7 +13616,43 @@ module.exports = transfer;
 },{}],86:[function(require,module,exports){
 module.exports = XMLHttpRequest;
 
-},{}],"bignumber.js":[function(require,module,exports){
+},{}],87:[function(require,module,exports){
+/* wan.js */
+    var Method = require('../method');
+    //var formatters = require('../formatters');
+
+    function Wan(web3) {
+        this._requestManager = web3._requestManager;
+
+        var self = this;
+
+        methods().forEach(function(method) {
+            method.attachToObject(self);
+            method.setRequestManager(self._requestManager);
+        });
+
+        properties().forEach(function(p) {
+            p.attachToObject(self);
+            p.setRequestManager(self._requestManager);
+        });
+    }
+
+    var methods = function () {
+        var getOTAMixSet = new Method({
+            name: 'getOTAMixSet',
+            call: 'wan_getOTAMixSet',
+            params: 2
+        });
+
+        return [
+            getOTAMixSet
+        ];
+    };
+    var properties = function () {
+        return [];
+    };
+module.exports = Wan;
+},{"../formatters":30,"../method":36}],"bignumber.js":[function(require,module,exports){
 /*! bignumber.js v2.0.7 https://github.com/MikeMcl/bignumber.js/LICENCE */
 
 ;(function (global) {

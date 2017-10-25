@@ -89,12 +89,6 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 
 	code := contract.CodeAddr
 
-	if code!=nil {
-		fmt.Print("code is not nil")
-	}
-
-
-
 	if contract.CodeAddr != nil {
 
 		if p := PrecompiledContracts[*code]; p != nil {
