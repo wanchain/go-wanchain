@@ -1,4 +1,4 @@
-package ota
+package vm
 
 import (
 	"github.com/wanchain/go-wanchain/common"

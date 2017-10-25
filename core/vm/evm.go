@@ -135,7 +135,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if PrecompiledContracts[to.Address()] == nil {
 		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 	} else {
-		if bytes.Equal(common.BytesToAddress([]byte{5}).Bytes(),to.Address().Bytes()) {
+		if bytes.Equal(common.BytesToAddress([]byte{5}).Bytes(), to.Address().Bytes()) {
 
 			if input[0] == WAN_VERIFY_STAMP {
 
@@ -148,36 +148,32 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 				} else {
 
 					crdLen := hexutil.BytesToShort(input[2:4])
-					temp := make([]byte,(crdLen - 4))
-					copy(temp,input[4:(crdLen - 4)])//copy orignal contract input
+					temp := make([]byte, (crdLen - 4))
+					copy(temp, input[4:(crdLen-4)]) //copy orignal contract input
 
-
-					craBytes := make([]byte,20)//normal address length is 20
-					copy(craBytes,input[crdLen:])//copy contract address
+					craBytes := make([]byte, 20)   //normal address length is 20
+					copy(craBytes, input[crdLen:]) //copy contract address
 
 					addr = common.BytesToAddress(craBytes)
-					to   = AccountRef(addr)
+					to = AccountRef(addr)
 					callData := temp //recover the contract data
 					value = big.NewInt(-1)
 
 					sigLen := int(input[1]) - 20
 
-
 					//verify the contract ota1 sig
 					idxFrom := crdLen + 20
 					idxEnd := int(idxFrom) + sigLen
-					res := verifyContractOtaSender(temp,input[idxFrom:idxEnd])
+					res := verifyContractOtaSender(temp, input[idxFrom:idxEnd])
 					if !res {
-						return nil,contract.Gas, errors.New("error in verify contract from signature")
+						return nil, contract.Gas, errors.New("error in verify contract from signature")
 					}
 
 					caller = AccountRef(common.BytesToAddress([]byte{0}))
 					contract := NewContract(caller, to, value, gas)
 					contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 
-
 					ret, err := evm.interpreter.Run(contract, callData)
-
 
 					// When an error was returned by the EVM or when setting the creation code
 					// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -198,7 +194,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// only.
 	contract := NewContract(caller, to, value, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-
 
 	ret, err = evm.interpreter.Run(contract, input)
 	// When an error was returned by the EVM or when setting the creation code
