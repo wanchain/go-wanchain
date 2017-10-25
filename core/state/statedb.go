@@ -270,6 +270,15 @@ func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error) {
 	return otaWAddrs, err
 }
 
+func (self *StateDB) GetOTABalance(otaWAddr []byte) (*big.Int, error) {
+	if otaWAddr == nil || len(otaWAddr) != common.WAddressLength {
+		return nil, errors.New("invalid ota wan address!")
+	}
+
+	otaAX := otaWAddr[1 : 1+common.HashLength]
+	return vm.GetOtaBalanceFromAX(self, otaAX)
+}
+
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {

@@ -5248,6 +5248,14 @@ var methods = function () {
         outputFormatter: formatters.outputBigNumberFormatter
     });
 
+    var getOTABalance = new Method({
+        name: 'getOTABalance',
+        call: 'eth_getOTABalance',
+        params: 1,
+        inputFormatter: [null],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
     var getStorageAt = new Method({
         name: 'getStorageAt',
         call: 'eth_getStorageAt',
@@ -5476,6 +5484,7 @@ var methods = function () {
 
     return [
         getBalance,
+        getOTABalance,
         getStorageAt,
         getCode,
         getBlock,
