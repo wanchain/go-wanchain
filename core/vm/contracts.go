@@ -450,7 +450,7 @@ var (
 )
 
 
-func (c *wanCoinSC) buyCoin(in []byte,contract *Contract,evm *Interpreter) []byte {
+func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []byte {
 
 	otaAddr,err:= keystore.WaddrToUncompressed(in)//input is wand address
 	if err!= nil {

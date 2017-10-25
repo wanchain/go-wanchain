@@ -262,12 +262,6 @@ func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) ([]string) {
 
 func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) ([]string) {
 	// lzh modify
-	//return []string {Encode(A.X.Bytes()),
-	//		 Encode(A.Y.Bytes()),
-	//	         Encode(B.X.Bytes()),
-	//	         Encode(B.Y.Bytes()),
-	//}
-
 	strAX, _ := EncodeWithFixOutLen(A.X.Bytes(), 64)
 	strAY, _ := EncodeWithFixOutLen(A.Y.Bytes(), 64)
 	strBX, _ := EncodeWithFixOutLen(B.X.Bytes(), 64)

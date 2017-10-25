@@ -1282,7 +1282,7 @@ func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args 
 	}
 
 	length := len(data) + 1
-	temp = make([]byte,length)
+	temp = make([]byte, length)
 	temp[0] = WANCOIN_BUY
 	copy(temp[1:],data)
 

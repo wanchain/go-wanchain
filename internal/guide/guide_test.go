@@ -111,48 +111,109 @@ func TestAccountManagement(t *testing.T) {
 		t.Fatalf("Failed to sign with time unlocked account: %v", err)
 	}
 
-	// //////////////////////////////////////////////////////////////////////////////////
-	// wanchain native coin transfer tests
-	// //////////////////////////////////////////////////////////////////////////////////
+}
+
+func TestGenerateOneTimeAddress(t *testing.T) {
+	// Create a temporary folder to work with
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Failed to create temporary folder: %v\n", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create an encrypted keystore with standard crypto parameters
+	ks := keystore.NewKeyStore(filepath.Join(tmpDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
 
 	// Create a new account with the specified encryption passphrase
-	wanAcc, err := ks.NewAccount("Wanchain Test Password")
+	testAcc, err := ks.NewAccount("Wanchain_One_Time_Address_Test")
 	if err != nil {
-		t.Fatalf("Failed to create new account: %v", err)
+		t.Fatalf("Fail to create new account: %v\n", err)
 	}
 
-	// unlock this new account
-	ks.Unlock(wanAcc, "Wanchain Test Password")
+	// Unlock the new account
+	ks.Unlock(testAcc, "Wanchain_One_Time_Address_Test")
 
-	// retrieve the WanAddress for the account
-	wanAddr, err := ks.GetWanAddress(wanAcc)
+	// Retrieve the Wanaddress for the account
+	wanAddr, err := ks.GetWanAddress(testAcc)
 	if err != nil {
-		t.Fatalf("Failed to get WanAddress for new generated account: %v", err)
+		t.Fatalf("Fail to get WanAddress: %v\n", err)
 	}
 
-	// retrieve pubkey byte slices
-	//PKBytes, err := hexutil.Decode(string(wanAddr))
 	PKA, PKB, err := keystore.GeneratePublicKeyFromWadress(wanAddr[:])
-
-	if err!=nil {
-		t.Fatalf("Failed to generate public key from wan address!\n")
+	if err != nil {
+		t.Fatalf("Fail to generate public key from wan address: %v\n", err)
 	}
 
 	strArr := hexutil.TwoPublicKeyToHexSlice(PKA, PKB)
 
 	SK, err := crypto.GenerateOneTimeKey(strArr[0], strArr[1], strArr[2], strArr[3])
 	if err != nil {
-		t.Fatalf("Failed to generate One Time Key!\n")
+		t.Fatalf("Fail to generate One Time Key: %v\n", err)
 	}
 
 	strCombined := strings.Join(SK, "")
 	strCombined = strings.Replace(strCombined, "0x", "", -1)
 
-	rawBytes,_ := hexutil.Decode("0x" + strCombined)
-	wbytes,_:= keystore.ToWaddr(rawBytes)
+	rawBytes, _ := hexutil.Decode("0x" + strCombined)
+	wbytes, _ := keystore.ToWaddr(rawBytes)
 
 	if len(wbytes) != 66 {
 		t.Fatal("Failed to generate One Time Key from Secret Key")
 	}
+
+}
+
+func TestSendOTATransaction(t *testing.T) {
+	// create a temporary folder to work with
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Fail to create temporary folder to work with: %v", err)
+	}
+
+	defer os.RemoveAll(tmpDir)
+
+	// create a keystore with standard crypto parameters
+	ks := keystore.NewKeyStore(filepath.Join(tmpDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
+
+	// create a new account with the specific passphrase
+	testAcc, err := ks.NewAccount("Wanchain_OTATransaction_Test")
+
+	// unlock new account
+	ks.Unlock(testAcc, "Wanchain_OTATransaction_Test")
+
+	// retireve the wanaddress
+	wanAddr, err := ks.GetWanAddress(testAcc)
+	if err != nil {
+		t.Fatalf("Fail to get wan address")
+	}
+
+	PKA, PKB, err := keystore.GeneratePublicKeyFromWadress(wanAddr[:])
+	if err != nil {
+		t.Fatalf("Fail to recover public keys from wan address: %v", err)
+	}
+
+	pubKeyArr := hexutil.TwoPublicKeyToHexSlice(PKA, PKB)
+	SK, err := crypto.GenerateOneTimeKey(pubKeyArr[0], pubKeyArr[1], pubKeyArr[2], pubKeyArr[3])
+	if err != nil {
+		t.Fatalf("Fail to generate one time key: %v", err)
+	}
+
+	combined := strings.Join(SK, "")
+	combined = strings.Replace(combined, "0x", "", -1)
+
+	rawBytes, err := hexutil.Decode("0x" + combined)
+	wBytes, _ := keystore.ToWaddr(rawBytes)
+
+	otaAddr := hexutil.Encode(wBytes)
+
+	if len(otaAddr) != 134 {
+		t.Fatalf("Fail to generate one time address, expected address length is: 134; actual length is: %d", len(otaAddr))
+	}
+
+	//chain := big.NewInt(1)
+
+	//tx :=
+
+	//ks.SignTx(testAcc, tx, chain, nil)
 
 }

@@ -119,12 +119,6 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*
 			PublicKeys, KeyImage, w_random, q_random := crypto.RingSign(verifyHash.Bytes(), otaPrivD, publicKeys)
 			crypto.VerifyRingSign(verifyHash.Bytes(),PublicKeys,KeyImage,w_random,q_random)
 			var idx int
-			//byte[0],the number used for ring sign public key num
-			//byte[1:]
-			//			pub []byte, 1 byte length,value
-			// 			w []byte,   1 byte length,value
-			// 			q []byte    1 byte length,value
-			//			keyImage []byte 1 byte legth,value
 			pubsLen := len(PublicKeys)
 			orgLen := len(tx.data.Payload) //value
 
