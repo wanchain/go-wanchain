@@ -482,7 +482,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		SumC.Add(SumC, c[i])
 		SumC.Mod(SumC, secp256k1_N)
 		d.Write(FromECDSAPub(Lpub))
-		//fmt.Printf("L'%d\t%x\n", i, FromECDSAPub(Lpub))
+		fmt.Printf("L'%d\t%x\n", i, FromECDSAPub(Lpub))
 	}
 	Rpub := new(ecdsa.PublicKey)
 	for i := 0; i < n; i++ {
@@ -490,17 +490,17 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		Ppub := new(ecdsa.PublicKey)
 		Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, c[i].Bytes())  //[wi]I
 		Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
-		//fmt.Printf("R'%d\t%x\n", i, FromECDSAPub(Rpub))
+		fmt.Printf("R'%d\t%x\n", i, FromECDSAPub(Rpub))
 
 		d.Write(FromECDSAPub(Rpub))
 	}
 	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
-	//fmt.Printf("R'%d\t%x\n", 0, hash.Bytes())
+	fmt.Printf("hash'%d\t%x\n", 0, hash.Bytes())
 
 	hash.Mod(hash, secp256k1_N)
-	//fmt.Printf("R'%d\t%x\n", 2,hash.Bytes())
+	fmt.Printf("hash'%d\t%x\n", 2,hash.Bytes())
 
-	//fmt.Printf("R'%d\t%x\n", 3, SumC.Bytes())
+	fmt.Printf("SumC'%d\t%x\n", 3, SumC.Bytes())
 	if hash.Cmp(SumC) == 0 {
 		ret = true
 	}
