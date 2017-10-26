@@ -8,18 +8,17 @@
 #                                                                     
 
 
-echo "run geth in pluto testnet"
-mkdir -p ./data_pluto
+echo "run geth in pluto bootnode testnet"
+mkdir -p ./data_pluto/keystore
 echo "wanglu" > ./passwd.txt
-if [ -d "DOCKER" ]; then
-	cp -rf DOCKER/data/keystore ./data_pluto
-else
-	cp -rf ../data/keystore ./data_pluto
-fi
-#rm -rf ./data_pluto/geth/chaindata
-#geth --datadir ./data_pluto init ./genesis_example/genesis_poa.json
+cp -rf ./UTC* ./data_pluto/keystore/
+#rm -rf /wanchain/src/data_pluto/geth/chaindata
+#geth --datadir /wanchain/src/data_pluto init ./genesis_example/genesis_poa.json
+
 networkid='--pluto'
-./build/bin/geth ${networkid} --nat none --verbosity 4 --gasprice '200000' --datadir ./data_pluto  \
+../build/bin/geth ${networkid}  --nodekey ./nodekey --verbosity 4 --gasprice '200000' --datadir ./data_pluto  \
+	--mine --minerthreads 1 \
+	--nat none \
 	 --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password ./passwd.txt \
 	 --targetgaslimit 900000000  --port 30303  \
-   	--rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin" --rpccorsdomain '*' $@
+	--etherbase '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e'   --rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin" --rpccorsdomain '*' 
