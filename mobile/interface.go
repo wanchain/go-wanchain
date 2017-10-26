@@ -64,21 +64,22 @@ func (i *Interface) SetBigInt(bigint *BigInt)      { i.object = &bigint.bigint }
 func (i *Interface) SetBigInts(bigints *BigInts)   { i.object = &bigints.bigints }
 
 // lzh modify
+// Anson5555555Lee fix
 func (i *Interface) SetDefaultBool()      { i.object = new(bool) }
-func (i *Interface) SetDefaultBools()     { i.object = &make([]bool, 0) }
+//func (i *Interface) SetDefaultBools()     { i.object = &make([]bool, 0) }
 //func (i *Interface) SetDefaultBools()     { i.object = new([]bool) }
 func (i *Interface) SetDefaultString()    { i.object = new(string) }
-func (i *Interface) SetDefaultStrings()   { i.object = &make([]string, 0) }
+//func (i *Interface) SetDefaultStrings()   { i.object = &make([]string, 0) }
 //func (i *Interface) SetDefaultStrings()   { i.object = new([]string) }
-func (i *Interface) SetDefaultBinary()    { i.object = &make([]byte, 0) }
+//func (i *Interface) SetDefaultBinary()    { i.object = &make([]byte, 0) }
 //func (i *Interface) SetDefaultBinary()    { i.object = new([]byte) }
-func (i *Interface) SetDefaultBinaries()  { i.object = &make([][]byte, 0) }
+//func (i *Interface) SetDefaultBinaries()  { i.object = &make([][]byte, 0) }
 //func (i *Interface) SetDefaultBinaries()  { i.object = new([][]byte) }
 func (i *Interface) SetDefaultAddress()   { i.object = new(common.Address) }
-func (i *Interface) SetDefaultAddresses() { i.object = &make([]common.Address, 0) }
+//func (i *Interface) SetDefaultAddresses() { i.object = &make([]common.Address, 0) }
 //func (i *Interface) SetDefaultAddresses() { i.object = new([]common.Address) }
 func (i *Interface) SetDefaultHash()      { i.object = new(common.Hash) }
-func (i *Interface) SetDefaultHashes()    { i.object = &make([]common.Hash, 0) }
+//func (i *Interface) SetDefaultHashes()    { i.object = &make([]common.Hash, 0) }
 //func (i *Interface) SetDefaultHashes()    { i.object = new([]common.Hash) }
 func (i *Interface) SetDefaultInt8()      { i.object = new(int8) }
 func (i *Interface) SetDefaultInt16()     { i.object = new(int16) }
@@ -89,7 +90,7 @@ func (i *Interface) SetDefaultUint16()    { i.object = new(uint16) }
 func (i *Interface) SetDefaultUint32()    { i.object = new(uint32) }
 func (i *Interface) SetDefaultUint64()    { i.object = new(uint64) }
 func (i *Interface) SetDefaultBigInt()    { i.object = new(*big.Int) }
-func (i *Interface) SetDefaultBigInts()   { i.object = &make([]*big.Int, 0) }
+//func (i *Interface) SetDefaultBigInts()   { i.object = &make([]*big.Int, 0) }
 //func (i *Interface) SetDefaultBigInts()   { i.object = new([]*big.Int) }
 
 func (i *Interface) GetBool() bool            { return *i.object.(*bool) }
