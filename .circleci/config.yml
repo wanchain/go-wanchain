@@ -20,7 +20,7 @@ jobs:
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-      - run: make geth
+      - run: make all
       - run: echo "good"
 
       # specify any bash command here prefixed with `run: `
