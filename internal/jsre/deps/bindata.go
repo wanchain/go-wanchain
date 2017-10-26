@@ -84,7 +84,7 @@ func bignumberJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "bignumber.js", size: 17314, mode: os.FileMode(436), modTime: time.Unix(1508747090, 0)}
+	info := bindataFileInfo{name: "bignumber.js", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -104,7 +104,7 @@ func web3Js() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web3.js", size: 497521, mode: os.FileMode(509), modTime: time.Unix(1508933474, 0)}
+	info := bindataFileInfo{name: "web3.js", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +162,7 @@ func AssetNames() []string {
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
 	"bignumber.js": bignumberJs,
-	"web3.js": web3Js,
+	"web3.js":      web3Js,
 }
 
 // AssetDir returns the file names below a certain
@@ -204,9 +204,10 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
-	"bignumber.js": &bintree{bignumberJs, map[string]*bintree{}},
-	"web3.js": &bintree{web3Js, map[string]*bintree{}},
+	"bignumber.js": {bignumberJs, map[string]*bintree{}},
+	"web3.js":      {web3Js, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory
@@ -255,4 +256,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
