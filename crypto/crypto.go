@@ -28,13 +28,14 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"os"
 	Mrand "math/rand"
+	"os"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/common/hexutil"
+	"fmt"
 )
 
 var (
@@ -176,7 +177,9 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
+
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
+
 }
 
 func zeroBytes(bytes []byte) {
@@ -186,6 +189,9 @@ func zeroBytes(bytes []byte) {
 }
 
 ///////////////////////////////////以下为新加内容/////////////////////////////////////
+
+
+
 //PublicKeyToInt for json 把公钥数组点转int数组，(0放x，1放y)
 //PublicKeys[n]数组时，调用 outInt=PublicKeyToInt(PublicKeys...），
 //单个公钥KeyImage时，调用outInt=PublicKeyToInt（KeyImage),    outInt[0]为返回值
@@ -365,7 +371,7 @@ func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
 func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 	KeyImg := new(ecdsa.PublicKey)
 	I = new(ecdsa.PublicKey)
-	KeyImg.X, KeyImg.Y = S256().ScalarBaseMult(Keccak256(FromECDSAPub(pub))) //Hash(P)
+	KeyImg.X, KeyImg.Y = S256().ScalarMult(pub.X, pub.Y, Keccak256(FromECDSAPub(pub))) //Hash(P)
 	I.X, I.Y = S256().ScalarMult(KeyImg.X, KeyImg.Y, x)
 	I.Curve = S256()
 	return
@@ -374,9 +380,9 @@ func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 //明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
 //2528 Pengbo add Shi TeemoGuo revise
 func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
-	//	n := len(PublicKeys)
+	n := len(PublicKeys)
 	//	fmt.Println(n)
-	n := 10
+	//n := 10
 	I := xScalarHashP(x.Bytes(), PublicKeys[0]) //Key Image
 	s := Mrand.Intn(n)                          //s位放主签名公钥
 	if s > 0 {
@@ -442,12 +448,30 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 
 //VerifyRingSign 验证环签名
 func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
+
 	ret := false
 	n := len(PublicKeys)
+
+	fmt.Printf("R'%d\t%x\n", 0, M)
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 1, FromECDSAPub(PublicKeys[i]))
+	}
+
+	fmt.Printf("R'%d\t%x\n", 2, FromECDSAPub(I))
+
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 3, c[i].Bytes())
+	}
+
+	for i:=0;i<n;i++ {
+		fmt.Printf("R'%d\t%x\n", 4, r[i].Bytes())
+	}
+
 	SumC := new(big.Int).SetInt64(0)
 	Lpub := new(ecdsa.PublicKey)
 	d := sha3.NewKeccak256()
 	d.Write(M)
+
 	//hash(M,Li,Ri)
 	for i := 0; i < n; i++ {
 		Lpub.X, Lpub.Y = S256().ScalarBaseMult(r[i].Bytes()) //[ri]G
@@ -471,22 +495,35 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		d.Write(FromECDSAPub(Rpub))
 	}
 	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
+	//fmt.Printf("R'%d\t%x\n", 0, hash.Bytes())
+
 	hash.Mod(hash, secp256k1_N)
+	//fmt.Printf("R'%d\t%x\n", 2,hash.Bytes())
+
+	//fmt.Printf("R'%d\t%x\n", 3, SumC.Bytes())
 	if hash.Cmp(SumC) == 0 {
 		ret = true
 	}
 	return ret
 }
 
-// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]A)]G+B
+// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]B)]G+A
 func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKey {
 	A1 := new(ecdsa.PublicKey)
 	A1.X, A1.Y = S256().ScalarMult(B.X, B.Y, r)   //A1=[r]B
-	A1Bytes := Keccak256(FromECDSAPub(A1)) //hash([r]B)
+	A1Bytes := Keccak256(FromECDSAPub(A1))        //hash([r]B)
 	A1.X, A1.Y = S256().ScalarBaseMult(A1Bytes)   //[hash([r]B)]G
 	A1.X, A1.Y = S256().Add(A1.X, A1.Y, A.X, A.Y) //A1=[hash([r]B)]G+A
 	A1.Curve = S256()
 	return *A1
+}
+
+func CompareA1(b []byte, A *ecdsa.PublicKey, S1 *ecdsa.PublicKey, A1 *ecdsa.PublicKey) bool {
+	A1n := generateA1(b, A, S1)
+	if A1.X.Cmp(A1n.X) == 0 && A1.Y.Cmp(A1n.Y) == 0 {
+		return true
+	}
+	return false
 }
 
 // 2528 Pengbo add TeemoGuo revise
@@ -501,9 +538,9 @@ func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.P
 	return A1, R, err
 }
 
-func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error){
+func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error) {
 	bytesAX, err := hexutil.Decode(AX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesAY, err := hexutil.Decode(AY)
@@ -511,7 +548,7 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 		return
 	}
 	bytesBX, err := hexutil.Decode(BX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesBY, err := hexutil.Decode(BY)
@@ -527,12 +564,12 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
 
 	generatedA1, generatedR, err := generateOneTimeKey2528(pa, pb)
-	return  hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
+	return hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
 }
 
-func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string)(retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string) (retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
 	bytesAX, err := hexutil.Decode(AX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesAY, err := hexutil.Decode(AY)
@@ -540,7 +577,7 @@ func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.Priva
 		return
 	}
 	bytesBX, err := hexutil.Decode(BX)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	bytesBY, err := hexutil.Decode(BY)
@@ -554,16 +591,16 @@ func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.Priva
 
 	retPub = &ecdsa.PublicKey{X: bnAX, Y: bnAY}
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
-        retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
+    retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
 	return
 }
 
-func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey,destPubA *ecdsa.PublicKey, destPubB *ecdsa.PublicKey)(retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error){
+func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, destPubA *ecdsa.PublicKey, destPubB *ecdsa.PublicKey) (retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
 	pub := new(ecdsa.PublicKey)
 	pub.X, pub.Y = S256().ScalarMult(destPubB.X, destPubB.Y, privateKey2.D.Bytes()) //[b]R
-	k := new(big.Int).SetBytes(Keccak256(FromECDSAPub(pub)))                                                                    //hash([b]R)
-	k.Add(k, privateKey.D)                                                                                                               //hash([b]R)+a
-	k.Mod(k, S256().Params().N)                                                                                                        //mod to feild N
+	k := new(big.Int).SetBytes(Keccak256(FromECDSAPub(pub)))                        //hash([b]R)
+	k.Add(k, privateKey.D)                                                          //hash([b]R)+a
+	k.Mod(k, S256().Params().N)                                                     //mod to feild N
 
 	retPriv1 = new(ecdsa.PrivateKey)
 	retPriv2 = new(ecdsa.PrivateKey)
@@ -571,4 +608,150 @@ func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ec
 	retPriv1.D = k
 	retPriv2.D = new(big.Int).SetInt64(0)
 	return retPriv1, retPriv2, nil
+}
+
+
+/////////////////////////////////////////jia added////////////////////////////////////////////////////////////////
+const (
+	// alphabet is the modified base58 alphabet used by Bitcoin.
+	alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+	alphabetIdx0 = '1'
+)
+
+var b58 = [256]byte{
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 0, 1, 2, 3, 4, 5, 6,
+	7, 8, 255, 255, 255, 255, 255, 255,
+	255, 9, 10, 11, 12, 13, 14, 15,
+	16, 255, 17, 18, 19, 20, 21, 255,
+	22, 23, 24, 25, 26, 27, 28, 29,
+	30, 31, 32, 255, 255, 255, 255, 255,
+	255, 33, 34, 35, 36, 37, 38, 39,
+	40, 41, 42, 43, 255, 44, 45, 46,
+	47, 48, 49, 50, 51, 52, 53, 54,
+	55, 56, 57, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255,
+}
+
+var bigRadix = big.NewInt(58)
+//var bigZero = big.NewInt(0)
+
+func Hex2Bytes(str string) []byte {
+	h, _ := hex.DecodeString(str)
+
+	return h
+}
+var FactoidPrefix = []byte{0x6c, 0x12}
+var WangLuMagicBigInt = new(big.Int).SetBytes(Hex2Bytes("9da26fc2e1d6ad9fdd46138906b0104ae68a65d8"))
+
+
+// Decode decodes a modified base58 string to a byte slice.
+func Decode(b string) []byte {
+	answer := big.NewInt(0)
+	j := big.NewInt(1)
+
+	scratch := new(big.Int)
+	for i := len(b) - 1; i >= 0; i-- {
+		tmp := b58[b[i]]
+		if tmp == 255 {
+			return []byte("")
+		}
+		scratch.SetInt64(int64(tmp))
+		scratch.Mul(j, scratch)
+		answer.Add(answer, scratch)
+		j.Mul(j, bigRadix)
+	}
+
+	tmpval := answer.Bytes()
+
+	var numZeros int
+	for numZeros = 0; numZeros < len(b); numZeros++ {
+		if b[numZeros] != alphabetIdx0 {
+			break
+		}
+	}
+	flen := numZeros + len(tmpval)
+	val := make([]byte, flen, flen)
+	copy(val[numZeros:], tmpval)
+
+	return val
+}
+
+// Encode encodes a byte slice to a modified base58 string.
+func Encode(b []byte) string {
+	x := new(big.Int)
+	x.SetBytes(b)
+
+	answer := make([]byte, 0, len(b)*136/100)
+	for x.Cmp(bigZero) > 0 {
+		mod := new(big.Int)
+		x.DivMod(x, bigRadix, mod)
+		answer = append(answer, alphabet[mod.Int64()])
+	}
+
+	// leading zero bytes
+	for _, i := range b {
+		if i != 0 {
+			break
+		}
+		answer = append(answer, alphabetIdx0)
+	}
+
+	// reverse
+	alen := len(answer)
+	for i := 0; i < alen/2; i++ {
+		answer[i], answer[alen-1-i] = answer[alen-1-i], answer[i]
+	}
+
+	return string(answer)
+}
+
+func getPreFixedBigInt() *big.Int{
+	baseBigInt := new(big.Int)
+	baseBigInt.SetBytes(Hex2Bytes("ffffffffffffffffffffffffffffffffffffffff"))
+	fmt.Println("baseBegInt: " + baseBigInt.String())
+	xdecimal := big.NewInt(58)
+	base := big.NewInt(58)
+	for base.Cmp(baseBigInt) <= 0 {
+		base = base.Mul(base, xdecimal)
+	}
+	LWangLu := big.NewInt(19)
+	LWangLu.Mul(LWangLu, base)
+	WWangLu := big.NewInt(58 * 29)
+	WWangLu.Mul(WWangLu, base)
+	retBigInt := big.NewInt(0)
+	retBigInt.Add(retBigInt, LWangLu)
+	retBigInt.Add(retBigInt, WWangLu)
+	fmt.Println("retBigInt: " + retBigInt.String())
+	fmt.Println("retBigInt hex: " + hex.EncodeToString(retBigInt.Bytes()))
+	return retBigInt
+}
+
+func otaAddress(address common.Address) string{
+
+	result := Encode(append(FactoidPrefix,Hex2Bytes(address.Hex())...))
+
+
+	return result
 }

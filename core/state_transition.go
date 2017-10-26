@@ -21,11 +21,16 @@ import (
 	"fmt"
 	"math/big"
 
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"strings"
 )
 
 var (
@@ -76,6 +81,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	TxType() uint64
 }
 
 func MessageCreatesContract(msg Message) bool {
@@ -183,6 +189,7 @@ func (self *StateTransition) buyGas() error {
 		state  = self.state
 		sender = self.from()
 	)
+
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
@@ -209,17 +216,120 @@ func (self *StateTransition) preCheck() error {
 	return self.buyGas()
 }
 
+var (
+	utilAbiDefinition = `[{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}],"name":"combine","outputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}]}]`
+
+	utilAbi, errAbiInit = abi.JSON(strings.NewReader(utilAbiDefinition))
+)
+
+func init() {
+	if errAbiInit != nil {
+		panic(errAbiInit)
+	}
+}
+
+func (self *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _, pi := range pa {
+		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+	}
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, _ := hexutil.DecodeBig(wi)
+		w = append(w, bi)
+	}
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, _ := hexutil.DecodeBig(qi)
+		q = append(q, bi)
+	}
+	return nil, publickeys, keyimgae, w, q
+}
+
+func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, keyimage *ecdsa.PublicKey, err error) {
+
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+
+	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
+	if err != nil {
+		return nil, nil, err
+	}
+	callData = TxDataWithRing.CxtCallParams[:]
+
+	err, publickeys, keyimage, ws, qs := self.DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	otaAXs := make([][]byte, 0, len(publickeys))
+	for i := 0; i < len(publickeys); i++ {
+		pkBytes := crypto.FromECDSAPub(publickeys[i])
+		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+	}
+
+	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(self.evm.StateDB, otaAXs)
+	if !exit || balanceGet == nil {
+		if err != nil {
+			log.Warn("verify mix ota fail. err:%s", err.Error())
+		}
+		if unexit != nil {
+			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		}
+		if balanceGet == nil {
+			log.Warn("balance getting from ota is wrong! get:%s, expect:%s")
+		}
+
+		return nil, nil, err
+	}
+
+	kix := crypto.FromECDSAPub(keyimage)
+	exit, _, err = vm.CheckOTAImageExit(self.evm.StateDB, kix)
+	if err != nil || exit {
+		return nil, nil, err
+	}
+
+	b := crypto.VerifyRingSign(hashInput, publickeys, keyimage, ws, qs)
+	if !b {
+		err = errors.New("ring sign is invalid!")
+		return nil, nil, err
+	}
+
+	vm.AddOTAImage(self.evm.StateDB, kix, balanceGet.Bytes())
+	return
+
+}
+
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
 func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
-	if err = self.preCheck(); err != nil {
-		return
+	//txtype 2 is contract trasaction
+	if self.msg.TxType() != 6 {
+		if err = self.preCheck(); err != nil {
+			return
+		}
+	} else {
+		fmt.Println("txType is 2")
 	}
+
 	msg := self.msg
 	sender := self.from() // err checked in preCheck
 
 	homestead := self.evm.ChainConfig().IsHomestead(self.evm.BlockNumber)
+
 	contractCreation := MessageCreatesContract(msg)
 	// Pay intrinsic gas
 	// TODO convert to uint64
@@ -227,8 +337,13 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, vm.ErrOutOfGas
 	}
-	if err = self.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, err
+
+	if self.msg.TxType() != 6 {
+		if err = self.useGas(intrinsicGas.Uint64()); err != nil {
+			return nil, nil, nil, err
+		}
+	} else {
+		fmt.Println("txType is 2")
 	}
 
 	var (
@@ -238,13 +353,27 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		// error.
 		vmerr error
 	)
+
 	if contractCreation {
 		ret, _, self.gas, vmerr = evm.Create(sender, self.data, self.gas, self.value)
 	} else {
 		// Increment the nonce for the next transaction
 		self.state.SetNonce(sender.Address(), self.state.GetNonce(sender.Address())+1)
+
+		if self.msg.TxType() == 6 {
+			pureCallData, _, err := self.preProcessPrivacyTx(sender.Address().Bytes(), self.data)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			// TODO: set gas correponding stamp value, stamp_value / gas_price
+			//       and sub gas used by ring sign
+			self.gas = 200000
+			self.initialGas.SetUint64(200000)
+			self.data = pureCallData[:]
+		}
 		ret, self.gas, vmerr = evm.Call(sender, self.to().Address(), self.data, self.gas, self.value)
 	}
+
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", err)
 		// The only possible consensus-error would be if there wasn't
@@ -256,8 +385,12 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	}
 	requiredGas = new(big.Int).Set(self.gasUsed())
 
-	self.refundGas()
-	self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))
+	if self.msg.TxType() != 6 {
+
+		self.refundGas()
+		self.state.AddBalance(self.evm.Coinbase, new(big.Int).Mul(self.gasUsed(), self.gasPrice))
+
+	}
 
 	return ret, requiredGas, self.gasUsed(), err
 }

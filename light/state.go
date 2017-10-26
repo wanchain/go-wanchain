@@ -314,3 +314,14 @@ func (self *LightState) Set(state *LightState) {
 func (self *LightState) GetRefund() *big.Int {
 	return self.refund
 }
+
+// lzh add
+func (s LightState) GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error) {
+	// ********************* not yet implement
+	return nil, nil
+}
+
+func (s LightState) GetOTABalance(otaWAddr []byte) (*big.Int, error) {
+	// ********************* not yet implement
+	return nil, nil
+}

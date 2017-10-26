@@ -140,8 +140,55 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	return &Transaction{data: d}
 }
 
-//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
+//jqg****
+
+const(
+	stampSCAddress 	 = 5
+	wancoinSCAddress = 6
+
+	WANCOIN_BUY    = byte(0)
+	WANCOIN_GET_COINS = byte(1)
+	WANCOIN_REFUND = byte(2)
+	WAN_BUY_STAMP = byte(3)
+	WAN_CONTRACT_OTA = byte(4)
+	WAN_STAMP_SET = byte(5)
+
+	TX_PRI_ORI_COIN = 0
+	TX_PRI_CONTRACT_CALL = 2
+)
+
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	var addressDst common.Address
+	addressDst = *to
+	txType := 6
+
+	d := txdata{
+		Txtype: uint64(txType),
+		AccountNonce: nonce,
+		Recipient:	  &addressDst ,
+		Payload:      data,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Price:        new(big.Int),
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	return &Transaction{data: d}
+}
+
+//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
+func newOTATransaction_zy(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
@@ -292,6 +339,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:		tx.Txtype(),
 	}
 
 	var err error
@@ -497,6 +545,7 @@ type Message struct {
 	amount, price, gasLimit *big.Int
 	data                    []byte
 	checkNonce              bool
+	txType  				uint64
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, checkNonce bool) Message {
@@ -520,3 +569,4 @@ func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+func (m Message) TxType() uint64       { return m.txType }

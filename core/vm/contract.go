@@ -18,7 +18,6 @@ package vm
 
 import (
 	"math/big"
-
 	"github.com/wanchain/go-wanchain/common"
 )
 

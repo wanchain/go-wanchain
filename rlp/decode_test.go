@@ -365,9 +365,12 @@ var decodeTests = []decodeTest{
 	{input: "B8020004", ptr: new(uint32), error: "rlp: non-canonical size information for uint32"},
 
 	// slices
-	{input: "C0", ptr: new([]uint), value: []uint{}},
-	{input: "C80102030405060708", ptr: new([]uint), value: []uint{1, 2, 3, 4, 5, 6, 7, 8}},
-	{input: "F8020004", ptr: new([]uint), error: "rlp: non-canonical size information for []uint"},
+	//{input: "C0", ptr: new([]uint), value: []uint{}},
+	{input: "C0", ptr: &make([]uint, 0), value: []uint{}},
+	//{input: "C80102030405060708", ptr: new([]uint), value: []uint{1, 2, 3, 4, 5, 6, 7, 8}},
+	{input: "C80102030405060708", ptr: &make([]uint, 0), value: []uint{1, 2, 3, 4, 5, 6, 7, 8}},
+	//{input: "F8020004", ptr: new([]uint), error: "rlp: non-canonical size information for []uint"},
+	{input: "F8020004", ptr: &make([]uint, 0), error: "rlp: non-canonical size information for []uint"},
 
 	// arrays
 	{input: "C50102030405", ptr: new([5]uint), value: [5]uint{1, 2, 3, 4, 5}},
@@ -381,11 +384,16 @@ var decodeTests = []decodeTest{
 	{input: "C101", ptr: new([0]uint), error: "rlp: input list has too many elements for [0]uint"},
 
 	// byte slices
-	{input: "01", ptr: new([]byte), value: []byte{1}},
-	{input: "80", ptr: new([]byte), value: []byte{}},
-	{input: "8D6162636465666768696A6B6C6D", ptr: new([]byte), value: []byte("abcdefghijklm")},
-	{input: "C0", ptr: new([]byte), error: "rlp: expected input string or byte for []uint8"},
-	{input: "8105", ptr: new([]byte), error: "rlp: non-canonical size information for []uint8"},
+	//{input: "01", ptr: new([]byte), value: []byte{1}},
+	{input: "01", ptr: &make([]byte, 0), value: []byte{1}},
+	//{input: "80", ptr: new([]byte), value: []byte{}},
+	{input: "80", ptr: &make([]byte, 0), value: []byte{}},
+	//{input: "8D6162636465666768696A6B6C6D", ptr: new([]byte), value: []byte("abcdefghijklm")},
+	{input: "8D6162636465666768696A6B6C6D", ptr: &make([]byte, 0), value: []byte("abcdefghijklm")},
+	//{input: "C0", ptr: new([]byte), error: "rlp: expected input string or byte for []uint8"},
+	{input: "C0", ptr: &make([]byte, 0), error: "rlp: expected input string or byte for []uint8"},
+	//{input: "8105", ptr: new([]byte), error: "rlp: non-canonical size information for []uint8"},
+	{input: "8105", ptr: &make([]byte, 0), error: "rlp: non-canonical size information for []uint8"},
 
 	// byte arrays
 	{input: "02", ptr: new([1]byte), value: [1]byte{2}},
@@ -445,7 +453,8 @@ var decodeTests = []decodeTest{
 	},
 	{
 		input: "C7C50583343434C0",
-		ptr:   new([]*simplestruct),
+		//ptr:   new([]*simplestruct),
+		ptr:   &make([]*simplestruct, 0),
 		error: "rlp: too few elements for rlp.simplestruct, decoding into ([]*rlp.simplestruct)[1]",
 	},
 	{
@@ -506,7 +515,8 @@ var decodeTests = []decodeTest{
 	// RawValue
 	{input: "01", ptr: new(RawValue), value: RawValue(unhex("01"))},
 	{input: "82FFFF", ptr: new(RawValue), value: RawValue(unhex("82FFFF"))},
-	{input: "C20102", ptr: new([]RawValue), value: []RawValue{unhex("01"), unhex("02")}},
+	//{input: "C20102", ptr: new([]RawValue), value: []RawValue{unhex("01"), unhex("02")}},
+	{input: "C20102", ptr: &make([]RawValue, 0), value: []RawValue{unhex("01"), unhex("02")}},
 
 	// pointers
 	{input: "00", ptr: new(*[]byte), value: &[]byte{0}},
@@ -519,7 +529,8 @@ var decodeTests = []decodeTest{
 	{input: "C58403030303", ptr: new(*[][]byte), value: &[][]byte{{3, 3, 3, 3}}},
 
 	// check that input position is advanced also for empty values.
-	{input: "C3808005", ptr: new([]*uint), value: []*uint{uintp(0), uintp(0), uintp(5)}},
+	//{input: "C3808005", ptr: new([]*uint), value: []*uint{uintp(0), uintp(0), uintp(5)}},
+	{input: "C3808005", ptr: &make([]*uint, 0), value: []*uint{uintp(0), uintp(0), uintp(5)}},
 
 	// interface{}
 	{input: "00", ptr: new(interface{}), value: []byte{0}},
@@ -530,7 +541,8 @@ var decodeTests = []decodeTest{
 	{input: "C50183040404", ptr: new(interface{}), value: []interface{}{[]byte{1}, []byte{4, 4, 4}}},
 	{
 		input: "C3010203",
-		ptr:   new([]io.Reader),
+		//ptr:   new([]io.Reader),
+		ptr:   &make([]io.Reader, 0),
 		error: "rlp: type io.Reader is not RLP-serializable",
 	},
 

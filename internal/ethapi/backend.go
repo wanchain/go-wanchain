@@ -70,6 +70,10 @@ type State interface {
 	GetCode(ctx context.Context, addr common.Address) ([]byte, error)
 	GetState(ctx context.Context, a common.Address, b common.Hash) (common.Hash, error)
 	GetNonce(ctx context.Context, addr common.Address) (uint64, error)
+
+	// lzh add
+	GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error)
+	GetOTABalance(otaWAddr []byte) (*big.Int, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
@@ -86,6 +90,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Public:    true,
 		}, {
 			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicTransactionPoolAPI(apiBackend),
+			Public:    true,
+		}, {
+			Namespace: "wan",
 			Version:   "1.0",
 			Service:   NewPublicTransactionPoolAPI(apiBackend),
 			Public:    true,

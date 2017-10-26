@@ -23,6 +23,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/trie"
 )
 
 // VMState is a wrapper for the light state that holds the actual context and
@@ -158,10 +159,21 @@ func (s *VMState) GetState(a common.Address, b common.Hash) common.Hash {
 	return res
 }
 
+// lzh add
+func (s *VMState) GetStateByteArray(a common.Address, b common.Hash) []byte {
+	// ****************************not yet implemented
+	return nil
+}
+
 // SetState sets the storage value at storage address key of the account addr
 func (s *VMState) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	err := s.state.SetState(s.ctx, addr, key, value)
 	s.errHandler(err)
+}
+
+// lzh add
+func (s *VMState) SetStateByteArray(addr common.Address, key common.Hash, value []byte) {
+	// ****************************not yet implemented
 }
 
 // Suicide marks an account to be removed and clears its balance
@@ -191,4 +203,8 @@ func (s *VMState) HasSuicided(addr common.Address) bool {
 	res, err := s.state.HasSuicided(s.ctx, addr)
 	s.errHandler(err)
 	return res
+}
+
+func (s *VMState) StorageVmTrie(a common.Address) *trie.SecureTrie {
+ 	return nil
 }

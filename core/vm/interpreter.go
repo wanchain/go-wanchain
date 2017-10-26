@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+
 )
 
 // Config are the configuration options for the Interpreter
@@ -77,6 +78,8 @@ func NewInterpreter(env *EVM, cfg Config) *Interpreter {
 		gasTable: env.ChainConfig().GasTable(env.BlockNumber),
 		intPool:  newIntPool(),
 	}
+
+
 }
 
 // Run loops and evaluates the contract's code with the given input data
@@ -84,10 +87,14 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 	evm.env.depth++
 	defer func() { evm.env.depth-- }()
 
+	code := contract.CodeAddr
+
 	if contract.CodeAddr != nil {
-		if p := PrecompiledContracts[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract)
+
+		if p := PrecompiledContracts[*code]; p != nil {
+			return RunPrecompiledContract(p, input, contract,evm)
 		}
+
 	}
 
 	// Don't bother with the execution if there's no code.
@@ -180,6 +187,7 @@ func (evm *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err e
 		//fmt.Printf("%04d: %8v    cost = %-8d stack = %-8d\n", pc, op, cost, stack.len())
 
 		// execute the operation
+
 		res, err := operation.execute(&pc, evm.env, contract, mem, stack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.

@@ -267,7 +267,7 @@ func (pool *TxPool) SetLocal(tx *types.Transaction) {
 // to the consensus rules.
 //cr@zy: add validatetx for OTATx
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
-	if tx.Txtype() == 0 {
+	if tx.Txtype() == 0 || tx.Txtype() == 6{
 		return nil
 	}
 
@@ -307,7 +307,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	log.Error("validateTx from:" + from.String())
-	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	//added judge for privacy tx type
+	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0&&tx.Txtype()!=0&&tx.Txtype()!=6{
 		return ErrInsufficientFunds
 	}
 
@@ -518,7 +519,7 @@ func (pool *TxPool) promoteExecutables(state *state.StateDB) {
 		// Drop all transactions that are too costly (low balance)
 		drops, _ := list.Filter(state.GetBalance(addr))
 		for _, tx := range drops {
-			if tx.Txtype() != 0 {
+			if tx.Txtype() != 0 &&tx.Txtype()!=6{
 				hash := tx.Hash()
 				log.Debug("Removed unpayable queued transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -653,10 +654,12 @@ func (pool *TxPool) demoteUnexecutables(state *state.StateDB) {
 		// Drop all transactions that are too costly (low balance), and queue any invalids back for later
 		drops, invalids := list.Filter(state.GetBalance(addr))
 		for _, tx := range drops {
-			hash := tx.Hash()
-			log.Debug("Removed unpayable pending transaction", "hash", hash)
-			delete(pool.all, hash)
-			pendingNofundsCounter.Inc(1)
+			if tx.Txtype() != 0 &&tx.Txtype()!=6 {
+				hash := tx.Hash()
+				log.Debug("Removed unpayable pending transaction", "hash", hash)
+				delete(pool.all, hash)
+				pendingNofundsCounter.Inc(1)
+			}
 		}
 		for _, tx := range invalids {
 			hash := tx.Hash()

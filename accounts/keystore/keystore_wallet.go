@@ -21,6 +21,7 @@ import (
 
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
@@ -98,7 +99,7 @@ func (w *keystoreWallet) SignHash(account accounts.Account, hash []byte) ([]byte
 // with the given account. If the wallet does not wrap this particular account,
 // an error is returned to avoid account leakage (even though in theory we may
 // be able to sign via our shared keystore backend).
-func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int,keys []string) (*types.Transaction, error) {
 	// Make sure the requested account is contained within
 	if account.Address != w.account.Address {
 		return nil, accounts.ErrUnknownAccount
@@ -107,10 +108,10 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 		return nil, accounts.ErrUnknownAccount
 	}
 	// Account seems valid, request the keystore to sign
-	return w.keystore.SignTx(account, tx, chainID)
+	return w.keystore.SignTx(account, tx, chainID,keys)
 }
 
-func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account)([]string, error){
+func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account) ([]string, error) {
 	if account.Address != w.account.Address {
 		return nil, accounts.ErrUnknownAccount
 	}
@@ -120,14 +121,34 @@ func (w *keystoreWallet) GetPublicKeysRawStr(account accounts.Account)([]string,
 	return w.keystore.GetPublicKeysRawStr(account)
 }
 
-func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string)([]string, error){
+func (w *keystoreWallet) GetWanAddress(account accounts.Account)(common.WAddress, error) {
+	if account.Address != w.account.Address {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	return w.keystore.GetWanAddress(account)
+}
+
+func (w *keystoreWallet) CheckOTAdress(account accounts.Account, b *common.WAddress) (bool, error) {
+	if account.Address != w.account.Address {
+		return false, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return false, accounts.ErrUnknownAccount
+	}
+	return w.keystore.CheckOTAdress(account, b)
+}
+
+func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
 	if account.Address != w.account.Address {
 		return nil, accounts.ErrUnknownAccount
 	}
 	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
 		return nil, accounts.ErrUnknownAccount
 	}
-	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY);
+	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY)
 }
 
 // SignHashWithPassphrase implements accounts.Wallet, attempting to sign the

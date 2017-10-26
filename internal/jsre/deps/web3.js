@@ -2477,6 +2477,7 @@ module.exports={
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
 var Eth = require('./web3/methods/eth');
+var Wan = require('./web3/methods/wan');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
@@ -2499,6 +2500,7 @@ function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
     this.eth = new Eth(this);
+    this.wan = new Wan(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
@@ -2598,7 +2600,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/wan":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -3717,6 +3719,25 @@ var inputTransactionFormatter = function (options){
     return options;
 };
 
+var inputOTATransactionFormatter = function (options){
+
+        options.from = options.from || config.defaultAccount;
+        options.from = inputAddressFormatter(options.from);
+
+        if (options.to) { // it might be contract creation
+            options.to = inputAddressFormatter(options.to);
+        }
+
+        ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+            return options[key] !== undefined;
+        }).forEach(function(key){
+            //options[key] = utils.fromDecimal(options[key]);
+        });
+
+        return options;
+};
+
+
 /**
  * Formats the output of a transaction to its proper values
  *
@@ -3880,6 +3901,7 @@ var inputAddressFormatter = function (address) {
 };
 
 
+
 var outputSyncingFormatter = function(result) {
 
     result.startingBlock = utils.toDecimal(result.startingBlock);
@@ -3898,6 +3920,7 @@ module.exports = {
     inputBlockNumberFormatter: inputBlockNumberFormatter,
     inputCallFormatter: inputCallFormatter,
     inputTransactionFormatter: inputTransactionFormatter,
+    inputOTATransactionFormatter:inputOTATransactionFormatter,
     inputAddressFormatter: inputAddressFormatter,
     inputPostFormatter: inputPostFormatter,
     outputBigNumberFormatter: outputBigNumberFormatter,
@@ -3907,6 +3930,7 @@ module.exports = {
     outputLogFormatter: outputLogFormatter,
     outputPostFormatter: outputPostFormatter,
     outputSyncingFormatter: outputSyncingFormatter
+
 };
 
 
@@ -5226,6 +5250,14 @@ var methods = function () {
         outputFormatter: formatters.outputBigNumberFormatter
     });
 
+    var getOTABalance = new Method({
+        name: 'getOTABalance',
+        call: 'eth_getOTABalance',
+        params: 1,
+        inputFormatter: [null],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
     var getStorageAt = new Method({
         name: 'getStorageAt',
         call: 'eth_getStorageAt',
@@ -5330,6 +5362,54 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
+    var sendOTARefundTransaction = new Method({
+        name: 'sendOTARefundTransaction',
+        call: 'eth_sendOTARefundTransaction',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+	});
+
+    var sendPrivacyCxtTransaction = new Method({
+        name: 'sendPrivacyCxtTransaction',
+        call: 'eth_sendPrivacyCxtTransaction',
+        params: 2,
+        inputFormatter: [formatters.inputTransactionFormatter, null]
+    });
+
+    var buyOTAStamp = new Method({
+        name: 'buyOTAStamp',
+        call: 'eth_buyOTAStamp',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+    });
+
+    var getOTAMixSet = new Method({
+        name: 'getOTAMixSet',
+        call: 'eth_getOTAMixSet',
+        params: 2,
+    });
+
+    var genRingSignData = new Method({
+        name: 'genRingSignData',
+        call: 'eth_genRingSignData',
+        params: 3,
+    });
+
+
+    var scanOTAbyAccount = new Method ({
+        name: 'scanOTAbyAccount',
+        call: 'eth_scanOTAbyAccount',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
+    });
+
+
+    var generateRingSignatureOTAs = new Method({
+        name: 'generateRingSignatureOTAs',
+        call: 'eth_generateRingSignatureOTAs',
+        params: 2
+    });
+
     var getPublicKeysRawStr = new Method({
         name: 'getPublicKeysRawStr',
         call: 'eth_getPublicKeysRawStr',
@@ -5337,18 +5417,33 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter]
     });
 
+    var getWanAddress = new Method({
+        name: 'getWanAddress',
+        call: 'eth_getWanAddress',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter],
+    });
+
     var generateOneTimeAddress = new Method({
         name: 'generateOneTimeAddress',
         call: 'eth_generateOneTimeAddress',
-        params: 4,
-        inputFormatter: [null, null, null, null]
+        params: 1,
+        inputFormatter: [null]
+    });
+
+    var signOTAContractTransaction = new Method({
+        name: 'signOTAContractTransaction',
+        call: 'eth_signOTAContractTransaction',
+        params: 3,
+        inputFormatter: [formatters.inputTransactionFormatter,null,null]
+
     });
 
     var computeOTAPPKeys = new Method({
         name: 'computeOTAPPKeys',
         call: 'eth_computeOTAPPKeys',
-        params: 5,
-        inputFormatter: [formatters.inputAddressFormatter, null, null, null, null]
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var sign = new Method({
@@ -5405,6 +5500,7 @@ var methods = function () {
 
     return [
         getBalance,
+        getOTABalance,
         getStorageAt,
         getCode,
         getBlock,
@@ -5420,8 +5516,17 @@ var methods = function () {
         estimateGas,
         sendRawTransaction,
         sendTransaction,
+        scanOTAbyAccount,
+        generateRingSignatureOTAs,
         sendOTATransaction,
+        sendOTARefundTransaction,
+        sendPrivacyCxtTransaction,
+        buyOTAStamp,
+        getOTAMixSet,
+        genRingSignData,
+        signOTAContractTransaction,
         getPublicKeysRawStr,
+        getWanAddress,
         generateOneTimeAddress,
         computeOTAPPKeys,
         sign,
@@ -5607,6 +5712,14 @@ var methods = function () {
         inputFormatter: [null]
     });
 
+    var newOTAAccount = new Method({
+        name: 'newOTAAccount',
+        call: 'personal_newOTAAccount',
+        params: 1,
+        inputFormatter: [null]
+    });
+
+
     var unlockAccount = new Method({
         name: 'unlockAccount',
         call: 'personal_unlockAccount',
@@ -5630,6 +5743,7 @@ var methods = function () {
 
     return [
         newAccount,
+        newOTAAccount,
         unlockAccount,
         sendTransaction,
         lockAccount
@@ -13511,7 +13625,43 @@ module.exports = transfer;
 },{}],86:[function(require,module,exports){
 module.exports = XMLHttpRequest;
 
-},{}],"bignumber.js":[function(require,module,exports){
+},{}],87:[function(require,module,exports){
+/* wan.js */
+    var Method = require('../method');
+    //var formatters = require('../formatters');
+
+    function Wan(web3) {
+        this._requestManager = web3._requestManager;
+
+        var self = this;
+
+        methods().forEach(function(method) {
+            method.attachToObject(self);
+            method.setRequestManager(self._requestManager);
+        });
+
+        properties().forEach(function(p) {
+            p.attachToObject(self);
+            p.setRequestManager(self._requestManager);
+        });
+    }
+
+    var methods = function () {
+        var getOTAMixSet = new Method({
+            name: 'getOTAMixSet',
+            call: 'wan_getOTAMixSet',
+            params: 2
+        });
+
+        return [
+            getOTAMixSet
+        ];
+    };
+    var properties = function () {
+        return [];
+    };
+module.exports = Wan;
+},{"../formatters":30,"../method":36}],"bignumber.js":[function(require,module,exports){
 /*! bignumber.js v2.0.7 https://github.com/MikeMcl/bignumber.js/LICENCE */
 
 ;(function (global) {

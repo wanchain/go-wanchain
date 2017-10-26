@@ -124,7 +124,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	}
 	t.S = (*big.Int)(dec.S)
 
-	if t.Txtype == uint64(0) {/*
+	if t.Txtype == uint64(6) {/*
 		t.PublicKeys = *new([]*ecdsa.PublicKey)
 		t.W_random = *new([]*big.Int)
 		t.Q_random = *new([]*big.Int)

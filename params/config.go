@@ -65,6 +65,22 @@ var (
 			Epoch:  30000,
 		},
 	}
+	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
+	PlutoChainConfig = &ChainConfig{
+		ChainId:        big.NewInt(6),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   nil,
+		DAOForkSupport: true,
+		EIP150Block:    big.NewInt(0),
+		EIP150Hash:     common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177"),
+		EIP155Block:    big.NewInt(3),
+		EIP158Block:    big.NewInt(3),
+		Pluto: &PlutoConfig{
+			Period: 6,
+			Epoch:  6000,
+		},
+	}
+
 
 	// AllProtocolChanges contains every protocol change (EIPs)
 	// introduced and accepted by the Ethereum core developers.
@@ -75,8 +91,8 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil,nil}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil,nil}
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -101,6 +117,7 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+	Pluto *PlutoConfig   `json:"pluto,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -122,6 +139,17 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
+// PlutoConfig is the consensus engine configs for proof-of-authority based sealing.
+type PlutoConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *PlutoConfig) String() string {
+	return "pluto"
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -130,6 +158,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Pluto != nil:
+		engine = c.Pluto
 	default:
 		engine = "unknown"
 	}

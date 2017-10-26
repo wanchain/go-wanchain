@@ -164,11 +164,13 @@ func (_ReleaseOracle *ReleaseOracleTransactorRaw) Transact(opts *bind.TransactOp
 // Solidity: function authProposals() constant returns(address[])
 func (_ReleaseOracle *ReleaseOracleCaller) AuthProposals(opts *bind.CallOpts) ([]common.Address, error) {
 	var (
-		ret0 = new([]common.Address)
+		// lzh modify
+		ret0 = make([]common.Address, 0)
+		//ret0 = new([]common.Address)
 	)
-	out := ret0
+	out := &ret0
 	err := _ReleaseOracle.contract.Call(opts, out, "authProposals")
-	return *ret0, err
+	return ret0, err
 }
 
 // AuthProposals is a free data retrieval call binding the contract method 0xbf8ecf9c.
@@ -326,11 +328,13 @@ func (_ReleaseOracle *ReleaseOracleCallerSession) ProposedVersion() (struct {
 // Solidity: function signers() constant returns(address[])
 func (_ReleaseOracle *ReleaseOracleCaller) Signers(opts *bind.CallOpts) ([]common.Address, error) {
 	var (
-		ret0 = new([]common.Address)
+		// lzh modify
+		ret0 = make([]common.Address, 0)
+		//ret0 = new([]common.Address)
 	)
-	out := ret0
+	out := &ret0
 	err := _ReleaseOracle.contract.Call(opts, out, "signers")
-	return *ret0, err
+	return ret0, err
 }
 
 // Signers is a free data retrieval call binding the contract method 0x46f0975a.
