@@ -91,6 +91,7 @@ var (
 		utils.DevModeFlag,
 		utils.TestnetFlag,
 		utils.RinkebyFlag,
+		utils.PlutoFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
