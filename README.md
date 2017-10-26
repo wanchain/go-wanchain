@@ -2,8 +2,8 @@
 
 Branch    | Tests 
 ----------|-------
-master    | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/master.svg?style=shield)](https://circleci.com/gh/wanchain/go-wanchain/tree/master) 
-jia_add_precomiled_contract    | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/jia_add_precomiled_contract.svg?style=shield)](https://circleci.com/gh/wanchain/go-wanchain/tree/jia_add_precomiled_contract) 
+master    | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/master.svg?style=shield)](https://circleci.com/gh/wanchain/go-wanchain/tree/master) 
+develop   | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/develop.svg?style=shield)](https://circleci.com/gh/wanchain/go-wanchain/tree/develop) 
 
 
 Requirement: Docker
