@@ -228,7 +228,7 @@ func init(){
 	}
 }
 
-func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int){
+func (self *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int){
 	ss := strings.Split(s, "+")
 	ps := ss[0]
 	k := ss[1]
@@ -256,7 +256,8 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	return nil, publickeys, keyimgae, w, q
 }
 
-func preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage *ecdsa.PublicKey, err error){
+func (self *StateTransition)  preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage *ecdsa.PublicKey, err error){
+
 	var TxDataWithRing struct{
 		RingSignedData string
 		CxtCallParams   []byte
@@ -264,24 +265,51 @@ func preProcessPrivacyTx(hashInput []byte, in[] byte)(callData []byte, keyimage 
 
 	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
 	if err != nil {
-		return
+		return nil,nil,err
 	}
 	callData = TxDataWithRing.CxtCallParams[:]
 
-	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	err, publickeys, keyimage, ws, qs := self.DecodeRingSignOut(TxDataWithRing.RingSignedData)
 	if err != nil {
-		return
+		return nil,nil,err
 	}
+
+	otaAXs := make([][]byte, 0, len(publickeys))
+	for i := 0; i < len(publickeys); i++ {
+		pkBytes := crypto.FromECDSAPub(publickeys[i])
+		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+	}
+
+	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(self.evm.StateDB, otaAXs)
+	if !exit || balanceGet == nil {
+		if err != nil {
+			log.Warn("verify mix ota fail. err:%s", err.Error())
+		}
+		if unexit != nil {
+			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		}
+		if balanceGet == nil  {
+			log.Warn("balance getting from ota is wrong! get:%s, expect:%s")
+		}
+
+		return nil,nil,err
+	}
+
+	kix := crypto.FromECDSAPub(keyimage)
+	exit, _, err = vm.CheckOTAImageExit(self.evm.StateDB, kix)
+	if err != nil || exit {
+		return nil,nil,err
+	}
+
 
 	b := crypto.VerifyRingSign(hashInput, publickeys, keyimage, ws, qs)
 	if !b {
 		err = errors.New("ring sign is invalid!")
+		return nil,nil,err
 	}
 
-	//TODO: check all publickeys in corrsponding deposit value tree
-
-	//TODO: check keyimage have not appear
     return
+
 }
 
 // TransitionDb will transition the state by applying the current message and returning the result
@@ -333,7 +361,7 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 		self.state.SetNonce(sender.Address(), self.state.GetNonce(sender.Address())+1)
 
 		if self.msg.TxType() == 6 {
-			pureCallData, _, err := preProcessPrivacyTx(sender.Address().Bytes(), self.data)
+			pureCallData, _, err := self.preProcessPrivacyTx(sender.Address().Bytes(), self.data)
 			if err != nil {
 				return nil, nil, nil, err
 			}

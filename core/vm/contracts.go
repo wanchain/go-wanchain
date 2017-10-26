@@ -539,7 +539,7 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
-	err, publickeys, keyimgae, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
+	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
 	if err != nil {
 		return nil
 	}
@@ -566,13 +566,13 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []b
 		return nil
 	}
 
-	kix := crypto.FromECDSAPub(keyimgae)
+	kix := crypto.FromECDSAPub(keyimage)
 	exit, _, err = CheckOTAImageExit(evm.env.StateDB, kix)
 	if err != nil || exit {
 		return nil
 	}
 
-	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimgae, ws, qs)
+	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimage, ws, qs)
 	if !b {
 	} else { // For test
 		AddOTAImage(evm.env.StateDB, kix, RefundStruct.Value.Bytes())
