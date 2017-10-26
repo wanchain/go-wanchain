@@ -17,7 +17,55 @@ wanUnlock(eth.coinbase);
 sendWanFromUnlock(eth.coinbase, eth.accounts[1], 100);
 wanUnlock(eth.accounts[1])
 wanUnlock(eth.accounts[2])
+////////////////////////////////////////////////////////////////////////////////////////////
+/*********************************************
+*原生币交易
+**********************************************/
+abiDef = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyCoinNote","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
+contractDef = eth.contract(abiDef);
+coinContractAddr = "0x0000000000000000000000000000000000000006";
+coinContract = contractDef.at(coinContractAddr);
+
+oldValue = web3.fromWei(eth.getBalance(eth.accounts[1]));
+personal.unlockAccount(eth.accounts[1],"wanglu",9999);
+personal.unlockAccount(eth.accounts[2],"wanglu",9999);
+
+//generate OTA address for account1
+var wanAddr = eth.getWanAddress(eth.accounts[2]);
+var otaAddr = eth.generateOneTimeAddress(wanAddr);
+
+txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
+eth.sendTransaction({from:eth.accounts[1], to:"0x0000000000000000000000000000000000000006", value:web3.toWei(1), data:txBuyData, gas: 1000000});
+
+
+/*
+  1.mixPubkeys = get OTAMixSet for [Coins]                         stamps
+  2.ringSignData = genRingSignData(receiver_address, coinNotePrivateKey. mixPubkeys)
+  3.cxtTxData = coinContract.refundCoin.getData(value)
+  4.otaTxData = combiningOTAData(ringSignData, cxtTxData)
+  5.eth.sendOTATransaction({from:receiver_address, to:coinContractAddr,data:otaTxData, gas:1000000})
+*/
+//get wanaddr without '0x' prefix
+var otaAddr = '0x03165a11eb0797e7258fabc36df1c49bb957b03fd806a0fcb0518ef3fde05b358f02405046537cc5464cf82c87ac007ad92f3140b5d94f163b45cbce3c35633e8ca4';
+var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
+var mixSetWith0x = []
+for (i = 0; i < mixWanAddresses.length; i++){
+	mixSetWith0x.push('0x' + mixWanAddresses[i])
+}
+
+keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
+privateKey = keyPairs[0];
+
+var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
+var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
+eth.sendTransaction({from:eth.accounts[2], to:"0x0000000000000000000000000000000000000006", value:0, data:txRefundData, gas: 2000000});
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*********************************************
+*代币币交易
+**********************************************
 
 /*************************
  为 accounts[1] 买了邮票otaAddrStamp，私钥为privateKeyStamp
@@ -43,8 +91,6 @@ var mixSetWith0x = []
 for (i = 0; i < mixStampAddresses.length; i++){
     mixSetWith0x.push('0x' + mixStampAddresses[i])
 }
-
-
 
 
 
