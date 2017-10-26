@@ -79,9 +79,11 @@ stampContract = contractDef.at(stampContractAddr);
 //generate OTA address for account1, otaAddr is a stamp
 var wanAddr = eth.getWanAddress(eth.accounts[1]);
 var otaAddrStamp = eth.generateOneTimeAddress(wanAddr);
-
 txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.01));
+
+
 eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.01), data:txBuyData, gas: 1000000});
+
 keyPairs = eth.computeOTAPPKeys(eth.accounts[1], otaAddrStamp).split('+');
 privateKeyStamp = keyPairs[0];
 
@@ -111,7 +113,7 @@ var erc20simpleInt = erc20simple_contract.new(
   });
 
 // 实例化部署的合约，下面的地址用实际生成的地址替换
-var contractAddr = "0x9ad91c7be0b8bf933a796b99d60d057ca12fa68b"
+var contractAddr = "0x0dacf2427f6eb1eb3fc09ea403a92a53e2add176"
 var erc20simple = erc20simple_contract.at(contractAddr)
 
 
@@ -148,7 +150,7 @@ glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
 combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
 //发送隐私保护交易
-eth.sendPrivacyCxtTransaction({from:addrTokenHolder, to:"0x3ea98fb3b170cad3072892a141565e8ff8e9a062", value:0, data: combinedData}, privateKeyTokenHolder)
+eth.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData}, privateKeyTokenHolder)
 //查看接收者账户信息  erc20simple.privacyBalance(addrOTAAcc2)
 //erc20simple.privacyBalance(addrTokenHolder)
 
