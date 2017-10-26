@@ -111,7 +111,7 @@ var erc20simpleInt = erc20simple_contract.new(
   });
 
 // 实例化部署的合约，下面的地址用实际生成的地址替换
-var contractAddr = "0x3ea98fb3b170cad3072892a141565e8ff8e9a062"
+var contractAddr = "0x9ad91c7be0b8bf933a796b99d60d057ca12fa68b"
 var erc20simple = erc20simple_contract.at(contractAddr)
 
 
@@ -121,9 +121,8 @@ var wanAddr = eth.getWanAddress(eth.accounts[1]);
 var otaAddrTokenHolder = eth.generateOneTimeAddress(wanAddr);//0x03d1846dd42d21cd69dc602ae140925b172957b4f3b466c2ac0c9d7b781a81dd42032da6aa341879a4afadf1a75b05fc42264ecc9bb108832c5339b93a75c2831181
 keyPairs = eth.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
 privateKeyTokenHolder = keyPairs[0];//0x1b0386deba93f85d23dc486834b046bb55e4612f67b0eab57360395d9a0409ae
-addrTokenHolder = '0xF16759618f122B21BDFad1481e2462dDAC25cEda'
-erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, '0x1000000000',
-	{from:eth.accounts[1], gas:10000000});
+addrTokenHolder = keyPairs[2];
+erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, '0x1000000000',{from:eth.accounts[1], gas:10000000});
 //erc20simple.privacyBalance(addrTokenHolder).toString(16)
 
 
@@ -137,7 +136,7 @@ var wanAddr = eth.getWanAddress(eth.accounts[2]);
 var otaAddr4Account2 = eth.generateOneTimeAddress(wanAddr);
 keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
 privateKeyOtaAcc2 = keyPairs[0]; //0x272b34102f088f621a7a05134314b8402bfc9dff9d3da4d5d5e7a730a971dc08
-addrOTAAcc2 = '0x5f6025382489D8BF689F57f8DC77F165DDaA96D8'
+addrOTAAcc2 = keyPairs[2];
 //contract interface call data
 
 //使用合约接口生成经典的合约调用数据
@@ -150,6 +149,6 @@ combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
 //发送隐私保护交易
 eth.sendPrivacyCxtTransaction({from:addrTokenHolder, to:"0x3ea98fb3b170cad3072892a141565e8ff8e9a062", value:0, data: combinedData}, privateKeyTokenHolder)
-//查看接收者账户信息erc20simple.privacyBalance(addrOTAAcc2)
-
+//查看接收者账户信息  erc20simple.privacyBalance(addrOTAAcc2)
+//erc20simple.privacyBalance(addrTokenHolder)
 

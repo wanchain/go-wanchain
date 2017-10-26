@@ -1869,7 +1869,14 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	otaPub := sS[0] + sS[1][2:]
 	otaPriv := sS[2]
 
-	return otaPriv + "+" + otaPub, nil
+	privateKey, err := crypto.HexToECDSA(otaPriv[2:])
+
+	var addr common.Address
+	pubkey := crypto.FromECDSAPub(&privateKey.PublicKey)
+	//caculate the address for replaced pub
+	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return otaPriv + "+" + otaPub + "+" +hexutil.Encode(addr[:]), nil
 
 }
 
