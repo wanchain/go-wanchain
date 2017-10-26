@@ -114,8 +114,8 @@ func (ks *KeyStore) SignHash(address *Address, hash []byte) (signature []byte, _
 }
 
 // SignTx signs the given transaction with the requested account.
-func (ks *KeyStore) SignTx(account *Account, tx *Transaction, chainID *BigInt) (*Transaction, error) {
-	signed, err := ks.keystore.SignTx(account.account, tx.tx, chainID.bigint)
+func (ks *KeyStore) SignTx(account *Account, tx *Transaction, chainID *BigInt, keys []string) (*Transaction, error) {
+	signed, err := ks.keystore.SignTx(account.account, tx.tx, chainID.bigint, keys)
 	if err != nil {
 		return nil, err
 	}
