@@ -64,7 +64,7 @@ wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
 
 var acc1NewBalance = parseFloat(wanBalance(eth.accounts[1]))
 var acc2NewBalance = parseFloat(wanBalance(eth.accounts[2]))
-if (true || acc2NewBalance < acc2OldBalance || acc2NewBalance > (acc2OldBalance + tranValue)) {
+if (acc2NewBalance < acc2OldBalance || acc2NewBalance > (acc2OldBalance + tranValue)) {
 	throw Error("acc2OldBalance:" + acc2OldBalance + ", acc2NewBalance:" + acc2NewBalance + ", tranValue:" + tranValue)
 }
 
