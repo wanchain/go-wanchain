@@ -1,4 +1,4 @@
-# before use the file, please desploy yourself contract and replace the contractAddr value with the new address!!!
+// before use the file, please desploy yourself contract and replace the contractAddr value with the new address!!!
 
 var initPriBalance = '0x1000000000';
 var priTranValue = 888;

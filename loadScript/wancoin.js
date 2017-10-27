@@ -68,7 +68,7 @@ if (acc2NewBalance < acc2OldBalance || acc2NewBalance > (acc2OldBalance + tranVa
 	throw Error("acc2OldBalance:" + acc2OldBalance + ", acc2NewBalance:" + acc2NewBalance + ", tranValue:" + tranValue)
 }
 
-if (acc1NewBalance + tranValue > acc1OldBalance) {
+if (acc1NewBalance > acc1OldBalance - tranValue || acc1NewBalance < acc1OldBalance - tranValue - 1) {
 	throw Error("acc1OldBalance:" + acc1OldBalance + ", acc1NewBalance:" + acc1NewBalance + ", tranValue:" + tranValue)
 }
 
