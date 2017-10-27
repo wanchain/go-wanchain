@@ -21,6 +21,7 @@ jobs:
     steps:
       - checkout
       - run: make all
+      - run: make testCoin
       - run: echo "good"
 
       # specify any bash command here prefixed with `run: `

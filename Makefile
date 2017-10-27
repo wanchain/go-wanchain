@@ -37,6 +37,9 @@ ios:
 test: all
 	build/env.sh go run build/ci.go test
 
+testCoin: all
+	./build/bin/geth --datadir "./DOCKER/loadScript-data" --mine --minerthreads 1 --nodiscover js './loadScript/wancoin.js'
+
 clean:
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
 
