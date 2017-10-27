@@ -235,7 +235,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 		}
 	}
 
-	return nil, nil, nil
+	//return nil, nil, nil
 }
 
 func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {
