@@ -98,7 +98,7 @@ wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
 ota2Balance = erc20simple.privacyBalance(addrOTAAcc2)
-if (true || ota2Balance != priTranValue) {
+if (ota2Balance != priTranValue) {
 	throw Error("ota2 balance wrong. balance:" + ota2Balance +  ", expect:" + priTranValue)
 }
 
