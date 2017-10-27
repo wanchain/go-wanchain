@@ -1257,7 +1257,7 @@ func TestWanchain(t *testing.T){
 	if err != nil {
 		t.Fatal("didn't expect error:", err)
 	}
-	fmt.Println("expected %x", A)
+	fmt.Printf("expected %x", A)
 	fmt.Println("..............")
 }
 
