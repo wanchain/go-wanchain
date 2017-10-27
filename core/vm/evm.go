@@ -127,7 +127,10 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	
+	if PrecompiledContracts[to.Address()] == nil {
+		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	}
 
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped evmironment for this execution context
