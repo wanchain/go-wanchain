@@ -41,12 +41,14 @@ func TestDAOForkRangeExtradata(t *testing.T) {
 	// Create the concurrent, conflicting two nodes
 	proDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(proDb)
-	proConf := &params.ChainConfig{HomesteadBlock: big.NewInt(0), DAOForkBlock: forkBlock, DAOForkSupport: true}
+	//proConf := &params.ChainConfig{HomesteadBlock: big.NewInt(0), DAOForkBlock: forkBlock, DAOForkSupport: true}
+	proConf := &params.ChainConfig{DAOForkBlock: forkBlock, DAOForkSupport: true}
 	proBc, _ := NewBlockChain(proDb, proConf, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
 
 	conDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(conDb)
-	conConf := &params.ChainConfig{HomesteadBlock: big.NewInt(0), DAOForkBlock: forkBlock, DAOForkSupport: false}
+	//conConf := &params.ChainConfig{HomesteadBlock: big.NewInt(0), DAOForkBlock: forkBlock, DAOForkSupport: false}
+	conConf := &params.ChainConfig{DAOForkBlock: forkBlock, DAOForkSupport: false}
 	conBc, _ := NewBlockChain(conDb, conConf, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
 
 	if _, err := proBc.InsertChain(prefix); err != nil {

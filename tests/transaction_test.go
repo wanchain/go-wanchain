@@ -61,7 +61,7 @@ func TestWrongRLPTransactions(t *testing.T) {
 
 func TestHomesteadWrongRLPTransactions(t *testing.T) {
 	config := &params.ChainConfig{
-		HomesteadBlock: big.NewInt(0),
+		//HomesteadBlock: big.NewInt(0),
 	}
 	err := RunTransactionTests(config, filepath.Join(transactionTestDir, "Homestead", "ttWrongRLPTransaction.json"), TransSkipTests)
 	if err != nil {
