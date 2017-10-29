@@ -31,11 +31,11 @@ import (
 	Mrand "math/rand"
 	"os"
 
+	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
-	"fmt"
 )
 
 var (
@@ -189,8 +189,6 @@ func zeroBytes(bytes []byte) {
 }
 
 ///////////////////////////////////以下为新加内容/////////////////////////////////////
-
-
 
 //PublicKeyToInt for json 把公钥数组点转int数组，(0放x，1放y)
 //PublicKeys[n]数组时，调用 outInt=PublicKeyToInt(PublicKeys...），
@@ -453,17 +451,17 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	n := len(PublicKeys)
 
 	fmt.Printf("R'%d\t%x\n", 0, M)
-	for i:=0;i<n;i++ {
+	for i := 0; i < n; i++ {
 		fmt.Printf("R'%d\t%x\n", 1, FromECDSAPub(PublicKeys[i]))
 	}
 
 	fmt.Printf("R'%d\t%x\n", 2, FromECDSAPub(I))
 
-	for i:=0;i<n;i++ {
+	for i := 0; i < n; i++ {
 		fmt.Printf("R'%d\t%x\n", 3, c[i].Bytes())
 	}
 
-	for i:=0;i<n;i++ {
+	for i := 0; i < n; i++ {
 		fmt.Printf("R'%d\t%x\n", 4, r[i].Bytes())
 	}
 
@@ -498,7 +496,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	fmt.Printf("hash'%d\t%x\n", 0, hash.Bytes())
 
 	hash.Mod(hash, secp256k1_N)
-	fmt.Printf("hash'%d\t%x\n", 2,hash.Bytes())
+	fmt.Printf("hash'%d\t%x\n", 2, hash.Bytes())
 
 	fmt.Printf("SumC'%d\t%x\n", 3, SumC.Bytes())
 	if hash.Cmp(SumC) == 0 {
@@ -564,7 +562,7 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
 
 	generatedA1, generatedR, err := generateOneTimeKey2528(pa, pb)
-	return hexutil.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
+	return common.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
 }
 
 func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string) (retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
@@ -591,7 +589,7 @@ func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.Priva
 
 	retPub = &ecdsa.PublicKey{X: bnAX, Y: bnAY}
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
-    retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
+	retPriv1, retPriv2, err = GenerateOneTimePrivateKey2528(privateKey, privateKey2, retPub, pb)
 	return
 }
 
@@ -609,7 +607,6 @@ func GenerateOneTimePrivateKey2528(privateKey *ecdsa.PrivateKey, privateKey2 *ec
 	retPriv2.D = new(big.Int).SetInt64(0)
 	return retPriv1, retPriv2, nil
 }
-
 
 /////////////////////////////////////////jia added////////////////////////////////////////////////////////////////
 const (
@@ -655,6 +652,7 @@ var b58 = [256]byte{
 }
 
 var bigRadix = big.NewInt(58)
+
 //var bigZero = big.NewInt(0)
 
 func Hex2Bytes(str string) []byte {
@@ -662,9 +660,9 @@ func Hex2Bytes(str string) []byte {
 
 	return h
 }
+
 var FactoidPrefix = []byte{0x6c, 0x12}
 var WangLuMagicBigInt = new(big.Int).SetBytes(Hex2Bytes("9da26fc2e1d6ad9fdd46138906b0104ae68a65d8"))
-
 
 // Decode decodes a modified base58 string to a byte slice.
 func Decode(b string) []byte {
@@ -727,7 +725,7 @@ func Encode(b []byte) string {
 	return string(answer)
 }
 
-func getPreFixedBigInt() *big.Int{
+func getPreFixedBigInt() *big.Int {
 	baseBigInt := new(big.Int)
 	baseBigInt.SetBytes(Hex2Bytes("ffffffffffffffffffffffffffffffffffffffff"))
 	fmt.Println("baseBegInt: " + baseBigInt.String())
@@ -748,10 +746,9 @@ func getPreFixedBigInt() *big.Int{
 	return retBigInt
 }
 
-func otaAddress(address common.Address) string{
+func otaAddress(address common.Address) string {
 
-	result := Encode(append(FactoidPrefix,Hex2Bytes(address.Hex())...))
-
+	result := Encode(append(FactoidPrefix, Hex2Bytes(address.Hex())...))
 
 	return result
 }

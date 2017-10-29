@@ -1672,7 +1672,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 		return "", errors.New("fail to generate public key from wan address!")
 	}
 
-	strs := hexutil.TwoPublicKeyToHexSlice(publicKeyA, publicKeyB)
+	strs := common.TwoPublicKeyToHexSlice(publicKeyA, publicKeyB)
 
 	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
 	if err != nil {
@@ -1876,7 +1876,7 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	//caculate the address for replaced pub
 	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	return otaPriv + "+" + otaPub + "+" +hexutil.Encode(addr[:]), nil
+	return otaPriv + "+" + otaPub + "+" + hexutil.Encode(addr[:]), nil
 
 }
 

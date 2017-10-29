@@ -31,14 +31,14 @@ encoding may be of uneven length. The number zero encodes as "0x0".
 package hexutil
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
-	"crypto/ecdsa"
-	"bytes"
-	"encoding/binary"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
@@ -85,23 +85,6 @@ func Encode(b []byte) string {
 	copy(enc, "0x")
 	hex.Encode(enc[2:], b)
 	return string(enc)
-}
-
-// Encode encodes b as a hex string with 0x prefix.
-// The out string with fix length(without pre '0x').
-func EncodeWithFixOutLen(b []byte, fixLen int) (string, error) {
-	if len(b)*2 > fixLen {
-		return "", ErrSyntax
-	}
-
-	enc := make([]byte, fixLen+2)
-	copy(enc[:], "0x")
-	for i := 2; i < (fixLen - len(b)*2 + 2); i++ {
-		enc[i] = '0'
-	}
-
-	hex.Encode(enc[fixLen-len(b)*2 + 2:], b)
-	return string(enc[:]), nil
 }
 
 // DecodeUint64 decodes a hex string with 0x prefix as a quantity.
@@ -255,42 +238,9 @@ func mapError(err error) error {
 	return err
 }
 
-func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) ([]string) {
-	return []string {Encode(pkey.X.Bytes()),
-		  Encode(pkey.Y.Bytes())}
-}
-
-func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) ([]string) {
-	// lzh modify
-	//return []string {Encode(A.X.Bytes()),
-	//		 Encode(A.Y.Bytes()),
-	//	         Encode(B.X.Bytes()),
-	//	         Encode(B.Y.Bytes()),
-	//}
-
-	strAX, _ := EncodeWithFixOutLen(A.X.Bytes(), 64)
-	strAY, _ := EncodeWithFixOutLen(A.Y.Bytes(), 64)
-	strBX, _ := EncodeWithFixOutLen(B.X.Bytes(), 64)
-	strBY, _ := EncodeWithFixOutLen(B.Y.Bytes(), 64)
-
-	return []string {strAX, strAY, strBX, strBY}
-}
-
-
-func FourBigIntToHexSlice(AX,AY,BX,BY []byte) ([]string) {
-	// lzh modify
-	//return []string {Encode(AX),
-	//	Encode(AY),
-	//	Encode(BX),
-	//	Encode(BY),
-	//}
-
-	strAX, _ := EncodeWithFixOutLen(AX, 64)
-	strAY, _ := EncodeWithFixOutLen(AY, 64)
-	strBX, _ := EncodeWithFixOutLen(BX, 64)
-	strBY, _ := EncodeWithFixOutLen(BY, 64)
-
-	return []string {strAX, strAY, strBX, strBY}
+func PublicKeyToHexSlice(pkey *ecdsa.PublicKey) []string {
+	return []string{Encode(pkey.X.Bytes()),
+		Encode(pkey.Y.Bytes())}
 }
 
 func BytesToInt(b []byte) int {
@@ -307,11 +257,11 @@ func IntToBytes(n int) []byte {
 	return bytesBuffer.Bytes()
 }
 
-func BytesToShort(b []byte) int16  {
+func BytesToShort(b []byte) int16 {
 	bytesBuffer := bytes.NewBuffer(b)
 	var tmp int16
 	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
-	return int16 (tmp)
+	return int16(tmp)
 }
 
 func ShortToBytes(n int16) []byte {

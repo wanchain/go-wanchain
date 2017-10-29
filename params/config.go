@@ -26,8 +26,8 @@ import (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:        MainNetChainID,
-		HomesteadBlock: MainNetHomesteadBlock,
+		ChainId: MainNetChainID,
+		//HomesteadBlock: MainNetHomesteadBlock,
 		DAOForkBlock:   MainNetDAOForkBlock,
 		DAOForkSupport: true,
 		EIP150Block:    MainNetHomesteadGasRepriceBlock,
@@ -39,8 +39,8 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(3),
-		HomesteadBlock: big.NewInt(0),
+		ChainId: big.NewInt(3),
+		//HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
 		DAOForkSupport: true,
 		EIP150Block:    big.NewInt(0),
@@ -52,8 +52,8 @@ var (
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(4),
-		HomesteadBlock: big.NewInt(1),
+		ChainId: big.NewInt(4),
+		//HomesteadBlock: big.NewInt(1),
 		DAOForkBlock:   nil,
 		DAOForkSupport: true,
 		EIP150Block:    big.NewInt(2),
@@ -67,8 +67,8 @@ var (
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(6),
-		HomesteadBlock: big.NewInt(0),
+		ChainId: big.NewInt(6),
+		//HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
 		DAOForkSupport: true,
 		EIP150Block:    big.NewInt(0),
@@ -81,7 +81,6 @@ var (
 		},
 	}
 
-
 	// AllProtocolChanges contains every protocol change (EIPs)
 	// introduced and accepted by the Ethereum core developers.
 	// TestChainConfig is like AllProtocolChanges but has chain ID 1.
@@ -91,8 +90,10 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil,nil}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil,nil}
+	//AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil, nil}
+	//TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil, nil}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), new(EthashConfig), nil, nil}
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -103,7 +104,7 @@ var (
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 
-	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
+	//HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
 	DAOForkBlock   *big.Int `json:"daoForkBlock,omitempty"`   // TheDAO hard-fork switch block (nil = no fork)
 	DAOForkSupport bool     `json:"daoForkSupport,omitempty"` // Whether the nodes supports or opposes the DAO hard-fork
 
@@ -117,7 +118,7 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
-	Pluto *PlutoConfig   `json:"pluto,omitempty"`
+	Pluto  *PlutoConfig  `json:"pluto,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -165,7 +166,7 @@ func (c *ChainConfig) String() string {
 	}
 	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Engine: %v}",
 		c.ChainId,
-		c.HomesteadBlock,
+		//c.HomesteadBlock,
 		c.DAOForkBlock,
 		c.DAOForkSupport,
 		c.EIP150Block,
@@ -176,9 +177,9 @@ func (c *ChainConfig) String() string {
 }
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.
-func (c *ChainConfig) IsHomestead(num *big.Int) bool {
-	return isForked(c.HomesteadBlock, num)
-}
+//func (c *ChainConfig) IsHomestead(num *big.Int) bool {
+//	return isForked(c.HomesteadBlock, num)
+//}
 
 // IsDAO returns whether num is either equal to the DAO fork block or greater.
 func (c *ChainConfig) IsDAOFork(num *big.Int) bool {
@@ -233,9 +234,9 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
-	if isForkIncompatible(c.HomesteadBlock, newcfg.HomesteadBlock, head) {
-		return newCompatError("Homestead fork block", c.HomesteadBlock, newcfg.HomesteadBlock)
-	}
+	//if isForkIncompatible(c.HomesteadBlock, newcfg.HomesteadBlock, head) {
+	//	return newCompatError("Homestead fork block", c.HomesteadBlock, newcfg.HomesteadBlock)
+	//}
 	if isForkIncompatible(c.DAOForkBlock, newcfg.DAOForkBlock, head) {
 		return newCompatError("DAO fork block", c.DAOForkBlock, newcfg.DAOForkBlock)
 	}

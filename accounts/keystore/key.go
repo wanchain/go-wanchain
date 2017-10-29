@@ -34,8 +34,8 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/common/math"
+	"github.com/wanchain/go-wanchain/crypto"
 	//"math/big"
 )
 
@@ -207,7 +207,7 @@ func (k *Key) GetTwoPublicKeyRawStrs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	ret := hexutil.TwoPublicKeyToHexSlice(PK1, PK2)
+	ret := common.TwoPublicKeyToHexSlice(PK1, PK2)
 	return ret, nil
 }
 
@@ -245,7 +245,7 @@ func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	return nil
 }
 
-func ToWaddr(raw []byte)([]byte, error) {
+func ToWaddr(raw []byte) ([]byte, error) {
 	pub := make([]byte, 65)
 	pub[0] = 0x04
 	copy(pub[1:], raw[0:64])
@@ -253,36 +253,35 @@ func ToWaddr(raw []byte)([]byte, error) {
 	copy(pub[1:], raw[64:])
 	B := crypto.ToECDSAPub(pub)
 	wd := GenerateWaddressFromPubkey(A, B)
-	return wd[:],nil
+	return wd[:], nil
 }
 
-func WaddrToUncompressed(waddr []byte) ( []byte, error) {
+func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	A, B, err := GeneratePublicKeyFromWadress(waddr)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	u := make([]byte,128)
+	u := make([]byte, 128)
 	ax := math.PaddedBigBytes(A.X, 32)
 	ay := math.PaddedBigBytes(A.Y, 32)
 	bx := math.PaddedBigBytes(B.X, 32)
 	by := math.PaddedBigBytes(B.Y, 32)
-	copy(u[0:],ax[0:32])
-	copy(u[32:],ay[0:32])
-	copy(u[64:],bx[0:32])
-	copy(u[96:],by[0:32])
+	copy(u[0:], ax[0:32])
+	copy(u[32:], ay[0:32])
+	copy(u[64:], bx[0:32])
+	copy(u[96:], by[0:32])
 
-	return u,nil
+	return u, nil
 }
 
-func WaddrToUncompressedFromString(waddr string) ( []byte, error) {
+func WaddrToUncompressedFromString(waddr string) ([]byte, error) {
 	waddrBytes, err := hexutil.Decode(waddr)
 	if err != nil {
 		return nil, err
 	}
 	return WaddrToUncompressed(waddrBytes)
 }
-
 
 // lzh add
 func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddress) error {

@@ -101,7 +101,7 @@ type TxPool struct {
 	wg   sync.WaitGroup // for shutdown sync
 	quit chan struct{}
 
-	homestead bool
+	//homestead bool
 }
 
 func NewTxPool(config *params.ChainConfig, eventMux *event.TypeMux, currentStateFn stateFn, gasLimitFn func() *big.Int) *TxPool {
@@ -141,11 +141,11 @@ func (pool *TxPool) eventLoop() {
 		switch ev := ev.Data.(type) {
 		case ChainHeadEvent:
 			pool.mu.Lock()
-			if ev.Block != nil {
-				if pool.config.IsHomestead(ev.Block.Number()) {
-					pool.homestead = true
-				}
-			}
+			//if ev.Block != nil {
+			//	if pool.config.IsHomestead(ev.Block.Number()) {
+			//		pool.homestead = true
+			//	}
+			//}
 
 			pool.resetState()
 			pool.mu.Unlock()
@@ -267,7 +267,7 @@ func (pool *TxPool) SetLocal(tx *types.Transaction) {
 // to the consensus rules.
 //cr@zy: add validatetx for OTATx
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
-	if tx.Txtype() == 0 || tx.Txtype() == 6{
+	if tx.Txtype() == 0 || tx.Txtype() == 6 {
 		return nil
 	}
 
@@ -308,11 +308,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// cost == V + GP * GL
 	log.Error("validateTx from:" + from.String())
 	//added judge for privacy tx type
-	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0&&tx.Txtype()!=0&&tx.Txtype()!=6{
+	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && tx.Txtype() != 0 && tx.Txtype() != 6 {
 		return ErrInsufficientFunds
 	}
 
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	//intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
@@ -519,7 +520,7 @@ func (pool *TxPool) promoteExecutables(state *state.StateDB) {
 		// Drop all transactions that are too costly (low balance)
 		drops, _ := list.Filter(state.GetBalance(addr))
 		for _, tx := range drops {
-			if tx.Txtype() != 0 &&tx.Txtype()!=6{
+			if tx.Txtype() != 0 && tx.Txtype() != 6 {
 				hash := tx.Hash()
 				log.Debug("Removed unpayable queued transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -654,7 +655,7 @@ func (pool *TxPool) demoteUnexecutables(state *state.StateDB) {
 		// Drop all transactions that are too costly (low balance), and queue any invalids back for later
 		drops, invalids := list.Filter(state.GetBalance(addr))
 		for _, tx := range drops {
-			if tx.Txtype() != 0 &&tx.Txtype()!=6 {
+			if tx.Txtype() != 0 && tx.Txtype() != 6 {
 				hash := tx.Hash()
 				log.Debug("Removed unpayable pending transaction", "hash", hash)
 				delete(pool.all, hash)

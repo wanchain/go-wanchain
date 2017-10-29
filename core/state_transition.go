@@ -92,9 +92,11 @@ func MessageCreatesContract(msg Message) bool {
 // with the given data.
 //
 // TODO convert to uint64
-func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+//func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	igas := new(big.Int)
-	if contractCreation && homestead {
+	//if contractCreation && homestead {
+	if contractCreation {
 		igas.SetUint64(params.TxGasContractCreation)
 	} else {
 		igas.SetUint64(params.TxGas)
@@ -328,12 +330,13 @@ func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *b
 	msg := self.msg
 	sender := self.from() // err checked in preCheck
 
-	homestead := self.evm.ChainConfig().IsHomestead(self.evm.BlockNumber)
+	//homestead := self.evm.ChainConfig().IsHomestead(self.evm.BlockNumber)
 
 	contractCreation := MessageCreatesContract(msg)
 	// Pay intrinsic gas
 	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(self.data, contractCreation, homestead)
+	//intrinsicGas := IntrinsicGas(self.data, contractCreation, homestead)
+	intrinsicGas := IntrinsicGas(self.data, contractCreation)
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, vm.ErrOutOfGas
 	}

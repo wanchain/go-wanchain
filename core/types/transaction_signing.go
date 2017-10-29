@@ -38,16 +38,17 @@ type sigCache struct {
 
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
-	var signer Signer
-	switch {
-	case config.IsEIP155(blockNumber):
-		signer = NewEIP155Signer(config.ChainId)
-	case config.IsHomestead(blockNumber):
-		signer = HomesteadSigner{}
-	default:
-		signer = FrontierSigner{}
-	}
-	return signer
+	//var signer Signer
+	//switch {
+	//case config.IsEIP155(blockNumber):
+	//	signer = NewEIP155Signer(config.ChainId)
+	//case config.IsHomestead(blockNumber):
+	//	signer = HomesteadSigner{}
+	//default:
+	//	signer = FrontierSigner{}
+	//}
+	//return signer
+	return NewEIP155Signer(config.ChainId)
 }
 
 //cr@zy-OTA: TODO:不知道在一起性地址的交易情况下是不是需要有改动
@@ -57,7 +58,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // TODO: Additional parameters added on SignTx, causes a conflict with test case in bench_test.go
 //jqg  keys [] string defining is for transfer OTA private key
 
-func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys [] string) (*Transaction, error) {
+func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey, keys []string) (*Transaction, error) {
 	txh := s.Hash(tx)
 
 	sig, err := crypto.Sign(txh[:], prv)
