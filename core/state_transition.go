@@ -316,7 +316,7 @@ func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (c
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
 func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
-	//txtype 2 is contract trasaction
+	//txtype 2 means contract transaction
 	if self.msg.TxType() != 6 {
 		if err = self.preCheck(); err != nil {
 			return

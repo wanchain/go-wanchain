@@ -273,7 +273,6 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
-
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
 		return nil, ErrLocked
