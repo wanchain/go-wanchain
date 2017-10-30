@@ -555,8 +555,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	//if evm.ChainConfig().IsHomestead(evm.BlockNumber) && suberr == ErrCodeStoreOutOfGas {
-	if suberr == ErrCodeStoreOutOfGas {
+	if evm.ChainConfig().IsHomestead(evm.BlockNumber) && suberr == ErrCodeStoreOutOfGas {
 		stack.push(new(big.Int))
 	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
 		stack.push(new(big.Int))
@@ -640,9 +639,9 @@ func opCallCode(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 func opDelegateCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	// if not homestead return an error. DELEGATECALL is not supported
 	// during pre-homestead.
-	//if !evm.ChainConfig().IsHomestead(evm.BlockNumber) {
-	//	return nil, fmt.Errorf("invalid opcode %x", DELEGATECALL)
-	//}
+	if !evm.ChainConfig().IsHomestead(evm.BlockNumber) {
+		return nil, fmt.Errorf("invalid opcode %x", DELEGATECALL)
+	}
 
 	gas, to, inOffset, inSize, outOffset, outSize := stack.pop().Uint64(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 
