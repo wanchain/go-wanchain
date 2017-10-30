@@ -212,7 +212,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 		it := trie.NewIterator(dataTrie.NodeIterator(nil))
 
 		for it.Next() {
-			fmt.Println("GetOTASet for loop.., i:", i, ", loop:", loop)
+			//fmt.Println("GetOTASet for loop.., i:", i, ", loop:", loop)
 			if it.Value == nil || len(it.Value) != common.WAddressLength {
 				return nil, balance, errors.New("GetOTASet, found invalid ota addr len from trie!")
 			}

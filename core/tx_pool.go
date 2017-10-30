@@ -101,7 +101,7 @@ type TxPool struct {
 	wg   sync.WaitGroup // for shutdown sync
 	quit chan struct{}
 
-	//homestead bool
+	homestead bool
 }
 
 func NewTxPool(config *params.ChainConfig, eventMux *event.TypeMux, currentStateFn stateFn, gasLimitFn func() *big.Int) *TxPool {
@@ -141,11 +141,11 @@ func (pool *TxPool) eventLoop() {
 		switch ev := ev.Data.(type) {
 		case ChainHeadEvent:
 			pool.mu.Lock()
-			//if ev.Block != nil {
-			//	if pool.config.IsHomestead(ev.Block.Number()) {
-			//		pool.homestead = true
-			//	}
-			//}
+			if ev.Block != nil {
+				if pool.config.IsHomestead(ev.Block.Number()) {
+					pool.homestead = true
+				}
+			}
 
 			pool.resetState()
 			pool.mu.Unlock()
@@ -312,8 +312,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrInsufficientFunds
 	}
 
-	//intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil)
+	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}

@@ -38,17 +38,16 @@ type sigCache struct {
 
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
-	//var signer Signer
-	//switch {
-	//case config.IsEIP155(blockNumber):
-	//	signer = NewEIP155Signer(config.ChainId)
-	//case config.IsHomestead(blockNumber):
-	//	signer = HomesteadSigner{}
-	//default:
-	//	signer = FrontierSigner{}
-	//}
-	//return signer
-	return NewEIP155Signer(config.ChainId)
+	var signer Signer
+	switch {
+	case config.IsEIP155(blockNumber):
+		signer = NewEIP155Signer(config.ChainId)
+	case config.IsHomestead(blockNumber):
+		signer = HomesteadSigner{}
+	default:
+		signer = FrontierSigner{}
+	}
+	return signer
 }
 
 //cr@zy-OTA: TODO:不知道在一起性地址的交易情况下是不是需要有改动
