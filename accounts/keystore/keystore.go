@@ -292,7 +292,7 @@ func (ks *KeyStore) GetWanAddress(a accounts.Account)(common.WAddress, error) {
 
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
-		_,ksen,err := ks.getEncryptedKey(a);
+		_, ksen, err := ks.getEncryptedKey(a);
 		if err!= nil {
 			return common.WAddress{}, ErrLocked
 		}

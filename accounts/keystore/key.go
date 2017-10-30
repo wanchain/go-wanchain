@@ -302,57 +302,6 @@ func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddr
 	return nil
 }
 
-//// lzh add (ecdsa public key AX --> AY)
-//func GetEllipticYFromX(curve *elliptic.CurveParams, x *big.Int, positive bool) *big.Int  {
-//	// y² = x³ - 3x + b
-//	y2 := new(big.Int).Mul(x, x)
-//	y2.Mul(y2, x)
-//
-//	threeX := new(big.Int).Lsh(x, 1)
-//	threeX.Add(threeX, x)
-//
-//	y2.Sub(y2, threeX)
-//	y2.Add(y2, curve.B)
-//
-//	// ⌊√y2⌋ --> y
-//	y := new(big.Int).Sqrt(y2)
-//
-//
-//	if positive && y.Cmp(new(big.Int)) < 0 {
-//		y.Sub(new(big.Int), y)
-//	}
-//
-//	return y
-//}
-//
-//func TestGetEllipticYFromX() {
-//	xStr := "d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf"
-//	yStr := "6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
-//
-//	x, ok := new(big.Int).SetString(xStr, 16)
-//	if !ok {
-//		return
-//	}
-//
-//	strstr := common.Bytes2Hex(x.Bytes())
-//
-//	exY, ok := new(big.Int).SetString(yStr, 16)
-//	if !ok {
-//		return
-//	}
-//
-//	strstr = common.Bytes2Hex(exY.Bytes())
-//
-//	y := GetEllipticYFromX(crypto.S256().Params(), x, false)
-//	strstr = common.Bytes2Hex(y.Bytes())
-//
-//	if y.Cmp(exY) == 0 {
-//		log.Info("TestGetEllipticYFromX suc!", strstr)
-//	} else {
-//		log.Info("TestGetEllipticYFromX fail!", strstr)
-//	}
-//}
-
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
 // retry until the first byte is 0.
