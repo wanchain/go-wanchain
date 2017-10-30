@@ -29,6 +29,7 @@ import (
 const (
 	HashLength    = 32
 	AddressLength = 20
+	WAddressLength = 66
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -125,7 +126,6 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 /////////// Address
 
 // a new wan addreess, the format is compressed_PubkeyA compressed_PubkeyB checksum16
-const WAddressLength = 66
 type WAddress [WAddressLength]byte
 
 // Address represents the 20 byte address of an Ethereum account.
