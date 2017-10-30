@@ -57,10 +57,13 @@ for (i = 0; i < mixWanAddresses.length; i++){
 keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
 privateKey = keyPairs[0];
 
+console.log("Balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
 var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
 var refundTx = eth.sendTransaction({from:eth.accounts[2], to:"0x0000000000000000000000000000000000000006", value:0, data:txRefundData, gas: 2000000});
 wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
+
+console.log("New balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
 
 var acc1NewBalance = parseFloat(wanBalance(eth.accounts[1]))
 var acc2NewBalance = parseFloat(wanBalance(eth.accounts[2]))
