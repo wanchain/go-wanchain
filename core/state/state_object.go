@@ -95,7 +95,7 @@ type stateObject struct {
 
 	// lzh add
 	cachedStorageByteArray StorageByteArray
-	dirtyStorageByteArray StorageByteArray
+	dirtyStorageByteArray  StorageByteArray
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -109,7 +109,8 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash) &&
+		s.data.Root == common.Hash{} && len(s.dirtyStorage) == 0 && len(s.dirtyStorageByteArray) == 0
 }
 
 // Account is the Ethereum consensus representation of accounts.
@@ -205,12 +206,11 @@ func (self *stateObject) GetStateByteArray(db trie.Database, key common.Hash) []
 	}
 	// Load from DB in case it is missing.
 	value = self.getTrie(db).Get(key[:])
-	if (len(value) != 0) {
+	if len(value) != 0 {
 		self.cachedStorageByteArray[key] = value
 	}
 	return value
 }
-
 
 // SetState updates a value in account storage.
 func (self *stateObject) SetState(db trie.Database, key, value common.Hash) {
@@ -254,7 +254,6 @@ func (self *stateObject) setStateByteArray(key common.Hash, value []byte) {
 	}
 }
 
-
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db trie.Database) *trie.SecureTrie {
 	tr := self.getTrie(db)
@@ -272,7 +271,7 @@ func (self *stateObject) updateTrie(db trie.Database) *trie.SecureTrie {
 	// lzh add
 	for key, value := range self.dirtyStorageByteArray {
 		delete(self.dirtyStorageByteArray, key)
-		if (len(value) == 0) {
+		if len(value) == 0 {
 			tr.Delete(key[:])
 			continue
 		}
