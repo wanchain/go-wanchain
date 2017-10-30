@@ -338,6 +338,10 @@ func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+	if in==nil || len(in)<4 {
+		return nil
+	}
+	
 	var methodId [4]byte
 	copy(methodId[:], in[:4])
 
@@ -432,6 +436,10 @@ const (
 )
 
 func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+	if in==nil || len(in)<4 {
+		return nil
+	}
+	
 	var methodIdArr [4]byte
 	copy(methodIdArr[:], in[:4])
 
