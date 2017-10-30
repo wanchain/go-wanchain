@@ -385,8 +385,7 @@ func newKey(rand io.Reader) (*Key, error) {
 		return nil, err
 	}
 
-	var privateKeyECDSA2 *ecdsa.PrivateKey
-	privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), rand)
+	privateKeyECDSA2, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
