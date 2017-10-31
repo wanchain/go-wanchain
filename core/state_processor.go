@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 )
 
@@ -120,7 +121,12 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	if tx.Txtype() == 0 {
-		receipt.Logs = append(receipt.Logs,&types.Log{Address:*tx.To() , Data: ret})
+		toAddr := tx.To()
+		if toAddr == nil {
+			log.Error("invalid tx to address(nil)! txType:", tx.Txtype())
+		} else {
+			receipt.Logs = append(receipt.Logs, &types.Log{Address: *toAddr, Data: ret})
+		}
 	}
 
 	return receipt, gas, err
