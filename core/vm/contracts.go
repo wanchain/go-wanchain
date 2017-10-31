@@ -386,22 +386,6 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpret
 	return nil
 }
 
-func (c *wanchainStampSC) getStamps(in []byte, contract *Contract, evm *Interpreter) []byte {
-	setEleNum := 3
-	otaAX := in[:common.HashLength]
-	otaWanAddrs, _, err := GetOTASet(evm.env.StateDB, otaAX, setEleNum)
-	if err != nil {
-		return nil
-	}
-
-	retBuf := make([]byte, 0, common.WAddressLength*setEleNum)
-	for _, otaWanAddr := range otaWanAddrs {
-		retBuf = append(retBuf, otaWanAddr...)
-	}
-
-	return retBuf
-}
-
 //////////////////////////genesis coin precompile contract/////////////////////////////////////////
 /*  byte[0]: 0->buy
  *			 1->refund
@@ -446,7 +430,7 @@ func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte 
 	if methodIdArr == buyIdArr {
 		return c.buyCoin(in[4:], contract, evm)
 	} else if methodIdArr == getCoinsIdArr {
-		return c.getCoins(in[4:], contract, evm)
+		return nil
 	} else if methodIdArr == refundIdArr {
 		return c.refund(in[4:], contract, evm)
 	}
@@ -492,21 +476,6 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []b
 	return nil
 }
 
-func (c *wanCoinSC) getCoins(all []byte, contract *Contract, evm *Interpreter) []byte {
-	setEleNum := 3
-	otaAX := all[:common.HashLength]
-	otaWanAddrs, _, err := GetOTASet(evm.env.StateDB, otaAX, setEleNum)
-	if err != nil {
-		return nil
-	}
-
-	retBuf := make([]byte, 0, common.WAddressLength*setEleNum)
-	for _, otaWanAddr := range otaWanAddrs {
-		retBuf = append(retBuf, otaWanAddr...)
-	}
-
-	return retBuf
-}
 
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
