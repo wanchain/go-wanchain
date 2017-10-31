@@ -316,8 +316,8 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
-	var privateKeyECDSA2 *ecdsa.PrivateKey
-	privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), reader)
+
+	privateKeyECDSA2, err := ecdsa.GenerateKey(crypto.S256(), reader)
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
