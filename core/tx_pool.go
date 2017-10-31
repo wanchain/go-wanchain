@@ -306,7 +306,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	log.Error("validateTx from:" + from.String())
+	log.Debug("validateTx from:" + from.String())
 	//added judge for privacy tx type
 	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && tx.Txtype() != 0 && tx.Txtype() != 6 {
 		return ErrInsufficientFunds
