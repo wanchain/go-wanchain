@@ -28,12 +28,12 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
+	"github.com/naoina/toml"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/contracts/release"
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/naoina/toml"
 )
 
 var (
