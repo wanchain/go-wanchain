@@ -27,8 +27,6 @@ var wait = function (conditionFunc) {
 	}
 }
 
-wanUnlock(eth.coinbase);
-sendWanFromUnlock(eth.coinbase, eth.accounts[1], 100);
 wanUnlock(eth.accounts[1])
 wanUnlock(eth.accounts[2])
 
@@ -69,7 +67,7 @@ var otaAddrTokenHolder = eth.generateOneTimeAddress(wanAddr);
 keyPairs = eth.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
 privateKeyTokenHolder = keyPairs[0];
 addrTokenHolder = keyPairs[2];
-sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:10000000});
+sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:1000000});
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 ota1Balance = erc20simple.privacyBalance(addrTokenHolder)

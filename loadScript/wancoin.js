@@ -24,10 +24,6 @@ var wait = function (conditionFunc) {
 
 var tranValue = 1;
 
-wanUnlock(eth.coinbase);
-var sendTx = sendWanFromUnlock(eth.coinbase, eth.accounts[1], 100);
-wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
-
 abiDef = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyCoinNote","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
 contractDef = eth.contract(abiDef);
@@ -37,8 +33,8 @@ coinContract = contractDef.at(coinContractAddr);
 var acc1OldBalance = parseFloat(wanBalance(eth.accounts[1]))
 var acc2OldBalance = parseFloat(wanBalance(eth.accounts[2]))
 
-personal.unlockAccount(eth.accounts[1],"wanglu",9999);
-personal.unlockAccount(eth.accounts[2],"wanglu",9999);
+wanUnlock(eth.accounts[1]);
+wanUnlock(eth.accounts[2]);
 
 var wanAddr = eth.getWanAddress(eth.accounts[2]);
 var otaAddr = eth.generateOneTimeAddress(wanAddr);
