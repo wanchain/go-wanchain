@@ -28,12 +28,12 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
+	"github.com/naoina/toml"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/contracts/release"
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/naoina/toml"
 )
 
 var (
@@ -102,7 +102,7 @@ func defaultNodeConfig() node.Config {
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
 	cfg.HTTPModules = append(cfg.HTTPModules, "wan")
 	cfg.WSModules = append(cfg.WSModules, "eth")
-	cfg.IPCPath = "geth.ipc"
+	cfg.IPCPath = "gwan.ipc"
 	return cfg
 }
 
