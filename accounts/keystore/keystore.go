@@ -292,7 +292,7 @@ func (ks *KeyStore) GetWanAddress(a accounts.Account)(common.WAddress, error) {
 
 	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
-		_, ksen, err := ks.getEncryptedKey(a);
+		_, ksen, err := ks.getEncryptedKey(a)
 		if err!= nil {
 			return common.WAddress{}, ErrLocked
 		}
@@ -570,8 +570,8 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	if the current key has no second privateKey, we need create for it.
 	*/
 	if key.PrivateKey2 == nil {
-		var privateKeyECDSA2 *ecdsa.PrivateKey
-		privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), crand.Reader)
+		//var privateKeyECDSA2 *ecdsa.PrivateKey
+		privateKeyECDSA2, err := ecdsa.GenerateKey(crypto.S256(), crand.Reader)
 		if err != nil {
 			return  err
 		}
