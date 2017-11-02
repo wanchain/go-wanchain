@@ -36,6 +36,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/math"
 )
 
 var (
@@ -534,7 +535,9 @@ func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.P
 	}
 	R = &RPrivateKey.PublicKey
 	A1 = new(ecdsa.PublicKey)
-	*A1 = generateA1(RPrivateKey.D.Bytes(), A, B)
+	//*A1 = generateA1(RPrivateKey.D.Bytes(), A, B)
+	// anson modifies
+	*A1 = generateA1(math.PaddedBigBytes(RPrivateKey.D, 32), A, B)
 	return A1, R, err
 }
 

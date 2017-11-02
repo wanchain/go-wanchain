@@ -39,7 +39,7 @@ import (
 	"crypto/ecdsa"
 	"bytes"
 	"encoding/binary"
-	"github.com/Anson5Lee/anson_eth/common/math"
+	"github.com/wanchain/go-wanchain/common/math"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
