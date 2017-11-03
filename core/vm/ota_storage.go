@@ -55,10 +55,10 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 	return new(big.Int).SetBytes(balance), nil
 }
 
-// ChechOTAExit chech the OTA exit in db or not
-func CheckOTAExit(statedb StateDB, otaAX []byte) (exit bool, balance *big.Int, err error) {
+// ChechOTAExist check the OTA exists in db or not
+func CheckOTAExit(statedb StateDB, otaAX []byte) (bool, balance *big.Int, err error) {
 	if statedb == nil || otaAX == nil || len(otaAX) < common.HashLength {
-		return false, nil, errors.New("CheckOTAExit, invalid input param!")
+		return false, nil,ErrInvalidOTAArgs
 	}
 
 	otaAddrKey := common.BytesToHash(otaAX)
@@ -121,7 +121,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 
 func SetOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
 	if statedb == nil || balance == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
-		return errors.New("SetOTA, invalid input param!")
+		return ErrInvalidOTAArgs
 	}
 
 	otaAX := otaWanAddr[1 : 1+common.HashLength]
@@ -145,12 +145,12 @@ func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool
 	}
 
 	otaAddrKey := common.BytesToHash(otaWanAddr[1 : 1+common.HashLength])
-	exit, _, err := CheckOTAExit(statedb, otaAddrKey[:])
+	exist, _, err := CheckOTAExit(statedb, otaAddrKey[:])
 	if err != nil {
 		return false, err
 	}
 
-	if exit {
+	if exist {
 		return false, nil
 	}
 
