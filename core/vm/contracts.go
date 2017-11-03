@@ -30,6 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
 	"strings"
+	"fmt"
 )
 
 // Precompiled contract is the basic interface for native Go contracts. The implementation
@@ -432,6 +433,8 @@ const (
 )
 
 func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+	inStr := hexutil.Encode(in)
+	fmt.Printf("%s", inStr)
 	var methodIdArr [4]byte
 	copy(methodIdArr[:], in[:4])
 

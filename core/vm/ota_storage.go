@@ -15,6 +15,10 @@ var (
 	OTAImageStorageAddr   = common.BytesToAddress(crypto.Keccak256([]byte(string("OTA image storage addr"))))
 )
 
+var (
+	ErrInvalidOTAArgs = errors.New("Invalid arguments to persist OTAs")
+)
+
 func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
 		return nil, errors.New("GetOtaBalanceFromAX. invalid input param!")
@@ -137,7 +141,7 @@ func SetOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
 
 func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool, error) {
 	if statedb == nil || balance == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
-		return false, errors.New("AddOTAIfNotExit, invalid input param!")
+		return false, ErrInvalidOTAArgs
 	}
 
 	otaAddrKey := common.BytesToHash(otaWanAddr[1 : 1+common.HashLength])
