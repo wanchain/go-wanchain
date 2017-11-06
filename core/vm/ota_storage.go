@@ -56,7 +56,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 }
 
 // ChechOTAExist check the OTA exists in db or not
-func CheckOTAExit(statedb StateDB, otaAX []byte) (bool, balance *big.Int, err error) {
+func CheckOTAExit(statedb StateDB, otaAX []byte) (status bool, balance *big.Int, err error) {
 	if statedb == nil || otaAX == nil || len(otaAX) < common.HashLength {
 		return false, nil,ErrInvalidOTAArgs
 	}

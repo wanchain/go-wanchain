@@ -329,6 +329,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	stateObject := self.getStateObject(a)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, b)
+
 	}
 	return common.Hash{}
 }
