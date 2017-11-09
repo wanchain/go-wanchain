@@ -25,11 +25,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
-	"crypto/ecdsa"
 )
 
 // creates a Key and stores that in the given KeyStore by decrypting a presale key JSON
@@ -47,7 +46,6 @@ func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accou
 func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error) {
 	preSaleKeyStruct := struct {
 		EncSeed string
-		EncSeed2 string
 		EthAddr string
 		Email   string
 		BtcAddr string
@@ -56,62 +54,32 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 	if err != nil {
 		return nil, err
 	}
-
-	var ecKey, ecKey2 *ecdsa.PrivateKey
-
-	{
-		encSeedBytes, err := hex.DecodeString(preSaleKeyStruct.EncSeed)
-		if err != nil {
-			return nil, errors.New("invalid hex in encSeed")
-		}
-		iv := encSeedBytes[:16]
-		cipherText := encSeedBytes[16:]
-		/*
-			See https://github.com/ethereum/pyethsaletool
-
-			pyethsaletool generates the encryption key from password by
-			2000 rounds of PBKDF2 with HMAC-SHA-256 using password as salt (:().
-			16 byte key length within PBKDF2 and resulting key is used as AES key
-		*/
-		passBytes := []byte(password)
-		derivedKey := pbkdf2.Key(passBytes, passBytes, 2000, 16, sha256.New)
-		plainText, err := aesCBCDecrypt(derivedKey, cipherText, iv)
-		if err != nil {
-			return nil, err
-		}
-		ethPriv := crypto.Keccak256(plainText)
-		ecKey = crypto.ToECDSA(ethPriv)
+	encSeedBytes, err := hex.DecodeString(preSaleKeyStruct.EncSeed)
+	if err != nil {
+		return nil, errors.New("invalid hex in encSeed")
 	}
+	iv := encSeedBytes[:16]
+	cipherText := encSeedBytes[16:]
+	/*
+		See https://github.com/ethereum/pyethsaletool
 
-	{
-		encSeedBytes, err := hex.DecodeString(preSaleKeyStruct.EncSeed2)
-		if err != nil {
-			return nil, errors.New("invalid hex in encSeed")
-		}
-		iv := encSeedBytes[:16]
-		cipherText := encSeedBytes[16:]
-		/*
-			See https://github.com/ethereum/pyethsaletool
-
-			pyethsaletool generates the encryption key from password by
-			2000 rounds of PBKDF2 with HMAC-SHA-256 using password as salt (:().
-			16 byte key length within PBKDF2 and resulting key is used as AES key
-		*/
-		passBytes := []byte(password)
-		derivedKey := pbkdf2.Key(passBytes, passBytes, 2000, 16, sha256.New)
-		plainText, err := aesCBCDecrypt(derivedKey, cipherText, iv)
-		if err != nil {
-			return nil, err
-		}
-		ethPriv := crypto.Keccak256(plainText)
-		ecKey2 = crypto.ToECDSA(ethPriv)
+		pyethsaletool generates the encryption key from password by
+		2000 rounds of PBKDF2 with HMAC-SHA-256 using password as salt (:().
+		16 byte key length within PBKDF2 and resulting key is used as AES key
+	*/
+	passBytes := []byte(password)
+	derivedKey := pbkdf2.Key(passBytes, passBytes, 2000, 16, sha256.New)
+	plainText, err := aesCBCDecrypt(derivedKey, cipherText, iv)
+	if err != nil {
+		return nil, err
 	}
+	ethPriv := crypto.Keccak256(plainText)
+	ecKey := crypto.ToECDSAUnsafe(ethPriv)
 
 	key = &Key{
 		Id:         nil,
 		Address:    crypto.PubkeyToAddress(ecKey.PublicKey),
 		PrivateKey: ecKey,
-		PrivateKey2: ecKey2,
 	}
 	derivedAddr := hex.EncodeToString(key.Address.Bytes()) // needed because .Hex() gives leading "0x"
 	expectedAddr := preSaleKeyStruct.EthAddr

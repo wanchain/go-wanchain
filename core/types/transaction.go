@@ -28,7 +28,6 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/rlp"
-	//"crypto/ecdsa"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -56,14 +55,12 @@ type Transaction struct {
 }
 
 type txdata struct {
-	Txtype       uint64          `json:"Txtype"    gencodec:"required"`
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`
 	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
-
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -72,19 +69,9 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
-
-	//PublicKeys []*ecdsa.PublicKey `json:"publicKeys,omitempty"`
-	//KeyImage   *ecdsa.PublicKey   `json:"keyImage,omitempty"`
-	PublicKeys []*hexutil.Big `json:"publicKeys,omitempty" rlp:"nil"`
-	KeyImage   []*hexutil.Big   `json:"keyImage,omitempty" rlp:"nil"`
-	W_random   []*hexutil.Big         `json:"w_random,omitempty" rlp:"nil"`
-	Q_random   []*hexutil.Big     `json:"q_random,omitempty" rlp:"nil"`
 }
 
-//r@zy: 如果这个自动生成的对transaction的marshal和unmarshal不能条件生成的话，那就。。。。
-
 type txdataMarshaling struct {
-	Txtype       hexutil.Uint64
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
@@ -93,18 +80,10 @@ type txdataMarshaling struct {
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
-	PublicKeys   []*hexutil.Big
-	KeyImage     []*hexutil.Big
-	Wrandom      []*hexutil.Big
-	Qrandom      []*hexutil.Big
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
-}
-
-func NewOTATransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
-	return newOTATransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
 func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
@@ -116,84 +95,6 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
-		Txtype: 1,
-		AccountNonce: nonce,
-		Recipient:    to,
-		Payload:      data,
-		Amount:       new(big.Int),
-		GasLimit:     new(big.Int),
-		Price:        new(big.Int),
-		V:            new(big.Int),
-		R:            new(big.Int),
-		S:            new(big.Int),
-	}
-	if amount != nil {
-		d.Amount.Set(amount)
-	}
-	if gasLimit != nil {
-		d.GasLimit.Set(gasLimit)
-	}
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-
-	return &Transaction{data: d}
-}
-
-//jqg****
-
-const(
-	stampSCAddress 	 = 5
-	wancoinSCAddress = 6
-
-	WANCOIN_BUY    = byte(0)
-	WANCOIN_GET_COINS = byte(1)
-	WANCOIN_REFUND = byte(2)
-	WAN_BUY_STAMP = byte(3)
-	WAN_CONTRACT_OTA = byte(4)
-	WAN_STAMP_SET = byte(5)
-
-	TX_PRI_ORI_COIN = 0
-	TX_PRI_CONTRACT_CALL = 2
-)
-
-func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
-	var addressDst common.Address
-	addressDst = *to
-	txType := 6
-
-	d := txdata{
-		Txtype: uint64(txType),
-		AccountNonce: nonce,
-		Recipient:	  &addressDst ,
-		Payload:      data,
-		Amount:       new(big.Int),
-		GasLimit:     new(big.Int),
-		Price:        new(big.Int),
-		V:            new(big.Int),
-		R:            new(big.Int),
-		S:            new(big.Int),
-	}
-	if amount != nil {
-		d.Amount.Set(amount)
-	}
-	if gasLimit != nil {
-		d.GasLimit.Set(gasLimit)
-	}
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-
-	return &Transaction{data: d}
-}
-
-//cr@zy****:  接受PublicTransactionPoolAPI的输入，构建OTA Transaction
-func newOTATransaction_zy(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
-	if len(data) > 0 {
-		data = common.CopyBytes(data)
-	}
-	d := txdata{
-		Txtype: 0,
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -280,7 +181,6 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Txtype() uint64      { return tx.data.Txtype }
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
@@ -309,12 +209,6 @@ func (tx *Transaction) Hash() common.Hash {
 	return v
 }
 
-// SigHash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (tx *Transaction) SigHash(signer Signer) common.Hash {
-	return signer.Hash(tx)
-}
-
 func (tx *Transaction) Size() common.StorageSize {
 	if size := tx.size.Load(); size != nil {
 		return size.(common.StorageSize)
@@ -339,7 +233,6 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
-		txType:		tx.Txtype(),
 	}
 
 	var err error
@@ -350,7 +243,13 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	return signer.WithSignature(tx, sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy := &Transaction{data: tx.data}
+	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
+	return cpy, nil
 }
 
 // Cost returns amount + gasprice * gaslimit.
@@ -401,7 +300,7 @@ func (tx *Transaction) String() string {
 	Hex:      %x
 `,
 		tx.Hash(),
-		len(tx.data.Recipient) == 0,
+		tx.data.Recipient == nil,
 		from,
 		to,
 		tx.data.AccountNonce,
@@ -482,28 +381,32 @@ func (s *TxByPrice) Pop() interface{} {
 // transactions in a profit-maximising sorted order, while supporting removing
 // entire batches of transactions for non-executable accounts.
 type TransactionsByPriceAndNonce struct {
-	txs   map[common.Address]Transactions // Per account nonce-sorted list of transactions
-	heads TxByPrice                       // Next transaction for each unique account (price heap)
+	txs    map[common.Address]Transactions // Per account nonce-sorted list of transactions
+	heads  TxByPrice                       // Next transaction for each unique account (price heap)
+	signer Signer                          // Signer for the set of transactions
 }
 
 // NewTransactionsByPriceAndNonce creates a transaction set that can retrieve
 // price sorted transactions in a nonce-honouring way.
 //
 // Note, the input map is reowned so the caller should not interact any more with
-// if after providng it to the constructor.
-func NewTransactionsByPriceAndNonce(txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
+// if after providing it to the constructor.
+func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price based heap with the head transactions
 	heads := make(TxByPrice, 0, len(txs))
-	for acc, accTxs := range txs {
+	for _, accTxs := range txs {
 		heads = append(heads, accTxs[0])
+		// Ensure the sender address is from the signer
+		acc, _ := Sender(signer, accTxs[0])
 		txs[acc] = accTxs[1:]
 	}
 	heap.Init(&heads)
 
 	// Assemble and return the transaction set
 	return &TransactionsByPriceAndNonce{
-		txs:   txs,
-		heads: heads,
+		txs:    txs,
+		heads:  heads,
+		signer: signer,
 	}
 }
 
@@ -517,9 +420,7 @@ func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 
 // Shift replaces the current best head with the next one from the same account.
 func (t *TransactionsByPriceAndNonce) Shift() {
-	signer := deriveSigner(t.heads[0].data.V)
-	// derive signer but don't cache.
-	acc, _ := Sender(signer, t.heads[0]) // we only sort valid txs so this cannot fail
+	acc, _ := Sender(t.signer, t.heads[0])
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
 		t.heads[0], t.txs[acc] = txs[0], txs[1:]
 		heap.Fix(&t.heads, 0)
@@ -545,7 +446,6 @@ type Message struct {
 	amount, price, gasLimit *big.Int
 	data                    []byte
 	checkNonce              bool
-	txType  				uint64
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, checkNonce bool) Message {
@@ -569,4 +469,3 @@ func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m Message) TxType() uint64       { return m.txType }

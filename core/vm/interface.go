@@ -21,7 +21,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/trie"
 )
 
 // StateDB is an EVM database for full state querying.
@@ -46,10 +45,6 @@ type StateDB interface {
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	// lzh add
-	GetStateByteArray(common.Address, common.Hash) []byte
-	SetStateByteArray(common.Address, common.Hash, []byte)
-
 	Suicide(common.Address) bool
 	HasSuicided(common.Address) bool
 
@@ -67,8 +62,6 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
-
-	StorageVmTrie(a common.Address) *trie.SecureTrie
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

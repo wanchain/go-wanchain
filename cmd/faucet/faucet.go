@@ -102,7 +102,7 @@ func main() {
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
-		// Calcualte the period for th enext tier and format it
+		// Calculate the period for the next tier and format it
 		period := *minutesFlag * int(math.Pow(3, float64(i)))
 		periods[i] = fmt.Sprintf("%d mins", period)
 		if period%60 == 0 {
@@ -205,7 +205,6 @@ type faucet struct {
 	update   chan struct{}        // Channel to signal request updates
 
 	lock sync.RWMutex // Lock protecting the faucet's internals
-	keys []string
 }
 
 func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
@@ -414,8 +413,9 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		// Iterate over all the files and look for Ethereum addresses
 		var address common.Address
 		for _, file := range gist.Files {
-			if len(file.Content) == 2+common.AddressLength*2 {
-				address = common.HexToAddress(file.Content)
+			content := strings.TrimSpace(file.Content)
+			if len(content) == 2+common.AddressLength*2 {
+				address = common.HexToAddress(content)
 			}
 		}
 		if address == (common.Address{}) {
@@ -446,8 +446,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
 			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, big.NewInt(21000), f.price, nil)
-			//signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainId, f.keys)
-			signed, err := f.keystore.SignTx(f.account, tx, nil, f.keys)
+			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainId)
 			if err != nil {
 				websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
 				f.lock.Unlock()

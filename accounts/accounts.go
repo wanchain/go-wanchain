@@ -24,7 +24,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/event"
-
 )
 
 // Account represents an Ethereum account located at a specific location defined
@@ -43,8 +42,9 @@ type Wallet interface {
 	URL() URL
 
 	// Status returns a textual status to aid the user in the current state of the
-	// wallet.
-	Status() string
+	// wallet. It also returns an error indicating any failure the wallet might have
+	// encountered.
+	Status() (string, error)
 
 	// Open initializes access to a wallet instance. It is not meant to unlock or
 	// decrypt account keys, rather simply to establish a connection to hardware
@@ -111,15 +111,7 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignTxWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
-	SignTx(account Account, tx *types.Transaction, chainID *big.Int,keys [] string) (*types.Transaction, error)
-
-	GetPublicKeysRawStr(account Account) ([]string, error)
-
-	GetWanAddress(account Account)(common.WAddress, error)
-
-	CheckOTAdress(account Account, b *common.WAddress) (bool, error)
-
-	ComputeOTAPPKeys(account Account, AX string, AY string, BX string, BY string) ([]string, error)
+	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
@@ -156,9 +148,26 @@ type Backend interface {
 	Subscribe(sink chan<- WalletEvent) event.Subscription
 }
 
+// WalletEventType represents the different event types that can be fired by
+// the wallet subscription subsystem.
+type WalletEventType int
+
+const (
+	// WalletArrived is fired when a new wallet is detected either via USB or via
+	// a filesystem event in the keystore.
+	WalletArrived WalletEventType = iota
+
+	// WalletOpened is fired when a wallet is successfully opened with the purpose
+	// of starting any background processes such as automatic key derivation.
+	WalletOpened
+
+	// WalletDropped
+	WalletDropped
+)
+
 // WalletEvent is an event fired by an account backend when a wallet arrival or
 // departure is detected.
 type WalletEvent struct {
-	Wallet Wallet // Wallet instance arrived or departed
-	Arrive bool   // Whether the wallet was added or removed
+	Wallet Wallet          // Wallet instance arrived or departed
+	Kind   WalletEventType // Event type that happened in the system
 }

@@ -26,9 +26,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/robertkrimen/otto"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/internal/jsre/deps"
-	"github.com/robertkrimen/otto"
 )
 
 var (

@@ -35,7 +35,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/event"
@@ -144,14 +143,14 @@ func (ks *KeyStore) refreshWallets() {
 	for _, account := range accs {
 		// Drop wallets while they were in front of the next account
 		for len(ks.wallets) > 0 && ks.wallets[0].URL().Cmp(account.URL) < 0 {
-			events = append(events, accounts.WalletEvent{Wallet: ks.wallets[0], Arrive: false})
+			events = append(events, accounts.WalletEvent{Wallet: ks.wallets[0], Kind: accounts.WalletDropped})
 			ks.wallets = ks.wallets[1:]
 		}
 		// If there are no more wallets or the account is before the next, wrap new wallet
 		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.URL) > 0 {
 			wallet := &keystoreWallet{account: account, keystore: ks}
 
-			events = append(events, accounts.WalletEvent{Wallet: wallet, Arrive: true})
+			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 			wallets = append(wallets, wallet)
 			continue
 		}
@@ -164,7 +163,7 @@ func (ks *KeyStore) refreshWallets() {
 	}
 	// Drop any leftover wallets and set the new batch
 	for _, wallet := range ks.wallets {
-		events = append(events, accounts.WalletEvent{Wallet: wallet, Arrive: false})
+		events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletDropped})
 	}
 	ks.wallets = wallets
 	ks.mu.Unlock()
@@ -269,7 +268,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 }
 
 // SignTx signs the given transaction with the requested account.
-func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int, keys []string) (*types.Transaction, error) {
+func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -280,89 +279,9 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey, keys)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
 	}
-
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey, keys)
-}
-
-func (ks *KeyStore) GetWanAddress(a accounts.Account) (common.WAddress, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found {
-		_, ksen, err := ks.getEncryptedKey(a)
-		if err != nil {
-			return common.WAddress{}, ErrLocked
-		}
-
-		return ksen.WAddress, nil
-	}
-
-	ret := unlockedKey.WAddress
-	return ret, nil
-}
-
-func (ks *KeyStore) GetPublicKeysRawStrFromUnlock(a accounts.Account) ([]string, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found {
-		return nil, ErrLocked
-	}
-
-	ret := common.TwoPublicKeyToHexSlice(&unlockedKey.PrivateKey.PublicKey, &unlockedKey.PrivateKey2.PublicKey)
-	return ret, nil
-}
-
-// lzh modify
-func (ks *KeyStore) GetPublicKeysRawStr(a accounts.Account) ([]string, error) {
-	a, key, err := ks.getEncryptedKey(a)
-	if err != nil {
-		return ks.GetPublicKeysRawStrFromUnlock(a)
-	}
-
-	return key.GetTwoPublicKeyRawStrs()
-}
-
-func (ks *KeyStore) CheckOTAdress(a accounts.Account, otaddr *common.WAddress) (bool, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	res := false
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found {
-		return res, ErrLocked
-	}
-	A := &unlockedKey.PrivateKey.PublicKey
-	A1, S1, err := GeneratePublicKeyFromWadress(otaddr[:])
-	if err != nil {
-		return res, err
-	}
-	res = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1, A1)
-	return res, nil
-
-}
-
-func (ks *KeyStore) ComputeOTAPPKeys(account accounts.Account, AX string, AY string, BX string, BY string) ([]string, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	unlockedKey, found := ks.unlocked[account.Address]
-	if !found {
-		return nil, ErrLocked
-	}
-
-	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
-
-	pub1X := hexutil.Encode(common.LeftPadBytes(pub1.X.Bytes(), 32))
-	pub1Y := hexutil.Encode(common.LeftPadBytes(pub1.Y.Bytes(), 32))
-	priv1D := hexutil.Encode(common.LeftPadBytes(priv1.D.Bytes(), 32))
-	priv2D := hexutil.Encode(common.LeftPadBytes(priv2.D.Bytes(), 32))
-
-	return []string{pub1X, pub1Y, priv1D, priv2D}, err
+	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -388,9 +307,9 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey, nil)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey, nil)
+	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.
@@ -464,16 +383,6 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
-// lzh
-func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
-	a, err := ks.Find(a)
-	if err != nil {
-		return a, nil, err
-	}
-	key, err := ks.storage.GetKeyEncrypt(a.Address, a.URL.Path)
-	return a, key, err
-}
-
 func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
@@ -536,12 +445,11 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 }
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
-func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
-	key := newKeyFromECDSA(priv, priv2)
+func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
+	key := newKeyFromECDSA(priv)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
-
 	return ks.importKey(key, passphrase)
 }
 
@@ -561,18 +469,6 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	if err != nil {
 		return err
 	}
-	/*
-		if the current key has no second privateKey, we need create for it.
-	*/
-	if key.PrivateKey2 == nil {
-		var privateKeyECDSA2 *ecdsa.PrivateKey
-		privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), crand.Reader)
-		if err != nil {
-			return err
-		}
-		key.PrivateKey2 = privateKeyECDSA2
-	}
-	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 

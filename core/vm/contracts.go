@@ -18,563 +18,362 @@ package vm
 
 import (
 	"crypto/sha256"
+	"errors"
 	"math/big"
 
-	"bytes"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
-	"strings"
 )
 
-// Precompiled contract is the basic interface for native Go contracts. The implementation
+// PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
 type PrecompiledContract interface {
-	RequiredGas(inputSize int) uint64                              // RequiredPrice calculates the contract gas use
-	Run(input []byte, contract *Contract, evm *Interpreter) []byte // Run runs the precompiled contract
+	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
+	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
-// Precompiled contains the default set of ethereum contracts
-var PrecompiledContracts = map[common.Address]PrecompiledContract{
+// PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
+// contracts used in the Frontier and Homestead releases.
+var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}): &ecrecover{},
 	common.BytesToAddress([]byte{2}): &sha256hash{},
 	common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &wanchainStampSC{},
-	common.BytesToAddress([]byte{6}): &wanCoinSC{},
 }
 
-// RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *Interpreter) (ret []byte, err error) {
+// PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
+// contracts used in the Byzantium release.
+var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}): &ecrecover{},
+	common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{3}): &ripemd160hash{},
+	common.BytesToAddress([]byte{4}): &dataCopy{},
+	common.BytesToAddress([]byte{5}): &bigModExp{},
+	common.BytesToAddress([]byte{6}): &bn256Add{},
+	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
+	common.BytesToAddress([]byte{8}): &bn256Pairing{},
+}
 
-	gas := p.RequiredGas(len(input))
+// RunPrecompiledContract runs and evaluates the output of a precompiled contract.
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
+	gas := p.RequiredGas(input)
 	if contract.UseGas(gas) {
-
-		ret = p.Run(input, contract, evm)
-		if ret != nil {
-			return ret, nil
-		} else {
-			return nil, ErrOutOfGas
-		}
-
-	} else {
-		return nil, ErrOutOfGas
+		return p.Run(input)
 	}
-
+	return nil, ErrOutOfGas
 }
 
-// ECRECOVER implemented as a native contract
+// ECRECOVER implemented as a native contract.
 type ecrecover struct{}
 
-func (c *ecrecover) RequiredGas(inputSize int) uint64 {
+func (c *ecrecover) RequiredGas(input []byte) uint64 {
 	return params.EcrecoverGas
 }
 
-func (c *ecrecover) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	const ecRecoverInputLength = 128
 
-	in = common.RightPadBytes(in, ecRecoverInputLength)
-	// "in" is (hash, v, r, s), each 32 bytes
+	input = common.RightPadBytes(input, ecRecoverInputLength)
+	// "input" is (hash, v, r, s), each 32 bytes
 	// but for ecrecover we want (r, s, v)
 
-	r := new(big.Int).SetBytes(in[64:96])
-	s := new(big.Int).SetBytes(in[96:128])
-	v := in[63] - 27
+	r := new(big.Int).SetBytes(input[64:96])
+	s := new(big.Int).SetBytes(input[96:128])
+	v := input[63] - 27
 
-	// tighter sig s values in homestead only apply to tx sigs
-	if !allZero(in[32:63]) || !crypto.ValidateSignatureValues(v, r, s, false) {
-		log.Trace("ECRECOVER error: v, r or s value invalid")
-		return nil
+	// tighter sig s values input homestead only apply to tx sigs
+	if !allZero(input[32:63]) || !crypto.ValidateSignatureValues(v, r, s, false) {
+		return nil, nil
 	}
 	// v needs to be at the end for libsecp256k1
-	pubKey, err := crypto.Ecrecover(in[:32], append(in[64:128], v))
+	pubKey, err := crypto.Ecrecover(input[:32], append(input[64:128], v))
 	// make sure the public key is a valid one
 	if err != nil {
-		log.Trace("ECRECOVER failed", "err", err)
-		return nil
+		return nil, nil
 	}
 
 	// the first byte of pubkey is bitcoin heritage
-	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32)
+	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
 }
 
-// SHA256 implemented as a native contract
+// SHA256 implemented as a native contract.
 type sha256hash struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *sha256hash) RequiredGas(inputSize int) uint64 {
-	return uint64(inputSize+31)/32*params.Sha256WordGas + params.Sha256Gas
+func (c *sha256hash) RequiredGas(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
 }
-func (c *sha256hash) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
-	h := sha256.Sum256(in)
-	return h[:]
+func (c *sha256hash) Run(input []byte) ([]byte, error) {
+	h := sha256.Sum256(input)
+	return h[:], nil
 }
 
-// RIPMED160 implemented as a native contract
+// RIPMED160 implemented as a native contract.
 type ripemd160hash struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *ripemd160hash) RequiredGas(inputSize int) uint64 {
-	return uint64(inputSize+31)/32*params.Ripemd160WordGas + params.Ripemd160Gas
+func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
 }
-func (c *ripemd160hash) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
+func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
-	ripemd.Write(in)
-	return common.LeftPadBytes(ripemd.Sum(nil), 32)
+	ripemd.Write(input)
+	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
-// data copy implemented as a native contract
+// data copy implemented as a native contract.
 type dataCopy struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *dataCopy) RequiredGas(inputSize int) uint64 {
-	return uint64(inputSize+31)/32*params.IdentityWordGas + params.IdentityGas
+func (c *dataCopy) RequiredGas(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.IdentityPerWordGas + params.IdentityBaseGas
+}
+func (c *dataCopy) Run(in []byte) ([]byte, error) {
+	return in, nil
 }
 
-func (c *dataCopy) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
-
-	return in
-}
-
-/////////////////////////////////////added by jqg ///////////////////////////////////
-//in structure
-//the first byte is the ac
-/*  byte[0]: 0->buy stamp
- * 			 1->get stampSet
- *			 2->refund
- *  byte[1]: if action is stampSet, this is the set number
- *  byte[2:]:the OTA-Address
- */
-
-const (
-	WAN_CONTRACT_SEND_OTA = byte(0)
-
-	WAN_BUY_STAMP    = byte(3)
-	WAN_VERIFY_STAMP = byte(4)
-	WAN_STAMP_SET    = byte(5)
-
-	WAN_STAMP_DOT1 = "10000000000000000" //0.01
-	WAN_STAMP_DOT2 = "20000000000000000" //0.02
-	WAN_STAMP_DOT5 = "50000000000000000" //0.05
-
-	OTA_ADDR_LEN = 128
-)
+// bigModExp implements a native big integer exponential modular operation.
+type bigModExp struct{}
 
 var (
-	coinSCDefinition = `
-	[
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "buyCoinNote",
-    "outputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "inputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "refundCoin",
-    "outputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [],
-    "name": "getCoins",
-    "outputs": [
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  }
-]`
-	stampSCDefinition = `
-	[
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "buyStamp",
-    "outputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "inputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "refundCoin",
-    "outputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [],
-    "name": "getCoins",
-    "outputs": [
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  }
-]`
-
-	coinAbi, errCoinSCInit               = abi.JSON(strings.NewReader(coinSCDefinition))
-	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
-
-	stampAbi, errStampSCInit = abi.JSON(strings.NewReader(stampSCDefinition))
-	stBuyId                  [4]byte
+	big1      = big.NewInt(1)
+	big4      = big.NewInt(4)
+	big8      = big.NewInt(8)
+	big16     = big.NewInt(16)
+	big32     = big.NewInt(32)
+	big64     = big.NewInt(64)
+	big96     = big.NewInt(96)
+	big480    = big.NewInt(480)
+	big1024   = big.NewInt(1024)
+	big3072   = big.NewInt(3072)
+	big199680 = big.NewInt(199680)
 )
 
-func init() {
-	if errCoinSCInit != nil || errStampSCInit != nil {
-		// TODO: refact panic
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (c *bigModExp) RequiredGas(input []byte) uint64 {
+	var (
+		baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
+		expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
+		modLen  = new(big.Int).SetBytes(getData(input, 64, 32))
+	)
+	if len(input) > 96 {
+		input = input[96:]
+	} else {
+		input = input[:0]
 	}
+	// Retrieve the head 32 bytes of exp for the adjusted exponent length
+	var expHead *big.Int
+	if big.NewInt(int64(len(input))).Cmp(baseLen) <= 0 {
+		expHead = new(big.Int)
+	} else {
+		if expLen.Cmp(big32) > 0 {
+			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), 32))
+		} else {
+			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), expLen.Uint64()))
+		}
+	}
+	// Calculate the adjusted exponent length
+	var msb int
+	if bitlen := expHead.BitLen(); bitlen > 0 {
+		msb = bitlen - 1
+	}
+	adjExpLen := new(big.Int)
+	if expLen.Cmp(big32) > 0 {
+		adjExpLen.Sub(expLen, big32)
+		adjExpLen.Mul(big8, adjExpLen)
+	}
+	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
 
-	copy(buyIdArr[:], coinAbi.Methods["buyCoinNote"].Id())
-	copy(refundIdArr[:], coinAbi.Methods["refundCoin"].Id())
-	copy(getCoinsIdArr[:], coinAbi.Methods["getCoins"].Id())
+	// Calculate the gas cost of the operation
+	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
+	switch {
+	case gas.Cmp(big64) <= 0:
+		gas.Mul(gas, gas)
+	case gas.Cmp(big1024) <= 0:
+		gas = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(gas, gas), big4),
+			new(big.Int).Sub(new(big.Int).Mul(big96, gas), big3072),
+		)
+	default:
+		gas = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(gas, gas), big16),
+			new(big.Int).Sub(new(big.Int).Mul(big480, gas), big199680),
+		)
+	}
+	gas.Mul(gas, math.BigMax(adjExpLen, big1))
+	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
 
-	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
+	if gas.BitLen() > 64 {
+		return math.MaxUint64
+	}
+	return gas.Uint64()
 }
 
-type wanchainStampSC struct {
-}
-
-func (c *wanchainStampSC) RequiredGas(inputSize int) uint64 {
-	return 0
-}
-
-func (c *wanchainStampSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
-	if in==nil || len(in)<4 {
-		return nil
+func (c *bigModExp) Run(input []byte) ([]byte, error) {
+	var (
+		baseLen = new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
+		expLen  = new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
+		modLen  = new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
+	)
+	if len(input) > 96 {
+		input = input[96:]
+	} else {
+		input = input[:0]
 	}
-	
-	var methodId [4]byte
-	copy(methodId[:], in[:4])
-
-	if methodId == stBuyId {
-		return c.buyStamp(in[4:], contract, evm)
+	// Handle a special case when both the base and mod length is zero
+	if baseLen == 0 && modLen == 0 {
+		return []byte{}, nil
 	}
-
-	return nil
-}
-
-func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *Interpreter) []byte {
-	var StampInput struct {
-		OtaAddr string
-		Value   *big.Int
+	// Retrieve the operands and execute the exponentiation
+	var (
+		base = new(big.Int).SetBytes(getData(input, 0, baseLen))
+		exp  = new(big.Int).SetBytes(getData(input, baseLen, expLen))
+		mod  = new(big.Int).SetBytes(getData(input, baseLen+expLen, modLen))
+	)
+	if mod.BitLen() == 0 {
+		// Modulo 0 is undefined, return zero
+		return common.LeftPadBytes([]byte{}, int(modLen)), nil
 	}
-
-	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
-	if err != nil {
-		return nil
-	}
-
-	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
-	if err != nil {
-		return nil
-	}
-
-	add, err := AddOTAIfNotExit(evm.env.StateDB, contract.value, wanAddr)
-	if err != nil || !add {
-		return nil
-	}
-
-	addrSrc := contract.CallerAddress
-
-	balance := evm.env.StateDB.GetBalance(addrSrc)
-
-	if balance.Cmp(contract.value) >= 0 {
-		// Need check contract value in  build in value sets
-		evm.env.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte("1")
-	}
-
-	return nil
-}
-
-//////////////////////////genesis coin precompile contract/////////////////////////////////////////
-/*  byte[0]: 0->buy
- *			 1->refund
- *
- *  byte[2]: if action is stampSet, this is the set number
- *  byte[3:]:the OTA-Address
- */
-const (
-	WANCOIN_BUY       = byte(0)
-	WANCOIN_GET_COINS = byte(1)
-	WANCOIN_REFUND    = byte(2)
-)
-
-type wanCoinSC struct {
-}
-
-func (c *wanCoinSC) RequiredGas(inputSize int) uint64 {
-	return params.EcrecoverGas
-}
-
-const (
-	Pre0dot1 = "100000000000000000"    //0.1
-	Pre0dot2 = "200000000000000000"    //0.2
-	Pre0dot5 = "500000000000000000"    //0.5
-	Pre1     = "1000000000000000000"   //1
-	Pre2     = "2000000000000000000"   //2
-	Pre5     = "5000000000000000000"   //5
-	Pre10    = "10000000000000000000"  //10
-	Pre20    = "20000000000000000000"  //20
-	Pre50    = "50000000000000000000"  //50
-	Pre100   = "100000000000000000000" //100
-)
-
-func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *Interpreter) []byte {
-	if in==nil || len(in)<4 {
-		return nil
-	}
-	
-	var methodIdArr [4]byte
-	copy(methodIdArr[:], in[:4])
-
-	if methodIdArr == buyIdArr {
-		return c.buyCoin(in[4:], contract, evm)
-	} else if methodIdArr == getCoinsIdArr {
-		return nil
-	} else if methodIdArr == refundIdArr {
-		return c.refund(in[4:], contract, evm)
-	}
-
-	return nil
+	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
 var (
-	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	// errNotOnCurve is returned if a point being unmarshalled as a bn256 elliptic
+	// curve point is not on the curve.
+	errNotOnCurve = errors.New("point not on elliptic curve")
+
+	// errInvalidCurvePoint is returned if a point being unmarshalled as a bn256
+	// elliptic curve point is invalid.
+	errInvalidCurvePoint = errors.New("invalid elliptic curve point")
 )
 
-func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *Interpreter) []byte {
-	var outStruct struct {
-		OtaAddr string
-		Value   *big.Int
+// newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
+// returning it, or an error if the point is invalid.
+func newCurvePoint(blob []byte) (*bn256.G1, error) {
+	p, onCurve := new(bn256.G1).Unmarshal(blob)
+	if !onCurve {
+		return nil, errNotOnCurve
 	}
-
-	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
-	if err != nil {
-		return nil
+	gx, gy, _, _ := p.CurvePoints()
+	if gx.Cmp(bn256.P) >= 0 || gy.Cmp(bn256.P) >= 0 {
+		return nil, errInvalidCurvePoint
 	}
-
-	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
-	if err != nil {
-		return nil
-	}
-
-	add, err := AddOTAIfNotExit(evm.env.StateDB, contract.value, wanAddr)
-	if err != nil || !add {
-		return nil
-	}
-
-	addrSrc := contract.CallerAddress
-
-	balance := evm.env.StateDB.GetBalance(addrSrc)
-
-	if balance.Cmp(contract.value) >= 0 {
-		// Need check contract value in  build in value sets
-		evm.env.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte("1")
-	}
-
-	return nil
+	return p, nil
 }
 
-
-func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
-	ss := strings.Split(s, "+")
-	ps := ss[0]
-	k := ss[1]
-	ws := ss[2]
-	qs := ss[3]
-
-	pa := strings.Split(ps, "&")
-	publickeys := make([]*ecdsa.PublicKey, 0)
-	for _, pi := range pa {
-		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+// newTwistPoint unmarshals a binary blob into a bn256 elliptic curve point,
+// returning it, or an error if the point is invalid.
+func newTwistPoint(blob []byte) (*bn256.G2, error) {
+	p, onCurve := new(bn256.G2).Unmarshal(blob)
+	if !onCurve {
+		return nil, errNotOnCurve
 	}
-	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
-	wa := strings.Split(ws, "&")
-	w := make([]*big.Int, 0)
-	for _, wi := range wa {
-		bi, _ := hexutil.DecodeBig(wi)
-		w = append(w, bi)
+	x2, y2, _, _ := p.CurvePoints()
+	if x2.Real().Cmp(bn256.P) >= 0 || x2.Imag().Cmp(bn256.P) >= 0 ||
+		y2.Real().Cmp(bn256.P) >= 0 || y2.Imag().Cmp(bn256.P) >= 0 {
+		return nil, errInvalidCurvePoint
 	}
-	qa := strings.Split(qs, "&")
-	q := make([]*big.Int, 0)
-	for _, qi := range qa {
-		bi, _ := hexutil.DecodeBig(qi)
-		q = append(q, bi)
-	}
-	return nil, publickeys, keyimgae, w, q
+	return p, nil
 }
 
-func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *Interpreter) []byte {
-	var RefundStruct struct {
-		RingSignedData string
-		Value          *big.Int
-	}
+// bn256Add implements a native elliptic curve point addition.
+type bn256Add struct{}
 
-	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (c *bn256Add) RequiredGas(input []byte) uint64 {
+	return params.Bn256AddGas
+}
+
+func (c *bn256Add) Run(input []byte) ([]byte, error) {
+	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
-		return nil
+		return nil, err
 	}
-
-	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
+	y, err := newCurvePoint(getData(input, 64, 64))
 	if err != nil {
-		return nil
+		return nil, err
 	}
+	res := new(bn256.G1)
+	res.Add(x, y)
+	return res.Marshal(), nil
+}
 
-	otaAXs := make([][]byte, 0, len(publickeys))
-	for i := 0; i < len(publickeys); i++ {
-		pkBytes := crypto.FromECDSAPub(publickeys[i])
-		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+// bn256ScalarMul implements a native elliptic curve scalar multiplication.
+type bn256ScalarMul struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
+	return params.Bn256ScalarMulGas
+}
+
+func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
+	p, err := newCurvePoint(getData(input, 0, 64))
+	if err != nil {
+		return nil, err
 	}
+	res := new(bn256.G1)
+	res.ScalarMult(p, new(big.Int).SetBytes(getData(input, 64, 32)))
+	return res.Marshal(), nil
+}
 
-	exit, balanceGet, unexit, err := BatCheckOTAExit(evm.env.StateDB, otaAXs)
-	if !exit || balanceGet == nil || balanceGet.Cmp(RefundStruct.Value) != 0 {
+var (
+	// true32Byte is returned if the bn256 pairing check succeeds.
+	true32Byte = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
+	// false32Byte is returned if the bn256 pairing check fails.
+	false32Byte = make([]byte, 32)
+
+	// errBadPairingInput is returned if the bn256 pairing input is invalid.
+	errBadPairingInput = errors.New("bad elliptic curve pairing size")
+)
+
+// bn256Pairing implements a pairing pre-compile for the bn256 curve
+type bn256Pairing struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
+	return params.Bn256PairingBaseGas + uint64(len(input)/192)*params.Bn256PairingPerPointGas
+}
+
+func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
+	// Handle some corner cases cheaply
+	if len(input)%192 > 0 {
+		return nil, errBadPairingInput
+	}
+	// Convert the input into a set of coordinates
+	var (
+		cs []*bn256.G1
+		ts []*bn256.G2
+	)
+	for i := 0; i < len(input); i += 192 {
+		c, err := newCurvePoint(input[i : i+64])
 		if err != nil {
-			log.Warn("verify mix ota fail. err:%s", err.Error())
+			return nil, err
 		}
-		if unexit != nil {
-			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		t, err := newTwistPoint(input[i+64 : i+192])
+		if err != nil {
+			return nil, err
 		}
-		if balanceGet != nil && balanceGet.Cmp(RefundStruct.Value) != 0 {
-			log.Warn("balance getting from ota is wrong! get:%s, expect:%s",
-				balanceGet.String(), RefundStruct.Value.String())
-		}
-
-		return nil
+		cs = append(cs, c)
+		ts = append(ts, t)
 	}
-
-	kix := crypto.FromECDSAPub(keyimage)
-	exit, _, err = CheckOTAImageExit(evm.env.StateDB, kix)
-	if err != nil || exit {
-		return nil
+	// Execute the pairing checks and return the results
+	if bn256.PairingCheck(cs, ts) {
+		return true32Byte, nil
 	}
-
-	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimage, ws, qs)
-	if !b {
-	} else { // For test
-		AddOTAImage(evm.env.StateDB, kix, RefundStruct.Value.Bytes())
-
-		addrSrc := contract.CallerAddress
-		evm.env.StateDB.AddBalance(addrSrc, RefundStruct.Value)
-		return []byte("1")
-	}
-
-	return nil
-}
-
-func verifyHash(all []byte, contract *Contract, evm *Interpreter, hashOrig []byte) bool {
-
-	from := contract.caller.Address()
-	hashBytes := make([]byte, len(from[:])+len(all)) //the use addr and the tx.data[0:4] as the hash input for ring sig verify
-	copy(hashBytes, from[:])
-	copy(hashBytes[common.AddressLength:], all)
-	//this hash is used to veriy the sender
-	hcal := common.BytesToHash(hashBytes).Bytes()
-
-	if bytes.Equal(hashOrig, hcal) {
-		return true
-	}
-
-	return false
-
+	return false32Byte, nil
 }

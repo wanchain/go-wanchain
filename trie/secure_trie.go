@@ -96,16 +96,6 @@ func (t *SecureTrie) Update(key, value []byte) {
 	}
 }
 
-func (t *SecureTrie) UpdateWithPrfix(key,prefix,value []byte) error {
-	if err := t.UpdateWithPrfix(key,prefix,value); err != nil {
-		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
-		return err
-	}
-
-	return nil
-
-}
-
 // TryUpdate associates key with value in the trie. Subsequent calls to
 // Get will return value. If value has length zero, any existing value
 // is deleted from the trie and calls to Get will return nil.
@@ -123,8 +113,6 @@ func (t *SecureTrie) TryUpdate(key, value []byte) error {
 	t.getSecKeyCache()[string(hk)] = common.CopyBytes(key)
 	return nil
 }
-
-
 
 // Delete removes any existing value for key from the trie.
 func (t *SecureTrie) Delete(key []byte) {
@@ -166,6 +154,11 @@ func (t *SecureTrie) Hash() common.Hash {
 
 func (t *SecureTrie) Root() []byte {
 	return t.trie.Root()
+}
+
+func (t *SecureTrie) Copy() *SecureTrie {
+	cpy := *t
+	return &cpy
 }
 
 // NodeIterator returns an iterator that returns nodes of the underlying trie. Iteration

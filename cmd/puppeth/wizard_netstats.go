@@ -22,9 +22,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/olekukonko/tablewriter"
 )
 
 // networkStats verifies the status of network components and generates a protip
@@ -39,7 +39,7 @@ func (w *wizard) networkStats(tips bool) {
 	// Iterate over all the specified hosts and check their status
 	stats := tablewriter.NewWriter(os.Stdout)
 	stats.SetHeader([]string{"Server", "IP", "Status", "Service", "Details"})
-	stats.SetColWidth(128)
+	stats.SetColWidth(100)
 
 	for server, pubkey := range w.conf.Servers {
 		client := w.servers[server]
@@ -129,7 +129,7 @@ func (w *wizard) networkStats(tips bool) {
 		}
 	}
 	// If a genesis block was found, load it into our configs
-	if protips.genesis != "" {
+	if protips.genesis != "" && w.conf.genesis == nil {
 		genesis := new(core.Genesis)
 		if err := json.Unmarshal([]byte(protips.genesis), genesis); err != nil {
 			log.Error("Failed to parse remote genesis", "err", err)

@@ -55,14 +55,6 @@ type (
 		account       *common.Address
 		key, prevalue common.Hash
 	}
-
-	// lzh add
-	storageByteArrayChange struct {
-		account  *common.Address
-		key      common.Hash
-		prevalue []byte
-	}
-
 	codeChange struct {
 		account            *common.Address
 		prevcode, prevhash []byte
@@ -79,8 +71,8 @@ type (
 		hash common.Hash
 	}
 	touchChange struct {
-		account *common.Address
-		prev    bool
+		account   *common.Address
+		prev      bool
 		prevDirty bool
 	}
 )
@@ -129,11 +121,6 @@ func (ch storageChange) undo(s *StateDB) {
 	s.getStateObject(*ch.account).setState(ch.key, ch.prevalue)
 }
 
-// lzh add
-func (ch storageByteArrayChange) undo(s *StateDB) {
-	s.getStateObject(*ch.account).setStateByteArray(ch.key, ch.prevalue)
-}
-
 func (ch refundChange) undo(s *StateDB) {
 	s.refund = ch.prev
 }
@@ -145,6 +132,7 @@ func (ch addLogChange) undo(s *StateDB) {
 	} else {
 		s.logs[ch.txhash] = logs[:len(logs)-1]
 	}
+	s.logSize--
 }
 
 func (ch addPreimageChange) undo(s *StateDB) {

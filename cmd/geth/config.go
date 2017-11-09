@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
+	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 )
 
 var (
@@ -42,7 +43,7 @@ var (
 		Name:        "dumpconfig",
 		Usage:       "Show configuration values",
 		ArgsUsage:   "",
-		Flags:       append(nodeFlags, rpcFlags...),
+		Flags:       append(append(nodeFlags, rpcFlags...), whisperFlags...),
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: `The dumpconfig command shows configuration values.`,
 	}
@@ -76,6 +77,7 @@ type ethstatsConfig struct {
 
 type gethConfig struct {
 	Eth      eth.Config
+	Shh      whisper.Config
 	Node     node.Config
 	Ethstats ethstatsConfig
 }
@@ -99,10 +101,9 @@ func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
-	cfg.HTTPModules = append(cfg.HTTPModules, "wan")
-	cfg.WSModules = append(cfg.WSModules, "eth")
-	cfg.IPCPath = "gwan.ipc"
+	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
+	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
+	cfg.IPCPath = "geth.ipc"
 	return cfg
 }
 
@@ -110,6 +111,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	// Load defaults.
 	cfg := gethConfig{
 		Eth:  eth.DefaultConfig,
+		Shh:  whisper.DefaultConfig,
 		Node: defaultNodeConfig(),
 	}
 
@@ -131,7 +133,19 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
 
+	utils.SetShhConfig(ctx, stack, &cfg.Shh)
+
 	return stack, cfg
+}
+
+// enableWhisper returns true in case one of the whisper flags is set.
+func enableWhisper(ctx *cli.Context) bool {
+	for _, flag := range whisperFlags {
+		if ctx.GlobalIsSet(flag.GetName()) {
+			return true
+		}
+	}
+	return false
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
@@ -139,11 +153,17 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 
 	utils.RegisterEthService(stack, &cfg.Eth)
 
-	// Whisper must be explicitly enabled, but is auto-enabled in --dev mode.
-	shhEnabled := ctx.GlobalBool(utils.WhisperEnabledFlag.Name)
+	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
+	shhEnabled := enableWhisper(ctx)
 	shhAutoEnabled := !ctx.GlobalIsSet(utils.WhisperEnabledFlag.Name) && ctx.GlobalIsSet(utils.DevModeFlag.Name)
 	if shhEnabled || shhAutoEnabled {
-		utils.RegisterShhService(stack)
+		if ctx.GlobalIsSet(utils.WhisperMaxMessageSizeFlag.Name) {
+			cfg.Shh.MaxMessageSize = uint32(ctx.Int(utils.WhisperMaxMessageSizeFlag.Name))
+		}
+		if ctx.GlobalIsSet(utils.WhisperMinPOWFlag.Name) {
+			cfg.Shh.MinimumAcceptedPOW = ctx.Float64(utils.WhisperMinPOWFlag.Name)
+		}
+		utils.RegisterShhService(stack, &cfg.Shh)
 	}
 
 	// Add the Ethereum Stats daemon if requested.

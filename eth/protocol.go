@@ -22,7 +22,9 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -94,12 +96,16 @@ var errorToString = map[int]string{
 }
 
 type txPool interface {
-	// AddBatch should add the given transactions to the pool.
-	AddBatch([]*types.Transaction) error
+	// AddRemotes should add the given transactions to the pool.
+	AddRemotes([]*types.Transaction) error
 
 	// Pending should return pending transactions.
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
+
+	// SubscribeTxPreEvent should return an event subscription of
+	// TxPreEvent and send events to the given channel.
+	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
 }
 
 // statusData is the network packet for the status message.

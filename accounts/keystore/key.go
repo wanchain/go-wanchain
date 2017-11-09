@@ -29,38 +29,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
-	//"math/big"
 )
 
 const (
 	version = 3
 )
 
-//r@zy: 修改为新的结构
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
 	Address common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
-	PrivateKey  *ecdsa.PrivateKey
-	PrivateKey2 *ecdsa.PrivateKey
-
-	WAddress common.WAddress
+	PrivateKey *ecdsa.PrivateKey
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
-	// Loads the encrypt key from disk
-	GetKeyEncrypt(addr common.Address, filename string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -75,12 +65,10 @@ type plainKeyJSON struct {
 }
 
 type encryptedKeyJSONV3 struct {
-	Address  string     `json:"address"`
-	Crypto   cryptoJSON `json:"crypto"`
-	Crypto2  cryptoJSON `json:"crypto2"`
-	Id       string     `json:"id"`
-	Version  int        `json:"version"`
-	WAddress string     `json:"waddress"`
+	Address string     `json:"address"`
+	Crypto  cryptoJSON `json:"crypto"`
+	Id      string     `json:"id"`
+	Version int        `json:"version"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -101,14 +89,6 @@ type cryptoJSON struct {
 
 type cipherparamsJSON struct {
 	IV string `json:"iv"`
-}
-
-type scryptParamsJSON struct {
-	N     int    `json:"n"`
-	R     int    `json:"r"`
-	P     int    `json:"p"`
-	DkLen int    `json:"dklen"`
-	Salt  string `json:"salt"`
 }
 
 func (k *Key) MarshalJSON() (j []byte, err error) {
@@ -136,227 +116,32 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	if err != nil {
 		return err
 	}
-
-	privkey, err := hex.DecodeString(keyJSON.PrivateKey)
+	privkey, err := crypto.HexToECDSA(keyJSON.PrivateKey)
 	if err != nil {
 		return err
 	}
 
 	k.Address = common.BytesToAddress(addr)
-	k.PrivateKey = crypto.ToECDSA(privkey)
+	k.PrivateKey = privkey
 
 	return nil
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, privateKeyECDSA2 *ecdsa.PrivateKey) *Key {
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
-		Id:          id,
-		Address:     crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
-		PrivateKey:  privateKeyECDSA,
-		PrivateKey2: privateKeyECDSA2,
+		Id:         id,
+		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		PrivateKey: privateKeyECDSA,
 	}
-
-	updateWaddress(key)
-
 	return key
 }
-
-// SerializeCompressed serializes a public key in a 33-byte compressed format. from btcec.
-//func isOdd(a *big.Int) bool {
-//	return a.Bit(0) == 1
-//}
-func PubkeySerializeCompressed(p *ecdsa.PublicKey) []byte {
-	const pubkeyCompressed byte = 0x2
-	b := make([]byte, 0, 33)
-	format := pubkeyCompressed
-	if p.Y.Bit(0) == 1 {
-		format |= 0x1
-	}
-	b = append(b, format)
-	//b = append(b, p.X.Bytes()...)
-	b = append(b, math.PaddedBigBytes(p.X, 32)...)
-	return b
-}
-func (k *Key) GenerateWaddress() common.WAddress {
-	var tmpWaddress common.WAddress
-	copy(tmpWaddress[0:33], PubkeySerializeCompressed(&k.PrivateKey.PublicKey))
-	copy(tmpWaddress[33:66], PubkeySerializeCompressed(&k.PrivateKey2.PublicKey))
-	return tmpWaddress
-}
-func GenerateWaddressFromPubkey(Pub1, Pub2 *ecdsa.PublicKey) common.WAddress {
-	var tmpWaddress common.WAddress
-	copy(tmpWaddress[0:33], PubkeySerializeCompressed(Pub1))
-	copy(tmpWaddress[33:66], PubkeySerializeCompressed(Pub2))
-	return tmpWaddress
-}
-
-// lzh add
-func updateWaddress(k *Key) {
-	k.WAddress = k.GenerateWaddress()
-}
-
-// lzh add
-func checkWaddressValid(k *Key) bool {
-	return k.WAddress == k.GenerateWaddress()
-}
-
-// lzh add
-func (k *Key) GetTwoPublicKeyRawStrs() ([]string, error) {
-	PK1, PK2, err := k.GetTwoPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	ret := common.TwoPublicKeyToHexSlice(PK1, PK2)
-	return ret, nil
-}
-
-// lzh add
-func (k *Key) GetTwoPublicKey() (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	return GeneratePublicKeyFromWadress(k.WAddress[:])
-}
-
-// lzh add
-func GeneratePublicKeyFromWadress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	pb := make([]byte, 33)
-	copy(pb[0:33], waddr[0:33])
-	curve := btcec.S256()
-	pk1, err := btcec.ParsePubKey(pb, curve)
-	if err != nil {
-		return nil, nil, err
-	}
-	copy(pb[0:33], waddr[33:66])
-	pk2, err2 := btcec.ParsePubKey(pb, curve)
-	if err2 != nil {
-		return nil, nil, err2
-	}
-	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
-}
-
-func WaddrFromUncompressed(waddr []byte, raw []byte) error {
-	pub := make([]byte, 65)
-	pub[0] = 0x04
-	copy(pub[1:], raw[0:64])
-	A := crypto.ToECDSAPub(pub)
-	copy(pub[1:], raw[64:])
-	B := crypto.ToECDSAPub(pub)
-	wd := GenerateWaddressFromPubkey(A, B)
-	copy(waddr, wd[:])
-	return nil
-}
-
-func ToWaddr(raw []byte) ([]byte, error) {
-	pub := make([]byte, 65)
-	pub[0] = 0x04
-	copy(pub[1:], raw[0:64])
-	A := crypto.ToECDSAPub(pub)
-	copy(pub[1:], raw[64:])
-	B := crypto.ToECDSAPub(pub)
-	wd := GenerateWaddressFromPubkey(A, B)
-	return wd[:], nil
-}
-
-func WaddrToUncompressed(waddr []byte) ([]byte, error) {
-	A, B, err := GeneratePublicKeyFromWadress(waddr)
-	if err != nil {
-		return nil, err
-	}
-
-	u := make([]byte, 128)
-	ax := math.PaddedBigBytes(A.X, 32)
-	ay := math.PaddedBigBytes(A.Y, 32)
-	bx := math.PaddedBigBytes(B.X, 32)
-	by := math.PaddedBigBytes(B.Y, 32)
-	copy(u[0:], ax[0:32])
-	copy(u[32:], ay[0:32])
-	copy(u[64:], bx[0:32])
-	copy(u[96:], by[0:32])
-
-	return u, nil
-}
-
-func WaddrToUncompressedFromString(waddr string) ([]byte, error) {
-	waddrBytes, err := hexutil.Decode(waddr)
-	if err != nil {
-		return nil, err
-	}
-	return WaddrToUncompressed(waddrBytes)
-}
-
-// lzh add
-func initPublicKeyFromWaddress(pk1, pk2 *ecdsa.PublicKey, waddress *common.WAddress) error {
-
-	PK1, PK2, err := GeneratePublicKeyFromWadress(waddress[:])
-	if err != nil {
-		return err
-	}
-	pk1.Curve = crypto.S256()
-	pk2.Curve = crypto.S256()
-
-	pk1.X = PK1.X
-	pk1.Y = PK1.Y
-	pk2.X = PK2.X
-	pk2.Y = PK2.Y
-
-	return nil
-}
-
-//// lzh add (ecdsa public key AX --> AY)
-//func GetEllipticYFromX(curve *elliptic.CurveParams, x *big.Int, positive bool) *big.Int  {
-//	// y² = x³ - 3x + b
-//	y2 := new(big.Int).Mul(x, x)
-//	y2.Mul(y2, x)
-//
-//	threeX := new(big.Int).Lsh(x, 1)
-//	threeX.Add(threeX, x)
-//
-//	y2.Sub(y2, threeX)
-//	y2.Add(y2, curve.B)
-//
-//	// ⌊√y2⌋ --> y
-//	y := new(big.Int).Sqrt(y2)
-//
-//
-//	if positive && y.Cmp(new(big.Int)) < 0 {
-//		y.Sub(new(big.Int), y)
-//	}
-//
-//	return y
-//}
-//
-//func TestGetEllipticYFromX() {
-//	xStr := "d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf"
-//	yStr := "6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
-//
-//	x, ok := new(big.Int).SetString(xStr, 16)
-//	if !ok {
-//		return
-//	}
-//
-//	strstr := common.Bytes2Hex(x.Bytes())
-//
-//	exY, ok := new(big.Int).SetString(yStr, 16)
-//	if !ok {
-//		return
-//	}
-//
-//	strstr = common.Bytes2Hex(exY.Bytes())
-//
-//	y := GetEllipticYFromX(crypto.S256().Params(), x, false)
-//	strstr = common.Bytes2Hex(y.Bytes())
-//
-//	if y.Cmp(exY) == 0 {
-//		log.Info("TestGetEllipticYFromX suc!", strstr)
-//	} else {
-//		log.Info("TestGetEllipticYFromX fail!", strstr)
-//	}
-//}
 
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
 // retry until the first byte is 0.
 func NewKeyForDirectICAP(rand io.Reader) *Key {
-	randBytes := make([]byte, 64*2)
+	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
 	if err != nil {
 		panic("key generation: could not read from random source: " + err.Error())
@@ -366,12 +151,7 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
-	var privateKeyECDSA2 *ecdsa.PrivateKey
-	privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), reader)
-	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
-	}
-	key := newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2)
+	key := newKeyFromECDSA(privateKeyECDSA)
 	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
 		return NewKeyForDirectICAP(rand)
 	}
@@ -383,13 +163,7 @@ func newKey(rand io.Reader) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	var privateKeyECDSA2 *ecdsa.PrivateKey
-	privateKeyECDSA2, err = ecdsa.GenerateKey(crypto.S256(), rand)
-	if err != nil {
-		return nil, err
-	}
-	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
+	return newKeyFromECDSA(privateKeyECDSA), nil
 }
 
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {

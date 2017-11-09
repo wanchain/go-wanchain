@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -106,7 +107,7 @@ func TestImportPreSaleKey(t *testing.T) {
 	// file content of a presale key file generated with:
 	// python pyethsaletool.py genwallet
 	// with password "foo"
-	fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"encseed2\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\",\"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
+	fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
 	pass := "foo"
 	account, _, err := importPreSaleKey(ks, []byte(fileContent), pass)
 	if err != nil {
@@ -140,21 +141,32 @@ func TestV3_PBKDF2_1(t *testing.T) {
 	testDecryptV3(tests["wikipage_test_vector_pbkdf2"], t)
 }
 
+var testsSubmodule = filepath.Join("..", "..", "tests", "testdata", "KeyStoreTests")
+
+func skipIfSubmoduleMissing(t *testing.T) {
+	if !common.FileExist(testsSubmodule) {
+		t.Skipf("can't find JSON tests from submodule at %s", testsSubmodule)
+	}
+}
+
 func TestV3_PBKDF2_2(t *testing.T) {
+	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3("../../tests/files/KeyStoreTests/basic_tests.json", t)
+	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
 	testDecryptV3(tests["test1"], t)
 }
 
 func TestV3_PBKDF2_3(t *testing.T) {
+	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3("../../tests/files/KeyStoreTests/basic_tests.json", t)
+	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
 	testDecryptV3(tests["python_generated_test_with_odd_iv"], t)
 }
 
 func TestV3_PBKDF2_4(t *testing.T) {
+	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3("../../tests/files/KeyStoreTests/basic_tests.json", t)
+	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
 	testDecryptV3(tests["evilnonce"], t)
 }
 
@@ -165,8 +177,9 @@ func TestV3_Scrypt_1(t *testing.T) {
 }
 
 func TestV3_Scrypt_2(t *testing.T) {
+	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3("../../tests/files/KeyStoreTests/basic_tests.json", t)
+	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
 	testDecryptV3(tests["test2"], t)
 }
 
@@ -193,7 +206,7 @@ func TestV1_2(t *testing.T) {
 }
 
 func testDecryptV3(test KeyStoreTestV3, t *testing.T) {
-	privBytes, _, _, err := decryptKeyV3(&test.Json, test.Password)
+	privBytes, _, err := decryptKeyV3(&test.Json, test.Password)
 	if err != nil {
 		t.Fatal(err)
 	}

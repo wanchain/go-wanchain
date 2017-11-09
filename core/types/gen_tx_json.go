@@ -6,17 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
-	//"crypto/ecdsa"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	//"github.com/wanchain/go-wanchain/crypto"
 )
-//r@zy:如果不能实现根据条件的自动marshal,unmarshal部分字段，就把这个硬编码
-//TeemoGuo: todo  如何适应OTA格式交易
+
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		Txtype       hexutil.Uint64  `json:"Txtype"    gencodec:"required"`
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
@@ -26,14 +22,9 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		V            *hexutil.Big    `json:"v" gencodec:"required"`
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
-		PublicKeys   []*hexutil.Big  `json:"publicKeys,omitempty"`
-		KeyImage     []*hexutil.Big  `json:"keyImage,omitempty"`
-		Wrandom      []*hexutil.Big  `json:"w_random,omitempty"`
-		Qrandom      []*hexutil.Big  `json:"q_random,omitempty"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
 	var enc txdata
-	enc.Txtype = hexutil.Uint64(t.Txtype)
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
 	enc.Price = (*hexutil.Big)(t.Price)
 	enc.GasLimit = (*hexutil.Big)(t.GasLimit)
@@ -43,28 +34,12 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.V = (*hexutil.Big)(t.V)
 	enc.R = (*hexutil.Big)(t.R)
 	enc.S = (*hexutil.Big)(t.S)
-
-	if t.Txtype == uint64(0) {
-		/*enc.PublicKeys = crypto.PublicKeyToInt(t.PublicKeys...)
-
-		for i := 0; i < len(t.PublicKeys); i++ {
-			w := t.W_random[i]
-			q := t.Q_random[i]
-
-			enc.Wrandom = append(enc.Wrandom, (*hexutil.Big)(w))
-			enc.Qrandom = append(enc.Qrandom, (*hexutil.Big)(q))
-		}
-		enc.KeyImage = crypto.PublicKeyToInt(t.KeyImage)
-		*/
-	}
 	enc.Hash = t.Hash
 	return json.Marshal(&enc)
 }
 
-//TeemoGuo: todo  如何适应OTA格式交易
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		Txtype       *hexutil.Uint64 `json:"Txtype"    gencodec:"required"`
 		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
@@ -75,19 +50,11 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
-		PublicKeys   []*hexutil.Big  `json:"publicKeys,omitempty"`
-		KeyImage     []*hexutil.Big  `json:"keyImage,omitempty"`
-		Wrandom      []*hexutil.Big  `json:"w_random,omitempty"`
-		Qrandom      []*hexutil.Big  `json:"q_random,omitempty"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.Txtype == nil {
-		return errors.New("missing required field 'Txtype' for txdata")
-	}
-	t.Txtype = uint64(*dec.Txtype)
 	if dec.AccountNonce == nil {
 		return errors.New("missing required field 'nonce' for txdata")
 	}
@@ -123,176 +90,8 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 's' for txdata")
 	}
 	t.S = (*big.Int)(dec.S)
-
-	if t.Txtype == uint64(6) {/*
-		t.PublicKeys = *new([]*ecdsa.PublicKey)
-		t.W_random = *new([]*big.Int)
-		t.Q_random = *new([]*big.Int)
-		t.KeyImage = new(ecdsa.PublicKey)
-
-		for i := 0; i < len(dec.PublicKeys)/2; i++ {
-			buffer := new(ecdsa.PublicKey)
-			t.PublicKeys = append(t.PublicKeys, buffer)
-			t.PublicKeys[i].X = (*big.Int)(dec.PublicKeys[2*i])
-			t.PublicKeys[i].Y = (*big.Int)(dec.PublicKeys[2*i+1])
-			t.PublicKeys[i].Curve = crypto.S256()
-			buffer1 := new(big.Int)
-			t.W_random = append(t.W_random, buffer1)
-			t.W_random[i] = (*big.Int)(dec.Wrandom[i])
-			buffer2 := new(big.Int)
-			t.Q_random = append(t.Q_random, buffer2)
-			t.Q_random[i] = (*big.Int)(dec.Qrandom[i])
-		}
-
-		t.KeyImage.X = (*big.Int)(dec.KeyImage[0])
-		t.KeyImage.Y = (*big.Int)(dec.KeyImage[1])
-		t.KeyImage.Curve = crypto.S256()*/
-	}
 	if dec.Hash != nil {
 		t.Hash = dec.Hash
 	}
-	return nil
-}
-
-// TeemoGuo add: 以下为新增Payload数据结构的MarshalJSON和UnmarshalJSON
-
-//2528 Shi TeemoGuo add
-type Payloadata struct {
-	From  []*hexutil.Big `json:"from"    gencodec:"required"`
-	To    []*hexutil.Big `json:"to"      gencodec:"required"`
-	Value *hexutil.Big   `json:"value"      gencodec:"required"`
-	Sig   hexutil.Bytes  `json:"sig"      gencodec:"required"`
-}
-
-func (p Payloadata) MarshalJSON() ([]byte, error) {
-	/*
-	type Payloadata struct {
-		From  []*hexutil.Big `json:"from"    gencodec:"required"`
-		To    []*hexutil.Big `json:"to"      gencodec:"required"`
-		Value *hexutil.Big   `json:"value"      gencodec:"required"`
-		Sig   hexutil.Bytes  `json:"sig"      gencodec:"required"`
-	}
-	var pd Payloadata
-	pd.From = crypto.PublicKeyToInt(&p.From.PrivateKey.PublicKey)
-	pd.From = append(pd.From, crypto.PublicKeyToInt(&p.From.PrivateKey2.PublicKey)[0])
-	pd.From = append(pd.From, crypto.PublicKeyToInt(&p.From.PrivateKey2.PublicKey)[1])
-
-	pd.To = crypto.PublicKeyToInt(&p.To.PrivateKey.PublicKey)
-	pd.To = append(pd.To, crypto.PublicKeyToInt(&p.To.PrivateKey2.PublicKey)[0])
-	pd.To = append(pd.To, crypto.PublicKeyToInt(&p.To.PrivateKey2.PublicKey)[1])
-	pd.Value = (*hexutil.Big)(p.Value)
-	pd.Sig = p.Sig
-	return json.Marshal(&pd)
-	*/
-	return nil, nil
-}
-
-//2528 Shi TeemoGuo add
-func (p *Payloadata) UnmarshalJSON(input []byte) error {
-	/*
-	type Payloadata struct {
-		From  []*hexutil.Big `json:"from"    gencodec:"required"`
-		To    []*hexutil.Big `json:"to"      gencodec:"required"`
-		Value *hexutil.Big   `json:"value"      gencodec:"required"`
-		Sig   hexutil.Bytes  `json:"sig"      gencodec:"required"`
-	}
-	var pd Payloadata
-	if err := json.Unmarshal(input, &pd); err != nil {
-		return err
-	}
-	if pd.From == nil {
-		return errors.New("missing required field 'from' for payloadata")
-	}
-	if pd.To == nil {
-		return errors.New("missing required field 'to' for payloadata")
-	}
-	if pd.Value == nil {
-		return errors.New("missing required field 'Value' for payloadata")
-	}
-	if pd.Sig == nil {
-		return errors.New("missing required field 'sig' for payloadata")
-	}
-
-	temp := *new([]*ecdsa.PublicKey)
-	temp2 := *new([]*ecdsa.PublicKey)
-	for i := 0; i < len(pd.From)/2; i++ {
-		buffer := new(ecdsa.PublicKey)
-		temp = append(temp, buffer)
-		temp[i].X = (*big.Int)(pd.From[2*i])
-		temp[i].Y = (*big.Int)(pd.From[2*i+1])
-		temp[i].Curve = crypto.S256()
-		buffer2 := new(ecdsa.PublicKey)
-		temp2 = append(temp2, buffer2)
-		temp2[i].X = (*big.Int)(pd.To[2*i])
-		temp2[i].Y = (*big.Int)(pd.To[2*i+1])
-		temp2[i].Curve = crypto.S256()
-	}
-	p.From = new(keystore.Key)
-	p.To = new(keystore.Key)
-	p.From.PrivateKey = new(ecdsa.PrivateKey)
-	p.From.PrivateKey2 = new(ecdsa.PrivateKey)
-	p.To.PrivateKey = new(ecdsa.PrivateKey)
-	p.To.PrivateKey2 = new(ecdsa.PrivateKey)
-
-	p.From.PrivateKey.PublicKey = *temp[0]
-	p.From.PrivateKey.D = new(big.Int).SetInt64(0)
-	p.From.PrivateKey2.PublicKey = *temp[1]
-	p.From.PrivateKey2.D = new(big.Int).SetInt64(0)
-	p.From.Id = make([]byte, 0)
-	p.From.Address = crypto.PubkeyToAddress(p.From.PrivateKey.PublicKey)
-
-	p.To.PrivateKey.PublicKey = *temp2[0]
-	p.To.PrivateKey.D = new(big.Int).SetInt64(0)
-	p.To.PrivateKey2.PublicKey = *temp2[1]
-	p.To.PrivateKey2.D = new(big.Int).SetInt64(0)
-	p.To.Id = make([]byte, 0)
-	p.To.Address = crypto.PubkeyToAddress(p.To.PrivateKey.PublicKey)
-
-	p.Value = (*big.Int)(pd.Value)
-
-	p.Sig = pd.Sig*/
-
-	return nil
-}
-
-// TeemoGuo add: 以下为新增PdataEnckey数据结构的MarshalJSON和UnmarshalJSON
-
-//2528 Shi TeemoGuo add
-type PdataEnckey struct {
-	Enckey hexutil.Bytes `json:"enckey"      gencodec:"required"`
-	Pd     hexutil.Bytes `json:"pd"          gencodec:"required"`
-}
-
-func (p PdataEnckey) MarshalJSON() ([]byte, error) {
-	type PdataEnckey struct {
-		Enckey hexutil.Bytes `json:"enckey"      gencodec:"required"`
-		Pd     hexutil.Bytes `json:"pd"          gencodec:"required"`
-	}
-	var pdEnc PdataEnckey
-	pdEnc.Enckey = p.Enckey
-	pdEnc.Pd = p.Pd
-	return json.Marshal(&pdEnc)
-}
-
-//2528 Shi TeemoGuo add
-func (p *PdataEnckey) UnmarshalJSON(input []byte) error {
-	type PdataEncKey struct {
-		Enckey hexutil.Bytes `json:"enckey"      gencodec:"required"`
-		Pd     hexutil.Bytes `json:"pd"      gencodec:"required"`
-	}
-	var pdEnc PdataEncKey
-	if err := json.Unmarshal(input, &pdEnc); err != nil {
-		return err
-	}
-	if pdEnc.Enckey == nil {
-		return errors.New("missing required field 'enckey' for PdataEncKey")
-	}
-	if pdEnc.Pd == nil {
-		return errors.New("missing required field 'pd' for PdataEncKey")
-	}
-
-	p.Enckey = pdEnc.Enckey
-	p.Pd = pdEnc.Pd
-
 	return nil
 }

@@ -23,13 +23,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
-var MetricsEnabledFlag = "metrics"
+const MetricsEnabledFlag = "metrics"
 
 // Enabled is the flag specifying if metrics are enable or not.
 var Enabled = false

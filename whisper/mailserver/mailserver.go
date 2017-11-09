@@ -21,14 +21,14 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type WMailServer struct {
@@ -104,7 +104,7 @@ func (s *WMailServer) Archive(env *whisper.Envelope) {
 
 func (s *WMailServer) DeliverMail(peer *whisper.Peer, request *whisper.Envelope) {
 	if peer == nil {
-		log.Error(fmt.Sprint("Whisper peer is nil"))
+		log.Error("Whisper peer is nil")
 		return
 	}
 

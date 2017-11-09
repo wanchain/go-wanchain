@@ -45,13 +45,6 @@ func (ks keyStorePlain) GetKey(addr common.Address, filename, auth string) (*Key
 	return key, nil
 }
 
-// lzh add
-func (ks keyStorePlain) GetKeyEncrypt(addr common.Address, filename string) (*Key, error) {
-    // ****************************tmp not imple
-    return nil, nil
-}
-
-
 func (ks keyStorePlain) StoreKey(filename string, key *Key, auth string) error {
 	content, err := json.Marshal(key)
 	if err != nil {

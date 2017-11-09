@@ -20,10 +20,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/swarm/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/swarm/storage"
 )
 
 const counterKeyPrefix = 0x01

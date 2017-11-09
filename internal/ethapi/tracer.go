@@ -21,11 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
+	"github.com/robertkrimen/otto"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/robertkrimen/otto"
 )
 
 // fakeBig is used to provide an interface to Javascript for 'big.NewInt'
@@ -341,6 +342,12 @@ func (jst *JavascriptTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, 
 			jst.err = wrapError("step", err)
 		}
 	}
+	return nil
+}
+
+// CaptureEnd is called after the call finishes
+func (jst *JavascriptTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+	//TODO! @Arachnid please figure out of there's anything we can use this method for
 	return nil
 }
 

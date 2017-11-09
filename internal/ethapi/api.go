@@ -17,9 +17,7 @@
 package ethapi
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -38,21 +36,16 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	//"github.com/tendermint/go-crypto/keys/tx"
-	"crypto/ecdsa"
-	"strconv"
 )
 
 const (
 	defaultGas      = 90000
 	defaultGasPrice = 50 * params.Shannon
-	emptyHex        = "0x"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -61,7 +54,7 @@ type PublicEthereumAPI struct {
 	b Backend
 }
 
-// NewPublicEthereumAPI creates a new Etheruem protocol API.
+// NewPublicEthereumAPI creates a new Ethereum protocol API.
 func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
 	return &PublicEthereumAPI{b}
 }
@@ -121,16 +114,16 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]*RPCTransac
 	// Flatten the pending transactions
 	for account, txs := range pending {
 		dump := make(map[string]*RPCTransaction)
-		for nonce, tx := range txs {
-			dump[fmt.Sprintf("%d", nonce)] = newRPCPendingTransaction(tx)
+		for _, tx := range txs {
+			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
 		}
 		content["pending"][account.Hex()] = dump
 	}
 	// Flatten the queued transactions
 	for account, txs := range queue {
 		dump := make(map[string]*RPCTransaction)
-		for nonce, tx := range txs {
-			dump[fmt.Sprintf("%d", nonce)] = newRPCPendingTransaction(tx)
+		for _, tx := range txs {
+			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
 		}
 		content["queued"][account.Hex()] = dump
 	}
@@ -165,16 +158,16 @@ func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 	// Flatten the pending transactions
 	for account, txs := range pending {
 		dump := make(map[string]string)
-		for nonce, tx := range txs {
-			dump[fmt.Sprintf("%d", nonce)] = format(tx)
+		for _, tx := range txs {
+			dump[fmt.Sprintf("%d", tx.Nonce())] = format(tx)
 		}
 		content["pending"][account.Hex()] = dump
 	}
 	// Flatten the queued transactions
 	for account, txs := range queue {
 		dump := make(map[string]string)
-		for nonce, tx := range txs {
-			dump[fmt.Sprintf("%d", nonce)] = format(tx)
+		for _, tx := range txs {
+			dump[fmt.Sprintf("%d", tx.Nonce())] = format(tx)
 		}
 		content["queued"][account.Hex()] = dump
 	}
@@ -207,15 +200,17 @@ func (s *PublicAccountAPI) Accounts() []common.Address {
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
 type PrivateAccountAPI struct {
-	am *accounts.Manager
-	b  Backend
+	am        *accounts.Manager
+	nonceLock *AddrLocker
+	b         Backend
 }
 
 // NewPrivateAccountAPI create a new PrivateAccountAPI.
-func NewPrivateAccountAPI(b Backend) *PrivateAccountAPI {
+func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 	return &PrivateAccountAPI{
-		am: b.AccountManager(),
-		b:  b,
+		am:        b.AccountManager(),
+		nonceLock: nonceLock,
+		b:         b,
 	}
 }
 
@@ -235,20 +230,43 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 type rawWallet struct {
 	URL      string             `json:"url"`
 	Status   string             `json:"status"`
-	Accounts []accounts.Account `json:"accounts"`
+	Failure  string             `json:"failure,omitempty"`
+	Accounts []accounts.Account `json:"accounts,omitempty"`
 }
 
 // ListWallets will return a list of wallets this node manages.
 func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 	wallets := make([]rawWallet, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
-		wallets = append(wallets, rawWallet{
+		status, failure := wallet.Status()
+
+		raw := rawWallet{
 			URL:      wallet.URL().String(),
-			Status:   wallet.Status(),
+			Status:   status,
 			Accounts: wallet.Accounts(),
-		})
+		}
+		if failure != nil {
+			raw.Failure = failure.Error()
+		}
+		wallets = append(wallets, raw)
 	}
 	return wallets
+}
+
+// OpenWallet initiates a hardware wallet opening procedure, establishing a USB
+// connection and attempting to authenticate via the provided passphrase. Note,
+// the method may return an extra challenge requiring a second open (e.g. the
+// Trezor PIN matrix challenge).
+func (s *PrivateAccountAPI) OpenWallet(url string, passphrase *string) error {
+	wallet, err := s.am.Wallet(url)
+	if err != nil {
+		return err
+	}
+	pass := ""
+	if passphrase != nil {
+		pass = *passphrase
+	}
+	return wallet.Open(pass)
 }
 
 // DeriveAccount requests a HD wallet to derive a new account, optionally pinning
@@ -285,13 +303,11 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
-	hexkey, err := hex.DecodeString(privkey)
+	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
-
-	//cr&zy TODO:
-	acc, err := fetchKeystore(s.am).ImportECDSA(crypto.ToECDSA(hexkey), crypto.ToECDSA(hexkey), password)
+	acc, err := fetchKeystore(s.am).ImportECDSA(key, password)
 	return acc.Address, err
 }
 
@@ -321,15 +337,23 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
 	wallet, err := s.am.Find(account)
 	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
@@ -424,7 +448,7 @@ type PublicBlockChainAPI struct {
 	b Backend
 }
 
-// NewPublicBlockChainAPI creates a new Etheruem blockchain API.
+// NewPublicBlockChainAPI creates a new Ethereum blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
 }
@@ -443,28 +467,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	if state == nil || err != nil {
 		return nil, err
 	}
-
-	amount, _ := state.GetBalance(ctx, address)
-	if big.NewInt(0).Cmp(amount) == 0 {
-		fmt.Println("the account balance is 0")
-	}
-	return state.GetBalance(ctx, address)
-}
-
-// GetOTABalance returns OTA balance
-func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string) (*big.Int, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
-	if state == nil || err != nil {
-		return nil, err
-	}
-
-	otaWAddrByte := common.FromHex(otaWAddr)
-	if otaWAddrByte == nil || len(otaWAddrByte) != common.WAddressLength {
-		return nil, errors.New("invalid ota wan address!")
-	}
-
-	return state.GetOTABalance(otaWAddrByte)
-
+	b := state.GetBalance(address)
+	return b, state.Error()
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -545,52 +549,26 @@ func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, bloc
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
-func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (string, error) {
+func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
-		return "", err
+		return nil, err
 	}
-	res, err := state.GetCode(ctx, address)
-	if len(res) == 0 || err != nil { // backwards compatibility
-		return "0x", err
-	}
-	return common.ToHex(res), nil
+	code := state.GetCode(address)
+	return code, state.Error()
 }
 
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
 // numbers are also allowed.
-func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNr rpc.BlockNumber) (string, error) {
+func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
-		return "0x", err
+		return nil, err
 	}
-	res, err := state.GetState(ctx, address, common.HexToHash(key))
-	if err != nil {
-		return "0x", err
-	}
-	return res.Hex(), nil
+	res := state.GetState(address, common.HexToHash(key))
+	return res[:], state.Error()
 }
-
-// callmsg is the message type used for call transitions.
-type callmsg struct {
-	addr          common.Address
-	to            *common.Address
-	gas, gasPrice *big.Int
-	value         *big.Int
-	data          []byte
-}
-
-// accessor boilerplate to implement core.Message
-func (m callmsg) From() (common.Address, error)         { return m.addr, nil }
-func (m callmsg) FromFrontier() (common.Address, error) { return m.addr, nil }
-func (m callmsg) Nonce() uint64                         { return 0 }
-func (m callmsg) CheckNonce() bool                      { return false }
-func (m callmsg) To() *common.Address                   { return m.to }
-func (m callmsg) GasPrice() *big.Int                    { return m.gasPrice }
-func (m callmsg) Gas() *big.Int                         { return m.gas }
-func (m callmsg) Value() *big.Int                       { return m.value }
-func (m callmsg) Data() []byte                          { return m.data }
 
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
@@ -602,12 +580,12 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
-func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, error) {
+func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, bool, error) {
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
-		return nil, common.Big0, err
+		return nil, common.Big0, false, err
 	}
 	// Set sender address or use a default if none specified
 	addr := args.From
@@ -645,39 +623,40 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Get a new instance of the EVM.
 	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
-		return nil, common.Big0, err
+		return nil, common.Big0, false, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
 	go func() {
-		select {
-		case <-ctx.Done():
-			evm.Cancel()
-		}
+		<-ctx.Done()
+		evm.Cancel()
 	}()
 
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(core.GasPool).AddGas(math.MaxBig256)
-	res, gas, err := core.ApplyMessage(evm, msg, gp)
+	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
 	if err := vmError(); err != nil {
-		return nil, common.Big0, err
+		return nil, common.Big0, false, err
 	}
-	return res, gas, err
+	return res, gas, failed, err
 }
 
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, err := s.doCall(ctx, args, blockNr, vm.Config{DisableGasMetering: true})
+	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{DisableGasMetering: true})
 	return (hexutil.Bytes)(result), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*hexutil.Big, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
-	var lo, hi uint64
-	if (*big.Int)(&args.Gas).Sign() != 0 {
+	var (
+		lo uint64 = params.TxGas - 1
+		hi uint64
+	)
+	if (*big.Int)(&args.Gas).Uint64() >= params.TxGas {
 		hi = (*big.Int)(&args.Gas).Uint64()
 	} else {
 		// Retrieve the current pending block to act as the gas ceiling
@@ -692,10 +671,10 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 		mid := (hi + lo) / 2
 		(*big.Int)(&args.Gas).SetUint64(mid)
 
-		_, gas, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{})
+		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{})
 
-		// If the transaction became invalid or used all the gas (failed), raise the gas limit
-		if err != nil || gas.Cmp((*big.Int)(&args.Gas)) == 0 {
+		// If the transaction became invalid or execution failed, raise the gas limit
+		if err != nil || failed {
 			lo = mid
 			continue
 		}
@@ -706,10 +685,11 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM
-// while replaying a transaction in debug mode as well as the amount of
-// gas used and the return value
+// while replaying a transaction in debug mode as well as transaction
+// execution status, the amount of gas used and the return value
 type ExecutionResult struct {
 	Gas         *big.Int       `json:"gas"`
+	Failed      bool           `json:"failed"`
 	ReturnValue string         `json:"returnValue"`
 	StructLogs  []StructLogRes `json:"structLogs"`
 }
@@ -791,7 +771,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 
 		if fullTx {
 			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newRPCTransaction(b, tx.Hash())
+				return newRPCTransactionFromBlockHash(b, tx.Hash()), nil
 			}
 		}
 
@@ -834,15 +814,17 @@ type RPCTransaction struct {
 	S                *hexutil.Big    `json:"s"`
 }
 
-// newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
-func newRPCPendingTransaction(tx *types.Transaction) *RPCTransaction {
+// newRPCTransaction returns a transaction that will serialize to the RPC
+// representation, with the given location metadata set (if available).
+func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
 	var signer types.Signer = types.FrontierSigner{}
 	if tx.Protected() {
 		signer = types.NewEIP155Signer(tx.ChainId())
 	}
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
-	return &RPCTransaction{
+
+	result := &RPCTransaction{
 		From:     from,
 		Gas:      (*hexutil.Big)(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
@@ -855,86 +837,57 @@ func newRPCPendingTransaction(tx *types.Transaction) *RPCTransaction {
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
 	}
+	if blockHash != (common.Hash{}) {
+		result.BlockHash = blockHash
+		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+		result.TransactionIndex = hexutil.Uint(index)
+	}
+	return result
 }
 
-// newRPCTransaction returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockIndex(b *types.Block, txIndex uint) (*RPCTransaction, error) {
-	if txIndex < uint(len(b.Transactions())) {
-		tx := b.Transactions()[txIndex]
-		var signer types.Signer = types.FrontierSigner{}
-		if tx.Protected() {
-			signer = types.NewEIP155Signer(tx.ChainId())
-		}
-		from, _ := types.Sender(signer, tx)
-		v, r, s := tx.RawSignatureValues()
-		return &RPCTransaction{
-			BlockHash:        b.Hash(),
-			BlockNumber:      (*hexutil.Big)(b.Number()),
-			From:             from,
-			Gas:              (*hexutil.Big)(tx.Gas()),
-			GasPrice:         (*hexutil.Big)(tx.GasPrice()),
-			Hash:             tx.Hash(),
-			Input:            hexutil.Bytes(tx.Data()),
-			Nonce:            hexutil.Uint64(tx.Nonce()),
-			To:               tx.To(),
-			TransactionIndex: hexutil.Uint(txIndex),
-			Value:            (*hexutil.Big)(tx.Value()),
-			V:                (*hexutil.Big)(v),
-			R:                (*hexutil.Big)(r),
-			S:                (*hexutil.Big)(s),
-		}, nil
-	}
+// newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
+func newRPCPendingTransaction(tx *types.Transaction) *RPCTransaction {
+	return newRPCTransaction(tx, common.Hash{}, 0, 0)
+}
 
-	return nil, nil
+// newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
+func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) *RPCTransaction {
+	txs := b.Transactions()
+	if index >= uint64(len(txs)) {
+		return nil
+	}
+	return newRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
 }
 
 // newRPCRawTransactionFromBlockIndex returns the bytes of a transaction given a block and a transaction index.
-func newRPCRawTransactionFromBlockIndex(b *types.Block, txIndex uint) (hexutil.Bytes, error) {
-	if txIndex < uint(len(b.Transactions())) {
-		tx := b.Transactions()[txIndex]
-		return rlp.EncodeToBytes(tx)
+func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) hexutil.Bytes {
+	txs := b.Transactions()
+	if index >= uint64(len(txs)) {
+		return nil
 	}
-
-	return nil, nil
+	blob, _ := rlp.EncodeToBytes(txs[index])
+	return blob
 }
 
-// newRPCTransaction returns a transaction that will serialize to the RPC representation.
-func newRPCTransaction(b *types.Block, txHash common.Hash) (*RPCTransaction, error) {
+// newRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
+func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *RPCTransaction {
 	for idx, tx := range b.Transactions() {
-		if tx.Hash() == txHash {
-			return newRPCTransactionFromBlockIndex(b, uint(idx))
+		if tx.Hash() == hash {
+			return newRPCTransactionFromBlockIndex(b, uint64(idx))
 		}
 	}
-
-	return nil, nil
+	return nil
 }
 
 // PublicTransactionPoolAPI exposes methods for the RPC interface
 type PublicTransactionPoolAPI struct {
-	b Backend
+	b         Backend
+	nonceLock *AddrLocker
 }
 
 // NewPublicTransactionPoolAPI creates a new RPC service with methods specific for the transaction pool.
-func NewPublicTransactionPoolAPI(b Backend) *PublicTransactionPoolAPI {
-	return &PublicTransactionPoolAPI{b}
-}
-
-func getTransaction(chainDb ethdb.Database, b Backend, txHash common.Hash) (*types.Transaction, bool, error) {
-	txData, err := chainDb.Get(txHash.Bytes())
-	isPending := false
-	tx := new(types.Transaction)
-
-	if err == nil && len(txData) > 0 {
-		if err := rlp.DecodeBytes(txData, tx); err != nil {
-			return nil, isPending, err
-		}
-	} else {
-		// pending transaction?
-		tx = b.GetPoolTransaction(txHash)
-		isPending = true
-	}
-
-	return tx, isPending, nil
+func NewPublicTransactionPoolAPI(b Backend, nonceLock *AddrLocker) *PublicTransactionPoolAPI {
+	return &PublicTransactionPoolAPI{b, nonceLock}
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
@@ -956,35 +909,35 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Co
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (*RPCTransaction, error) {
+func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *RPCTransaction {
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		return newRPCTransactionFromBlockIndex(block, uint(index))
+		return newRPCTransactionFromBlockIndex(block, uint64(index))
 	}
-	return nil, nil
+	return nil
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (*RPCTransaction, error) {
+func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *RPCTransaction {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
-		return newRPCTransactionFromBlockIndex(block, uint(index))
+		return newRPCTransactionFromBlockIndex(block, uint64(index))
 	}
-	return nil, nil
+	return nil
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
-func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (hexutil.Bytes, error) {
+func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		return newRPCRawTransactionFromBlockIndex(block, uint(index))
+		return newRPCRawTransactionFromBlockIndex(block, uint64(index))
 	}
-	return nil, nil
+	return nil
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
-func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (hexutil.Bytes, error) {
+func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
-		return newRPCRawTransactionFromBlockIndex(block, uint(index))
+		return newRPCRawTransactionFromBlockIndex(block, uint64(index))
 	}
-	return nil, nil
+	return nil
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number
@@ -993,97 +946,46 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	if state == nil || err != nil {
 		return nil, err
 	}
-	nonce, err := state.GetNonce(ctx, address)
-	if err != nil {
-		return nil, err
-	}
-	return (*hexutil.Uint64)(&nonce), nil
-}
-
-// getTransactionBlockData fetches the meta data for the given transaction from the chain database. This is useful to
-// retrieve block information for a hash. It returns the block hash, block index and transaction index.
-func getTransactionBlockData(chainDb ethdb.Database, txHash common.Hash) (common.Hash, uint64, uint64, error) {
-	var txBlock struct {
-		BlockHash  common.Hash
-		BlockIndex uint64
-		Index      uint64
-	}
-
-	blockData, err := chainDb.Get(append(txHash.Bytes(), 0x0001))
-	if err != nil {
-		return common.Hash{}, uint64(0), uint64(0), err
-	}
-
-	reader := bytes.NewReader(blockData)
-	if err = rlp.Decode(reader, &txBlock); err != nil {
-		return common.Hash{}, uint64(0), uint64(0), err
-	}
-
-	return txBlock.BlockHash, txBlock.BlockIndex, txBlock.Index, nil
+	nonce := state.GetNonce(address)
+	return (*hexutil.Uint64)(&nonce), state.Error()
 }
 
 // GetTransactionByHash returns the transaction for the given hash
-func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*RPCTransaction, error) {
-	var tx *types.Transaction
-	var isPending bool
-	var err error
-
-	if tx, isPending, err = getTransaction(s.b.ChainDb(), s.b, hash); err != nil {
-		log.Debug("Failed to retrieve transaction", "hash", hash, "err", err)
-		return nil, nil
-	} else if tx == nil {
-		return nil, nil
+func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) *RPCTransaction {
+	// Try to return an already finalized transaction
+	if tx, blockHash, blockNumber, index := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
+		return newRPCTransaction(tx, blockHash, blockNumber, index)
 	}
-	if isPending {
-		return newRPCPendingTransaction(tx), nil
+	// No finalized transaction, try to retrieve it from the pool
+	if tx := s.b.GetPoolTransaction(hash); tx != nil {
+		return newRPCPendingTransaction(tx)
 	}
-
-	blockHash, _, _, err := getTransactionBlockData(s.b.ChainDb(), hash)
-	if err != nil {
-		log.Debug("Failed to retrieve transaction block", "hash", hash, "err", err)
-		return nil, nil
-	}
-
-	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
-		return newRPCTransaction(block, hash)
-	}
-	return nil, nil
+	// Transaction unknown, return as such
+	return nil
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
 func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	var tx *types.Transaction
-	var err error
 
-	if tx, _, err = getTransaction(s.b.ChainDb(), s.b, hash); err != nil {
-		log.Debug("Failed to retrieve transaction", "hash", hash, "err", err)
-		return nil, nil
-	} else if tx == nil {
-		return nil, nil
+	// Retrieve a finalized transaction, or a pooled otherwise
+	if tx, _, _, _ = core.GetTransaction(s.b.ChainDb(), hash); tx == nil {
+		if tx = s.b.GetPoolTransaction(hash); tx == nil {
+			// Transaction not found anywhere, abort
+			return nil, nil
+		}
 	}
-
+	// Serialize to RLP and return
 	return rlp.EncodeToBytes(tx)
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
-	receipt := core.GetReceipt(s.b.ChainDb(), hash)
-	if receipt == nil {
-		//log.Debug("Receipt not found for transaction", "hash", hash)
+	tx, blockHash, blockNumber, index := core.GetTransaction(s.b.ChainDb(), hash)
+	if tx == nil {
 		return nil, nil
 	}
-
-	tx, _, err := getTransaction(s.b.ChainDb(), s.b, hash)
-	if err != nil {
-		log.Debug("Failed to retrieve transaction", "hash", hash, "err", err)
-		return nil, nil
-	}
-
-	txBlock, blockIndex, index, err := getTransactionBlockData(s.b.ChainDb(), hash)
-	if err != nil {
-		log.Debug("Failed to retrieve transaction block", "hash", hash, "err", err)
-		return nil, nil
-	}
+	receipt, _, _, _ := core.GetReceipt(s.b.ChainDb(), hash) // Old receipts don't have the lookup data available
 
 	var signer types.Signer = types.FrontierSigner{}
 	if tx.Protected() {
@@ -1092,9 +994,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 	from, _ := types.Sender(signer, tx)
 
 	fields := map[string]interface{}{
-		"root":              hexutil.Bytes(receipt.PostState),
-		"blockHash":         txBlock,
-		"blockNumber":       hexutil.Uint64(blockIndex),
+		"blockHash":         blockHash,
+		"blockNumber":       hexutil.Uint64(blockNumber),
 		"transactionHash":   hash,
 		"transactionIndex":  hexutil.Uint64(index),
 		"from":              from,
@@ -1104,6 +1005,13 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
+	}
+
+	// Assign receipt status or post state.
+	if len(receipt.PostState) > 0 {
+		fields["root"] = hexutil.Bytes(receipt.PostState)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
 	}
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -1129,7 +1037,7 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-	return wallet.SignTx(account, tx, chainID, nil)
+	return wallet.SignTx(account, tx, chainID)
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -1175,10 +1083,6 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
 }
 
-func (args *SendTxArgs) toOTATransaction() *types.Transaction {
-	return types.NewOTATransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
-}
-
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
 	if err := b.SendTx(ctx, tx); err != nil {
@@ -1186,7 +1090,10 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	}
 	if tx.To() == nil {
 		signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
-		from, _ := types.Sender(signer, tx)
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return common.Hash{}, err
+		}
 		addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
@@ -1198,15 +1105,24 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
@@ -1216,695 +1132,21 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-	signed, err := wallet.SignTx(account, tx, chainID, nil)
+	signed, err := wallet.SignTx(account, tx, chainID)
 	if err != nil {
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, signed)
-}
-
-///////////////////////////jqg /////////////////////////////////////////////////////////
-func (s *PrivateAccountAPI) NewOTAAccount(password string) (common.Address, error) {
-	acc, err := fetchKeystore(s.am).NewAccount(password)
-	if err == nil {
-		return acc.Address, nil
-	}
-	return common.Address{}, err
-}
-
-const (
-	WANCOIN_BUY       = byte(0)
-	WANCOIN_GET_COINS = byte(1)
-	WANCOIN_REFUND    = byte(2)
-	WAN_BUY_STAMP     = byte(3)
-	WAN_CONTRACT_OTA  = byte(4)
-	WAN_STAMP_SET     = byte(5)
-
-	wancoinScAddr = 6
-)
-
-var (
-	ErrOTASetFailed = errors.New("no OTA address set")
-)
-
-func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, address common.Address) (string, error) {
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return "", err
-	}
-	wanAddr, err2 := wallet.GetWanAddress(account)
-	if err2 != nil {
-		return "", err2
-	}
-
-	return hexutil.Encode(wanAddr[:]), nil
-}
-
-func (s *PublicTransactionPoolAPI) SendOTATransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	var temp []byte
-	data := args.Data
-	//to   := args.To//OTA address
-
-	if len(data) == 0 {
-		return common.Hash{}, errors.New("no OTA address")
-	}
-
-	//2 pub and one section length
-	if len(data) != common.WAddressLength {
-		return common.Hash{}, errors.New("OTA address is not correct")
-	}
-
-	length := len(data) + 1
-	temp = make([]byte, length)
-	temp[0] = WANCOIN_BUY
-	copy(temp[1:], data)
-
-	args.Data = temp
-
-	// Assemble the transaction and sign with the wallet
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-
-	signed, err := wallet.SignTx(account, tx, chainID, nil)
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return submitTransaction(ctx, s.b, signed)
-}
-
-func (s *PublicTransactionPoolAPI) SendOTARefundTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	dataOrig := args.Data
-	if len(dataOrig) != common.WAddressLength {
-		return common.Hash{}, errors.New("OTA address is not correct")
-	}
-
-	data, err := keystore.WaddrToUncompressed(dataOrig)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	otaKeyPair, errapi := s.ComputeOTAPPKeys(ctx, args.From, hexutil.Encode(data))
-	if errapi != nil {
-		return common.Hash{}, errors.New("error in computing ota prikey")
-	}
-	//the index 0 key string is ota private key
-	//the index 1 key string is ota public key
-	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
-
-	keypair := strings.Split(otaKeyPair, "+")
-	// lzh modify
-	keys := make([]string, 0)
-	//keys := *new([]string)
-	keys = append(keys, keypair[0][2:])
-	keys = append(keys, keypair[1][2:])
-
-	//needed to replaced by the address got from contract
-	num := 3
-	otaByteSet, err := s.getOTAMixSet(ctx, data, num)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	for _, otaByte := range otaByteSet {
-
-		otaAddr, _ := keystore.WaddrToUncompressed(otaByte)
-		if len(otaAddr) == 0 {
-			return common.Hash{}, errors.New("error in computing mix ota addres")
-		}
-
-		keys = append(keys, hexutil.Encode(otaAddr)[2:130]) //record 0x + 128 bytes as public key
-	}
-
-	var temp []byte
-
-	val := args.Value.ToInt().Bytes()
-
-	length := 4 + len(data)
-	valLen := len(val)
-	temp = make([]byte, length+valLen)
-
-	lenBytes := hexutil.ShortToBytes(int16(length))
-
-	temp[0] = WANCOIN_REFUND
-	temp[1] = byte(valLen)
-	temp[2] = lenBytes[0]
-	temp[3] = lenBytes[1]
-	//copy(temp[4:],data[:])//record to address in data
-
-	//record value in data,the acutal spend should be 0
-	copy(temp[length:], val[:])
-
-	args.Data = temp
-	args.Value = (*hexutil.Big)(big.NewInt(0))
-
-	//add the nonce
-	//nonce := (uint64)(*args.Nonce)
-	//*args.Nonce = (hexutil.Uint64)(atomic.AddUint64(&nonce, 1))
-
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-	// Assemble the transaction and sign with the wallet
-	signed, err := wallet.SignTx(account, tx, chainID, keys)
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return submitTransaction(ctx, s.b, signed)
-}
-
-func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	// Assemble the transaction and sign with the wallet
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-
-	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
-
-	var signed *types.Transaction
-	if chainID != nil {
-		signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey, nil)
-	} else {
-		signed, err = types.SignTx(tx, types.HomesteadSigner{}, privateKey, nil)
-	}
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return submitTransaction(ctx, s.b, signed)
-}
-
-func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
-	orgOtaAddr := common.FromHex(otaAddr)
-
-	otaByteSet, err := s.getOTAMixSet(ctx, orgOtaAddr, setLen)
-	if err != nil {
-		return nil, err
-	}
-
-	ret := make([]string, 0)
-	for _, otaByte := range otaByteSet {
-		ret = append(ret, common.Bytes2Hex(otaByte))
-
-	}
-
-	return ret, nil
-}
-
-func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int) ([][]byte, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
-	if state == nil || err != nil {
-		return nil, err
-	}
-
-	return state.GetOTASet(otaAddr, setLen)
-}
-
-type RingSignedData struct {
-	PublicKeys []*ecdsa.PublicKey
-	KeyImage   *ecdsa.PublicKey
-	Ws         []*big.Int
-	Qs         []*big.Int
-}
-
-func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	// TODO: input params check
-
-	hmsg, _ := hexutil.Decode(hashMsg)
-	privkey, _ := hexutil.Decode(privateKey)
-	wanAddresses := strings.Split(mixWanAdresses, "+")
-	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
-	if err != nil {
-		return "", err
-	}
-
-	return genRingSignData(hmsg, privkey, &ecdsaPrivateKey.PublicKey, wanAddresses)
-}
-
-func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error) {
-	// TODO: input params check
-
-	otaPrivD := new(big.Int).SetBytes(privateKey)
-
-	publicKeys := make([]*ecdsa.PublicKey, 0)
-	publicKeys = append(publicKeys, actualPub)
-	for _, strWanAddr := range mixWanAdress {
-		pubBytes, err := hexutil.Decode(strWanAddr)
-		if err != nil {
-			return "", errors.New("fail to decode wan address!")
-		}
-
-		publicKeyA, _, err := keystore.GeneratePublicKeyFromWadress(pubBytes)
-		if err != nil {
-			return "", errors.New("fail to generate public key from wan address!")
-		}
-
-		publicKeys = append(publicKeys, publicKeyA)
-	}
-
-	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
-	//b := crypto.VerifyRingSign(hashMsg, retPublicKeys, keyImage, w_random, q_random)
-	// fmt.Println(b)
-
-	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
-}
-
-//  encode all ring sign out data to a string
-func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
-	pa := make([]string, 0)
-	for _, pk := range publicKeys {
-		pa = append(pa, common.ToHex(crypto.FromECDSAPub(pk)))
-	}
-	ps := strings.Join(pa, "&")
-	k := common.ToHex(crypto.FromECDSAPub(keyimage))
-	wa := make([]string, 0)
-	for _, wi := range Ws {
-		wa = append(wa, hexutil.EncodeBig(wi))
-	}
-	ws := strings.Join(wa, "&")
-	qa := make([]string, 0)
-	for _, qi := range Qs {
-		qa = append(qa, hexutil.EncodeBig(qi))
-	}
-	qs := strings.Join(qa, "&")
-	outs := strings.Join([]string{ps, k, ws, qs}, "+")
-	//decodeRingSignOut(outs)
-	return outs, nil
-}
-
-func (s *PublicTransactionPoolAPI) BuyOTAStamp(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	var temp []byte
-	data := args.Data
-	//to   := args.To//OTA address
-
-	if len(data) == 0 {
-		return common.Hash{}, errors.New("no OTA address")
-	}
-
-	//2 pub and one section length
-	if len(data) != common.WAddressLength {
-		return common.Hash{}, errors.New("OTA address is not correct")
-	}
-
-	length := len(data) + 1
-	temp = make([]byte, length)
-	temp[0] = WAN_BUY_STAMP
-	copy(temp[1:], data)
-
-	args.Data = temp
-
-	// Assemble the transaction and sign with the wallet
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-
-	signed, err := wallet.SignTx(account, tx, chainID, nil)
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return submitTransaction(ctx, s.b, signed)
-}
-
-var privacyContract common.Address
-
-func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
-	otas := []string{}
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return otas, err
-	}
-
-	curBlock, err := s.GetBlockByNumber(ctx, n, true)
-	if err != nil {
-		return otas, err
-	}
-
-	element := curBlock["transactions"]
-	privacyContract[19] = 0x06
-	if txs, ok := element.([]interface{}); ok {
-		for i := 0; i < len(txs); i++ {
-			txi := txs[i]
-			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
-				if privacyContract.Str() == txrpc.To.Str() {
-					otas = append(otas, string(txrpc.To.Hex()))
-					var otaWAddr common.WAddress
-					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
-						return otas, err4
-					}
-					isMine, err := wallet.CheckOTAdress(account, &otaWAddr)
-					if err != nil {
-						return otas, err
-					}
-					if isMine == true {
-						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
-					}
-				}
-			}
-		}
-
-	} else {
-		return otas, errors.New("fetch txs failed")
-	}
-
-	return otas, nil
-}
-
-func (s *PublicBlockChainAPI) GenerateRingSignatureOTAs(ctx context.Context, addr string, n int) ([]string, error) {
-	return []string{"aaa", "bbb", "ccc", "ddd"}, nil
-}
-
-func (s *PublicTransactionPoolAPI) GetPublicKeysRawStr(ctx context.Context, address common.Address) (string, error) {
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return "", err
-	}
-
-	sS, err2 := wallet.GetPublicKeysRawStr(account)
-	if err2 != nil {
-		return "", err2
-	}
-
-	return strings.Join(sS[:], "+"), nil
-}
-
-func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, wanAdress string) (string, error) {
-
-	strLen := len(wanAdress)
-
-	if strLen != (common.WAddressLength<<1)+2 {
-
-		return "", errors.New("invalid wan address!")
-	}
-
-	pubBytes, err := hexutil.Decode(wanAdress)
-	if err != nil {
-		return "", errors.New("fail to decode wan address!")
-	}
-
-	publicKeyA, publicKeyB, err := keystore.GeneratePublicKeyFromWadress(pubBytes)
-	if err != nil {
-		return "", errors.New("fail to generate public key from wan address!")
-	}
-
-	strs := common.TwoPublicKeyToHexSlice(publicKeyA, publicKeyB)
-
-	sS, err := crypto.GenerateOneTimeKey(strs[0], strs[1], strs[2], strs[3])
-	if err != nil {
-		return "", err
-	}
-
-	sall := strings.Join(sS[:], "")
-	sall = strings.Replace(sall, "0x", "", -1)
-
-	rawBytes, _ := hexutil.Decode("0x" + sall)
-	wbytes, _ := keystore.ToWaddr(rawBytes)
-
-	return hexutil.Encode(wbytes), nil
-}
-
-//args.data store the call contract byte code
-func (s *PublicTransactionPoolAPI) SignOTAContractTransaction(ctx context.Context, args SendTxArgs, wanSignerAddress string, stampAddress string) (*SignTransactionResult, error) {
-
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return nil, err
-	}
-
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return nil, err
-	}
-
-	data := args.Data
-
-	if len(wanSignerAddress) != ((common.WAddressLength << 1) + 2) {
-		fmt.Println("len=" + strconv.Itoa(len(wanSignerAddress)))
-		return nil, errors.New(" address is not correct")
-	}
-
-	wanSignerBytes, _ := hexutil.Decode(wanSignerAddress)
-	otaSignerBytes, err := keystore.WaddrToUncompressed(wanSignerBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	otaSignerAddress := hexutil.Encode(otaSignerBytes)
-	otaSignerKeyPair, errapi := s.ComputeOTAPPKeys(ctx, args.From, otaSignerAddress)
-	if errapi != nil {
-		return nil, errors.New("error in computing ota prikey")
-	}
-
-	signerKeypair := strings.Split(otaSignerKeyPair, "+")
-
-	otaPrivD, _ := new(big.Int).SetString(signerKeypair[0][2:], 16)
-	signPriv := crypto.ToECDSA(otaPrivD.Bytes())
-	callDataHash := common.BytesToHash(data)
-	sig, err := crypto.Sign(callDataHash[:], signPriv)
-	if err != nil {
-		return nil, err
-	}
-	sigLen := len(sig)
-
-	//begin to get stamp set
-	if len(stampAddress) != ((common.WAddressLength << 1) + 2) {
-		fmt.Println("len=" + strconv.Itoa(len(stampAddress)))
-		return nil, errors.New("OTA address is not correct")
-	}
-
-	stampBytes, _ := hexutil.Decode(stampAddress)
-	stampOTABytes, err := keystore.WaddrToUncompressed(stampBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	stampOTAAddress := hexutil.Encode(stampOTABytes)
-	otaKeyPair, errapi := s.ComputeOTAPPKeys(ctx, args.From, stampOTAAddress)
-	if errapi != nil {
-		return nil, errors.New("error in computing ota prikey")
-	}
-
-	//the index 0 key string is stamp ota private key
-	//the index 1 key string is stamp ota public key
-	//the index 2:n key string is other public is generated randomly or got from the precompiled contract
-	keypair := strings.Split(otaKeyPair, "+")
-
-	keys := make([]string, 0)
-	keys = append(keys, keypair[0][2:])
-	keys = append(keys, keypair[1][2:])
-
-	otaBytes, herr := hex.DecodeString(stampOTAAddress[2:])
-	if herr != nil {
-		return nil, err
-	}
-	//otaLen := len(otaBytes)
-
-	args.Data = otaBytes
-	otaSet, err := s.getOTAMixSet(ctx, otaBytes, 3)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, otaMix := range otaSet {
-
-		otaAddr, err := keystore.WaddrToUncompressed(otaMix)
-		if err != nil {
-			return nil, err
-		}
-
-		otaMixAddr := common.Bytes2Hex(otaAddr)
-		keys = append(keys, otaMixAddr[0:128]) //record 0x + 128 bytes as public key
-	}
-
-	var temp []byte
-	length := 4 + len(data)
-
-	craBytes := args.To.Bytes()
-	craLen := len(craBytes)
-
-	temp = make([]byte, length+craLen+sigLen) //should be 20 + 128
-
-	craLenba := hexutil.ShortToBytes(int16(length))
-	temp[0] = WAN_CONTRACT_OTA
-	temp[1] = byte(craLen + sigLen) //contract address length + ota address
-	temp[2] = craLenba[0]
-	temp[3] = craLenba[1]
-	copy(temp[4:], data[:]) //record contract data for call ota function
-
-	dataLen := hexutil.BytesToShort(temp[2:4])
-	fmt.Println("%d", dataLen)
-
-	//record to contract addr in data,the acutal spend should be 0
-	copy(temp[length:], craBytes)
-	//record the sig data signed by the priv of the from parameter in cotract ota function
-	copy(temp[length+craLen:], sig)
-
-	args.Data = temp
-	args.Value = (*hexutil.Big)(big.NewInt(0))
-
-	//add the nonce
-	//nonce := (uint64)(*args.Nonce)
-	//*args.Nonce = (hexutil.Uint64)(atomic.AddUint64(&nonce, 1))
-
-	// Assemble the transaction and sign with the wallet
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-
-	tx, sigErr := wallet.SignTx(account, tx, chainID, keys)
-	if sigErr != nil {
-		return nil, err
-	}
-
-	txBytes, err := rlp.EncodeToBytes(tx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &SignTransactionResult{txBytes, tx}, nil
-
-}
-
-// 根据一次性地址拥有者的private key信息计算对应地址的两个private key
-func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return "", err
-	}
-
-	wanBytes, _ := hexutil.Decode(inOtaAddr)
-	otaBytes, err := keystore.WaddrToUncompressed(wanBytes)
-	if err != nil {
-		return "", err
-	}
-
-	otaAddr := hexutil.Encode(otaBytes)
-
-	//AX string, AY string, BX string, BY string
-	otaAddr = strings.Replace(otaAddr, "0x", "", -1)
-	AX := "0x" + otaAddr[0:64]
-	AY := "0x" + otaAddr[64:128]
-
-	BX := "0x" + otaAddr[128:192]
-	BY := "0x" + otaAddr[192:256]
-
-	sS, err2 := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
-	if err2 != nil {
-		return "", err2
-	}
-
-	otaPub := sS[0] + sS[1][2:]
-	otaPriv := sS[2]
-
-	privateKey, err := crypto.HexToECDSA(otaPriv[2:])
-
-	var addr common.Address
-	pubkey := crypto.FromECDSAPub(&privateKey.PublicKey)
-	//caculate the address for replaced pub
-	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
-
-	return otaPriv + "+" + otaPub + "+" + hexutil.Encode(addr[:]), nil
-
 }
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
-func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (string, error) {
+func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return "", err
+		return common.Hash{}, err
 	}
-
-	if err := s.b.SendTx(ctx, tx); err != nil {
-		return "", err
-	}
-
-	signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
-	if tx.To() == nil {
-		from, err := types.Sender(signer, tx)
-		if err != nil {
-			return "", err
-		}
-		addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
-	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
-	}
-
-	return tx.Hash().Hex(), nil
+	return submitTransaction(ctx, s.b, tx)
 }
 
 // Sign calculates an ECDSA signature for:
@@ -1942,6 +1184,12 @@ type SignTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
@@ -2012,7 +1260,6 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 			if err != nil {
 				return common.Hash{}, err
 			}
-			s.b.RemoveTx(p.Hash())
 			if err = s.b.SendTx(ctx, signedTx); err != nil {
 				return common.Hash{}, err
 			}
@@ -2023,7 +1270,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
 }
 
-// PublicDebugAPI is the collection of Etheruem APIs exposed over the public
+// PublicDebugAPI is the collection of Ethereum APIs exposed over the public
 // debugging endpoint.
 type PublicDebugAPI struct {
 	b Backend
@@ -2054,7 +1301,7 @@ func (api *PublicDebugAPI) PrintBlock(ctx context.Context, number uint64) (strin
 	if block == nil {
 		return "", fmt.Errorf("block #%d not found", number)
 	}
-	return fmt.Sprintf("%s", block), nil
+	return block.String(), nil
 }
 
 // SeedHash retrieves the seed hash of a block.
@@ -2066,7 +1313,7 @@ func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string,
 	return fmt.Sprintf("0x%x", ethash.SeedHash(number)), nil
 }
 
-// PrivateDebugAPI is the collection of Etheruem APIs exposed over the private
+// PrivateDebugAPI is the collection of Ethereum APIs exposed over the private
 // debugging endpoint.
 type PrivateDebugAPI struct {
 	b Backend
