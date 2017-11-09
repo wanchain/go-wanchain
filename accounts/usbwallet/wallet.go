@@ -560,3 +560,9 @@ func (w *wallet) SignHashWithPassphrase(account accounts.Account, passphrase str
 func (w *wallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return w.SignTx(account, tx, chainID)
 }
+
+// @anson
+// TODO: to be implemented
+func (w *wallet) GetWanAddress(account accounts.Account) (common.WAddress, error) {
+	return common.WAddress{}, nil
+}

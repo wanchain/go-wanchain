@@ -21,6 +21,7 @@ import (
 
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
@@ -136,4 +137,17 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	}
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
+}
+
+// GetWanAddress represents the wallet to retrieve corresponding wanchain public address for a specific ordinary account/address
+func (w *keystoreWallet) GetWanAddress(account accounts.Account) (common.WAddress, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return common.WAddress{}, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to retrieve
+	return w.keystore.GetWanAddress(account)
 }

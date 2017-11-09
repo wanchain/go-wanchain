@@ -1389,3 +1389,18 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 func (s *PublicNetAPI) Version() string {
 	return fmt.Sprintf("%d", s.networkVersion)
 }
+
+// Return corresponding WAddress of an ordinary account
+func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, a common.Address) (string, error) {
+	account := accounts.Account{Address: a}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+	wanAddr, err := wallet.GetWanAddress(account)
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(wanAddr[:]), nil
+}

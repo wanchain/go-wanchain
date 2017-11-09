@@ -383,6 +383,20 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
+// getEncryptedKeyfile load an encrypted keyfile from the disk
+func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
+	a, err := ks.Find(a)
+	if err != nil {
+		return a, nil, err
+	}
+	key, err := ks.storage.GetEncryptedKey(a.Address, a.URL.Path)
+	if err != nil {
+		return a, nil, err
+	}
+	return a, key, nil
+
+}
+
 func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
@@ -482,6 +496,24 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	ks.cache.add(a)
 	ks.refreshWallets()
 	return a, nil
+}
+
+// GetWanAddress represents the keystore to retrieve corresponding wanchain public address for a specific ordinary account/address
+func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, error) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[account.Address]
+	if !found {
+		_, ksen, err := ks.getEncryptedKey(account)
+		if err != nil {
+			return common.WAddress{}, ErrLocked
+		}
+		return ksen.WAddress, nil
+	}
+
+	ret := unlockedKey.WAddress
+	return ret, nil
 }
 
 // zeroKey zeroes a private key in memory.

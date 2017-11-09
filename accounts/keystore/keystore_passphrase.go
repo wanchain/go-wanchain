@@ -31,6 +31,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -73,6 +74,10 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
+var (
+	ErrWAddressFieldNotExist = errors.New("It seems that this account doesn't include a valid wanchain address field, please update your keyfile version")
+)
+
 func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
@@ -96,6 +101,45 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 		return err
 	}
 	return writeKeyFile(filename, keyjson)
+}
+
+// Implements GetEncryptedKey method of keystore interface
+func (ks keyStorePassphrase) GetEncryptedKey(a common.Address, filename string) (*Key, error) {
+	// load the encrypted json keyfile
+	keyjson, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	key, err := GenerateKeyWithWAddress(keyjson)
+	if err != nil {
+		return nil, err
+	}
+	key.Address = a
+	return key, nil
+}
+
+// Generate a Key initialized with WAddress field
+func GenerateKeyWithWAddress(keyjson []byte) (*Key, error) {
+	// parse the json blob into a simple map to fetch the key version
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return nil, err
+	}
+
+	waddress, ok := m["waddress"].(string)
+	// fmt.Printf("waddress: %s\n", waddress)
+	if !ok || waddress == "" {
+		return nil, ErrWAddressFieldNotExist
+	}
+
+	waddressRaw, err := hex.DecodeString(waddress)
+	if err != nil {
+		return nil, err
+	}
+
+	key := new(Key)
+	copy(key.WAddress[:], waddressRaw)
+	return key, nil
 }
 
 func (ks keyStorePassphrase) JoinPath(filename string) string {

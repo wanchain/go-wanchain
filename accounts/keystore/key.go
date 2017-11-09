@@ -53,9 +53,11 @@ type Key struct {
 }
 
 type keyStore interface {
-	// Loads and decrypts the key from disk.
+	// Loads and decrypts the key from disk
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
-	// Writes and encrypts the key.
+	// Loads an encrypted keyfile from disk
+	GetEncryptedKey(addr common.Address, filename string) (*Key, error)
+	// Writes and encrypts the key
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
 	JoinPath(filename string) string
