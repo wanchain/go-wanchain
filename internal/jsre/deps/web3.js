@@ -5431,7 +5431,33 @@ var methods = function () {
         params: 0
     });
 
+    // @anson
+    var getWanAddress = new Method({
+        name: 'getWanAddress',
+        call: 'eth_getWanAddress',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+    }); 
+
+    // @anson
+    var generateOneTimeAddress = new Method({
+        name: 'generateOneTimeAddress',
+        call: 'eth_generateOneTimeAddress',
+        params: 1,
+        inputFormatter: [null]
+    });
+
+    // @anson
+    var getOTAMixSet = new Method({
+        name: 'getOTAMixSet',
+        call: 'eth_getOTAMixSet',
+        params: 2
+    });
+
     return [
+        getWanAddress,
+        generateOneTimeAddress,
+        getOTAMixSet,
         getBalance,
         getStorageAt,
         getCode,
