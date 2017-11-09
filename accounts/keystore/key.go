@@ -46,6 +46,10 @@ type Key struct {
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
+	// add a second privkey for privary
+	PrivateKey2 *ecdsa.PrivateKey
+	// compact wanchain address format
+	WAddress common.WAddress
 }
 
 type keyStore interface {

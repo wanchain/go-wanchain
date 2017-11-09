@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	HashLength    = 32
-	AddressLength = 20
+	HashLength     = 32
+	AddressLength  = 20
+	WAddressLength = 66
 )
 
 var (
@@ -135,8 +136,11 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 
 /////////// Address
 
-// Address represents the 20 byte address of an Ethereum account.
+// Address represents the 20 byte address of an ordinary account.
 type Address [AddressLength]byte
+
+// WAddress represents the 66 byte address of an Wanchain account
+type WAddress [WAddressLength]byte
 
 func BytesToAddress(b []byte) Address {
 	var a Address
