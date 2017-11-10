@@ -32,6 +32,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
 )
 
@@ -71,10 +72,12 @@ type plainKeyJSON struct {
 }
 
 type encryptedKeyJSONV3 struct {
-	Address string     `json:"address"`
-	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version int        `json:"version"`
+	Address  string     `json:"address"`
+	Crypto   cryptoJSON `json:"crypto"`
+	Crypto2  cryptoJSON `json:"crypto2"`
+	Id       string     `json:"id"`
+	Version  int        `json:"version"`
+	WAddress string     `json:"waddress"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -133,14 +136,44 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
+func newKeyFromECDSA(sk1, sk2 *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
-		Id:         id,
-		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
-		PrivateKey: privateKeyECDSA,
+		Id:          id,
+		Address:     crypto.PubkeyToAddress(sk1.PublicKey),
+		PrivateKey:  sk1,
+		PrivateKey2: sk2,
 	}
+
+	updateWaddress(key)
+
 	return key
+}
+
+// updateWaddress adds WAddress field to the Key struct
+
+func updateWaddress(k *Key) {
+	k.WAddress = k.GenerateWaddress()
+}
+
+func (k *Key) GenerateWaddress() common.WAddress {
+	var tmpRaw common.WAddress
+	copy(tmpRaw[:33], ECDSAPKCompression(&k.PrivateKey.PublicKey))
+	copy(tmpRaw[33:], ECDSAPKCompression(&k.PrivateKey2.PublicKey))
+	return tmpRaw
+}
+
+// ECDSAPKCompression serializes a public key in a 33-byte compressed format from btcec
+func ECDSAPKCompression(p *ecdsa.PublicKey) []byte {
+	const pubkeyCompressed byte = 0x2
+	b := make([]byte, 0, 33)
+	format := pubkeyCompressed
+	if p.Y.Bit(0) == 1 {
+		format |= 0x1
+	}
+	b = append(b, format)
+	b = append(b, math.PaddedBigBytes(p.X, 32)...)
+	return b
 }
 
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
@@ -153,11 +186,16 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 		panic("key generation: could not read from random source: " + err.Error())
 	}
 	reader := bytes.NewReader(randBytes)
-	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), reader)
+	sk1, err := ecdsa.GenerateKey(crypto.S256(), reader)
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
-	key := newKeyFromECDSA(privateKeyECDSA)
+
+	sk2, err := ecdsa.GenerateKey(crypto.S256(), reader)
+	if err != nil {
+		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
+	}
+	key := newKeyFromECDSA(sk1, sk2)
 	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
 		return NewKeyForDirectICAP(rand)
 	}
@@ -169,7 +207,12 @@ func newKey(rand io.Reader) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA), nil
+
+	privateKeyECDSA2, err := ecdsa.GenerateKey(crypto.S256(), rand)
+	if err != nil {
+		return nil, err
+	}
+	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
 }
 
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
