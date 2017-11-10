@@ -45,7 +45,7 @@ func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, erro
 			precompiles = PrecompiledContractsByzantium
 		}
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract)
+			return RunPrecompiledContract(p, input, contract,evm)
 		}
 	}
 	return evm.interpreter.Run(snapshot, contract, input)
@@ -149,8 +149,10 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		to       = AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
 	)
+
+	var precompiles  map[common.Address]PrecompiledContract;
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsHomestead
+		precompiles = PrecompiledContractsHomestead
 		if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
 			precompiles = PrecompiledContractsByzantium
 		}
@@ -159,7 +161,12 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+
+
+
+	if precompiles[to.Address()] != precompiles[common.BytesToAddress([]byte{wanCoinPrecompileAddr})]&&precompiles[to.Address()] != precompiles[common.BytesToAddress([]byte{wanStampPrecompileAddr})] {
+		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	}
 
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped environment for this execution context

@@ -27,14 +27,23 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"strings"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/log"
 )
 
+const (
+	wanCoinPrecompileAddr = byte(100)
+	wanStampPrecompileAddr = byte(200)
+)
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
 type PrecompiledContract interface {
 	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
-	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
+	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) // Run runs the precompiled contract
 }
 
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
@@ -44,6 +53,9 @@ var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{2}): &sha256hash{},
 	common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	common.BytesToAddress([]byte{4}): &dataCopy{},
+
+	common.BytesToAddress([]byte{wanCoinPrecompileAddr}): &wanCoinSC{},
+	common.BytesToAddress([]byte{wanStampPrecompileAddr}): &wanchainStampSC{},
 }
 
 // PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
@@ -57,13 +69,16 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}): &bn256Add{},
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
+
+	common.BytesToAddress([]byte{wanCoinPrecompileAddr}): &wanCoinSC{},
+	common.BytesToAddress([]byte{wanStampPrecompileAddr}): &wanchainStampSC{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract,evm *EVM) (ret []byte, err error) {
 	gas := p.RequiredGas(input)
 	if contract.UseGas(gas) {
-		return p.Run(input)
+		return p.Run(input, contract, evm)
 	}
 	return nil, ErrOutOfGas
 }
@@ -75,7 +90,7 @@ func (c *ecrecover) RequiredGas(input []byte) uint64 {
 	return params.EcrecoverGas
 }
 
-func (c *ecrecover) Run(input []byte) ([]byte, error) {
+func (c *ecrecover) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	const ecRecoverInputLength = 128
 
 	input = common.RightPadBytes(input, ecRecoverInputLength)
@@ -111,7 +126,7 @@ type sha256hash struct{}
 func (c *sha256hash) RequiredGas(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
 }
-func (c *sha256hash) Run(input []byte) ([]byte, error) {
+func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	h := sha256.Sum256(input)
 	return h[:], nil
 }
@@ -126,7 +141,7 @@ type ripemd160hash struct{}
 func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
 }
-func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
+func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	ripemd := ripemd160.New()
 	ripemd.Write(input)
 	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
@@ -142,7 +157,7 @@ type dataCopy struct{}
 func (c *dataCopy) RequiredGas(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.IdentityPerWordGas + params.IdentityBaseGas
 }
-func (c *dataCopy) Run(in []byte) ([]byte, error) {
+func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return in, nil
 }
 
@@ -223,7 +238,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	return gas.Uint64()
 }
 
-func (c *bigModExp) Run(input []byte) ([]byte, error) {
+func (c *bigModExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var (
 		baseLen = new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
 		expLen  = new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
@@ -298,7 +313,7 @@ func (c *bn256Add) RequiredGas(input []byte) uint64 {
 	return params.Bn256AddGas
 }
 
-func (c *bn256Add) Run(input []byte) ([]byte, error) {
+func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -320,7 +335,7 @@ func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
 	return params.Bn256ScalarMulGas
 }
 
-func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
+func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	p, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -349,7 +364,7 @@ func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
 	return params.Bn256PairingBaseGas + uint64(len(input)/192)*params.Bn256PairingPerPointGas
 }
 
-func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
+func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	// Handle some corner cases cheaply
 	if len(input)%192 > 0 {
 		return nil, errBadPairingInput
@@ -377,3 +392,392 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 	}
 	return false32Byte, nil
 }
+
+
+///////////////////////for wan privacy tx /////////////////////////////////////////////////////////
+
+/////////////////////////////////////added by jqg ///////////////////////////////////
+
+
+var (
+	coinSCDefinition = `
+	[
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyCoinNote",
+    "outputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "inputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "refundCoin",
+    "outputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "getCoins",
+    "outputs": [
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  }
+]`
+	stampSCDefinition = `
+	[
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyStamp",
+    "outputs": [
+      {
+        "name": "OtaAddr",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "inputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "refundCoin",
+    "outputs": [
+      {
+        "name": "RingSignedData",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "getCoins",
+    "outputs": [
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  }
+]`
+
+	coinAbi, errCoinSCInit               = abi.JSON(strings.NewReader(coinSCDefinition))
+	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
+
+	stampAbi, errStampSCInit = abi.JSON(strings.NewReader(stampSCDefinition))
+	stBuyId                  [4]byte
+
+	errBuyCoin = errors.New("error in buy coin")
+	errRefundCoin = errors.New("error in refund coin")
+
+	errBuyStamp = errors.New("error in buy stamp")
+
+	errParameters = errors.New("error parameters")
+	errMethodId = errors.New("error method id")
+
+	errBalance = errors.New("balance is insufficient")
+)
+
+func init() {
+	if errCoinSCInit != nil || errStampSCInit != nil {
+		// TODO: refact panic
+	}
+
+	copy(buyIdArr[:], coinAbi.Methods["buyCoinNote"].Id())
+	copy(refundIdArr[:], coinAbi.Methods["refundCoin"].Id())
+	copy(getCoinsIdArr[:], coinAbi.Methods["getCoins"].Id())
+
+	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
+}
+
+type wanchainStampSC struct {}
+
+func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
+func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM)([]byte, error) {
+	if in==nil || len(in)<4 {
+		return nil,errParameters
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], in[:4])
+
+	if methodId == stBuyId {
+		return c.buyStamp(in[4:], contract, env)
+	}
+
+	return nil,errMethodId
+}
+
+func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	var StampInput struct {
+		OtaAddr string
+		Value   *big.Int
+	}
+
+	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
+	if err != nil {
+		return nil,errBuyStamp
+	}
+
+	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
+	if err != nil {
+		return nil,errBuyStamp
+	}
+
+	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
+	if err != nil || !add {
+		return nil,errBuyStamp
+	}
+
+	addrSrc := contract.CallerAddress
+
+	balance := evm.StateDB.GetBalance(addrSrc)
+
+	if balance.Cmp(contract.value) >= 0 {
+		// Need check contract value in  build in value sets
+		evm.StateDB.SubBalance(addrSrc, contract.value)
+		return []byte("1"),nil
+	} else {
+
+		return nil,errBalance
+	}
+}
+
+
+type wanCoinSC struct {
+}
+
+func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
+
+func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error){
+	if in==nil || len(in)<4 {
+		return nil,errParameters
+	}
+
+	var methodIdArr [4]byte
+	copy(methodIdArr[:], in[:4])
+
+	if methodIdArr == buyIdArr {
+		return c.buyCoin(in[4:], contract, evm)
+	} else if methodIdArr == refundIdArr {
+		return c.refund(in[4:], contract, evm)
+	}
+
+	return nil,errMethodId
+}
+
+var (
+	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+)
+
+func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	var outStruct struct {
+		OtaAddr string
+		Value   *big.Int
+	}
+
+	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
+	if err != nil {
+		return nil,errBuyCoin
+	}
+
+	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
+	if err != nil {
+		return nil,errBuyCoin
+	}
+
+	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
+	if err != nil || !add {
+		return nil,errBuyCoin
+	}
+
+	addrSrc := contract.CallerAddress
+
+	balance := evm.StateDB.GetBalance(addrSrc)
+
+	if balance.Cmp(contract.value) >= 0 {
+		// Need check contract value in  build in value sets
+		evm.StateDB.SubBalance(addrSrc, contract.value)
+		return []byte("1"),nil
+	} else {
+		return nil,errBalance
+	}
+}
+
+
+func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _, pi := range pa {
+		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+	}
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, _ := hexutil.DecodeBig(wi)
+		w = append(w, bi)
+	}
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, _ := hexutil.DecodeBig(qi)
+		q = append(q, bi)
+	}
+	return nil, publickeys, keyimgae, w, q
+}
+
+func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	var RefundStruct struct {
+		RingSignedData string
+		Value          *big.Int
+	}
+
+	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
+	if err != nil {
+		return nil,errRefundCoin
+	}
+
+	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
+	if err != nil {
+		return nil,errRefundCoin
+	}
+
+	otaAXs := make([][]byte, 0, len(publickeys))
+	for i := 0; i < len(publickeys); i++ {
+		pkBytes := crypto.FromECDSAPub(publickeys[i])
+		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+	}
+
+	exit, balanceGet, unexit, err := BatCheckOTAExit(evm.StateDB, otaAXs)
+	if !exit || balanceGet == nil || balanceGet.Cmp(RefundStruct.Value) != 0 {
+		if err != nil {
+			log.Warn("verify mix ota fail. err:%s", err.Error())
+		}
+		if unexit != nil {
+			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		}
+		if balanceGet != nil && balanceGet.Cmp(RefundStruct.Value) != 0 {
+			log.Warn("balance getting from ota is wrong! get:%s, expect:%s",
+				balanceGet.String(), RefundStruct.Value.String())
+		} else {
+			return nil,errBalance
+		}
+	}
+
+	kix := crypto.FromECDSAPub(keyimage)
+	exit, _, err = CheckOTAImageExit(evm.StateDB, kix)
+	if err != nil || exit {
+		return nil,errRefundCoin
+	}
+
+	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimage, ws, qs)
+	if b {
+
+		AddOTAImage(evm.StateDB, kix, RefundStruct.Value.Bytes())
+
+		addrSrc := contract.CallerAddress
+		evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
+		return []byte("1"),nil
+	} else {
+		return nil,errRefundCoin
+	}
+
+}
+/////////////////////////////////////////for debug////////////////////////
+
+func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {return nil}
+
+func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {return true,nil,nil}
+
+func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.Int, unexitOta []byte, err error) {
+	return true,nil,nil,nil
+}
+
+func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool, error) {return  true,nil}
