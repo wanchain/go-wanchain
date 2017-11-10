@@ -477,12 +477,21 @@ func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, er
 	return a, nil
 }
 
-// Update changes the passphrase of an existing account.
+// Update transitions an account from a previous format to the current one, also providing the possibility to change the pass-phrase
 func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string) error {
 	a, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return err
 	}
+
+	if key.PrivateKey2 == nil {
+		sk2, err := ecdsa.GenerateKey(crypto.S256(), crand.Reader)
+		if err != nil {
+			return err
+		}
+		key.PrivateKey2 = sk2
+	}
+	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 

@@ -230,8 +230,9 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	}
 	// Depending on the version try to parse one way or another
 	var (
-		keyBytes, keyId []byte
-		err             error
+		keyBytes, keyBytes2, keyId []byte
+		err                        error
+		waddressStr                *string
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
@@ -244,61 +245,97 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
-		keyBytes, keyId, err = decryptKeyV3(k, auth)
+		keyBytes, keyBytes2, keyId, err = decryptKeyV3(k, auth)
+		if err != nil {
+			return nil, err
+		}
+
+		waddressStr = &k.WAddress
 	}
 	// Handle any decryption errors and return the key
 	if err != nil {
 		return nil, err
 	}
 	key := crypto.ToECDSAUnsafe(keyBytes)
+	key2 := crypto.ToECDSAUnsafe(keyBytes2)
+
+	waddressRaw, err := hex.DecodeString(*waddressStr)
+	if err != nil {
+		return nil, err
+	}
+
+	var waddress common.WAddress
+	copy(waddress[:], waddressRaw)
 
 	return &Key{
-		Id:         uuid.UUID(keyId),
-		Address:    crypto.PubkeyToAddress(key.PublicKey),
-		PrivateKey: key,
+		Id:          uuid.UUID(keyId),
+		Address:     crypto.PubkeyToAddress(key.PublicKey),
+		PrivateKey:  key,
+		PrivateKey2: key2,
+		WAddress:    waddress,
 	}, nil
 }
 
-func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
+func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyBytes2 []byte, keyId []byte, err error) {
 	if keyProtected.Version != version {
-		return nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
-	}
-
-	if keyProtected.Crypto.Cipher != "aes-128-ctr" {
-		return nil, nil, fmt.Errorf("Cipher not supported: %v", keyProtected.Crypto.Cipher)
+		return nil, nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}
 
 	keyId = uuid.Parse(keyProtected.Id)
-	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
+
+	plainText, err := decryptKeyV3Item(keyProtected.Crypto, auth)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	iv, err := hex.DecodeString(keyProtected.Crypto.CipherParams.IV)
+	plainText2, err := decryptKeyV3Item(keyProtected.Crypto2, auth)
 	if err != nil {
-		return nil, nil, err
+		if "" == keyProtected.Crypto2.Cipher {
+			plainText2 = make([]byte, 0)
+		} else {
+			return nil, nil, nil, err
+		}
 	}
 
-	cipherText, err := hex.DecodeString(keyProtected.Crypto.CipherText)
-	if err != nil {
-		return nil, nil, err
+	return plainText, plainText2, keyId, err
+}
+
+func decryptKeyV3Item(cryptoItem cryptoJSON, auth string) (keyBytes []byte, err error) {
+	if cryptoItem.Cipher != "aes-128-ctr" {
+		return nil, fmt.Errorf("Cipher not supported: %v", cryptoItem.Cipher)
 	}
 
-	derivedKey, err := getKDFKey(keyProtected.Crypto, auth)
+	mac, err := hex.DecodeString(cryptoItem.MAC)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	iv, err := hex.DecodeString(cryptoItem.CipherParams.IV)
+	if err != nil {
+		return nil, err
+	}
+
+	cipherText, err := hex.DecodeString(cryptoItem.CipherText)
+	if err != nil {
+		return nil, err
+	}
+
+	derivedKey, err := getKDFKey(cryptoItem, auth)
+	if err != nil {
+		return nil, err
 	}
 
 	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
 	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, nil, ErrDecrypt
+		return nil, ErrDecrypt
 	}
 
 	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return plainText, keyId, err
+
+	return plainText, err
 }
 
 func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byte, keyId []byte, err error) {
