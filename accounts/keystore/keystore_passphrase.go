@@ -28,6 +28,7 @@ package keystore
 import (
 	"bytes"
 	"crypto/aes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -153,16 +154,43 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
+
+	cryptoStruct, err := EncryptOnePrivateKey(key.PrivateKey, auth, scryptN, scryptP)
+	if err != nil {
+		return nil, err
+	}
+
+	cryptoStruct2, err := EncryptOnePrivateKey(key.PrivateKey2, auth, scryptN, scryptP)
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedKeyJSONV3 := encryptedKeyJSONV3{
+		hex.EncodeToString(key.Address[:]),
+		*cryptoStruct,
+		*cryptoStruct2,
+		key.Id.String(),
+		version,
+		hex.EncodeToString(key.WAddress[:]),
+	}
+	return json.Marshal(encryptedKeyJSONV3)
+}
+
+// EncryptOnePrivateKey encrypts a key using the specified scrypt parameters into one field of a json
+// blob that can be decrypted later on.
+func EncryptOnePrivateKey(privateKey *ecdsa.PrivateKey, auth string, scryptN, scryptP int) (*cryptoJSON, error) {
 	authArray := []byte(auth)
 	salt := randentropy.GetEntropyCSPRNG(32)
 	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
+
 	if err != nil {
 		return nil, err
 	}
 	encryptKey := derivedKey[:16]
-	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
+	keyBytes := math.PaddedBigBytes(privateKey.D, 32)
 
 	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
+
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
@@ -180,7 +208,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		IV: hex.EncodeToString(iv),
 	}
 
-	cryptoStruct := cryptoJSON{
+	cryptoStruct := &cryptoJSON{
 		Cipher:       "aes-128-ctr",
 		CipherText:   hex.EncodeToString(cipherText),
 		CipherParams: cipherParamsJSON,
@@ -188,13 +216,9 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		KDFParams:    scryptParamsJSON,
 		MAC:          hex.EncodeToString(mac),
 	}
-	encryptedKeyJSONV3 := encryptedKeyJSONV3{
-		hex.EncodeToString(key.Address[:]),
-		cryptoStruct,
-		key.Id.String(),
-		version,
-	}
-	return json.Marshal(encryptedKeyJSONV3)
+
+	return cryptoStruct, nil
+
 }
 
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
