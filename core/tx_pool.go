@@ -544,10 +544,15 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+	if tx.Txtype() == 6 {
+		return nil
+	}
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
 	}
+
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {
@@ -573,9 +578,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && tx.Txtype() != 6 {
 		return ErrInsufficientFunds
 	}
+
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
@@ -889,11 +895,13 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			hash := tx.Hash()
-			log.Trace("Removed unpayable queued transaction", "hash", hash)
-			delete(pool.all, hash)
-			pool.priced.Removed()
-			queuedNofundsCounter.Inc(1)
+			if tx.Txtype() != 6 {
+				hash := tx.Hash()
+				log.Trace("Removed unpayable queued transaction", "hash", hash)
+				delete(pool.all, hash)
+				pool.priced.Removed()
+				queuedNofundsCounter.Inc(1)
+			}
 		}
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
@@ -1047,11 +1055,13 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			hash := tx.Hash()
-			log.Trace("Removed unpayable pending transaction", "hash", hash)
-			delete(pool.all, hash)
-			pool.priced.Removed()
-			pendingNofundsCounter.Inc(1)
+			if tx.Txtype() != 6 {
+				hash := tx.Hash()
+				log.Trace("Removed unpayable pending transaction", "hash", hash)
+				delete(pool.all, hash)
+				pool.priced.Removed()
+				pendingNofundsCounter.Inc(1)
+			}
 		}
 		for _, tx := range invalids {
 			hash := tx.Hash()

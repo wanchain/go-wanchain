@@ -13,6 +13,9 @@ import (
 
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
+		//added for privacy
+		Txtype       hexutil.Uint64  `json:"Txtype"    gencodec:"required"`
+
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
@@ -24,7 +27,9 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
+
 	var enc txdata
+	enc.Txtype = hexutil.Uint64(t.Txtype)
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
 	enc.Price = (*hexutil.Big)(t.Price)
 	enc.GasLimit = (*hexutil.Big)(t.GasLimit)
@@ -40,6 +45,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
+		Txtype       *hexutil.Uint64 `json:"Txtype"    gencodec:"required"`
 		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
@@ -55,6 +61,12 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
+
+	if dec.Txtype == nil {
+		return errors.New("missing required field 'Txtype' for txdata")
+	}
+	t.Txtype = uint64(*dec.Txtype)
+
 	if dec.AccountNonce == nil {
 		return errors.New("missing required field 'nonce' for txdata")
 	}

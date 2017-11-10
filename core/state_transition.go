@@ -25,6 +25,11 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"strings"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
@@ -74,6 +79,8 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+
+	TxType() uint64
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message
@@ -206,18 +213,25 @@ func (st *StateTransition) preCheck() error {
 	return st.buyGas()
 }
 
+
+
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
-	if err = st.preCheck(); err != nil {
-		return
+
+	if st.msg.TxType() != 6 {
+		if err = st.preCheck(); err != nil {
+			return
+		}
 	}
+
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
 
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
 	contractCreation := msg.To() == nil
+
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
@@ -225,8 +239,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
-	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, false, err
+
+	if st.msg.TxType() != 6 {
+		if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+			return nil, nil, nil, false, err
+		}
 	}
 
 	var (
@@ -241,8 +258,22 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
+
+		if st.msg.TxType() == 6 {
+			pureCallData, _, err := st.preProcessPrivacyTx(sender.Address().Bytes(), st.data)
+			if err != nil {
+				return nil, nil, nil, false, err
+			}
+			// TODO: set gas correponding stamp value, stamp_value / gas_price
+			//       and sub gas used by ring sign
+			st.gas = 200000
+			st.initialGas.SetUint64(200000)
+			st.data = pureCallData[:]
+		}
+
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
+
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
@@ -254,8 +285,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
-	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	if st.msg.TxType() != 6 {
+		st.refundGas()
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	}
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
@@ -282,3 +315,103 @@ func (st *StateTransition) refundGas() {
 func (st *StateTransition) gasUsed() *big.Int {
 	return new(big.Int).Sub(st.initialGas, new(big.Int).SetUint64(st.gas))
 }
+
+
+///////////////////////added for privacy tx /////////////////////////////
+var (
+	utilAbiDefinition = `[{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}],"name":"combine","outputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}]}]`
+
+	utilAbi, errAbiInit = abi.JSON(strings.NewReader(utilAbiDefinition))
+)
+
+func init() {
+	if errAbiInit != nil {
+		panic(errAbiInit)
+	}
+}
+
+func (self *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _, pi := range pa {
+		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
+	}
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, _ := hexutil.DecodeBig(wi)
+		w = append(w, bi)
+	}
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, _ := hexutil.DecodeBig(qi)
+		q = append(q, bi)
+	}
+	return nil, publickeys, keyimgae, w, q
+}
+
+func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, keyimage *ecdsa.PublicKey, err error) {
+
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+
+	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
+	if err != nil {
+		return nil, nil, err
+	}
+	callData = TxDataWithRing.CxtCallParams[:]
+
+	err, publickeys, keyimage, ws, qs := self.DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	otaAXs := make([][]byte, 0, len(publickeys))
+	for i := 0; i < len(publickeys); i++ {
+		pkBytes := crypto.FromECDSAPub(publickeys[i])
+		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+	}
+
+	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(self.evm.StateDB, otaAXs)
+	if !exit || balanceGet == nil {
+		if err != nil {
+			log.Warn("verify mix ota fail. err:%s", err.Error())
+		}
+		if unexit != nil {
+			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+		}
+		if balanceGet == nil {
+			log.Warn("balance getting from ota is wrong! get:%s, expect:%s")
+		}
+
+		return nil, nil, err
+	}
+
+	kix := crypto.FromECDSAPub(keyimage)
+	exit, _, err = vm.CheckOTAImageExit(self.evm.StateDB, kix)
+	if err != nil || exit {
+		return nil, nil, err
+	}
+
+	b := crypto.VerifyRingSign(hashInput, publickeys, keyimage, ws, qs)
+	if !b {
+		err = errors.New("ring sign is invalid!")
+		return nil, nil, err
+	}
+
+	vm.AddOTAImage(self.evm.StateDB, kix, balanceGet.Bytes())
+
+	return
+
+}
+

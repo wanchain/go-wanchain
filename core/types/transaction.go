@@ -55,6 +55,8 @@ type Transaction struct {
 }
 
 type txdata struct {
+	Txtype       uint64          `json:"Txtype"    gencodec:"required"`
+
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`
@@ -72,6 +74,8 @@ type txdata struct {
 }
 
 type txdataMarshaling struct {
+	Txtype       hexutil.Uint64
+
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
@@ -95,6 +99,7 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
+		Txtype: 1,
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -181,6 +186,8 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Txtype() uint64      { return tx.data.Txtype }
+
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
@@ -233,6 +240,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:		tx.Txtype(),
 	}
 
 	var err error
@@ -446,6 +454,7 @@ type Message struct {
 	amount, price, gasLimit *big.Int
 	data                    []byte
 	checkNonce              bool
+	txType  				uint64
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, checkNonce bool) Message {
@@ -458,6 +467,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, g
 		gasLimit:   gasLimit,
 		data:       data,
 		checkNonce: checkNonce,
+
 	}
 }
 
@@ -469,3 +479,34 @@ func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+
+func (m Message) TxType() uint64       { return m.txType }
+////////////////////////////////////for privacy tx ///////////////////////
+func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	var addressDst common.Address
+	addressDst = *to
+
+	d := txdata{
+		Txtype: 	  6,
+		AccountNonce: nonce,
+		Recipient:	  &addressDst ,
+		Payload:      data,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Price:        new(big.Int),
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	return &Transaction{data: d}
+}
