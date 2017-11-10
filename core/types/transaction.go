@@ -482,6 +482,11 @@ func (m Message) CheckNonce() bool     { return m.checkNonce }
 
 func (m Message) TxType() uint64       { return m.txType }
 ////////////////////////////////////for privacy tx ///////////////////////
+func NewOTATransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	return newOTATransaction(nonce, &to, amount, gasLimit, gasPrice, data)
+}
+
+
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	var addressDst common.Address
 	addressDst = *to
