@@ -44,6 +44,7 @@ type RemoteAgent struct {
 
 	chain       consensus.ChainReader
 	engine      consensus.Engine
+	engine2      consensus.Engine
 	currentWork *Work
 	work        map[common.Hash]*Work
 
@@ -57,6 +58,7 @@ func NewRemoteAgent(chain consensus.ChainReader, engine consensus.Engine) *Remot
 	return &RemoteAgent{
 		chain:    chain,
 		engine:   engine,
+		engine2:   engine,
 		work:     make(map[common.Hash]*Work),
 		hashrate: make(map[common.Hash]hashrate),
 	}

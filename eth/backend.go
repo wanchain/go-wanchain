@@ -71,6 +71,7 @@ type Ethereum struct {
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
+	engine2        consensus.Engine
 	accountManager *accounts.Manager
 
 	ApiBackend *EthApiBackend
@@ -110,12 +111,18 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
+   var chainConfig2 *params.ChainConfig
+   chainConfig2 = chainConfig
+   chainConfig2.Clique= &params.CliqueConfig{ Period: 15, Epoch:  30000 }
+   chainConfig2.Pluto = nil
+
 	eth := &Ethereum{
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
+		engine2:        CreateConsensusEngine(ctx, config, chainConfig2, chainDb),
 		shutdownChan:   make(chan bool),
 		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
@@ -162,11 +169,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		}
 	}
 
-	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, maxPeers, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
+	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, maxPeers, eth.eventMux, eth.txPool, eth.engine, eth.engine2, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 
-	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
+	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine, eth.engine2)
 	eth.miner.SetGasPrice(config.GasPrice)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 

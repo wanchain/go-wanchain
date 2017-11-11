@@ -96,7 +96,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, engine2 consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -165,6 +165,12 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.removePeer)
 
 	validator := func(header *types.Header) error {
+    // ppow1 change - example
+    // the idea is to call the Ethash checking functions, followed by the POA Clique (modified) functions in every instance per my Google doc
+		err := engine2.VerifyHeader(blockchain, header, true)
+    if err != nil {
+     return err
+    }
 		return engine.VerifyHeader(blockchain, header, true)
 	}
 	heighter := func() uint64 {

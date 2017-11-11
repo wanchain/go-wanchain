@@ -56,6 +56,7 @@ type Service struct {
 	eth    *eth.Ethereum      // Full Ethereum service if monitoring a full node
 	les    *les.LightEthereum // Light Ethereum service if monitoring a light node
 	engine consensus.Engine   // Consensus engine to retrieve variadic block fields
+	engine2 consensus.Engine   // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -84,6 +85,7 @@ func New(url string, ethServ *eth.Ethereum, lesServ *les.LightEthereum) (*Servic
 		eth:    ethServ,
 		les:    lesServ,
 		engine: engine,
+		engine2: engine,
 		node:   parts[1],
 		pass:   parts[3],
 		host:   parts[4],

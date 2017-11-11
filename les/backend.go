@@ -59,6 +59,7 @@ type LightEthereum struct {
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
+	engine2         consensus.Engine
 	accountManager *accounts.Manager
 
 	networkId     uint64
@@ -86,6 +87,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         eth.CreateConsensusEngine(ctx, config, chainConfig, chainDb),
+		engine2:         eth.CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 	}
