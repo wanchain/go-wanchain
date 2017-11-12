@@ -253,11 +253,19 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		waddressStr = &k.WAddress
 	}
 	// Handle any decryption errors and return the key
+	// @anson ToECDSA vs ToECDSAUnsafe
 	if err != nil {
 		return nil, err
 	}
 	key := crypto.ToECDSAUnsafe(keyBytes)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	key2 := crypto.ToECDSAUnsafe(keyBytes2)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	waddressRaw, err := hex.DecodeString(*waddressStr)
 	if err != nil {
@@ -288,12 +296,12 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 		return nil, nil, nil, err
 	}
 
-	plainText2, err := decryptKeyV3Item(keyProtected.Crypto2, auth)
-	if err != nil {
+	plainText2, err2 := decryptKeyV3Item(keyProtected.Crypto2, auth)
+	if err2 != nil {
 		if "" == keyProtected.Crypto2.Cipher {
 			plainText2 = make([]byte, 0)
 		} else {
-			return nil, nil, nil, err
+			return nil, nil, nil, err2
 		}
 	}
 

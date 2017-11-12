@@ -29,10 +29,10 @@ import (
 	"os"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 
 	"crypto/aes"
 	"crypto/cipher"
@@ -90,6 +90,9 @@ func ToECDSA(d []byte) (*ecdsa.PrivateKey, error) {
 // never be used unless you are sure the input is valid and want to avoid hitting
 // errors due to bad origin encoding (0 prefixes cut off).
 func ToECDSAUnsafe(d []byte) *ecdsa.PrivateKey {
+	if len(d) == 0 {
+		return nil
+	}
 	priv, _ := toECDSA(d, false)
 	return priv
 }
@@ -759,4 +762,3 @@ func otaAddress(address common.Address) string {
 
 	return result
 }
-

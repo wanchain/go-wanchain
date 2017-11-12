@@ -483,9 +483,8 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	if err != nil {
 		return err
 	}
-
 	if key.PrivateKey2 == nil {
-		sk2, err := ecdsa.GenerateKey(crypto.S256(), crand.Reader)
+		sk2, err := crypto.GenerateKey()
 		if err != nil {
 			return err
 		}

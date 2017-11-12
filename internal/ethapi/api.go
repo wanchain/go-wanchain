@@ -1419,7 +1419,6 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 	return types.NewOTATransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
 }
 
-
 func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
