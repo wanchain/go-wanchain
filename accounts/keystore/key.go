@@ -267,3 +267,21 @@ func toISO8601(t time.Time) string {
 	}
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
+
+func ToWaddr(raw []byte) ([]byte, error) {
+	pub := make([]byte, 65)
+	pub[0] = 0x04
+	copy(pub[1:], raw[0:64])
+	A := crypto.ToECDSAPub(pub)
+	copy(pub[1:], raw[64:])
+	B := crypto.ToECDSAPub(pub)
+	waddr := GenerateWaddressFromPK(A, B)
+	return waddr[:], nil
+}
+
+func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) common.WAddress {
+	var tmp common.WAddress
+	copy(tmp[:33], ECDSAPKCompression(A))
+	copy(tmp[33:], ECDSAPKCompression(B))
+	return tmp
+}

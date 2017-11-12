@@ -762,3 +762,47 @@ func otaAddress(address common.Address) string {
 
 	return result
 }
+
+// func GenerateOneTimeKey(pk1x string, pk1y string, pk2x string, pk2y string) ([]string, error) {
+// 	pk1xBytes, err := hexutil.Decode(pk1x)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	pk1yBytes, err := hexutil.Decode(pk1y)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	pk2xBytes, err := hexutil.Decode(pk2x)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	pk2yBytes, err := hexutil.Decode(pk2y)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	bnAX := new(big.Int).SetBytes(pk1xBytes)
+// 	bnAY := new(big.Int).SetBytes(pk1yBytes)
+// 	bnBX := new(big.Int).SetBytes(pk2xBytes)
+// 	bnBY := new(big.Int).SetBytes(pk2yBytes)
+
+// 	PKA := &ecdsa.PublicKey{X: bnAX, Y: bnAY}
+// 	PKB := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
+
+// 	PKA1, PKS1, err := generateOneTimeKey(PKA, PKB)
+// 	return hexutil.PKPair2HexSlice(PKA1, PKS1), nil
+
+// }
+
+// func generateOneTimeKey(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+// 	s1, err := GenerateKey()
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	S1 := &s1.PublicKey
+// 	return generateA1(s1.D.Bytes(), A, B), S1, err
+// }

@@ -49,6 +49,12 @@ const (
 	defaultGasPrice = 50 * params.Shannon
 )
 
+var (
+	ErrInvalidWAddress                  = errors.New("Invalid Waddress, try again")
+	ErrFailToGeneratePKPairFromWAddress = errors.New("Fail to generate publickey pair from WAddress")
+	ErrFailToGeneratePKPairSlice        = errors.New("Fail to generate publickey pair hex slice")
+)
+
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
@@ -1400,7 +1406,7 @@ func (s *PublicNetAPI) Version() string {
 }
 
 ////////////////////added for privacy tx ////////////////////////////////////////
-// Return corresponding WAddress of an ordinary account
+// GetWanAddress returns corresponding WAddress of an ordinary account
 func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, a common.Address) (string, error) {
 	account := accounts.Account{Address: a}
 	wallet, err := s.b.AccountManager().Find(account)
@@ -1413,6 +1419,40 @@ func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, a common.A
 	}
 
 	return hexutil.Encode(wanAddr[:]), nil
+}
+
+// GenerateOneTimeAddress returns corresponding One-Time-Address for given WanAddress
+func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, wAddr string) (string, error) {
+	strlen := len(wAddr)
+	if strlen != (common.WAddressLength<<1)+2 {
+		return "", ErrInvalidWAddress
+	}
+
+	PKBytesSlice, err := hexutil.Decode(wAddr)
+	if err != nil {
+		return "", err
+	}
+
+	PK1, PK2, err := keystore.GeneratePKPairFromWAddress(PKBytesSlice)
+	if err != nil {
+		return "", ErrFailToGeneratePKPairFromWAddress
+	}
+
+	PKPairSlice := hexutil.PKPair2HexSlice(PK1, PK2)
+
+	SKOTA, err := crypto.GenerateOneTimeKey(PKPairSlice[0], PKPairSlice[1], PKPairSlice[2], PKPairSlice[3])
+	if err != nil {
+		return "", err
+	}
+
+	otaStr := strings.Replace(strings.Join(SKOTA, ""), "0x", "", -1)
+	raw, err := hexutil.Decode("0x" + otaStr)
+	if err != nil {
+		return "", err
+	}
+
+	rawWanAddr, err := keystore.ToWaddr(raw)
+	return hexutil.Encode(rawWanAddr), nil
 }
 
 func (args *SendTxArgs) toOTATransaction() *types.Transaction {
