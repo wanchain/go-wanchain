@@ -29,6 +29,12 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
+	"errors"
+	"github.com/wanchain/go-wanchain/core/vm"
+)
+
+const (
+	OTA_ADDR_LEN = 128
 )
 
 type revision struct {
@@ -188,6 +194,37 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
+// lzh add
+// GetOTASet get the set of ota, with the count as setting
+// TODO: verify?,is possible one OTA exist in stamp and coin at the same time, cause bug
+// TODO: improve time complexity from O(n*log) to O(log),get mix set by value, and type(stamp/coin)
+func (self *StateDB) GetOTASet(otaAddr []byte, otaNum int) ([][]byte, error) {
+	if otaAddr == nil || (len(otaAddr) != common.WAddressLength && len(otaAddr) != OTA_ADDR_LEN) {
+		return nil, errors.New("invalid ota account!")
+	}
+
+	if otaNum <= 0 {
+		return [][]byte{}, nil
+	}
+
+	otaAX := otaAddr[:common.HashLength]
+	if len(otaAddr) == common.WAddressLength {
+		otaAX = otaAX[1 : 1+common.HashLength]
+	}
+
+	otaWAddrs, _, err := vm.GetOTASet(self, otaAX, otaNum)
+	return otaWAddrs, err
+}
+
+func (self *StateDB) GetOTABalance(otaWAddr []byte) (*big.Int, error) {
+	if otaWAddr == nil || len(otaWAddr) != common.WAddressLength {
+		return nil, errors.New("invalid ota wan address!")
+	}
+
+	otaAX := otaWAddr[1 : 1+common.HashLength]
+	return vm.GetOtaBalanceFromAX(self, otaAX)
+}
+
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
@@ -234,6 +271,15 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 		return stateObject.GetState(self.db, b)
 	}
 	return common.Hash{}
+}
+
+// lzh add
+func (self *StateDB) GetStateByteArray(a common.Address, b common.Hash) []byte {
+	stateObject := self.getStateObject(a)
+	if stateObject != nil {
+		return stateObject.GetStateByteArray(self.db, b)
+	}
+	return nil
 }
 
 // StorageTrie returns the storage trie of an account.
@@ -300,6 +346,14 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
+	}
+}
+
+// lzh add
+func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, value []byte) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetStateByteArray(self.db, key, value)
 	}
 }
 
@@ -444,6 +498,26 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	}
 }
 
+func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
+	so := db.getStateObject(addr)
+	if so == nil {
+		return
+	}
+
+	// When iterating over the storage check the cache first
+	for h, value := range so.cachedStorageByteArray {
+		cb(h, value)
+	}
+
+	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
+	for it.Next() {
+		// ignore cached values
+		key := common.BytesToHash(db.trie.GetKey(it.Key))
+		if _, ok := so.cachedStorage[key]; !ok {
+			cb(key, it.Value)
+		}
+	}
+}
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {

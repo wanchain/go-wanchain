@@ -1154,6 +1154,75 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, signed)
 }
 
+func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
+	orgOtaAddr := common.FromHex(otaAddr)
+
+	otaByteSet, err := s.getOTAMixSet(ctx, orgOtaAddr, setLen)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]string, 0)
+	for _, otaByte := range otaByteSet {
+		ret = append(ret, common.Bytes2Hex(otaByte))
+
+	}
+
+	return ret, nil
+}
+
+func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int) ([][]byte, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	return state.GetOTASet(otaAddr, setLen)
+}
+
+// 根据一次性地址拥有者的private key信息计算对应地址的两个private key
+func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return "", err
+	}
+
+	wanBytes, _ := hexutil.Decode(inOtaAddr)
+	otaBytes, err := keystore.WaddrToUncompressed(wanBytes)
+	if err != nil {
+		return "", err
+	}
+
+	otaAddr := hexutil.Encode(otaBytes)
+
+	//AX string, AY string, BX string, BY string
+	otaAddr = strings.Replace(otaAddr, "0x", "", -1)
+	AX := "0x" + otaAddr[0:64]
+	AY := "0x" + otaAddr[64:128]
+
+	BX := "0x" + otaAddr[128:192]
+	BY := "0x" + otaAddr[192:256]
+
+	sS, err2 := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
+	if err2 != nil {
+		return "", err2
+	}
+
+	otaPub := sS[0] + sS[1][2:]
+	otaPriv := sS[2]
+
+	privateKey, err := crypto.HexToECDSA(otaPriv[2:])
+
+	var addr common.Address
+	pubkey := crypto.FromECDSAPub(&privateKey.PublicKey)
+	//caculate the address for replaced pub
+	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return otaPriv + "+" + otaPub + "+" + hexutil.Encode(addr[:]), nil
+
+}
+
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {

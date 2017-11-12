@@ -770,14 +770,3 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 
 }
-/////////////////////////////////////////for debug////////////////////////
-
-func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {return nil}
-
-func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {return true,nil,nil}
-
-func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.Int, unexitOta []byte, err error) {
-	return true,nil,nil,nil
-}
-
-func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool, error) {return  true,nil}

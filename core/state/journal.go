@@ -55,6 +55,14 @@ type (
 		account       *common.Address
 		key, prevalue common.Hash
 	}
+
+	// lzh add
+	storageByteArrayChange struct {
+		account  *common.Address
+		key      common.Hash
+		prevalue []byte
+	}
+
 	codeChange struct {
 		account            *common.Address
 		prevcode, prevhash []byte
@@ -119,6 +127,11 @@ func (ch codeChange) undo(s *StateDB) {
 
 func (ch storageChange) undo(s *StateDB) {
 	s.getStateObject(*ch.account).setState(ch.key, ch.prevalue)
+}
+
+// lzh add
+func (ch storageByteArrayChange) undo(s *StateDB) {
+	s.getStateObject(*ch.account).setStateByteArray(ch.key, ch.prevalue)
 }
 
 func (ch refundChange) undo(s *StateDB) {
