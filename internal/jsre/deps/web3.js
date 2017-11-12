@@ -5453,11 +5453,29 @@ var methods = function () {
         call: 'eth_getOTAMixSet',
         params: 2
     });
+    //jqg
+    var sendPrivacyCxtTransaction = new Method({
+        name: 'sendPrivacyCxtTransaction',
+        call: 'eth_sendPrivacyCxtTransaction',
+        params: 2,
+        inputFormatter: [formatters.inputTransactionFormatter, null]
+    });
+
+    var computeOTAPPKeys = new Method({
+        name: 'computeOTAPPKeys',
+        call: 'eth_computeOTAPPKeys',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, null]
+    });
 
     return [
+        //for privacy tx
+        computeOTAPPKeys,
+        sendPrivacyCxtTransaction,
         getWanAddress,
         generateOneTimeAddress,
         getOTAMixSet,
+
         getBalance,
         getStorageAt,
         getCode,
