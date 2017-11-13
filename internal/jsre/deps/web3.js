@@ -5453,6 +5453,7 @@ var methods = function () {
         call: 'eth_getOTAMixSet',
         params: 2
     });
+    
     //jqg
     var sendPrivacyCxtTransaction = new Method({
         name: 'sendPrivacyCxtTransaction',
@@ -5461,6 +5462,7 @@ var methods = function () {
         inputFormatter: [formatters.inputTransactionFormatter, null]
     });
 
+    // @anson
     var computeOTAPPKeys = new Method({
         name: 'computeOTAPPKeys',
         call: 'eth_computeOTAPPKeys',
@@ -5468,6 +5470,7 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
+    // @anson
     var genRingSignData = new Method({
         name: 'genRingSignData',
         call: 'eth_genRingSignData',

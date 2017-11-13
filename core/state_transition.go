@@ -412,6 +412,12 @@ func (st *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (cal
 
 	stampGas = new(big.Int).Div(balanceGet,st.gasPrice).Uint64()
 
+	mixLen := len(publickeys)
+	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
+
+	stampGas -= ringSigDiffRequiredGas
+
+
 	return
 
 }

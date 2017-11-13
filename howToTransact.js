@@ -14,7 +14,7 @@ var sendWanFromUnlock = function (From, To , V){
 }
 
 wanUnlock(eth.coinbase);
-sendWanFromUnlock(eth.coinbase, eth.accounts[1], 100);
+//sendWanFromUnlock(eth.coinbase, eth.accounts[1], 100);
 wanUnlock(eth.accounts[1])
 wanUnlock(eth.accounts[2])
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -27,9 +27,8 @@ contractDef = eth.contract(abiDef);
 coinContractAddr = "0x0000000000000000000000000000000000000064";
 coinContract = contractDef.at(coinContractAddr);
 
-oldValue = web3.fromWei(eth.getBalance(eth.accounts[1]));
-personal.unlockAccount(eth.accounts[1],"wanglu",9999);
-personal.unlockAccount(eth.accounts[2],"wanglu",9999);
+oldValue1 = web3.fromWei(eth.getBalance(eth.accounts[1]));
+oldValue2 = web3.fromWei(eth.getBalance(eth.accounts[2]));
 
 //generate OTA address for account1
 var wanAddr = eth.getWanAddress(eth.accounts[2]);
@@ -47,7 +46,6 @@ eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei
   5.eth.sendOTATransaction({from:receiver_address, to:coinContractAddr,data:otaTxData, gas:1000000})
 */
 //get wanaddr without '0x' prefix
-//var otaAddr = '0x03165a11eb0797e7258fabc36df1c49bb957b03fd806a0fcb0518ef3fde05b358f02405046537cc5464cf82c87ac007ad92f3140b5d94f163b45cbce3c35633e8ca4';
 var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
@@ -59,7 +57,10 @@ privateKey = keyPairs[0];
 
 var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
-eth.sendTransaction({from:eth.accounts[2], to:"0x0000000000000000000000000000000000000006", value:0, data:txRefundData, gas: 2000000});
+eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000});
+
+oldValue1 = web3.fromWei(eth.getBalance(eth.accounts[1]));
+oldValue2 = web3.fromWei(eth.getBalance(eth.accounts[2]));
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -73,7 +74,7 @@ eth.sendTransaction({from:eth.accounts[2], to:"0x0000000000000000000000000000000
 abiDefStamp = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyStamp","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
 contractDef = eth.contract(abiDefStamp);
-stampContractAddr = "0x0000000000000000000000000000000000000005";
+stampContractAddr = "0x00000000000000000000000000000000000000c8";
 stampContract = contractDef.at(stampContractAddr);
 
 //generate OTA address for account1, otaAddr is a stamp
@@ -113,7 +114,7 @@ var erc20simpleInt = erc20simple_contract.new(
   });
 
 // 实例化部署的合约，下面的地址用实际生成的地址替换
-var contractAddr = "0x0dacf2427f6eb1eb3fc09ea403a92a53e2add176"
+var contractAddr = "0x8aa6d8dab3140e04e16a7ab1ef28e06f2ba2a807"
 var erc20simple = erc20simple_contract.at(contractAddr)
 
 
