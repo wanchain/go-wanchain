@@ -24,7 +24,7 @@ wanUnlock(eth.accounts[2])
 abiDef = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyCoinNote","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
 contractDef = eth.contract(abiDef);
-coinContractAddr = "0x0000000000000000000000000000000000000006";
+coinContractAddr = "0x0000000000000000000000000000000000000064";
 coinContract = contractDef.at(coinContractAddr);
 
 oldValue = web3.fromWei(eth.getBalance(eth.accounts[1]));
@@ -36,7 +36,7 @@ var wanAddr = eth.getWanAddress(eth.accounts[2]);
 var otaAddr = eth.generateOneTimeAddress(wanAddr);
 
 txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
-eth.sendTransaction({from:eth.accounts[1], to:"0x0000000000000000000000000000000000000006", value:web3.toWei(1), data:txBuyData, gas: 1000000});
+eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei(1), data:txBuyData, gas: 1000000});
 
 
 /*
@@ -47,7 +47,7 @@ eth.sendTransaction({from:eth.accounts[1], to:"0x0000000000000000000000000000000
   5.eth.sendOTATransaction({from:receiver_address, to:coinContractAddr,data:otaTxData, gas:1000000})
 */
 //get wanaddr without '0x' prefix
-var otaAddr = '0x03165a11eb0797e7258fabc36df1c49bb957b03fd806a0fcb0518ef3fde05b358f02405046537cc5464cf82c87ac007ad92f3140b5d94f163b45cbce3c35633e8ca4';
+//var otaAddr = '0x03165a11eb0797e7258fabc36df1c49bb957b03fd806a0fcb0518ef3fde05b358f02405046537cc5464cf82c87ac007ad92f3140b5d94f163b45cbce3c35633e8ca4';
 var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
@@ -133,7 +133,6 @@ var hashMsg = addrTokenHolder //0xF16759618f122B21BDFad1481e2462dDAC25cEda
 var ringSignData = eth.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
 //为接收方生成隐私地址
-
 var wanAddr = eth.getWanAddress(eth.accounts[2]);
 var otaAddr4Account2 = eth.generateOneTimeAddress(wanAddr);
 keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
