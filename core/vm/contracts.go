@@ -625,7 +625,35 @@ type wanCoinSC struct {
 }
 
 func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
-	return 0
+	var methodIdArr [4]byte
+	copy(methodIdArr[:], input[:4])
+
+    if methodIdArr == refundIdArr {
+
+		var RefundStruct struct {
+			RingSignedData string
+			Value          *big.Int
+		}
+
+		err := coinAbi.Unpack(&RefundStruct, "refundCoin", input[4:])
+		if err != nil {
+			return params.RequiredGasPerMixPub
+		}
+
+		err, publickeys, _, _, _ := DecodeRingSignOut(RefundStruct.RingSignedData)
+		if err != nil {
+			return params.RequiredGasPerMixPub
+		}
+
+		mixLen := len(publickeys)
+		ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
+
+		return ringSigDiffRequiredGas
+
+	} else {
+		return 0
+	}
+
 }
 
 
