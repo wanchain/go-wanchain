@@ -43,7 +43,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"crypto/ecdsa"
 )
 
 const (
@@ -1190,93 +1189,52 @@ func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []b
 	return state.GetOTASet(otaAddr, setLen)
 }
 
-<<<<<<< HEAD
-func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAddress string) (string, error) {
+func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
 	// @anson
 	// TODO: params validation
 
 	hmsg, _ := hexutil.Decode(hashMsg)
-	privKey, err := hexutil.Decode(privateKey)
-	if err != nil {
-		return "", err
-	}
-
-	wanAddresses := strings.Split(mixWanAddress, "+")
-=======
-type RingSignedData struct {
-	PublicKeys []*ecdsa.PublicKey
-	KeyImage   *ecdsa.PublicKey
-	Ws         []*big.Int
-	Qs         []*big.Int
-}
-
-func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	// TODO: input params check
-
-	hmsg, _ := hexutil.Decode(hashMsg)
-	privkey, _ := hexutil.Decode(privateKey)
+	privKey, _ := hexutil.Decode(privateKey)
 	wanAddresses := strings.Split(mixWanAdresses, "+")
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
 	if err != nil {
 		return "", err
 	}
 
-<<<<<<< HEAD
 	return genRingSignData(hmsg, privKey, &ecdsaPrivateKey.PublicKey, wanAddresses)
-}
-
-func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAddress []string) (string, error) {
-	// @anson
-	// TODO: params-validation
-=======
-	return genRingSignData(hmsg, privkey, &ecdsaPrivateKey.PublicKey, wanAddresses)
 }
 
 func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error) {
 	// TODO: input params check
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 
 	otaPrivD := new(big.Int).SetBytes(privateKey)
 
 	publicKeys := make([]*ecdsa.PublicKey, 0)
 	publicKeys = append(publicKeys, actualPub)
-<<<<<<< HEAD
-	for _, strWanAddr := range mixWanAddress {
-		pubBytes, err := hexutil.Decode(strWanAddr)
-		if err != nil {
-			return "", errors.New("Fail to decode wan address!")
-=======
+
 	for _, strWanAddr := range mixWanAdress {
 		pubBytes, err := hexutil.Decode(strWanAddr)
 		if err != nil {
 			return "", errors.New("fail to decode wan address!")
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 		}
 
 		publicKeyA, _, err := keystore.GeneratePublicKeyFromWaddress(pubBytes)
 		if err != nil {
-<<<<<<< HEAD
+
 			return "", errors.New("Fail to generate public key from wan address!")
-=======
+
 			return "", errors.New("fail to generate public key from wan address!")
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
+
 		}
 
 		publicKeys = append(publicKeys, publicKeyA)
 	}
 
 	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
-<<<<<<< HEAD
-=======
-	//b := crypto.VerifyRingSign(hashMsg, retPublicKeys, keyImage, w_random, q_random)
-	// fmt.Println(b)
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
-
 	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
 }
 
-<<<<<<< HEAD
+//  encode all ring sign out data to a string
 func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
 	tmp := make([]string, 0)
 	for _, pk := range publicKeys {
@@ -1284,45 +1242,22 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	}
 
 	pkStr := strings.Join(tmp, "&")
-=======
-//  encode all ring sign out data to a string
-func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
-	pa := make([]string, 0)
-	for _, pk := range publicKeys {
-		pa = append(pa, common.ToHex(crypto.FromECDSAPub(pk)))
-	}
-	ps := strings.Join(pa, "&")
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 	k := common.ToHex(crypto.FromECDSAPub(keyimage))
 	wa := make([]string, 0)
 	for _, wi := range Ws {
 		wa = append(wa, hexutil.EncodeBig(wi))
 	}
-<<<<<<< HEAD
+
 	wStr := strings.Join(wa, "&")
-=======
-	ws := strings.Join(wa, "&")
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 	qa := make([]string, 0)
 	for _, qi := range Qs {
 		qa = append(qa, hexutil.EncodeBig(qi))
 	}
-<<<<<<< HEAD
 	qStr := strings.Join(qa, "&")
 	outs := strings.Join([]string{pkStr, k, wStr, qStr}, "+")
 	return outs, nil
-
 }
 
-=======
-	qs := strings.Join(qa, "&")
-	outs := strings.Join([]string{ps, k, ws, qs}, "+")
-	//decodeRingSignOut(outs)
-	return outs, nil
-}
-
-
->>>>>>> 2abbddc37e3099c4c513e7a35af2dc85b975fcda
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
 	account := accounts.Account{Address: address}
