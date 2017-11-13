@@ -495,6 +495,22 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return b, state.Error()
 }
 
+// GetOTABalance returns OTA balance
+func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	otaWAddrByte := common.FromHex(otaWAddr)
+	if otaWAddrByte == nil || len(otaWAddrByte) != common.WAddressLength {
+		return nil, errors.New("invalid ota wan address!")
+	}
+
+	return state.GetOTABalance(otaWAddrByte)
+
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
@@ -1256,6 +1272,51 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	qStr := strings.Join(qa, "&")
 	outs := strings.Join([]string{pkStr, k, wStr, qStr}, "+")
 	return outs, nil
+}
+
+var privacyContract common.Address
+
+func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
+	otas := []string{}
+	account := accounts.Account{Address: address}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return otas, err
+	}
+
+	curBlock, err := s.GetBlockByNumber(ctx, n, true)
+	if err != nil {
+		return otas, err
+	}
+
+	element := curBlock["transactions"]
+	privacyContract[19] = 0x06
+	if txs, ok := element.([]interface{}); ok {
+		for i := 0; i < len(txs); i++ {
+			txi := txs[i]
+			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
+				if privacyContract.Str() == txrpc.To.Str() {
+					otas = append(otas, string(txrpc.To.Hex()))
+					var otaWAddr common.WAddress
+					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
+						return otas, err4
+					}
+					isMine, err := wallet.CheckOTAdress(account, &otaWAddr)
+					if err != nil {
+						return otas, err
+					}
+					if isMine == true {
+						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
+					}
+				}
+			}
+		}
+
+	} else {
+		return otas, errors.New("fetch txs failed")
+	}
+
+	return otas, nil
 }
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key

@@ -2,12 +2,11 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
@@ -196,7 +195,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 	}
 
 	mptAddr := common.HexToAddress(balance.String())
-	fmt.Println("GetOTASet, mptAddr:", common.ToHex(mptAddr[:]))
+	log.Debug("GetOTASet, mptAddr:", common.ToHex(mptAddr[:]))
 
 	otaWanAddrs = make([][]byte, 0)
 	rnd := rand.Intn(100) + 1

@@ -2509,6 +2509,7 @@ module.exports={
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
 var Eth = require('./web3/methods/eth');
+var Wan = require('./web3/methods/wan');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
@@ -2531,6 +2532,7 @@ function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
     this.eth = new Eth(this);
+    this.wan = new Wan(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
@@ -2632,7 +2634,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/wan":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -5477,6 +5479,22 @@ var methods = function () {
         params: 3,
     });
 
+    var getOTABalance = new Method({
+        name: 'getOTABalance',
+        call: 'eth_getOTABalance',
+        params: 1,
+        inputFormatter: [null],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
+    var scanOTAbyAccount = new Method ({
+        name: 'scanOTAbyAccount',
+        call: 'eth_scanOTAbyAccount',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
+    });
+
+
 
     return [
         //for privacy tx
@@ -5486,6 +5504,8 @@ var methods = function () {
         generateOneTimeAddress,
         getOTAMixSet,
         genRingSignData,
+        getOTABalance,
+        scanOTAbyAccount,
 
         getBalance,
         getStorageAt,

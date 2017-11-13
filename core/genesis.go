@@ -342,6 +342,21 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 	}
 }
 
+// DefaultPlutoGenesisBlock returns the Pluto network genesis block.
+
+
+
+func DefaultPlutoGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x59f83144,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e8ffc3d0c02c0bfc39b139fa49e2c5475f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x47b760,
+		Difficulty: big.NewInt(1),
+		Alloc:      jsonPrealloc(PlutoAllocJson),
+	}
+}
+
 // DevGenesisBlock returns the 'geth --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
@@ -361,6 +376,14 @@ func decodePrealloc(data string) GenesisAlloc {
 	ga := make(GenesisAlloc, len(p))
 	for _, account := range p {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+	}
+	return ga
+}
+
+func jsonPrealloc(data string) GenesisAlloc {
+	var ga GenesisAlloc
+	if err:=json.Unmarshal([]byte(data), &ga); err!=nil{
+		panic(err)
 	}
 	return ga
 }
