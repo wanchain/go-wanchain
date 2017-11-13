@@ -163,8 +163,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 
-
-	if precompiles[to.Address()] != precompiles[common.BytesToAddress([]byte{wanCoinPrecompileAddr})]&&precompiles[to.Address()] != precompiles[common.BytesToAddress([]byte{wanStampPrecompileAddr})] {
+	if !bytes.Equal(to.Address().Bytes(),common.BytesToAddress([]byte{wanCoinPrecompileAddr}).Bytes()) && !bytes.Equal(to.Address().Bytes(),common.BytesToAddress([]byte{wanStampPrecompileAddr}).Bytes()) {
 		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 	}
 
