@@ -181,7 +181,7 @@ func ECDSAPKCompression(p *ecdsa.PublicKey) []byte {
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
 // retry until the first byte is 0.
 func NewKeyForDirectICAP(rand io.Reader) *Key {
-	randBytes := make([]byte, 64)
+	randBytes := make([]byte, 64*2)
 	_, err := rand.Read(randBytes)
 	if err != nil {
 		panic("key generation: could not read from random source: " + err.Error())
