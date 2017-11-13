@@ -27,7 +27,7 @@ var tranValue = 1;
 abiDef = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyCoinNote","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
 contractDef = eth.contract(abiDef);
-coinContractAddr = "0x0000000000000000000000000000000000000006";
+coinContractAddr = "0x0000000000000000000000000000000000000064";
 coinContract = contractDef.at(coinContractAddr);
 
 var acc1OldBalance = parseFloat(wanBalance(eth.accounts[1]))
@@ -40,7 +40,7 @@ var wanAddr = eth.getWanAddress(eth.accounts[2]);
 var otaAddr = eth.generateOneTimeAddress(wanAddr);
 
 txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
-buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:"0x0000000000000000000000000000000000000006", value:web3.toWei(tranValue), data:txBuyData, gas: 1000000});
+buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei(tranValue), data:txBuyData, gas: 1000000});
 wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 
 
@@ -56,7 +56,7 @@ privateKey = keyPairs[0];
 console.log("Balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
 var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
-var refundTx = eth.sendTransaction({from:eth.accounts[2], to:"0x0000000000000000000000000000000000000006", value:0, data:txRefundData, gas: 2000000});
+var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000});
 wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
 
 console.log("New balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
