@@ -322,9 +322,9 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 
 	// Create a temporary kesytore to test with
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
-	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("wanchain-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
 
+	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
 	list := ks.Accounts()
 	if len(list) > 0 {
 		t.Error("initial account list not empty:", list)
