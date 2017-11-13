@@ -18,6 +18,7 @@ package ethapi
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -59,6 +60,14 @@ var (
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
 	b Backend
+}
+
+// RingSignedData represents a ring-signed digital signature
+type RingSignedData struct {
+	PublicKeys []*ecdsa.PublicKey
+	KeyImage   *ecdsa.PublicKey
+	Ws         []*big.Int
+	Qs         []*big.Int
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
@@ -1178,6 +1187,75 @@ func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []b
 	}
 
 	return state.GetOTASet(otaAddr, setLen)
+}
+
+func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAddress string) (string, error) {
+	// @anson
+	// TODO: params validation
+
+	hmsg, _ := hexutil.Decode(hashMsg)
+	privKey, err := hexutil.Decode(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	wanAddresses := strings.Split(mixWanAddress, "+")
+	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
+	if err != nil {
+		return "", err
+	}
+
+	return genRingSignData(hmsg, privKey, &ecdsaPrivateKey.PublicKey, wanAddresses)
+}
+
+func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAddress []string) (string, error) {
+	// @anson
+	// TODO: params-validation
+
+	otaPrivD := new(big.Int).SetBytes(privateKey)
+
+	publicKeys := make([]*ecdsa.PublicKey, 0)
+	publicKeys = append(publicKeys, actualPub)
+	for _, strWanAddr := range mixWanAddress {
+		pubBytes, err := hexutil.Decode(strWanAddr)
+		if err != nil {
+			return "", errors.New("Fail to decode wan address!")
+		}
+
+		publicKeyA, _, err := keystore.GeneratePublicKeyFromWaddress(pubBytes)
+		if err != nil {
+			return "", errors.New("Fail to generate public key from wan address!")
+		}
+
+		publicKeys = append(publicKeys, publicKeyA)
+	}
+
+	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+
+	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
+}
+
+func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
+	tmp := make([]string, 0)
+	for _, pk := range publicKeys {
+		tmp = append(tmp, common.ToHex(crypto.FromECDSAPub(pk)))
+	}
+
+	pkStr := strings.Join(tmp, "&")
+	k := common.ToHex(crypto.FromECDSAPub(keyimage))
+	wa := make([]string, 0)
+	for _, wi := range Ws {
+		wa = append(wa, hexutil.EncodeBig(wi))
+	}
+	wStr := strings.Join(wa, "&")
+	qa := make([]string, 0)
+	for _, qi := range Qs {
+		qa = append(qa, hexutil.EncodeBig(qi))
+	}
+	qStr := strings.Join(qa, "&")
+	outs := strings.Join([]string{pkStr, k, wStr, qStr}, "+")
+	return outs, nil
+
 }
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
