@@ -23,6 +23,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
+	"bytes"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
