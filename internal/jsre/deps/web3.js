@@ -5468,6 +5468,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
+    var genRingSignData = new Method({
+        name: 'genRingSignData',
+        call: 'eth_genRingSignData',
+        params: 3,
+    });
+
+
     return [
         //for privacy tx
         computeOTAPPKeys,
@@ -5475,6 +5482,7 @@ var methods = function () {
         getWanAddress,
         generateOneTimeAddress,
         getOTAMixSet,
+        genRingSignData,
 
         getBalance,
         getStorageAt,
