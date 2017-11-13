@@ -111,6 +111,19 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 	return w.keystore.SignTx(account, tx, chainID)
 }
 
+func (w *keystoreWallet) ComputeOTAPPKeys(account accounts.Account, AX, AY, BX, BY string) ([]string, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+
+	// Account seems valid, request the keystore to process
+	return w.keystore.ComputeOTAPPKeys(account, AX, AY, BX, BY)
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, attempting to sign the
 // given hash with the given account using passphrase as extra authentication.
 func (w *keystoreWallet) SignHashWithPassphrase(account accounts.Account, passphrase string, hash []byte) ([]byte, error) {

@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -277,6 +278,44 @@ func ToWaddr(raw []byte) ([]byte, error) {
 	B := crypto.ToECDSAPub(pub)
 	waddr := GenerateWaddressFromPK(A, B)
 	return waddr[:], nil
+}
+
+func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	tmp := make([]byte, 33)
+	copy(tmp[:33], waddr[:33])
+	curve := btcec.S256()
+	pk1, err := btcec.ParsePubKey(tmp, curve)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	copy(tmp[:33], waddr[33:])
+	pk2, err := btcec.ParsePubKey(tmp, curve)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
+}
+
+func WaddrToUncompressed(waddr []byte) ([]byte, error) {
+	A, B, err := GeneratePublicKeyFromWaddress(waddr)
+	if err != nil {
+		return nil, err
+	}
+
+	u := make([]byte, 128)
+	ax := math.PaddedBigBytes(A.X, 32)
+	ay := math.PaddedBigBytes(A.Y, 32)
+	bx := math.PaddedBigBytes(B.X, 32)
+	by := math.PaddedBigBytes(B.Y, 32)
+	copy(u[0:], ax[:32])
+	copy(u[32:], ay[:32])
+	copy(u[64:], bx[:32])
+	copy(u[96:], by[:32])
+
+	return u, nil
+
 }
 
 func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) common.WAddress {
