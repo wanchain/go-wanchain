@@ -30,6 +30,7 @@ import (
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+
 )
 
 var (
@@ -184,9 +185,11 @@ func (st *StateTransition) buyGas() error {
 		state  = st.state
 		sender = st.from()
 	)
+
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
+
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err
 	}
@@ -240,11 +243,20 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
-	if st.msg.TxType() != 6 {
-		if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+	if st.msg.TxType() == 6 {
+		pureCallData, stampGas, err := st.preProcessPrivacyTx(sender.Address().Bytes(), st.data)
+		if err != nil {
 			return nil, nil, nil, false, err
 		}
+		st.gas = stampGas
+		st.initialGas.SetUint64(stampGas)
+		st.data = pureCallData[:]
 	}
+
+	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		return nil, nil, nil, false, err
+	}
+
 
 	var (
 		evm = st.evm
@@ -258,19 +270,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
-
-		if st.msg.TxType() == 6 {
-			pureCallData, _, err := st.preProcessPrivacyTx(sender.Address().Bytes(), st.data)
-			if err != nil {
-				return nil, nil, nil, false, err
-			}
-			// TODO: set gas correponding stamp value, stamp_value / gas_price
-			//       and sub gas used by ring sign
-			st.gas = 200000
-			st.initialGas.SetUint64(200000)
-			st.data = pureCallData[:]
-		}
-
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 
@@ -330,7 +329,7 @@ func init() {
 	}
 }
 
-func (self *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+func (st *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	ps := ss[0]
 	k := ss[1]
@@ -358,7 +357,7 @@ func (self *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.Public
 	return nil, publickeys, keyimgae, w, q
 }
 
-func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, keyimage *ecdsa.PublicKey, err error) {
+func (st *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, stampGas uint64, err error) {
 
 	var TxDataWithRing struct {
 		RingSignedData string
@@ -367,13 +366,13 @@ func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (c
 
 	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	callData = TxDataWithRing.CxtCallParams[:]
 
-	err, publickeys, keyimage, ws, qs := self.DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	err, publickeys, keyimage, ws, qs := st.DecodeRingSignOut(TxDataWithRing.RingSignedData)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	otaAXs := make([][]byte, 0, len(publickeys))
@@ -382,7 +381,7 @@ func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (c
 		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
 	}
 
-	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(self.evm.StateDB, otaAXs)
+	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(st.evm.StateDB, otaAXs)
 	if !exit || balanceGet == nil {
 		if err != nil {
 			log.Warn("verify mix ota fail. err:%s", err.Error())
@@ -394,22 +393,24 @@ func (self *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (c
 			log.Warn("balance getting from ota is wrong! get:%s, expect:%s")
 		}
 
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	kix := crypto.FromECDSAPub(keyimage)
-	exit, _, err = vm.CheckOTAImageExit(self.evm.StateDB, kix)
+	exit, _, err = vm.CheckOTAImageExit(st.evm.StateDB, kix)
 	if err != nil || exit {
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	b := crypto.VerifyRingSign(hashInput, publickeys, keyimage, ws, qs)
 	if !b {
 		err = errors.New("ring sign is invalid!")
-		return nil, nil, err
+		return nil, 0, err
 	}
 
-	vm.AddOTAImage(self.evm.StateDB, kix, balanceGet.Bytes())
+	vm.AddOTAImage(st.evm.StateDB, kix, balanceGet.Bytes())
+
+	stampGas = new(big.Int).Div(balanceGet,st.gasPrice).Uint64()
 
 	return
 
