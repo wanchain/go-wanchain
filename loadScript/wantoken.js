@@ -33,7 +33,7 @@ wanUnlock(eth.accounts[2])
 abiDefStamp = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyStamp","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
 contractDef = eth.contract(abiDefStamp);
-stampContractAddr = "0x0000000000000000000000000000000000000005";
+stampContractAddr = "0x00000000000000000000000000000000000000c8";
 stampContract = contractDef.at(stampContractAddr);
 
 var wanAddr = eth.getWanAddress(eth.accounts[1]);
