@@ -240,6 +240,12 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 			return nil, err
 		}
 		keyBytes, keyId, err = decryptKeyV1(k, auth)
+		key := crypto.ToECDSAUnsafe(keyBytes)
+		return &Key{
+			Id:         uuid.UUID(keyId),
+			Address:    crypto.PubkeyToAddress(key.PublicKey),
+			PrivateKey: key,
+		}, nil
 	} else {
 		k := new(encryptedKeyJSONV3)
 		if err := json.Unmarshal(keyjson, k); err != nil {
@@ -257,15 +263,9 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	key := crypto.ToECDSAUnsafe(keyBytes)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
+	key := crypto.ToECDSAUnsafe(keyBytes)
 	key2 := crypto.ToECDSAUnsafe(keyBytes2)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	waddressRaw, err := hex.DecodeString(*waddressStr)
 	if err != nil {
