@@ -38,6 +38,14 @@ func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accou
 		return accounts.Account{}, nil, err
 	}
 	key.Id = uuid.NewRandom()
+	// @anson
+	// add a second sk field for wanchain address
+	sk, err := crypto.GenerateKey()
+	if err != nil {
+		return accounts.Account{}, nil, err
+	}
+	key.PrivateKey2 = sk
+
 	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: keyStore.JoinPath(keyFileName(key.Address))}}
 	err = keyStore.StoreKey(a.URL.Path, key, password)
 	return a, key, err
