@@ -13683,7 +13683,43 @@ module.exports = transfer;
 },{}],86:[function(require,module,exports){
 module.exports = XMLHttpRequest;
 
-},{}],"bignumber.js":[function(require,module,exports){
+},{}],87:[function(require,module,exports){
+/* wan.js */
+    var Method = require('../method');
+    //var formatters = require('../formatters');
+
+    function Wan(web3) {
+        this._requestManager = web3._requestManager;
+
+        var self = this;
+
+        methods().forEach(function(method) {
+            method.attachToObject(self);
+            method.setRequestManager(self._requestManager);
+        });
+
+        properties().forEach(function(p) {
+            p.attachToObject(self);
+            p.setRequestManager(self._requestManager);
+        });
+    }
+
+    var methods = function () {
+        var getOTAMixSet = new Method({
+            name: 'getOTAMixSet',
+            call: 'wan_getOTAMixSet',
+            params: 2
+        });
+
+        return [
+            getOTAMixSet
+        ];
+    };
+    var properties = function () {
+        return [];
+    };
+module.exports = Wan;
+},{"../formatters":30,"../method":36}],"bignumber.js":[function(require,module,exports){
 'use strict';
 
 module.exports = BigNumber; // jshint ignore:line
