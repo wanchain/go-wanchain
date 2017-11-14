@@ -100,26 +100,26 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	}
 }
 
-// func TestImportPreSaleKey(t *testing.T) {
-// 	dir, ks := tmpKeyStoreIface(t, true)
-// 	defer os.RemoveAll(dir)
+func TestImportPreSaleKey(t *testing.T) {
+	dir, ks := tmpKeyStoreIface(t, true)
+	defer os.RemoveAll(dir)
 
-// file content of a presale key file generated with:
-// python pyethsaletool.py genwallet
-// with password "foo"
-// fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
-// 	pass := "foo"
-// 	account, _, err := importPreSaleKey(ks, []byte(fileContent), pass)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	if account.Address != common.HexToAddress("d4584b5f6229b7be90727b0fc8c6b91bb427821f") {
-// 		t.Errorf("imported account has wrong address %x", account.Address)
-// 	}
-// 	if !strings.HasPrefix(account.URL.Path, dir) {
-// 		t.Errorf("imported account file not in keystore directory: %q", account.URL)
-// 	}
-// }
+	// file content of a presale key file generated with:
+	// python pyethsaletool.py genwallet
+	// with password "foo"
+	fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
+	pass := "foo"
+	account, _, err := importPreSaleKey(ks, []byte(fileContent), pass)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if account.Address != common.HexToAddress("d4584b5f6229b7be90727b0fc8c6b91bb427821f") {
+		t.Errorf("imported account has wrong address %x", account.Address)
+	}
+	if !strings.HasPrefix(account.URL.Path, dir) {
+		t.Errorf("imported account file not in keystore directory: %q", account.URL)
+	}
+}
 
 // Test and utils for the key store tests in the Ethereum JSON tests;
 // testdataKeyStoreTests/basic_tests.json
