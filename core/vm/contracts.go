@@ -550,7 +550,34 @@ var (
 	errMethodId = errors.New("error method id")
 
 	errBalance = errors.New("balance is insufficient")
+
+	errStampValue = errors.New("stamp value is not support")
+
+	errCoinValue = errors.New("wancoin value is not support")
+
+	StampValueSet = make (map[string]string,5)
+	WanCoinValueSet = make (map[string]string,10)
+
 )
+
+const (
+	Wancoindot1 = "100000000000000000"    //0.1
+	Wancoindot2 = "200000000000000000"    //0.2
+	Wancoindot5 = "500000000000000000"    //0.5
+	Wancoin1     = "1000000000000000000"   //1
+	Wancoin2     = "2000000000000000000"   //2
+	Wancoin5     = "5000000000000000000"   //5
+	Wancoin10    = "10000000000000000000"  //10
+	Wancoin20    = "20000000000000000000"  //20
+	Wancoin50    = "50000000000000000000"  //50
+	Wancoin100   = "100000000000000000000" //100
+
+	WanStamp0dot1 = "10000000000000000" //0.01
+	WanStamp0dot2 = "20000000000000000" //0.02
+	WanStamp0dot5 = "50000000000000000"  //0.05
+)
+
+
 
 func init() {
 	if errCoinSCInit != nil || errStampSCInit != nil {
@@ -562,12 +589,52 @@ func init() {
 	copy(getCoinsIdArr[:], coinAbi.Methods["getCoins"].Id())
 
 	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
+
+	sval01,_:= new(big.Int).SetString(WanStamp0dot1,10)
+	StampValueSet[sval01.Text(16)] = WanStamp0dot1
+
+	sval02,_:= new(big.Int).SetString(WanStamp0dot2,10)
+	StampValueSet[sval02.Text(16)] = WanStamp0dot2
+
+	sval05,_:= new(big.Int).SetString(WanStamp0dot5,10)
+	StampValueSet[sval05.Text(16)] = WanStamp0dot5
+
+
+	cval01,_:= new(big.Int).SetString(Wancoindot1,10)
+	WanCoinValueSet[cval01.Text(16)] = Wancoindot1
+
+	cval02,_:= new(big.Int).SetString(Wancoindot2,10)
+	WanCoinValueSet[cval02.Text(16)] = Wancoindot2
+
+	cval05,_:= new(big.Int).SetString(Wancoindot5,10)
+	WanCoinValueSet[cval05.Text(16)] = Wancoindot5
+
+	cval1,_:= new(big.Int).SetString(Wancoin1,10)
+	WanCoinValueSet[cval1.Text(16)] = Wancoin1
+
+	cval2,_:= new(big.Int).SetString(Wancoin2,10)
+	WanCoinValueSet[cval2.Text(16)] = Wancoin2
+
+	cval5,_:= new(big.Int).SetString(Wancoin5,10)
+	WanCoinValueSet[cval5.Text(16)] = Wancoin5
+
+	cval10,_:= new(big.Int).SetString(Wancoin10,10)
+	WanCoinValueSet[cval10.Text(16)] = Wancoin10
+
+	cval20,_:= new(big.Int).SetString(Wancoin20,10)
+	WanCoinValueSet[cval20.Text(16)] = Wancoin20
+
+	cval50,_:= new(big.Int).SetString(Wancoin50,10)
+	WanCoinValueSet[cval50.Text(16)] = Wancoin50
+
+	cval100,_:= new(big.Int).SetString(Wancoin100,10)
+	WanCoinValueSet[cval100.Text(16)] = Wancoin100
 }
 
 type wanchainStampSC struct {}
 
 func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
-	return 0
+	return params.CreateDataGas
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM)([]byte, error) {
@@ -594,6 +661,11 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
 	if err != nil {
 		return nil,errBuyStamp
+	}
+
+	_,ok := StampValueSet[contract.value.Text(16)]
+	if !ok {
+		return nil,errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
@@ -651,7 +723,7 @@ func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
 		return ringSigDiffRequiredGas
 
 	} else {
-		return 0
+		return params.CreateDataGas
 	}
 
 }
@@ -687,6 +759,11 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
 	if err != nil {
 		return nil,errBuyCoin
+	}
+
+	_,ok := WanCoinValueSet[contract.value.Text(16)]
+	if !ok {
+		return nil,errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)

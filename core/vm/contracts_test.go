@@ -465,3 +465,11 @@ func BenchmarkPrecompiledBn256Pairing(bench *testing.B) {
 		benchmarkPrecompiled("08", test, bench)
 	}
 }
+
+//test buyCoin
+func TestPrecompiledWanCoinSCBuyCoin(t *testing.T) {
+	for _, test := range bn256PairingTests {
+		testPrecompiled("08", test, t)
+	}
+}
+
