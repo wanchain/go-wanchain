@@ -56,7 +56,7 @@ type StateDB interface {
 	// Notably this should also return true for suicided accounts.
 	Exist(common.Address) bool
 	// Empty returns whether the given account is empty. Empty
-	// is defined according to EIP161 (balance = nonce = code = 0).
+	// is defined according to EIP161 (balance = nonce = code = data.root = dirtyStorage = 0).
 	Empty(common.Address) bool
 
 	RevertToSnapshot(int)

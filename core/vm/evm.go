@@ -28,7 +28,7 @@ import (
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
 // deployed contract addresses (relevant after the account abstraction).
-var emptyCodeHash = crypto.Keccak256Hash(nil)
+//var emptyCodeHash = crypto.Keccak256Hash(nil)
 
 type (
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
@@ -320,8 +320,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	evm.StateDB.SetNonce(caller.Address(), nonce+1)
 
 	contractAddr = crypto.CreateAddress(caller.Address(), nonce)
-	contractHash := evm.StateDB.GetCodeHash(contractAddr)
-	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+	if !evm.StateDB.Empty(contractAddr) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 	// Create a new account on the state
