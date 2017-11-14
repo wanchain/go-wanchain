@@ -384,13 +384,13 @@ func (st *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (cal
 	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(st.evm.StateDB, otaAXs)
 	if !exit || balanceGet == nil {
 		if err != nil {
-			log.Warn("verify mix ota fail. err:%s", err.Error())
+			log.Warn("verify mix ota fail", "err", err.Error())
 		}
 		if unexit != nil {
-			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+			log.Warn("invalid mix ota", "invalid ota", common.ToHex(unexit))
 		}
 		if balanceGet == nil {
-			log.Warn("balance getting from ota is wrong! get:%s, expect:%s")
+			log.Warn("balance getting from ota is wrong!")
 		}
 
 		return nil, 0, err
