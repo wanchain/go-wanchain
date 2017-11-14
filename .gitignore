@@ -29,3 +29,6 @@ profile.cov
 
 # IdeaIDE
 .idea
+
+# Docker Env 
+DOCKER/**
