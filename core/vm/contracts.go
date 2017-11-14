@@ -843,14 +843,14 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 	exit, balanceGet, unexit, err := BatCheckOTAExit(evm.StateDB, otaAXs)
 	if !exit || balanceGet == nil || balanceGet.Cmp(RefundStruct.Value) != 0 {
 		if err != nil {
-			log.Warn("verify mix ota fail. err:%s", err.Error())
+			log.Warn("verify mix ota fail", "err", err.Error())
 		}
 		if unexit != nil {
-			log.Warn("invalid mix ota:%s", common.ToHex(unexit))
+			log.Warn("invalid mix ota", "invalid ota", common.ToHex(unexit))
 		}
 		if balanceGet != nil && balanceGet.Cmp(RefundStruct.Value) != 0 {
-			log.Warn("balance getting from ota is wrong! get:%s, expect:%s",
-				balanceGet.String(), RefundStruct.Value.String())
+			log.Warn("balance getting from ota is wrong", "get", balanceGet.String(),
+				"expect", RefundStruct.Value.String())
 		} else {
 			return nil,errBalance
 		}
