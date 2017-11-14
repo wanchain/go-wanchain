@@ -1301,7 +1301,7 @@ func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address comm
 					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
 						return otas, err4
 					}
-					isMine, err := wallet.CheckOTAdress(account, &otaWAddr)
+					isMine, err := wallet.CheckOTA(account, &otaWAddr)
 					if err != nil {
 						return otas, err
 					}

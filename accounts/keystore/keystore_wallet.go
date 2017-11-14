@@ -164,3 +164,17 @@ func (w *keystoreWallet) GetWanAddress(account accounts.Account) (common.WAddres
 	// Account seems valid, request the keystore to retrieve
 	return w.keystore.GetWanAddress(account)
 }
+
+// CheckOTA represents the wallet to check if the OTA exists
+func (w *keystoreWallet) CheckOTA(account accounts.Account, wan *common.WAddress) (bool, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return false, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return false, accounts.ErrUnknownAccount
+	}
+
+	// Account seems valid, request the keystore to make further process
+	return w.keystore.CheckOTA(account, wan)
+}
