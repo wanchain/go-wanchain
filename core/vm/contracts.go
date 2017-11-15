@@ -645,7 +645,7 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 	if balance.Cmp(contract.value) >= 0 {
 		// Need check contract value in  build in value sets
 		evm.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte("1"),nil
+		return []byte{1},nil
 	} else {
 
 		return nil,errBalance
@@ -657,6 +657,10 @@ type wanCoinSC struct {
 }
 
 func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
+	if input==nil || len(input)<4 {
+		return 0
+	}
+
 	var methodIdArr [4]byte
 	copy(methodIdArr[:], input[:4])
 
@@ -743,7 +747,7 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 	if balance.Cmp(contract.value) >= 0 {
 		// Need check contract value in  build in value sets
 		evm.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte("1"),nil
+		return []byte{1},nil
 	} else {
 		return nil,errBalance
 	}
@@ -829,7 +833,7 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 
 		addrSrc := contract.CallerAddress
 		evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
-		return []byte("1"),nil
+		return []byte{1},nil
 	} else {
 		return nil,errRefundCoin
 	}

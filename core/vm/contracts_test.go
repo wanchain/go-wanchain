@@ -6,6 +6,11 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"strings"
+	"github.com/wanchain/go-wanchain/params"
+	"bytes"
+	"github.com/wanchain/go-wanchain/core/types"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.
@@ -258,6 +263,7 @@ var bn256ScalarMulTests = []precompiledTest{
 	},
 }
 
+
 // bn256PairingTests are the test and benchmark data for the bn256 pairing check
 // precompiled contract.
 var bn256PairingTests = []precompiledTest{
@@ -319,6 +325,7 @@ var bn256PairingTests = []precompiledTest{
 		name:     "ten_point_match_3",
 	},
 }
+
 
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
@@ -466,10 +473,173 @@ func BenchmarkPrecompiledBn256Pairing(bench *testing.B) {
 	}
 }
 
-//test buyCoin
-func TestPrecompiledWanCoinSCBuyCoin(t *testing.T) {
-	for _, test := range bn256PairingTests {
-		testPrecompiled("08", test, t)
+///////////////////////////////////////////////////////////////////////
+var (
+		wanCoinSCAbiDef = `[{"constant":false, "type":"function", "stateMutability":"nonpayable", "inputs":[{"name":"OtaAddr", "type":"string"},{"name":"Value", "type":"uint256"}], "name":"buyCoinNote", "outputs":[{"name":"OtaAddr", "type":"string"},{"name":"Value", "type":"uint256"}]},{"constant":false, "type":"function", "inputs":[{"name":"RingSignedData", "type":"string"},{"name":"Value", "type":"uint256"}], "name":"refundCoin", "outputs":[{"name":"RingSignedData", "type":"string"},{"name":"Value", "type":"uint256"}]},{"constant":false, "inputs":[], "name":"getCoins", "outputs":[{"name":"Value", "type":"uint256"}]}]`
+	testwanCoinAbi, _= abi.JSON(strings.NewReader(wanCoinSCAbiDef))
+
+
+		wanStampAbiDef = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyStamp","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];`
+	 testwanStampAbi, _ = abi.JSON(strings.NewReader(wanStampAbiDef))
+
+	 buyCoinData = "0x3f8582d700000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000008630783032626463373964626438333735343230373638336661373737656632393664343061323430376161383338653331623337346438376161383561366135653338653033333464353232316632613935656631326236353432323933323937353935633130323733376237393964616664306130623334323334663937353738336362620000000000000000000000000000000000000000000000000000"
+
+	 refundData  =	"0x9ed1ecc800000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000000003a530783034366335383636636166663661383137316631346630623536346662396562663365376238323132363262653038376162616564363136333135386531313130316436353234623365636366353663663435376161373536336138316432633361383431303738346261346632356135343932353439306266373966623332373226307830346264633739646264383337353432303736383366613737376566323936643430613234303761613833386533316233373464383761613835613661356533386563313565653038336531316131386436653736383564396162613935383337303566363439396464346637656137373437316462323433633530303163313463263078303436633538363663616666366138313731663134663062353634666239656266336537623832313236326265303837616261656436313633313538653131313031643635323462336563636635366366343537616137353633613831643263336138343130373834626134663235613534393235343930626637396662333237322b3078303466356531356337356261323061323163376433656164313336636162346166313234653861646139353633623263356435323263326538383530336530333332386161636233616434306231333237636637633533613865633132363761343035643163613335356635656635653538643532656564303634373138646339302b30783464633136633662666561303033333166346637383763313762653635343364363330386436386636303761613464663666313337366463306631373439613926307834623833366562393233346263613966373634643338636436306439326361306163396364373465396461316439663836646339336362396165643235336233263078663338636161333634353265623037336438333663313336336462373931636335353438353836363466643333373136333064666131353961636536663235352b3078653330343230343032386136626462393131636332653862633031623437363164303636353937326262616162366132336531343364663531353364376534622630783636323530343637393764353331636334376164386539633033343331626133393161383663383861323865386365666431303663343365303332633431653726307831356564373730353834306433646133626137633163316332666666306336613239616532386138343462376530383532636634323066376463376632313538000000000000000000000000000000000000000000000000000000"
+
+	dbMockType = 0 //if 1 ,mock return blance nil
+
+)
+
+type CTStateDB struct{
+}
+
+func (CTStateDB) CreateAccount(common.Address) {}
+
+func (CTStateDB) SubBalance(common.Address, *big.Int)   {}
+func (CTStateDB) AddBalance(addr common.Address, pval *big.Int) {
+
+}
+func (CTStateDB) GetBalance(addr common.Address) *big.Int                                 {
+	defaulVal,_:= new(big.Int).SetString("10000000000000000000",10)
+	return defaulVal
+}
+func (CTStateDB) GetNonce(common.Address) uint64                                     { return 0 }
+func (CTStateDB) SetNonce(common.Address, uint64)                                    {}
+func (CTStateDB) GetCodeHash(common.Address) common.Hash                             { return common.Hash{} }
+func (CTStateDB) GetCode(common.Address) []byte                                      { return nil }
+func (CTStateDB) SetCode(common.Address, []byte)                                     {}
+func (CTStateDB) GetCodeSize(common.Address) int                                     { return 0 }
+func (CTStateDB) AddRefund(*big.Int)                                                 {}
+func (CTStateDB) GetRefund() *big.Int                                                { return nil }
+func (CTStateDB) GetState(common.Address, common.Hash) common.Hash                   { return common.Hash{} }
+func (CTStateDB) SetState(common.Address, common.Hash, common.Hash)                  {}
+func (CTStateDB) Suicide(common.Address) bool                                        { return false }
+func (CTStateDB) HasSuicided(common.Address) bool                                    { return false }
+func (CTStateDB) Exist(common.Address) bool                                          { return false }
+func (CTStateDB) Empty(common.Address) bool                                          { return false }
+func (CTStateDB) RevertToSnapshot(int)                                               {}
+func (CTStateDB) Snapshot() int                                                      { return 0 }
+func (CTStateDB) AddLog(*types.Log)                                                  {}
+func (CTStateDB) AddPreimage(common.Hash, []byte)                                    {}
+func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) {}
+func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool){}
+
+func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
+
+	if !bytes.Equal(addr.Bytes(), otaImageStorageAddr.Bytes()) {
+
+		if dbMockType == 1 {
+			return nil
+		}
+
+		defaulVal, _ := new(big.Int).SetString("1000000000000000000", 10)
+		return defaulVal.Bytes()
+		
+	} else {
+		return nil
 	}
 }
 
+func (CTStateDB) SetStateByteArray(common.Address, common.Hash, []byte)				{}
+
+type dummyCtRef struct {
+	calledForEach bool
+}
+
+func (dummyCtRef) ReturnGas(*big.Int)          {}
+func (dummyCtRef) Address() common.Address     { return common.Address{} }
+func (dummyCtRef) Value() *big.Int             { return new(big.Int) }
+func (dummyCtRef) SetCode(common.Hash, []byte) {}
+func (d *dummyCtRef) ForEachStorage(callback func(key, value common.Hash) bool) {
+	d.calledForEach = true
+}
+func (d *dummyCtRef) SubBalance(amount *big.Int) {}
+func (d *dummyCtRef) AddBalance(amount *big.Int) {}
+func (d *dummyCtRef) SetBalance(*big.Int)        {}
+func (d *dummyCtRef) SetNonce(uint64)            {}
+func (d *dummyCtRef) Balance() *big.Int          { return new(big.Int) }
+
+type dummyCtDB struct {
+	CTStateDB
+	ref *dummyCtRef
+}
+
+//test buyCoin to simulate the tx process
+func TestPrecompiledWanCoinSCBuyCoinSuccess(t *testing.T) {
+
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+	chargeValue,_:= new(big.Int).SetString(Wancoin10,10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(buyCoinData[2:])
+
+	dbMockType = 1
+	if res, err := RunPrecompiledContract(p, in, contract,evm); err != nil {
+		t.Error(err)
+	} else if common.Bytes2Hex(res) != "01" {
+		t.Errorf("Expected %v, got %v", "1", common.Bytes2Hex(res))
+	}
+
+}
+
+func TestPrecompiledWanCoinSCBuyCoinFailWrongValue(t *testing.T) {
+
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+	chargeValue,_:= new(big.Int).SetString("1111111000",10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(buyCoinData[2:])
+
+	if _, err := RunPrecompiledContract(p, in, contract,evm); err == nil {
+		t.Error(err)
+	}
+
+}
+
+
+
+//test refund
+func TestPrecompiledWanCoinRefundSuccess(t *testing.T) {
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+	chargeValue,_:= new(big.Int).SetString(Wancoin10,10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	contract.CallerAddress = common.HexToAddress("0x8b179c2b542f47bb2fb2dc40a3cf648aaae1df16")
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(refundData[2:])
+
+	if res, err := RunPrecompiledContract(p, in, contract,evm); err != nil {
+		t.Error(err)
+	} else if common.Bytes2Hex(res) != "01" {
+		t.Errorf("Expected %v, got %v", "1", common.Bytes2Hex(res))
+	}
+}
+
+
+func TestPrecompiledWanCoinRefundFailWrongSender(t *testing.T) {
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+	chargeValue,_:= new(big.Int).SetString(Wancoin10,10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	contract.CallerAddress = common.HexToAddress("0x99179c2b542f47bb2fb2dc40a3cf648aaae1df16")
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(refundData[2:])
+
+	if _, err := RunPrecompiledContract(p, in, contract,evm); err == nil {
+		t.Error(err)
+	}
+}
