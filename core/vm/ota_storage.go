@@ -10,13 +10,6 @@ import (
 	"fmt"
 )
 
-// Reserved contracts address for ota info storage
-var (
-	ReserveContractOTABalance = big.NewInt(300)
-	ReserveContractOTAImage   = big.NewInt(301)
-	ReserveContractOTABalanceAddr = common.BytesToAddress(ReserveContractOTABalance.Bytes())
-	ReserveContractOTAImageAddr   = common.BytesToAddress(ReserveContractOTAImage.Bytes())
-)
 
 // ota balance to ota storage address
 //
@@ -36,7 +29,7 @@ func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 		return nil, errors.New("GetOtaBalanceFromAX. invalid input param!")
 	}
 
-	balance := statedb.GetStateByteArray(ReserveContractOTABalanceAddr, common.BytesToHash(otaAX))
+	balance := statedb.GetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX))
 	if balance == nil || len(balance) == 0 {
 		return common.Big0, nil
 	}
@@ -49,7 +42,7 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 		return errors.New("SetOtaBalanceToAX. invalid input param!")
 	}
 
-	statedb.SetStateByteArray(ReserveContractOTABalanceAddr, common.BytesToHash(otaAX), balance.Bytes())
+	statedb.SetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX), balance.Bytes())
 	return nil
 }
 
@@ -59,7 +52,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 	}
 
 	otaAX := otaWanAddr[1 : 1+common.HashLength]
-	balance := statedb.GetStateByteArray(ReserveContractOTABalanceAddr, common.BytesToHash(otaAX))
+	balance := statedb.GetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX))
 	if balance == nil || len(balance) == 0 {
 		return common.Big0, nil
 	}
@@ -265,7 +258,7 @@ func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {
 	}
 
 	otaImageKey := crypto.Keccak256Hash(otaImage)
-	otaImageValue := statedb.GetStateByteArray(ReserveContractOTAImageAddr, otaImageKey)
+	otaImageValue := statedb.GetStateByteArray(otaImagePrecompileAddr, otaImageKey)
 	if otaImageValue != nil && len(otaImageValue) != 0 {
 		return true, otaImageValue, nil
 	}
@@ -279,6 +272,6 @@ func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {
 	}
 
 	otaImageKey := crypto.Keccak256Hash(otaImage)
-	statedb.SetStateByteArray(ReserveContractOTAImageAddr, otaImageKey, value)
+	statedb.SetStateByteArray(otaImagePrecompileAddr, otaImageKey, value)
 	return nil
 }

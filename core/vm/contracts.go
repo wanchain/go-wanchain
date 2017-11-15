@@ -34,46 +34,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 )
 
-const (
-	wanCoinPrecompileAddr = byte(100)
-	wanStampPrecompileAddr = byte(200)
-)
-// PrecompiledContract is the basic interface for native Go contracts. The implementation
-// requires a deterministic gas count based on the input size of the Run method of the
-// contract.
-type PrecompiledContract interface {
-	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
-	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) // Run runs the precompiled contract
-}
-
-// PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
-// contracts used in the Frontier and Homestead releases.
-var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-
-	common.BytesToAddress([]byte{wanCoinPrecompileAddr}): &wanCoinSC{},
-	common.BytesToAddress([]byte{wanStampPrecompileAddr}): &wanchainStampSC{},
-}
-
-// PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
-// contracts used in the Byzantium release.
-var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &bigModExp{},
-	common.BytesToAddress([]byte{6}): &bn256Add{},
-	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}): &bn256Pairing{},
-
-	common.BytesToAddress([]byte{wanCoinPrecompileAddr}): &wanCoinSC{},
-	common.BytesToAddress([]byte{wanStampPrecompileAddr}): &wanchainStampSC{},
-}
-
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract,evm *EVM) (ret []byte, err error) {
 	gas := p.RequiredGas(input)
