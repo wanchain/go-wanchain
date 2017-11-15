@@ -338,6 +338,10 @@ func TestWalletNotifications(t *testing.T) {
 	checkEvents(t, wantEvents, events)
 }
 
+func TestGenerateWanAddress(t *testing.T) {
+
+}
+
 // checkAccounts checks that all known live accounts are present in the wallet list.
 func checkAccounts(t *testing.T, live map[common.Address]accounts.Account, wallets []accounts.Wallet) {
 	if len(live) != len(wallets) {
