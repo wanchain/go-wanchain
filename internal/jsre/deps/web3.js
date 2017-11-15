@@ -5746,6 +5746,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter]
     });
 
+    var updateAccount = new Method({
+        name: 'updateAccount',
+        call: 'personal_updateAccount',
+        params: 3,
+        inputFormatter: [formatters.inputAddressFormatter, null, null]
+    });
+
     return [
         newAccount,
         importRawKey,
@@ -5753,7 +5760,8 @@ var methods = function () {
         ecRecover,
         sign,
         sendTransaction,
-        lockAccount
+        lockAccount,
+        updateAccount
     ];
 };
 
