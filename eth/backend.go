@@ -212,6 +212,13 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
+	if chainConfig.Pluto != nil {
+		var cliqueCfg params.CliqueConfig
+		chainConfig.Clique = &cliqueCfg
+		chainConfig.Clique.Period = chainConfig.Pluto.Period
+		chainConfig.Clique.Epoch = chainConfig.Pluto.Epoch
+		return clique.New(chainConfig.Clique, db)
+	}
 	// Otherwise assume proof-of-work
 	switch {
 	case config.PowFake:
