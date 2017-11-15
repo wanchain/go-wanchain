@@ -28,7 +28,7 @@ func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 		return nil, errors.New("GetOtaBalanceFromAX. invalid input param!")
 	}
 
-	balance := statedb.GetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX))
+	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
 	if balance == nil || len(balance) == 0 {
 		return common.Big0, nil
 	}
@@ -41,7 +41,7 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 		return errors.New("SetOtaBalanceToAX. invalid input param!")
 	}
 
-	statedb.SetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX), balance.Bytes())
+	statedb.SetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX), balance.Bytes())
 	return nil
 }
 
@@ -51,7 +51,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 	}
 
 	otaAX := otaWanAddr[1 : 1+common.HashLength]
-	balance := statedb.GetStateByteArray(otaBalancePrecompileAddr, common.BytesToHash(otaAX))
+	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
 	if balance == nil || len(balance) == 0 {
 		return common.Big0, nil
 	}
@@ -203,7 +203,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 	}
 
 	mptAddr := OTABalance2ContractAddr(balance)
-	log.Debug("GetOTASet, mptAddr:", common.ToHex(mptAddr[:]))
+	log.Debug("GetOTASet", "mptAddr", common.ToHex(mptAddr[:]))
 
 	otaWanAddrs = make([][]byte, 0)
 	rnd := rand.Intn(100) + 1
@@ -212,9 +212,8 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 	loop := 0
 	for {
 		statedb.ForEachStorageByteArray(mptAddr, func(key common.Hash, value []byte) bool {
-			log.Trace("GetOTASet for loop.., i:", i, ", loop:", loop)
 			if value == nil || len(value) != common.WAddressLength {
-				log.Error("invalid OTA address!", balance, value)
+				log.Error("invalid OTA address!", "balance", balance, "value", value)
 				err = errors.New(fmt.Sprint("invalid OTA address! balance:", balance, ", ota:", value))
 				return false
 			}
@@ -256,7 +255,7 @@ func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {
 	}
 
 	otaImageKey := crypto.Keccak256Hash(otaImage)
-	otaImageValue := statedb.GetStateByteArray(otaImagePrecompileAddr, otaImageKey)
+	otaImageValue := statedb.GetStateByteArray(otaImageStorageAddr, otaImageKey)
 	if otaImageValue != nil && len(otaImageValue) != 0 {
 		return true, otaImageValue, nil
 	}
@@ -270,6 +269,6 @@ func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {
 	}
 
 	otaImageKey := crypto.Keccak256Hash(otaImage)
-	statedb.SetStateByteArray(otaImagePrecompileAddr, otaImageKey, value)
+	statedb.SetStateByteArray(otaImageStorageAddr, otaImageKey, value)
 	return nil
 }
