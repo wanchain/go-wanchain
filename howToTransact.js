@@ -45,11 +45,11 @@ eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei
   4.otaTxData = combiningOTAData(ringSignData, cxtTxData)
   5.eth.sendOTATransaction({from:receiver_address, to:coinContractAddr,data:otaTxData, gas:1000000})
 */
-//get wanaddr without '0x' prefix
+//get wanaddr with '0x' prefix
 var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
-	mixSetWith0x.push('0x' + mixWanAddresses[i])
+	mixSetWith0x.push(mixWanAddresses[i])
 }
 
 keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
@@ -92,7 +92,7 @@ privateKeyStamp = keyPairs[0];
 var mixStampAddresses = eth.getOTAMixSet(otaAddrStamp,2);
 var mixSetWith0x = []
 for (i = 0; i < mixStampAddresses.length; i++){
-    mixSetWith0x.push('0x' + mixStampAddresses[i])
+    mixSetWith0x.push(mixStampAddresses[i])
 }
 
 

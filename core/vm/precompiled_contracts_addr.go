@@ -5,8 +5,9 @@ import (
 	"math/big"
 )
 
-// porecompiled contracts address define
-
+// Precompiled contracts address or
+// Reserved contracts address.
+// Should prevent overwriting to them.
 var (
 	ecrecoverPrecompileAddr      = common.BytesToAddress([]byte{1})
 	sha256hashPrecompileAddr     = common.BytesToAddress([]byte{2})
@@ -20,8 +21,23 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
-	otaBalancePrecompileAddr = common.BytesToAddress(big.NewInt(300).Bytes())
-	otaImagePrecompileAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
+	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
+	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
+
+	// 0.01wan --> "0x0000000000000000000000010000000000000000"
+	otaBalancePercent1WStorageAddr = common.HexToAddress(WanStamp0dot1)
+	otaBalancePercent2WStorageAddr = common.HexToAddress(WanStamp0dot2)
+	otaBalancePercent5WStorageAddr = common.HexToAddress(WanStamp0dot5)
+	otaBalanceTenth1WStorageAddr   = common.HexToAddress(Wancoindot1)
+	otaBalanceTenth2WStorageAddr   = common.HexToAddress(Wancoindot2)
+	otaBalanceTenth5WStorageAddr   = common.HexToAddress(Wancoindot5)
+	otaBalance1WStorageAddr        = common.HexToAddress(Wancoin1)
+	otaBalance2WStorageAddr        = common.HexToAddress(Wancoin2)
+	otaBalance5WStorageAddr        = common.HexToAddress(Wancoin5)
+	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
+	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)
+	otaBalance50WStorageAddr       = common.HexToAddress(Wancoin50)
+	otaBalance100WStorageAddr      = common.HexToAddress(Wancoin100)
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation

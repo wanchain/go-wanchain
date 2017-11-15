@@ -51,7 +51,7 @@ privateKeyStamp = keyPairs[0];
 var mixStampAddresses = eth.getOTAMixSet(otaAddrStamp,2);
 var mixSetWith0x = []
 for (i = 0; i < mixStampAddresses.length; i++){
-    mixSetWith0x.push('0x' + mixStampAddresses[i])
+    mixSetWith0x.push(mixStampAddresses[i])
 }
 
 

@@ -352,6 +352,16 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 	return err == nil, err
 }
 
+func (s *PrivateAccountAPI) UpdateAccount(addr common.Address, oldPassword string, newPassword string) error {
+	keystore := fetchKeystore(s.am)
+	if keystore == nil {
+		return errors.New("no invalid keystore!")
+	}
+
+	account := accounts.Account{Address: addr}
+	return keystore.Update(account, oldPassword, newPassword)
+}
+
 // LockAccount will lock the account associated with the given address when it's unlocked.
 func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
@@ -1189,7 +1199,7 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 
 	ret := make([]string, 0)
 	for _, otaByte := range otaByteSet {
-		ret = append(ret, common.Bytes2Hex(otaByte))
+		ret = append(ret, common.ToHex(otaByte))
 
 	}
 
