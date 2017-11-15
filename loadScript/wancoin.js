@@ -47,7 +47,7 @@ wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
-	mixSetWith0x.push('0x' + mixWanAddresses[i])
+	mixSetWith0x.push(mixWanAddresses[i])
 }
 
 keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');

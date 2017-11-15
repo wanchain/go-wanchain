@@ -1199,7 +1199,7 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 
 	ret := make([]string, 0)
 	for _, otaByte := range otaByteSet {
-		ret = append(ret, common.Bytes2Hex(otaByte))
+		ret = append(ret, common.ToHex(otaByte))
 
 	}
 
