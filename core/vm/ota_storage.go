@@ -2,20 +2,19 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
-	"fmt"
 )
-
 
 // ota balance to ota storage address
 //
 // 1 wancoin --> (bigint)1000000000000000000 --> "0x0000000000000000000001000000000000000000"
 //
-func OTABalance2ContractAddr(balance * big.Int) common.Address {
+func OTABalance2ContractAddr(balance *big.Int) common.Address {
 	if balance == nil {
 		return common.Address{}
 	}
@@ -98,8 +97,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 			return false, nil, otaAX, errors.New("BatCheckOTAExit, invalid input ota AX!")
 		}
 
-		otaAddrKey := common.BytesToHash(otaAX)
-		balanceTmp, err := GetOtaBalanceFromAX(statedb, otaAddrKey[:])
+		balanceTmp, err := GetOtaBalanceFromAX(statedb, otaAX[:common.HashLength])
 		if err != nil {
 			return false, nil, otaAX, err
 		} else if balanceTmp.Cmp(common.Big0) == 0 {
@@ -244,7 +242,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 			return nil, balance, errors.New("GetOTASet, no ota adress in the trie! trie balance:" + balance.String())
 		}
 
-		if  i >= otaNum {
+		if i >= otaNum {
 			return otaWanAddrs, balance, nil
 		}
 	}
