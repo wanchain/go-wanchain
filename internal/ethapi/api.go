@@ -1239,8 +1239,6 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 
 			return "", errors.New("Fail to generate public key from wan address!")
 
-			return "", errors.New("fail to generate public key from wan address!")
-
 		}
 
 		publicKeys = append(publicKeys, publicKeyA)
