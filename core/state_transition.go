@@ -357,7 +357,7 @@ func (st *StateTransition) DecodeRingSignOut(s string) (error, []*ecdsa.PublicKe
 	return nil, publickeys, keyimgae, w, q
 }
 
-func (st *StateTransition) preProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, stampGas uint64, err error) {
+func (st *StateTransition) PreProcessPrivacyTx(hashInput []byte, in []byte) (callData []byte, stampGas uint64, err error) {
 
 	var TxDataWithRing struct {
 		RingSignedData string
