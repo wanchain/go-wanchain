@@ -244,7 +244,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	if st.msg.TxType() == 6 {
-		pureCallData, stampGas, err := st.preProcessPrivacyTx(sender.Address().Bytes(), st.data)
+		pureCallData, stampGas, err := st.PreProcessPrivacyTx(sender.Address().Bytes(), st.data)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
