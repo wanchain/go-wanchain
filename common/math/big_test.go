@@ -21,8 +21,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"testing"
-
-	"github.com/wanchain/go-wanchain/common"
+	// "github.com/wanchain/go-wanchain/common"
 )
 
 func TestHexOrDecimal256(t *testing.T) {
@@ -229,7 +228,8 @@ func TestBigEndianByteAt(t *testing.T) {
 		{"ABCDEF0908070605040302010000000000000000000000000000000000000000", 500, 0x00},
 	}
 	for _, test := range tests {
-		v := new(big.Int).SetBytes(common.Hex2Bytes(test.x))
+		raw, _ := hex.DecodeString(test.x)
+		v := new(big.Int).SetBytes(raw)
 		actual := bigEndianByteAt(v, test.y)
 		if actual != test.exp {
 			t.Fatalf("Expected  [%v] %v:th byte to be %v, was %v.", test.x, test.y, test.exp, actual)
@@ -262,7 +262,8 @@ func TestLittleEndianByteAt(t *testing.T) {
 		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0xFFFF, 0x0},
 	}
 	for _, test := range tests {
-		v := new(big.Int).SetBytes(common.Hex2Bytes(test.x))
+		raw, _ := hex.DecodeString(test.x)
+		v := new(big.Int).SetBytes(raw)
 		actual := Byte(v, 32, test.y)
 		if actual != test.exp {
 			t.Fatalf("Expected  [%v] %v:th byte to be %v, was %v.", test.x, test.y, test.exp, actual)

@@ -80,7 +80,7 @@ func TestCheckOTAExit(t *testing.T) {
 	}
 
 	if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
-		t.Errorf("exit:%d, balance:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balance:%v", exit, balanceGet)
 	}
 
 	err = SetOTA(statedb, balanceSet, otaShortAddr)
@@ -93,7 +93,7 @@ func TestCheckOTAExit(t *testing.T) {
 		t.Errorf("CheckOTAExit, err:%s", err.Error())
 	}
 	if !exit || balanceGet == nil || balanceGet.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("ChechOTAExit, exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("ChechOTAExit, exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestBatCheckOTAExit(t *testing.T) {
 
 	exit, balanceGet, unexitotaAx, err := BatCheckOTAExit(statedb, otaAXs)
 	if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
-		t.Errorf("exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 
 	if unexitotaAx == nil {
@@ -143,7 +143,7 @@ func TestBatCheckOTAExit(t *testing.T) {
 
 	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
 	if !exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) != 0) {
-		t.Errorf("exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 
 	if unexitotaAx != nil {
@@ -159,7 +159,7 @@ func TestBatCheckOTAExit(t *testing.T) {
 	otaAXs = append(otaAXs, unexitotaAXSet)
 	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
 	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 
 	if unexitotaAx != nil {
@@ -176,11 +176,11 @@ func TestBatCheckOTAExit(t *testing.T) {
 
 	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
 	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 
 	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%d, balanceGet:%v", exit, balanceGet)
+		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
 	}
 
 	if err != nil {
