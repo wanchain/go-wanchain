@@ -28,6 +28,8 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/event"
 )
 
@@ -37,7 +39,9 @@ func TestKeyStore(t *testing.T) {
 	dir, ks := tmpKeyStore(t, true)
 	defer os.RemoveAll(dir)
 
-	a, err := ks.NewAccount("foo")
+	// create an account
+	auth := "wanchain_test"
+	a, err := ks.NewAccount(auth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +58,21 @@ func TestKeyStore(t *testing.T) {
 	if !ks.HasAddress(a.Address) {
 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
 	}
-	if err := ks.Update(a, "foo", "bar"); err != nil {
+	if err := ks.Unlock(a, auth); err != nil {
+		t.Errorf("Unlock error: %v", err)
+	}
+	var wAddr common.WAddress
+	wAddr, err = ks.GetWanAddress(a)
+	if err != nil && len(wAddr) != common.WAddressLength {
+		t.Errorf("Generate waddress error: %v", err)
+	}
+	if _, err := genOTA(hexutil.Encode(wAddr[:])); err != nil {
+		t.Errorf("Generate OTA error: %v", err)
+	}
+	if err := ks.Update(a, auth, auth+"_new"); err != nil {
 		t.Errorf("Update error: %v", err)
 	}
-	if err := ks.Delete(a, "bar"); err != nil {
+	if err := ks.Delete(a, auth+"_new"); err != nil {
 		t.Errorf("Delete error: %v", err)
 	}
 	if common.FileExist(a.URL.Path) {
@@ -388,4 +403,31 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
 	return d, new(d)
+}
+
+func genOTA(wanStr string) (string, error) {
+	wanRaw, err := hexutil.Decode(wanStr)
+	if err != nil {
+		return "", err
+	}
+
+	PK1, PK2, err := GeneratePKPairFromWAddress(wanRaw)
+	if err != nil {
+		return "", err
+	}
+
+	PKPairStr := hexutil.PKPair2HexSlice(PK1, PK2)
+	SKOTA, err := crypto.GenerateOneTimeKey(PKPairStr[0], PKPairStr[1], PKPairStr[2], PKPairStr[3])
+	if err != nil {
+		return "", err
+	}
+
+	otaStr := strings.Replace(strings.Join(SKOTA, ""), "0x", "", -1)
+	raw, err := hexutil.Decode("0x" + otaStr)
+	if err != nil {
+		return "", err
+	}
+
+	rawWanAddr, err := ToWaddr(raw)
+	return hexutil.Encode(rawWanAddr), nil
 }
