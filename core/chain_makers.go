@@ -22,7 +22,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -172,9 +171,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 				}
 			}
 		}
-		if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
-			misc.ApplyDAOHardFork(statedb)
-		}
+
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
