@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"bytes"
 	"github.com/wanchain/go-wanchain/core/types"
+
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.
@@ -486,7 +487,12 @@ var (
 
 	 refundData  =	"0x9ed1ecc800000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000000003a530783034366335383636636166663661383137316631346630623536346662396562663365376238323132363262653038376162616564363136333135386531313130316436353234623365636366353663663435376161373536336138316432633361383431303738346261346632356135343932353439306266373966623332373226307830346264633739646264383337353432303736383366613737376566323936643430613234303761613833386533316233373464383761613835613661356533386563313565653038336531316131386436653736383564396162613935383337303566363439396464346637656137373437316462323433633530303163313463263078303436633538363663616666366138313731663134663062353634666239656266336537623832313236326265303837616261656436313633313538653131313031643635323462336563636635366366343537616137353633613831643263336138343130373834626134663235613534393235343930626637396662333237322b3078303466356531356337356261323061323163376433656164313336636162346166313234653861646139353633623263356435323263326538383530336530333332386161636233616434306231333237636637633533613865633132363761343035643163613335356635656635653538643532656564303634373138646339302b30783464633136633662666561303033333166346637383763313762653635343364363330386436386636303761613464663666313337366463306631373439613926307834623833366562393233346263613966373634643338636436306439326361306163396364373465396461316439663836646339336362396165643235336233263078663338636161333634353265623037336438333663313336336462373931636335353438353836363466643333373136333064666131353961636536663235352b3078653330343230343032386136626462393131636332653862633031623437363164303636353937326262616162366132336531343364663531353364376534622630783636323530343637393764353331636334376164386539633033343331626133393161383663383861323865386365666431303663343365303332633431653726307831356564373730353834306433646133626137633163316332666666306336613239616532386138343462376530383532636634323066376463376632313538000000000000000000000000000000000000000000000000000000"
 
-	dbMockType = 0 //if 1 ,mock return blance nil
+	buyStampData = "0xc4e403e70000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000002386f26fc10000000000000000000000000000000000000000000000000000000000000000008630783033623835346663373266623031613065333665653931386230383566663532323830643138343265656232383262333839613166623364333735326564376165643033323234303231313638653539313035303033316130656139393334373561323839353563353039656431613634636131613739373166313762653635666165340000000000000000000000000000000000000000000000000000"
+
+	dbMockRetVal *big.Int
+
+	refundSender = "0x8b179c2b542f47bb2fb2dc40a3cf648aaae1df16"
+	addrTokenHolder = "0x36d6780f45c253ba982d41ec17a44b66b890ada9"
 
 )
 
@@ -528,12 +534,11 @@ func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
 
 	if !bytes.Equal(addr.Bytes(), otaImageStorageAddr.Bytes()) {
 
-		if dbMockType == 1 {
+		if dbMockRetVal != nil {
+			return dbMockRetVal.Bytes()
+		} else {
 			return nil
 		}
-
-		defaulVal, _ := new(big.Int).SetString("1000000000000000000", 10)
-		return defaulVal.Bytes()
 		
 	} else {
 		return nil
@@ -567,6 +572,8 @@ type dummyCtDB struct {
 //test buyCoin to simulate the tx process
 func TestPrecompiledWanCoinSCBuyCoinSuccess(t *testing.T) {
 
+	dbMockRetVal = nil
+
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
 	chargeValue,_:= new(big.Int).SetString(Wancoin10,10)
 
@@ -577,7 +584,6 @@ func TestPrecompiledWanCoinSCBuyCoinSuccess(t *testing.T) {
 
 	in := common.Hex2Bytes(buyCoinData[2:])
 
-	dbMockType = 1
 	if res, err := RunPrecompiledContract(p, in, contract,evm); err != nil {
 		t.Error(err)
 	} else if common.Bytes2Hex(res) != "01" {
@@ -587,6 +593,8 @@ func TestPrecompiledWanCoinSCBuyCoinSuccess(t *testing.T) {
 }
 
 func TestPrecompiledWanCoinSCBuyCoinFailWrongValue(t *testing.T) {
+
+	dbMockRetVal, _ = new(big.Int).SetString("1000000000000000000", 10)
 
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
 	chargeValue,_:= new(big.Int).SetString("1111111000",10)
@@ -604,17 +612,20 @@ func TestPrecompiledWanCoinSCBuyCoinFailWrongValue(t *testing.T) {
 
 }
 
-
-
 //test refund
 func TestPrecompiledWanCoinRefundSuccess(t *testing.T) {
+
+	dbMockRetVal, _ = new(big.Int).SetString("1000000000000000000", 10)
+
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+
 	chargeValue,_:= new(big.Int).SetString(Wancoin10,10)
 
 	ref      := &dummyCtRef{}
 
 	contract := NewContract(ref, ref, chargeValue, 1000000)
-	contract.CallerAddress = common.HexToAddress("0x8b179c2b542f47bb2fb2dc40a3cf648aaae1df16")
+	contract.CallerAddress = common.HexToAddress(refundSender)
+
 	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	in := common.Hex2Bytes(refundData[2:])
@@ -625,6 +636,8 @@ func TestPrecompiledWanCoinRefundSuccess(t *testing.T) {
 		t.Errorf("Expected %v, got %v", "1", common.Bytes2Hex(res))
 	}
 }
+
+
 
 
 func TestPrecompiledWanCoinRefundFailWrongSender(t *testing.T) {
@@ -643,3 +656,56 @@ func TestPrecompiledWanCoinRefundFailWrongSender(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+
+//test buyCoin to simulate the tx process
+func TestPrecompiledStampSCBuyStampSuccess(t *testing.T) {
+
+	dbMockRetVal = nil
+
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{200})]
+	chargeValue,_:= new(big.Int).SetString(WanStamp0dot1,10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(buyStampData[2:])
+
+
+	if res, err := RunPrecompiledContract(p, in, contract,evm); err != nil {
+		t.Error(err)
+	} else if common.Bytes2Hex(res) != "01" {
+		t.Errorf("Expected %v, got %v", "1", common.Bytes2Hex(res))
+	}
+
+}
+
+func TestPrecompiledStampSCBuyStampFailWrongStampValue(t *testing.T) {
+
+	dbMockRetVal = nil
+
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{200})]
+	chargeValue,_:= new(big.Int).SetString(Wancoin1,10)
+
+	ref      := &dummyCtRef{}
+
+	contract := NewContract(ref, ref, chargeValue, 1000000)
+	evm      := NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	in := common.Hex2Bytes(buyStampData[2:])
+
+
+	if _, err := RunPrecompiledContract(p, in, contract,evm); err == nil {
+		t.Error(err)
+	}
+
+}
+
+
+
+
+
+
+
