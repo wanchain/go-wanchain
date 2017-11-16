@@ -312,8 +312,6 @@ func accountUpdate(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
-	fmt.Printf("\nctx args: %v\n", ctx.Args())
-
 	for _, addr := range ctx.Args() {
 		account, oldPassword := unlockAccount(ctx, ks, addr, 0, nil)
 		newPassword := getPassPhrase("Please give a new password. Do not forget this password.", true, 0, nil)
