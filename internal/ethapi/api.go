@@ -517,8 +517,8 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 		return nil, errors.New("invalid ota wan address!")
 	}
 
-	return state.GetOTABalance(otaWAddrByte)
-
+	otaAX := otaWAddrByte[1 : 1+common.HashLength]
+	return vm.GetOtaBalanceFromAX(state, otaAX)
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -1190,9 +1190,26 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
-	orgOtaAddr := common.FromHex(otaAddr)
+	if setLen <= 0 {
+		return []string{}, errors.New("invalid mix set len")
+	}
 
-	otaByteSet, err := s.getOTAMixSet(ctx, orgOtaAddr, setLen)
+	orgOtaAddr := common.FromHex(otaAddr)
+	if len(orgOtaAddr) < common.HashLength {
+		return []string{}, errors.New("invalid ota address")
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	otaAX := orgOtaAddr[:common.HashLength]
+	if len(orgOtaAddr) == common.WAddressLength {
+		otaAX = orgOtaAddr[1 : 1+common.HashLength]
+	}
+
+	otaByteSet, _, err := vm.GetOTASet(state, otaAX, setLen)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,15 +1221,6 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 	}
 
 	return ret, nil
-}
-
-func (s *PublicTransactionPoolAPI) getOTAMixSet(ctx context.Context, otaAddr []byte, setLen int) ([][]byte, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
-	if state == nil || err != nil {
-		return nil, err
-	}
-
-	return state.GetOTASet(otaAddr, setLen)
 }
 
 func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
