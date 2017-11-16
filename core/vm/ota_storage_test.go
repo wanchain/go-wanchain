@@ -26,7 +26,7 @@ var (
 func TestGetOtaBalance(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[0])
 	)
@@ -67,7 +67,7 @@ func TestGetOtaBalance(t *testing.T) {
 func TestCheckOTAExit(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[1])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -100,7 +100,7 @@ func TestCheckOTAExit(t *testing.T) {
 func TestBatCheckOTAExit(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddrBytes = [][]byte{
 			common.FromHex(otaShortAddrs[1]),
@@ -200,7 +200,7 @@ func TestBatCheckOTAExit(t *testing.T) {
 func TestSetOTA(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[3])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -227,7 +227,7 @@ func TestSetOTA(t *testing.T) {
 func TestAddOTAIfNotExit(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[4])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -267,7 +267,7 @@ func TestAddOTAIfNotExit(t *testing.T) {
 func TestGetOTAInfoFromAX(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[4])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -315,7 +315,7 @@ func TestGetOTASet(t *testing.T) {
 	t.Logf("TestGetOTASet begin..")
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr      = common.FromHex(otaShortAddrs[6])
 		otaShortAddrBytes = [][]byte{
@@ -356,45 +356,45 @@ func TestGetOTASet(t *testing.T) {
 
 	// mem database Iterator doesnt work. unit test alwayse fail!!
 
-	//setLen := 3
-	//otaShortAddrBytesGet, balanceGet, err = GetOTASet(statedb, otaAX, setLen)
-	//if err != nil {
-	//	t.Errorf("err:%s", err.Error())
-	//}
-	//
-	//if otaShortAddrBytesGet == nil {
-	//	t.Errorf("otaShortAddrBytesGet is nil!")
-	//}
-	//
-	//if len(otaShortAddrBytesGet) != setLen {
-	//	t.Errorf("otaShortAddrBytesGet len is wrong! len:%d, expect:%d", len(otaShortAddrBytesGet), setLen)
-	//}
-	//
-	//for _, otaShortAddrGet := range otaShortAddrBytesGet {
-	//	otaAXGet := otaShortAddrGet[1 : 1+common.HashLength]
-	//	otaShortAddrReGet, balanceReGet, err := GetOTAInfoFromAX(statedb, otaAXGet)
-	//	if err != nil {
-	//		t.Errorf("err:%s", err.Error())
-	//	}
-	//
-	//	if common.ToHex(otaShortAddrReGet) != common.ToHex(otaShortAddrGet) {
-	//		t.Errorf("otaShortAddrReGet:%s, expect:%s", common.ToHex(otaShortAddrReGet), common.ToHex(otaShortAddrGet))
-	//	}
-	//
-	//	if balanceReGet == nil {
-	//		t.Errorf("balanceReGet is nil!")
-	//	}
-	//
-	//	if balanceReGet.Cmp(balanceSet) != 0 {
-	//		t.Errorf("balanceReGet:%s, expect:%s", balanceReGet.String(), balanceSet.String())
-	//	}
-	//}
+	setLen := 3
+	otaShortAddrBytesGet, balanceGet, err = GetOTASet(statedb, otaAX, setLen)
+	if err != nil {
+		t.Errorf("err:%s", err.Error())
+	}
+
+	if otaShortAddrBytesGet == nil {
+		t.Errorf("otaShortAddrBytesGet is nil!")
+	}
+
+	if len(otaShortAddrBytesGet) != setLen {
+		t.Errorf("otaShortAddrBytesGet len is wrong! len:%d, expect:%d", len(otaShortAddrBytesGet), setLen)
+	}
+
+	for _, otaShortAddrGet := range otaShortAddrBytesGet {
+		otaAXGet := otaShortAddrGet[1 : 1+common.HashLength]
+		otaShortAddrReGet, balanceReGet, err := GetOTAInfoFromAX(statedb, otaAXGet)
+		if err != nil {
+			t.Errorf("err:%s", err.Error())
+		}
+
+		if common.ToHex(otaShortAddrReGet) != common.ToHex(otaShortAddrGet) {
+			t.Errorf("otaShortAddrReGet:%s, expect:%s", common.ToHex(otaShortAddrReGet), common.ToHex(otaShortAddrGet))
+		}
+
+		if balanceReGet == nil {
+			t.Errorf("balanceReGet is nil!")
+		}
+
+		if balanceReGet.Cmp(balanceSet) != 0 {
+			t.Errorf("balanceReGet:%s, expect:%s", balanceReGet.String(), balanceSet.String())
+		}
+	}
 }
 
 func TestCheckOTAImageExit(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[7])
 		balanceSet   = big.NewInt(10)
@@ -442,7 +442,7 @@ func TestCheckOTAImageExit(t *testing.T) {
 func TestAddOTAImage(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, db)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[7])
 		balanceSet   = big.NewInt(10)
