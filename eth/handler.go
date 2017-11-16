@@ -28,7 +28,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth/downloader"
@@ -442,10 +441,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				p.forkDrop = nil
 
 				// Validate the header and either drop the peer or continue
-				if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
-					p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
-					return err
-				}
+
+
 				p.Log().Debug("Verified to be on the same side of the DAO fork")
 				return nil
 			}
