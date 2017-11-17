@@ -431,3 +431,46 @@ func genOTA(wanStr string) (string, error) {
 	rawWanAddr, err := ToWaddr(raw)
 	return hexutil.Encode(rawWanAddr), nil
 }
+
+func TestComputeOTAPPKeys(t *testing.T) {
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+
+	// create an account
+	auth := "wanchain_test"
+	a, err := ks.NewAccount(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = ks.Unlock(a, auth)
+	if err != nil {
+		t.Errorf("unlock fail. err:%s", err.Error())
+	}
+
+	var wAddr common.WAddress
+	wAddr, err = ks.GetWanAddress(a)
+	if err != nil && len(wAddr) != common.WAddressLength {
+		t.Errorf("Generate waddress error: %v", err)
+	}
+
+	PK1, PK2, err := GeneratePKPairFromWAddress(wAddr[:])
+	if err != nil {
+		t.Errorf("generate PK pair from wan address fail. err:%s", err.Error())
+	}
+
+	PKPairStr := hexutil.PKPair2HexSlice(PK1, PK2)
+	SKOTA, err := crypto.GenerateOneTimeKey(PKPairStr[0], PKPairStr[1], PKPairStr[2], PKPairStr[3])
+	if err != nil {
+		t.Errorf("generate one time key fail. err:%s", err.Error())
+	}
+
+	pk, err := ks.ComputeOTAPPKeys(a, SKOTA[0], SKOTA[1], SKOTA[2], SKOTA[3])
+	if err != nil {
+		t.Errorf("compute ota ppkey fail. err:%s", err.Error())
+	}
+
+	if len(pk) != 4 || len(pk[0]) == 0 || len(pk[1]) == 0 || len(pk[2]) == 0 {
+		t.Errorf("invalid ota pk. pk lenght:%d", len(pk))
+	}
+}
