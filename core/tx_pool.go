@@ -275,9 +275,11 @@ func (pool *TxPool) loop() {
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.mu.Lock()
-				if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-					pool.homestead = true
-				}
+
+				//if pool.chainconfig.IsHomestead(ev.Block.Number()) {
+				//	pool.homestead = true
+				//}
+
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 

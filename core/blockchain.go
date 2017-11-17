@@ -808,7 +808,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if err := WriteBlock(batch, block); err != nil {
 		return NonStatTy, err
 	}
-	if _, err := state.CommitTo(batch, bc.config.IsEIP158(block.Number())); err != nil {
+
+	if _, err := state.CommitTo(batch, true/*bc.config.IsEIP158(block.Number())*/); err != nil {
 		return NonStatTy, err
 	}
 	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {

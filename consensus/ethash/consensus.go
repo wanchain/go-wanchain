@@ -287,8 +287,10 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	switch {
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
+	/*
 	case config.IsHomestead(next):
-		return calcDifficultyHomestead(time, parent)
+		return calcDifficultyHomestead(time, parent)*/
+
 	default:
 		return calcDifficultyFrontier(time, parent)
 	}
@@ -506,7 +508,8 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+
+	header.Root = state.IntermediateRoot(true/*chain.Config().IsEIP158(header.Number)*/)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts), nil
