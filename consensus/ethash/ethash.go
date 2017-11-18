@@ -36,6 +36,9 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rpc"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")
@@ -45,7 +48,8 @@ var (
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
 
 	// sharedEthash is a full instance that can be shared between multiple users.
-	sharedEthash = New("", 3, 0, "", 1, 0)
+	// TODO: temp disable share ethash
+	sharedEthash = New("", 3, 0, "", 1, 0, nil)
 
 	// algorithmRevision is the data structure version used for file naming.
 	algorithmRevision = 23
@@ -350,10 +354,15 @@ type Ethash struct {
 	fakeDelay time.Duration // Time delay to sleep for before returning from verify
 
 	lock sync.Mutex // Ensures thread safety for the in-memory caches and mining fields
+
+	db   ethdb.Database
+	recents *lru.ARCCache
+	signer   common.Address
+	signFn   SignerFn
 }
 
 // New creates a full sized ethash PoW scheme.
-func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinmem, dagsondisk int) *Ethash {
+func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinmem, dagsondisk int, db ethdb.Database) *Ethash {
 	if cachesinmem <= 0 {
 		log.Warn("One ethash cache must alwast be in memory", "requested", cachesinmem)
 		cachesinmem = 1
@@ -364,6 +373,9 @@ func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinme
 	if dagdir != "" && dagsondisk > 0 {
 		log.Info("Disk storage enabled for ethash DAGs", "dir", dagdir, "count", dagsondisk)
 	}
+
+	recents, _ := lru.NewARC(256)
+
 	return &Ethash{
 		cachedir:     cachedir,
 		cachesinmem:  cachesinmem,
@@ -375,6 +387,8 @@ func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinme
 		datasets:     make(map[uint64]*dataset),
 		update:       make(chan struct{}),
 		hashrate:     metrics.NewMeter(),
+		db:           db,
+		recents:      recents,
 	}
 }
 

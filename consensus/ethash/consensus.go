@@ -27,17 +27,27 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
 	set "gopkg.in/fatih/set.v0"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/accounts"
 )
 
+const (
+	checkpointInterval = 1024 // Number of blocks after which to save the signers state
+)
 // Ethash proof-of-work protocol constants.
 var (
 	blockReward *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	maxUncles            = 2                 // Maximum number of uncles allowed in a single block
+
+	extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signer seal
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -55,12 +65,69 @@ var (
 	errInvalidDifficulty = errors.New("non-positive difficulty")
 	errInvalidMixDigest  = errors.New("invalid mix digest")
 	errInvalidPoW        = errors.New("invalid proof-of-work")
+	errMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
+	errUnauthorized = errors.New("unauthorized signer")
+	errAuthorTooOften = errors.New("signer too often")
 )
+
+type SignerFn func(accounts.Account, []byte) ([]byte, error)
+
+func sigHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewKeccak256()
+
+	rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
+	})
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// ecrecover extracts the Ethereum account address from a signed header.
+func ecrecover(header *types.Header) (common.Address, error) {
+	// Retrieve the signature from the header extra-data
+	if len(header.Extra) < extraSeal {
+		return common.Address{}, errMissingSignature
+	}
+	signature := header.Extra[len(header.Extra)-extraSeal:]
+
+	// Recover the public key and the Ethereum address
+	log.Trace("cr@zy seal %s", header.String())
+
+	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	log.Trace("cr@zy seal hash  Input%s", sigHash(header).String())
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
+}
 
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
+}
+
+func (self *Ethash) Authorize(signer common.Address, signFn SignerFn){
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	self.signFn = signFn
+	self.signer = signer
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
@@ -225,6 +292,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
+	if len(header.Extra) != extraVanity + extraSeal {
+		return fmt.Errorf("extra-data size invalid: %d", len(header.Extra))
+	}
 	// Verify the header's timestamp
 	if uncle {
 		if header.Time.Cmp(math.MaxBig256) > 0 {
@@ -267,22 +337,108 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
 	}
+	if err := ethash.verifySignerIdentity(chain, header, parent); err != nil {
+		return err
+	}
 	// Verify the engine specific seal securing the block
 	if seal {
 		if err := ethash.VerifySeal(chain, header); err != nil {
 			return err
 		}
 	}
-	// If all checks passed, validate any special fields for hard forks
-	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
-		return err
-	}
-	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
-		return err
-	}
+
+
 	return nil
 }
 
+// TODO: its's different from POA, need consider thread-security
+func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+
+	snap, err := self.snapshot(chain, number-1, header.ParentHash, parent)
+	if err != nil {
+		return err
+	}
+
+    //self.recents.Add(snap.Hash, snap)
+
+	updatedSnap, err := snap.apply(header)
+	if err != nil {
+		return err
+	}
+
+	self.recents.Add(header.Hash(), updatedSnap)
+
+    return nil
+}
+// snapshot retrieves the signer status at a given point
+func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parent *types.Header) (*Snapshot, error) {
+	var (
+		headers []*types.Header
+		snap *Snapshot
+	)
+
+	for snap == nil {
+		if s, ok := self.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			break
+		}
+
+		if number%checkpointInterval == 0 {
+			if s, err := LoadSnapShot(self.db, hash); err == nil {
+				snap = s
+				break
+			}
+		}
+
+		if number == 0 {
+			genesis := chain.GetHeaderByNumber(0)
+			// TODO: cr@zy
+			//if err := self.VerifyHeader(chain,genesis, false); err != nil {
+			//	return nil, err
+			//}
+			// TODO: does we need
+			signers := make([]common.Address, len(genesis.Extra)/common.AddressLength)
+			for i := 0; i < len(signers); i++ {
+				copy(signers[i][:], genesis.Extra[i*common.AddressLength:])
+			}
+			snap = NewSnapshot(0, genesis.Hash(), signers)
+			if err := snap.store(self.db); err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		header := chain.GetHeader(hash, number)
+		headers = append(headers, header)
+		number, hash = number-1, header.ParentHash
+	}
+
+	for i := 0; i < len(headers) / 2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+
+	for _, iHeader := range  headers {
+		snap, err := snap.apply(iHeader)
+		if err != nil {
+			return nil, err
+		}
+		self.recents.Add(snap.Hash, snap)
+
+		if snap.Number%checkpointInterval == 0 && len(headers) > 0{
+			if err = snap.store(self.db); err != nil {
+				return nil, err
+			}
+			log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		}
+	}
+
+
+	return snap, nil
+}
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 // that a new block should have when created at time given the parent block's time
 // and difficulty.
@@ -434,8 +590,24 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
+	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+	if err != nil {
+		return err
+	}
+
+	if !snap.isLegal4Sign(header.Coinbase){
+		return errUnauthorized
+	}
+
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
 		parent.Time.Uint64(), parent.Number, parent.Difficulty)
+
+	if len(header.Extra) < extraVanity {
+		header.Extra = append(header.Extra, make([]byte, extraVanity-len(header.Extra))...)
+	}
+	header.Extra = header.Extra[:extraVanity]
+	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
 	return nil
 }
@@ -463,7 +635,7 @@ var (
 //
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(state *state.StateDB, header *types.Header, uncles []*types.Header) {
-	reward := new(big.Int).Set(blockReward)
+	/*reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)
 	for _, uncle := range uncles {
 		r.Add(uncle.Number, big8)
@@ -475,5 +647,5 @@ func AccumulateRewards(state *state.StateDB, header *types.Header, uncles []*typ
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward)*/
 }

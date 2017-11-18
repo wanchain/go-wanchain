@@ -258,12 +258,12 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.MainnetChainConfig,
+		Config:     params.WanchainChainConfig,
 		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
-		Alloc:      decodePrealloc(mainnetAllocData),
+		ExtraData:  hexutil.MustDecode("0xf9b32578b4420a36f132db32b56f3831a7cc18041631447d041f929595a9c7b0c9c0047de2e76186e442408a5f2e224c92b34e251de48f5266fc38de38b195d2a18a4e60292868fa74fae619d566111e806abd0d68515764d36b4b1dce5607f5b8672623c142b37451bf17a6d3057768d27ed99cc90fb51ff174d859cabf5e2decb61c023fcb81593ff2e20af15e32354fdd171b6dc8ec5528f6e9164b28d21f26d50e6bdc748c013f2259f70d432c8020f7af23ae5c54ec6d94732cbee9610a7290e6b50d8f395a"),
+		GasLimit:   16777216,
+		Difficulty: big.NewInt(1048576),
+		Alloc:      jsonPrealloc(wanchainAllocJson),
 	}
 }
 
