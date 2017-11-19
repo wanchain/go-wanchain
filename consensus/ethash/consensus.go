@@ -27,6 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
+	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
@@ -273,7 +274,12 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 		}
 	}
 	// If all checks passed, validate any special fields for hard forks
-
+	//if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
+	//	return err
+	//}
+	//if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -283,17 +289,19 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // given the parent block's time and difficulty.
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
-	next := new(big.Int).Add(parent.Number, big1)
-	switch {
-	case config.IsByzantium(next):
-		return calcDifficultyByzantium(time, parent)
-	/*
-	case config.IsHomestead(next):
-		return calcDifficultyHomestead(time, parent)*/
 
-	default:
-		return calcDifficultyFrontier(time, parent)
-	}
+	return calcDifficultyByzantium(time, parent)
+
+	//next := new(big.Int).Add(parent.Number, big1)
+	//
+	//switch {
+	//case config.IsByzantium(next):
+	//	return calcDifficultyByzantium(time, parent)
+	//case config.IsHomestead(next):
+	//	return calcDifficultyHomestead(time, parent)
+	//default:
+	//	return calcDifficultyFrontier(time, parent)
+	//}
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -508,7 +516,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
-
 	header.Root = state.IntermediateRoot(true/*chain.Config().IsEIP158(header.Number)*/)
 
 	// Header seems complete, assemble into a block and return

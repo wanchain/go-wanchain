@@ -22,6 +22,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
+	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -162,7 +163,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
 		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
-
 		// Mutate the state and block according to any hard-fork specs
 		//if daoBlock := config.DAOForkBlock; daoBlock != nil {
 		//	limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
@@ -171,6 +171,10 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 		//			h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
 		//		}
 		//	}
+		//}
+
+		//if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
+		//	misc.ApplyDAOHardFork(statedb)
 		//}
 
 		// Execute any user modifications to the block and finalize it

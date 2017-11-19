@@ -28,6 +28,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth/downloader"
@@ -411,6 +412,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&headers); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+
 		// If no headers were received, but we're expending a DAO fork check, maybe it's that
 		//if len(headers) == 0 && p.forkDrop != nil {
 		//	// Possibly an empty reply to the fork header checks, sanity check TDs
@@ -418,11 +420,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		//
 		//	// If we already have a DAO header, we can check the peer's TD against it. If
 		//	// the peer's ahead of this, it too must have a reply to the DAO check
-		//	if daoHeader := pm.blockchain.GetHeaderByNumber(pm.chainconfig.DAOForkBlock.Uint64()); daoHeader != nil {
-		//		if _, td := p.Head(); td.Cmp(pm.blockchain.GetTd(daoHeader.Hash(), daoHeader.Number.Uint64())) >= 0 {
-		//			verifyDAO = false
-		//		}
-		//	}
+		//	//if daoHeader := pm.blockchain.GetHeaderByNumber(pm.chainconfig.DAOForkBlock.Uint64()); daoHeader != nil {
+		//	//	if _, td := p.Head(); td.Cmp(pm.blockchain.GetTd(daoHeader.Hash(), daoHeader.Number.Uint64())) >= 0 {
+		//	//		verifyDAO = false
+		//	//	}
+		//	//}
 		//	// If we're seemingly on the same chain, disable the drop timer
 		//	if verifyDAO {
 		//		p.Log().Debug("Seems to be on the same side of the DAO fork")
@@ -441,14 +443,17 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			//	p.forkDrop = nil
 			//
 			//	// Validate the header and either drop the peer or continue
-			//
-			//
+			//	if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
+			//		p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
+			//		return err
+			//	}
 			//	p.Log().Debug("Verified to be on the same side of the DAO fork")
 			//	return nil
 			//}
 			// Irrelevant of the fork checks, send the header to the fetcher just in case
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
+
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
