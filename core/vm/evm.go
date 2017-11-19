@@ -41,10 +41,12 @@ type (
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsHomestead
-		if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
-			precompiles = PrecompiledContractsByzantium
-		}
+		//precompiles := PrecompiledContractsHomestead
+
+		//if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
+			precompiles := PrecompiledContractsByzantium
+		//}
+
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			return RunPrecompiledContract(p, input, contract,evm)
 		}
@@ -155,12 +157,12 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	if !evm.StateDB.Exist(addr) {
 
-		precompiles = PrecompiledContractsHomestead
-		if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
+		//precompiles = PrecompiledContractsHomestead
+		//if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
 
 			precompiles = PrecompiledContractsByzantium
 
-		}
+		//}
 
 		if precompiles[addr] == nil /*&& evm.ChainConfig().IsEIP158(evm.BlockNumber)*/ && value.Sign() == 0 {
 			return nil, gas, nil
