@@ -277,7 +277,7 @@ func (pool *TxPool) loop() {
 				pool.mu.Lock()
 
 				//if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-				//	pool.homestead = true
+					pool.homestead = true
 				//}
 
 				pool.reset(head.Header(), ev.Block.Header())
