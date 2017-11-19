@@ -289,19 +289,17 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // given the parent block's time and difficulty.
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
-
-	return calcDifficultyByzantium(time, parent)
-
 	//next := new(big.Int).Add(parent.Number, big1)
 	//
-	//switch {
+	switch {
 	//case config.IsByzantium(next):
 	//	return calcDifficultyByzantium(time, parent)
 	//case config.IsHomestead(next):
 	//	return calcDifficultyHomestead(time, parent)
-	//default:
-	//	return calcDifficultyFrontier(time, parent)
-	//}
+	default:
+		//return calcDifficultyFrontier(time, parent)
+		return calcDifficultyByzantium(time, parent)
+	}
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -535,9 +533,11 @@ var (
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := frontierBlockReward
-	if config.IsByzantium(header.Number) {
+	//if config.IsByzantium(header.Number) {
+
 		blockReward = byzantiumBlockReward
-	}
+
+	//}
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)

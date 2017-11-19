@@ -42,7 +42,7 @@ var (
 		//EIP158Block:    big.NewInt(2675000),
 
 		//ByzantiumBlock: big.NewInt(4370000),
-		ByzantiumBlock: big.NewInt(0),
+		//ByzantiumBlock: big.NewInt(0),
 		Ethash: new(EthashConfig),
 	}
 
@@ -56,7 +56,7 @@ var (
 		//EIP150Hash:     common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
 		//EIP155Block:    big.NewInt(10),
 		//EIP158Block:    big.NewInt(10),
-		ByzantiumBlock: big.NewInt(0),
+		//ByzantiumBlock: big.NewInt(0),
 
 		Ethash: new(EthashConfig),
 	}
@@ -71,7 +71,7 @@ var (
 		//EIP150Hash:     common.HexToHash("0x9b095b36c15eaf13044373aef8ee0bd3a382a5abb92e402afa44b8249c3a90e9"),
 		//EIP155Block:    big.NewInt(3),
 		//EIP158Block:    big.NewInt(3),
-		ByzantiumBlock: big.NewInt(0),
+		//ByzantiumBlock: big.NewInt(0),
 
 		Clique: &CliqueConfig{
 			Period: 15,
@@ -102,9 +102,9 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337),/* big.NewInt(0),*/ /*nil, false,*//* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/ big.NewInt(0), new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337),/* big.NewInt(0),*/ /*nil, false,*//* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0), big.NewInt(0), */new(EthashConfig), nil, nil}
 
-	TestChainConfig    = &ChainConfig{big.NewInt(1), /*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, *//*big.NewInt(0), *//*big.NewInt(0), */big.NewInt(0), new(EthashConfig), nil, nil}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), /*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, *//*big.NewInt(0), *//*big.NewInt(0),big.NewInt(0),  */new(EthashConfig), nil, nil}
 
 	TestRules          = TestChainConfig.Rules(new(big.Int))
 )
@@ -129,7 +129,7 @@ type ChainConfig struct {
 	//EIP155Block *big.Int `json:"eip155Block,omitempty"` // EIP155 HF block
 	//EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
-	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	//ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -189,7 +189,7 @@ func (c *ChainConfig) String() string {
 		//c.EIP155Block,
 		//c.EIP158Block,
 
-		c.ByzantiumBlock,
+		//c.ByzantiumBlock,
 		engine,
 	)
 }
@@ -216,9 +216,9 @@ func (c *ChainConfig) String() string {
 //	return isForked(c.EIP158Block, num)
 //}
 
-func (c *ChainConfig) IsByzantium(num *big.Int) bool {
-	return isForked(c.ByzantiumBlock, num)
-}
+//func (c *ChainConfig) IsByzantium(num *big.Int) bool {
+//	return isForked(c.ByzantiumBlock, num)
+//}
 
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
 //
@@ -290,9 +290,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	//	return newCompatError("EIP158 chain ID", c.EIP158Block, newcfg.EIP158Block)
 	//}
 
-	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
-		return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
-	}
+	//if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
+	//	return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
+	//}
 
 	return nil
 }
@@ -360,7 +360,7 @@ func (err *ConfigCompatError) Error() string {
 type Rules struct {
 	ChainId                                   *big.Int
 	//IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
-	IsByzantium                               bool
+	//IsByzantium                               bool
 }
 
 func (c *ChainConfig) Rules(num *big.Int) Rules {
@@ -370,5 +370,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 	//return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: /*c.IsHomestead(num)*/false, IsEIP150: false/*c.IsEIP150(num)*/, IsEIP155: false/*c.IsEIP155(num)*/, IsEIP158:false/* c.IsEIP158(num)*/, IsByzantium: c.IsByzantium(num)}
 
-	return Rules{ChainId: new(big.Int).Set(chainId), IsByzantium: c.IsByzantium(num)}
+	return Rules{ChainId: new(big.Int).Set(chainId)}
 }
