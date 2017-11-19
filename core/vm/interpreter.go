@@ -72,8 +72,10 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 		switch {
 		case evm.ChainConfig().IsByzantium(evm.BlockNumber):
 			cfg.JumpTable = byzantiumInstructionSet
+		/*
 		case evm.ChainConfig().IsHomestead(evm.BlockNumber):
-			cfg.JumpTable = homesteadInstructionSet
+			cfg.JumpTable = homesteadInstructionSet*/
+
 		default:
 			cfg.JumpTable = frontierInstructionSet
 		}
