@@ -53,11 +53,16 @@ var (
 )
 
 func TestTransactionSigHash(t *testing.T) {
-	var homestead HomesteadSigner
-	if homestead.Hash(emptyTx) != common.HexToHash("c775b99e7ad12f50d819fcd602390467e28141316969f4b57f0626f74fe3b386") {
+	// var homestead HomesteadSigner
+	// @anson
+	// make an eip155 signer
+	eip155 := NewEIP155Signer(big.NewInt(5201314))
+
+	if eip155.Hash(emptyTx) != common.HexToHash("0x0e9969d6dc776ab0cae59d85e794bc81c06517787c78ea35f78685953c51ec96") {
 		t.Errorf("empty transaction hash mismatch, got %x", emptyTx.Hash())
 	}
-	if homestead.Hash(rightvrsTx) != common.HexToHash("fe7a79529ed5f7c3375d06b26b186a8644e0e16c373d7a12be41c62d6042b77a") {
+
+	if eip155.Hash(rightvrsTx) != common.HexToHash("0xf72c163df11788d7db9680b91e8dee7ca2188953404523a0bf8f509d962cc680") {
 		t.Errorf("RightVRS transaction hash mismatch, got %x", rightvrsTx.Hash())
 	}
 }
