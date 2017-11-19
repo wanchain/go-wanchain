@@ -190,7 +190,8 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && stored != params.MainnetGenesisHash {
+	//	if genesis == nil && stored != params.MainnetGenesisHash {
+	if genesis == nil && stored != params.PlutoGenesisHash {
 		return storedcfg, stored, nil
 	}
 
@@ -215,6 +216,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.MainnetChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
+	case ghash == params.PlutoGenesisHash:
+		return params.PlutoChainConfig
 	default:
 		return params.AllProtocolChanges
 	}
@@ -344,8 +347,6 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 
 // DefaultPlutoGenesisBlock returns the Pluto network genesis block.
 
-
-
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
@@ -382,7 +383,7 @@ func decodePrealloc(data string) GenesisAlloc {
 
 func jsonPrealloc(data string) GenesisAlloc {
 	var ga GenesisAlloc
-	if err:=json.Unmarshal([]byte(data), &ga); err!=nil{
+	if err := json.Unmarshal([]byte(data), &ga); err != nil {
 		panic(err)
 	}
 	return ga

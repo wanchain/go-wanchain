@@ -26,12 +26,13 @@ import (
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
+	PlutoGenesisHash   = common.HexToHash("0x7b67a3f28e0d12b57e5fdaa445c4d6dbe68bffa9b808e944e5c67726669d62b6") // Pluto genesis hash to enforce below configs on
 )
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(1),
+		ChainId: big.NewInt(1),
 
 		//HomesteadBlock: big.NewInt(1150000),
 		//DAOForkBlock:   big.NewInt(1920000),
@@ -48,7 +49,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(3),
+		ChainId: big.NewInt(3),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -63,7 +64,7 @@ var (
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(4),
+		ChainId: big.NewInt(4),
 		//HomesteadBlock: big.NewInt(1),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -80,7 +81,7 @@ var (
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(6),
+		ChainId: big.NewInt(6),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -88,6 +89,8 @@ var (
 		//EIP150Hash:     common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		//EIP155Block:    big.NewInt(3),
 		//EIP158Block:    big.NewInt(3),
+		//ByzantiumBlock: big.NewInt(0),
+
 		Pluto: &PlutoConfig{
 			Period: 6,
 			Epoch:  6000,
@@ -102,11 +105,11 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337),/* big.NewInt(0),*/ /*nil, false,*//* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0), big.NewInt(0), */new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337) /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0), big.NewInt(0), */, new(EthashConfig), nil, nil}
 
-	TestChainConfig    = &ChainConfig{big.NewInt(1), /*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, *//*big.NewInt(0), *//*big.NewInt(0),big.NewInt(0),  */new(EthashConfig), nil, nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1) /*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, */ /*big.NewInt(0), */ /*big.NewInt(0),big.NewInt(0),  */, new(EthashConfig), nil, nil}
 
-	TestRules          = TestChainConfig.Rules(new(big.Int))
+	TestRules = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -180,7 +183,8 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Engine: %v}",
+	//return fmt.Sprintf("{ChainID: %v Homestead: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Byzantium: %v Engine: %v}",
 		c.ChainId,
 		//c.HomesteadBlock,
 		//c.DAOForkBlock,
@@ -232,8 +236,8 @@ func (c *ChainConfig) GasTable(num *big.Int) GasTable {
 	//case c.IsEIP158(num):
 	//	return GasTableEIP158
 	/*
-	case c.IsEIP150(num):
-		return GasTableEIP150
+		case c.IsEIP150(num):
+			return GasTableEIP150
 	*/
 	//default:
 	//	return GasTableHomestead
@@ -358,7 +362,7 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainId                                   *big.Int
+	ChainId *big.Int
 	//IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
 	//IsByzantium                               bool
 }
