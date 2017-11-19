@@ -39,15 +39,16 @@ var (
 	)
 
 	rightvrsTx, _ = NewTransaction(
-		3,
+		4,
 		common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		big.NewInt(10),
-		big.NewInt(2000),
+		big.NewInt(100),
+		big.NewInt(200000),
 		big.NewInt(1),
 		common.FromHex("5544"),
 	).WithSignature(
-		HomesteadSigner{},
-		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
+		NewEIP155Signer(big.NewInt(5201314)),
+		// HomesteadSigner{},
+		common.Hex2Bytes("477e2517143dd329f2f6f5a2d554f9b51e306ebe11afc046cc528ec067e4fada756767362196f120957ce96dd2d8b664ee69b83bc1bed077d82ed8dfe03bd7f400"),
 	)
 )
 
@@ -66,7 +67,7 @@ func TestTransactionEncode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode error: %v", err)
 	}
-	should := common.FromHex("f8620103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3")
+	should := common.FromHex("f86601040183030d4094b94f5374fce5edbc8e2a8697c15331677e6ebf0b64825544839ebb67a0477e2517143dd329f2f6f5a2d554f9b51e306ebe11afc046cc528ec067e4fadaa0756767362196f120957ce96dd2d8b664ee69b83bc1bed077d82ed8dfe03bd7f4")
 	if !bytes.Equal(txb, should) {
 		t.Errorf("encoded RLP mismatch, got %x", txb)
 	}

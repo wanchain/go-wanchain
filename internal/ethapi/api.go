@@ -396,7 +396,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	var chainID *big.Int
 
 	//if config := s.b.ChainConfig(); /*config.IsEIP155(s.b.CurrentBlock().Number())*/ {
-	if config := s.b.ChainConfig(); config!= nil {
+	if config := s.b.ChainConfig(); config != nil {
 		chainID = config.ChainId
 	}
 
@@ -1703,7 +1703,7 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 
 	var chainID *big.Int
 	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-	if config := s.b.ChainConfig(); config!=nil {
+	if config := s.b.ChainConfig(); config != nil {
 		chainID = config.ChainId
 	}
 
