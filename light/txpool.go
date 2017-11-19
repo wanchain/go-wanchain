@@ -307,7 +307,9 @@ func (pool *TxPool) setNewHead(head *types.Header) {
 	txc, _ := pool.reorgOnNewHead(ctx, head)
 	m, r := txc.getLists()
 	pool.relay.NewHead(pool.head, m, r)
-	pool.homestead = pool.config.IsHomestead(head.Number)
+
+	pool.homestead = true //pool.config.IsHomestead(head.Number)
+
 	pool.signer = types.MakeSigner(pool.config, head.Number)
 }
 
