@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"github.com/wanchain/go-wanchain/core/types"
 
-	"github.com/wanchain/syndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.
