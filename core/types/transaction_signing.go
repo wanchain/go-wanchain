@@ -54,7 +54,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 		return NewEIP155Signer(config.ChainId)
 	}
 
-	return signer
+	//return signer
 
 
 }
