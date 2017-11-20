@@ -57,6 +57,7 @@ func (d *diffTest) UnmarshalJSON(b []byte) (err error) {
 	return nil
 }
 
+// @anson This case is out-of-date due to consensus migration to Byzan
 func TestCalcDifficulty(t *testing.T) {
 	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))
 	if err != nil {
