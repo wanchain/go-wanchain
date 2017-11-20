@@ -51,10 +51,10 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 	default:
 		//signer = FrontierSigner{}
-		return NewEIP155Signer(config.ChainId)
+		signer = NewEIP155Signer(config.ChainId)
 	}
 
-	//return signer
+	return signer
 
 
 }
