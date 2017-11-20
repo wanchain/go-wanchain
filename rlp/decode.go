@@ -803,7 +803,7 @@ func (s *Stream) Decode(val interface{}) error {
 	}
 	rval := reflect.ValueOf(val)
 	rtyp := rval.Type()
-	fmt.Println("rtyp: ", rtyp.Elem())
+	//fmt.Println("rtyp: ", rtyp.Elem())
 	if rtyp.Kind() != reflect.Ptr {
 		return errNoPointer
 	}
