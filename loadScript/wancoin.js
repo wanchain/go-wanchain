@@ -36,25 +36,25 @@ var acc2OldBalance = parseFloat(wanBalance(eth.accounts[2]))
 wanUnlock(eth.accounts[1]);
 wanUnlock(eth.accounts[2]);
 
-var wanAddr = eth.getWanAddress(eth.accounts[2]);
-var otaAddr = eth.generateOneTimeAddress(wanAddr);
+var wanAddr = wan.getWanAddress(eth.accounts[2]);
+var otaAddr = wan.generateOneTimeAddress(wanAddr);
 
 txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
 buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei(tranValue), data:txBuyData, gas: 1000000});
 wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 
 
-var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
+var mixWanAddresses = wan.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
 	mixSetWith0x.push(mixWanAddresses[i])
 }
 
-keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
+keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
 privateKey = keyPairs[0];
 
 console.log("Balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
-var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
+var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
 var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000});
 wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});

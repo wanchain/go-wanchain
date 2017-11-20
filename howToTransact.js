@@ -31,8 +31,8 @@ oldValue1 = web3.fromWei(eth.getBalance(eth.accounts[1]));
 oldValue2 = web3.fromWei(eth.getBalance(eth.accounts[2]));
 
 //generate OTA address for account1
-var wanAddr = eth.getWanAddress(eth.accounts[2]);
-var otaAddr = eth.generateOneTimeAddress(wanAddr);
+var wanAddr = wan.getWanAddress(eth.accounts[2]);
+var otaAddr = wan.generateOneTimeAddress(wanAddr);
 
 txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
 eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei(1), data:txBuyData, gas: 1000000});
@@ -46,16 +46,16 @@ eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei
   5.eth.sendOTATransaction({from:receiver_address, to:coinContractAddr,data:otaTxData, gas:1000000})
 */
 //get wanaddr with '0x' prefix
-var mixWanAddresses = eth.getOTAMixSet(otaAddr,2);
+var mixWanAddresses = wan.getOTAMixSet(otaAddr,2);
 var mixSetWith0x = []
 for (i = 0; i < mixWanAddresses.length; i++){
 	mixSetWith0x.push(mixWanAddresses[i])
 }
 
-keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
+keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
 privateKey = keyPairs[0];
 
-var ringSignData = eth.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
+var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
 eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000});
 
@@ -78,18 +78,18 @@ stampContractAddr = "0x00000000000000000000000000000000000000c8";
 stampContract = contractDef.at(stampContractAddr);
 
 //generate OTA address for account1, otaAddr is a stamp
-var wanAddr = eth.getWanAddress(eth.accounts[1]);
-var otaAddrStamp = eth.generateOneTimeAddress(wanAddr);
+var wanAddr = wan.getWanAddress(eth.accounts[1]);
+var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
 txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.01));
 
 
 eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.01), data:txBuyData, gas: 1000000});
 
-keyPairs = eth.computeOTAPPKeys(eth.accounts[1], otaAddrStamp).split('+');
+keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrStamp).split('+');
 privateKeyStamp = keyPairs[0];
 
 //get mixStamp
-var mixStampAddresses = eth.getOTAMixSet(otaAddrStamp,2);
+var mixStampAddresses = wan.getOTAMixSet(otaAddrStamp,2);
 var mixSetWith0x = []
 for (i = 0; i < mixStampAddresses.length; i++){
     mixSetWith0x.push(mixStampAddresses[i])
@@ -114,30 +114,30 @@ var erc20simpleInt = erc20simple_contract.new(
   });
 
 // 实例化部署的合约，下面的地址用实际生成的地址替换
-var contractAddr = "0x8aa6d8dab3140e04e16a7ab1ef28e06f2ba2a807"
+var contractAddr = "0xaf509ab5856a7d20a283239133b16bc7acbeb40f"
 var erc20simple = erc20simple_contract.at(contractAddr)
 
 
 //为account1生成一个OTA地址otaAddrTokenHolder持有指定数量的Token,addrTokenHolder为一次性地址的Address
 //privateKeyTokenHolder 为私钥
-var wanAddr = eth.getWanAddress(eth.accounts[1]);
-var otaAddrTokenHolder = eth.generateOneTimeAddress(wanAddr);//0x03d1846dd42d21cd69dc602ae140925b172957b4f3b466c2ac0c9d7b781a81dd42032da6aa341879a4afadf1a75b05fc42264ecc9bb108832c5339b93a75c2831181
-keyPairs = eth.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
-privateKeyTokenHolder = keyPairs[0];//0x1b0386deba93f85d23dc486834b046bb55e4612f67b0eab57360395d9a0409ae
+var wanAddr = wan.getWanAddress(eth.accounts[1]);
+var otaAddrTokenHolder = wan.generateOneTimeAddress(wanAddr);
+keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
+privateKeyTokenHolder = keyPairs[0];
 addrTokenHolder = keyPairs[2];
 erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, '0x1000000000',{from:eth.accounts[1], gas:10000000});
 //erc20simple.privacyBalance(addrTokenHolder).toString(16)
 
 
 //使用代币发送方的一次性地址的address作为哈希msg，使用邮票私钥做ring sign
-var hashMsg = addrTokenHolder //0xF16759618f122B21BDFad1481e2462dDAC25cEda
-var ringSignData = eth.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
+var hashMsg = addrTokenHolder
+var ringSignData = wan.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
 //为接收方生成隐私地址
-var wanAddr = eth.getWanAddress(eth.accounts[2]);
-var otaAddr4Account2 = eth.generateOneTimeAddress(wanAddr);
-keyPairs = eth.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
-privateKeyOtaAcc2 = keyPairs[0]; //0x272b34102f088f621a7a05134314b8402bfc9dff9d3da4d5d5e7a730a971dc08
+var wanAddr = wan.getWanAddress(eth.accounts[2]);
+var otaAddr4Account2 = wan.generateOneTimeAddress(wanAddr);
+keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
+privateKeyOtaAcc2 = keyPairs[0];
 addrOTAAcc2 = keyPairs[2];
 //contract interface call data
 
@@ -150,7 +150,8 @@ glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
 combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
 //发送隐私保护交易
-eth.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData}, privateKeyTokenHolder)
-//查看接收者账户信息  erc20simple.privacyBalance(addrOTAAcc2)
-//erc20simple.privacyBalance(addrTokenHolder)
+wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData}, privateKeyTokenHolder)
+//查看接收者账户信息  
+erc20simple.privacyBalance(addrOTAAcc2)
+erc20simple.privacyBalance(addrTokenHolder)
 

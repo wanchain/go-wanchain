@@ -5433,80 +5433,7 @@ var methods = function () {
         params: 0
     });
 
-    // @anson
-    var getWanAddress = new Method({
-        name: 'getWanAddress',
-        call: 'eth_getWanAddress',
-        params: 1,
-        inputFormatter: [formatters.inputAddressFormatter]
-    }); 
-
-    // @anson
-    var generateOneTimeAddress = new Method({
-        name: 'generateOneTimeAddress',
-        call: 'eth_generateOneTimeAddress',
-        params: 1,
-        inputFormatter: [null]
-    });
-
-    // @anson
-    var getOTAMixSet = new Method({
-        name: 'getOTAMixSet',
-        call: 'eth_getOTAMixSet',
-        params: 2
-    });
-    
-    //jqg
-    var sendPrivacyCxtTransaction = new Method({
-        name: 'sendPrivacyCxtTransaction',
-        call: 'eth_sendPrivacyCxtTransaction',
-        params: 2,
-        inputFormatter: [formatters.inputTransactionFormatter, null]
-    });
-
-    // @anson
-    var computeOTAPPKeys = new Method({
-        name: 'computeOTAPPKeys',
-        call: 'eth_computeOTAPPKeys',
-        params: 2,
-        inputFormatter: [formatters.inputAddressFormatter, null]
-    });
-
-    // @anson
-    var genRingSignData = new Method({
-        name: 'genRingSignData',
-        call: 'eth_genRingSignData',
-        params: 3,
-    });
-
-    var getOTABalance = new Method({
-        name: 'getOTABalance',
-        call: 'eth_getOTABalance',
-        params: 1,
-        inputFormatter: [null],
-        outputFormatter: formatters.outputBigNumberFormatter
-    });
-
-    var scanOTAbyAccount = new Method ({
-        name: 'scanOTAbyAccount',
-        call: 'eth_scanOTAbyAccount',
-        params: 2,
-        inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
-    });
-
-
-
     return [
-        //for privacy tx
-        computeOTAPPKeys,
-        sendPrivacyCxtTransaction,
-        getWanAddress,
-        generateOneTimeAddress,
-        getOTAMixSet,
-        genRingSignData,
-        getOTABalance,
-        scanOTAbyAccount,
-
         getBalance,
         getStorageAt,
         getCode,
@@ -13694,7 +13621,7 @@ module.exports = XMLHttpRequest;
 },{}],87:[function(require,module,exports){
 /* wan.js */
     var Method = require('../method');
-    //var formatters = require('../formatters');
+    var formatters = require('../formatters');
 
     function Wan(web3) {
         this._requestManager = web3._requestManager;
@@ -13713,14 +13640,76 @@ module.exports = XMLHttpRequest;
     }
 
     var methods = function () {
+        // @anson
+        var getWanAddress = new Method({
+            name: 'getWanAddress',
+            call: 'wan_getWanAddress',
+            params: 1,
+            inputFormatter: [formatters.inputAddressFormatter]
+        });
+
+        // @anson
+        var generateOneTimeAddress = new Method({
+            name: 'generateOneTimeAddress',
+            call: 'wan_generateOneTimeAddress',
+            params: 1,
+            inputFormatter: [null]
+        });
+
+        // @anson
         var getOTAMixSet = new Method({
             name: 'getOTAMixSet',
             call: 'wan_getOTAMixSet',
             params: 2
         });
 
+        //jqg
+        var sendPrivacyCxtTransaction = new Method({
+            name: 'sendPrivacyCxtTransaction',
+            call: 'wan_sendPrivacyCxtTransaction',
+            params: 2,
+            inputFormatter: [formatters.inputTransactionFormatter, null]
+        });
+
+        // @anson
+        var computeOTAPPKeys = new Method({
+            name: 'computeOTAPPKeys',
+            call: 'wan_computeOTAPPKeys',
+            params: 2,
+            inputFormatter: [formatters.inputAddressFormatter, null]
+        });
+
+        // @anson
+        var genRingSignData = new Method({
+            name: 'genRingSignData',
+            call: 'wan_genRingSignData',
+            params: 3,
+        });
+
+        var getOTABalance = new Method({
+            name: 'getOTABalance',
+            call: 'wan_getOTABalance',
+            params: 1,
+            inputFormatter: [null],
+            outputFormatter: formatters.outputBigNumberFormatter
+        });
+
+        var scanOTAbyAccount = new Method ({
+            name: 'scanOTAbyAccount',
+            call: 'wan_scanOTAbyAccount',
+            params: 2,
+            inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
+        });
+
         return [
-            getOTAMixSet
+            computeOTAPPKeys,
+            sendPrivacyCxtTransaction,
+            getWanAddress,
+            generateOneTimeAddress,
+            getOTAMixSet,
+            genRingSignData,
+            getOTABalance,
+            scanOTAbyAccount,
         ];
     };
     var properties = function () {
