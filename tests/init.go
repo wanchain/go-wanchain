@@ -18,74 +18,74 @@ package tests
 
 import (
 	"fmt"
-	"math/big"
+	//"math/big"
 
 	"github.com/wanchain/go-wanchain/params"
 )
 
-// This table defines supported forks and their chain config.
+//// This table defines supported forks and their chain config.
 var Forks = map[string]*params.ChainConfig{
-	"Frontier": &params.ChainConfig{
-		ChainId: big.NewInt(1),
-	},
-	"Homestead": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-	},
-	"EIP150": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block:    big.NewInt(0),
-	},
-	"EIP158": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block:    big.NewInt(0),
-		EIP155Block:    big.NewInt(0),
-		EIP158Block:    big.NewInt(0),
-	},
-
-	"Byzantium": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block:    big.NewInt(0),
-		EIP155Block:    big.NewInt(0),
-		EIP158Block:    big.NewInt(0),
-		//DAOForkBlock:   big.NewInt(0),
-		ByzantiumBlock: big.NewInt(0),
-	},
-
-	"FrontierToHomesteadAt5": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(5),
-	},
-	"HomesteadToEIP150At5": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block:    big.NewInt(5),
-	},
-
-	"HomesteadToDaoAt5": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		DAOForkBlock:   big.NewInt(5),
-		DAOForkSupport: true,
-	},
-	"EIP158ToByzantiumAt5": &params.ChainConfig{
-		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block:    big.NewInt(0),
-		EIP155Block:    big.NewInt(0),
-		EIP158Block:    big.NewInt(0),
-		ByzantiumBlock: big.NewInt(5),
-	},
+//	"Frontier": &params.ChainConfig{
+//		ChainId: big.NewInt(1),
+//	},
+//	"Homestead": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//	},
+//	"EIP150": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		EIP150Block:    big.NewInt(0),
+//	},
+//	"EIP158": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		EIP150Block:    big.NewInt(0),
+//		EIP155Block:    big.NewInt(0),
+//		EIP158Block:    big.NewInt(0),
+//	},
+//
+//	"Byzantium": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		EIP150Block:    big.NewInt(0),
+//		EIP155Block:    big.NewInt(0),
+//		EIP158Block:    big.NewInt(0),
+//		//DAOForkBlock:   big.NewInt(0),
+//		ByzantiumBlock: big.NewInt(0),
+//	},
+//
+//	"FrontierToHomesteadAt5": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(5),
+//	},
+//	"HomesteadToEIP150At5": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		EIP150Block:    big.NewInt(5),
+//	},
+//
+//	"HomesteadToDaoAt5": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		DAOForkBlock:   big.NewInt(5),
+//		DAOForkSupport: true,
+//	},
+//	"EIP158ToByzantiumAt5": &params.ChainConfig{
+//		ChainId:        big.NewInt(1),
+//		HomesteadBlock: big.NewInt(0),
+//		EIP150Block:    big.NewInt(0),
+//		EIP155Block:    big.NewInt(0),
+//		EIP158Block:    big.NewInt(0),
+//		ByzantiumBlock: big.NewInt(5),
+//	},
 }
-
+//
 // UnsupportedForkError is returned when a test requests a fork that isn't implemented.
 type UnsupportedForkError struct {
 	Name string
 }
-
+//
 func (e UnsupportedForkError) Error() string {
 	return fmt.Sprintf("unsupported fork %q", e.Name)
 }

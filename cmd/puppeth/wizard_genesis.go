@@ -40,11 +40,11 @@ func (w *wizard) makeGenesis() {
 		Difficulty: big.NewInt(1048576),
 		Alloc:      make(core.GenesisAlloc),
 		Config: &params.ChainConfig{
-			HomesteadBlock: big.NewInt(1),
-			EIP150Block:    big.NewInt(2),
-			EIP155Block:    big.NewInt(3),
-			EIP158Block:    big.NewInt(3),
-			ByzantiumBlock: big.NewInt(4),
+			///HomesteadBlock: big.NewInt(1),
+			//EIP150Block:    big.NewInt(2),
+			//EIP155Block:    big.NewInt(3),
+			//EIP158Block:    big.NewInt(3),
+			//ByzantiumBlock: big.NewInt(4),
 		},
 	}
 	// Figure out which consensus engine to choose
@@ -143,37 +143,37 @@ func (w *wizard) makeGenesis() {
 func (w *wizard) manageGenesis() {
 	// Figure out whether to modify or export the genesis
 	fmt.Println()
-	fmt.Println(" 1. Modify existing fork rules")
-	fmt.Println(" 2. Export genesis configuration")
+	//fmt.Println(" 1. Modify existing fork rules")
+	fmt.Println(" 1. Export genesis configuration")
 
 	choice := w.read()
 	switch {
 	case choice == "1":
 		// Fork rule updating requested, iterate over each fork
-		fmt.Println()
-		fmt.Printf("Which block should Homestead come into effect? (default = %v)\n", w.conf.genesis.Config.HomesteadBlock)
-		w.conf.genesis.Config.HomesteadBlock = w.readDefaultBigInt(w.conf.genesis.Config.HomesteadBlock)
-
-		fmt.Println()
-		fmt.Printf("Which block should EIP150 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP150Block)
-		w.conf.genesis.Config.EIP150Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP150Block)
-
-		fmt.Println()
-		fmt.Printf("Which block should EIP155 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP155Block)
-		w.conf.genesis.Config.EIP155Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP155Block)
-
-		fmt.Println()
-		fmt.Printf("Which block should EIP158 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP158Block)
-		w.conf.genesis.Config.EIP158Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP158Block)
-
-		fmt.Println()
-		fmt.Printf("Which block should Byzantium come into effect? (default = %v)\n", w.conf.genesis.Config.ByzantiumBlock)
-		w.conf.genesis.Config.ByzantiumBlock = w.readDefaultBigInt(w.conf.genesis.Config.ByzantiumBlock)
-
-		out, _ := json.MarshalIndent(w.conf.genesis.Config, "", "  ")
-		fmt.Printf("Chain configuration updated:\n\n%s\n", out)
-
-	case choice == "2":
+	//	fmt.Println()
+	//	fmt.Printf("Which block should Homestead come into effect? (default = %v)\n", w.conf.genesis.Config.HomesteadBlock)
+	//	w.conf.genesis.Config.HomesteadBlock = w.readDefaultBigInt(w.conf.genesis.Config.HomesteadBlock)
+	//
+	//	fmt.Println()
+	//	fmt.Printf("Which block should EIP150 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP150Block)
+	//	w.conf.genesis.Config.EIP150Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP150Block)
+	//
+	//	fmt.Println()
+	//	fmt.Printf("Which block should EIP155 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP155Block)
+	//	w.conf.genesis.Config.EIP155Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP155Block)
+	//
+	//	fmt.Println()
+	//	fmt.Printf("Which block should EIP158 come into effect? (default = %v)\n", w.conf.genesis.Config.EIP158Block)
+	//	w.conf.genesis.Config.EIP158Block = w.readDefaultBigInt(w.conf.genesis.Config.EIP158Block)
+	//
+	//	fmt.Println()
+	//	fmt.Printf("Which block should Byzantium come into effect? (default = %v)\n", w.conf.genesis.Config.ByzantiumBlock)
+	//	w.conf.genesis.Config.ByzantiumBlock = w.readDefaultBigInt(w.conf.genesis.Config.ByzantiumBlock)
+	//
+	//	out, _ := json.MarshalIndent(w.conf.genesis.Config, "", "  ")
+	//	fmt.Printf("Chain configuration updated:\n\n%s\n", out)
+	//
+	//case choice == "2":
 		// Save whatever genesis configuration we currently have
 		fmt.Println()
 		fmt.Printf("Which file to save the genesis into? (default = %s.json)\n", w.network)
