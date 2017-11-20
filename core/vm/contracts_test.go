@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"github.com/wanchain/go-wanchain/core/types"
 
+	"github.com/wanchain/syndtr/goleveldb/leveldb/errors"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.
@@ -702,6 +703,21 @@ func TestPrecompiledStampSCBuyStampFailWrongStampValue(t *testing.T) {
 	}
 
 }
+
+
+func TestPrecompiledWanCoinSCReuqireGas(t *testing.T) {
+
+	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
+	in := common.Hex2Bytes(refundData[2:])
+
+	gas := p.RequiredGas(in)
+
+	if gas != 3 * params.RequiredGasPerMixPub {
+		t.Error(errors.New("gas used is not correct"))
+	}
+}
+
+
 
 
 
