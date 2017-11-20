@@ -184,7 +184,7 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	//return fmt.Sprintf("{ChainID: %v Homestead: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Engine: %v}",
-	return fmt.Sprintf("{ChainID: %v Byzantium: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v; Engine: %v}",
 		c.ChainId,
 		//c.HomesteadBlock,
 		//c.DAOForkBlock,
