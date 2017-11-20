@@ -57,9 +57,9 @@ func setDefaults(cfg *Config) {
 			HomesteadBlock: new(big.Int),
 			//DAOForkBlock:   new(big.Int),
 			//DAOForkSupport: false,
-			EIP150Block:    new(big.Int),
-			EIP155Block:    new(big.Int),
-			EIP158Block:    new(big.Int),
+			EIP150Block: new(big.Int),
+			EIP155Block: new(big.Int),
+			EIP158Block: new(big.Int),
 		}
 	}
 
