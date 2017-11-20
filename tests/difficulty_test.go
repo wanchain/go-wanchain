@@ -19,10 +19,8 @@ package tests
 
 import (
 	"testing"
-
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/params"
 )
 
