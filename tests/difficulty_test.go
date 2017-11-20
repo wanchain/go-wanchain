@@ -40,13 +40,13 @@ var (
 	//}
 	mainnetChainConfig = params.ChainConfig{
 		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		//DAOForkBlock:   big.NewInt(1920000),
-		//DAOForkSupport: true,
-		EIP150Block:    big.NewInt(0),
-		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:    big.NewInt(0),
-		EIP158Block:    big.NewInt(0),
+		//HomesteadBlock: big.NewInt(0),
+		////DAOForkBlock:   big.NewInt(1920000),
+		////DAOForkSupport: true,
+		//EIP150Block:    big.NewInt(0),
+		//EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		//EIP155Block:    big.NewInt(0),
+		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 	}
 
@@ -73,9 +73,9 @@ func TestDifficulty(t *testing.T) {
 	dt.config("Morden", *params.TestnetChainConfig)
 	dt.config("Frontier", params.ChainConfig{})
 
-	dt.config("Homestead", params.ChainConfig{
-		HomesteadBlock: big.NewInt(0),
-	})
+	//dt.config("Homestead", params.ChainConfig{
+	//	HomesteadBlock: big.NewInt(0),
+	//})
 
 	dt.config("Byzantium", params.ChainConfig{
 		ByzantiumBlock: big.NewInt(0),
