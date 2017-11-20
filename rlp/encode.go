@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"reflect"
 	"sync"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
@@ -89,6 +90,7 @@ func Encode(w io.Writer, val interface{}) error {
 	if err := eb.encode(val); err != nil {
 		return err
 	}
+
 	return eb.toWriter(w)
 }
 
@@ -181,6 +183,7 @@ func (w *encbuf) Write(b []byte) (int, error) {
 
 func (w *encbuf) encode(val interface{}) error {
 	rval := reflect.ValueOf(val)
+	fmt.Println(rval.Type())
 	ti, err := cachedTypeInfo(rval.Type(), tags{})
 	if err != nil {
 		return err
@@ -267,6 +270,8 @@ func (w *encbuf) toWriter(out io.Writer) (err error) {
 		// write string data after the last list header
 		_, err = out.Write(w.str[strpos:])
 	}
+	fmt.Printf(hexutil.Encode(w.str))
+
 	return err
 }
 
