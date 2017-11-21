@@ -23,8 +23,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 )
