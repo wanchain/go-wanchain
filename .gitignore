@@ -29,3 +29,7 @@ profile.cov
 
 # IdeaIDE
 .idea
+
+.*.swp
+cscope*
+run_cscope

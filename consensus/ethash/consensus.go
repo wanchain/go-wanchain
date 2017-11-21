@@ -70,8 +70,10 @@ var (
 	errAuthorTooOften = errors.New("signer too often")
 )
 
+// INFO: copied from consensus/clique/clique.go
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
+// INFO: copied from consensus/clique/clique.go
 func sigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
@@ -94,6 +96,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
+// INFO: copied from consensus/clique/clique.go
 // ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
@@ -116,6 +119,7 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	return signer, nil
 }
 
+// INFO: copied from consensus/clique/clique.go
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
@@ -289,9 +293,11 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, uncle bool, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size
-	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
-		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
-	}
+//	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
+//		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
+//	}
+// ^^^ superseded by the check below
+
 	if len(header.Extra) != extraVanity + extraSeal {
 		return fmt.Errorf("extra-data size invalid: %d", len(header.Extra))
 	}
@@ -374,6 +380,8 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 
     return nil
 }
+
+// INFO: copied from consensus/clique/clique.go , mostly
 // snapshot retrieves the signer status at a given point
 func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parent *types.Header) (*Snapshot, error) {
 	var (

@@ -1,3 +1,5 @@
+// INFO: copied from consensus/clique/snapshot.go , but heavily modified
+
 package ethash
 
 import (
