@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -48,32 +47,28 @@ var (
 		common.FromHex("5544"),
 	).WithSignature(
 		NewEIP155Signer(big.NewInt(1)),
-		// HomesteadSigner{},
 		common.Hex2Bytes("477e2517143dd329f2f6f5a2d554f9b51e306ebe11afc046cc528ec067e4fada756767362196f120957ce96dd2d8b664ee69b83bc1bed077d82ed8dfe03bd7f400"),
 	)
 )
 
-func TestTransactionSigHash(t *testing.T) {
-	// var homestead HomesteadSigner
-	// @anson
-	// make an eip155 signer
-	eip155 := NewEIP155Signer(big.NewInt(1))
+// out-of-date test
+// func TestTransactionSigHash(t *testing.T) {
+// 	var homestead HomesteadSigner
+// 	if homestead.Hash(emptyTx) != common.HexToHash("c775b99e7ad12f50d819fcd602390467e28141316969f4b57f0626f74fe3b386") {
+// 		t.Errorf("empty transaction hash mismatch, got %x", emptyTx.Hash())
+// 	}
+// 	if homestead.Hash(rightvrsTx) != common.HexToHash("fe7a79529ed5f7c3375d06b26b186a8644e0e16c373d7a12be41c62d6042b77a") {
+// 		t.Errorf("RightVRS transaction hash mismatch, got %x", rightvrsTx.Hash())
+// 	}
 
-	if eip155.Hash(emptyTx) != common.HexToHash("0x0e9969d6dc776ab0cae59d85e794bc81c06517787c78ea35f78685953c51ec96") {
-		t.Errorf("empty transaction hash mismatch, got %x", emptyTx.Hash())
-	}
-
-	if eip155.Hash(rightvrsTx) != common.HexToHash("0xf72c163df11788d7db9680b91e8dee7ca2188953404523a0bf8f509d962cc680") {
-		t.Errorf("RightVRS transaction hash mismatch, got %x", rightvrsTx.Hash())
-	}
-}
+// }
 
 func TestTransactionEncode(t *testing.T) {
 	txb, err := rlp.EncodeToBytes(rightvrsTx)
 	if err != nil {
 		t.Fatalf("encode error: %v", err)
 	}
-	should := common.FromHex("f86601040183030d4094b94f5374fce5edbc8e2a8697c15331677e6ebf0b64825544839ebb67a0477e2517143dd329f2f6f5a2d554f9b51e306ebe11afc046cc528ec067e4fadaa0756767362196f120957ce96dd2d8b664ee69b83bc1bed077d82ed8dfe03bd7f4")
+	should := common.FromHex("f86301040183030d4094b94f5374fce5edbc8e2a8697c15331677e6ebf0b6482554425a0477e2517143dd329f2f6f5a2d554f9b51e306ebe11afc046cc528ec067e4fadaa0756767362196f120957ce96dd2d8b664ee69b83bc1bed077d82ed8dfe03bd7f4")
 	if !bytes.Equal(txb, should) {
 		t.Errorf("encoded RLP mismatch, got %x", txb)
 	}
@@ -88,7 +83,6 @@ func decodeTx(data []byte) (*Transaction, error) {
 func defaultTestKey() (*ecdsa.PrivateKey, common.Address) {
 	key, _ := crypto.HexToECDSA("a4369e77024c2ade4994a9345af5c47598c7cfb36c65e8a4a3117519883d9014")
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	fmt.Println("addr is: ", addr.Hex())
 	return key, addr
 }
 
