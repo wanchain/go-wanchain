@@ -44,7 +44,7 @@ var (
 
 		//ByzantiumBlock: big.NewInt(4370000),
 		ByzantiumBlock: big.NewInt(0),
-		Ethash: new(EthashConfig),
+		Ethash:         new(EthashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
@@ -105,9 +105,9 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/ big.NewInt(0),  new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337) /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/, big.NewInt(0), new(EthashConfig), nil, nil}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1),/*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, */ /*big.NewInt(0), */ /*big.NewInt(0),*/big.NewInt(0), new(EthashConfig), nil, nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1) /*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, */ /*big.NewInt(0), */ /*big.NewInt(0),*/, big.NewInt(0), new(EthashConfig), nil, nil}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
 )
