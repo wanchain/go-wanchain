@@ -19,13 +19,16 @@ package ethash
 import (
 	"encoding/json"
 	"math/big"
-	"os"
-	"path/filepath"
-	"testing"
+	//"os"
+	//"path/filepath"
+	//"testing"
 
 	"github.com/wanchain/go-wanchain/common/math"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/params"
+	//"github.com/wanchain/go-wanchain/core/types"
+	//"github.com/wanchain/go-wanchain/params"
+	//"testing"
+	//"os"
+	//"path/filepath"
 )
 
 type diffTest struct {
@@ -57,30 +60,30 @@ func (d *diffTest) UnmarshalJSON(b []byte) (err error) {
 	return nil
 }
 
-// @anson This case is out-of-date due to consensus migration to Byzan
-func TestCalcDifficulty(t *testing.T) {
-	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))
-	if err != nil {
-		t.Skip(err)
-	}
-	defer file.Close()
-
-	tests := make(map[string]diffTest)
-	err = json.NewDecoder(file).Decode(&tests)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	config := &params.ChainConfig{ByzantiumBlock: big.NewInt(1150000)}
-	for name, test := range tests {
-		number := new(big.Int).Sub(test.CurrentBlocknumber, big.NewInt(1))
-		diff := CalcDifficulty(config, test.CurrentTimestamp, &types.Header{
-			Number:     number,
-			Time:       new(big.Int).SetUint64(test.ParentTimestamp),
-			Difficulty: test.ParentDifficulty,
-		})
-		if diff.Cmp(test.CurrentDifficulty) != 0 {
-			t.Error(name, "failed. Expected", test.CurrentDifficulty, "and calculated", diff)
-		}
-	}
-}
+// This case is out-of-date due to consensus protocol migrated to Byzantium
+//func TestCalcDifficulty(t *testing.T) {
+//	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))
+//	if err != nil {
+//		t.Skip(err)
+//	}
+//	defer file.Close()
+//
+//	tests := make(map[string]diffTest)
+//	err = json.NewDecoder(file).Decode(&tests)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	config := &params.ChainConfig{ByzantiumBlock: big.NewInt(1150000)}
+//	for name, test := range tests {
+//		number := new(big.Int).Sub(test.CurrentBlocknumber, big.NewInt(1))
+//		diff := CalcDifficulty(config, test.CurrentTimestamp, &types.Header{
+//			Number:     number,
+//			Time:       new(big.Int).SetUint64(test.ParentTimestamp),
+//			Difficulty: test.ParentDifficulty,
+//		})
+//		if diff.Cmp(test.CurrentDifficulty) != 0 {
+//			t.Error(name, "failed. Expected", test.CurrentDifficulty, "and calculated", diff)
+//		}
+//	}
+//}
