@@ -34,17 +34,17 @@ type Signer interface {
 	Sign(*Address, *Transaction) (tx *Transaction, _ error)
 }
 
-type signer struct {
-	sign bind.SignerFn
-}
-
-func (s *signer) Sign(addr *Address, unsignedTx *Transaction) (signedTx *Transaction, _ error) {
-	sig, err := s.sign(types.HomesteadSigner{}, addr.address, unsignedTx.tx)
-	if err != nil {
-		return nil, err
-	}
-	return &Transaction{sig}, nil
-}
+//type signer struct {
+//	sign bind.SignerFn
+//}
+//
+//func (s *signer) Sign(addr *Address, unsignedTx *Transaction) (signedTx *Transaction, _ error) {
+//	sig, err := s.sign(types.HomesteadSigner{}, addr.address, unsignedTx.tx)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return &Transaction{sig}, nil
+//}
 
 // CallOpts is the collection of options to fine tune a contract call request.
 type CallOpts struct {
