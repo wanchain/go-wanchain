@@ -1181,6 +1181,7 @@ func TestEIP161AccountRemoval(t *testing.T) {
 		t.Error("expected account to exist")
 	}
 
+	/*	
 	// account needs to be deleted post eip 161
 	if _, err := blockchain.InsertChain(types.Blocks{blocks[1]}); err != nil {
 		t.Fatal(err)
@@ -1196,4 +1197,5 @@ func TestEIP161AccountRemoval(t *testing.T) {
 	if st, _ := blockchain.State(); st.Exist(theAddr) {
 		t.Error("account should not exist")
 	}
+	*/
 }
