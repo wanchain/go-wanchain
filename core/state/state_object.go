@@ -28,7 +28,11 @@ import (
 	"github.com/wanchain/go-wanchain/trie"
 )
 
-var emptyCodeHash = crypto.Keccak256(nil)
+var (
+	emptyCodeHash = crypto.Keccak256(nil)
+	// This is the known root hash of an empty trie.
+	emptyTrieRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+)
 
 type Code []byte
 
@@ -111,9 +115,10 @@ type stateObject struct {
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
 	emptyHash := common.Hash{}
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash) &&
-		bytes.Equal(s.data.CodeHash, emptyHash[:]) && s.data.Root == emptyHash && len(s.dirtyStorage) == 0 &&
-		len(s.dirtyStorageByteArray) == 0
+	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 &&
+		(bytes.Equal(s.data.CodeHash, emptyCodeHash) || bytes.Equal(s.data.CodeHash, emptyHash[:])) &&
+		(s.data.Root == emptyHash || s.data.Root == emptyTrieRoot) &&
+		len(s.dirtyStorage) == 0 && len(s.dirtyStorageByteArray) == 0
 }
 
 // Account is the Ethereum consensus representation of accounts.
@@ -134,15 +139,15 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data.CodeHash = emptyCodeHash
 	}
 	return &stateObject{
-		db:            db,
-		address:       address,
-		addrHash:      crypto.Keccak256Hash(address[:]),
-		data:          data,
-		cachedStorage: make(Storage),
-		dirtyStorage:  make(Storage),
+		db:                     db,
+		address:                address,
+		addrHash:               crypto.Keccak256Hash(address[:]),
+		data:                   data,
+		cachedStorage:          make(Storage),
+		dirtyStorage:           make(Storage),
 		cachedStorageByteArray: make(StorageByteArray),
-		dirtyStorageByteArray: make(StorageByteArray),
-		onDirty:       onDirty,
+		dirtyStorageByteArray:  make(StorageByteArray),
+		onDirty:                onDirty,
 	}
 }
 
