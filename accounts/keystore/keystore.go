@@ -287,12 +287,16 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 }
 
 func (ks *KeyStore) CheckOTA(a accounts.Account, ota *common.WAddress) (bool, error) {
+	if ota == nil {
+		return false, errors.New("invalid wan address")
+	}
+
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
 	ret := false
 	unlockedKey, found := ks.unlocked[a.Address]
-	if !found {
+	if !found || unlockedKey == nil {
 		return ret, ErrLocked
 	}
 
@@ -567,6 +571,10 @@ func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, er
 
 // GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
 func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	if len(w) == common.WAddressLength {
+		return nil, nil, errors.New("invalid wan address len")
+	}
+
 	tmp := make([]byte, 33)
 	copy(tmp[:], w[:33])
 	curve := btcec.S256()
@@ -574,16 +582,22 @@ func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, e
 	if err != nil {
 		return nil, nil, err
 	}
+
 	copy(tmp[:], w[33:])
 	PK2, err := btcec.ParsePubKey(tmp, curve)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *ecdsa.PrivateKey) {
+	if k == nil {
+		return
+	}
+
 	b := k.D.Bits()
 	for i := range b {
 		b[i] = 0

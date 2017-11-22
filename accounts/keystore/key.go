@@ -309,17 +309,6 @@ func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
 	return &waddr, nil
 }
 
-//func ToWaddr(raw []byte) ([]byte, error) {
-//	pub := make([]byte, 65)
-//	pub[0] = 0x04
-//	copy(pub[1:], raw[0:64])
-//	A := crypto.ToECDSAPub(pub)
-//	copy(pub[1:], raw[64:])
-//	B := crypto.ToECDSAPub(pub)
-//	waddr := GenerateWaddressFromPK(A, B)
-//	return waddr[:], nil
-//}
-
 func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	if len(waddr) != common.WAddressLength {
 		return nil, errors.New("invalid wan address len")
