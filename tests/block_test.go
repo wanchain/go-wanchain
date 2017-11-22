@@ -35,6 +35,7 @@ func TestBlockchain(t *testing.T) {
 
 	// Still failing tests
 	bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
+
 	// Skip Fork tests
 	bt.skipLoad(`.*_EIP150$`)
 	bt.skipLoad(`.*_EIP158$`)
