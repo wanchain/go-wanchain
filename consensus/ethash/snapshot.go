@@ -7,6 +7,7 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/functrace"
 	"encoding/json"
 )
 
@@ -33,6 +34,9 @@ type plainSnapShot struct {
 }
 
 func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Snapshot {
+  functrace.Enter()
+  defer functrace.Exit()
+
 	snap := &Snapshot{
 		PermissionSigners: make(map[common.Address]struct{}),
 		Number: number,
@@ -47,8 +51,10 @@ func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Sna
 	return snap
 }
 
-
 func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+  functrace.Enter()
+  defer functrace.Exit()
+
 	blob, err := db.Get(append([]byte("ppow-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -74,7 +80,10 @@ func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	return snap, nil
 }
 
-func(s *Snapshot) store(db ethdb.Database) error {
+func (s *Snapshot) store(db ethdb.Database) error {
+  functrace.Enter()
+  defer functrace.Exit()
+
 	plain := &plainSnapShot{
 		PermissionSigners: s.PermissionSigners,
 		Number: s.Number,
@@ -97,7 +106,10 @@ func(s *Snapshot) store(db ethdb.Database) error {
 	return db.Put(append([]byte("ppow-"), plain.Hash[:]...), blob)
 }
 
-func(s* Snapshot) copy() *Snapshot {
+func (s* Snapshot) copy() *Snapshot {
+  functrace.Enter()
+  defer functrace.Exit()
+
 	cpy := &Snapshot{
 		PermissionSigners:  s.PermissionSigners,
 		Number:    s.Number,
@@ -113,7 +125,10 @@ func(s* Snapshot) copy() *Snapshot {
 	return cpy
 }
 
-func (self *Snapshot)updateSignerStatus(signer common.Address, isExist bool){
+func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool){
+  functrace.Enter()
+  defer functrace.Exit()
+
 	if isExist {
 		//if signer already presence
 		if(self.RecentSignersWindow.Len()) > 0 {
@@ -144,7 +159,10 @@ func (self *Snapshot)updateSignerStatus(signer common.Address, isExist bool){
 // RecentSignersWindow is the set who can not sign next block
 // len(RecentSignersWindow) = (len(UsedSigners)-1)/2
 // so when n > 2, hacker should got (n / 2 + 1) key to reorg chain?
-func(s *Snapshot) apply(header *types.Header) (*Snapshot, error){
+func (s *Snapshot) apply(header *types.Header) (*Snapshot, error){
+  functrace.Enter()
+  defer functrace.Exit()
+
 	snap := s.copy()
 
 	signer, err := ecrecover(header)
@@ -171,7 +189,10 @@ func(s *Snapshot) apply(header *types.Header) (*Snapshot, error){
 	return snap, nil
 }
 
-func(s *Snapshot) isLegal4Sign(signer common.Address) bool {
+func (s *Snapshot) isLegal4Sign(signer common.Address) bool {
+  functrace.Enter()
+  defer functrace.Exit()
+
 	if _, ok := s.PermissionSigners[signer]; !ok {
 		return false
 	}
