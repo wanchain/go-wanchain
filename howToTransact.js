@@ -80,10 +80,10 @@ stampContract = contractDef.at(stampContractAddr);
 //generate OTA address for account1, otaAddr is a stamp
 var wanAddr = wan.getWanAddress(eth.accounts[1]);
 var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
-txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.01));
+txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.001));
 
 
-eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.01), data:txBuyData, gas: 1000000});
+eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.001), data:txBuyData, gas: 1000000});
 
 keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrStamp).split('+');
 privateKeyStamp = keyPairs[0];
@@ -94,7 +94,6 @@ var mixSetWith0x = []
 for (i = 0; i < mixStampAddresses.length; i++){
     mixSetWith0x.push(mixStampAddresses[i])
 }
-
 
 
 /***************
