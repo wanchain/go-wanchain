@@ -428,8 +428,12 @@ func genOTA(wanStr string) (string, error) {
 		return "", err
 	}
 
-	rawWanAddr, err := ToWaddr(raw)
-	return hexutil.Encode(rawWanAddr), nil
+	rawWanAddr, err := WaddrFromUncompressed(raw)
+	if err != nil || rawWanAddr == nil {
+		return "", nil
+	}
+
+	return hexutil.Encode(rawWanAddr[:]), nil
 }
 
 func TestComputeOTAPPKeys(t *testing.T) {

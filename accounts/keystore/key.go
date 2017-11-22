@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"errors"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"
@@ -270,6 +271,10 @@ func toISO8601(t time.Time) string {
 }
 
 func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	if len(waddr) != common.WAddressLength {
+		return nil, nil, errors.New("invalid wan address len")
+	}
+
 	tmp := make([]byte, 33)
 	copy(tmp[:33], waddr[:33])
 	curve := btcec.S256()
@@ -287,7 +292,12 @@ func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.Publi
 	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
 }
 
-func WaddrFromUncompressed(waddr []byte, raw []byte) error {
+func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
+	if len(raw) != 32*2*2 {
+		return nil, errors.New("invalid uncompressed wan address len")
+	}
+
+	var waddr common.WAddress
 	pub := make([]byte, 65)
 	pub[0] = 0x004
 	copy(pub[1:], raw[:64])
@@ -295,28 +305,32 @@ func WaddrFromUncompressed(waddr []byte, raw []byte) error {
 	copy(pub[1:], raw[64:])
 	B := crypto.ToECDSAPub(pub)
 	wd := GenerateWaddressFromPK(A, B)
-	copy(waddr, wd[:])
-	return nil
+	copy(waddr[:], wd[:])
+	return &waddr, nil
 }
 
-func ToWaddr(raw []byte) ([]byte, error) {
-	pub := make([]byte, 65)
-	pub[0] = 0x04
-	copy(pub[1:], raw[0:64])
-	A := crypto.ToECDSAPub(pub)
-	copy(pub[1:], raw[64:])
-	B := crypto.ToECDSAPub(pub)
-	waddr := GenerateWaddressFromPK(A, B)
-	return waddr[:], nil
-}
+//func ToWaddr(raw []byte) ([]byte, error) {
+//	pub := make([]byte, 65)
+//	pub[0] = 0x04
+//	copy(pub[1:], raw[0:64])
+//	A := crypto.ToECDSAPub(pub)
+//	copy(pub[1:], raw[64:])
+//	B := crypto.ToECDSAPub(pub)
+//	waddr := GenerateWaddressFromPK(A, B)
+//	return waddr[:], nil
+//}
 
 func WaddrToUncompressed(waddr []byte) ([]byte, error) {
+	if len(waddr) != common.WAddressLength {
+		return nil, errors.New("invalid wan address len")
+	}
+
 	A, B, err := GeneratePublicKeyFromWaddress(waddr)
 	if err != nil {
 		return nil, err
 	}
 
-	u := make([]byte, 128)
+	u := make([]byte, 32*2*2)
 	ax := math.PaddedBigBytes(A.X, 32)
 	ay := math.PaddedBigBytes(A.Y, 32)
 	bx := math.PaddedBigBytes(B.X, 32)
@@ -327,12 +341,11 @@ func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	copy(u[96:], by[:32])
 
 	return u, nil
-
 }
 
-func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) common.WAddress {
+func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAddress {
 	var tmp common.WAddress
 	copy(tmp[:33], ECDSAPKCompression(A))
 	copy(tmp[33:], ECDSAPKCompression(B))
-	return tmp
+	return &tmp
 }

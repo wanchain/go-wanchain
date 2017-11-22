@@ -1322,14 +1322,16 @@ func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address comm
 			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
 				if privacyContract.Str() == txrpc.To.Str() {
 					otas = append(otas, string(txrpc.To.Hex()))
-					var otaWAddr common.WAddress
-					if err4 := keystore.WaddrFromUncompressed(otaWAddr[:], txrpc.Input[1:]); err4 != nil {
-						return otas, err4
+					otaWAddr, err := keystore.WaddrFromUncompressed(txrpc.Input[1:])
+					if err != nil || otaWAddr == nil {
+						return otas, err
 					}
-					isMine, err := wallet.CheckOTA(account, &otaWAddr)
+
+					isMine, err := wallet.CheckOTA(account, otaWAddr)
 					if err != nil {
 						return otas, err
 					}
+
 					if isMine == true {
 						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
 					}
@@ -1684,8 +1686,12 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 		return "", err
 	}
 
-	rawWanAddr, err := keystore.ToWaddr(raw)
-	return hexutil.Encode(rawWanAddr), nil
+	rawWanAddr, err := keystore.WaddrFromUncompressed(raw)
+	if err != nil || rawWanAddr == nil {
+		return "", err
+	}
+
+	return hexutil.Encode(rawWanAddr[:]), nil
 }
 
 func (args *SendTxArgs) toOTATransaction() *types.Transaction {
