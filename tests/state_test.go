@@ -34,6 +34,9 @@ func TestState(t *testing.T) {
 	// Broken tests:
 	st.skipLoad(`^stTransactionTest/OverflowGasRequire\.json`) // gasLimit > 256 bits
 	st.skipLoad(`^stTransactionTest/zeroSigTransa[^/]*\.json`) // EIP-86 is not supported yet
+	st.skipLoad(`^stChangedEIP150/`)
+	st.skipLoad(`^stEIP150Specific/`)
+	st.skipLoad(`^stEIP150Specific/`)
 	// Expected failures:
 	st.fails(`^stRevertTest/RevertPrecompiledTouch\.json/EIP158`, "bug in test")
 	st.fails(`^stRevertTest/RevertPrefoundEmptyOOG\.json/EIP158`, "bug in test")

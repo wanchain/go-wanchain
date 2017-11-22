@@ -36,6 +36,16 @@ func TestBlockchain(t *testing.T) {
 	// Still failing tests
 	bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
 
+	// Skip Fork tests
+	bt.skipLoad(`.*_EIP150$`)
+	bt.skipLoad(`.*_EIP158$`)
+	bt.skipLoad(`.*_Frontier$`)
+	bt.skipLoad(`.*_Homestead$`)
+
+	bt.skipLoad(`^bcForkStressTest/`)
+	bt.skipLoad(`^bcForgedTest/`)
+	bt.skipLoad(`^TransitionTests/`)
+
 	bt.walk(t, blockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		if err := bt.checkFailure(t, name, test.Run()); err != nil {
 			t.Error(err)
