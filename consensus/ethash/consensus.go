@@ -24,25 +24,26 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/params"
-	set "gopkg.in/fatih/set.v0"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
+	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/rlp"
+	set "gopkg.in/fatih/set.v0"
 )
 
 const (
-//	checkpointInterval = 1024 // Number of blocks after which to save the signers state
+	//	checkpointInterval = 1024 // Number of blocks after which to save the signers state
 	checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
 )
+
 // Ethash proof-of-work protocol constants.
 var (
 	blockReward *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
@@ -67,9 +68,9 @@ var (
 	errInvalidDifficulty = errors.New("non-positive difficulty")
 	errInvalidMixDigest  = errors.New("invalid mix digest")
 	errInvalidPoW        = errors.New("invalid proof-of-work")
-	errMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
-	errUnauthorized = errors.New("unauthorized signer")
-	errAuthorTooOften = errors.New("signer too often")
+	errMissingSignature  = errors.New("extra-data 65 byte suffix signature missing")
+	errUnauthorized      = errors.New("unauthorized signer")
+	errAuthorTooOften    = errors.New("signer too often")
 )
 
 // INFO: copied from consensus/clique/clique.go
@@ -101,8 +102,8 @@ func sigHash(header *types.Header) (hash common.Hash) {
 // INFO: copied from consensus/clique/clique.go
 // ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
@@ -129,18 +130,18 @@ func ecrecover(header *types.Header) (common.Address, error) {
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	return header.Coinbase, nil
 }
 
-func (self *Ethash) Authorize(signer common.Address, signFn SignerFn){
+func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	self.signFn = signFn
 	self.signer = signer
@@ -151,12 +152,12 @@ func (self *Ethash) Authorize(signer common.Address, signFn SignerFn){
 func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull {
-    log.Error("fakeFull")
+		log.Error("fakeFull")
 		return nil
 	}
 
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// Short circuit if the header is known, or it's parent not
 	number := header.Number.Uint64()
@@ -175,8 +176,8 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
 func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull || len(headers) == 0 {
@@ -312,16 +313,16 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 //
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, uncle bool, seal bool) error {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// Ensure that the header's extra-data section is of a reasonable size
-//	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
-//		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
-//	}
-// ^^^ superseded by the check below
+	//	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
+	//		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
+	//	}
+	// ^^^ superseded by the check below
 
-	if len(header.Extra) != extraVanity + extraSeal {
+	if len(header.Extra) != extraVanity+extraSeal {
 		return fmt.Errorf("extra-data size invalid: %d", len(header.Extra))
 	}
 	// Verify the header's timestamp
@@ -382,8 +383,8 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // TODO: its's different from POA, need consider thread-security
 func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
 	number := header.Number.Uint64()
-  functrace.Enter(fmt.Sprintf("number= %d", number))
-  defer functrace.Exit()
+	functrace.Enter(fmt.Sprintf("number= %d", number))
+	defer functrace.Exit()
 
 	if number == 0 {
 		return nil
@@ -394,7 +395,7 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-    //self.recents.Add(snap.Hash, snap)
+	//self.recents.Add(snap.Hash, snap)
 
 	updatedSnap, err := snap.apply(header)
 	if err != nil {
@@ -403,7 +404,7 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 
 	self.recents.Add(header.Hash(), updatedSnap)
 
-    return nil
+	return nil
 }
 
 // INFO: copied from consensus/clique/clique.go , mostly
@@ -411,11 +412,11 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parent *types.Header) (*Snapshot, error) {
 	var (
 		headers []*types.Header
-		snap *Snapshot
+		snap    *Snapshot
 	)
 
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	for snap == nil {
 		if s, ok := self.recents.Get(hash); ok {
@@ -453,18 +454,18 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		number, hash = number-1, header.ParentHash
 	}
 
-	for i := 0; i < len(headers) / 2; i++ {
+	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
 
-	for _, iHeader := range  headers {
+	for _, iHeader := range headers {
 		snap, err := snap.apply(iHeader)
 		if err != nil {
 			return nil, err
 		}
 		self.recents.Add(snap.Hash, snap)
 
-		if snap.Number%checkpointInterval == 0 && len(headers) > 0{
+		if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 			if err = snap.store(self.db); err != nil {
 				return nil, err
 			}
@@ -474,6 +475,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 
 	return snap, nil
 }
+
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 // that a new block should have when created at time given the parent block's time
 // and difficulty.
@@ -587,8 +589,8 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 		return nil
 	}
 
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// If we're running a shared PoW, delegate verification to it
 	if ethash.shared != nil {
@@ -630,15 +632,15 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 		return consensus.ErrUnknownAncestor
 	}
 
-  functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
-  defer functrace.Exit()
+	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
+	defer functrace.Exit()
 
 	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return err
 	}
 
-	if !snap.isLegal4Sign(header.Coinbase){
+	if !snap.isLegal4Sign(header.Coinbase) {
 		return errUnauthorized
 	}
 
@@ -657,8 +659,8 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(state, header, uncles)
@@ -680,8 +682,8 @@ var (
 //
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(state *state.StateDB, header *types.Header, uncles []*types.Header) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	/*reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)

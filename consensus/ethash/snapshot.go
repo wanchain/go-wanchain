@@ -4,56 +4,56 @@ package ethash
 
 import (
 	"container/list"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/functrace"
 	"encoding/json"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/functrace"
 )
 
 const (
-	windowRatio = 2  //
+	windowRatio = 2 //
 )
 
 type Snapshot struct {
 	PermissionSigners map[common.Address]struct{}
 
-	Number uint64
-	Hash   common.Hash
-	UsedSigners map[common.Address]struct{}
+	Number              uint64
+	Hash                common.Hash
+	UsedSigners         map[common.Address]struct{}
 	RecentSignersWindow *list.List
 }
 
 type plainSnapShot struct {
-	PermissionSigners map[common.Address]struct{}  `json:"permissionSigners"`
+	PermissionSigners map[common.Address]struct{} `json:"permissionSigners"`
 
-	Number uint64                                  `json:"number"`
-	Hash   common.Hash                             `json:"hash"`
-	UsedSigners map[common.Address]struct{}        `json:"usedSigners"`
-	RecentSignersWindow []common.Address           `json:"recentSignersWindow"`
+	Number              uint64                      `json:"number"`
+	Hash                common.Hash                 `json:"hash"`
+	UsedSigners         map[common.Address]struct{} `json:"usedSigners"`
+	RecentSignersWindow []common.Address            `json:"recentSignersWindow"`
 }
 
 func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Snapshot {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	snap := &Snapshot{
-		PermissionSigners: make(map[common.Address]struct{}),
-		Number: number,
-		Hash: hash,
-		UsedSigners: make(map[common.Address]struct{}),
+		PermissionSigners:   make(map[common.Address]struct{}),
+		Number:              number,
+		Hash:                hash,
+		UsedSigners:         make(map[common.Address]struct{}),
 		RecentSignersWindow: list.New(),
 	}
 
-	for _, s := range signers{
+	for _, s := range signers {
 		snap.PermissionSigners[s] = struct{}{}
 	}
 	return snap
 }
 
 func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	blob, err := db.Get(append([]byte("ppow-"), hash[:]...))
 	if err != nil {
@@ -66,10 +66,10 @@ func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	}
 
 	snap := &Snapshot{
-		PermissionSigners: plain.PermissionSigners,
-		Number: plain.Number,
-		Hash: plain.Hash,
-		UsedSigners: plain.UsedSigners,
+		PermissionSigners:   plain.PermissionSigners,
+		Number:              plain.Number,
+		Hash:                plain.Hash,
+		UsedSigners:         plain.UsedSigners,
 		RecentSignersWindow: list.New(),
 	}
 
@@ -81,19 +81,19 @@ func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 }
 
 func (s *Snapshot) store(db ethdb.Database) error {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	plain := &plainSnapShot{
-		PermissionSigners: s.PermissionSigners,
-		Number: s.Number,
-		Hash: s.Hash,
-		UsedSigners: s.UsedSigners,
+		PermissionSigners:   s.PermissionSigners,
+		Number:              s.Number,
+		Hash:                s.Hash,
+		UsedSigners:         s.UsedSigners,
 		RecentSignersWindow: make([]common.Address, s.RecentSignersWindow.Len()),
 	}
 
-	for e := s.RecentSignersWindow.Front(); e!= nil; e = e.Next() {
-		if _, ok := e.Value.(common.Address); ok{
+	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
+		if _, ok := e.Value.(common.Address); ok {
 			plain.RecentSignersWindow = append(plain.RecentSignersWindow, e.Value.(common.Address))
 		}
 	}
@@ -106,15 +106,15 @@ func (s *Snapshot) store(db ethdb.Database) error {
 	return db.Put(append([]byte("ppow-"), plain.Hash[:]...), blob)
 }
 
-func (s* Snapshot) copy() *Snapshot {
-  functrace.Enter()
-  defer functrace.Exit()
+func (s *Snapshot) copy() *Snapshot {
+	functrace.Enter()
+	defer functrace.Exit()
 
 	cpy := &Snapshot{
-		PermissionSigners:  s.PermissionSigners,
-		Number:    s.Number,
-		Hash: s.Hash,
-		UsedSigners: make(map[common.Address]struct{}),
+		PermissionSigners:   s.PermissionSigners,
+		Number:              s.Number,
+		Hash:                s.Hash,
+		UsedSigners:         make(map[common.Address]struct{}),
 		RecentSignersWindow: list.New(),
 	}
 
@@ -125,13 +125,13 @@ func (s* Snapshot) copy() *Snapshot {
 	return cpy
 }
 
-func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool){
-  functrace.Enter()
-  defer functrace.Exit()
+func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
+	functrace.Enter()
+	defer functrace.Exit()
 
 	if isExist {
 		//if signer already presence
-		if(self.RecentSignersWindow.Len()) > 0 {
+		if (self.RecentSignersWindow.Len()) > 0 {
 			self.RecentSignersWindow.PushFront(signer)
 			self.RecentSignersWindow.Remove(self.RecentSignersWindow.Back())
 		}
@@ -139,7 +139,7 @@ func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool){
 		// This is the first time the signer appear
 		self.UsedSigners[signer] = struct{}{}
 		preWindowLen := self.RecentSignersWindow.Len()
-		newWindowLen := (len(self.UsedSigners)-1) / windowRatio
+		newWindowLen := (len(self.UsedSigners) - 1) / windowRatio
 		if newWindowLen > preWindowLen {
 			self.RecentSignersWindow.PushFront(signer)
 		} else {
@@ -159,9 +159,9 @@ func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool){
 // RecentSignersWindow is the set who can not sign next block
 // len(RecentSignersWindow) = (len(UsedSigners)-1)/2
 // so when n > 2, hacker should got (n / 2 + 1) key to reorg chain?
-func (s *Snapshot) apply(header *types.Header) (*Snapshot, error){
-  functrace.Enter()
-  defer functrace.Exit()
+func (s *Snapshot) apply(header *types.Header) (*Snapshot, error) {
+	functrace.Enter()
+	defer functrace.Exit()
 
 	snap := s.copy()
 
@@ -174,8 +174,8 @@ func (s *Snapshot) apply(header *types.Header) (*Snapshot, error){
 		return nil, errUnauthorized
 	}
 
-	for e := snap.RecentSignersWindow.Front(); e!= nil; e = e.Next() {
-		if _, ok := e.Value.(common.Address); ok{
+	for e := snap.RecentSignersWindow.Front(); e != nil; e = e.Next() {
+		if _, ok := e.Value.(common.Address); ok {
 			wSigner := e.Value.(common.Address)
 			if signer == wSigner {
 				return nil, errAuthorTooOften
@@ -190,14 +190,14 @@ func (s *Snapshot) apply(header *types.Header) (*Snapshot, error){
 }
 
 func (s *Snapshot) isLegal4Sign(signer common.Address) bool {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	if _, ok := s.PermissionSigners[signer]; !ok {
 		return false
 	}
 	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
-		if _, ok := e.Value.(common.Address); ok{
+		if _, ok := e.Value.(common.Address); ok {
 			wSigner := e.Value.(common.Address)
 			if signer == wSigner {
 				return false

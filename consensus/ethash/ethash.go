@@ -32,13 +32,13 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
+	"github.com/hashicorp/golang-lru"
+	metrics "github.com/rcrowley/go-metrics"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rpc"
-	metrics "github.com/rcrowley/go-metrics"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/hashicorp/golang-lru"
-	"github.com/wanchain/go-wanchain/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")
@@ -355,10 +355,10 @@ type Ethash struct {
 
 	lock sync.Mutex // Ensures thread safety for the in-memory caches and mining fields
 
-	db   ethdb.Database
+	db      ethdb.Database
 	recents *lru.ARCCache
-	signer   common.Address
-	signFn   SignerFn
+	signer  common.Address
+	signFn  SignerFn
 }
 
 // New creates a full sized ethash PoW scheme.

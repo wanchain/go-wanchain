@@ -25,19 +25,19 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/accounts"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
 // the block's difficulty requirements.
 func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	header := block.Header()
 	log.Trace("Seal(): cr@zy seal")
@@ -45,7 +45,7 @@ func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop
 	sighash, err := ethash.signFn(accounts.Account{Address: block.Coinbase()}, sigHash(block.Header()).Bytes())
 	log.Trace("Seal(): cr@zy seal", "hash Input", sigHash(block.Header()).String())
 	if err != nil {
-    	return nil, err
+		return nil, err
 	}
 
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
@@ -113,8 +113,8 @@ func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop
 // mine is the actual proof-of-work miner that searches for a nonce starting from
 // seed that results in correct final block difficulty.
 func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
-  functrace.Enter()
-  defer functrace.Exit()
+	functrace.Enter()
+	defer functrace.Exit()
 
 	// Extract some data from the header
 	var (
