@@ -92,8 +92,11 @@ type btHeaderMarshaling struct {
 }
 
 func (t *BlockTest) Run() error {
+	fmt.Println("json.Network: ", t.json.Network)
 	config, ok := Forks[t.json.Network]
+	fmt.Printf("\nConfig is: %s\n", config)
 	if !ok {
+		fmt.Println("-----------------------------------------------")
 		return UnsupportedForkError{t.json.Network}
 	}
 
