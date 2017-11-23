@@ -54,6 +54,7 @@ var (
 	ErrInvalidWAddress                  = errors.New("Invalid Waddress, try again")
 	ErrFailToGeneratePKPairFromWAddress = errors.New("Fail to generate publickey pair from WAddress")
 	ErrFailToGeneratePKPairSlice        = errors.New("Fail to generate publickey pair hex slice")
+	ErrInvalidPrivateKey                = errors.New("Invalid private key")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -1242,11 +1243,20 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 }
 
 func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	// @anson
-	// TODO: params validation
+	hmsg, err := hexutil.Decode(hashMsg)
+	if err != nil {
+		return "", err
+	}
 
-	hmsg, _ := hexutil.Decode(hashMsg)
-	privKey, _ := hexutil.Decode(privateKey)
+	privKey, err := hexutil.Decode(privateKey)
+	if err != nil {
+		return "", nil
+	}
+
+	if privKey == nil {
+		return "", ErrInvalidPrivateKey
+	}
+
 	wanAddresses := strings.Split(mixWanAdresses, "+")
 	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
 	if err != nil {
@@ -1257,8 +1267,6 @@ func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg 
 }
 
 func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error) {
-	// TODO: input params check
-
 	otaPrivD := new(big.Int).SetBytes(privateKey)
 
 	publicKeys := make([]*ecdsa.PublicKey, 0)
@@ -1268,6 +1276,10 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 		pubBytes, err := hexutil.Decode(strWanAddr)
 		if err != nil {
 			return "", errors.New("fail to decode wan address!")
+		}
+
+		if len(pubBytes) != common.WAddressLength {
+			return "", ErrInvalidWAddress
 		}
 
 		publicKeyA, _, err := keystore.GeneratePublicKeyFromWaddress(pubBytes)
@@ -1363,7 +1375,11 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 		return "", err
 	}
 
-	wanBytes, _ := hexutil.Decode(inOtaAddr)
+	wanBytes, err := hexutil.Decode(inOtaAddr)
+	if err != nil {
+		return "", err
+	}
+
 	otaBytes, err := keystore.WaddrToUncompressed(wanBytes)
 	if err != nil {
 		return "", err
@@ -1388,6 +1404,9 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	otaPriv := sS[2]
 
 	privateKey, err := crypto.HexToECDSA(otaPriv[2:])
+	if err != nil {
+		return "", err
+	}
 
 	var addr common.Address
 	pubkey := crypto.FromECDSAPub(&privateKey.PublicKey)
@@ -1725,12 +1744,7 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
 
 	var signed *types.Transaction
-	if chainID != nil {
-		signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	} else {
-		signed, err = types.SignTx(tx, types.HomesteadSigner{}, privateKey)
-	}
-
+	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		return common.Hash{}, err
 	}
