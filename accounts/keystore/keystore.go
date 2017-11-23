@@ -503,6 +503,15 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 	return ks.importKey(key, newPassphrase)
 }
 
+// @anson
+func (ks *KeyStore) ExportECDSA(a accounts.Account, passphrase string) (*big.Int, *big.Int, error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return nil, nil, err
+	}
+	return key.PrivateKey.D, key.PrivateKey2.D, err
+}
+
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
 	key := newKeyFromECDSA(priv1, priv2)

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 
@@ -186,6 +187,36 @@ Note:
 As you can directly copy your encrypted accounts to another ethereum instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
+`,
+			},
+			{
+				Name:   "export",
+				Usage:  "Export a private-key-pair into a json file",
+				Action: utils.MigrateFlags(accountExport),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+					utils.PasswordFileFlag,
+					utils.LightKDFFlag,
+				},
+				ArgsUsage: "<address>",
+				Description: `
+    geth account export <address>
+
+Exports a private-key-pair into a json file according to the givan address.
+
+This command requires two arguments: first is the address, and second is the json file to export to.
+
+The exported file is assumed to be a json file which contains an unencrypted private key pair in hexencoded string format.
+
+You are prompted for a corresponding passphrase for the given address.
+
+For non-interactive use the passphrase can be specified with the -password flag:
+
+    geth account import [options] <keyfile>
+
+Note:
+Please keep carefully with your private keys!
 `,
 			},
 		},
@@ -362,5 +393,38 @@ func accountImport(ctx *cli.Context) error {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
 	fmt.Printf("Address: {%x}\n", acct.Address)
+	return nil
+}
+
+// @anson
+// accountExport exports an ecdsa private-key-pair to the given json file
+func accountExport(ctx *cli.Context) error {
+	// Params validation
+	if len(ctx.Args()) < 2 {
+		utils.Fatalf("This command requires two arguments: first is the account address and second is a file to export to")
+	}
+	address := ctx.Args().First()
+	stack, _ := makeConfigNode(ctx)
+
+	// Fetch keystore and then make an account according to the given address
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	account, err := utils.MakeAddress(ks, address)
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+	// Asks for passphrase to decrypt the keyfile
+	passphrase := getPassPhrase("Please enter password for the given account", true, 0, utils.MakePasswordList(ctx))
+	// Returns ecdsa key-pair in hex string
+	D, D1, err := ks.ExportECDSA(account, passphrase)
+	if err != nil {
+		return err
+	}
+
+	// Get output file
+	fp := ctx.Args().Get(1)
+	err = utils.ExportECDSA(hex.EncodeToString(D.Bytes()), hex.EncodeToString(D1.Bytes()), fp)
+	if err != nil {
+		utils.Fatalf("Export error: %v\n", err)
+	}
 	return nil
 }

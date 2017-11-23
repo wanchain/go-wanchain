@@ -19,6 +19,7 @@ package utils
 
 import (
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -191,6 +192,27 @@ func ExportChain(blockchain *core.BlockChain, fn string) error {
 	log.Info("Exported blockchain", "file", fn)
 
 	return nil
+}
+
+// @anson
+func ExportECDSA(d, d1, fp string) error {
+	keyPair := struct {
+		D  string `json:"privateKey"`
+		D1 string `json:"privateKey1"`
+	}{
+		D:  d,
+		D1: d1,
+	}
+	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
+	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+
+	var fileWriter io.Writer = fh
+	err = json.NewEncoder(fileWriter).Encode(keyPair)
+	return err
 }
 
 func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, last uint64) error {
