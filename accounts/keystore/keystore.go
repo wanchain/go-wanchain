@@ -571,7 +571,7 @@ func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, er
 
 // GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
 func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	if len(w) == common.WAddressLength {
+	if len(w) != common.WAddressLength {
 		return nil, nil, errors.New("invalid wan address len")
 	}
 
