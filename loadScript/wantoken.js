@@ -38,10 +38,10 @@ stampContract = contractDef.at(stampContractAddr);
 
 var wanAddr = wan.getWanAddress(eth.accounts[1]);
 var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
-txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.01));
+txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.001));
 
 
-sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.01), data:txBuyData, gas: 1000000});
+sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.001), data:txBuyData, gas: 1000000});
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
@@ -57,7 +57,7 @@ for (i = 0; i < mixStampAddresses.length; i++){
 
 
 var erc20simple_contract = web3.eth.contract([{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_toKey","type":"bytes"},{"name":"_value","type":"uint256"}],"name":"otatransfer","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"privacyBalance","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":false,"inputs":[{"name":"initialBase","type":"address"},{"name":"baseKeyBytes","type":"bytes"},{"name":"value","type":"uint256"}],"name":"initPrivacyAsset","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"otabalanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"otaKey","outputs":[{"name":"","type":"bytes"}],"payable":false,"type":"function","stateMutability":"view"}]);
-contractAddr = '0x18f940983efda661f29b8b18609daf28d0cd5bff';
+contractAddr = '0xedcd01da765b283c0425c41359a728b2dd7671bb';
 erc20simple = erc20simple_contract.at(contractAddr)
 
 		

@@ -1142,7 +1142,7 @@ func TestEIP161AccountRemoval(t *testing.T) {
 		theAddr = common.Address{1}
 		gspec   = &Genesis{
 			Config: &params.ChainConfig{
-				ChainId:        big.NewInt(1),
+				ChainId: big.NewInt(1),
 				//HomesteadBlock: new(big.Int),
 				//EIP155Block:    new(big.Int),
 				//EIP158Block:    big.NewInt(2),
@@ -1154,7 +1154,8 @@ func TestEIP161AccountRemoval(t *testing.T) {
 	blockchain, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer blockchain.Stop()
 
-	blocks, _ := GenerateChain(gspec.Config, genesis, db, 3, func(i int, block *BlockGen) {
+	//blocks, _ := GenerateChain(gspec.Config, genesis, db, 3, func(i int, block *BlockGen) {
+	blocks, _ := GenerateChain(gspec.Config, genesis, db, 1, func(i int, block *BlockGen) {
 		var (
 			tx     *types.Transaction
 			err    error
@@ -1163,39 +1164,48 @@ func TestEIP161AccountRemoval(t *testing.T) {
 		switch i {
 		case 0:
 			tx, err = types.SignTx(types.NewTransaction(block.TxNonce(address), theAddr, new(big.Int), big.NewInt(21000), new(big.Int), nil), signer, key)
-		case 1:
-			tx, err = types.SignTx(types.NewTransaction(block.TxNonce(address), theAddr, new(big.Int), big.NewInt(21000), new(big.Int), nil), signer, key)
-		case 2:
-			tx, err = types.SignTx(types.NewTransaction(block.TxNonce(address), theAddr, new(big.Int), big.NewInt(21000), new(big.Int), nil), signer, key)
+			//case 1:
+			//	tx, err = types.SignTx(types.NewTransaction(block.TxNonce(address), theAddr, new(big.Int), big.NewInt(21000), new(big.Int), nil), signer, key)
+			//case 2:
+			//	tx, err = types.SignTx(types.NewTransaction(block.TxNonce(address), theAddr, new(big.Int), big.NewInt(21000), new(big.Int), nil), signer, key)
 		}
 		if err != nil {
 			t.Fatal(err)
 		}
 		block.AddTx(tx)
 	})
-	// account must exist pre eip 161
+
+	// account musn't be created post eip 161
 	if _, err := blockchain.InsertChain(types.Blocks{blocks[0]}); err != nil {
 		t.Fatal(err)
 	}
-	if st, _ := blockchain.State(); !st.Exist(theAddr) {
-		t.Error("expected account to exist")
-	}
-
-	/*	
-	// account needs to be deleted post eip 161
-	if _, err := blockchain.InsertChain(types.Blocks{blocks[1]}); err != nil {
-		t.Fatal(err)
-	}
 	if st, _ := blockchain.State(); st.Exist(theAddr) {
 		t.Error("account should not exist")
 	}
 
-	// account musn't be created post eip 161
-	if _, err := blockchain.InsertChain(types.Blocks{blocks[2]}); err != nil {
-		t.Fatal(err)
-	}
-	if st, _ := blockchain.State(); st.Exist(theAddr) {
-		t.Error("account should not exist")
-	}
+	/*
+		// account must exist pre eip 161
+		if _, err := blockchain.InsertChain(types.Blocks{blocks[0]}); err != nil {
+			t.Fatal(err)
+		}
+		if st, _ := blockchain.State(); !st.Exist(theAddr) {
+			t.Error("expected account to exist")
+		}
+
+		// account needs to be deleted post eip 161
+		if _, err := blockchain.InsertChain(types.Blocks{blocks[1]}); err != nil {
+			t.Fatal(err)
+		}
+		if st, _ := blockchain.State(); st.Exist(theAddr) {
+			t.Error("account should not exist")
+		}
+
+		// account musn't be created post eip 161
+		if _, err := blockchain.InsertChain(types.Blocks{blocks[2]}); err != nil {
+			t.Fatal(err)
+		}
+		if st, _ := blockchain.State(); st.Exist(theAddr) {
+			t.Error("account should not exist")
+		}
 	*/
 }
