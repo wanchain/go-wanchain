@@ -25,7 +25,6 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/console"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -380,7 +379,7 @@ func accountImport(ctx *cli.Context) error {
 	if len(keyfile) == 0 {
 		utils.Fatalf("keyfile must be given as argument")
 	}
-	key, key1, err := crypto.LoadECDSAPair(keyfile)
+	key, key1, err := keystore.LoadECDSAPair(keyfile)
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
@@ -415,14 +414,14 @@ func accountExport(ctx *cli.Context) error {
 	// Asks for passphrase to decrypt the keyfile
 	passphrase := getPassPhrase("Please enter password for the given account", true, 0, utils.MakePasswordList(ctx))
 	// Returns ecdsa key-pair in hex string
-	D, D1, err := ks.ExportECDSA(account, passphrase)
+	r, r1, err := ks.ExportECDSA(account, passphrase)
 	if err != nil {
 		return err
 	}
 
 	// Get output file
 	fp := ctx.Args().Get(1)
-	err = utils.ExportECDSA(hex.EncodeToString(D.Bytes()), hex.EncodeToString(D1.Bytes()), fp)
+	err = keystore.ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fp)
 	if err != nil {
 		utils.Fatalf("Export error: %v\n", err)
 	}

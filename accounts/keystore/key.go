@@ -37,6 +37,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 const (
@@ -54,6 +55,11 @@ type Key struct {
 	PrivateKey2 *ecdsa.PrivateKey
 	// compact wanchain address format
 	WAddress common.WAddress
+}
+
+type keyPair struct {
+	D  string `json:"privateKey"`
+	D1 string `json:"privateKey1"`
 }
 
 type keyStore interface {
@@ -338,4 +344,62 @@ func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAdd
 	copy(tmp[:33], ECDSAPKCompression(A))
 	copy(tmp[33:], ECDSAPKCompression(B))
 	return &tmp
+}
+
+// @anson
+// LoadECDSAPair loads a secp256k1 private key pair from the given file
+func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
+	// read the given file including private key pair
+	kp := keyPair{}
+
+	raw, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = json.Unmarshal(raw, &kp)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Decode the key pair
+	d, err := hex.DecodeString(kp.D)
+	if err != nil {
+		return nil, nil, err
+	}
+	d1, err := hex.DecodeString(kp.D1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Generate ecdsa private keys
+	sk, err := crypto.ToECDSA(d)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sk1, err := crypto.ToECDSA(d1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sk, sk1, err
+}
+
+// @anson
+func ExportECDSAPair(d, d1, fp string) error {
+	kp := keyPair{
+		D:  d,
+		D1: d1,
+	}
+	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
+	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+
+	var fileWriter io.Writer = fh
+	err = json.NewEncoder(fileWriter).Encode(kp)
+	return err
 }
