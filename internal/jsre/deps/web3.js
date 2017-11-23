@@ -5636,7 +5636,7 @@ var methods = function () {
     var importRawKey = new Method({
         name: 'importRawKey',
 		call: 'personal_importRawKey',
-		params: 2
+		params: 3
     });
 
     var sign = new Method({

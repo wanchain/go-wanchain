@@ -253,8 +253,13 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
+
 		keyBytes, keyId, err = decryptKeyV1(k, auth)
-		key := crypto.ToECDSAUnsafe(keyBytes)
+		key, err := crypto.ToECDSA(keyBytes)
+		if err != nil || key == nil {
+			return nil, err
+		}
+
 		return &Key{
 			Id:         uuid.UUID(keyId),
 			Address:    crypto.PubkeyToAddress(key.PublicKey),
@@ -272,15 +277,14 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 		waddressStr = &k.WAddress
 	}
-	// Handle any decryption errors and return the key
-	// @anson ToECDSA vs ToECDSAUnsafe
-	if err != nil {
-		return nil, err
+
+	key, err := crypto.ToECDSA(keyBytes)
+	if err != nil || key == nil {
+		return nil, ErrInvalidPrivateKey
 	}
 
-	key := crypto.ToECDSAUnsafe(keyBytes)
-	key2 := crypto.ToECDSAUnsafe(keyBytes2)
-	if key == nil || key2 == nil {
+	key2, err := crypto.ToECDSA(keyBytes2)
+	if err != nil || key2 == nil {
 		return nil, ErrInvalidPrivateKey
 	}
 
