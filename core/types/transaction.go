@@ -487,6 +487,10 @@ func NewOTATransaction(nonce uint64, to common.Address, amount, gasLimit, gasPri
 }
 
 func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+	if to == nil {
+		return nil
+	}
+
 	var addressDst common.Address
 	addressDst = *to
 

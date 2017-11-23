@@ -273,7 +273,7 @@ func toISO8601(t time.Time) string {
 
 func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
 	if len(waddr) != common.WAddressLength {
-		return nil, nil, errors.New("invalid wan address len")
+		return nil, nil, ErrWAddressInvalid
 	}
 
 	tmp := make([]byte, 33)
@@ -312,7 +312,7 @@ func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
 
 func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	if len(waddr) != common.WAddressLength {
-		return nil, errors.New("invalid wan address len")
+		return nil, ErrWAddressInvalid
 	}
 
 	A, B, err := GeneratePublicKeyFromWaddress(waddr)
