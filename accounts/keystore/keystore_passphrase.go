@@ -77,6 +77,9 @@ type keyStorePassphrase struct {
 
 var (
 	ErrWAddressFieldNotExist = errors.New("It seems that this account doesn't include a valid wanchain address field, please update your keyfile version")
+	ErrWAddressInvalid       = errors.New("invalid wanchain address")
+	ErrInvalidAccountKey     = errors.New("invalid account key")
+	ErrInvalidPrivateKey     = errors.New("invalid private key")
 )
 
 func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
@@ -138,6 +141,10 @@ func GenerateKeyWithWAddress(keyjson []byte) (*Key, error) {
 		return nil, err
 	}
 
+	if len(waddressRaw) != common.WAddressLength {
+		return nil, ErrWAddressInvalid
+	}
+
 	key := new(Key)
 	copy(key.WAddress[:], waddressRaw)
 	return key, nil
@@ -154,6 +161,9 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
+	if key == nil {
+		return nil, ErrInvalidAccountKey
+	}
 
 	cryptoStruct, err := EncryptOnePrivateKey(key.PrivateKey, auth, scryptN, scryptP)
 	if err != nil {
@@ -179,13 +189,17 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 // EncryptOnePrivateKey encrypts a key using the specified scrypt parameters into one field of a json
 // blob that can be decrypted later on.
 func EncryptOnePrivateKey(privateKey *ecdsa.PrivateKey, auth string, scryptN, scryptP int) (*cryptoJSON, error) {
+	if privateKey == nil {
+		return nil, ErrInvalidPrivateKey
+	}
+
 	authArray := []byte(auth)
 	salt := randentropy.GetEntropyCSPRNG(32)
 	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
-
 	if err != nil {
 		return nil, err
 	}
+
 	encryptKey := derivedKey[:16]
 	keyBytes := math.PaddedBigBytes(privateKey.D, 32)
 
@@ -266,6 +280,9 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 	key := crypto.ToECDSAUnsafe(keyBytes)
 	key2 := crypto.ToECDSAUnsafe(keyBytes2)
+	if key == nil || key2 == nil {
+		return nil, ErrInvalidPrivateKey
+	}
 
 	waddressRaw, err := hex.DecodeString(*waddressStr)
 	if err != nil {

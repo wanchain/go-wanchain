@@ -288,7 +288,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 
 func (ks *KeyStore) CheckOTA(a accounts.Account, ota *common.WAddress) (bool, error) {
 	if ota == nil {
-		return false, errors.New("invalid wan address")
+		return false, ErrWAddressInvalid
 	}
 
 	ks.mu.RLock()
@@ -572,7 +572,7 @@ func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, er
 // GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
 func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
 	if len(w) != common.WAddressLength {
-		return nil, nil, errors.New("invalid wan address len")
+		return nil, nil, ErrWAddressInvalid
 	}
 
 	tmp := make([]byte, 33)
