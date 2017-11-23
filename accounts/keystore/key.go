@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pborman/uuid"
 	"github.com/wanchain/go-wanchain/accounts"

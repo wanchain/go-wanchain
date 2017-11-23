@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
-	"math/big"
-	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/rlp"
+	"math/big"
+	"testing"
 )
 
 // The values in those tests are from the Transaction Tests

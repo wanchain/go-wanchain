@@ -21,6 +21,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -160,6 +161,19 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 	return ToECDSA(key)
+}
+
+// LoadECDSAPair loads a secp256k1 private key pair from the given file
+func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
+	fileReader, err := os.Open(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer fileReader.Close()
+
+	var keyPair map[string]interface{}
+	err = json.NewDecoder(fileReader).Decode(&keyPair)
+
 }
 
 // SaveECDSA saves a secp256k1 private key to the given file with
