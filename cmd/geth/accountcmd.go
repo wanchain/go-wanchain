@@ -172,7 +172,7 @@ changing your password is only possible interactively.
 Imports an unencrypted private key from <keyfile> and creates a new account.
 Prints the address.
 
-The keyfile is assumed to contain an unencrypted private key in hexadecimal format.
+The keyfile is assumed to be a json file which contains an unencrypted private key pair in hexencoded string format.
 
 The account is saved in encrypted format, you are prompted for a passphrase.
 
@@ -349,7 +349,7 @@ func accountImport(ctx *cli.Context) error {
 	if len(keyfile) == 0 {
 		utils.Fatalf("keyfile must be given as argument")
 	}
-	key, err := crypto.LoadECDSA(keyfile)
+	key, key1, err := crypto.LoadECDSAPair(keyfile)
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
@@ -357,7 +357,7 @@ func accountImport(ctx *cli.Context) error {
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportECDSA(key, key, passphrase)
+	acct, err := ks.ImportECDSA(key, key1, passphrase)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}

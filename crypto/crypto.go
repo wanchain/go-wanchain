@@ -163,17 +163,47 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	return ToECDSA(key)
 }
 
+// @anson
 // LoadECDSAPair loads a secp256k1 private key pair from the given file
 func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
-	fileReader, err := os.Open(file)
+	// read the given file including private key pair
+	keyPair := struct {
+		D  string `json:"privateKey"`
+		D1 string `json:"privateKey1"`
+	}{}
+
+	raw, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer fileReader.Close()
 
-	var keyPair map[string]interface{}
-	err = json.NewDecoder(fileReader).Decode(&keyPair)
+	err = json.Unmarshal(raw, &keyPair)
+	if err != nil {
+		return nil, nil, err
+	}
 
+	// Decode the key pair
+	d, err := hex.DecodeString(keyPair.D)
+	if err != nil {
+		return nil, nil, err
+	}
+	d1, err := hex.DecodeString(keyPair.D1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Generate ecdsa private keys
+	sk, err := ToECDSA(d)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sk1, err := ToECDSA(d1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sk, sk1, err
 }
 
 // SaveECDSA saves a secp256k1 private key to the given file with
