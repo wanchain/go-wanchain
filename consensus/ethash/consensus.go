@@ -68,7 +68,7 @@ var (
 	errInvalidDifficulty = errors.New("non-positive difficulty")
 	errInvalidMixDigest  = errors.New("invalid mix digest")
 	errInvalidPoW        = errors.New("invalid proof-of-work")
-	errMissingSignature  = errors.New("extra-data 65 byte suffix signature missing")
+	errMissingSignature  = errors.New("extra data 65 byte suffix signature missing")
 	errUnauthorized      = errors.New("unauthorized signer")
 	errAuthorTooOften    = errors.New("signer too often")
 )
@@ -140,7 +140,7 @@ func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	functrace.Enter()
+	functrace.Enter(signer.String())
 	defer functrace.Exit()
 
 	self.signFn = signFn
@@ -241,6 +241,9 @@ func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 }
 
 func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -259,6 +262,9 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of the stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull {
 		return nil
@@ -383,6 +389,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // TODO: its's different from POA, need consider thread-security
 func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
 	number := header.Number.Uint64()
+
 	functrace.Enter(fmt.Sprintf("number= %d", number))
 	defer functrace.Exit()
 
@@ -415,7 +422,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		snap    *Snapshot
 	)
 
-	functrace.Enter()
+	functrace.Enter(fmt.Sprintf("number= %d", number))
 	defer functrace.Exit()
 
 	for snap == nil {
@@ -482,6 +489,9 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 //
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func CalcDifficulty(config *params.ChainConfig, time, parentTime uint64, parentNumber, parentDiff *big.Int) *big.Int {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	if config.IsHomestead(new(big.Int).Add(parentNumber, common.Big1)) {
 		return calcDifficultyHomestead(time, parentTime, parentNumber, parentDiff)
 	}

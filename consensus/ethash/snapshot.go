@@ -5,6 +5,7 @@ package ethash
 import (
 	"container/list"
 	"encoding/json"
+	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
@@ -34,7 +35,7 @@ type plainSnapShot struct {
 }
 
 func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Snapshot {
-	functrace.Enter()
+	functrace.Enter(fmt.Sprintf("number= %d", number))
 	defer functrace.Exit()
 
 	snap := &Snapshot{
@@ -52,7 +53,7 @@ func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Sna
 }
 
 func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	functrace.Enter()
+	functrace.Enter(hash.String())
 	defer functrace.Exit()
 
 	blob, err := db.Get(append([]byte("ppow-"), hash[:]...))
@@ -126,7 +127,7 @@ func (s *Snapshot) copy() *Snapshot {
 }
 
 func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
-	functrace.Enter()
+	functrace.Enter(signer.String())
 	defer functrace.Exit()
 
 	if isExist {
@@ -190,7 +191,7 @@ func (s *Snapshot) apply(header *types.Header) (*Snapshot, error) {
 }
 
 func (s *Snapshot) isLegal4Sign(signer common.Address) bool {
-	functrace.Enter()
+	functrace.Enter(signer.String())
 	defer functrace.Exit()
 
 	if _, ok := s.PermissionSigners[signer]; !ok {
