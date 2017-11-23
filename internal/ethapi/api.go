@@ -319,19 +319,28 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 // @TODO
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey, string, password string) (common.Address, error) {
-	// key, err := crypto.HexToECDSA(privkey)
-	hexkey, err := hex.DecodeString(privkey)
+func (s *PrivateAccountAPI) ImportRawKey(privkey1, privkey2 string, password string) (common.Address, error) {
+	hexkey1, err := hex.DecodeString(privkey1)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	sk, err := crypto.ToECDSA(hexkey)
+	hexkey2, err := hex.DecodeString(privkey2)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	sk1, err := crypto.ToECDSA(hexkey1)
 	if err != nil {
 		return common.Address{}, nil
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk, sk, password)
+	sk2, err := crypto.ToECDSA(hexkey2)
+	if err != nil {
+		return common.Address{}, nil
+	}
+
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk1, sk2, password)
 	return acc.Address, err
 }
 

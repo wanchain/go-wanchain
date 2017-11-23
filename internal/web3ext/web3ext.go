@@ -478,7 +478,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'importRawKey',
 			call: 'personal_importRawKey',
-			params: 2
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'sign',
