@@ -112,11 +112,11 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	// Recover the public key and the Ethereum address
-	log.Trace("ecrecover(): cr@zy seal")
+	//log.Trace("ecrecover(): cr@zy seal")
 	log.Trace(fmt.Sprintf(header.String()))
 
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
-	log.Trace("ecrecover(): cr@zy seal hash", "Input hash", sigHash(header).String())
+	//log.Trace("ecrecover(): cr@zy seal hash", "Input hash", sigHash(header).String())
 	if err != nil {
 		return common.Address{}, err
 	}
