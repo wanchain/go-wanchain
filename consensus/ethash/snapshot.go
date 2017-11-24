@@ -10,6 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/functrace"
+	"errors"
 )
 
 const (
