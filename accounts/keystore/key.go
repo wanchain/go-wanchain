@@ -387,6 +387,7 @@ func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
 }
 
 // @anson
+// ExportECDSAPair returns an ecdsa-private-key pair
 func ExportECDSAPair(d, d1, fp string) error {
 	kp := keyPair{
 		D:  d,
