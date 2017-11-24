@@ -345,6 +345,11 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey1, privkey2 string, password str
 	return acc.Address, err
 }
 
+// ExportRawKey exports the hex encoded ECDSA key into the given file in json foramt
+func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, file string) error {
+	return nil
+}
+
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.

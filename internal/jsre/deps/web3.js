@@ -5639,6 +5639,13 @@ var methods = function () {
 		params: 3
     });
 
+    // @anson 
+    var exportRawKey = new Method({
+        name: 'exportRawKey',
+        call: 'personal_exportRawKey',
+        params: 2
+    });
+
     var sign = new Method({
         name: 'sign',
 		call: 'personal_sign',
@@ -5683,6 +5690,7 @@ var methods = function () {
     return [
         newAccount,
         importRawKey,
+        exportRawKey,
         unlockAccount,
         ecRecover,
         sign,
@@ -13686,20 +13694,6 @@ module.exports = XMLHttpRequest;
             params: 3,
         });
 
-        // @anson
-        var importECDSAPair = new Method({
-            name: 'importECDSAPair',
-            call: 'wan_importECDSAPair',
-            params: 1,
-        });
-
-        // @anson
-        var exportECDSAPair = new Method({
-            name: 'exportECDSAPair',
-            call: 'wan_exportECDSAPair',
-            params: 2,
-        });
-
         var getOTABalance = new Method({
             name: 'getOTABalance',
             call: 'wan_getOTABalance',
@@ -13716,8 +13710,6 @@ module.exports = XMLHttpRequest;
         });
 
         return [
-            importECDSAPair,
-            exportECDSAPair,
             computeOTAPPKeys,
             sendPrivacyCxtTransaction,
             getWanAddress,
