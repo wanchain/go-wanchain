@@ -5643,7 +5643,7 @@ var methods = function () {
     var exportRawKey = new Method({
         name: 'exportRawKey',
         call: 'personal_exportRawKey',
-        params: 3
+        params: 2
     });
 
     var sign = new Method({

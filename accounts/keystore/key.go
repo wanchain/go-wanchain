@@ -404,3 +404,17 @@ func ExportECDSAPair(d, d1, fp string) error {
 	err = json.NewEncoder(fileWriter).Encode(kp)
 	return err
 }
+
+// @anson
+func ExportECDSAPairStr(d, d1 string) (string, error) {
+	kp := keyPair{
+		D:  d,
+		D1: d1,
+	}
+	r, err := json.Marshal(kp)
+	if err != nil {
+		return "", err
+	}
+
+	return string(r), err
+}

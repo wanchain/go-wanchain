@@ -319,15 +319,15 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey, privkey1 string, password string) (common.Address, error) {
-	if strings.HasPrefix(privkey, "0x") {
-		privkey = privkey[2:]
+func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password string) (common.Address, error) {
+	if strings.HasPrefix(privkey0, "0x") {
+		privkey0 = privkey0[2:]
 	}
 	if strings.HasPrefix(privkey1, "0x") {
 		privkey1 = privkey1[2:]
 	}
 
-	r, err := hex.DecodeString(privkey)
+	r0, err := hex.DecodeString(privkey0)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -337,7 +337,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey, privkey1 string, password stri
 		return common.Address{}, err
 	}
 
-	sk, err := crypto.ToECDSA(r)
+	sk0, err := crypto.ToECDSA(r0)
 	if err != nil {
 		return common.Address{}, nil
 	}
@@ -347,29 +347,29 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey, privkey1 string, password stri
 		return common.Address{}, nil
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk, sk1, password)
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, password)
 	return acc.Address, err
 }
 
 // ExportRawKey exports the hex encoded ECDSA key into the given file in json foramt
-func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, password, fn string) error {
+func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, password string) (string, error) {
 	ks := fetchKeystore(s.am)
 	account, err := ks.Find(accounts.Account{Address: addr})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	r, r1, err := ks.ExportECDSA(account, password)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	err = keystore.ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fn)
+	str, err := keystore.ExportECDSAPairStr(hex.EncodeToString(r), hex.EncodeToString(r1))
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return err
+	return str, err
 }
 
 // UnlockAccount will unlock the account associated with the given address with
