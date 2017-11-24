@@ -160,32 +160,50 @@ func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
 // RecentSignersWindow is the set who can not sign next block
 // len(RecentSignersWindow) = (len(UsedSigners)-1)/2
 // so when n > 2, hacker should got (n / 2 + 1) key to reorg chain?
-func (s *Snapshot) apply(header *types.Header) (*Snapshot, error) {
+func(s *Snapshot) apply(headers []*types.Header) (*Snapshot, error){
 	functrace.Enter()
 	defer functrace.Exit()
 
-	snap := s.copy()
-
-	signer, err := ecrecover(header)
-	if err != nil {
-		return nil, err
+	if len(headers) == 0 {
+		return s, nil
 	}
-
-	if _, ok := snap.PermissionSigners[signer]; !ok {
-		return nil, errUnauthorized
-	}
-
-	for e := snap.RecentSignersWindow.Front(); e != nil; e = e.Next() {
-		if _, ok := e.Value.(common.Address); ok {
-			wSigner := e.Value.(common.Address)
-			if signer == wSigner {
-				return nil, errAuthorTooOften
-			}
+	// Sanity check that the headers can be applied
+	for i := 0; i < len(headers)-1; i++ {
+		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
+			return nil, errors.New("invaild---")
 		}
 	}
+	if headers[0].Number.Uint64() != s.Number+1 {
+		return nil, errors.New("invaild---")
+	}
 
-	_, ok := snap.UsedSigners[signer]
-	snap.updateSignerStatus(signer, ok)
+
+	snap := s.copy()
+
+	for _, header := range headers {
+		signer, err := ecrecover(header)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, ok := snap.PermissionSigners[signer]; !ok {
+			return nil, errUnauthorized
+		}
+
+		for e := snap.RecentSignersWindow.Front(); e != nil; e = e.Next() {
+			if _, ok := e.Value.(common.Address); ok {
+				wSigner := e.Value.(common.Address)
+				if signer == wSigner {
+					return nil, errAuthorTooOften
+				}
+			}
+		}
+
+		_, ok := snap.UsedSigners[signer]
+		snap.updateSignerStatus(signer, ok)
+		snap.Hash = header.Hash()
+		snap.Number = header.Number.Uint64()
+	}
 
 	return snap, nil
 }

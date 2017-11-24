@@ -166,7 +166,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case g != nil:
 		return g.Config
 	case ghash == params.MainNetGenesisHash:
-		return params.MainnetChainConfig
+		return params.WanchainChainConfig
 	case ghash == params.TestNetGenesisHash:
 		return params.TestnetChainConfig
 	default:

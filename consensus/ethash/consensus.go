@@ -169,7 +169,8 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 		return consensus.ErrUnknownAncestor
 	}
 	// Sanity checks passed, do a proper verification
-	return ethash.verifyHeader(chain, header, parent, false, seal)
+	parents := []*types.Header{parent}
+	return ethash.verifyHeader(chain, header, parents, false, seal)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -253,10 +254,18 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
 	if chain.GetHeader(headers[index].Hash(), headers[index].Number.Uint64()) != nil {
 		return nil // known block
 	}
-	return ethash.verifyHeader(chain, headers[index], parent, false, seals[index])
+
+	var parents []*types.Header
+	if index == 0 {
+		parents = []*types.Header{parent}
+	} else {
+		parents = headers[:index]
+	}
+	return ethash.verifyHeader(chain, headers[index], parents, false, seals[index])
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
@@ -307,9 +316,9 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 		if ancestors[uncle.ParentHash] == nil || uncle.ParentHash == block.ParentHash() {
 			return errDanglingUncle
 		}
-		if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
-			return err
-		}
+		//if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
+		//	return err
+		//}
 	}
 	return nil
 }
@@ -318,11 +327,12 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // stock Ethereum ethash engine.
 //
 // See YP section 4.3.4. "Block Header Validity"
-func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, uncle bool, seal bool) error {
+func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, uncle bool, seal bool) error {
 	functrace.Enter()
 	defer functrace.Exit()
 
 	// Ensure that the header's extra-data section is of a reasonable size
+	parent := parents[len(parents)-1]
 	//	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 	//		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	//	}
@@ -373,8 +383,10 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
 	}
-	if err := ethash.verifySignerIdentity(chain, header, parent); err != nil {
-		return err
+	if seal {
+		if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
+			return err
+		}
 	}
 	// Verify the engine specific seal securing the block
 	if seal {
@@ -387,7 +399,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 }
 
 // TODO: its's different from POA, need consider thread-security
-func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
+func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
 
 	functrace.Enter(fmt.Sprintf("number= %d", number))
@@ -397,26 +409,17 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		return nil
 	}
 
-	snap, err := self.snapshot(chain, number-1, header.ParentHash, parent)
+	_, err := self.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
 
-	//self.recents.Add(snap.Hash, snap)
-
-	updatedSnap, err := snap.apply(header)
-	if err != nil {
-		return err
-	}
-
-	self.recents.Add(header.Hash(), updatedSnap)
-
-	return nil
+    return nil
 }
 
 // INFO: copied from consensus/clique/clique.go , mostly
 // snapshot retrieves the signer status at a given point
-func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parent *types.Header) (*Snapshot, error) {
+func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	var (
 		headers []*types.Header
 		snap    *Snapshot
@@ -456,7 +459,19 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 			break
 		}
 
-		header := chain.GetHeader(hash, number)
+		var header *types.Header
+		if len(parents) > 0 {
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			header = chain.GetHeader(hash, number)
+			if header == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
+		}
 		headers = append(headers, header)
 		number, hash = number-1, header.ParentHash
 	}
@@ -465,19 +480,18 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
 
-	for _, iHeader := range headers {
-		snap, err := snap.apply(iHeader)
-		if err != nil {
+	snap, err := snap.apply(headers)
+	if err != nil {
+		return nil, err
+	}
+
+	self.recents.Add(snap.Hash, snap)
+
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0{
+		if err = snap.store(self.db); err != nil {
 			return nil, err
 		}
-		self.recents.Add(snap.Hash, snap)
-
-		if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-			if err = snap.store(self.db); err != nil {
-				return nil, err
-			}
-			log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash.String())
-		}
+		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
 	return snap, nil
