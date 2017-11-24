@@ -13686,6 +13686,20 @@ module.exports = XMLHttpRequest;
             params: 3,
         });
 
+        // @anson
+        var importECDSAPair = new Method({
+            name: 'importECDSAPair',
+            call: 'wan_importECDSAPair',
+            params: 1,
+        });
+
+        // @anson
+        var exportECDSAPair = new Method({
+            name: 'exportECDSAPair',
+            call: 'wan_exportECDSAPair',
+            params: 2,
+        });
+
         var getOTABalance = new Method({
             name: 'getOTABalance',
             call: 'wan_getOTABalance',
@@ -13702,6 +13716,8 @@ module.exports = XMLHttpRequest;
         });
 
         return [
+            importECDSAPair,
+            exportECDSAPair,
             computeOTAPPKeys,
             sendPrivacyCxtTransaction,
             getWanAddress,
