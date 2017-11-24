@@ -425,5 +425,6 @@ func accountExport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Export error: %v\n", err)
 	}
-	return nil
+
+	return err
 }

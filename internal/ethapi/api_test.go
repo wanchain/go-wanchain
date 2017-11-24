@@ -2,9 +2,10 @@ package ethapi
 
 import (
 	"context"
-	"github.com/wanchain/go-wanchain/common"
 	"testing"
 	"time"
+
+	"github.com/wanchain/go-wanchain/common"
 )
 
 func TestGenerateOneTimeAddress(t *testing.T) {

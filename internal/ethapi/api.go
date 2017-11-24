@@ -317,37 +317,59 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// @TODO
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey1, privkey2 string, password string) (common.Address, error) {
-	hexkey1, err := hex.DecodeString(privkey1)
+func (s *PrivateAccountAPI) ImportRawKey(privkey, privkey1 string, password string) (common.Address, error) {
+	if strings.HasPrefix(privkey, "0x") {
+		privkey = privkey[2:]
+	}
+	if strings.HasPrefix(privkey1, "0x") {
+		privkey1 = privkey1[2:]
+	}
+
+	r, err := hex.DecodeString(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	hexkey2, err := hex.DecodeString(privkey2)
+	r1, err := hex.DecodeString(privkey1)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	sk1, err := crypto.ToECDSA(hexkey1)
+	sk, err := crypto.ToECDSA(r)
 	if err != nil {
 		return common.Address{}, nil
 	}
 
-	sk2, err := crypto.ToECDSA(hexkey2)
+	sk1, err := crypto.ToECDSA(r1)
 	if err != nil {
 		return common.Address{}, nil
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk1, sk2, password)
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk, sk1, password)
 	return acc.Address, err
 }
 
 // ExportRawKey exports the hex encoded ECDSA key into the given file in json foramt
-func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, file string) error {
-	return nil
+func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, password, fn string) error {
+	ks := fetchKeystore(s.am)
+	account, err := ks.Find(accounts.Account{Address: addr})
+	if err != nil {
+		return err
+	}
+
+	r, r1, err := ks.ExportECDSA(account, password)
+	if err != nil {
+		return err
+	}
+
+	err = keystore.ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fn)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 // UnlockAccount will unlock the account associated with the given address with
