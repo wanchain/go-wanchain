@@ -202,27 +202,28 @@ func(s *Snapshot) apply(headers []*types.Header) (*Snapshot, error){
 
 		_, ok := snap.UsedSigners[signer]
 		snap.updateSignerStatus(signer, ok)
-		snap.Hash = header.Hash()
-		snap.Number = header.Number.Uint64()
 	}
+
+	snap.Hash = headers[len(headers)-1].Hash()
+	snap.Number = headers[len(headers)-1].Number.Uint64()
 
 	return snap, nil
 }
 
-func (s *Snapshot) isLegal4Sign(signer common.Address) bool {
+func(s *Snapshot) isLegal4Sign(signer common.Address) error {
 	functrace.Enter(signer.String())
 	defer functrace.Exit()
 
 	if _, ok := s.PermissionSigners[signer]; !ok {
-		return false
+		return errUnauthorized
 	}
 	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
 		if _, ok := e.Value.(common.Address); ok {
 			wSigner := e.Value.(common.Address)
 			if signer == wSigner {
-				return false
+				return errAuthorTooOften
 			}
 		}
 	}
-	return true
+	return nil
 }

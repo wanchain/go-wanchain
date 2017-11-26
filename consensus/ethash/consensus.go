@@ -384,13 +384,13 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 		return consensus.ErrInvalidNumber
 	}
 	if seal {
-		if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
+		if err := ethash.VerifySeal(chain, header); err != nil {
 			return err
 		}
 	}
-	// Verify the engine specific seal securing the block
+
 	if seal {
-		if err := ethash.VerifySeal(chain, header); err != nil {
+		if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
 			return err
 		}
 	}
@@ -443,7 +443,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 
 		if number == 0 {
 			genesis := chain.GetHeaderByNumber(0)
-			// TODO: cr@zy
+			// TODO: cr@zy think maybe useful add this
 			//if err := self.VerifyHeader(chain,genesis, false); err != nil {
 			//	return nil, err
 			//}
@@ -664,8 +664,9 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 		return err
 	}
 
-	if !snap.isLegal4Sign(header.Coinbase) {
-		return errUnauthorized
+	err = snap.isLegal4Sign(header.Coinbase)
+	if err != nil{
+		return err
 	}
 
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
