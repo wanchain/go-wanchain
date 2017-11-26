@@ -38,10 +38,10 @@ test: all
 	build/env.sh go run build/ci.go test
 
 testCoin: all
-	./build/bin/geth --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wancoin.js'
+	./build/bin/geth --gasprice 200000 --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wancoin.js'
 
 testToken: all
-	./build/bin/geth --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wantoken.js'
+	./build/bin/geth --gasprice 200000 --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wantoken.js'
 
 clean:
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
