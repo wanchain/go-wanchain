@@ -19,7 +19,7 @@ var wait = function (conditionFunc) {
 	var loopLimit = 120;
 	var loopTimes = 0;
 	while (!conditionFunc()) {
-		admin.sleep(1);
+		admin.sleep(2);
 		loopTimes++;
 		if(loopTimes>=loopLimit){
 			throw Error("wait timeout! conditionFunc:" + conditionFunc)
