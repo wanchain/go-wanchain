@@ -1,5 +1,5 @@
 var wanBalance = function(addr){
-	return web3.fromWei(web3.eth.getBalance(addr));
+	return web3.fromWin(web3.eth.getBalance(addr));
 }
 
 var wanUnlock = function(addr){
@@ -7,7 +7,7 @@ var wanUnlock = function(addr){
 }
 
 var sendWanFromUnlock = function (From, To , V){
-	return eth.sendTransaction({from:From, to: To, value: web3.toWei(V)});
+	return eth.sendTransaction({from:From, to: To, value: web3.toWin(V)});
 }
 
 var wait = function (conditionFunc) {
@@ -39,8 +39,8 @@ wanUnlock(eth.accounts[2]);
 var wanAddr = wan.getWanAddress(eth.accounts[2]);
 var otaAddr = wan.generateOneTimeAddress(wanAddr);
 
-txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWei(1));
-buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWei(tranValue), data:txBuyData, gas: 1000000});
+txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWin(1));
+buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWin(tranValue), data:txBuyData, gas: 1000000});
 wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 
 
@@ -53,13 +53,13 @@ for (i = 0; i < mixWanAddresses.length; i++){
 keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
 privateKey = keyPairs[0];
 
-console.log("Balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
+console.log("Balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
 var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
-var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWei(1))
+var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(1))
 var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000});
 wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
 
-console.log("New balance of ", eth.accounts[2], " is ", web3.fromWei(eth.getBalance(eth.accounts[2])));
+console.log("New balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
 
 var acc1NewBalance = parseFloat(wanBalance(eth.accounts[1]))
 var acc2NewBalance = parseFloat(wanBalance(eth.accounts[2]))

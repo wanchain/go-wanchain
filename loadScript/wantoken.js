@@ -4,7 +4,7 @@ var initPriBalance = '0x1000000000';
 var priTranValue = 888;
 
 var wanBalance = function(addr){
-	return web3.fromWei(web3.eth.getBalance(addr));
+	return web3.fromWin(web3.eth.getBalance(addr));
 }
 
 var wanUnlock = function(addr){
@@ -12,7 +12,7 @@ var wanUnlock = function(addr){
 }
 
 var sendWanFromUnlock = function (From, To , V){
-	eth.sendTransaction({from:From, to: To, value: web3.toWei(V)});
+	eth.sendTransaction({from:From, to: To, value: web3.toWin(V)});
 }
 
 var wait = function (conditionFunc) {
@@ -38,10 +38,10 @@ stampContract = contractDef.at(stampContractAddr);
 
 var wanAddr = wan.getWanAddress(eth.accounts[1]);
 var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
-txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWei(0.001));
+txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(0.001));
 
 
-sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWei(0.001), data:txBuyData, gas: 1000000});
+sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(0.001), data:txBuyData, gas: 1000000});
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
