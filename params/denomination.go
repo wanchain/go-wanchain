@@ -22,13 +22,13 @@ const (
 	//
 	//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
 	//
-	Wei      = 1
+	Win      = 1
 	Ada      = 1e3
 	Babbage  = 1e6
 	Shannon  = 1e9
 	Szabo    = 1e12
 	Finney   = 1e15
-	Ether    = 1e18
+	Wan      = 1e18
 	Einstein = 1e21
 	Douglas  = 1e42
 )

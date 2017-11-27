@@ -21,21 +21,22 @@ import (
 	"errors"
 	"math/big"
 
+	"crypto/ecdsa"
+	"strings"
+
+	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"strings"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract,evm *EVM) (ret []byte, err error) {
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, err error) {
 	gas := p.RequiredGas(input)
 	if contract.UseGas(gas) {
 		return p.Run(input, contract, evm)
@@ -353,11 +354,9 @@ func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, 
 	return false32Byte, nil
 }
 
-
 ///////////////////////for wan privacy tx /////////////////////////////////////////////////////////
 
 /////////////////////////////////////added by jqg ///////////////////////////////////
-
 
 var (
 	coinSCDefinition = `
@@ -501,13 +500,13 @@ var (
 	stampAbi, errStampSCInit = abi.JSON(strings.NewReader(stampSCDefinition))
 	stBuyId                  [4]byte
 
-	errBuyCoin = errors.New("error in buy coin")
+	errBuyCoin    = errors.New("error in buy coin")
 	errRefundCoin = errors.New("error in refund coin")
 
 	errBuyStamp = errors.New("error in buy stamp")
 
 	errParameters = errors.New("error parameters")
-	errMethodId = errors.New("error method id")
+	errMethodId   = errors.New("error method id")
 
 	errBalance = errors.New("balance is insufficient")
 
@@ -515,29 +514,26 @@ var (
 
 	errCoinValue = errors.New("wancoin value is not support")
 
-	StampValueSet = make (map[string]string,5)
-	WanCoinValueSet = make (map[string]string,10)
-
+	StampValueSet   = make(map[string]string, 5)
+	WanCoinValueSet = make(map[string]string, 10)
 )
 
 const (
 	Wancoindot1 = "100000000000000000"    //0.1
 	Wancoindot2 = "200000000000000000"    //0.2
 	Wancoindot5 = "500000000000000000"    //0.5
-	Wancoin1     = "1000000000000000000"   //1
-	Wancoin2     = "2000000000000000000"   //2
-	Wancoin5     = "5000000000000000000"   //5
-	Wancoin10    = "10000000000000000000"  //10
-	Wancoin20    = "20000000000000000000"  //20
-	Wancoin50    = "50000000000000000000"  //50
-	Wancoin100   = "100000000000000000000" //100
+	Wancoin1    = "1000000000000000000"   //1
+	Wancoin2    = "2000000000000000000"   //2
+	Wancoin5    = "5000000000000000000"   //5
+	Wancoin10   = "10000000000000000000"  //10
+	Wancoin20   = "20000000000000000000"  //20
+	Wancoin50   = "50000000000000000000"  //50
+	Wancoin100  = "100000000000000000000" //100
 
 	WanStamp0dot1 = "1000000000000000" //0.001
 	WanStamp0dot2 = "2000000000000000" //0.002
-	WanStamp0dot5 = "5000000000000000"  //0.005
+	WanStamp0dot5 = "5000000000000000" //0.005
 )
-
-
 
 func init() {
 	if errCoinSCInit != nil || errStampSCInit != nil {
@@ -550,56 +546,55 @@ func init() {
 
 	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
 
-	sval01,_:= new(big.Int).SetString(WanStamp0dot1,10)
+	sval01, _ := new(big.Int).SetString(WanStamp0dot1, 10)
 	StampValueSet[sval01.Text(16)] = WanStamp0dot1
 
-	sval02,_:= new(big.Int).SetString(WanStamp0dot2,10)
+	sval02, _ := new(big.Int).SetString(WanStamp0dot2, 10)
 	StampValueSet[sval02.Text(16)] = WanStamp0dot2
 
-	sval05,_:= new(big.Int).SetString(WanStamp0dot5,10)
+	sval05, _ := new(big.Int).SetString(WanStamp0dot5, 10)
 	StampValueSet[sval05.Text(16)] = WanStamp0dot5
 
-
-	cval01,_:= new(big.Int).SetString(Wancoindot1,10)
+	cval01, _ := new(big.Int).SetString(Wancoindot1, 10)
 	WanCoinValueSet[cval01.Text(16)] = Wancoindot1
 
-	cval02,_:= new(big.Int).SetString(Wancoindot2,10)
+	cval02, _ := new(big.Int).SetString(Wancoindot2, 10)
 	WanCoinValueSet[cval02.Text(16)] = Wancoindot2
 
-	cval05,_:= new(big.Int).SetString(Wancoindot5,10)
+	cval05, _ := new(big.Int).SetString(Wancoindot5, 10)
 	WanCoinValueSet[cval05.Text(16)] = Wancoindot5
 
-	cval1,_:= new(big.Int).SetString(Wancoin1,10)
+	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
 	WanCoinValueSet[cval1.Text(16)] = Wancoin1
 
-	cval2,_:= new(big.Int).SetString(Wancoin2,10)
+	cval2, _ := new(big.Int).SetString(Wancoin2, 10)
 	WanCoinValueSet[cval2.Text(16)] = Wancoin2
 
-	cval5,_:= new(big.Int).SetString(Wancoin5,10)
+	cval5, _ := new(big.Int).SetString(Wancoin5, 10)
 	WanCoinValueSet[cval5.Text(16)] = Wancoin5
 
-	cval10,_:= new(big.Int).SetString(Wancoin10,10)
+	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	WanCoinValueSet[cval10.Text(16)] = Wancoin10
 
-	cval20,_:= new(big.Int).SetString(Wancoin20,10)
+	cval20, _ := new(big.Int).SetString(Wancoin20, 10)
 	WanCoinValueSet[cval20.Text(16)] = Wancoin20
 
-	cval50,_:= new(big.Int).SetString(Wancoin50,10)
+	cval50, _ := new(big.Int).SetString(Wancoin50, 10)
 	WanCoinValueSet[cval50.Text(16)] = Wancoin50
 
-	cval100,_:= new(big.Int).SetString(Wancoin100,10)
+	cval100, _ := new(big.Int).SetString(Wancoin100, 10)
 	WanCoinValueSet[cval100.Text(16)] = Wancoin100
 }
 
-type wanchainStampSC struct {}
+type wanchainStampSC struct{}
 
 func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
 	return params.CreateDataGas
 }
 
-func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM)([]byte, error) {
-	if in==nil || len(in)<4 {
-		return nil,errParameters
+func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, error) {
+	if in == nil || len(in) < 4 {
+		return nil, errParameters
 	}
 
 	var methodId [4]byte
@@ -609,7 +604,7 @@ func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM)([]byte, e
 		return c.buyStamp(in[4:], contract, env)
 	}
 
-	return nil,errMethodId
+	return nil, errMethodId
 }
 
 func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -620,22 +615,22 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 
 	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
 	if err != nil {
-		return nil,errBuyStamp
+		return nil, errBuyStamp
 	}
 
-	_,ok := StampValueSet[contract.value.Text(16)]
+	_, ok := StampValueSet[contract.value.Text(16)]
 	if !ok {
-		return nil,errStampValue
+		return nil, errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
 	if err != nil {
-		return nil,errBuyStamp
+		return nil, errBuyStamp
 	}
 
 	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
 	if err != nil || !add {
-		return nil,errBuyStamp
+		return nil, errBuyStamp
 	}
 
 	addrSrc := contract.CallerAddress
@@ -645,26 +640,25 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 	if balance.Cmp(contract.value) >= 0 {
 		// Need check contract value in  build in value sets
 		evm.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte{1},nil
+		return []byte{1}, nil
 	} else {
 
-		return nil,errBalance
+		return nil, errBalance
 	}
 }
-
 
 type wanCoinSC struct {
 }
 
 func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
-	if input==nil || len(input)<4 {
+	if input == nil || len(input) < 4 {
 		return 0
 	}
 
 	var methodIdArr [4]byte
 	copy(methodIdArr[:], input[:4])
 
-    if methodIdArr == refundIdArr {
+	if methodIdArr == refundIdArr {
 
 		var RefundStruct struct {
 			RingSignedData string
@@ -692,10 +686,9 @@ func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
 
 }
 
-
-func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error){
-	if in==nil || len(in)<4 {
-		return nil,errParameters
+func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if in == nil || len(in) < 4 {
+		return nil, errParameters
 	}
 
 	var methodIdArr [4]byte
@@ -707,7 +700,7 @@ func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error)
 		return c.refund(in[4:], contract, evm)
 	}
 
-	return nil,errMethodId
+	return nil, errMethodId
 }
 
 var (
@@ -722,22 +715,22 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
 	if err != nil {
-		return nil,errBuyCoin
+		return nil, errBuyCoin
 	}
 
-	_,ok := WanCoinValueSet[contract.value.Text(16)]
+	_, ok := WanCoinValueSet[contract.value.Text(16)]
 	if !ok {
-		return nil,errStampValue
+		return nil, errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
 	if err != nil {
-		return nil,errBuyCoin
+		return nil, errBuyCoin
 	}
 
 	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
 	if err != nil || !add {
-		return nil,errBuyCoin
+		return nil, errBuyCoin
 	}
 
 	addrSrc := contract.CallerAddress
@@ -747,12 +740,11 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 	if balance.Cmp(contract.value) >= 0 {
 		// Need check contract value in  build in value sets
 		evm.StateDB.SubBalance(addrSrc, contract.value)
-		return []byte{1},nil
+		return []byte{1}, nil
 	} else {
-		return nil,errBalance
+		return nil, errBalance
 	}
 }
-
 
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
@@ -790,12 +782,12 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
 	if err != nil {
-		return nil,errRefundCoin
+		return nil, errRefundCoin
 	}
 
 	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
 	if err != nil {
-		return nil,errRefundCoin
+		return nil, errRefundCoin
 	}
 
 	otaAXs := make([][]byte, 0, len(publickeys))
@@ -816,14 +808,14 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 			log.Warn("balance getting from ota is wrong", "get", balanceGet.String(),
 				"expect", RefundStruct.Value.String())
 		} else {
-			return nil,errBalance
+			return nil, errBalance
 		}
 	}
 
 	kix := crypto.FromECDSAPub(keyimage)
 	exit, _, err = CheckOTAImageExit(evm.StateDB, kix)
 	if err != nil || exit {
-		return nil,errRefundCoin
+		return nil, errRefundCoin
 	}
 
 	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimage, ws, qs)
@@ -833,9 +825,9 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 
 		addrSrc := contract.CallerAddress
 		evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
-		return []byte{1},nil
+		return []byte{1}, nil
 	} else {
-		return nil,errRefundCoin
+		return nil, errRefundCoin
 	}
 
 }
