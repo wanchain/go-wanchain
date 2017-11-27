@@ -466,28 +466,29 @@ func (self *worker) commitNewWork() {
 	self.eth.TxPool().RemoveBatch(work.failedTxs)
 
 	// compute uncles for the new block.
-	var (
-		uncles    []*types.Header
-		badUncles []common.Hash
-	)
-	for hash, uncle := range self.possibleUncles {
-		if len(uncles) == 2 {
-			break
-		}
-		if err := self.commitUncle(work, uncle.Header()); err != nil {
-			log.Trace("Bad uncle found and will be removed", "hash", hash)
-			log.Trace(fmt.Sprint(uncle))
-
-			badUncles = append(badUncles, hash)
-		} else {
-			log.Debug("Committing new uncle to block", "hash", hash)
-			uncles = append(uncles, uncle.Header())
-		}
-	}
-	for _, hash := range badUncles {
-		delete(self.possibleUncles, hash)
-	}
+	//var (
+	//	uncles    []*types.Header
+	//	badUncles []common.Hash
+	//)
+	//for hash, uncle := range self.possibleUncles {
+	//	if len(uncles) == 2 {
+	//		break
+	//	}
+	//	if err := self.commitUncle(work, uncle.Header()); err != nil {
+	//		log.Trace("Bad uncle found and will be removed", "hash", hash)
+	//		log.Trace(fmt.Sprint(uncle))
+	//
+	//		badUncles = append(badUncles, hash)
+	//	} else {
+	//		log.Debug("Committing new uncle to block", "hash", hash)
+	//		uncles = append(uncles, uncle.Header())
+	//	}
+	//}
+	//for _, hash := range badUncles {
+	//	delete(self.possibleUncles, hash)
+	//}
 	// Create the new block to seal with the consensus engine
+	uncles := []*types.Header{}
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
