@@ -277,7 +277,7 @@ func (pool *TxPool) loop() {
 				pool.mu.Lock()
 
 				//if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-					pool.homestead = true
+				pool.homestead = true
 				//}
 
 				pool.reset(head.Header(), ev.Block.Header())
@@ -547,7 +547,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
-/*	if tx.Txtype() == 6 {
+	/*	if tx.Txtype() == 6 {
 		return nil
 	}*/
 
@@ -586,9 +586,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if tx.Gas().Cmp(intrGas) < 0 && tx.Txtype() != 6  {
-		return ErrIntrinsicGas
+	if tx.Txtype() == 6 {
+		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas); err != nil {
+			return err
+		}
+	} else {
+		if tx.Gas().Cmp(intrGas) < 0 {
+			return ErrIntrinsicGas
+		}
 	}
+
 	return nil
 }
 
@@ -1071,6 +1078,16 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Demoting pending transaction", "hash", hash)
 			pool.enqueueTx(hash, tx)
 		}
+		// Remove all invalid privacy transactions
+		invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer)
+		for _, tx := range invalidPrivacy {
+			hash := tx.Hash()
+			log.Trace("Removed invalid privacy transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
 		// If there's a gap in front, warn (should never happen) and postpone all transactions
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
 			for _, tx := range list.Cap(0) {
