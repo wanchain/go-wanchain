@@ -71,6 +71,7 @@ var (
 	errMissingSignature  = errors.New("extra data 65 byte suffix signature missing")
 	errUnauthorized      = errors.New("unauthorized signer")
 	errAuthorTooOften    = errors.New("signer too often")
+	errUsedSignerDescend = errors.New("disallow used signer descend")
 )
 
 // INFO: copied from consensus/clique/clique.go
@@ -171,6 +172,33 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 	// Sanity checks passed, do a proper verification
 	parents := []*types.Header{parent}
 	return ethash.verifyHeader(chain, header, parents, false, seal)
+}
+
+func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *types.Block, oldChain []*types.Block, newChain []*types.Block) error{
+	s, err := ethash.snapshot(chain, commonBlock.NumberU64(), commonBlock.Hash(), nil)
+	if err != nil {
+		return err
+	}
+	oldSignerSet := make(map[common.Address]struct{})
+	newSignerSet := make(map[common.Address]struct{})
+	for signer := range s.UsedSigners {
+		oldSignerSet[signer] = struct{}{}
+		newSignerSet[signer] = struct{}{}
+	}
+
+	for _, b := range oldChain {
+		oldSignerSet[b.Coinbase()] = struct{}{}
+	}
+
+	for _, nb := range newChain {
+		newSignerSet[nb.Coinbase()] = struct{}{}
+	}
+
+	if len(newSignerSet) < len(oldSignerSet) {
+		return errUsedSignerDescend
+	}
+
+	return nil
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers

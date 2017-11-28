@@ -43,6 +43,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 	"github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/consensus/ethash"
 )
 
 var (
@@ -1155,6 +1156,17 @@ func (self *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			return fmt.Errorf("Invalid new chain")
 		}
 	}
+
+	//ppow extend
+	if ethash, ok := self.engine.(*ethash.Ethash); ok{
+		log.Error("wanchain willing revert")
+		err := ethash.VerifyPPOWReorg(self, oldBlock, oldChain, newChain)
+		if err != nil {
+			log.Error("wanchain revert invalid")
+			return err
+		}
+	}
+
 	// Ensure the user sees large reorgs
 	if len(oldChain) > 0 && len(newChain) > 0 {
 		logFn := log.Debug
