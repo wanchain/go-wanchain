@@ -71,6 +71,7 @@ var (
 	errMissingSignature  = errors.New("extra data 65 byte suffix signature missing")
 	errUnauthorized      = errors.New("unauthorized signer")
 	errAuthorTooOften    = errors.New("signer too often")
+	errUsedSignerDescend = errors.New("disallow used signer descend")
 )
 
 // INFO: copied from consensus/clique/clique.go
