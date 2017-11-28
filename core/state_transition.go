@@ -361,7 +361,7 @@ type PrivicyTxInfo struct {
 	StampGas     uint64
 }
 
-func FetchPrivicyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivicyTxInfo, err error) {
+func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivicyTxInfo, err error) {
 
 	var TxDataWithRing struct {
 		RingSignedData string
@@ -426,7 +426,7 @@ func FetchPrivicyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 }
 
 func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int) error {
-	info, err := FetchPrivicyTxInfo(stateDB, hashInput, in, gasPrice)
+	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return err
 	}
@@ -447,7 +447,7 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 }
 
 func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (callData []byte, stampGas uint64, err error) {
-	info, err := FetchPrivicyTxInfo(stateDB, hashInput, in, gasPrice)
+	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return nil, 0, err
 	}
