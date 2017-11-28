@@ -10,6 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/functrace"
+	"github.com/wanchain/go-wanchain/log"
 	"errors"
 )
 
@@ -188,6 +189,7 @@ func(s *Snapshot) apply(headers []*types.Header) (*Snapshot, error){
 		}
 
 		if _, ok := snap.PermissionSigners[signer]; !ok {
+			log.Error("Unauthorized signer, not in the list", "signer", signer)
 			return nil, errUnauthorized
 		}
 
@@ -195,6 +197,7 @@ func(s *Snapshot) apply(headers []*types.Header) (*Snapshot, error){
 			if _, ok := e.Value.(common.Address); ok {
 				wSigner := e.Value.(common.Address)
 				if signer == wSigner {
+					log.Error("Unauthorized signer, too often", "signer", signer)
 					return nil, errAuthorTooOften
 				}
 			}
@@ -215,12 +218,14 @@ func(s *Snapshot) isLegal4Sign(signer common.Address) error {
 	defer functrace.Exit()
 
 	if _, ok := s.PermissionSigners[signer]; !ok {
+		log.Error("Unauthorized signer, not legal", "signer", signer)
 		return errUnauthorized
 	}
 	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
 		if _, ok := e.Value.(common.Address); ok {
 			wSigner := e.Value.(common.Address)
 			if signer == wSigner {
+				log.Error("Unauthorized signer, author too often", "signer", signer)
 				return errAuthorTooOften
 			}
 		}
