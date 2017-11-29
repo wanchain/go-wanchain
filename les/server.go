@@ -77,13 +77,13 @@ func (s *LesServer) Protocols() []p2p.Protocol {
 // Start starts the LES server
 func (s *LesServer) Start(srvr *p2p.Server) {
 	s.protocolManager.Start()
-	go func() {
-		logger := log.New("topic", s.lesTopic)
-		logger.Info("Starting topic registration")
-		defer logger.Info("Terminated topic registration")
-
-		srvr.DiscV5.RegisterTopic(s.lesTopic, s.quitSync)
-	}()
+	//go func() {
+	//	logger := log.New("topic", s.lesTopic)
+	//	logger.Info("Starting topic registration")
+	//	defer logger.Info("Terminated topic registration")
+	//
+	//	srvr.DiscV5.RegisterTopic(s.lesTopic, s.quitSync)
+	//}()
 }
 
 // Stop stops the LES service
