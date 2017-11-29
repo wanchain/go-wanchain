@@ -41,7 +41,7 @@ var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
 txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(0.001));
 
 
-sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(0.001), data:txBuyData, gas: 1000000});
+sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(0.001), data:txBuyData, gas: 1000000, gasprice:'0x' + (200000).toString(16)});
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
@@ -67,7 +67,7 @@ var otaAddrTokenHolder = wan.generateOneTimeAddress(wanAddr);
 keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
 privateKeyTokenHolder = keyPairs[0];
 addrTokenHolder = keyPairs[2];
-sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:1000000});
+sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:1000000, gasprice:'0x' + (200000).toString(16)});
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 ota1Balance = erc20simple.privacyBalance(addrTokenHolder)
@@ -91,7 +91,7 @@ glueContractDef = eth.contract([{"constant":false,"type":"function","inputs":[{"
 glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
 combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
-sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData}, privateKeyTokenHolder)
+sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (200000).toString(16)}, privateKeyTokenHolder)
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 

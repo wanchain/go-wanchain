@@ -24,6 +24,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 )
 
@@ -294,7 +295,9 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 	l.gascap = new(big.Int).Set(gasLimit)
 
 	// Filter out all the transactions above the account's funds
-	removed := l.txs.Filter(func(tx *types.Transaction) bool { return (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)&&tx.Txtype()!=6 })
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		return (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0) && tx.Txtype() != 6
+	})
 
 	// If the list was strict, filter anything above the lowest nonce
 	var invalids types.Transactions
@@ -309,6 +312,40 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
 	}
 	return removed, invalids
+}
+
+// InvalidPrivacyTx remove invalidate privacy transactions
+func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer) types.Transactions {
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		if tx.Txtype() != 6 {
+			return false
+		}
+
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return true
+		}
+
+		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+		err = ValidPrivacyTx(stateDB, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas)
+		return err != nil
+	})
+
+	var invalids types.Transactions
+	if l.strict && len(removed) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range removed {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+
+	// Privacy transaction's sender is not real sender, just a hash info.
+	// So, no need to move invalid transactions to queue for later.
+	// Just remove all of invalid transactions.
+	return append(removed, invalids...)
 }
 
 // Cap places a hard limit on the number of items, returning all transactions
