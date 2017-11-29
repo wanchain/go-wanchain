@@ -232,7 +232,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		return ethash.NewShared()
 	default:
 		engine := ethash.New(ctx.ResolvePath(config.EthashCacheDir), config.EthashCachesInMem, config.EthashCachesOnDisk,
-			config.EthashDatasetDir, config.EthashDatasetsInMem, config.EthashDatasetsOnDisk)
+			config.EthashDatasetDir, config.EthashDatasetsInMem, config.EthashDatasetsOnDisk, db)
 		engine.SetThreads(-1) // Disable CPU mining
 		return engine
 	}
@@ -337,6 +337,15 @@ func (s *Ethereum) StartMining(local bool) error {
 			return fmt.Errorf("signer missing: %v", err)
 		}
 		clique.Authorize(eb, wallet.SignHash)
+	}
+
+	if ethash, ok := s.engine.(*ethash.Ethash); ok{
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("singer missing: %v", err)
+		}
+		ethash.Authorize(eb, wallet.SignHash)
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection

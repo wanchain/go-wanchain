@@ -21,17 +21,28 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"runtime"
+	//"runtime"
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
 	//"github.com/wanchain/go-wanchain/consensus/misc"
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
+	"github.com/wanchain/go-wanchain/functrace"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/rlp"
 	set "gopkg.in/fatih/set.v0"
+)
+
+const (
+	//	checkpointInterval = 1024 // Number of blocks after which to save the signers state
+	checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
 )
 
 // Ethash proof-of-work protocol constants.
@@ -39,6 +50,8 @@ var (
 	//frontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	byzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
+	extraVanity                   = 32                // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -56,12 +69,84 @@ var (
 	errInvalidDifficulty = errors.New("non-positive difficulty")
 	errInvalidMixDigest  = errors.New("invalid mix digest")
 	errInvalidPoW        = errors.New("invalid proof-of-work")
+	errMissingSignature  = errors.New("extra data 65 byte suffix signature missing")
+	errUnauthorized      = errors.New("unauthorized signer")
+	errAuthorTooOften    = errors.New("signer too often")
+	errUsedSignerDescend = errors.New("disallow used signer descend")
 )
 
+// INFO: copied from consensus/clique/clique.go
+type SignerFn func(accounts.Account, []byte) ([]byte, error)
+
+// INFO: copied from consensus/clique/clique.go
+func sigHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewKeccak256()
+
+	rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
+	})
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// INFO: copied from consensus/clique/clique.go
+// ecrecover extracts the Ethereum account address from a signed header.
+func ecrecover(header *types.Header) (common.Address, error) {
+	functrace.Enter()
+	defer functrace.Exit()
+
+	// Retrieve the signature from the header extra-data
+	if len(header.Extra) < extraSeal {
+		return common.Address{}, errMissingSignature
+	}
+	signature := header.Extra[len(header.Extra)-extraSeal:]
+
+	// Recover the public key and the Ethereum address
+	//log.Trace("ecrecover(): cr@zy seal")
+	log.Trace(fmt.Sprintf(header.String()))
+
+	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	//log.Trace("ecrecover(): cr@zy seal hash", "Input hash", sigHash(header).String())
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
+}
+
+// INFO: copied from consensus/clique/clique.go
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	return header.Coinbase, nil
+}
+
+func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	functrace.Enter(signer.String())
+	defer functrace.Exit()
+
+	self.signFn = signFn
+	self.signer = signer
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
@@ -71,6 +156,9 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 	if ethash.fakeFull {
 		return nil
 	}
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// Short circuit if the header is known, or it's parent not
 	number := header.Number.Uint64()
 	if chain.GetHeader(header.Hash(), number) != nil {
@@ -81,13 +169,43 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 		return consensus.ErrUnknownAncestor
 	}
 	// Sanity checks passed, do a proper verification
-	return ethash.verifyHeader(chain, header, parent, false, seal)
+	parents := []*types.Header{parent}
+	return ethash.verifyHeader(chain, header, parents, false, seal)
+}
+
+func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *types.Block, oldChain []*types.Block, newChain []*types.Block) error {
+	s, err := ethash.snapshot(chain, commonBlock.NumberU64(), commonBlock.Hash(), nil)
+	if err != nil {
+		return err
+	}
+	oldSignerSet := make(map[common.Address]struct{})
+	newSignerSet := make(map[common.Address]struct{})
+	for signer := range s.UsedSigners {
+		oldSignerSet[signer] = struct{}{}
+		newSignerSet[signer] = struct{}{}
+	}
+
+	for _, b := range oldChain {
+		oldSignerSet[b.Coinbase()] = struct{}{}
+	}
+
+	for _, nb := range newChain {
+		newSignerSet[nb.Coinbase()] = struct{}{}
+	}
+
+	if len(newSignerSet) < (len(oldSignerSet)-1) {
+		return errUsedSignerDescend
+	}
+
+	return nil
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
 func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+	functrace.Enter()
+	defer functrace.Exit()
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull || len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
@@ -98,7 +216,8 @@ func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 	}
 
 	// Spawn as many workers as allowed threads
-	workers := runtime.GOMAXPROCS(0)
+	//workers := runtime.GOMAXPROCS(0)
+	workers := 1
 	if len(headers) < workers {
 		workers = len(headers)
 	}
@@ -150,6 +269,9 @@ func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 }
 
 func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -162,12 +284,22 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 	if chain.GetHeader(headers[index].Hash(), headers[index].Number.Uint64()) != nil {
 		return nil // known block
 	}
-	return ethash.verifyHeader(chain, headers[index], parent, false, seals[index])
+
+	var parents []*types.Header
+	if index == 0 {
+		parents = []*types.Header{parent}
+	} else {
+		parents = headers[:index]
+	}
+	return ethash.verifyHeader(chain, headers[index], parents, false, seals[index])
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of the stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull {
 		return nil
@@ -210,9 +342,9 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 		if ancestors[uncle.ParentHash] == nil || uncle.ParentHash == block.ParentHash() {
 			return errDanglingUncle
 		}
-		if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
-			return err
-		}
+		//if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
+		//	return err
+		//}
 	}
 	return nil
 }
@@ -220,10 +352,20 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // verifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
-func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, uncle bool, seal bool) error {
+func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, uncle bool, seal bool) error {
+	functrace.Enter()
+	defer functrace.Exit()
+
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
 	// Ensure that the header's extra-data section is of a reasonable size
+	parent := parents[len(parents)-1]
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
+	}
+	if len(header.Extra) != extraVanity+extraSeal {
+		return fmt.Errorf("extra-data size invalid: %d", len(header.Extra))
 	}
 	// Verify the header's timestamp
 	if uncle {
@@ -273,6 +415,13 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 			return err
 		}
 	}
+
+	if seal {
+		if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
+			return err
+		}
+	}
+
 	// If all checks passed, validate any special fields for hard forks
 	//if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
 	//	return err
@@ -300,6 +449,105 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 		//return calcDifficultyFrontier(time, parent)
 		return calcDifficultyByzantium(time, parent)
 	}
+}
+
+// TODO: its's different from POA, need consider thread-security
+func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	number := header.Number.Uint64()
+
+	functrace.Enter(fmt.Sprintf("number= %d", number))
+	defer functrace.Exit()
+
+	if number == 0 {
+		return nil
+	}
+
+	_, err := self.snapshot(chain, number-1, header.ParentHash, parents)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// INFO: copied from consensus/clique/clique.go , mostly
+// snapshot retrieves the signer status at a given point
+func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+	var (
+		headers []*types.Header
+		snap    *Snapshot
+	)
+
+	functrace.Enter(fmt.Sprintf("number= %d", number))
+	defer functrace.Exit()
+
+	for snap == nil {
+		if s, ok := self.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			break
+		}
+
+		if number%checkpointInterval == 0 {
+			if s, err := LoadSnapShot(self.db, hash); err == nil {
+				snap = s
+				break
+			}
+		}
+
+		if number == 0 {
+			genesis := chain.GetHeaderByNumber(0)
+			// TODO: cr@zy think maybe useful add this
+			//if err := self.VerifyHeader(chain,genesis, false); err != nil {
+			//	return nil, err
+			//}
+			// TODO: does we need
+			signers := make([]common.Address, len(genesis.Extra)/common.AddressLength)
+			for i := 0; i < len(signers); i++ {
+				copy(signers[i][:], genesis.Extra[i*common.AddressLength:])
+			}
+			snap = NewSnapshot(0, genesis.Hash(), signers)
+			if err := snap.store(self.db); err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		var header *types.Header
+		if len(parents) > 0 {
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			header = chain.GetHeader(hash, number)
+			if header == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
+		}
+		headers = append(headers, header)
+		number, hash = number-1, header.ParentHash
+	}
+
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+
+	snap, err := snap.apply(headers)
+	if err != nil {
+		return nil, err
+	}
+
+	self.recents.Add(snap.Hash, snap)
+
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+		if err = snap.store(self.db); err != nil {
+			return nil, err
+		}
+		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+	}
+
+	return snap, nil
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -465,6 +713,10 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 		}
 		return nil
 	}
+
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// If we're running a shared PoW, delegate verification to it
 	if ethash.shared != nil {
 		return ethash.shared.VerifySeal(chain, header)
@@ -504,7 +756,28 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
+
+	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
+	defer functrace.Exit()
+
+	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+	if err != nil {
+		return err
+	}
+
+	err = snap.isLegal4Sign(header.Coinbase)
+	if err != nil {
+		return err
+	}
+
+	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
+		parent)
+
+	if len(header.Extra) < extraVanity {
+		header.Extra = append(header.Extra, make([]byte, extraVanity-len(header.Extra))...)
+	}
+	header.Extra = header.Extra[:extraVanity]
+	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
 	return nil
 }
@@ -512,6 +785,9 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(true/*chain.Config().IsEIP158(header.Number)*/)
@@ -531,15 +807,18 @@ var (
 // included uncles. The coinbase of each uncle block is also rewarded.
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	functrace.Enter()
+	defer functrace.Exit()
+
 	// Select the correct block reward based on chain progression
 	//blockReward := frontierBlockReward
 	//if config.IsByzantium(header.Number) {
 
-		blockReward := byzantiumBlockReward
+	//	blockReward := byzantiumBlockReward
 
 	//}
 	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
+	/*reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)
 	for _, uncle := range uncles {
 		r.Add(uncle.Number, big8)
@@ -551,5 +830,5 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward)*/
 }
