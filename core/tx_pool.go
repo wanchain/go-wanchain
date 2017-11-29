@@ -277,7 +277,7 @@ func (pool *TxPool) loop() {
 				pool.mu.Lock()
 
 				//if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-					pool.homestead = true
+				pool.homestead = true
 				//}
 
 				pool.reset(head.Header(), ev.Block.Header())
@@ -547,7 +547,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
-/*	if tx.Txtype() == 6 {
+	/*	if tx.Txtype() == 6 {
 		return nil
 	}*/
 
@@ -586,7 +586,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if tx.Gas().Cmp(intrGas) < 0 && tx.Txtype() != 6  {
+	if tx.Gas().Cmp(intrGas) < 0 && tx.Txtype() != 6 {
 		return ErrIntrinsicGas
 	}
 	return nil
