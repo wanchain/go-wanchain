@@ -38,6 +38,7 @@ import (
 	"crypto/cipher"
 	"crypto/rsa"
 
+	"github.com/wanchain/go-wanchain/log"
 	Mrand "math/rand"
 )
 
@@ -460,19 +461,18 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	ret := false
 	n := len(PublicKeys)
 
-	fmt.Printf("R'%d\t%x\n", 0, M)
+	log.Debug("M info", "R", 0, "M", common.ToHex(M))
 	for i := 0; i < n; i++ {
-		fmt.Printf("R'%d\t%x\n", 1, FromECDSAPub(PublicKeys[i]))
+		log.Debug("publicKeys", "i", i, "publickey", common.ToHex(FromECDSAPub(PublicKeys[i])))
 	}
 
-	fmt.Printf("R'%d\t%x\n", 2, FromECDSAPub(I))
-
+	log.Debug("image info", "I", common.ToHex(FromECDSAPub(I)))
 	for i := 0; i < n; i++ {
-		fmt.Printf("R'%d\t%x\n", 3, c[i].Bytes())
+		log.Debug("c info", "i", i, "c", common.ToHex(c[i].Bytes()))
 	}
 
 	for i := 0; i < n; i++ {
-		fmt.Printf("R'%d\t%x\n", 4, r[i].Bytes())
+		log.Debug("r info", "i", i, "r", common.ToHex(r[i].Bytes()))
 	}
 
 	SumC := new(big.Int).SetInt64(0)
@@ -490,7 +490,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		SumC.Add(SumC, c[i])
 		SumC.Mod(SumC, secp256k1_N)
 		d.Write(FromECDSAPub(Lpub))
-		fmt.Printf("L'%d\t%x\n", i, FromECDSAPub(Lpub))
+		log.Debug("LPublicKeys", "i", i, "Lpub", common.ToHex(FromECDSAPub(Lpub)))
 	}
 	Rpub := new(ecdsa.PublicKey)
 	for i := 0; i < n; i++ {
@@ -498,17 +498,16 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 		Ppub := new(ecdsa.PublicKey)
 		Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, c[i].Bytes())  //[wi]I
 		Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
-		fmt.Printf("R'%d\t%x\n", i, FromECDSAPub(Rpub))
+		log.Debug("RPublicKeys", "i", i, "Rpub", common.ToHex(FromECDSAPub(Rpub)))
 
 		d.Write(FromECDSAPub(Rpub))
 	}
 	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
-	fmt.Printf("hash'%d\t%x\n", 0, hash.Bytes())
+	log.Debug("hash info", "i", 0, "hash", common.ToHex(hash.Bytes()))
 
 	hash.Mod(hash, secp256k1_N)
-	fmt.Printf("hash'%d\t%x\n", 2, hash.Bytes())
-
-	fmt.Printf("SumC'%d\t%x\n", 3, SumC.Bytes())
+	log.Debug("hash info", "i", 2, "hash", common.ToHex(hash.Bytes()))
+	log.Debug("SumC info", "i", 3, "SumC", common.ToHex(SumC.Bytes()))
 	if hash.Cmp(SumC) == 0 {
 		ret = true
 	}

@@ -417,6 +417,9 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 
 	mixLen := len(infoTmp.PublicKeys)
 	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
+	if infoTmp.StampGas < ringSigDiffRequiredGas {
+		return nil, vm.ErrOutOfGas
+	}
 
 	infoTmp.StampGas -= ringSigDiffRequiredGas
 

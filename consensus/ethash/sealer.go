@@ -24,15 +24,32 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
 // the block's difficulty requirements.
 func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+	functrace.Enter()
+	defer functrace.Exit()
+
+	header := block.Header()
+	//log.Trace("Seal(): cr@zy seal")
+	//log.Trace(fmt.Sprintf(header.String()))
+	sighash, err := ethash.signFn(accounts.Account{Address: block.Coinbase()}, sigHash(block.Header()).Bytes())
+	//log.Trace("Seal(): cr@zy seal", "hash Input", sigHash(block.Header()).String())
+	if err != nil {
+		return nil, err
+	}
+
+	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	block = block.WithSeal(header)
+
 	// If we're running a fake PoW, simply return a 0 nonce immediately
 	if ethash.fakeMode {
 		header := block.Header()

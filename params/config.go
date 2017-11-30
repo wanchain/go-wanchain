@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
+	MainnetGenesisHash = common.HexToHash("0xf9c6db85a1f0366c7103239f2412a4a798dd734abbbbc14099bc92cf7ab323a0") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 	PlutoGenesisHash   = common.HexToHash("0x7b67a3f28e0d12b57e5fdaa445c4d6dbe68bffa9b808e944e5c67726669d62b6") // Pluto genesis hash to enforce below configs on
 )
@@ -43,6 +43,19 @@ var (
 		//EIP158Block:    big.NewInt(2675000),
 
 		//ByzantiumBlock: big.NewInt(4370000),
+		ByzantiumBlock: big.NewInt(0),
+		Ethash:         new(EthashConfig),
+	}
+
+	WanchainChainConfig = &ChainConfig{
+		ChainId: big.NewInt(1),
+		//HomesteadBlock: big.NewInt(0),
+		//DAOForkBlock:   nil,
+		//DAOForkSupport: true,
+		//EIP150Block:    big.NewInt(0),
+		//EIP150Hash:     common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
+		//EIP155Block:    big.NewInt(0),
+		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
 	}
