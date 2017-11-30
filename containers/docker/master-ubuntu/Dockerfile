@@ -10,6 +10,6 @@ RUN \
   rm -rf /go-ethereum
 
 EXPOSE 8545
-EXPOSE 30303
+EXPOSE 17717
 
 ENTRYPOINT ["/geth"]

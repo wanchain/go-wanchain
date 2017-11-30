@@ -21,5 +21,5 @@ fi
 networkid='--pluto'
 ./build/bin/geth ${networkid} --nat none --verbosity 4 --gasprice '200000' --datadir ./data_pluto  \
 	 --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password ./passwd.txt \
-	 --targetgaslimit 900000000  --port 30303  \
+	 --targetgaslimit 900000000  --port 17717  \
    	--rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin" --rpccorsdomain '*' $@

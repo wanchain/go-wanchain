@@ -158,7 +158,7 @@ func (self *SimNode) Addr() []byte {
 
 // Node returns a discover.Node representing the SimNode
 func (self *SimNode) Node() *discover.Node {
-	return discover.NewNode(self.ID, net.IP{127, 0, 0, 1}, 30303, 30303)
+	return discover.NewNode(self.ID, net.IP{127, 0, 0, 1}, 17717, 17717)
 }
 
 // Client returns an rpc.Client which can be used to communicate with the

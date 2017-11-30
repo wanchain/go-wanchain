@@ -21,8 +21,8 @@ RUN \
   #cp /wanchain/build/bin/geth /usr/local/bin/
 
 EXPOSE 8545
-EXPOSE 30303
-EXPOSE 30303/udp
+EXPOSE 17717
+EXPOSE 17717/udp
 
 
 #

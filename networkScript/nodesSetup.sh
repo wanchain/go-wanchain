@@ -59,11 +59,11 @@ do
 	docker rm   $containerName
 	docker inspect $containerName > /dev/null 2>&1
 	if [ $? -eq 1 ]; then
-		docker run --restart always --name $containerName -itd -v $SRCDIR:/wanchain/src -p $port1:8545 -p $port2:30303 -p $port2:30303/udp registry.cn-hangzhou.aliyuncs.com/wanglutech/wanchaindev /bin/sh
+		docker run --restart always --name $containerName -itd -v $SRCDIR:/wanchain/src -p $port1:8545 -p $port2:17717 -p $port2:17717/udp registry.cn-hangzhou.aliyuncs.com/wanglutech/wanchaindev /bin/sh
 	fi
 	
 	ip=$(docker exec $containerName ifconfig | grep "inet addr" | grep -v 127.0.0.1 | awk '{print $2}' | awk -F ':' '{print $2}')
-	endnodeurl="enode://$pubHash@$ip:30303"	
+	endnodeurl="enode://$pubHash@$ip:17717"
 	
 	if [ $i -eq 0 ]; then
 		allEndNodes="$endnodeurl"
