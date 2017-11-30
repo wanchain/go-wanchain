@@ -1,0 +1,71 @@
+1. Platform requirement
+   Ubuntu 16.04 TLS
+   Install golang enviroment and set up GOPATH
+   Keep the port 17717,8545 in the system is accessible
+
+2. Get the lastest code from github.com/wanchain/go-wanchain.git and check out the develop branch
+
+3. put or clone the code in the folder :$GOPATH/src/github.com/wanchain/go-wanchain
+
+4. in the folder $GOPATH/src/github.com/wanchain/go-wanchain,type the command:
+
+	make all
+
+5. after build successfully,in the folder $GOPATH/src/github.com/wanchain/go-wanchain/build/bin,the tool will be there
+
+   notes: If there are no build enviroment for building wanchain code, you can build the wanchain code in the othere computer, copy the builded tools in $GOPATH/src/github.com/wanchain/go-wanchain/build/bin to the target computer
+   then do following work.
+   
+6. put the build in keystore files in the folder ~/.wanchain/keystore
+
+7. put the corresponding pw files in the folder ~/.wanchain/
+
+8. in the folder $GOPATH/src/github.com/wanchain/go-wanchain/build/bin, type following command:
+   
+   If it is the first bootnodes
+   ./geth -verbosity 5 --datadir ~/.wanchain --gasprice 20000 --etherbase 0xf9b32578b4420a36f132db32b56f3831a7cc1804 --unlock 0xf9b32578b4420a36f132db32b56f3831a7cc1804 --password ~/.wanchain/pwdfile --mine --minerthreads 1 --rpc --rpcaddr 0.0.0.0 --rpcapi eth,personal,net,admin,wan --nodekey ~/.wanchain/nodekey/nodekey --nodiscover   
+   
+   If it is just normal nodes,like following commands:   
+    node2
+	./geth -verbosity 5 --datadir ~/.wanchain --gasprice 20000 --etherbase 0x810524175efa012446103d1a04c9f4263a962acc --unlock 0x810524175efa012446103d1a04c9f4263a962acc --password ~/.wanchain/pwdfile --mine --minerthreads 1 --nodekeyhex 900d0981bde924f82b7e8ccec52e2b07c2b0835cc22143d87f7dae2b733b3e57  
+
+	node3
+	./geth -verbosity 5 --datadir ~/.wanchain --gasprice 20000 --etherbase 0xdb05642eabc8347ec78e21bdf0d906ba579d423a --unlock 0xdb05642eabc8347ec78e21bdf0d906ba579d423a --password ~/.wanchain/pwdfile --mine --minerthreads 1 --nodekeyhex 6d592b74c53bfcc24b547225a29a6815f26a917ae9a22f2dedda058e7ec161c0  
+
+	node4
+	./geth -verbosity 5 --datadir ~/.wanchain --gasprice 20000 --etherbase 0x7e98bc5a465c1d2afa6b9376709a525981f53d49 --unlock 0x7e98bc5a465c1d2afa6b9376709a525981f53d49 --password ~/.wanchain/pwdfile --mine --minerthreads 1 --nodekeyhex 9780c4081b5b1191d664c5f55efab9c5de6f6c9678b9f61d7b1a17f3fc208aa3  
+
+	node5
+	./geth -verbosity 5 --datadir ~/.wanchain --gasprice 20000  --etherbase 0x0036805b6846f26ac35f2a7d7eda4a2a58f08e8e --unlock 0x0036805b6846f26ac35f2a7d7eda4a2a58f08e8e --password ~/.wanchain/pwdfile --mine --minerthreads 1 --nodekeyhex 9218e55f3cf88de176126f087796f3148138bb38be315b9913cf463b982dc65d
+	
+   notes: --etherbase address is from the prebuild keystores
+		  --verbosity is just for debug
+		  --rpc --rpcaddr --rpcapi can be removed if we do not provide rpc service on this node
+		  --nodekey is prebuild for bootnodes	
+
+9. transfer wan from account to other other account,like the accounts[1]
+   personal.unlockAccount("0xbd100cf8286136659a7d63a38a154e28dbf3e0fd","wanglu",9999);
+   eth.sendTransaction({from:eth.accounts[1],to:eth.accounts[2],value:web3.toWin(10)})
+
+10. check balance:
+   web3.fromWin(eth.getBalance(eth.accounts[1]))	
+   
+11. test wancoin privacy transanction:
+   in the folder $GOPATH/src/github.com/wanchain/go-wanchain/build/bin
+   ./geth attach http://118.190.33.66:8545
+   
+   loadScript("../../loadScript/wancoin.js")
+   
+   loadScript("../../loadScript/wantoken.js")
+
+12. if you need keystore,pwdfile and nodekey,contact wanchain beijing team
+   
+   
+   
+	
+	
+   
+   
+   
+   
+   
