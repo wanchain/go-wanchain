@@ -25,10 +25,14 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"fmt"
 )
 
 func TestDefaultGenesisBlock(t *testing.T) {
 	block, _ := DefaultGenesisBlock().ToBlock()
+
+	fmt.Print(common.ToHex(block.Hash().Bytes()))
+
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
