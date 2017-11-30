@@ -1699,6 +1699,7 @@ func (s *PublicNetAPI) Version() string {
 // GetWanAddress returns corresponding WAddress of an ordinary account
 func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, a common.Address) (string, error) {
 	account := accounts.Account{Address: a}
+	// first fetch the wallet/keystore, and then retrieve the wanaddress
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return "", err
@@ -1711,7 +1712,7 @@ func (s *PublicTransactionPoolAPI) GetWanAddress(ctx context.Context, a common.A
 	return hexutil.Encode(wanAddr[:]), nil
 }
 
-// GenerateOneTimeAddress returns corresponding One-Time-Address for given WanAddress
+// GenerateOneTimeAddress returns corresponding One-Time-Address for a given WanAddress
 func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, wAddr string) (string, error) {
 	strlen := len(wAddr)
 	if strlen != (common.WAddressLength<<1)+2 {
