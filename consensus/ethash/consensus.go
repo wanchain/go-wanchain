@@ -193,7 +193,7 @@ func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *
 		newSignerSet[nb.Coinbase()] = struct{}{}
 	}
 
-	if len(newSignerSet) < (len(oldSignerSet)-1) {
+	if len(newSignerSet) < (len(oldSignerSet) - 1) {
 		return errUsedSignerDescend
 	}
 
@@ -760,16 +760,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
 	defer functrace.Exit()
 
-	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
-	if err != nil {
-		return err
-	}
-
-	err = snap.isLegal4Sign(header.Coinbase)
-	if err != nil {
-		return err
-	}
-
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
 		parent)
 
@@ -788,9 +778,19 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	functrace.Enter()
 	defer functrace.Exit()
 
+	snap, err := ethash.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = snap.isLegal4Sign(header.Coinbase)
+	if err != nil {
+		return nil, err
+	}
+
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
-	header.Root = state.IntermediateRoot(true/*chain.Config().IsEIP158(header.Number)*/)
+	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts), nil
