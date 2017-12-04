@@ -59,7 +59,8 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := ethdb.NewMemDatabase()
-	genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
+	// genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
+	genesis := core.DefaultGenesisBlock()
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
 	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}
@@ -317,4 +318,4 @@ func (m callmsg) Gas() *big.Int        { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
 func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 
-func (m callmsg) TxType() uint64       { return m.CallMsg.TxType }
+func (m callmsg) TxType() uint64 { return m.CallMsg.TxType }
