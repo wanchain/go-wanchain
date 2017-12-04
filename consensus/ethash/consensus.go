@@ -41,6 +41,7 @@ import (
 )
 
 const (
+	//TODO:PPOW   change before release
 	//	checkpointInterval = 1024 // Number of blocks after which to save the signers state
 	checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
 )
@@ -193,6 +194,7 @@ func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *
 		newSignerSet[nb.Coinbase()] = struct{}{}
 	}
 
+	//TODO:PPOW how to make a reasonable choice
 	if len(newSignerSet) < (len(oldSignerSet) - 1) {
 		return errUsedSignerDescend
 	}
@@ -462,8 +464,12 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		return nil
 	}
 
-	_, err := self.snapshot(chain, number-1, header.ParentHash, parents)
+	s, err := self.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
+		return err
+	}
+
+	if err = s.isLegal4Sign(header.Coinbase); err != nil {
 		return err
 	}
 
@@ -760,6 +766,16 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
 	defer functrace.Exit()
 
+	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+	if err != nil {
+		return err
+	}
+
+	err = snap.isLegal4Sign(header.Coinbase)
+	if err != nil {
+		return err
+	}
+
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
 		parent)
 
@@ -777,16 +793,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	functrace.Enter()
 	defer functrace.Exit()
-
-	snap, err := ethash.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = snap.isLegal4Sign(header.Coinbase)
-	if err != nil {
-		return nil, err
-	}
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
