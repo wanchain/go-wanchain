@@ -56,7 +56,6 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 	return signer
 
-
 }
 
 // SignTx signs the transaction using the given signer and private key

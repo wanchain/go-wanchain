@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -810,7 +810,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		return NonStatTy, err
 	}
 
-	if _, err := state.CommitTo(batch, true/*bc.config.IsEIP158(block.Number())*/); err != nil {
+	if _, err := state.CommitTo(batch, true /*bc.config.IsEIP158(block.Number())*/); err != nil {
 		return NonStatTy, err
 	}
 	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {

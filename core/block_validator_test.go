@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -33,13 +34,17 @@ func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
 	var (
 		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = &Genesis{Config: params.TestChainConfig}
+		// gspec     = &Genesis{Config: params.TestChainConfig}
+		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
 		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
+	fmt.Println("Genesis: ", genesis.String())
+	fmt.Println("Genesis extra-data length: ", len(genesis.Extra()))
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
+		// fmt.Println(block.String())
 	}
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
 	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), vm.Config{})

@@ -309,6 +309,17 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 	return g.MustCommit(db)
 }
 
+// DefaultPPOWTestingGenesisBlock returns the Wanchain ppow testing genesis block
+func DefaultPPOWTestingGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.TestChainConfig,
+		Nonce:      66,
+		ExtraData:  hexutil.MustDecode("0x35616634653064623434343837643539353033663163653539323564653633645af4e0db44487d59503f1ce5925de63da78fd645ec13904cd950bc20c349b43ea42be97b08f69cd70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x47b760,
+		Difficulty: big.NewInt(1048576),
+	}
+}
+
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
@@ -318,7 +329,7 @@ func DefaultGenesisBlock() *Genesis {
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
 		//Difficulty: big.NewInt(17179869184),
-		Alloc:      jsonPrealloc(wanchainAllocJson),
+		Alloc: jsonPrealloc(wanchainAllocJson),
 	}
 }
 
