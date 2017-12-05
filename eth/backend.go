@@ -339,7 +339,7 @@ func (s *Ethereum) StartMining(local bool) error {
 		clique.Authorize(eb, wallet.SignHash)
 	}
 
-	if ethash, ok := s.engine.(*ethash.Ethash); ok{
+	if ethash, ok := s.engine.(*ethash.Ethash); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
 			log.Error("Etherbase account unavailable locally", "err", err)

@@ -25,12 +25,12 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind/backends"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 )
 
-var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+// var testKey1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+var testKey, _ = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
 
 var waitDeployedTests = map[string]struct {
 	code        string
@@ -53,9 +53,11 @@ var waitDeployedTests = map[string]struct {
 
 func TestWaitDeployed(t *testing.T) {
 	for name, test := range waitDeployedTests {
-		backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-			crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
-		})
+		// backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		// 	crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
+		// })
+		// fmt.Println(crypto.PubkeyToAddress(testKey1.PublicKey))
+		backend := backends.NewSimulatedBackend(nil)
 
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
