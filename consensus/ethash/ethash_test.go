@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Anson5Lee/bc/common/hexutil"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
