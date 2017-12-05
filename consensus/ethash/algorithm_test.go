@@ -704,7 +704,7 @@ func TestConcurrentDiskCacheGeneration(t *testing.T) {
 		go func(idx int) {
 			defer pend.Done()
 
-			ethash := New(cachedir, 0, 1, "", 0, 0)
+			ethash := New(cachedir, 0, 1, "", 0, 0, nil)
 			if err := ethash.VerifySeal(nil, block.Header()); err != nil {
 				t.Errorf("proc %d: block verification failed: %v", idx, err)
 			}
