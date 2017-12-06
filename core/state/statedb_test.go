@@ -53,6 +53,11 @@ func TestUpdateLeaks(t *testing.T) {
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
 		}
+		if i%4 == 0 {
+			hash := common.BytesToHash([]byte{i, i, i, i, i, i, i})
+			byteArray := append(hash[0:], hash[0:]...)
+			state.SetStateByteArray(addr, common.BytesToHash([]byte{i, i, i, i, i, i}), byteArray)
+		}
 		state.IntermediateRoot(false)
 	}
 	// Ensure that no data was leaked into the database
@@ -80,6 +85,11 @@ func TestIntermediateLeaks(t *testing.T) {
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
+		}
+		if i%4 == 0 {
+			hash := common.BytesToHash([]byte{i, i, i, i, i, i, i})
+			byteArray := append(hash[0:], hash[0:]...)
+			state.SetStateByteArray(addr, common.BytesToHash([]byte{i, i, i, i, i, i}), byteArray)
 		}
 	}
 
@@ -184,6 +194,17 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
 				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
 				s.SetState(addr, key, val)
+			},
+			args: make([]int64, 2),
+		},
+		{
+			name: "SetStateByteArray",
+			fn: func(a testAction, s *StateDB) {
+				var key common.Hash
+				var val [common.HashLength * 2]byte
+				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
+				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
+				s.SetStateByteArray(addr, key, val[:])
 			},
 			args: make([]int64, 2),
 		},
