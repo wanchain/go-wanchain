@@ -29,16 +29,17 @@ var (
 	otaBalancePercent1WStorageAddr = common.HexToAddress(WanStamp0dot1)
 	otaBalancePercent2WStorageAddr = common.HexToAddress(WanStamp0dot2)
 	otaBalancePercent5WStorageAddr = common.HexToAddress(WanStamp0dot5)
-	otaBalanceTenth1WStorageAddr   = common.HexToAddress(Wancoindot1)
-	otaBalanceTenth2WStorageAddr   = common.HexToAddress(Wancoindot2)
-	otaBalanceTenth5WStorageAddr   = common.HexToAddress(Wancoindot5)
-	otaBalance1WStorageAddr        = common.HexToAddress(Wancoin1)
-	otaBalance2WStorageAddr        = common.HexToAddress(Wancoin2)
-	otaBalance5WStorageAddr        = common.HexToAddress(Wancoin5)
+
 	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
 	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)
 	otaBalance50WStorageAddr       = common.HexToAddress(Wancoin50)
 	otaBalance100WStorageAddr      = common.HexToAddress(Wancoin100)
+
+	otaBalance200WStorageAddr       = common.HexToAddress(Wancoin200)
+	otaBalance500WStorageAddr       = common.HexToAddress(Wancoin500)
+	otaBalance1000WStorageAddr      = common.HexToAddress(Wancoin1000)
+	otaBalance5000WStorageAddr      = common.HexToAddress(Wancoin5000)
+	otaBalance50000WStorageAddr     = common.HexToAddress(Wancoin50000)
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
