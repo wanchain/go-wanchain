@@ -25,7 +25,7 @@ import (
 
 var (
 	MainnetGenesisHash = common.HexToHash("0xf395db10563a688d5878848b58926f82a251291bc9dba558ab66ae84c84fdeb8") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
+	TestnetGenesisHash = common.HexToHash("0xf395db10563a688d5878848b58926f82a251291bc9dba558ab66ae84c84fdeb8") // Testnet genesis hash to enforce below configs on
 	PlutoGenesisHash   = common.HexToHash("0x7b67a3f28e0d12b57e5fdaa445c4d6dbe68bffa9b808e944e5c67726669d62b6") // Pluto genesis hash to enforce below configs on
 )
 
@@ -118,9 +118,13 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/ big.NewInt(0),  new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337) /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/, big.NewInt(0), new(EthashConfig), nil, nil}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1),/*big.NewInt(0),*/ /*nil, false,*/ /*big.NewInt(0), common.Hash{}, */ /*big.NewInt(0), */ /*big.NewInt(0),*/big.NewInt(0), new(EthashConfig), nil, nil}
+	TestChainConfig = &ChainConfig{
+		ChainId:        big.NewInt(1),
+		ByzantiumBlock: big.NewInt(0),
+		Ethash:         new(EthashConfig),
+	}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
 )

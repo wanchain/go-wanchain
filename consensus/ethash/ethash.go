@@ -32,13 +32,13 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
+	lru "github.com/hashicorp/golang-lru"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/hashicorp/golang-lru"
-	"github.com/wanchain/go-wanchain/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")
@@ -395,6 +395,12 @@ func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinme
 // NewTester creates a small sized ethash PoW scheme useful only for testing
 // purposes.
 func NewTester() *Ethash {
+
+	// create a signer cache
+	recents, _ := lru.NewARC(256)
+	// create an in memory eth database
+	db, _ := ethdb.NewMemDatabase()
+
 	return &Ethash{
 		cachesinmem: 1,
 		caches:      make(map[uint64]*cache),
@@ -402,6 +408,8 @@ func NewTester() *Ethash {
 		tester:      true,
 		update:      make(chan struct{}),
 		hashrate:    metrics.NewMeter(),
+		recents:     recents,
+		db:          db,
 	}
 }
 
