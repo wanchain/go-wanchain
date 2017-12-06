@@ -561,16 +561,15 @@ var (
 )
 
 const (
+	Wancoin10  = "10000000000000000000"  //10
+	Wancoin20  = "20000000000000000000"  //20
+	Wancoin50  = "50000000000000000000"  //50
+	Wancoin100 = "100000000000000000000" //100
 
-	Wancoin10   = "10000000000000000000"  //10
-	Wancoin20   = "20000000000000000000"  //20
-	Wancoin50   = "50000000000000000000"  //50
-	Wancoin100  = "100000000000000000000" //100
-
-	Wancoin200   = "200000000000000000000"  //200
-	Wancoin500   = "500000000000000000000"  //500
-	Wancoin1000  = "1000000000000000000000" //1000
-	Wancoin5000  = "5000000000000000000000" //5000
+	Wancoin200   = "200000000000000000000"   //200
+	Wancoin500   = "500000000000000000000"   //500
+	Wancoin1000  = "1000000000000000000000"  //1000
+	Wancoin5000  = "5000000000000000000000"  //5000
 	Wancoin50000 = "50000000000000000000000" //50000
 
 	WanStamp0dot1 = "1000000000000000" //0.001
@@ -661,76 +660,67 @@ func (c *wanchainStampSC) ValidTx(stateDB StateDB, signer types.Signer, tx *type
 	var methodId [4]byte
 	copy(methodId[:], payload[:4])
 	if methodId == stBuyId {
-		var StampInput struct {
-			OtaAddr string
-			Value   *big.Int
-		}
-
-		payload = payload[4:]
-		err := stampAbi.Unpack(&StampInput, "buyStamp", payload)
-		if err != nil {
-			return errBuyStamp
-		}
-
-		if StampInput.Value.Cmp(tx.Value()) != 0 {
-			return ErrMismatchedValue
-		}
-
-		_, ok := StampValueSet[StampInput.Value.Text(16)]
-		if !ok {
-			return errStampValue
-		}
-
-		wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
-		if err != nil {
-			return err
-		}
-
-		ax, err := GetAXFromWanAddr(wanAddr)
-		exit, _, err := CheckOTAExit(stateDB, ax)
-		if err != nil {
-			return err
-		}
-
-		if exit {
-			return ErrOTAReused
-		}
-
-		return nil
-
+		_, err := c.ValidBuyStampReq(stateDB, payload[4:], tx.Value())
+		return err
 	}
 
-	return nil
+	return errParameters
 }
 
-func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, value *big.Int) (otaAddr []byte, err error) {
+	if stateDB == nil || payload == nil || len(payload) == 0 || value == nil {
+		return nil, errors.New("unknown error")
+	}
+
 	var StampInput struct {
 		OtaAddr string
 		Value   *big.Int
 	}
 
-	err := stampAbi.Unpack(&StampInput, "buyStamp", in)
+	err = stampAbi.Unpack(&StampInput, "buyStamp", payload)
 	if err != nil {
 		return nil, errBuyStamp
 	}
 
-	_, ok := StampValueSet[contract.value.Text(16)]
+	if StampInput.Value.Cmp(value) != 0 {
+		return nil, ErrMismatchedValue
+	}
+
+	_, ok := StampValueSet[StampInput.Value.Text(16)]
 	if !ok {
 		return nil, errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
 	if err != nil {
-		return nil, errBuyStamp
+		return nil, err
 	}
 
-	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
-	if err != nil || !add {
+	ax, err := GetAXFromWanAddr(wanAddr)
+	exit, _, err := CheckOTAExit(stateDB, ax)
+	if err != nil {
+		return nil, err
+	}
+
+	if exit {
+		return nil, ErrOTAReused
+	}
+
+	return wanAddr, nil
+}
+
+func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	wanAddr, err := c.ValidBuyStampReq(evm.StateDB, in, contract.value)
+	if err != nil {
+		return nil, err
+	}
+
+	err = SetOTA(evm.StateDB, contract.value, wanAddr)
+	if err != nil {
 		return nil, errBuyStamp
 	}
 
 	addrSrc := contract.CallerAddress
-
 	balance := evm.StateDB.GetBalance(addrSrc)
 
 	if balance.Cmp(contract.value) >= 0 {
@@ -738,7 +728,6 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 		evm.StateDB.SubBalance(addrSrc, contract.value)
 		return []byte{1}, nil
 	} else {
-
 		return nil, errBalance
 	}
 }
@@ -813,119 +802,80 @@ func (c *wanCoinSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tran
 	copy(methodIdArr[:], payload[:4])
 
 	if methodIdArr == buyIdArr {
-
-		var outStruct struct {
-			OtaAddr string
-			Value   *big.Int
-		}
-
-		payload = payload[4:]
-		err := coinAbi.Unpack(&outStruct, "buyCoinNote", payload)
-		if err != nil {
-			return errBuyCoin
-		}
-
-		if outStruct.Value.Cmp(tx.Value()) != 0 {
-			return ErrMismatchedValue
-		}
-
-		_, ok := WanCoinValueSet[outStruct.Value.Text(16)]
-		if !ok {
-			return errStampValue
-		}
-
-		wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
-		if err != nil {
-			return err
-		}
-
-		ax, err := GetAXFromWanAddr(wanAddr)
-		exit, _, err := CheckOTAExit(stateDB, ax)
-		if err != nil {
-			return err
-		}
-
-		if exit {
-			return ErrOTAReused
-		}
-
-		return nil
+		_, err := c.ValidBuyCoinReq(stateDB, payload[4:], tx.Value())
+		return err
 
 	} else if methodIdArr == refundIdArr {
-
-		var RefundStruct struct {
-			RingSignedData string
-			Value          *big.Int
-		}
-
-		payload = payload[4:]
-		err := coinAbi.Unpack(&RefundStruct, "refundCoin", payload)
-		if err != nil {
-			return errRefundCoin
-		}
-
 		from, err := types.Sender(signer, tx)
 		if err != nil {
 			return err
 		}
 
-		ringSignInfo, err := FetchRingSignInfo(stateDB, from.Bytes(), RefundStruct.RingSignedData)
-		if err != nil {
-			return err
-		}
-
-		if ringSignInfo.OTABalance.Cmp(RefundStruct.Value) != 0 {
-			return ErrMismatchedValue
-		}
-
-		kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
-		exit, _, err := CheckOTAImageExit(stateDB, kix)
-		if err != nil {
-			return err
-		}
-
-		if exit {
-			return ErrOTAReused
-		}
-
-		return nil
+		_, _, err = c.ValidRefundReq(stateDB, payload[4:], from.Bytes())
+		return err
 	}
 
-	return nil
+	return errParameters
 }
 
 var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
-func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *big.Int) (otaAddr []byte, err error) {
+	if stateDB == nil || payload == nil || len(payload) == 0 || txValue == nil {
+		return nil, errors.New("unknown error")
+	}
+
 	var outStruct struct {
 		OtaAddr string
 		Value   *big.Int
 	}
 
-	err := coinAbi.Unpack(&outStruct, "buyCoinNote", in)
+	err = coinAbi.Unpack(&outStruct, "buyCoinNote", payload)
 	if err != nil {
 		return nil, errBuyCoin
 	}
 
-	_, ok := WanCoinValueSet[contract.value.Text(16)]
+	if outStruct.Value.Cmp(txValue) != 0 {
+		return nil, ErrMismatchedValue
+	}
+
+	_, ok := WanCoinValueSet[outStruct.Value.Text(16)]
 	if !ok {
 		return nil, errStampValue
 	}
 
 	wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
 	if err != nil {
-		return nil, errBuyCoin
+		return nil, err
 	}
 
-	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
-	if err != nil || !add {
+	ax, err := GetAXFromWanAddr(wanAddr)
+	exit, _, err := CheckOTAExit(stateDB, ax)
+	if err != nil {
+		return nil, err
+	}
+
+	if exit {
+		return nil, ErrOTAReused
+	}
+
+	return wanAddr, nil
+}
+
+func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	otaAddr, err := c.ValidBuyCoinReq(evm.StateDB, in, contract.value)
+	if err != nil {
+		return nil, err
+	}
+
+	err = SetOTA(evm.StateDB, contract.value, otaAddr)
+	if err != nil {
 		return nil, errBuyCoin
 	}
 
 	addrSrc := contract.CallerAddress
-
 	balance := evm.StateDB.GetBalance(addrSrc)
 
 	if balance.Cmp(contract.value) >= 0 {
@@ -937,39 +887,53 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 }
 
-func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte) (image []byte, value *big.Int, err error) {
+	if stateDB == nil || payload == nil || len(payload) == 0 || from == nil || len(from) == 0 {
+		return nil, nil, errors.New("unknown error")
+	}
+
 	var RefundStruct struct {
 		RingSignedData string
 		Value          *big.Int
 	}
 
-	err := coinAbi.Unpack(&RefundStruct, "refundCoin", all)
+	err = coinAbi.Unpack(&RefundStruct, "refundCoin", payload)
 	if err != nil {
-		return nil, errRefundCoin
+		return nil, nil, errRefundCoin
 	}
 
-	ringSignInfo, err := FetchRingSignInfo(evm.StateDB, contract.CallerAddress.Bytes(), RefundStruct.RingSignedData)
+	ringSignInfo, err := FetchRingSignInfo(stateDB, from, RefundStruct.RingSignedData)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ringSignInfo.OTABalance.Cmp(RefundStruct.Value) != 0 {
-		return nil, ErrMismatchedValue
+		return nil, nil, ErrMismatchedValue
 	}
 
 	kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
-	exit, _, err := CheckOTAImageExit(evm.StateDB, kix)
+	exit, _, err := CheckOTAImageExit(stateDB, kix)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if exit {
+		return nil, nil, ErrOTAReused
+	}
+
+	return kix, RefundStruct.Value, nil
+
+}
+
+func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	kix, value, err := c.ValidRefundReq(evm.StateDB, all, contract.CallerAddress.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	if exit {
-		return nil, ErrOTAReused
-	}
-
-	AddOTAImage(evm.StateDB, kix, RefundStruct.Value.Bytes())
+	AddOTAImage(evm.StateDB, kix, value.Bytes())
 	addrSrc := contract.CallerAddress
-	evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
+	evm.StateDB.AddBalance(addrSrc, value)
 	return []byte{1}, nil
 
 }

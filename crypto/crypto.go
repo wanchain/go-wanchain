@@ -493,7 +493,7 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 
 //VerifyRingSign 验证环签名
 func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
-	if PublicKeys == nil || I == nil || c == nil || r == nil {
+	if M == nil || PublicKeys == nil || I == nil || c == nil || r == nil {
 		return false
 	}
 
