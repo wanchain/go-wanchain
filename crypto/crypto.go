@@ -502,6 +502,12 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	}
 
 	n := len(PublicKeys)
+	for i := 0; i < n; i++ {
+		if PublicKeys[i] == nil || PublicKeys[i].X == nil || PublicKeys[i].Y == nil ||
+			c[i] == nil || r[i] == nil {
+			return false
+		}
+	}
 
 	log.Debug("M info", "R", 0, "M", common.ToHex(M))
 	for i := 0; i < n; i++ {
