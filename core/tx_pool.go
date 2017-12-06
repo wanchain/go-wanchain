@@ -600,7 +600,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Check precompile aontracts transactions validation
 	if tx.To() != nil {
 		if p := vm.PrecompiledContractsByzantium[*tx.To()]; p != nil {
-			if err = p.InvalidTx(pool.currentState, pool.signer, tx); err != nil {
+			if err = p.ValidTx(pool.currentState, pool.signer, tx); err != nil {
 				return err
 			}
 		}

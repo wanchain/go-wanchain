@@ -78,7 +78,7 @@ func (c *ecrecover) Run(input []byte, contract *Contract, evm *EVM) ([]byte, err
 	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
 }
 
-func (c *ecrecover) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *ecrecover) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	return h[:], nil
 }
 
-func (c *sha256hash) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *sha256hash) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -117,7 +117,7 @@ func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
-func (c *ripemd160hash) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *ripemd160hash) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) 
 	return in, nil
 }
 
-func (c *dataCopy) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *dataCopy) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -244,7 +244,7 @@ func (c *bigModExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, err
 	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
-func (c *bigModExp) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *bigModExp) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -312,7 +312,7 @@ func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, erro
 	return res.Marshal(), nil
 }
 
-func (c *bn256Add) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *bn256Add) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -334,7 +334,7 @@ func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	return res.Marshal(), nil
 }
 
-func (c *bn256ScalarMul) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *bn256ScalarMul) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -386,7 +386,7 @@ func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, 
 	return false32Byte, nil
 }
 
-func (c *bn256Pairing) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *bn256Pairing) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
 
@@ -649,7 +649,7 @@ func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, 
 	return nil, errMethodId
 }
 
-func (c *wanchainStampSC) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *wanchainStampSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	if stateDB == nil || signer == nil || tx == nil {
 		return errParameters
 	}
@@ -800,7 +800,7 @@ func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error)
 	return nil, errMethodId
 }
 
-func (c *wanCoinSC) InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *wanCoinSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	if stateDB == nil || signer == nil || tx == nil {
 		return errParameters
 	}

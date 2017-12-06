@@ -47,7 +47,7 @@ var (
 type PrecompiledContract interface {
 	RequiredGas(input []byte) uint64                                // RequiredPrice calculates the contract gas use
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) // Run runs the precompiled contract
-	InvalidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error
+	ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error
 }
 
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
