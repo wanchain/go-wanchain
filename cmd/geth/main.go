@@ -155,6 +155,7 @@ func init() {
 		// See accountcmd.go:
 		accountCommand,
 		walletCommand,
+		transactionCommand,
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,

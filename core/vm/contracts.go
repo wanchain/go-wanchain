@@ -28,6 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/log"
@@ -77,6 +78,10 @@ func (c *ecrecover) Run(input []byte, contract *Contract, evm *EVM) ([]byte, err
 	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
 }
 
+func (c *ecrecover) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
 // SHA256 implemented as a native contract.
 type sha256hash struct{}
 
@@ -90,6 +95,10 @@ func (c *sha256hash) RequiredGas(input []byte) uint64 {
 func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	h := sha256.Sum256(input)
 	return h[:], nil
+}
+
+func (c *sha256hash) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
 }
 
 // RIPMED160 implemented as a native contract.
@@ -108,6 +117,10 @@ func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
+func (c *ripemd160hash) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
 // data copy implemented as a native contract.
 type dataCopy struct{}
 
@@ -120,6 +133,10 @@ func (c *dataCopy) RequiredGas(input []byte) uint64 {
 }
 func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return in, nil
+}
+
+func (c *dataCopy) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
 }
 
 // bigModExp implements a native big integer exponential modular operation.
@@ -227,6 +244,10 @@ func (c *bigModExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, err
 	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
+func (c *bigModExp) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
 var (
 	// errNotOnCurve is returned if a point being unmarshalled as a bn256 elliptic
 	// curve point is not on the curve.
@@ -235,6 +256,9 @@ var (
 	// errInvalidCurvePoint is returned if a point being unmarshalled as a bn256
 	// elliptic curve point is invalid.
 	errInvalidCurvePoint = errors.New("invalid elliptic curve point")
+
+	// invalid ring signed info
+	errInvalidRingSigned = errors.New("invalid ring signed info")
 )
 
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
@@ -288,6 +312,10 @@ func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, erro
 	return res.Marshal(), nil
 }
 
+func (c *bn256Add) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
 // bn256ScalarMul implements a native elliptic curve scalar multiplication.
 type bn256ScalarMul struct{}
 
@@ -304,6 +332,10 @@ func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	res := new(bn256.G1)
 	res.ScalarMult(p, new(big.Int).SetBytes(getData(input, 64, 32)))
 	return res.Marshal(), nil
+}
+
+func (c *bn256ScalarMul) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
 }
 
 var (
@@ -352,6 +384,10 @@ func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, 
 		return true32Byte, nil
 	}
 	return false32Byte, nil
+}
+
+func (c *bn256Pairing) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
 }
 
 ///////////////////////for wan privacy tx /////////////////////////////////////////////////////////
@@ -514,6 +550,12 @@ var (
 
 	errCoinValue = errors.New("wancoin value is not support")
 
+	ErrMismatchedValue = errors.New("mismatched wancoin value")
+
+	ErrInvalidOTASet = errors.New("invalid OTA mix set")
+
+	ErrOTAReused = errors.New("OTA is reused")
+
 	StampValueSet   = make(map[string]string, 5)
 	WanCoinValueSet = make(map[string]string, 10)
 )
@@ -605,6 +647,61 @@ func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, 
 	}
 
 	return nil, errMethodId
+}
+
+func (c *wanchainStampSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	if stateDB == nil || signer == nil || tx == nil {
+		return errParameters
+	}
+
+	payload := tx.Data()
+	if payload == nil || len(payload) < 4 {
+		return errParameters
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], payload[:4])
+	if methodId == stBuyId {
+		var StampInput struct {
+			OtaAddr string
+			Value   *big.Int
+		}
+
+		payload = payload[4:]
+		err := stampAbi.Unpack(&StampInput, "buyStamp", payload)
+		if err != nil {
+			return errBuyStamp
+		}
+
+		if StampInput.Value.Cmp(tx.Value()) != 0 {
+			return ErrMismatchedValue
+		}
+
+		_, ok := StampValueSet[StampInput.Value.Text(16)]
+		if !ok {
+			return errStampValue
+		}
+
+		wanAddr, err := hexutil.Decode(StampInput.OtaAddr)
+		if err != nil {
+			return err
+		}
+
+		ax, err := GetAXFromWanAddr(wanAddr)
+		exit, _, err := CheckOTAExit(stateDB, ax)
+		if err != nil {
+			return err
+		}
+
+		if exit {
+			return ErrOTAReused
+		}
+
+		return nil
+
+	}
+
+	return nil
 }
 
 func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -703,6 +800,101 @@ func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error)
 	return nil, errMethodId
 }
 
+func (c *wanCoinSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	if stateDB == nil || signer == nil || tx == nil {
+		return errParameters
+	}
+
+	payload := tx.Data()
+	if payload == nil || len(payload) < 4 {
+		return errParameters
+	}
+
+	var methodIdArr [4]byte
+	copy(methodIdArr[:], payload[:4])
+
+	if methodIdArr == buyIdArr {
+
+		var outStruct struct {
+			OtaAddr string
+			Value   *big.Int
+		}
+
+		payload = payload[4:]
+		err := coinAbi.Unpack(&outStruct, "buyCoinNote", payload)
+		if err != nil {
+			return errBuyCoin
+		}
+
+		if outStruct.Value.Cmp(tx.Value()) != 0 {
+			return ErrMismatchedValue
+		}
+
+		_, ok := WanCoinValueSet[outStruct.Value.Text(16)]
+		if !ok {
+			return errStampValue
+		}
+
+		wanAddr, err := hexutil.Decode(outStruct.OtaAddr)
+		if err != nil {
+			return err
+		}
+
+		ax, err := GetAXFromWanAddr(wanAddr)
+		exit, _, err := CheckOTAExit(stateDB, ax)
+		if err != nil {
+			return err
+		}
+
+		if exit {
+			return ErrOTAReused
+		}
+
+		return nil
+
+	} else if methodIdArr == refundIdArr {
+
+		var RefundStruct struct {
+			RingSignedData string
+			Value          *big.Int
+		}
+
+		payload = payload[4:]
+		err := coinAbi.Unpack(&RefundStruct, "refundCoin", payload)
+		if err != nil {
+			return errRefundCoin
+		}
+
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return err
+		}
+
+		ringSignInfo, err := FetchRingSignInfo(stateDB, from.Bytes(), RefundStruct.RingSignedData)
+		if err != nil {
+			return err
+		}
+
+		if ringSignInfo.OTABalance.Cmp(RefundStruct.Value) != 0 {
+			return ErrMismatchedValue
+		}
+
+		kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
+		exit, _, err := CheckOTAImageExit(stateDB, kix)
+		if err != nil {
+			return err
+		}
+
+		if exit {
+			return ErrOTAReused
+		}
+
+		return nil
+	}
+
+	return nil
+}
+
 var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
@@ -746,34 +938,6 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 }
 
-func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
-	ss := strings.Split(s, "+")
-	ps := ss[0]
-	k := ss[1]
-	ws := ss[2]
-	qs := ss[3]
-
-	pa := strings.Split(ps, "&")
-	publickeys := make([]*ecdsa.PublicKey, 0)
-	for _, pi := range pa {
-		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
-	}
-	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
-	wa := strings.Split(ws, "&")
-	w := make([]*big.Int, 0)
-	for _, wi := range wa {
-		bi, _ := hexutil.DecodeBig(wi)
-		w = append(w, bi)
-	}
-	qa := strings.Split(qs, "&")
-	q := make([]*big.Int, 0)
-	for _, qi := range qa {
-		bi, _ := hexutil.DecodeBig(qi)
-		q = append(q, bi)
-	}
-	return nil, publickeys, keyimgae, w, q
-}
-
 func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var RefundStruct struct {
 		RingSignedData string
@@ -785,49 +949,135 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, errRefundCoin
 	}
 
-	err, publickeys, keyimage, ws, qs := DecodeRingSignOut(RefundStruct.RingSignedData)
+	ringSignInfo, err := FetchRingSignInfo(evm.StateDB, contract.CallerAddress.Bytes(), RefundStruct.RingSignedData)
 	if err != nil {
-		return nil, errRefundCoin
+		return nil, err
 	}
 
-	otaAXs := make([][]byte, 0, len(publickeys))
-	for i := 0; i < len(publickeys); i++ {
-		pkBytes := crypto.FromECDSAPub(publickeys[i])
+	if ringSignInfo.OTABalance.Cmp(RefundStruct.Value) != 0 {
+		return nil, ErrMismatchedValue
+	}
+
+	kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
+	exit, _, err := CheckOTAImageExit(evm.StateDB, kix)
+	if err != nil {
+		return nil, err
+	}
+
+	if exit {
+		return nil, ErrOTAReused
+	}
+
+	AddOTAImage(evm.StateDB, kix, RefundStruct.Value.Bytes())
+	addrSrc := contract.CallerAddress
+	evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
+	return []byte{1}, nil
+
+}
+
+func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+	ss := strings.Split(s, "+")
+	ps := ss[0]
+	k := ss[1]
+	ws := ss[2]
+	qs := ss[3]
+
+	pa := strings.Split(ps, "&")
+	publickeys := make([]*ecdsa.PublicKey, 0)
+	for _, pi := range pa {
+		publickey := crypto.ToECDSAPub(common.FromHex(pi))
+		if publickey == nil || publickey.X == nil || publickey.Y == nil {
+			return errInvalidRingSigned, nil, nil, nil, nil
+		}
+
+		publickeys = append(publickeys, publickey)
+	}
+
+	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
+	if keyimgae == nil || keyimgae.X == nil || keyimgae.Y == nil {
+		return errInvalidRingSigned, nil, nil, nil, nil
+	}
+
+	wa := strings.Split(ws, "&")
+	w := make([]*big.Int, 0)
+	for _, wi := range wa {
+		bi, err := hexutil.DecodeBig(wi)
+		if bi == nil || err != nil {
+			return errInvalidRingSigned, nil, nil, nil, nil
+		}
+
+		w = append(w, bi)
+	}
+
+	qa := strings.Split(qs, "&")
+	q := make([]*big.Int, 0)
+	for _, qi := range qa {
+		bi, err := hexutil.DecodeBig(qi)
+		if bi == nil || err != nil {
+			return errInvalidRingSigned, nil, nil, nil, nil
+		}
+
+		q = append(q, bi)
+	}
+
+	return nil, publickeys, keyimgae, w, q
+}
+
+type RingSignInfo struct {
+	PublicKeys []*ecdsa.PublicKey
+	KeyImage   *ecdsa.PublicKey
+	W_Random   []*big.Int
+	Q_Random   []*big.Int
+	OTABalance *big.Int
+}
+
+func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) (info *RingSignInfo, err error) {
+	if stateDB == nil || hashInput == nil {
+		return nil, errParameters
+	}
+
+	infoTmp := new(RingSignInfo)
+
+	//
+	err, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random = DecodeRingSignOut(ringSignedStr)
+	if err != nil {
+		return
+	}
+
+	//
+	otaAXs := make([][]byte, 0, len(infoTmp.PublicKeys))
+	for i := 0; i < len(infoTmp.PublicKeys); i++ {
+		pkBytes := crypto.FromECDSAPub(infoTmp.PublicKeys[i])
 		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
 	}
 
-	exit, balanceGet, unexit, err := BatCheckOTAExit(evm.StateDB, otaAXs)
-	if !exit || balanceGet == nil || balanceGet.Cmp(RefundStruct.Value) != 0 {
+	exit, balanceGet, unexit, err := BatCheckOTAExit(stateDB, otaAXs)
+	if !exit || balanceGet == nil {
 		if err != nil {
 			log.Warn("verify mix ota fail", "err", err.Error())
 		}
 		if unexit != nil {
 			log.Warn("invalid mix ota", "invalid ota", common.ToHex(unexit))
 		}
-		if balanceGet != nil && balanceGet.Cmp(RefundStruct.Value) != 0 {
-			log.Warn("balance getting from ota is wrong", "get", balanceGet.String(),
-				"expect", RefundStruct.Value.String())
-		} else {
-			return nil, errBalance
+		if balanceGet == nil {
+			log.Warn("balance getting from ota is wrong!")
 		}
+
+		if err == nil {
+			err = ErrInvalidOTASet
+		}
+
+		return
 	}
 
-	kix := crypto.FromECDSAPub(keyimage)
-	exit, _, err = CheckOTAImageExit(evm.StateDB, kix)
-	if err != nil || exit {
-		return nil, errRefundCoin
+	infoTmp.OTABalance = balanceGet
+
+	//
+	valid := crypto.VerifyRingSign(hashInput, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random)
+	if !valid {
+		return nil, errInvalidRingSigned
 	}
 
-	b := crypto.VerifyRingSign(contract.CallerAddress.Bytes(), publickeys, keyimage, ws, qs)
-	if b {
-
-		AddOTAImage(evm.StateDB, kix, RefundStruct.Value.Bytes())
-
-		addrSrc := contract.CallerAddress
-		evm.StateDB.AddBalance(addrSrc, RefundStruct.Value)
-		return []byte{1}, nil
-	} else {
-		return nil, errRefundCoin
-	}
-
+	//
+	return infoTmp, nil
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
@@ -593,6 +594,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	} else {
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
+		}
+	}
+
+	// Check precompile aontracts transactions validation
+	if tx.To() != nil {
+		if p := vm.PrecompiledContractsByzantium[*tx.To()]; p != nil {
+			if err = p.ValidTx(pool.currentState, pool.signer, tx); err != nil {
+				return err
+			}
 		}
 	}
 

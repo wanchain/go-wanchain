@@ -42,6 +42,20 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	}
 }
 
+func TestDefaultTestnetGenesisBlock(t *testing.T) {
+	block, _ := DefaultTestnetGenesisBlock().ToBlock()
+
+	fmt.Print(common.ToHex(block.Hash().Bytes()))
+
+	if block.Hash() != params.MainnetGenesisHash {
+		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
+	}
+	block, _ = DefaultTestnetGenesisBlock().ToBlock()
+	if block.Hash() != params.TestnetGenesisHash {
+		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	}
+}
+
 func TestSetupGenesis(t *testing.T) {
 	var (
 		customghash = common.HexToHash("0x89c99d90b79719238d2645c7642f2c9295246e80775b38cfd162b696817fbd50")

@@ -23,7 +23,6 @@ import (
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -323,34 +322,6 @@ func init() {
 	}
 }
 
-func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
-	ss := strings.Split(s, "+")
-	ps := ss[0]
-	k := ss[1]
-	ws := ss[2]
-	qs := ss[3]
-
-	pa := strings.Split(ps, "&")
-	publickeys := make([]*ecdsa.PublicKey, 0)
-	for _, pi := range pa {
-		publickeys = append(publickeys, crypto.ToECDSAPub(common.FromHex(pi)))
-	}
-	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
-	wa := strings.Split(ws, "&")
-	w := make([]*big.Int, 0)
-	for _, wi := range wa {
-		bi, _ := hexutil.DecodeBig(wi)
-		w = append(w, bi)
-	}
-	qa := strings.Split(qs, "&")
-	q := make([]*big.Int, 0)
-	for _, qi := range qa {
-		bi, _ := hexutil.DecodeBig(qi)
-		q = append(q, bi)
-	}
-	return nil, publickeys, keyimgae, w, q
-}
-
 type PrivicyTxInfo struct {
 	PublicKeys   []*ecdsa.PublicKey
 	KeyImage     *ecdsa.PublicKey
@@ -368,63 +339,34 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 		CxtCallParams  []byte
 	}
 
-	infoTmp := new(PrivicyTxInfo)
 	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
 	if err != nil {
 		return
 	}
 
-	infoTmp.CallData = TxDataWithRing.CxtCallParams[:]
-
-	//
-	err, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random = DecodeRingSignOut(TxDataWithRing.RingSignedData)
+	ringSignInfo, err := vm.FetchRingSignInfo(stateDB, hashInput, TxDataWithRing.RingSignedData)
 	if err != nil {
 		return
 	}
 
-	//
-	otaAXs := make([][]byte, 0, len(infoTmp.PublicKeys))
-	for i := 0; i < len(infoTmp.PublicKeys); i++ {
-		pkBytes := crypto.FromECDSAPub(infoTmp.PublicKeys[i])
-		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
-	}
-
-	exit, balanceGet, unexit, err := vm.BatCheckOTAExit(stateDB, otaAXs)
-	if !exit || balanceGet == nil {
-		if err != nil {
-			log.Warn("verify mix ota fail", "err", err.Error())
-		}
-		if unexit != nil {
-			log.Warn("invalid mix ota", "invalid ota", common.ToHex(unexit))
-		}
-		if balanceGet == nil {
-			log.Warn("balance getting from ota is wrong!")
-		}
-
-		return
-	}
-
-	infoTmp.StampBalance = balanceGet
-
-	//
-	b := crypto.VerifyRingSign(hashInput, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random)
-	if !b {
-		return nil, errors.New("ring sign is invalid!")
-	}
-
-	//
-	infoTmp.StampGas = new(big.Int).Div(balanceGet, gasPrice).Uint64()
-
-	mixLen := len(infoTmp.PublicKeys)
+	stampGas := new(big.Int).Div(ringSignInfo.OTABalance, gasPrice).Uint64()
+	mixLen := len(ringSignInfo.PublicKeys)
 	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
-	if infoTmp.StampGas < ringSigDiffRequiredGas {
+	if stampGas < ringSigDiffRequiredGas {
 		return nil, vm.ErrOutOfGas
 	}
 
-	infoTmp.StampGas -= ringSigDiffRequiredGas
+	stampGas -= ringSigDiffRequiredGas
 
-	//
-	info = infoTmp
+	info = &PrivicyTxInfo{
+		ringSignInfo.PublicKeys,
+		ringSignInfo.KeyImage,
+		ringSignInfo.W_Random,
+		ringSignInfo.Q_Random,
+		TxDataWithRing.CxtCallParams[:],
+		ringSignInfo.OTABalance,
+		stampGas,
+	}
 	return
 }
 

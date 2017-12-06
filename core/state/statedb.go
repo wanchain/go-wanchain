@@ -496,6 +496,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	}
 }
 
+// cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
 	so := db.getStateObject(addr)
 	if so == nil {
@@ -504,7 +505,9 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 
 	// When iterating over the storage check the cache first
 	for h, value := range so.cachedStorageByteArray {
-		cb(h, value)
+		if !cb(h, value) {
+			return
+		}
 	}
 
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
@@ -512,7 +515,9 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
 		if _, ok := so.cachedStorage[key]; !ok {
-			cb(key, it.Value)
+			if !cb(key, it.Value) {
+				return
+			}
 		}
 	}
 }
