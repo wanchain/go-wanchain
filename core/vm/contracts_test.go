@@ -739,9 +739,9 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err != nil {
-			t.Error("wanCoinSC, invalidation check fail. err:", err.Error())
+			t.Error("wanCoinSC, validation check. err:", err.Error())
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -753,9 +753,9 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: OTA is reused")
+			t.Error("wanCoinSC, validation check. except err: OTA is reused")
 		}
 	}
 
@@ -772,9 +772,9 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: error in buy coin")
+			t.Error("wanCoinSC, validation check. except err: error in buy coin")
 		}
 	}
 
@@ -791,9 +791,9 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: error in buy coin")
+			t.Error("wanCoinSC, validation check. except err: error in buy coin")
 		}
 	}
 
@@ -810,9 +810,9 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: stamp value is not support")
+			t.Error("wanCoinSC, validation check. except err: stamp value is not support")
 		}
 	}
 }
@@ -851,9 +851,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, ota balance is 0!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, ota balance is 0!")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -883,9 +883,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err != nil {
-			t.Error("wanCoinSC, invalidation check fail. err:", err.Error())
+			t.Error("wanCoinSC, validation check. err:", err.Error())
 		}
 	}
 
@@ -902,9 +902,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, ota balance is 0!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, ota balance is 0!")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -934,9 +934,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err != nil {
-			t.Error("wanCoinSC, invalidation check fail. err:", err.Error())
+			t.Error("wanCoinSC, validation check. err:", err.Error())
 		}
 
 		image := common.FromHex(imageKey)
@@ -945,9 +945,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Error("add ota image fail. err:", err.Error())
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err:OTA is reused")
+			t.Error("wanCoinSC, validation check. except err:OTA is reused")
 		}
 	}
 
@@ -964,9 +964,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: error in refund coin")
+			t.Error("wanCoinSC, validation check. except err: error in refund coin")
 		}
 	}
 
@@ -983,9 +983,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: invalid ring signed info")
+			t.Error("wanCoinSC, validation check. except err: invalid ring signed info")
 		}
 	}
 
@@ -1002,9 +1002,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: invalid ring signed info")
+			t.Error("wanCoinSC, validation check. except err: invalid ring signed info")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -1034,9 +1034,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: invalid ring signed info")
+			t.Error("wanCoinSC, validation check. except err: invalid ring signed info")
 		}
 	}
 
@@ -1053,9 +1053,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: invalid ring signed info")
+			t.Error("wanCoinSC, validation check. except err: invalid ring signed info")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -1085,9 +1085,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: invalid ring signed info")
+			t.Error("wanCoinSC, validation check. except err: invalid ring signed info")
 		}
 	}
 
@@ -1104,9 +1104,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, ota balance is 0!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, ota balance is 0!")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -1136,9 +1136,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, otas have different balances!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, otas have different balances!")
 		}
 	}
 
@@ -1155,9 +1155,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcsc wanCoinSC
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, ota balance is 0!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, ota balance is 0!")
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
@@ -1187,9 +1187,9 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcsc.InvalidTx(statedb, signer, &tx)
+		err = wcsc.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("wanCoinSC, invalidation check fail. except err: BatCheckOTAExit, otas have different balances!")
+			t.Error("wanCoinSC, validation check. except err: BatCheckOTAExit, otas have different balances!")
 		}
 	}
 
@@ -1223,9 +1223,9 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcst wanchainStampSC
-		err = wcst.InvalidTx(statedb, signer, &tx)
+		err = wcst.ValidTx(statedb, signer, &tx)
 		if err != nil {
-			t.Error("WanchainStampSC, invalidation check fail. err: ", err.Error())
+			t.Error("WanchainStampSC, validation check. err: ", err.Error())
 		}
 
 		otaAddr := common.FromHex(stampOTA)
@@ -1237,9 +1237,9 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 			t.Errorf("add ota addr to statedb fail.")
 		}
 
-		err = wcst.InvalidTx(statedb, signer, &tx)
+		err = wcst.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("WanchainStampSC, invalidation check fail. except err: OTA is reused")
+			t.Error("WanchainStampSC, validation check. except err: OTA is reused")
 		}
 	}
 
@@ -1256,9 +1256,9 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcst wanchainStampSC
-		err = wcst.InvalidTx(statedb, signer, &tx)
+		err = wcst.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("WanchainStampSC, invalidation check fail. except err: error in buy stamp")
+			t.Error("WanchainStampSC, validation check. except err: error in buy stamp")
 		}
 	}
 
@@ -1275,9 +1275,9 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcst wanchainStampSC
-		err = wcst.InvalidTx(statedb, signer, &tx)
+		err = wcst.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("WanchainStampSC, invalidation check fail. except err: mismatched wancoin value")
+			t.Error("WanchainStampSC, validation check. except err: mismatched wancoin value")
 		}
 	}
 
@@ -1294,9 +1294,9 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 		signer := types.NewEIP155Signer(big.NewInt(1))
 
 		var wcst wanchainStampSC
-		err = wcst.InvalidTx(statedb, signer, &tx)
+		err = wcst.ValidTx(statedb, signer, &tx)
 		if err == nil {
-			t.Error("WanchainStampSC, invalidation check fail. except err: stamp value is not support")
+			t.Error("WanchainStampSC, validation check. except err: stamp value is not support")
 		}
 	}
 

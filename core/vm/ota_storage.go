@@ -58,7 +58,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 		return nil, errors.New("GetOtaBalanceFromWanAddr， invalid input param!")
 	}
 
-	otaAX := otaWanAddr[1 : 1+common.HashLength]
+	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
 	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
 	if balance == nil || len(balance) == 0 {
 		return common.Big0, nil
@@ -135,7 +135,7 @@ func SetOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
 		return errors.New("SetOTA, invalid input param!")
 	}
 
-	otaAX := otaWanAddr[1 : 1+common.HashLength]
+	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
 	balanceOld, err := GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		return err
@@ -155,7 +155,8 @@ func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool
 		return false, errors.New("AddOTAIfNotExit, invalid input param!")
 	}
 
-	otaAddrKey := common.BytesToHash(otaWanAddr[1 : 1+common.HashLength])
+	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
+	otaAddrKey := common.BytesToHash(otaAX)
 	exit, _, err := CheckOTAExit(statedb, otaAddrKey[:])
 	if err != nil {
 		return false, err
