@@ -386,63 +386,99 @@ func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 	return
 }
 
+var (
+	ErrInvalidRingSignParams = errors.New("invalid ring sign params")
+	ErrRingSignFail          = errors.New("ring sign fail")
+)
+
 //明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
 //2528 Pengbo add Shi TeemoGuo revise
-func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
+func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int, error) {
+	if M == nil || x == nil || PublicKeys == nil || len(PublicKeys) == 0 {
+		return nil, nil, nil, nil, ErrInvalidRingSignParams
+	}
+
+	for _, publicKey := range PublicKeys {
+		if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
+			return nil, nil, nil, nil, ErrInvalidRingSignParams
+		}
+	}
+
 	n := len(PublicKeys)
-	//	fmt.Println(n)
-	//n := 10
 	I := xScalarHashP(x.Bytes(), PublicKeys[0]) //Key Image
-	s := Mrand.Intn(n)                          //s位放主签名公钥
+	if I == nil || I.X == nil || I.Y == nil {
+		return nil, nil, nil, nil, ErrRingSignFail
+	}
+
+	s := Mrand.Intn(n) //s位放主签名公钥
 	if s > 0 {
-		//s = s - 1
 		PublicKeys[0], PublicKeys[s] = PublicKeys[s], PublicKeys[0] //交换位置
 	}
-	//fmt.Println("s=", s)
-
-	//PublicKeys[n] = &P.PublicKey//P的公钥放在第n位,0....n
 
 	var (
 		q = make([]*big.Int, n)
 		w = make([]*big.Int, n)
-		//q = *new([10]*big.Int)
-		//w = *new([10]*big.Int)
 	)
+
 	SumC := new(big.Int).SetInt64(0)
 	Lpub := new(ecdsa.PublicKey)
 	d := sha3.NewKeccak256()
 	d.Write(M)
-	//hash(M,Li,Ri)
+
+	var err error
 	for i := 0; i < n; i++ {
-		q[i], _ = randFieldElement2528(rand.Reader)
-		w[i], _ = randFieldElement2528(rand.Reader)
+		q[i], err = randFieldElement2528(rand.Reader)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+
+		w[i], err = randFieldElement2528(rand.Reader)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
 
 		Lpub.X, Lpub.Y = S256().ScalarBaseMult(q[i].Bytes()) //[qi]G
+		if Lpub.X == nil || Lpub.Y == nil {
+			return nil, nil, nil, nil, ErrRingSignFail
+		}
+
 		if i != s {
 			Ppub := new(ecdsa.PublicKey)
 			Ppub.X, Ppub.Y = S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, w[i].Bytes()) //[wi]Pi
-			Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y)                        //[qi]G+[wi]Pi
+			if Ppub.X == nil || Ppub.Y == nil {
+				return nil, nil, nil, nil, ErrRingSignFail
+			}
+
+			Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[qi]G+[wi]Pi
 
 			SumC.Add(SumC, w[i])
 			SumC.Mod(SumC, secp256k1_N)
 		}
-		//fmt.Printf("L%d\t%x\n", i, FromECDSAPub(Lpub))
+
 		d.Write(FromECDSAPub(Lpub))
 	}
+
 	Rpub := new(ecdsa.PublicKey)
 	for i := 0; i < n; i++ {
 		Rpub = xScalarHashP(q[i].Bytes(), PublicKeys[i]) //[qi]HashPi
+		if Rpub == nil || Rpub.X == nil || Rpub.Y == nil {
+			return nil, nil, nil, nil, ErrRingSignFail
+		}
+
 		if i != s {
 			Ppub := new(ecdsa.PublicKey)
-			Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, w[i].Bytes())  //[wi]I
+			Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, w[i].Bytes()) //[wi]I
+			if Ppub.X == nil || Ppub.Y == nil {
+				return nil, nil, nil, nil, ErrRingSignFail
+			}
+
 			Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
 		}
-		//fmt.Printf("R%d\t%x\n", i, FromECDSAPub(Rpub))
 
 		d.Write(FromECDSAPub(Rpub))
 	}
-	Cs := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
 
+	Cs := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
 	Cs.Sub(Cs, SumC)
 	Cs.Mod(Cs, secp256k1_N)
 
@@ -452,14 +488,26 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 	w[s] = Cs
 	q[s] = Rs
 
-	return PublicKeys, I, w, q
+	return PublicKeys, I, w, q, nil
 }
 
 //VerifyRingSign 验证环签名
 func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
+	if M == nil || PublicKeys == nil || I == nil || c == nil || r == nil {
+		return false
+	}
 
-	ret := false
+	if len(PublicKeys) == 0 || len(PublicKeys) != len(c) || len(PublicKeys) != len(r) {
+		return false
+	}
+
 	n := len(PublicKeys)
+	for i := 0; i < n; i++ {
+		if PublicKeys[i] == nil || PublicKeys[i].X == nil || PublicKeys[i].Y == nil ||
+			c[i] == nil || r[i] == nil {
+			return false
+		}
+	}
 
 	log.Debug("M info", "R", 0, "M", common.ToHex(M))
 	for i := 0; i < n; i++ {
@@ -483,35 +531,50 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	//hash(M,Li,Ri)
 	for i := 0; i < n; i++ {
 		Lpub.X, Lpub.Y = S256().ScalarBaseMult(r[i].Bytes()) //[ri]G
+		if Lpub.X == nil || Lpub.Y == nil {
+			return false
+		}
 
 		Ppub := new(ecdsa.PublicKey)
 		Ppub.X, Ppub.Y = S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, c[i].Bytes()) //[ci]Pi
-		Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y)                        //[ri]G+[ci]Pi
+		if Ppub.X == nil || Ppub.Y == nil {
+			return false
+		}
+
+		Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[ri]G+[ci]Pi
 		SumC.Add(SumC, c[i])
 		SumC.Mod(SumC, secp256k1_N)
 		d.Write(FromECDSAPub(Lpub))
 		log.Debug("LPublicKeys", "i", i, "Lpub", common.ToHex(FromECDSAPub(Lpub)))
 	}
+
 	Rpub := new(ecdsa.PublicKey)
 	for i := 0; i < n; i++ {
 		Rpub = xScalarHashP(r[i].Bytes(), PublicKeys[i]) //[qi]HashPi
+		if Rpub == nil || Rpub.X == nil || Rpub.Y == nil {
+			return false
+		}
+
 		Ppub := new(ecdsa.PublicKey)
-		Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, c[i].Bytes())  //[wi]I
+		Ppub.X, Ppub.Y = S256().ScalarMult(I.X, I.Y, c[i].Bytes()) //[wi]I
+		if Ppub.X == nil || Ppub.Y == nil {
+			return false
+		}
+
 		Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
 		log.Debug("RPublicKeys", "i", i, "Rpub", common.ToHex(FromECDSAPub(Rpub)))
 
 		d.Write(FromECDSAPub(Rpub))
 	}
+
 	hash := new(big.Int).SetBytes(d.Sum(nil)) //hash(m,Li,Ri)
 	log.Debug("hash info", "i", 0, "hash", common.ToHex(hash.Bytes()))
 
 	hash.Mod(hash, secp256k1_N)
 	log.Debug("hash info", "i", 2, "hash", common.ToHex(hash.Bytes()))
 	log.Debug("SumC info", "i", 3, "SumC", common.ToHex(SumC.Bytes()))
-	if hash.Cmp(SumC) == 0 {
-		ret = true
-	}
-	return ret
+
+	return hash.Cmp(SumC) == 0
 }
 
 // 2528 Pengbo add TeemoGuo revise: A1=[hash([r]B)]G+A

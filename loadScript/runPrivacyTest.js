@@ -29,7 +29,7 @@ personal.unlockAccount(eth.accounts[2],"wanglu",99999);
 personal.unlockAccount(eth.accounts[9],"wanglu",99999);
 
 cnt = 0;
-eth.sendTransaction({from:eth.accounts[9], to: eth.accounts[1], value: web3.toWin(100)});
+eth.sendTransaction({from:eth.accounts[9], to: eth.accounts[1], value: web3.toWin(100000)});
 
 
 
@@ -38,9 +38,7 @@ for(;;) {
 
     console.log("begin to loop test coin index=" + cnt++)
 
-    eth.sendTransaction({from:eth.accounts[2], to: eth.accounts[1], value: web3.toWin(1)});
-
-    var tranValue = 1;
+    var tranValue = 10;
 
     abiDef = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyCoinNote","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
@@ -57,7 +55,7 @@ for(;;) {
     var wanAddr = wan.getWanAddress(eth.accounts[2]);
     var otaAddr = wan.generateOneTimeAddress(wanAddr);
 
-    txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWin(1));
+    txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWin(tranValue));
     buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWin(tranValue), data:txBuyData, gas: 1000000, gasprice:'0x' + (200000).toString(16)});
     wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 
@@ -73,7 +71,7 @@ for(;;) {
 
     console.log("Balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
     var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
-    var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(1))
+    var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(tranValue))
     var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000, gasprice:'0x' + (200000).toString(16)});
     wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
 

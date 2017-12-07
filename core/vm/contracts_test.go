@@ -681,7 +681,7 @@ func TestPrecompiledStampSCBuyStampFailWrongStampValue(t *testing.T) {
 	dbMockRetVal = nil
 
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{200})]
-	chargeValue, _ := new(big.Int).SetString(Wancoin1, 10)
+	chargeValue, _ := new(big.Int).SetString(Wancoin10, 10)
 
 	ref := &dummyCtRef{}
 
@@ -725,6 +725,10 @@ var (
 )
 
 func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
+	Wancoin1 := "1000000000000000000"
+	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
+	WanCoinValueSet[cval1.Text(16)] = Wancoin1
+
 	{
 
 		tx := types.Transaction{}
@@ -837,6 +841,9 @@ var (
 )
 
 func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
+	Wancoin1 := "1000000000000000000"
+	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
+	WanCoinValueSet[cval1.Text(16)] = Wancoin1
 
 	{
 		tx := types.Transaction{}
@@ -1211,6 +1218,10 @@ var (
 )
 
 func TestWanchainStampSC_InvalidTx(t *testing.T) {
+	Wancoin1 := "1000000000000000000"
+	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
+	WanCoinValueSet[cval1.Text(16)] = Wancoin1
+
 	{
 		tx := types.Transaction{}
 		err := tx.UnmarshalJSON([]byte(txBuyStamp))

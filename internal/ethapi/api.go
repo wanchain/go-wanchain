@@ -1319,7 +1319,11 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 		publicKeys = append(publicKeys, publicKeyA)
 	}
 
-	retPublicKeys, keyImage, w_random, q_random := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+	retPublicKeys, keyImage, w_random, q_random, err := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+	if err != nil {
+		return "", err
+	}
+
 	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
 }
 
