@@ -39,8 +39,8 @@ func TestHeaderVerification(t *testing.T) {
 		genesis   = gspec.MustCommit(testdb)
 		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
-	fmt.Println("Genesis: ", genesis.String())
-	fmt.Println("Genesis extra-data length: ", len(genesis.Extra()))
+	// fmt.Println("Genesis: ", genesis.String())
+	// fmt.Println("Genesis extra-data length: ", len(genesis.Extra()))
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
@@ -48,6 +48,17 @@ func TestHeaderVerification(t *testing.T) {
 	}
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
 	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), vm.Config{})
+
+	for i, _ := range blocks {
+		_, err := ethash.NewFaker().Seal(chain, blocks[i], nil)
+		if err != nil {
+			fmt.Println("-------------------------------------------")
+			fmt.Println(err)
+			fmt.Println("-------------------------------------------")
+		}
+		// fmt.Println("here: ", ret.String())
+	}
+
 	defer chain.Stop()
 
 	for i := 0; i < len(blocks); i++ {

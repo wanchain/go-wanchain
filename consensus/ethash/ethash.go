@@ -417,7 +417,13 @@ func NewTester() *Ethash {
 // all blocks' seal as valid, though they still have to conform to the Ethereum
 // consensus rules.
 func NewFaker() *Ethash {
-	return &Ethash{fakeMode: true}
+
+	recents, _ := lru.NewARC(256)
+
+	return &Ethash{
+		recents:  recents,
+		fakeMode: true,
+	}
 }
 
 // NewFakeFailer creates a ethash consensus engine with a fake PoW scheme that

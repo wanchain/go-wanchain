@@ -211,7 +211,7 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		time = new(big.Int).Add(parent.Time(), big.NewInt(10)) // block time is fixed at 10 seconds
 	}
 
-	fmt.Println(parent.String())
+	// fmt.Println(parent.String())
 	// fmt.Println(reflect.Typeof(parent.Extra))
 
 	return &types.Header{
@@ -228,7 +228,7 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		GasUsed:  new(big.Int),
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
 		Time:     time,
-		Extra:    parent.Extra(),
+		Extra:    make([]byte, 97),
 	}
 }
 

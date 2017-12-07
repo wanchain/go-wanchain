@@ -17,7 +17,6 @@
 package ethash
 
 import (
-	"io/ioutil"
 	"math/big"
 	"testing"
 
@@ -25,17 +24,17 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 )
 
-func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := ioutil.TempDir("", "wanchain-keystore-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	new := NewPlaintextKeyStore
-	if encrypted {
-		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
-	}
-	return d, new(d)
-}
+// func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
+// 	d, err := ioutil.TempDir("", "wanchain-keystore-test")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	new := NewPlaintextKeyStore
+// 	if encrypted {
+// 		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
+// 	}
+// 	return d, new(d)
+// }
 
 // Tests that ethash works correctly in test mode.
 func TestTestMode(t *testing.T) {
@@ -54,4 +53,5 @@ func TestTestMode(t *testing.T) {
 	if err := ethash.VerifySeal(nil, head); err != nil {
 		t.Fatalf("unexpected verification error: %v", err)
 	}
+
 }

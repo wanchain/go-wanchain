@@ -35,7 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"gopkg.in/fatih/set.v0"
+        "gopkg.in/fatih/set.v0"
 )
 
 const (
