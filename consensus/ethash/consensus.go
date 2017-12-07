@@ -757,7 +757,7 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 
 // Prepare implements consensus.Engine, initializing the difficulty field of a
 // header to conform to the ethash protocol. The changes are done inline.
-func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header, mining bool) error {
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
@@ -766,14 +766,16 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
 	defer functrace.Exit()
 
-	snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
-	if err != nil {
-		return err
-	}
+	if mining {
+		snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+		if err != nil {
+			return err
+		}
 
-	err = snap.isLegal4Sign(header.Coinbase)
-	if err != nil {
-		return err
+		err = snap.isLegal4Sign(header.Coinbase)
+		if err != nil {
+			return err
+		}
 	}
 
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
