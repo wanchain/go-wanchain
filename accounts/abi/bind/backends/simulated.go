@@ -62,10 +62,19 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	// genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
 	genesis := core.DefaultGenesisBlock()
 	genesis.MustCommit(database)
+	// blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
 	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}
 	backend.rollback()
 	return backend
+}
+
+// @anson
+func (b *SimulatedBackend) SetExtra() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	fmt.Println("current appended block: ", b.pendingBlock.Header().String())
 }
 
 // Commit imports all the pending transactions as a single block and starts a
@@ -73,6 +82,8 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 func (b *SimulatedBackend) Commit() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
+	fmt.Println("length of pending blocks: ", len([]*types.Block{b.pendingBlock}))
 
 	if _, err := b.blockchain.InsertChain([]*types.Block{b.pendingBlock}); err != nil {
 		panic(err) // This cannot happen unless the simulator is wrong, fail in that case
