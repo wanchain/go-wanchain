@@ -17,6 +17,7 @@
 package backends
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -33,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 )
@@ -41,6 +43,15 @@ import (
 var _ bind.ContractBackend = (*SimulatedBackend)(nil)
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
+
+var (
+	key, _      = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+	coinbase    = crypto.PubkeyToAddress(key.PublicKey)
+	extraVanity = 32
+	extraSeal   = 65
+	bc          *core.BlockChain
+	db          ethdb.Database
+)
 
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
@@ -59,22 +70,71 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := ethdb.NewMemDatabase()
-	// genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
 	genesis := core.DefaultGenesisBlock()
+	genesis.Coinbase = coinbase
 	genesis.MustCommit(database)
-	// blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
+	gb, _ := genesis.ToBlock()
+	fmt.Println("genesis block: ", gb.String())
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
+	bc = blockchain
+	db = database
 	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}
 	backend.rollback()
 	return backend
 }
 
 // @anson
+// Ensure the extra data has all it's components for header verification
+// Plus, set coinbase for verification
 func (b *SimulatedBackend) SetExtra() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	fmt.Println("current appended block: ", b.pendingBlock.Header().String())
+	// Assemble block
+	var tmpBlock *types.Block
+	var tmpHeader *types.Header
+	// var tmpTransactions types.Transactions
+	// var tmpUncles []*types.Header
+
+	tmpHeader = types.CopyHeader(b.pendingBlock.Header())
+
+	// make sure extra data appended
+	// fmt.Println("tmpHeader extra: ", len(tmpHeader.Extra))
+
+	if len(tmpHeader.Extra) < extraVanity {
+		tmpHeader.Extra = append(tmpHeader.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(tmpHeader.Extra))...)
+	}
+	tmpHeader.Extra = tmpHeader.Extra[:extraVanity]
+	tmpHeader.Extra = append(tmpHeader.Extra, make([]byte, extraSeal)...)
+	tmpHeader.Coinbase = coinbase
+
+	// tmpTransactions = b.pendingBlock.Transactions()
+	// tmpUncles = b.pendingBlock.Uncles()
+	// tmpBlock = types.NewBlock(tmpHeader, tmpTransactions, tmpUncles, nil)
+
+	// newEngine := ethash.NewFaker()
+
+	receipts := core.GetBlockReceipts(db, b.pendingBlock.Hash(), core.GetBlockNumber(db, b.pendingBlock.Hash()))
+
+	fmt.Println("receipts: ", receipts)
+
+	// tmpBlock = newEngine.Finalize(bc, tmpHeader, db, tmpTransactions, tmpUncles, receipts)
+
+	fmt.Println("old receiptHash: ", b.pendingBlock.ReceiptHash())
+	// b.pendingBlock = tmpBlock
+
+	// fmt.Println("tmp block txHash: ", tmpBlock.TxHash())
+	// fmt.Println("old block txHash: ", b.pendingBlock.TxHash())
+
+	// fmt.Println("tmp block root: ", tmpBlock.Root())
+	// fmt.Println("old block root: ", b.pendingBlock.Root())
+
+	fmt.Println("tmp receiptHash: ", tmpBlock.ReceiptHash())
+	// fmt.Println("old receiptHash: ", b.pendingBlock.ReceiptHash())
+
+	// fmt.Println("temporary block: ", tmpBlock.String())
+	// fmt.Println("current appended block: ", b.pendingBlock.String())
+	// fmt.Println("current appended block header: ", b.pendingBlock.Header().String())
 }
 
 // Commit imports all the pending transactions as a single block and starts a
@@ -328,5 +388,4 @@ func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
 func (m callmsg) Gas() *big.Int        { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
 func (m callmsg) Data() []byte         { return m.CallMsg.Data }
-
-func (m callmsg) TxType() uint64 { return m.CallMsg.TxType }
+func (m callmsg) TxType() uint64       { return m.CallMsg.TxType }

@@ -419,10 +419,12 @@ func NewTester() *Ethash {
 func NewFaker() *Ethash {
 
 	recents, _ := lru.NewARC(256)
+	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
 		recents:  recents,
 		fakeMode: true,
+		db:       db,
 	}
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
@@ -312,10 +313,14 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 
 // DefaultPPOWTestingGenesisBlock returns the Wanchain ppow testing genesis block
 func DefaultPPOWTestingGenesisBlock() *Genesis {
+
+	key, _ := crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+	coinbase := crypto.PubkeyToAddress(key.PublicKey)
 	return &Genesis{
+		Coinbase:   coinbase,
 		Config:     params.TestChainConfig,
 		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x35616634653064623434343837643539353033663163653539323564653633645af4e0db44487d59503f1ce5925de63da78fd645ec13904cd950bc20c349b43ea42be97b08f69cd70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		ExtraData:  hexutil.MustDecode("0xf9b32578b4420a36f132db32b56f3831a7cc1804810524175efa012446103d1a04c9f4263a962accdb05642eabc8347ec78e21bdf0d906ba579d423ab5eb9bf02a924367ed9d4f86dfcb1c572cd9a4f80036805b6846f26ac35f2a7d7eda4a2a58f08e8ef073d4e52c506f3f288faa9db1c1e5ae0f1e70f8c38eb01bce9bcb61327532dc5a540da4cf484ae57e98bc5a465c1d2afa6b9376709a525981f53d493a46ef1eb55428b3b88a222d80d23531054ef51dbd100cf8286136659a7d63a38a154e28dbf3e0fd"),
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1048576),
 	}

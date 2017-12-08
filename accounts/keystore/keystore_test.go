@@ -142,7 +142,6 @@ func TestImportExportECDSAPair(t *testing.T) {
 	if s.D.Cmp(key.PrivateKey.D) != 0 && s1.D.Cmp(key.PrivateKey2.D) != 0 {
 		t.Fatal("Import ecdsa key pair error!")
 	}
-
 }
 
 func TestSign(t *testing.T) {
@@ -413,10 +412,6 @@ func TestWalletNotifications(t *testing.T) {
 	<-updates
 	checkAccounts(t, live, ks.Wallets())
 	checkEvents(t, wantEvents, events)
-}
-
-func TestGenerateWanAddress(t *testing.T) {
-
 }
 
 // checkAccounts checks that all known live accounts are present in the wallet list.

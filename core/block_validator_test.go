@@ -17,46 +17,61 @@
 package core
 
 import (
-	"fmt"
+	"io/ioutil"
+	"os"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 )
+
+func tmpKeyStore(t *testing.T, encrypted bool) (string, *keystore.KeyStore) {
+	d, err := ioutil.TempDir("", "wanchain-keystore-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	new := keystore.NewPlaintextKeyStore
+	if encrypted {
+		new = func(kd string) *keystore.KeyStore { return keystore.NewKeyStore(kd, 2, 1) }
+	}
+	return d, new(d)
+}
 
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
 	var (
+		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
+		dir, ks   = tmpKeyStore(t, true)
 		testdb, _ = ethdb.NewMemDatabase()
-		// gspec     = &Genesis{Config: params.TestChainConfig}
 		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
 		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
-	// fmt.Println("Genesis: ", genesis.String())
-	// fmt.Println("Genesis extra-data length: ", len(genesis.Extra()))
+	defer os.RemoveAll(dir)
+
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
-		// fmt.Println(block.String())
 	}
+
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), vm.Config{})
+	ce := ethash.NewFaker()
+	ce.Authorize(coinbase, ks.SignHash)
+	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
 
 	for i, _ := range blocks {
-		_, err := ethash.NewFaker().Seal(chain, blocks[i], nil)
+		_, err := ce.Seal(chain, blocks[i], nil)
 		if err != nil {
-			fmt.Println("-------------------------------------------")
-			fmt.Println(err)
-			fmt.Println("-------------------------------------------")
 		}
-		// fmt.Println("here: ", ret.String())
 	}
 
 	defer chain.Stop()
@@ -66,7 +81,7 @@ func TestHeaderVerification(t *testing.T) {
 			var results <-chan error
 
 			if valid {
-				engine := ethash.NewFaker()
+				engine := ce
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			} else {
 				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
@@ -78,7 +93,7 @@ func TestHeaderVerification(t *testing.T) {
 				if (result == nil) != valid {
 					t.Errorf("test %d.%d: validity mismatch: have %v, want %v", i, j, result, valid)
 				}
-			case <-time.After(time.Second):
+			case <-time.After(100 * time.Second):
 				t.Fatalf("test %d.%d: verification timeout", i, j)
 			}
 			// Make sure no more data is returned

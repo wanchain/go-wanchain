@@ -21,6 +21,8 @@ import (
 	"math/big"
 
 	"crypto/ecdsa"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -28,7 +30,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"strings"
 )
 
 var (

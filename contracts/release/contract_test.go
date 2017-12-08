@@ -32,7 +32,8 @@ import (
 // contract for testing.
 func setupReleaseTest(t *testing.T, prefund ...*ecdsa.PrivateKey) (*ecdsa.PrivateKey, *ReleaseOracle, *backends.SimulatedBackend) {
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	// key, _ := crypto.GenerateKey()
+	key, _ := crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
 	auth := bind.NewKeyedTransactor(key)
 
 	alloc := core.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}}
