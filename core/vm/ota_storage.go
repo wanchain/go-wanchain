@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
@@ -199,16 +200,26 @@ func GetOTAInfoFromAX(statedb StateDB, otaAX []byte) (otaWanAddr []byte, balance
 	return nil, balance, nil
 }
 
-func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
+func OTAInSet(otaSet [][]byte, ota []byte) bool {
+	for _, exit := range otaSet {
+		if bytes.Equal(exit, ota) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
 	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
-		return nil, nil, errors.New("GetOTASet, invalid input param!")
+		return nil, nil, errors.New("invalid input param!")
 	}
 
 	balance, err = GetOtaBalanceFromAX(statedb, otaAX)
 	if err != nil {
 		return nil, nil, err
 	} else if balance == nil || balance.Cmp(common.Big0) == 0 {
-		return nil, nil, errors.New("GetOTASet, cant find ota address balance!")
+		return nil, nil, errors.New("cant find ota address balance!")
 	}
 
 	mptAddr := OTABalance2ContractAddr(balance)
@@ -218,7 +229,29 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 	rnd := rand.Intn(100) + 1
 
 	i := 0
-	loop := 0
+	loopTimes := 0
+	passNum := 0
+	mptEleCount := 0
+	randomSel := func(value []byte) bool {
+		loopTimes++
+		if loopTimes%rnd == 0 {
+			otaWanAddrs = append(otaWanAddrs, value)
+			i++
+			rnd = rand.Intn(100) + 1
+
+			// not enough, return true to continue
+			return i < setNum
+		} else {
+			// return true to continue
+			return true
+		}
+	}
+
+	isSelf := func(value []byte) bool {
+		findAX, _ := GetAXFromWanAddr(value)
+		return bytes.Equal(findAX, otaAX)
+	}
+
 	for {
 		statedb.ForEachStorageByteArray(mptAddr, func(key common.Hash, value []byte) bool {
 			if value == nil || len(value) != common.WAddressLength {
@@ -227,32 +260,76 @@ func GetOTASet(statedb StateDB, otaAX []byte, otaNum int) (otaWanAddrs [][]byte,
 				return false
 			}
 
-			loop++
-			if loop%rnd == 0 {
-				otaWanAddrs = append(otaWanAddrs, value)
-				i++
-				rnd = rand.Intn(100) + 1
+			if passNum == 0 {
+				// first pass, record total count
+				mptEleCount++
 
-				if i >= otaNum {
-					return false
+				// find self, continue
+				if isSelf(value) {
+					return true
+				}
+
+				// random select
+				return randomSel(value)
+
+			} else if passNum == 1 {
+				// second pass
+				if setNum >= mptEleCount {
+					if !OTAInSet(otaWanAddrs, value) {
+						// mpt ele less than set num, reap the one don't exit in set
+						otaWanAddrs = append(otaWanAddrs, value)
+						i++
+
+						// not enough, return true to continue
+						return i < setNum
+					} else {
+						// return true to continue
+						return true
+					}
+				} else if !OTAInSet(otaWanAddrs, value) {
+					// find self, continue
+					if isSelf(value) {
+						return true
+					}
+
+					// random select
+					return randomSel(value)
+				} else {
+					return true
+				}
+
+			} else {
+				// third or more pass
+				if setNum >= mptEleCount {
+					// random select
+					return randomSel(value)
+				} else if !OTAInSet(otaWanAddrs, value) {
+					// find self, continue
+					if isSelf(value) {
+						return true
+					}
+
+					// random select
+					return randomSel(value)
+				} else {
+					return true
 				}
 			}
-
-			// Return true, indicating we'd like to continue.
-			return true
 		})
 
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if loop == 0 {
-			return nil, balance, errors.New("GetOTASet, no ota adress in the trie! trie balance:" + balance.String())
+		if mptEleCount == 0 {
+			return nil, balance, errors.New("no ota address exit! balance:" + balance.String())
 		}
 
-		if i >= otaNum {
+		if i >= setNum {
 			return otaWanAddrs, balance, nil
 		}
+
+		passNum++
 	}
 }
 
