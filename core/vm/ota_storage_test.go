@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -403,80 +404,589 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 }
 
 func TestGetOTASet(t *testing.T) {
-	t.Logf("TestGetOTASet begin..")
-	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
-		otaShortAddr      = common.FromHex(otaShortAddrs[6])
-		otaShortAddrBytes = make([][]byte, 0, 100)
-		otaAX             = otaShortAddr[1 : 1+common.HashLength]
-		balanceSet        = big.NewInt(10)
-	)
+			otaWanAddr = common.FromHex(otaShortAddrs[6])
+			otaAX      = otaWanAddr[1 : 1+common.HashLength]
+		)
 
-	for _, otaShortAddr := range otaMixSetAddrs {
-		otaShortAddrBytes = append(otaShortAddrBytes, common.FromHex(otaShortAddr))
+		setLen := 3
+		_, _, err := GetOTASet(statedb, otaAX, setLen)
+		if err == nil {
+			t.Error("err is nil! expect err: cant find ota address balance!")
+		}
 	}
 
-	setLen := 3
-	otaShortAddrBytesGet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
-	if err == nil {
-		t.Errorf("err is nil!")
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr = common.FromHex(otaShortAddrs[6])
+			otaAX      = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet = big.NewInt(10)
+
+			setLen = 3
+		)
+
+		err := SetOtaBalanceToAX(statedb, otaAX, balanceSet)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		_, _, err = GetOTASet(statedb, otaAX, setLen)
+		if err == nil {
+			t.Error("err is nil! expect err: no ota address exit! balance:10")
+		}
+
 	}
 
-	if otaShortAddrBytesGet != nil {
-		t.Errorf("otaShortAddrBytesGet is not nil!")
+	for i := 0; i < 100; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr = common.FromHex(otaShortAddrs[6])
+			otaAX      = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet = big.NewInt(10)
+
+			setLen = 1
+		)
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		for _, otaGet := range otaSet {
+			if !bytes.Equal(otaGet, otaWanAddr) {
+				t.Error("ota addr in set is wrong! expect:", common.ToHex(otaWanAddr), ", actual:", common.ToHex(otaGet))
+			}
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
 	}
 
-	if balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("balanceGet is not 0! balanceGet:%s", balanceGet.String())
+	for i := 0; i < 100; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr = common.FromHex(otaShortAddrs[6])
+			otaAX      = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet = big.NewInt(10)
+
+			setLen = 2
+		)
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		for _, otaGet := range otaSet {
+			if !bytes.Equal(otaGet, otaWanAddr) {
+				t.Error("ota addr in set is wrong! expect:", common.ToHex(otaWanAddr), ", actual:", common.ToHex(otaGet))
+			}
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
 	}
 
-	err = SetOTA(statedb, balanceSet, otaShortAddr)
-	if err != nil {
-		t.Errorf("err:%s", err.Error())
+	for i := 0; i < 100; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr = common.FromHex(otaShortAddrs[6])
+			otaAX      = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet = big.NewInt(10)
+
+			setLen = 3
+		)
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		for _, otaGet := range otaSet {
+			if !bytes.Equal(otaGet, otaWanAddr) {
+				t.Error("ota addr in set is wrong! expect:", common.ToHex(otaWanAddr), ", actual:", common.ToHex(otaGet))
+			}
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
 	}
 
-	for _, otaShortAddrTmp := range otaShortAddrBytes {
-		t.Logf("otaShortAddrTmp len:%d", len(otaShortAddrTmp))
-		err = SetOTA(statedb, balanceSet, otaShortAddrTmp)
+	for i := 0; i < 100; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+
+			setLen = 1
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		err = SetOTA(statedb, balanceSet, otaMixSetAddrBytes[0])
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		for _, otaGet := range otaSet {
+			if !bytes.Equal(otaGet, otaMixSetAddrBytes[0]) {
+				t.Error("ota addr in set is wrong! expect:", common.ToHex(otaMixSetAddrBytes[0]), ", actual:", common.ToHex(otaGet))
+			}
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
+	}
+
+	for i := 0; i < 30; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+
+			setLen = 2
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		err = SetOTA(statedb, balanceSet, otaMixSetAddrBytes[0])
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		var otaGetAX [common.HashLength]byte
+		otaAXMap := make(map[[common.HashLength]byte]bool)
+		for _, otaGet := range otaSet {
+			AXGet, _ := GetAXFromWanAddr(otaGet)
+			copy(otaGetAX[:], AXGet)
+			otaAXMap[otaGetAX] = true
+		}
+
+		if len(otaAXMap) != 2 {
+			t.Error("otaSet's non repeating ele is wrong. expect: ", setLen, ", actual:", len(otaAXMap))
+		}
+
+		copy(otaGetAX[:], otaAX)
+		_, ok := otaAXMap[otaGetAX]
+		if !ok {
+			t.Error("otaSet wrong, don't contain self!")
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
+	}
+
+	for i := 0; i < 30; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+
+			setLen = 3
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		err = SetOTA(statedb, balanceSet, otaMixSetAddrBytes[0])
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		var otaGetAX [common.HashLength]byte
+		otaAXMap := make(map[[common.HashLength]byte]bool)
+		for _, otaGet := range otaSet {
+			AXGet, _ := GetAXFromWanAddr(otaGet)
+			copy(otaGetAX[:], AXGet)
+			otaAXMap[otaGetAX] = true
+		}
+
+		if len(otaAXMap) != 2 {
+			t.Error("otaSet's non repeating ele is wrong. expect: ", setLen, ", actual:", len(otaAXMap))
+		}
+
+		copy(otaGetAX[:], otaAX)
+		_, ok := otaAXMap[otaGetAX]
+		if !ok {
+			t.Error("otaSet wrong, don't contain self!")
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
+	}
+
+	for i := 0; i < 30; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+
+			setLen = 10
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		err = SetOTA(statedb, balanceSet, otaMixSetAddrBytes[0])
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		var otaGetAX [common.HashLength]byte
+		otaAXMap := make(map[[common.HashLength]byte]bool)
+		for _, otaGet := range otaSet {
+			AXGet, _ := GetAXFromWanAddr(otaGet)
+			copy(otaGetAX[:], AXGet)
+			otaAXMap[otaGetAX] = true
+		}
+
+		if len(otaAXMap) != 2 {
+			t.Error("otaSet's non repeating ele is wrong. expect: ", setLen, ", actual:", len(otaAXMap))
+		}
+
+		copy(otaGetAX[:], otaAX)
+		_, ok := otaAXMap[otaGetAX]
+		if !ok {
+			t.Error("otaSet wrong, don't contain self!")
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
+	}
+
+	for i := 0; i < 30; i++ {
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+
+			setLen = 10
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		err := SetOTA(statedb, balanceSet, otaWanAddr)
+		if err != nil {
+			t.Error("set ota balance fail. err:", err.Error())
+		}
+
+		for _, addrByte := range otaMixSetAddrBytes {
+			err = SetOTA(statedb, balanceSet, addrByte)
+			if err != nil {
+				t.Error("set ota balance fail. err:", err.Error())
+			}
+		}
+
+		otaSet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err != nil {
+			t.Error("get ota set fail! err: ", err.Error())
+		}
+
+		if otaSet == nil {
+			t.Error("otaSet is nil")
+		}
+
+		if len(otaSet) != setLen {
+			t.Error("otaSet len wrong! expect:", setLen, ", actual:", len(otaSet))
+		}
+
+		var otaGetAX [common.HashLength]byte
+		otaAXMap := make(map[[common.HashLength]byte]bool)
+		for _, otaGet := range otaSet {
+			AXGet, _ := GetAXFromWanAddr(otaGet)
+			copy(otaGetAX[:], AXGet)
+			otaAXMap[otaGetAX] = true
+		}
+
+		if len(otaAXMap) != setLen {
+			t.Error("otaSet's non repeating ele is wrong. expect: ", setLen, ", actual:", len(otaAXMap))
+		}
+
+		copy(otaGetAX[:], otaAX)
+		_, ok := otaAXMap[otaGetAX]
+		if ok {
+			t.Error("otaSet wrong, contain self!")
+		}
+
+		if balanceGet == nil {
+			t.Error("balance from GetOTASet is nil! expect:", balanceSet.Uint64())
+		}
+
+		if balanceSet.Cmp(balanceGet) != 0 {
+			t.Error("balance from GetOTASet is nul! expect:", balanceSet.Uint64(), ", actual:", balanceGet.Uint64())
+		}
+
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaWanAddr         = common.FromHex(otaShortAddrs[6])
+			otaMixSetAddrBytes = make([][]byte, 0, 100)
+			otaAX              = otaWanAddr[1 : 1+common.HashLength]
+			balanceSet         = big.NewInt(10)
+		)
+
+		for _, otaWanAddr := range otaMixSetAddrs {
+			otaMixSetAddrBytes = append(otaMixSetAddrBytes, common.FromHex(otaWanAddr))
+		}
+
+		setLen := 3
+		otaShortAddrBytesGet, balanceGet, err := GetOTASet(statedb, otaAX, setLen)
+		if err == nil {
+			t.Errorf("err is nil!")
+		}
+
+		if otaShortAddrBytesGet != nil {
+			t.Errorf("otaShortAddrBytesGet is not nil!")
+		}
+
+		if balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0 {
+			t.Errorf("balanceGet is not 0! balanceGet:%s", balanceGet.String())
+		}
+
+		err = SetOTA(statedb, balanceSet, otaWanAddr)
 		if err != nil {
 			t.Errorf("err:%s", err.Error())
 		}
-	}
 
-	// mem database Iterator doesnt work. unit test alwayse fail!!
-	otaShortAddrBytesGet, balanceGet, err = GetOTASet(statedb, otaAX, setLen)
-	if err != nil {
-		t.Errorf("err:%s", err.Error())
-	}
+		for _, otaShortAddrTmp := range otaMixSetAddrBytes {
+			err = SetOTA(statedb, balanceSet, otaShortAddrTmp)
+			if err != nil {
+				t.Errorf("err:%s", err.Error())
+			}
+		}
 
-	if otaShortAddrBytesGet == nil {
-		t.Errorf("otaShortAddrBytesGet is nil!")
-	}
-
-	if len(otaShortAddrBytesGet) != setLen {
-		t.Errorf("otaShortAddrBytesGet len is wrong! len:%d, expect:%d", len(otaShortAddrBytesGet), setLen)
-	}
-
-	for _, otaShortAddrGet := range otaShortAddrBytesGet {
-		otaAXGet := otaShortAddrGet[1 : 1+common.HashLength]
-		otaShortAddrReGet, balanceReGet, err := GetOTAInfoFromAX(statedb, otaAXGet)
+		// mem database Iterator doesnt work. unit test alwayse fail!!
+		otaShortAddrBytesGet, balanceGet, err = GetOTASet(statedb, otaAX, setLen)
 		if err != nil {
 			t.Errorf("err:%s", err.Error())
 		}
 
-		if common.ToHex(otaShortAddrReGet) != common.ToHex(otaShortAddrGet) {
-			t.Errorf("otaShortAddrReGet:%s, expect:%s", common.ToHex(otaShortAddrReGet), common.ToHex(otaShortAddrGet))
+		if otaShortAddrBytesGet == nil {
+			t.Errorf("otaShortAddrBytesGet is nil!")
 		}
 
-		if balanceReGet == nil {
-			t.Errorf("balanceReGet is nil!")
+		if len(otaShortAddrBytesGet) != setLen {
+			t.Errorf("otaShortAddrBytesGet len is wrong! len:%d, expect:%d", len(otaShortAddrBytesGet), setLen)
 		}
 
-		if balanceReGet.Cmp(balanceSet) != 0 {
-			t.Errorf("balanceReGet:%s, expect:%s", balanceReGet.String(), balanceSet.String())
+		for _, otaShortAddrGet := range otaShortAddrBytesGet {
+			otaAXGet := otaShortAddrGet[1 : 1+common.HashLength]
+			otaShortAddrReGet, balanceReGet, err := GetOTAInfoFromAX(statedb, otaAXGet)
+			if err != nil {
+				t.Errorf("err:%s", err.Error())
+			}
+
+			if common.ToHex(otaShortAddrReGet) != common.ToHex(otaShortAddrGet) {
+				t.Errorf("otaShortAddrReGet:%s, expect:%s", common.ToHex(otaShortAddrReGet), common.ToHex(otaShortAddrGet))
+			}
+
+			if balanceReGet == nil {
+				t.Errorf("balanceReGet is nil!")
+			}
+
+			if balanceReGet.Cmp(balanceSet) != 0 {
+				t.Errorf("balanceReGet:%s, expect:%s", balanceReGet.String(), balanceSet.String())
+			}
 		}
+
 	}
 }
 
@@ -485,11 +995,11 @@ func TestCheckOTAImageExit(t *testing.T) {
 		db, _      = ethdb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
-		otaShortAddr = common.FromHex(otaShortAddrs[7])
-		balanceSet   = big.NewInt(10)
+		otaWanAddr = common.FromHex(otaShortAddrs[7])
+		balanceSet = big.NewInt(10)
 	)
 
-	otaImage := crypto.Keccak256(otaShortAddr)
+	otaImage := crypto.Keccak256(otaWanAddr)
 	otaImageValue := balanceSet.Bytes()
 
 	exit, otaImageValueGet, err := CheckOTAImageExit(statedb, otaImage)
@@ -533,11 +1043,11 @@ func TestAddOTAImage(t *testing.T) {
 		db, _      = ethdb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
-		otaShortAddr = common.FromHex(otaShortAddrs[7])
-		balanceSet   = big.NewInt(10)
+		otaWanAddr = common.FromHex(otaShortAddrs[7])
+		balanceSet = big.NewInt(10)
 	)
 
-	otaImage := crypto.Keccak256(otaShortAddr)
+	otaImage := crypto.Keccak256(otaWanAddr)
 	otaImageValue := balanceSet.Bytes()
 
 	err := AddOTAImage(statedb, otaImage, otaImageValue)

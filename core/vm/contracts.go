@@ -940,6 +940,10 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
+	if len(ss) < 4 {
+		return errInvalidRingSigned, nil, nil, nil, nil
+	}
+
 	ps := ss[0]
 	k := ss[1]
 	ws := ss[2]
@@ -981,6 +985,10 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 		}
 
 		q = append(q, bi)
+	}
+
+	if len(publickeys) != len(w) || len(publickeys) != len(q) {
+		return errInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	return nil, publickeys, keyimgae, w, q
