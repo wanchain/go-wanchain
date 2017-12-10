@@ -1052,3 +1052,45 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 	//
 	return infoTmp, nil
 }
+
+func GetPermiWanCoinOTABalances() []*big.Int {
+	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
+	cval20, _ := new(big.Int).SetString(Wancoin20, 10)
+	cval50, _ := new(big.Int).SetString(Wancoin50, 10)
+	cval100, _ := new(big.Int).SetString(Wancoin100, 10)
+
+	cval200, _ := new(big.Int).SetString(Wancoin200, 10)
+	cval500, _ := new(big.Int).SetString(Wancoin500, 10)
+	cval1000, _ := new(big.Int).SetString(Wancoin1000, 10)
+	cval5000, _ := new(big.Int).SetString(Wancoin5000, 10)
+	cval50000, _ := new(big.Int).SetString(Wancoin50000, 10)
+
+	wancoinBalances := []*big.Int{
+		cval10,
+		cval20,
+		cval50,
+		cval100,
+
+		cval200,
+		cval500,
+		cval1000,
+		cval5000,
+		cval50000,
+	}
+
+	return wancoinBalances
+}
+
+func GetPermiStampOTABalances() []*big.Int {
+	sval01, _ := new(big.Int).SetString(WanStamp0dot1, 10)
+	sval02, _ := new(big.Int).SetString(WanStamp0dot2, 10)
+	sval05, _ := new(big.Int).SetString(WanStamp0dot5, 10)
+
+	stampBalances := []*big.Int{
+		sval01,
+		sval02,
+		sval05,
+	}
+
+	return stampBalances
+}

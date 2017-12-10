@@ -13709,6 +13709,18 @@ module.exports = XMLHttpRequest;
             inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
         });
 
+        var getPermiWanCoinOTABalances = new Method ({
+            name: 'getPermiWanCoinOTABalances',
+            call: 'wan_getPermiWanCoinOTABalances',
+            params: 0,
+        });
+
+        var getPermiStampOTABalances = new Method ({
+            name: 'getPermiStampOTABalances',
+            call: 'wan_getPermiStampOTABalances',
+            params: 0,
+        });
+
         return [
             computeOTAPPKeys,
             sendPrivacyCxtTransaction,
@@ -13718,6 +13730,8 @@ module.exports = XMLHttpRequest;
             genRingSignData,
             getOTABalance,
             scanOTAbyAccount,
+            getPermiWanCoinOTABalances,
+            getPermiStampOTABalances,
         ];
     };
     var properties = function () {
