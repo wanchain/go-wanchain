@@ -561,6 +561,14 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 	return vm.GetOtaBalanceFromAX(state, otaAX)
 }
 
+func (s *PublicBlockChainAPI) GetPermiWanCoinOTABalances(ctx context.Context) []*big.Int {
+	return vm.GetPermiWanCoinOTABalances()
+}
+
+func (s *PublicBlockChainAPI) GetPermiStampOTABalances(ctx context.Context) []*big.Int {
+	return vm.GetPermiStampOTABalances()
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {

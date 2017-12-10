@@ -210,6 +210,8 @@ func OTAInSet(otaSet [][]byte, ota []byte) bool {
 	return false
 }
 
+// GetOTASet retrieve the setNum of same balance OTA address of the input OTA setting by otaAX.
+// As far as possible return the OTA set does not contain duplicate items and input otaAX self.
 func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
 	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
 		return nil, nil, errors.New("invalid input param!")
