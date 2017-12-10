@@ -17,12 +17,11 @@
 package core
 
 import (
-	"io/ioutil"
-	"os"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -32,50 +31,41 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 )
 
-func tmpKeyStore(t *testing.T, encrypted bool) (string, *keystore.KeyStore) {
-	d, err := ioutil.TempDir("", "wanchain-keystore-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	new := keystore.NewPlaintextKeyStore
-	if encrypted {
-		new = func(kd string) *keystore.KeyStore { return keystore.NewKeyStore(kd, 2, 1) }
-	}
-	return d, new(d)
-}
-
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
 	var (
 		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
 		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
-		dir, ks   = tmpKeyStore(t, true)
+		dir       = "testdata"
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
-	defer os.RemoveAll(dir)
 
+	// load a valid signer from keystore
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+	if hasKey := ks.HasAddress(coinbase); !hasKey {
+		t.Fatal("Failed to generate initializer")
+	}
+	ks.Unlock(accounts.Account{Address: coinbase}, "wanglu")
+
+	// generate ethash sealed blocks
+	ce := ethash.NewFaker()
+	ce.Authorize(coinbase, ks.SignHash)
+	chain, err := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer chain.Stop()
+
+	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
 	}
 
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	ce := ethash.NewFaker()
-	ce.Authorize(coinbase, ks.SignHash)
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
-
-	for i, _ := range blocks {
-		_, err := ce.Seal(chain, blocks[i], nil)
-		if err != nil {
-		}
-	}
-
-	defer chain.Stop()
-
 	for i := 0; i < len(blocks); i++ {
 		for j, valid := range []bool{true, false} {
 			var results <-chan error
@@ -85,6 +75,7 @@ func TestHeaderVerification(t *testing.T) {
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			} else {
 				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
+				engine.Authorize(coinbase, ks.SignHash)
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			}
 			// Wait for the verification result
@@ -118,7 +109,7 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
+		blocks, _ = GenerateChain(nil, params.TestChainConfig, genesis, testdb, nil, 8, nil)
 	)
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
@@ -190,7 +181,7 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 1024, nil)
+		blocks, _ = GenerateChain(nil, params.TestChainConfig, genesis, testdb, nil, 1024, nil)
 	)
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))

@@ -21,7 +21,9 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
+	"github.com/wanchain/go-wanchain/log"
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -51,6 +53,7 @@ type BlockGen struct {
 	uncles   []*types.Header
 
 	config *params.ChainConfig
+	engine ethash.Ethash
 }
 
 // SetCoinbase sets the coinbase of the generated block.
@@ -156,7 +159,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
-func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+func GenerateChain(agent consensus.ChainReader, config *params.ChainConfig, parent *types.Block, db ethdb.Database, ce consensus.Engine, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
 	if config == nil {
 		config = params.TestChainConfig
 	}
@@ -177,6 +180,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 		//	misc.ApplyDAOHardFork(statedb)
 		//}
 
+		// @anson
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
@@ -187,7 +191,16 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
 		h.Root = root
-		return types.NewBlock(h, b.txs, b.uncles, b.receipts), b.receipts
+		fb := types.NewBlock(h, b.txs, b.uncles, b.receipts)
+
+		// Sign and Seal the block
+		sb, err := ce.Seal(agent, fb, nil)
+		if err != nil {
+			log.Error("Chain makers failed to Seal blocks", "err", err)
+		}
+
+		return sb, b.receipts
+
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
@@ -270,7 +283,7 @@ func makeHeaderChain(parent *types.Header, n int, db ethdb.Database, seed int) [
 
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
 func makeBlockChain(parent *types.Block, n int, db ethdb.Database, seed int) []*types.Block {
-	blocks, _ := GenerateChain(params.TestChainConfig, parent, db, n, func(i int, b *BlockGen) {
+	blocks, _ := GenerateChain(nil, params.TestChainConfig, parent, db, nil, n, func(i int, b *BlockGen) {
 		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks

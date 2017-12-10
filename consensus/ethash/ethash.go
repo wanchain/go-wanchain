@@ -432,7 +432,15 @@ func NewFaker() *Ethash {
 // accepts all blocks as valid apart from the single one specified, though they
 // still have to conform to the Ethereum consensus rules.
 func NewFakeFailer(fail uint64) *Ethash {
-	return &Ethash{fakeMode: true, fakeFail: fail}
+	recents, _ := lru.NewARC(256)
+	db, _ := ethdb.NewMemDatabase()
+
+	return &Ethash{
+		fakeMode: true,
+		fakeFail: fail,
+		recents:  recents,
+		db:       db,
+	}
 }
 
 // NewFakeDelayer creates a ethash consensus engine with a fake PoW scheme that

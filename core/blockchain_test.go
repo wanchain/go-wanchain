@@ -588,7 +588,7 @@ func TestFastVsFullChains(t *testing.T) {
 		genesis = gspec.MustCommit(gendb)
 		signer  = types.NewEIP155Signer(gspec.Config.ChainId)
 	)
-	blocks, receipts := GenerateChain(gspec.Config, genesis, gendb, 1024, func(i int, block *BlockGen) {
+	blocks, receipts := GenerateChain(nil, gspec.Config, genesis, gendb, nil, 1024, func(i int, block *BlockGen) {
 		block.SetCoinbase(common.Address{0x00})
 
 		// If the block number is multiple of 3, send a few bonus transactions to the miner
@@ -673,7 +673,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 		genesis  = gspec.MustCommit(gendb)
 	)
 	height := uint64(1024)
-	blocks, receipts := GenerateChain(gspec.Config, genesis, gendb, int(height), nil)
+	blocks, receipts := GenerateChain(nil, gspec.Config, genesis, gendb, nil, int(height), nil)
 
 	// Configure a subchain to roll back
 	remove := []common.Hash{}
@@ -781,7 +781,7 @@ func TestChainTxReorgs(t *testing.T) {
 	//  - futureAdd: transaction added after the reorg has already finished
 	var pastAdd, freshAdd, futureAdd *types.Transaction
 
-	chain, _ := GenerateChain(gspec.Config, genesis, db, 3, func(i int, gen *BlockGen) {
+	chain, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 3, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
 			pastDrop, _ = types.SignTx(types.NewTransaction(gen.TxNonce(addr2), addr2, big.NewInt(1000), bigTxGas, nil, nil), signer, key2)
@@ -806,7 +806,7 @@ func TestChainTxReorgs(t *testing.T) {
 	defer blockchain.Stop()
 
 	// overwrite the old chain
-	chain, _ = GenerateChain(gspec.Config, genesis, db, 5, func(i int, gen *BlockGen) {
+	chain, _ = GenerateChain(nil, gspec.Config, genesis, db, nil, 5, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
 			pastAdd, _ = types.SignTx(types.NewTransaction(gen.TxNonce(addr3), addr3, big.NewInt(1000), bigTxGas, nil, nil), signer, key3)
@@ -875,7 +875,7 @@ func TestLogReorgs(t *testing.T) {
 
 	rmLogsCh := make(chan RemovedLogsEvent)
 	blockchain.SubscribeRemovedLogsEvent(rmLogsCh)
-	chain, _ := GenerateChain(params.TestChainConfig, genesis, db, 2, func(i int, gen *BlockGen) {
+	chain, _ := GenerateChain(nil, params.TestChainConfig, genesis, db, nil, 2, func(i int, gen *BlockGen) {
 		if i == 1 {
 			tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), big.NewInt(1000000), new(big.Int), code), signer, key1)
 			if err != nil {
@@ -888,7 +888,7 @@ func TestLogReorgs(t *testing.T) {
 		t.Fatalf("failed to insert chain: %v", err)
 	}
 
-	chain, _ = GenerateChain(params.TestChainConfig, genesis, db, 3, func(i int, gen *BlockGen) {})
+	chain, _ = GenerateChain(nil, params.TestChainConfig, genesis, db, nil, 3, func(i int, gen *BlockGen) {})
 	if _, err := blockchain.InsertChain(chain); err != nil {
 		t.Fatalf("failed to insert forked chain: %v", err)
 	}
@@ -920,12 +920,12 @@ func TestReorgSideEvent(t *testing.T) {
 	blockchain, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer blockchain.Stop()
 
-	chain, _ := GenerateChain(gspec.Config, genesis, db, 3, func(i int, gen *BlockGen) {})
+	chain, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 3, func(i int, gen *BlockGen) {})
 	if _, err := blockchain.InsertChain(chain); err != nil {
 		t.Fatalf("failed to insert chain: %v", err)
 	}
 
-	replacementBlocks, _ := GenerateChain(gspec.Config, genesis, db, 4, func(i int, gen *BlockGen) {
+	replacementBlocks, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 4, func(i int, gen *BlockGen) {
 		tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), big.NewInt(1000000), new(big.Int), nil), signer, key1)
 		if i == 2 {
 			gen.OffsetTime(-9)
@@ -992,7 +992,7 @@ func TestCanonicalBlockRetrieval(t *testing.T) {
 	bc := newTestBlockChain(true)
 	defer bc.Stop()
 
-	chain, _ := GenerateChain(bc.config, bc.genesisBlock, bc.chainDb, 10, func(i int, gen *BlockGen) {})
+	chain, _ := GenerateChain(nil, bc.config, bc.genesisBlock, bc.chainDb, nil, 10, func(i int, gen *BlockGen) {})
 
 	var pend sync.WaitGroup
 	pend.Add(len(chain))
@@ -1046,7 +1046,7 @@ func TestEIP155Transition(t *testing.T) {
 	blockchain, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer blockchain.Stop()
 
-	blocks, _ := GenerateChain(gspec.Config, genesis, db, 4, func(i int, block *BlockGen) {
+	blocks, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 4, func(i int, block *BlockGen) {
 		var (
 			tx      *types.Transaction
 			err     error
@@ -1109,7 +1109,7 @@ func TestEIP155Transition(t *testing.T) {
 
 	// generate an invalid chain id transaction
 	config := &params.ChainConfig{ChainId: big.NewInt(1), ByzantiumBlock: new(big.Int)}
-	blocks, _ = GenerateChain(config, blocks[len(blocks)-1], db, 4, func(i int, block *BlockGen) {
+	blocks, _ = GenerateChain(nil, config, blocks[len(blocks)-1], db, nil, 4, func(i int, block *BlockGen) {
 		var (
 			tx      *types.Transaction
 			err     error
@@ -1155,7 +1155,7 @@ func TestEIP161AccountRemoval(t *testing.T) {
 	defer blockchain.Stop()
 
 	//blocks, _ := GenerateChain(gspec.Config, genesis, db, 3, func(i int, block *BlockGen) {
-	blocks, _ := GenerateChain(gspec.Config, genesis, db, 1, func(i int, block *BlockGen) {
+	blocks, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 1, func(i int, block *BlockGen) {
 		var (
 			tx     *types.Transaction
 			err    error

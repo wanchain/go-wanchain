@@ -41,7 +41,7 @@ func ExampleGenerateChain() {
 
 	// Ensure that key1 has some funds in the genesis block.
 	gspec := &Genesis{
-		Config: &params.ChainConfig{ChainId:big.NewInt(1),ByzantiumBlock: big.NewInt(0)},
+		Config: &params.ChainConfig{ChainId: big.NewInt(1), ByzantiumBlock: big.NewInt(0)},
 		Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(1000000)}},
 	}
 	genesis := gspec.MustCommit(db)
@@ -51,7 +51,7 @@ func ExampleGenerateChain() {
 	// block index.
 	//signer := types.HomesteadSigner{}
 	signer := types.NewEIP155Signer(big.NewInt(1))
-	chain, _ := GenerateChain(gspec.Config, genesis, db, 5, func(i int, gen *BlockGen) {
+	chain, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, 5, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
 			// In block 1, addr1 sends addr2 some ether.
