@@ -128,7 +128,6 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// defer chain.Stop()
 
 	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
 
@@ -199,13 +198,35 @@ func TestHeaderConcurrentAbortion8(t *testing.T)  { testHeaderConcurrentAbortion
 func TestHeaderConcurrentAbortion32(t *testing.T) { testHeaderConcurrentAbortion(t, 32) }
 
 func testHeaderConcurrentAbortion(t *testing.T, threads int) {
+
 	// Create a simple chain to verify
 	var (
+		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
+		dir       = "testdata"
 		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = &Genesis{Config: params.TestChainConfig}
+		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(nil, params.TestChainConfig, genesis, testdb, nil, 1024, nil)
 	)
+
+	// load a valid signer from keystore
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+	if hasKey := ks.HasAddress(coinbase); !hasKey {
+		t.Fatal("Failed to generate initializer")
+	}
+	ks.Unlock(accounts.Account{Address: coinbase}, "wanglu")
+
+	// generate ethash sealed blocks
+	// ce := ethash.NewFaker()
+	ce := ethash.NewFakeDelayer(time.Millisecond)
+	ce.Authorize(coinbase, ks.SignHash)
+	chain, err := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer chain.Stop()
+	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
+
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
 
@@ -218,8 +239,8 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	defer runtime.GOMAXPROCS(old)
 
 	// Start the verifications and immediately abort
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond), vm.Config{})
-	defer chain.Stop()
+	// chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond), vm.Config{})
+	// defer chain.Stop()
 
 	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)
 	close(abort)

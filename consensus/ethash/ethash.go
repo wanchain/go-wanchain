@@ -447,7 +447,16 @@ func NewFakeFailer(fail uint64) *Ethash {
 // accepts all blocks as valid, but delays verifications by some time, though
 // they still have to conform to the Ethereum consensus rules.
 func NewFakeDelayer(delay time.Duration) *Ethash {
-	return &Ethash{fakeMode: true, fakeDelay: delay}
+
+	recents, _ := lru.NewARC(256)
+	db, _ := ethdb.NewMemDatabase()
+
+	return &Ethash{
+		fakeMode:  true,
+		fakeDelay: delay,
+		recents:   recents,
+		db:        db,
+	}
 }
 
 // NewFullFaker creates an ethash consensus engine with a full fake scheme that
