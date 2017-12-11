@@ -715,8 +715,8 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 		return nil, err
 	}
 
-	err = SetOTA(evm.StateDB, contract.value, wanAddr)
-	if err != nil {
+	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
+	if err != nil || !add {
 		return nil, errBuyStamp
 	}
 
@@ -870,8 +870,8 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, err
 	}
 
-	err = SetOTA(evm.StateDB, contract.value, otaAddr)
-	if err != nil {
+	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, otaAddr)
+	if err != nil || !add {
 		return nil, errBuyCoin
 	}
 
