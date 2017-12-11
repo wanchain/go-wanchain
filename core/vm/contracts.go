@@ -633,7 +633,7 @@ func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, error) {
-	if in == nil || len(in) < 4 {
+	if len(in) < 4 {
 		return nil, errParameters
 	}
 
@@ -653,7 +653,7 @@ func (c *wanchainStampSC) ValidTx(stateDB StateDB, signer types.Signer, tx *type
 	}
 
 	payload := tx.Data()
-	if payload == nil || len(payload) < 4 {
+	if len(payload) < 4 {
 		return errParameters
 	}
 
@@ -678,7 +678,7 @@ func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, valu
 	}
 
 	err = stampAbi.Unpack(&StampInput, "buyStamp", payload)
-	if err != nil {
+	if err != nil || StampInput.Value == nil {
 		return nil, errBuyStamp
 	}
 
@@ -736,7 +736,7 @@ type wanCoinSC struct {
 }
 
 func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
-	if input == nil || len(input) < 4 {
+	if len(input) < 4 {
 		return 0
 	}
 
@@ -772,7 +772,7 @@ func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
 }
 
 func (c *wanCoinSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if in == nil || len(in) < 4 {
+	if len(in) < 4 {
 		return nil, errParameters
 	}
 
@@ -794,7 +794,7 @@ func (c *wanCoinSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tran
 	}
 
 	payload := tx.Data()
-	if payload == nil || len(payload) < 4 {
+	if len(payload) < 4 {
 		return errParameters
 	}
 
@@ -823,7 +823,7 @@ var (
 )
 
 func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *big.Int) (otaAddr []byte, err error) {
-	if stateDB == nil || payload == nil || len(payload) == 0 || txValue == nil {
+	if stateDB == nil || len(payload) == 0 || txValue == nil {
 		return nil, errors.New("unknown error")
 	}
 
@@ -833,7 +833,7 @@ func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *bi
 	}
 
 	err = coinAbi.Unpack(&outStruct, "buyCoinNote", payload)
-	if err != nil {
+	if err != nil || outStruct.Value == nil {
 		return nil, errBuyCoin
 	}
 
@@ -852,6 +852,10 @@ func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *bi
 	}
 
 	ax, err := GetAXFromWanAddr(wanAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	exit, _, err := CheckOTAExit(stateDB, ax)
 	if err != nil {
 		return nil, err
@@ -888,7 +892,7 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 }
 
 func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte) (image []byte, value *big.Int, err error) {
-	if stateDB == nil || payload == nil || len(payload) == 0 || from == nil || len(from) == 0 {
+	if stateDB == nil || len(payload) == 0 || len(from) == 0 {
 		return nil, nil, errors.New("unknown error")
 	}
 
@@ -898,7 +902,7 @@ func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte)
 	}
 
 	err = coinAbi.Unpack(&RefundStruct, "refundCoin", payload)
-	if err != nil {
+	if err != nil || RefundStruct.Value == nil {
 		return nil, nil, errRefundCoin
 	}
 
@@ -931,7 +935,11 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, err
 	}
 
-	AddOTAImage(evm.StateDB, kix, value.Bytes())
+	err = AddOTAImage(evm.StateDB, kix, value.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
 	addrSrc := contract.CallerAddress
 	evm.StateDB.AddBalance(addrSrc, value)
 	return []byte{1}, nil
@@ -1012,7 +1020,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 	//
 	err, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random = DecodeRingSignOut(ringSignedStr)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	//
@@ -1022,23 +1030,14 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
 	}
 
-	exit, balanceGet, unexit, err := BatCheckOTAExit(stateDB, otaAXs)
-	if !exit || balanceGet == nil {
-		if err != nil {
-			log.Warn("verify mix ota fail", "err", err.Error())
-		}
-		if unexit != nil {
-			log.Warn("invalid mix ota", "invalid ota", common.ToHex(unexit))
-		}
-		if balanceGet == nil {
-			log.Warn("balance getting from ota is wrong!")
-		}
+	exit, balanceGet, _, err := BatCheckOTAExit(stateDB, otaAXs)
+	if err != nil {
+		log.Error("verify mix ota fail", "err", err.Error())
+		return nil, err
+	}
 
-		if err == nil {
-			err = ErrInvalidOTASet
-		}
-
-		return
+	if !exit {
+		return nil, ErrInvalidOTASet
 	}
 
 	infoTmp.OTABalance = balanceGet

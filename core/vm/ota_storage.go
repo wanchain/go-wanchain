@@ -72,7 +72,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 	return new(big.Int).SetBytes(balance), nil
 }
 
-// ChechOTAExit check the OTA exit or not
+// ChechOTAExit checks the OTA exit or not
 func CheckOTAExit(statedb StateDB, otaAX []byte) (exit bool, balance *big.Int, err error) {
 	if statedb == nil || otaAX == nil || len(otaAX) < common.HashLength {
 		return false, nil, errors.New("invalid input param!")
@@ -106,7 +106,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 	}
 
 	for _, otaAX := range otaAXs {
-		if otaAX == nil || len(otaAX) < common.HashLength {
+		if len(otaAX) < common.HashLength {
 			return false, nil, otaAX, errors.New("invalid input ota AX!")
 		}
 
@@ -128,7 +128,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 		otaAddrKey := common.BytesToHash(otaAX)
 		otaValue := statedb.GetStateByteArray(mptAddr, otaAddrKey)
 		if otaValue == nil || len(otaValue) == 0 {
-			return false, nil, otaAX, nil
+			return false, nil, otaAX, errors.New("ota doesn't exit:" + common.ToHex(otaAX))
 		}
 	}
 
@@ -360,7 +360,7 @@ func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {
 
 // AddOTAImage storage ota image key. Overwrite if exit already.
 func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {
-	if statedb == nil || otaImage == nil || len(otaImage) == 0 || value == nil || len(value) == 0 {
+	if statedb == nil || len(otaImage) == 0 || len(value) == 0 {
 		return errors.New("invalid input param!")
 	}
 

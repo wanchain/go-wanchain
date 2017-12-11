@@ -570,11 +570,14 @@ type dummyCtDB struct {
 
 //test buyCoin to simulate the tx process
 func TestPrecompiledWanCoinSCBuyCoinSuccess(t *testing.T) {
+	Wancoin1 := "1000000000000000000"
+	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
+	WanCoinValueSet[cval1.Text(16)] = Wancoin1
 
 	dbMockRetVal = nil
 
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{100})]
-	chargeValue, _ := new(big.Int).SetString(Wancoin10, 10)
+	chargeValue, _ := new(big.Int).SetString(Wancoin1, 10)
 
 	ref := &dummyCtRef{}
 
@@ -655,11 +658,14 @@ func TestPrecompiledWanCoinRefundFailWrongSender(t *testing.T) {
 
 //test buyCoin to simulate the tx process
 func TestPrecompiledStampSCBuyStampSuccess(t *testing.T) {
+	wanStamp0dot1 := "10000000000000000"
+	cval1, _ := new(big.Int).SetString(wanStamp0dot1, 10)
+	StampValueSet[cval1.Text(16)] = wanStamp0dot1
 
 	dbMockRetVal = nil
 
 	p := PrecompiledContractsByzantium[common.BytesToAddress([]byte{200})]
-	chargeValue, _ := new(big.Int).SetString(WanStamp0dot1, 10)
+	chargeValue, _ := new(big.Int).SetString(wanStamp0dot1, 10)
 
 	ref := &dummyCtRef{}
 
