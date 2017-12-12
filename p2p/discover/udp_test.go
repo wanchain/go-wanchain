@@ -312,7 +312,7 @@ func TestUDP_findnodeMultiReply(t *testing.T) {
 	// check that the sent neighbors are all returned by findnode
 	select {
 	case result := <-resultc:
-		want := append(list[:2], list[3:]...)
+		want := append(list[:3], list[3:]...)
 		if !reflect.DeepEqual(result, want) {
 			t.Errorf("neighbors mismatch:\n  got:  %v\n  want: %v", result, want)
 		}
