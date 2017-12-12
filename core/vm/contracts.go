@@ -668,7 +668,7 @@ func (c *wanchainStampSC) ValidTx(stateDB StateDB, signer types.Signer, tx *type
 }
 
 func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, value *big.Int) (otaAddr []byte, err error) {
-	if stateDB == nil || payload == nil || len(payload) == 0 || value == nil {
+	if stateDB == nil || len(payload) == 0 || value == nil {
 		return nil, errors.New("unknown error")
 	}
 

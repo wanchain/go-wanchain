@@ -26,7 +26,7 @@ func OTABalance2ContractAddr(balance *big.Int) common.Address {
 
 // GetAXFromWanAddr retrieve ota AX from ota WanAddr
 func GetAXFromWanAddr(otaWanAddr []byte) ([]byte, error) {
-	if otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
+	if len(otaWanAddr) != common.WAddressLength {
 		return nil, errors.New("invalid input param!")
 	}
 
@@ -40,7 +40,7 @@ func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 	}
 
 	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
-	if balance == nil || len(balance) == 0 {
+	if len(balance) == 0 {
 		return common.Big0, nil
 	}
 
@@ -49,7 +49,7 @@ func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 
 // SetOtaBalanceToAX set ota balance as 'balance'. Overwrite if ota balance exit already.
 func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
-	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength || balance == nil {
+	if statedb == nil || len(otaAX) != common.HashLength || balance == nil {
 		return errors.New("invalid input param!")
 	}
 
@@ -59,13 +59,13 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 
 // GetOtaBalanceFromWanAddr retrieve ota balance from ota WanAddr
 func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, error) {
-	if statedb == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
+	if statedb == nil || len(otaWanAddr) != common.WAddressLength {
 		return nil, errors.New("invalid input param!")
 	}
 
 	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
 	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
-	if balance == nil || len(balance) == 0 {
+	if len(balance) == 0 {
 		return common.Big0, nil
 	}
 
@@ -74,7 +74,7 @@ func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, err
 
 // ChechOTAExit checks the OTA exit or not
 func CheckOTAExit(statedb StateDB, otaAX []byte) (exit bool, balance *big.Int, err error) {
-	if statedb == nil || otaAX == nil || len(otaAX) < common.HashLength {
+	if statedb == nil || len(otaAX) < common.HashLength {
 		return false, nil, errors.New("invalid input param!")
 	}
 
@@ -96,12 +96,12 @@ func CheckOTAExit(statedb StateDB, otaAX []byte) (exit bool, balance *big.Int, e
 	return false, nil, nil
 }
 
-// BatCheckOTAExit batch chech the OTA exit in db or not
+// BatCheckOTAExit batch check the OTAs exit or not.
 //
-// return ota as []byte when find first not exit one
+// return true means all OTAs exit and their have same balance
 //
 func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.Int, unexitOta []byte, err error) {
-	if statedb == nil || otaAXs == nil || len(otaAXs) == 0 {
+	if statedb == nil || len(otaAXs) == 0 {
 		return false, nil, nil, errors.New("invalid input param!")
 	}
 
@@ -127,7 +127,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 	for _, otaAX := range otaAXs {
 		otaAddrKey := common.BytesToHash(otaAX)
 		otaValue := statedb.GetStateByteArray(mptAddr, otaAddrKey)
-		if otaValue == nil || len(otaValue) == 0 {
+		if len(otaValue) == 0 {
 			return false, nil, otaAX, errors.New("ota doesn't exit:" + common.ToHex(otaAX))
 		}
 	}
@@ -137,7 +137,7 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 
 // setOTA storage ota info, include balance and WanAddr. Overwrite if ota exit already.
 func setOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
-	if statedb == nil || balance == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
+	if statedb == nil || balance == nil || len(otaWanAddr) != common.WAddressLength {
 		return errors.New("invalid input param!")
 	}
 
@@ -158,7 +158,7 @@ func setOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
 
 // AddOTAIfNotExit storage ota info if doesn't exit already.
 func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool, error) {
-	if statedb == nil || balance == nil || otaWanAddr == nil || len(otaWanAddr) != common.WAddressLength {
+	if statedb == nil || balance == nil || len(otaWanAddr) != common.WAddressLength {
 		return false, errors.New("invalid input param!")
 	}
 
@@ -183,7 +183,7 @@ func AddOTAIfNotExit(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool
 
 // GetOTAInfoFromAX retrieve ota info, include balance and WanAddr
 func GetOTAInfoFromAX(statedb StateDB, otaAX []byte) (otaWanAddr []byte, balance *big.Int, err error) {
-	if statedb == nil || otaAX == nil || len(otaAX) < common.HashLength {
+	if statedb == nil || len(otaAX) < common.HashLength {
 		return nil, nil, errors.New("invalid input param!")
 	}
 
@@ -221,7 +221,7 @@ func OTAInSet(otaSet [][]byte, ota []byte) bool {
 // GetOTASet retrieve the setNum of same balance OTA address of the input OTA setting by otaAX.
 // As far as possible return the OTA set does not contain duplicate items and input otaAX self.
 func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
-	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
+	if statedb == nil || len(otaAX) != common.HashLength {
 		return nil, nil, errors.New("invalid input param!")
 	}
 
@@ -264,7 +264,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte,
 
 	for {
 		statedb.ForEachStorageByteArray(mptAddr, func(key common.Hash, value []byte) bool {
-			if value == nil || len(value) != common.WAddressLength {
+			if len(value) != common.WAddressLength {
 				log.Error("invalid OTA address!", "balance", balance, "value", value)
 				err = errors.New(fmt.Sprint("invalid OTA address! balance:", balance, ", ota:", value))
 				return false
@@ -345,7 +345,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte,
 
 // CheckOTAImageExit checks ota image key exit already or not
 func CheckOTAImageExit(statedb StateDB, otaImage []byte) (bool, []byte, error) {
-	if statedb == nil || otaImage == nil || len(otaImage) == 0 {
+	if statedb == nil || len(otaImage) == 0 {
 		return false, nil, errors.New("invalid input param!")
 	}
 

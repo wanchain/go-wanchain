@@ -394,7 +394,7 @@ var (
 //明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
 //2528 Pengbo add Shi TeemoGuo revise
 func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int, error) {
-	if M == nil || x == nil || PublicKeys == nil || len(PublicKeys) == 0 {
+	if M == nil || x == nil || len(PublicKeys) == 0 {
 		return nil, nil, nil, nil, ErrInvalidRingSignParams
 	}
 
