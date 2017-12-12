@@ -35,7 +35,6 @@ func TestHeaderVerification(t *testing.T) {
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
-		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
 
 	chainEngine := ethash.NewFaker(testdb)
@@ -101,7 +100,6 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 	defer chain.Stop()
 	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
 	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
-
 
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))

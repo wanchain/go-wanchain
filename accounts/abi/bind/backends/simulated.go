@@ -17,7 +17,6 @@
 package backends
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -73,68 +72,13 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	genesis := core.DefaultGenesisBlock()
 	genesis.Coinbase = coinbase
 	genesis.MustCommit(database)
-	gb, _ := genesis.ToBlock()
-	fmt.Println("genesis block: ", gb.String())
-	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), vm.Config{})
+
+	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(database), vm.Config{})
 	bc = blockchain
 	db = database
 	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}
 	backend.rollback()
 	return backend
-}
-
-// @anson
-// Ensure the extra data has all it's components for header verification
-// Plus, set coinbase for verification
-func (b *SimulatedBackend) SetExtra() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	// Assemble block
-	var tmpBlock *types.Block
-	var tmpHeader *types.Header
-	// var tmpTransactions types.Transactions
-	// var tmpUncles []*types.Header
-
-	tmpHeader = types.CopyHeader(b.pendingBlock.Header())
-
-	// make sure extra data appended
-	// fmt.Println("tmpHeader extra: ", len(tmpHeader.Extra))
-
-	if len(tmpHeader.Extra) < extraVanity {
-		tmpHeader.Extra = append(tmpHeader.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(tmpHeader.Extra))...)
-	}
-	tmpHeader.Extra = tmpHeader.Extra[:extraVanity]
-	tmpHeader.Extra = append(tmpHeader.Extra, make([]byte, extraSeal)...)
-	tmpHeader.Coinbase = coinbase
-
-	// tmpTransactions = b.pendingBlock.Transactions()
-	// tmpUncles = b.pendingBlock.Uncles()
-	// tmpBlock = types.NewBlock(tmpHeader, tmpTransactions, tmpUncles, nil)
-
-	// newEngine := ethash.NewFaker()
-
-	receipts := core.GetBlockReceipts(db, b.pendingBlock.Hash(), core.GetBlockNumber(db, b.pendingBlock.Hash()))
-
-	fmt.Println("receipts: ", receipts)
-
-	// tmpBlock = newEngine.Finalize(bc, tmpHeader, db, tmpTransactions, tmpUncles, receipts)
-
-	fmt.Println("old receiptHash: ", b.pendingBlock.ReceiptHash())
-	// b.pendingBlock = tmpBlock
-
-	// fmt.Println("tmp block txHash: ", tmpBlock.TxHash())
-	// fmt.Println("old block txHash: ", b.pendingBlock.TxHash())
-
-	// fmt.Println("tmp block root: ", tmpBlock.Root())
-	// fmt.Println("old block root: ", b.pendingBlock.Root())
-
-	fmt.Println("tmp receiptHash: ", tmpBlock.ReceiptHash())
-	// fmt.Println("old receiptHash: ", b.pendingBlock.ReceiptHash())
-
-	// fmt.Println("temporary block: ", tmpBlock.String())
-	// fmt.Println("current appended block: ", b.pendingBlock.String())
-	// fmt.Println("current appended block header: ", b.pendingBlock.Header().String())
 }
 
 // Commit imports all the pending transactions as a single block and starts a
@@ -160,7 +104,18 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, _ := core.GenerateChain(nil, b.config, b.blockchain.CurrentBlock(), b.database, nil, 1, func(int, *core.BlockGen) {})
+	var (
+		testdb, _ = ethdb.NewMemDatabase()
+		gspec     = core.DefaultPPOWTestingGenesisBlock()
+		genesis   = gspec.MustCommit(testdb)
+	)
+
+	chainEngine := ethash.NewFaker(testdb)
+
+	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
+	defer chain.Stop()
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+	blocks, _ := chainEnv.GenerateChain(genesis, 1, nil)
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
 }
@@ -336,10 +291,21 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 // SendTransaction updates the pending block to include the given transaction.
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	var (
+		testdb, _ = ethdb.NewMemDatabase()
+		gspec     = core.DefaultPPOWTestingGenesisBlock()
+		genesis   = gspec.MustCommit(testdb)
+	)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.HomesteadSigner{}, tx)
+	chainEngine := ethash.NewFaker(testdb)
+	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
+	defer chain.Stop()
+
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+
+	sender, err := types.Sender(types.NewEIP155Signer(gspec.Config.ChainId), tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -348,12 +314,13 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := core.GenerateChain(nil, b.config, b.blockchain.CurrentBlock(), b.database, nil, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := chainEnv.GenerateChain(genesis, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
 		block.AddTx(tx)
 	})
+
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
 	return nil
@@ -361,9 +328,20 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 
 // JumpTimeInSeconds adds skip seconds to the clock
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
+	var (
+		testdb, _ = ethdb.NewMemDatabase()
+		gspec     = core.DefaultPPOWTestingGenesisBlock()
+		genesis   = gspec.MustCommit(testdb)
+	)
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(nil, b.config, b.blockchain.CurrentBlock(), b.database, nil, 1, func(number int, block *core.BlockGen) {
+
+	chainEngine := ethash.NewFaker(testdb)
+	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
+	defer chain.Stop()
+
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+	blocks, _ := chainEnv.GenerateChain(genesis, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
