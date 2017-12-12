@@ -239,11 +239,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
+	var stampTotalGas uint64
 	if st.msg.TxType() == 6 {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Address().Bytes(), st.data, st.gasPrice)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
+
+		stampTotalGas = totalUseableGas
 		st.gas = evmUseableGas
 		st.initialGas.SetUint64(evmUseableGas)
 		st.data = pureCallData[:]
@@ -251,7 +254,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		if err := st.gp.SubGas(big.NewInt(int64(totalUseableGas))); err != nil {
 			return nil, nil, nil, false, err
 		}
-
 	}
 
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
@@ -282,14 +284,17 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 			return nil, nil, nil, false, vmerr
 		}
 	}
-	requiredGas = new(big.Int).Set(st.gasUsed())
 
 	if st.msg.TxType() != 6 {
 		st.refundGas()
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+		usedGas = new(big.Int).Set(st.gasUsed())
+	} else {
+		usedGas = big.NewInt(int64(stampTotalGas))
 	}
 
-	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
+	requiredGas = usedGas
+	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
+	return ret, requiredGas, usedGas, vmerr != nil, err
 }
 
 func (st *StateTransition) refundGas() {
