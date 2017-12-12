@@ -25,7 +25,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	"fmt"
 )
 
 func TestDefaultGenesisBlock(t *testing.T) {
