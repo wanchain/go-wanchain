@@ -165,16 +165,17 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 
 	// Generate a chain of b.N blocks using the supplied block
 	// generator function.
-	gspec := Genesis{
-		Config: params.TestChainConfig,
-		Alloc:  GenesisAlloc{benchRootAddr: {Balance: benchRootFunds}},
-	}
+	gspec := DefaultPPOWTestingGenesisBlock()
+	gspec.Alloc = GenesisAlloc{benchRootAddr: {Balance: benchRootFunds}}
 	genesis := gspec.MustCommit(db)
-	chain, _ := GenerateChain(nil, gspec.Config, genesis, db, nil, b.N, gen)
+	engine := ethash.NewFaker(db)
+	chainman, _ := NewBlockChain(db, gspec.Config, engine, vm.Config{})
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine,chainman, db)
+	chain, _ := chainEnv.GenerateChain(genesis, b.N, gen)
 
 	// Time the insertion of the new chain.
 	// State and blocks are stored in the same DB.
-	chainman, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), vm.Config{})
+
 	defer chainman.Stop()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -284,7 +285,7 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 		if err != nil {
 			b.Fatalf("error opening database at %v: %v", dir, err)
 		}
-		chain, err := NewBlockChain(db, params.TestChainConfig, ethash.NewFaker(), vm.Config{})
+		chain, err := NewBlockChain(db, params.TestChainConfig, ethash.NewFaker(db), vm.Config{})
 		if err != nil {
 			b.Fatalf("error creating chain: %v", err)
 		}

@@ -314,7 +314,7 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 // DefaultPPOWTestingGenesisBlock returns the Wanchain ppow testing genesis block
 func DefaultPPOWTestingGenesisBlock() *Genesis {
 
-	key, _ := crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+	key, _ := crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	coinbase := crypto.PubkeyToAddress(key.PublicKey)
 	return &Genesis{
 		Coinbase:   coinbase,

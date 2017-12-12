@@ -21,12 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 )
@@ -35,47 +32,33 @@ import (
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
 	var (
-		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
-		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
-		dir       = "testdata"
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
+		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
 
-	// load a valid signer from keystore
-	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-	if hasKey := ks.HasAddress(coinbase); !hasKey {
-		t.Fatal("Failed to generate initializer")
-	}
-	ks.Unlock(accounts.Account{Address: coinbase}, "wanglu")
-
-	// generate ethash sealed blocks
-	ce := ethash.NewFaker()
-	ce.Authorize(coinbase, ks.SignHash)
-	chain, err := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	chainEngine := ethash.NewFaker(testdb)
+	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
+	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
 	defer chain.Stop()
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
 
-	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
 	}
 
-	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
 	for i := 0; i < len(blocks); i++ {
 		for j, valid := range []bool{true, false} {
 			var results <-chan error
 
 			if valid {
-				engine := ce
+				engine := ethash.NewFaker(testdb)
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			} else {
-				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
-				engine.Authorize(coinbase, ks.SignHash)
+				engine := ethash.NewFakeFailer(headers[i].Number.Uint64(), testdb)
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			}
 			// Wait for the verification result
@@ -84,7 +67,7 @@ func TestHeaderVerification(t *testing.T) {
 				if (result == nil) != valid {
 					t.Errorf("test %d.%d: validity mismatch: have %v, want %v", i, j, result, valid)
 				}
-			case <-time.After(100 * time.Second):
+			case <-time.After(time.Second):
 				t.Fatalf("test %d.%d: verification timeout", i, j)
 			}
 			// Make sure no more data is returned
@@ -106,30 +89,19 @@ func TestHeaderConcurrentVerification32(t *testing.T) { testHeaderConcurrentVeri
 func testHeaderConcurrentVerification(t *testing.T, threads int) {
 	// Create a simple chain to verify
 	var (
-		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
-		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
-		dir       = "testdata"
 		testdb, _ = ethdb.NewMemDatabase()
 		gspec     = DefaultPPOWTestingGenesisBlock()
 		genesis   = gspec.MustCommit(testdb)
+		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
 	)
 
-	// load a valid signer from keystore
-	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-	if hasKey := ks.HasAddress(coinbase); !hasKey {
-		t.Fatal("Failed to generate initializer")
-	}
-	ks.Unlock(accounts.Account{Address: coinbase}, "wanglu")
+	chainEngine := ethash.NewFaker(testdb)
+	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
+	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
+	defer chain.Stop()
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
 
-	// generate ethash sealed blocks
-	ce := ethash.NewFaker()
-	ce.Authorize(coinbase, ks.SignHash)
-	chain, err := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
 
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
@@ -148,13 +120,11 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		var results <-chan error
 
 		if valid {
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
+			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(testdb), vm.Config{})
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		} else {
-			engine := ethash.NewFakeFailer(uint64(len(headers) - 1))
-			engine.Authorize(coinbase, ks.SignHash)
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, engine, vm.Config{})
+			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeFailer(uint64(len(headers)-1), testdb), vm.Config{})
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		}
@@ -198,34 +168,20 @@ func TestHeaderConcurrentAbortion8(t *testing.T)  { testHeaderConcurrentAbortion
 func TestHeaderConcurrentAbortion32(t *testing.T) { testHeaderConcurrentAbortion(t, 32) }
 
 func testHeaderConcurrentAbortion(t *testing.T, threads int) {
-
 	// Create a simple chain to verify
 	var (
-		key, _    = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
-		coinbase  = crypto.PubkeyToAddress(key.PublicKey)
-		dir       = "testdata"
 		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = DefaultPPOWTestingGenesisBlock()
+		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
+		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 1024, nil)
 	)
 
-	// load a valid signer from keystore
-	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-	if hasKey := ks.HasAddress(coinbase); !hasKey {
-		t.Fatal("Failed to generate initializer")
-	}
-	ks.Unlock(accounts.Account{Address: coinbase}, "wanglu")
-
-	// generate ethash sealed blocks
-	// ce := ethash.NewFaker()
-	ce := ethash.NewFakeDelayer(time.Millisecond)
-	ce.Authorize(coinbase, ks.SignHash)
-	chain, err := NewBlockChain(testdb, params.TestChainConfig, ce, vm.Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	chainEngine := ethash.NewFaker(testdb)
+	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
+	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
 	defer chain.Stop()
-	blocks, _ := GenerateChain(chain, params.TestChainConfig, genesis, testdb, ce, 8, nil)
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
+	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
 
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
@@ -239,8 +195,8 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	defer runtime.GOMAXPROCS(old)
 
 	// Start the verifications and immediately abort
-	// chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond), vm.Config{})
-	// defer chain.Stop()
+	chain, _ = NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond, testdb), vm.Config{})
+	defer chain.Stop()
 
 	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)
 	close(abort)

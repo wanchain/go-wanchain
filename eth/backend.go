@@ -223,10 +223,10 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	switch {
 	case config.PowFake:
 		log.Warn("Ethash used in fake mode")
-		return ethash.NewFaker()
+		return ethash.NewFaker(db)
 	case config.PowTest:
 		log.Warn("Ethash used in test mode")
-		return ethash.NewTester()
+		return ethash.NewTester(db)
 	case config.PowShared:
 		log.Warn("Ethash used in shared mode")
 		return ethash.NewShared()

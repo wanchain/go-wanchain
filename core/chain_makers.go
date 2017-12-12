@@ -23,20 +23,61 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/log"
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/accounts"
 )
 
 // So we can deterministically seed different blockchains
 var (
 	canonicalSeed = 1
 	forkSeed      = 2
+	fakedAddr = common.HexToAddress("0xf9b32578b4420a36f132db32b56f3831a7cc1804")
+	fakedAccountPrivateKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 )
+
+func fakeSignerFn(signer accounts.Account, hash []byte) ([]byte, error){
+	return crypto.Sign(hash, fakedAccountPrivateKey)
+}
+
+type ChainEnv struct {
+	config *params.ChainConfig
+	genesis *Genesis
+	engine *ethash.Ethash
+	blockChain *BlockChain
+	db         ethdb.Database
+	mapSigners map[common.Address]struct{}
+	arraySigners []common.Address
+	signerKeys   []*ecdsa.PrivateKey
+	//set signers here for testing convenience
+	// validSigners
+}
+
+func NewChainEnv(config *params.ChainConfig, g *Genesis, engine consensus.Engine, bc *BlockChain, db ethdb.Database) *ChainEnv{
+	ce := &ChainEnv{
+		config:config,
+		genesis:g,
+		engine: engine.(*ethash.Ethash),
+		blockChain: bc,
+		db: db,
+		mapSigners: make(map[common.Address]struct{}),
+		arraySigners: make([]common.Address, len(g.ExtraData)/common.AddressLength),
+	}
+
+	for i := 0; i < len(ce.arraySigners); i++ {
+		copy(ce.arraySigners[i][:], g.ExtraData[i*common.AddressLength:])
+	}
+	for _, s := range ce.arraySigners {
+		ce.mapSigners[s] = struct{}{}
+	}
+
+	return ce
+}
 
 // BlockGen creates blocks for testing.
 // See GenerateChain for a detailed explanation.
@@ -53,7 +94,6 @@ type BlockGen struct {
 	uncles   []*types.Header
 
 	config *params.ChainConfig
-	engine ethash.Ethash
 }
 
 // SetCoinbase sets the coinbase of the generated block.
@@ -159,55 +199,36 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
-func GenerateChain(agent consensus.ChainReader, config *params.ChainConfig, parent *types.Block, db ethdb.Database, ce consensus.Engine, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
-	if config == nil {
-		config = params.TestChainConfig
-	}
+func (self *ChainEnv)GenerateChain(parent *types.Block, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
-		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
-		// Mutate the state and block according to any hard-fork specs
-		//if daoBlock := config.DAOForkBlock; daoBlock != nil {
-		//	limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-		//	if h.Number.Cmp(daoBlock) >= 0 && h.Number.Cmp(limit) < 0 {
-		//		if config.DAOForkSupport {
-		//			h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-		//		}
-		//	}
-		//}
+		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: self.config}
 
-		//if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
-		//	misc.ApplyDAOHardFork(statedb)
-		//}
-
-		// @anson
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
 		}
-		ethash.AccumulateRewards(config, statedb, h, b.uncles)
-		root, err := statedb.CommitTo(db, true /*config.IsEIP158(h.Number)*/)
+
+		ethash.AccumulateRewards(self.config, statedb, h, b.uncles)
+		root, err := statedb.CommitTo(self.db, true)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
 		h.Root = root
-		fb := types.NewBlock(h, b.txs, b.uncles, b.receipts)
 
-		// Sign and Seal the block
-		sb, err := ce.Seal(agent, fb, nil)
-		if err != nil {
-			log.Error("Chain makers failed to Seal blocks", "err", err)
-		}
-
-		return sb, b.receipts
-
+		self.engine.Authorize(fakedAddr, fakeSignerFn)
+		h.Coinbase.Set(fakedAddr)
+		rawBlock := types.NewBlock(h, b.txs, b.uncles, b.receipts)
+		sealBlock, _ := self.engine.Seal(self.blockChain, rawBlock, nil)
+		return  sealBlock, b.receipts
 	}
 	for i := 0; i < n; i++ {
-		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
+		//fmt.Println(self.db)
+		statedb, err := state.New(parent.Root(), state.NewDatabase(self.db))
 		if err != nil {
 			panic(err)
 		}
-		header := makeHeader(config, parent, statedb)
+		header := makeHeader(self.config, parent, statedb)
 		block, receipt := genblock(i, header, statedb)
 		blocks[i] = block
 		receipts[i] = receipt
@@ -248,32 +269,34 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.
-func newCanonical(n int, full bool) (ethdb.Database, *BlockChain, error) {
+func newCanonical(n int, full bool) (ethdb.Database, *BlockChain, error, *ChainEnv) {
 	// Initialize a fresh chain with only a genesis block
-	gspec := new(Genesis)
+	gspec := DefaultPPOWTestingGenesisBlock()
 	db, _ := ethdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
+	engine := ethash.NewFaker(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, ethash.NewFaker(), vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.TestChainConfig, engine, vm.Config{})
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
 	// Create and inject the requested chain
 	if n == 0 {
-		return db, blockchain, nil
+		return db, blockchain, nil, chainEnv
 	}
 	if full {
 		// Full block-chain requested
-		blocks := makeBlockChain(genesis, n, db, canonicalSeed)
+		blocks := chainEnv.makeBlockChain(genesis, n, canonicalSeed)
 		_, err := blockchain.InsertChain(blocks)
-		return db, blockchain, err
+		return db, blockchain, err, chainEnv
 	}
 	// Header-only chain requested
-	headers := makeHeaderChain(genesis.Header(), n, db, canonicalSeed)
+	headers := chainEnv.makeHeaderChain(genesis.Header(), n, canonicalSeed)
 	_, err := blockchain.InsertHeaderChain(headers, 1)
-	return db, blockchain, err
+	return db, blockchain, err, chainEnv
 }
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
-func makeHeaderChain(parent *types.Header, n int, db ethdb.Database, seed int) []*types.Header {
-	blocks := makeBlockChain(types.NewBlockWithHeader(parent), n, db, seed)
+func (self* ChainEnv)makeHeaderChain(parent *types.Header, n int, seed int) []*types.Header {
+	blocks := self.makeBlockChain(types.NewBlockWithHeader(parent), n, seed)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
@@ -282,9 +305,9 @@ func makeHeaderChain(parent *types.Header, n int, db ethdb.Database, seed int) [
 }
 
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
-func makeBlockChain(parent *types.Block, n int, db ethdb.Database, seed int) []*types.Block {
-	blocks, _ := GenerateChain(nil, params.TestChainConfig, parent, db, nil, n, func(i int, b *BlockGen) {
-		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
+func (self *ChainEnv)makeBlockChain(parent *types.Block, n int, seed int) []*types.Block {
+	blocks, _ := self.GenerateChain(parent, n, func(i int, b *BlockGen) {
+		//b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks
 }

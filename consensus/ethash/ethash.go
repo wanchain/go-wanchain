@@ -394,11 +394,10 @@ func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinme
 
 // NewTester creates a small sized ethash PoW scheme useful only for testing
 // purposes.
-func NewTester() *Ethash {
+func NewTester(db ethdb.Database) *Ethash {
+
 	// create a signer cache
 	recents, _ := lru.NewARC(256)
-	// create an in memory eth database
-	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
 		cachesinmem: 1,
@@ -415,11 +414,9 @@ func NewTester() *Ethash {
 // NewFaker creates a ethash consensus engine with a fake PoW scheme that accepts
 // all blocks' seal as valid, though they still have to conform to the Ethereum
 // consensus rules.
-func NewFaker() *Ethash {
-	// create a signer cache
+func NewFaker(db ethdb.Database) *Ethash {
+
 	recents, _ := lru.NewARC(256)
-	// create an in memory eth database
-	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
 		recents:  recents,
@@ -431,11 +428,8 @@ func NewFaker() *Ethash {
 // NewFakeFailer creates a ethash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid apart from the single one specified, though they
 // still have to conform to the Ethereum consensus rules.
-func NewFakeFailer(fail uint64) *Ethash {
-	// create a signer cache
+func NewFakeFailer(fail uint64, db ethdb.Database) *Ethash {
 	recents, _ := lru.NewARC(256)
-	// create an in memory eth database
-	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
 		fakeMode: true,
@@ -448,10 +442,9 @@ func NewFakeFailer(fail uint64) *Ethash {
 // NewFakeDelayer creates a ethash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid, but delays verifications by some time, though
 // they still have to conform to the Ethereum consensus rules.
-func NewFakeDelayer(delay time.Duration) *Ethash {
+func NewFakeDelayer(delay time.Duration, db ethdb.Database) *Ethash {
 
 	recents, _ := lru.NewARC(256)
-	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
 		fakeMode:  true,
@@ -463,18 +456,9 @@ func NewFakeDelayer(delay time.Duration) *Ethash {
 
 // NewFullFaker creates an ethash consensus engine with a full fake scheme that
 // accepts all blocks as valid, without checking any consensus rules whatsoever.
-func NewFullFaker() *Ethash {
-	// create a signer cache
+func NewFullFaker(db ethdb.Database) *Ethash {
 	recents, _ := lru.NewARC(256)
-	// create an in memory eth database
-	db, _ := ethdb.NewMemDatabase()
-
-	return &Ethash{
-		fakeMode: true,
-		fakeFull: true,
-		recents:  recents,
-		db:       db,
-	}
+	return &Ethash{fakeMode: true, fakeFull: true, db: db, recents:recents}
 }
 
 // NewShared creates a full sized ethash PoW shared between all requesters running
