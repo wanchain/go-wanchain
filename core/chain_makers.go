@@ -31,6 +31,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/accounts"
+	"crypto/ecdsa"
 )
 
 // So we can deterministically seed different blockchains
