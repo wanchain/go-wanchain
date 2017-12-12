@@ -395,7 +395,6 @@ func New(cachedir string, cachesinmem, cachesondisk int, dagdir string, dagsinme
 // NewTester creates a small sized ethash PoW scheme useful only for testing
 // purposes.
 func NewTester() *Ethash {
-
 	// create a signer cache
 	recents, _ := lru.NewARC(256)
 	// create an in memory eth database
@@ -417,8 +416,9 @@ func NewTester() *Ethash {
 // all blocks' seal as valid, though they still have to conform to the Ethereum
 // consensus rules.
 func NewFaker() *Ethash {
-
+	// create a signer cache
 	recents, _ := lru.NewARC(256)
+	// create an in memory eth database
 	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
@@ -432,7 +432,9 @@ func NewFaker() *Ethash {
 // accepts all blocks as valid apart from the single one specified, though they
 // still have to conform to the Ethereum consensus rules.
 func NewFakeFailer(fail uint64) *Ethash {
+	// create a signer cache
 	recents, _ := lru.NewARC(256)
+	// create an in memory eth database
 	db, _ := ethdb.NewMemDatabase()
 
 	return &Ethash{
@@ -462,7 +464,17 @@ func NewFakeDelayer(delay time.Duration) *Ethash {
 // NewFullFaker creates an ethash consensus engine with a full fake scheme that
 // accepts all blocks as valid, without checking any consensus rules whatsoever.
 func NewFullFaker() *Ethash {
-	return &Ethash{fakeMode: true, fakeFull: true}
+	// create a signer cache
+	recents, _ := lru.NewARC(256)
+	// create an in memory eth database
+	db, _ := ethdb.NewMemDatabase()
+
+	return &Ethash{
+		fakeMode: true,
+		fakeFull: true,
+		recents:  recents,
+		db:       db,
+	}
 }
 
 // NewShared creates a full sized ethash PoW shared between all requesters running
