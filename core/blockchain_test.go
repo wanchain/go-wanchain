@@ -48,7 +48,7 @@ func newTestBlockChain(fake bool) (*BlockChain, *ChainEnv) {
 	if err != nil {
 		panic(err)
 	}
-	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain,db)
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
 	blockchain.SetValidator(bproc{})
 	return blockchain, chainEnv
 }
@@ -185,7 +185,7 @@ func TestLastBlock(t *testing.T) {
 	bchain, chainEnv := newTestBlockChain(false)
 	defer bchain.Stop()
 
-	block := chainEnv.makeBlockChain(bchain.CurrentBlock(), 1,  0)[0]
+	block := chainEnv.makeBlockChain(bchain.CurrentBlock(), 1, 0)[0]
 	bchain.insert(block)
 	if block.Hash() != GetHeadBlockHash(bchain.chainDb) {
 		t.Errorf("Write/Get HeadBlockHash failed")
@@ -588,10 +588,10 @@ func TestFastVsFullChains(t *testing.T) {
 		//signer  = types.NewEIP155Signer(gspec.Config.ChainId)
 	)
 
-    gspec := DefaultPPOWTestingGenesisBlock()
-    gspec.Alloc = GenesisAlloc{address: {Balance: funds}}
+	gspec := DefaultPPOWTestingGenesisBlock()
+	gspec.Alloc = GenesisAlloc{address: {Balance: funds}}
 	genesis := gspec.MustCommit(gendb)
-	signer  := types.NewEIP155Signer(gspec.Config.ChainId)
+	signer := types.NewEIP155Signer(gspec.Config.ChainId)
 	engine := ethash.NewFaker(gendb)
 	stdChain, _ := NewBlockChain(gendb, gspec.Config, engine, vm.Config{})
 	defer stdChain.Stop()
@@ -690,9 +690,8 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	defer stdChain.Stop()
 	stdChainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, stdChain, gendb)
 
-
 	height := uint64(1024)
-	blocks, receipts := stdChainEnv.GenerateChain(genesis,int(height), nil)
+	blocks, receipts := stdChainEnv.GenerateChain(genesis, int(height), nil)
 
 	// Configure a subchain to roll back
 	remove := []common.Hash{}
@@ -789,13 +788,12 @@ func TestChainTxReorgs(t *testing.T) {
 		addr2: {Balance: big.NewInt(1000000)},
 		addr3: {Balance: big.NewInt(1000000)},
 	}
-	signer  := types.NewEIP155Signer(gspec.Config.ChainId)
+	signer := types.NewEIP155Signer(gspec.Config.ChainId)
 	genesis := gspec.MustCommit(db)
 	engine := ethash.NewFaker(db)
 	stdChain, _ := NewBlockChain(db, gspec.Config, engine, vm.Config{})
 	defer stdChain.Stop()
 	stdChainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, stdChain, db)
-
 
 	// Create two transactions shared between the chains:
 	//  - postponed: transaction included at a later block in the forked chain
@@ -814,7 +812,7 @@ func TestChainTxReorgs(t *testing.T) {
 	//  - futureAdd: transaction added after the reorg has already finished
 	var pastAdd, freshAdd, futureAdd *types.Transaction
 
-	chain, _ := stdChainEnv.GenerateChain(genesis,3, func(i int, gen *BlockGen) {
+	chain, _ := stdChainEnv.GenerateChain(genesis, 3, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
 			pastDrop, _ = types.SignTx(types.NewTransaction(gen.TxNonce(addr2), addr2, big.NewInt(1000), bigTxGas, nil, nil), signer, key2)
@@ -895,7 +893,7 @@ func TestLogReorgs(t *testing.T) {
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		db, _   = ethdb.NewMemDatabase()
 		// this code generates a log
-		code    = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
+		code = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
 		//gspec   = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
 		//genesis = gspec.MustCommit(db)
 		//signer  = types.NewEIP155Signer(gspec.Config.ChainId)
@@ -903,13 +901,12 @@ func TestLogReorgs(t *testing.T) {
 
 	gspec := DefaultPPOWTestingGenesisBlock()
 	gspec.Alloc = GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}
-	signer  := types.NewEIP155Signer(gspec.Config.ChainId)
+	signer := types.NewEIP155Signer(gspec.Config.ChainId)
 	genesis := gspec.MustCommit(db)
 	engine := ethash.NewFaker(db)
 	blockchain, _ := NewBlockChain(db, gspec.Config, engine, vm.Config{})
 	defer blockchain.Stop()
 	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
-
 
 	rmLogsCh := make(chan RemovedLogsEvent)
 	blockchain.SubscribeRemovedLogsEvent(rmLogsCh)
@@ -957,7 +954,7 @@ func TestReorgSideEvent(t *testing.T) {
 
 	gspec := DefaultPPOWTestingGenesisBlock()
 	gspec.Alloc = GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}
-	signer  := types.NewEIP155Signer(gspec.Config.ChainId)
+	signer := types.NewEIP155Signer(gspec.Config.ChainId)
 	genesis := gspec.MustCommit(db)
 	engine := ethash.NewFaker(db)
 	blockchain, _ := NewBlockChain(db, gspec.Config, engine, vm.Config{})
@@ -969,7 +966,7 @@ func TestReorgSideEvent(t *testing.T) {
 		t.Fatalf("failed to insert chain: %v", err)
 	}
 
-	replacementBlocks, _ := chainEnv.GenerateChain(genesis,  4, func(i int, gen *BlockGen) {
+	replacementBlocks, _ := chainEnv.GenerateChain(genesis, 4, func(i int, gen *BlockGen) {
 		tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), big.NewInt(1000000), new(big.Int), nil), signer, key1)
 		if i == 2 {
 			gen.OffsetTime(-9)
