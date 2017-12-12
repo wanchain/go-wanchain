@@ -1577,7 +1577,7 @@ func TestStampVerifySuccess(t *testing.T) {
 
 	dbMockRetVal, _ = new(big.Int).SetString(vm.WanStamp0dot1, 10)
 
-	_, _, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Bytes(), st.data, st.gasPrice)
+	_, _, _, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Bytes(), st.data, st.gasPrice)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1602,7 +1602,7 @@ func TestStampVerifyFailWrongSender(t *testing.T) {
 
 	dbMockRetVal, _ = new(big.Int).SetString(vm.WanStamp0dot1, 10)
 
-	_, _, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Bytes(), st.data, st.gasPrice)
+	_, _, _, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Bytes(), st.data, st.gasPrice)
 	if err == nil {
 		t.Error(err)
 		return

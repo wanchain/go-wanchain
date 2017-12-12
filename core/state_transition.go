@@ -240,16 +240,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	if st.msg.TxType() == 6 {
-		pureCallData, stampGas, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Address().Bytes(), st.data, st.gasPrice)
+		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Address().Bytes(), st.data, st.gasPrice)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
-		st.gas = stampGas
-		st.initialGas.SetUint64(stampGas)
+		st.gas = evmUseableGas
+		st.initialGas.SetUint64(evmUseableGas)
 		st.data = pureCallData[:]
 		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
-		if err := st.gp.SubGas(big.NewInt(int64(stampGas))); err != nil {
-			return nil,nil,nil,false,err
+		if err := st.gp.SubGas(big.NewInt(int64(totalUseableGas))); err != nil {
+			return nil, nil, nil, false, err
 		}
 
 	}
@@ -397,19 +397,19 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	return nil
 }
 
-func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (callData []byte, stampGas uint64, err error) {
+func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (callData []byte, totalUseableGas uint64, evmUseableGas uint64, err error) {
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	kix := crypto.FromECDSAPub(info.KeyImage)
 	exit, _, err := vm.CheckOTAImageExit(stateDB, kix)
 	if err != nil || exit {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	vm.AddOTAImage(stateDB, kix, info.StampBalance.Bytes())
 
-	return info.CallData, info.StampGas, nil
+	return info.CallData, new(big.Int).Div(info.StampBalance, gasPrice).Uint64(), info.StampGas, nil
 }
