@@ -247,6 +247,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.gas = stampGas
 		st.initialGas.SetUint64(stampGas)
 		st.data = pureCallData[:]
+		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
+		if err := st.gp.SubGas(big.NewInt(int64(stampGas))); err != nil {
+			return nil,nil,nil,false,err
+		}
+
 	}
 
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
