@@ -331,7 +331,7 @@ func DefaultPPOWTestingGenesisBlock() *Genesis {
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.WanchainChainConfig,
-		Nonce:      66,
+		Nonce:      67,
 		ExtraData:  hexutil.MustDecode(getPpwSingStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
