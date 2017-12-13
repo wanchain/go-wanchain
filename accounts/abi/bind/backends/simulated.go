@@ -24,11 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Anson5Lee/bc/common/math"
-	"github.com/Anson5Lee/bc/params"
 	"github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -36,6 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
