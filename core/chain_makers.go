@@ -226,7 +226,6 @@ func (self *ChainEnv) GenerateChain(parent *types.Block, n int, gen func(int, *B
 		return sealBlock, b.receipts
 	}
 	for i := 0; i < n; i++ {
-		//fmt.Println(self.db)
 		statedb, err := state.New(parent.Root(), state.NewDatabase(self.db))
 		if err != nil {
 			panic(err)
@@ -311,4 +310,16 @@ func (self *ChainEnv) makeBlockChain(parent *types.Block, n int, seed int) []*ty
 	// })
 	blocks, _ := self.GenerateChain(parent, n, nil)
 	return blocks
+}
+
+func (self *ChainEnv) Blockchain() *BlockChain {
+	return self.blockChain
+}
+
+func (self *ChainEnv) Database() ethdb.Database {
+	return self.blockChain.chainDb
+}
+
+func (self *ChainEnv) Config() *params.ChainConfig {
+	return self.config
 }

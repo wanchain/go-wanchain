@@ -24,10 +24,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Anson5Lee/bc/common/math"
+	"github.com/Anson5Lee/bc/params"
 	"github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -35,7 +36,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/params"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -53,26 +53,30 @@ var (
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database   ethdb.Database   // In memory database to store our testing data
-	blockchain *core.BlockChain // Ethereum blockchain to handle the consensus
+	// database   ethdb.Database   // In memory database to store our testing data
+	// blockchain *core.BlockChain // Ethereum blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
 	pendingState *state.StateDB // Currently pending state that will be the active on on request
 
-	config *params.ChainConfig
+	env *core.ChainEnv
+
+	// config *params.ChainConfig
 }
 
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
-func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
+func NewSimulatedBackend() *SimulatedBackend {
 	db, _ := ethdb.NewMemDatabase()
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec.MustCommit(db)
 
-	bc, _ := core.NewBlockChain(db, gspec.Config, ethash.NewFaker(db), vm.Config{})
+	ce := ethash.NewFaker(db)
+	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
+	env := core.NewChainEnv(gspec.Config, gspec, ce, bc, db)
 
-	backend := &SimulatedBackend{database: db, blockchain: bc, config: gspec.Config}
+	backend := &SimulatedBackend{env: env}
 	backend.rollback()
 	return backend
 }
@@ -83,7 +87,7 @@ func (b *SimulatedBackend) Commit() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if _, err := b.blockchain.InsertChain([]*types.Block{b.pendingBlock}); err != nil {
+	if _, err := b.env.Blockchain().InsertChain([]*types.Block{b.pendingBlock}); err != nil {
 		panic(err) // This cannot happen unless the simulator is wrong, fail in that case
 	}
 	b.rollback()
@@ -98,16 +102,13 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	bc := b.blockchain
-	chainEngine := bc.Engine()
+	// blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), b.database, 1, func(int, *core.BlockGen) {})
+	// b.pendingBlock = blocks[0]
+	// b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
 
-	fmt.Println("current block: ", b.blockchain.CurrentBlock().String())
-
-	chainEnv := core.NewChainEnv(params.TestChainConfig, core.DefaultPPOWTestingGenesisBlock(), chainEngine, bc, b.database)
-	fmt.Println("current block number: ", b.blockchain.CurrentBlock().NumberU64())
-	blocks, _ := chainEnv.GenerateChain(b.blockchain.CurrentBlock(), 1, func(int, *core.BlockGen) {})
+	blocks, _ := b.env.GenerateChain(b.env.Blockchain().CurrentBlock(), 1, nil)
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.env.Database()))
 }
 
 // CodeAt returns the code associated with a certain account in the blockchain.
@@ -115,59 +116,59 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	fmt.Println("current block number: ", b.blockchain.CurrentBlock().Number())
+	fmt.Println("current block number: ", b.env.Blockchain().CurrentBlock().Number())
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	statedb, _ := b.blockchain.State()
+	statedb, _ := b.env.Blockchain().State()
 	fmt.Println("contract: ", contract)
 	fmt.Println("codeat: ", statedb.GetCode(contract))
 	return statedb.GetCode(contract), nil
 }
 
 // BalanceAt returns the wei balance of a certain account in the blockchain.
-func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (*big.Int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (*big.Int, error) {
+// 	b.mu.Lock()
+// 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
-	}
-	statedb, _ := b.blockchain.State()
-	return statedb.GetBalance(contract), nil
-}
+// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+// 		return nil, errBlockNumberUnsupported
+// 	}
+// 	statedb, _ := b.blockchain.State()
+// 	return statedb.GetBalance(contract), nil
+// }
 
 // NonceAt returns the nonce of a certain account in the blockchain.
-func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
+// 	b.mu.Lock()
+// 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return 0, errBlockNumberUnsupported
-	}
-	statedb, _ := b.blockchain.State()
-	return statedb.GetNonce(contract), nil
-}
+// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+// 		return 0, errBlockNumberUnsupported
+// 	}
+// 	statedb, _ := b.blockchain.State()
+// 	return statedb.GetNonce(contract), nil
+// }
 
 // StorageAt returns the value of key in the storage of an account in the blockchain.
-func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
+// 	b.mu.Lock()
+// 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
-	}
-	statedb, _ := b.blockchain.State()
-	val := statedb.GetState(contract, key)
-	return val[:], nil
-}
+// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+// 		return nil, errBlockNumberUnsupported
+// 	}
+// 	statedb, _ := b.blockchain.State()
+// 	val := statedb.GetState(contract, key)
+// 	return val[:], nil
+// }
 
 // TransactionReceipt returns the receipt of a transaction.
-func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	receipt, _, _, _ := core.GetReceipt(b.database, txHash)
-	return receipt, nil
-}
+// func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+// 	receipt, _, _, _ := core.GetReceipt(b.database, txHash)
+// 	return receipt, nil
+// }
 
 // PendingCodeAt returns the code associated with an account in the pending state.
 func (b *SimulatedBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
@@ -182,26 +183,26 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call ethereum.CallM
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	state, err := b.blockchain.State()
+	state, err := b.env.Blockchain().State()
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
+	rval, _, _, err := b.callContract(ctx, call, b.env.Blockchain().CurrentBlock(), state)
 	return rval, err
 }
 
 // PendingCallContract executes a contract call on the pending state.
-func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
+// func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+// 	b.mu.Lock()
+// 	defer b.mu.Unlock()
+// 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
 
-	rval, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
-	return rval, err
-}
+// 	rval, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+// 	return rval, err
+// }
 
 // PendingNonceAt implements PendingStateReader.PendingNonceAt, retrieving
 // the nonce currently pending for the account.
@@ -273,10 +274,10 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	// Execute the call.
 	msg := callmsg{call}
 
-	evmContext := core.NewEVMContext(msg, block.Header(), b.blockchain, nil)
+	evmContext := core.NewEVMContext(msg, block.Header(), b.env.Blockchain(), nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
+	vmenv := vm.NewEVM(evmContext, statedb, b.env.Config(), vm.Config{})
 	gaspool := new(core.GasPool).AddGas(math.MaxBig256)
 	ret, gasUsed, _, failed, err := core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 	return ret, gasUsed, failed, err
@@ -286,12 +287,9 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 
-	bc := b.blockchain
-	chainEngine := bc.Engine()
+	// bc := b.env.Blockchain()
 
-	chainEnv := core.NewChainEnv(params.TestChainConfig, core.DefaultPPOWTestingGenesisBlock(), chainEngine, bc, b.database)
 	sender, err := types.Sender(types.NewEIP155Signer(big.NewInt(1)), tx)
-	// fmt.Println("sender: ", sender.Hex())
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -300,7 +298,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := chainEnv.GenerateChain(b.blockchain.CurrentBlock(), 1, func(number int, block *core.BlockGen) {
+	blocks, _ := b.env.GenerateChain(b.env.Blockchain().CurrentBlock(), 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
@@ -308,34 +306,23 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	})
 
 	b.pendingBlock = blocks[0]
-	fmt.Println("b.pendingBlock", b.pendingBlock.String())
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.env.Database()))
 	return nil
 }
 
 // JumpTimeInSeconds adds skip seconds to the clock
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
-	var (
-		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = core.DefaultPPOWTestingGenesisBlock()
-		genesis   = gspec.MustCommit(testdb)
-	)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	chainEngine := ethash.NewFaker(testdb)
-	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
-
-	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-	blocks, _ := chainEnv.GenerateChain(genesis, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := b.env.GenerateChain(b.env.Blockchain().CurrentBlock(), 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
 		block.OffsetTime(int64(adjustment.Seconds()))
 	})
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.env.Database()))
 
 	return nil
 }

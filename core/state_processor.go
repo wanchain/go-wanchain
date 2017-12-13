@@ -111,7 +111,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 
 	//} else {
 	//
-	//	root = statedb.IntermediateRoot(true/*config.IsEIP158(header.Number)*/).Bytes()
+	// root = statedb.IntermediateRoot(true /*config.IsEIP158(header.Number)*/).Bytes()
 	//}
 
 	// check block gasused reach gaslimit
