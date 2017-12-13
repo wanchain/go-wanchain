@@ -8,6 +8,8 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"fmt"
 	"strings"
+	"github.com/wanchain/go-wanchain/core/types"
+	"math/big"
 )
 
 type SignerInfo struct {
@@ -105,19 +107,79 @@ func TestStoreAndLoadRunningSnapshot(t *testing.T) {
 	}
 }
 
+func internalApply(s *Snapshot,headers[]*types.Header, testUsedSigners map[common.Address]struct{}, testWindow []common.Address){
+	//for _, header := range headers {
+	//
+	//}
+}
 
-func TestPPOWApplyingFixHeader(t *testing.T){
-	fmt.Println("")
-	//hash := crypto.Keccak256Hash([]byte{0})
-	//blockNumber := 0
-	//s := newSnapshot(uint64(blockNumber), hash,addrArray)
-	//blockNumber++
-
+func internalUpdateWindow(testUsedSigners map[common.Address]struct{}, testWindow[]common.Address, signer common.Address, isExist bool) {
 
 }
 
-func TestPPOWApplyingRandom(t *testing.T){
+func sign(header *types.Header, signer common.Address) {
+	si := signerSet[signer.String()]
+	sig, _ := crypto.Sign(sigHash(header).Bytes(), si.private)
+	copy(header.Extra[len(header.Extra)-65:], sig)
+}
 
+// indexes indicated use which signer to sign header
+func prepareHeaders(indexes []int, blockNumbers []int) []*types.Header{
+	headers := make([]*types.Header, 0)
+	for i, n := range indexes{
+		signer := addrArray[n]
+		h := &types.Header{
+			Coinbase: signer,
+			Time:     big.NewInt(int64(blockNumbers[i]) * int64(1000)),
+			Number:   big.NewInt(int64(blockNumbers[i])),
+			Extra:    make([]byte, extraSeal+ extraVanity),
+		}
+		sign(h, signer)
+		headers = append(headers, h)
+	}
+	return headers
+}
+
+func TestPPOWApplyingErrBlockNumberHeaders(t *testing.T){
+	fmt.Println("")
+	hash := crypto.Keccak256Hash([]byte{0})
+	blockNumber := 0
+	s := newSnapshot(uint64(blockNumber), hash,addrArray)
+	blockNumber++
+
+	//invalid block headers number order
+	invalidNumberHeaders := prepareHeaders([]int{0,1}, []int{1,0})
+	_, err := s.apply(invalidNumberHeaders)
+	if err == nil{
+		t.Error("apply error invalid order block number")
+	}
+}
+
+func TestPPOWApplyingNotCotinueNumberHeaders(t *testing.T){
+	hash := crypto.Keccak256Hash([]byte{0})
+	blockNumber := 8
+	s := newSnapshot(uint64(blockNumber), hash,addrArray)
+
+	//invalid block headers number order
+	invalidNumberHeaders := prepareHeaders([]int{0}, []int{blockNumber})
+	_, err := s.apply(invalidNumberHeaders)
+	if err == nil{
+		t.Error("apply error invalid order block number")
+	}
+	invalidNumberHeaders = prepareHeaders([]int{0}, []int{blockNumber-1})
+	_, err = s.apply(invalidNumberHeaders)
+	if err == nil{
+		t.Error("apply error invalid order block number")
+	}
+	invalidNumberHeaders = prepareHeaders([]int{0}, []int{blockNumber+2})
+	_, err = s.apply(invalidNumberHeaders)
+	if err == nil{
+		t.Error("apply error invalid order block number")
+	}
+}
+
+func TestPPOWApplyingRandom(t *testing.T){
+    fmt.Printf("")
 }
 
 func TestIsSignerLegal(t *testing.T){
