@@ -20,11 +20,14 @@ type SignerInfo struct {
 }
 
 var (
+	// assert never be lower than 6
 	totalSigner  = 20
 	signerSet    = make(map[string]*SignerInfo)
 	addrStrArray = make([]string, 0)
 	addrArray = make([]common.Address,0)
 	indexAddrStrMap = make(map[int]string)
+	unAuthorizedSigner = common.Address{}
+	unAuthorizedPrivateKey *ecdsa.PrivateKey = nil
 )
 
 
@@ -39,6 +42,8 @@ func init(){
 		addrArray = append(addrArray, addr)
 		indexAddrStrMap[i] = str
 	}
+	unAuthorizedPrivateKey, _ = crypto.GenerateKey()
+	unAuthorizedSigner.Set(crypto.PubkeyToAddress(unAuthorizedPrivateKey.PublicKey))
 }
 
 //store and retrieve permission pow
@@ -107,16 +112,6 @@ func TestStoreAndLoadRunningSnapshot(t *testing.T) {
 	}
 }
 
-func internalApply(s *Snapshot,headers[]*types.Header, testUsedSigners map[common.Address]struct{}, testWindow []common.Address){
-	//for _, header := range headers {
-	//
-	//}
-}
-
-func internalUpdateWindow(testUsedSigners map[common.Address]struct{}, testWindow[]common.Address, signer common.Address, isExist bool) {
-
-}
-
 func sign(header *types.Header, signer common.Address) {
 	si := signerSet[signer.String()]
 	sig, _ := crypto.Sign(sigHash(header).Bytes(), si.private)
@@ -140,22 +135,92 @@ func prepareHeaders(indexes []int, blockNumbers []int) []*types.Header{
 	return headers
 }
 
+func prepareUnAuthorizedSignerHeader(blockNumber int) []*types.Header{
+	headers := make([]*types.Header, 0)
+	h := &types.Header{
+		Coinbase: unAuthorizedSigner,
+		Time:     big.NewInt(int64(blockNumber) * int64(1000)),
+		Number:   big.NewInt(int64(blockNumber)),
+		Extra:    make([]byte, extraSeal+ extraVanity),
+	}
+	sig, _ := crypto.Sign(sigHash(h).Bytes(), unAuthorizedPrivateKey)
+	copy(h.Extra[len(h.Extra)-65:], sig)
+	headers = append(headers, h)
+	return headers
+}
+
+
+func TestPPOWApplyingFixedCorrectHeaders(t *testing.T){
+	hash := crypto.Keccak256Hash([]byte{0})
+	blockNumber := 0
+	s := newSnapshot(uint64(blockNumber), hash,addrArray)
+	blockNumber++
+
+	usingSigners := totalSigner - 3
+	signerIndexes := make([]int, 0)
+	blockNumbers := make([]int, 0)
+	expectWindowLen := (usingSigners-1)/2
+	for i := 0; i < usingSigners; i++ {
+		signerIndexes = append(signerIndexes, i)
+		blockNumbers = append(blockNumbers, blockNumber)
+		blockNumber++
+	}
+	for i:=0; i< expectWindowLen; i++ {
+		signerIndexes = append(signerIndexes, i)
+		blockNumbers = append(blockNumbers, blockNumber)
+		blockNumber++
+	}
+	headers := prepareHeaders(signerIndexes, blockNumbers)
+	_, err := s.apply(headers)
+	if err != nil{
+		t.Error("apply shouldn't be failed ")
+	}
+
+	for i := 0; i < usingSigners; i++ {
+		if _, ok := s.PermissionSigners[addrArray[i]]; !ok{
+			t.Error("used signer didn't record")
+		}
+	}
+
+	expectedIndex := expectWindowLen-1
+	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
+		addr := e.Value.(common.Address)
+		if strings.Compare(addr.String(), addrStrArray[expectedIndex]) != 0 {
+			t.Error("error in recent window store or retrieve")
+		}
+		expectedIndex--
+	}
+}
+
 func TestPPOWApplyingErrBlockNumberHeaders(t *testing.T){
-	fmt.Println("")
 	hash := crypto.Keccak256Hash([]byte{0})
 	blockNumber := 0
 	s := newSnapshot(uint64(blockNumber), hash,addrArray)
 	blockNumber++
 
 	//invalid block headers number order
-	invalidNumberHeaders := prepareHeaders([]int{0,1}, []int{1,0})
+	invalidNumberHeaders := prepareHeaders([]int{0,1}, []int{blockNumber+1,blockNumber})
 	_, err := s.apply(invalidNumberHeaders)
 	if err == nil{
 		t.Error("apply error invalid order block number")
 	}
 }
 
-func TestPPOWApplyingNotCotinueNumberHeaders(t *testing.T){
+func TestPPOWApplyingUnAuthorizedHeader(t *testing.T){
+	hash := crypto.Keccak256Hash([]byte{0})
+	blockNumber := 0
+	s := newSnapshot(uint64(blockNumber), hash,addrArray)
+	blockNumber++
+
+	//
+	invalidNumberHeaders := prepareUnAuthorizedSignerHeader(blockNumber)
+	_, err := s.apply(invalidNumberHeaders)
+	if err == nil{
+		t.Error("apply error invalid order block number")
+	}
+}
+
+func TestPPOWApplyingNotContinueNumberHeaders(t *testing.T){
 	hash := crypto.Keccak256Hash([]byte{0})
 	blockNumber := 8
 	s := newSnapshot(uint64(blockNumber), hash,addrArray)
@@ -178,8 +243,19 @@ func TestPPOWApplyingNotCotinueNumberHeaders(t *testing.T){
 	}
 }
 
+func internalApply(s *Snapshot,headers[]*types.Header, testUsedSigners map[common.Address]struct{}, testWindow []common.Address){
+	//for _, header := range headers {
+	//
+	//}
+}
+
+func internalUpdateWindow(testUsedSigners map[common.Address]struct{}, testWindow[]common.Address, signer common.Address, isExist bool) {
+
+}
+
+
 func TestPPOWApplyingRandom(t *testing.T){
-    fmt.Printf("")
+    fmt.Printf("%s", "")
 }
 
 func TestIsSignerLegal(t *testing.T){

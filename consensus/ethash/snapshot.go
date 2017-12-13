@@ -25,6 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
+	"strings"
 )
 
 const (
@@ -178,7 +179,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 	for _, header := range headers {
 		signer, err := ecrecover(header)
-		if err != nil {
+		if err != nil || 0 != strings.Compare(signer.String(), header.Coinbase.String()){
 			return nil, err
 		}
 
