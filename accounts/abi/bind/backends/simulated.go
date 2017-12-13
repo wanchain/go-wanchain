@@ -44,12 +44,10 @@ var _ bind.ContractBackend = (*SimulatedBackend)(nil)
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
 
 var (
-	key, _      = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+	key, _      = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	coinbase    = crypto.PubkeyToAddress(key.PublicKey)
 	extraVanity = 32
 	extraSeal   = 65
-	bc          *core.BlockChain
-	db          ethdb.Database
 )
 
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
@@ -68,15 +66,13 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database, _ := ethdb.NewMemDatabase()
-	genesis := core.DefaultGenesisBlock()
-	genesis.Coinbase = coinbase
-	genesis.MustCommit(database)
+	db, _ := ethdb.NewMemDatabase()
+	gspec := core.DefaultPPOWTestingGenesisBlock()
+	gspec.MustCommit(db)
 
-	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(database), vm.Config{})
-	bc = blockchain
-	db = database
-	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}
+	bc, _ := core.NewBlockChain(db, gspec.Config, ethash.NewFaker(db), vm.Config{})
+
+	backend := &SimulatedBackend{database: db, blockchain: bc, config: gspec.Config}
 	backend.rollback()
 	return backend
 }
@@ -86,8 +82,6 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 func (b *SimulatedBackend) Commit() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
-	fmt.Println("length of pending blocks: ", len([]*types.Block{b.pendingBlock}))
 
 	if _, err := b.blockchain.InsertChain([]*types.Block{b.pendingBlock}); err != nil {
 		panic(err) // This cannot happen unless the simulator is wrong, fail in that case
@@ -104,18 +98,14 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	var (
-		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = core.DefaultPPOWTestingGenesisBlock()
-		genesis   = gspec.MustCommit(testdb)
-	)
+	bc := b.blockchain
+	chainEngine := bc.Engine()
 
-	chainEngine := ethash.NewFaker(testdb)
+	fmt.Println("current block: ", b.blockchain.CurrentBlock().String())
 
-	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
-	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-	blocks, _ := chainEnv.GenerateChain(genesis, 1, nil)
+	chainEnv := core.NewChainEnv(params.TestChainConfig, core.DefaultPPOWTestingGenesisBlock(), chainEngine, bc, b.database)
+	fmt.Println("current block number: ", b.blockchain.CurrentBlock().NumberU64())
+	blocks, _ := chainEnv.GenerateChain(b.blockchain.CurrentBlock(), 1, func(int, *core.BlockGen) {})
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
 }
@@ -125,10 +115,14 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	fmt.Println("current block number: ", b.blockchain.CurrentBlock().Number())
+
 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
 	statedb, _ := b.blockchain.State()
+	fmt.Println("contract: ", contract)
+	fmt.Println("codeat: ", statedb.GetCode(contract))
 	return statedb.GetCode(contract), nil
 }
 
@@ -291,21 +285,13 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 // SendTransaction updates the pending block to include the given transaction.
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	var (
-		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = core.DefaultPPOWTestingGenesisBlock()
-		genesis   = gspec.MustCommit(testdb)
-	)
-	b.mu.Lock()
-	defer b.mu.Unlock()
 
-	chainEngine := ethash.NewFaker(testdb)
-	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
+	bc := b.blockchain
+	chainEngine := bc.Engine()
 
-	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-
-	sender, err := types.Sender(types.NewEIP155Signer(gspec.Config.ChainId), tx)
+	chainEnv := core.NewChainEnv(params.TestChainConfig, core.DefaultPPOWTestingGenesisBlock(), chainEngine, bc, b.database)
+	sender, err := types.Sender(types.NewEIP155Signer(big.NewInt(1)), tx)
+	// fmt.Println("sender: ", sender.Hex())
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -314,7 +300,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := chainEnv.GenerateChain(genesis, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := chainEnv.GenerateChain(b.blockchain.CurrentBlock(), 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
@@ -322,6 +308,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	})
 
 	b.pendingBlock = blocks[0]
+	fmt.Println("b.pendingBlock", b.pendingBlock.String())
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
 	return nil
 }

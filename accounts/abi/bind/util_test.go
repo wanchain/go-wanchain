@@ -18,6 +18,7 @@ package bind_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -29,8 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 )
 
-// var testKey1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-var testKey, _ = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+var testKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 
 var waitDeployedTests = map[string]struct {
 	code        string
@@ -53,15 +53,11 @@ var waitDeployedTests = map[string]struct {
 
 func TestWaitDeployed(t *testing.T) {
 	for name, test := range waitDeployedTests {
-		// backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		// 	crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
-		// })
-		// fmt.Println(crypto.PubkeyToAddress(testKey1.PublicKey))
 		backend := backends.NewSimulatedBackend(nil)
 
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
-		tx, _ = types.SignTx(tx, types.HomesteadSigner{}, testKey)
+		tx, _ = types.SignTx(tx, types.NewEIP155Signer(big.NewInt(1)), testKey)
 
 		// Wait for it to get mined in the background.
 		var (
@@ -72,8 +68,12 @@ func TestWaitDeployed(t *testing.T) {
 		)
 		go func() {
 			address, err = bind.WaitDeployed(ctx, backend, tx)
+			fmt.Println("err: ", err)
+			fmt.Println("address: ", address)
 			close(mined)
 		}()
+
+		fmt.Println("tx to be send: ", tx.String())
 
 		// Send and mine the transaction.
 		backend.SendTransaction(ctx, tx)
