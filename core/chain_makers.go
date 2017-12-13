@@ -127,7 +127,7 @@ func (b *BlockGen) SetExtra(data []byte) {
 func (b *BlockGen) AddTx(tx *types.Transaction) {
 	fmt.Println("transaction to be added: ", tx.String())
 	if b.gasPool == nil {
-		b.SetCoinbase(common.Address{})
+		b.SetCoinbase(b.parent.Coinbase())
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
 	receipt, _, err := ApplyTransaction(b.config, nil, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{})
