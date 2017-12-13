@@ -494,7 +494,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		}
 
 		if number%checkpointInterval == 0 {
-			if s, err := LoadSnapShot(self.db, hash); err == nil {
+			if s, err := loadSnapShot(self.db, hash); err == nil {
 				snap = s
 				break
 			}
@@ -511,7 +511,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 			for i := 0; i < len(signers); i++ {
 				copy(signers[i][:], genesis.Extra[i*common.AddressLength:])
 			}
-			snap = NewSnapshot(0, genesis.Hash(), signers)
+			snap = newSnapshot(0, genesis.Hash(), signers)
 			if err := snap.store(self.db); err != nil {
 				return nil, err
 			}

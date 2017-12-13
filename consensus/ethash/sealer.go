@@ -39,10 +39,8 @@ func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop
 	defer functrace.Exit()
 
 	header := block.Header()
-	// log.Trace("Seal(): cr@zy seal")
-	// log.Trace(fmt.Sprintf(header.String()))
+	// permission signer signing the header
 	sighash, err := ethash.signFn(accounts.Account{Address: block.Coinbase()}, sigHash(block.Header()).Bytes())
-	//log.Trace("Seal(): cr@zy seal", "hash Input", sigHash(block.Header()).String())
 	if err != nil {
 		return nil, err
 	}

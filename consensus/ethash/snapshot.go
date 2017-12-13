@@ -21,12 +21,10 @@ import (
 	"container/list"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/functrace"
 )
 
 const (
@@ -51,10 +49,7 @@ type plainSnapShot struct {
 	RecentSignersWindow []common.Address            `json:"recentSignersWindow"`
 }
 
-func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Snapshot {
-	functrace.Enter(fmt.Sprintf("number= %d", number))
-	defer functrace.Exit()
-
+func newSnapshot(number uint64, hash common.Hash, signers []common.Address) *Snapshot {
 	snap := &Snapshot{
 		PermissionSigners:   make(map[common.Address]struct{}),
 		Number:              number,
@@ -69,10 +64,7 @@ func NewSnapshot(number uint64, hash common.Hash, signers []common.Address) *Sna
 	return snap
 }
 
-func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	functrace.Enter(hash.String())
-	defer functrace.Exit()
-
+func loadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte("ppow-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -99,9 +91,6 @@ func LoadSnapShot(db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 }
 
 func (s *Snapshot) store(db ethdb.Database) error {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	plain := &plainSnapShot{
 		PermissionSigners:   s.PermissionSigners,
 		Number:              s.Number,
@@ -125,9 +114,6 @@ func (s *Snapshot) store(db ethdb.Database) error {
 }
 
 func (s *Snapshot) copy() *Snapshot {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	cpy := &Snapshot{
 		PermissionSigners:   s.PermissionSigners,
 		Number:              s.Number,
@@ -144,9 +130,6 @@ func (s *Snapshot) copy() *Snapshot {
 }
 
 func (s *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
-	functrace.Enter(signer.String())
-	defer functrace.Exit()
-
 	if isExist {
 		//if signer already presence
 		if (s.RecentSignersWindow.Len()) > 0 {
@@ -178,9 +161,6 @@ func (s *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
 // len(RecentSignersWindow) = (len(UsedSigners)-1)/2
 // so when n > 2, hacker should got (n / 2 + 1) key to reorg chain?
 func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	if len(headers) == 0 {
 		return s, nil
 	}
@@ -226,9 +206,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 }
 
 func (s *Snapshot) isLegal4Sign(signer common.Address) error {
-	functrace.Enter(signer.String())
-	defer functrace.Exit()
-
 	if _, ok := s.PermissionSigners[signer]; !ok {
 		return errUnauthorized
 	}
