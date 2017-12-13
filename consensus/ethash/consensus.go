@@ -502,11 +502,11 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 
 		if number == 0 {
 			genesis := chain.GetHeaderByNumber(0)
-			// TODO: cr@zy think maybe useful add this
-			//if err := self.VerifyHeader(chain,genesis, false); err != nil {
-			//	return nil, err
-			//}
-			// TODO: does we need
+			// verify genesis hash match
+			if err := self.VerifyHeader(chain,genesis, false); err != nil {
+				return nil, err
+			}
+
 			signers := make([]common.Address, len(genesis.Extra)/common.AddressLength)
 			for i := 0; i < len(signers); i++ {
 				copy(signers[i][:], genesis.Extra[i*common.AddressLength:])
@@ -550,7 +550,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		if err = snap.store(self.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Trace("Stored ppow snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
 	return snap, nil
