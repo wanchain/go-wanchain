@@ -53,7 +53,7 @@ func TestTestMode(t *testing.T) {
 	sighash4Extra, err := fakeSignerFn(accounts.Account{}, sigHash(head).Bytes())
 	copy(head.Extra[len(head.Extra)-extraSeal:], sighash4Extra)
 
-	ethash := NewTester()
+	ethash := NewTester(nil)
 	ethash.signer = fakedAddr
 	ethash.signFn = fakeSignerFn
 	block, err := ethash.Seal(nil, types.NewBlockWithHeader(head), nil)
