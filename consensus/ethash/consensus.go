@@ -821,22 +821,20 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	// Select the correct block reward based on chain progression
 	//blockReward := frontierBlockReward
 	//if config.IsByzantium(header.Number) {
-
 	//	blockReward := byzantiumBlockReward
-
 	//}
 	// Accumulate the rewards for the miner and any included uncles
-	/*reward := new(big.Int).Set(blockReward)
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
-
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
-	}
-	state.AddBalance(header.Coinbase, reward)*/
+	//reward := new(big.Int).Set(blockReward)
+	//r := new(big.Int)
+	//for _, uncle := range uncles {
+	//	r.Add(uncle.Number, big8)
+	//	r.Sub(r, header.Number)
+	//	r.Mul(r, blockReward)
+	//	r.Div(r, big8)
+	//	state.AddBalance(uncle.Coinbase, r)
+	//
+	//	r.Div(blockReward, big32)
+	//	reward.Add(reward, r)
+	//}
+	//state.AddBalance(header.Coinbase, reward)
 }
