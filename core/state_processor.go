@@ -107,12 +107,17 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	var root []byte
 	//if config.IsByzantium(header.Number) {
 
-		statedb.Finalise(true)
+	statedb.Finalise(true)
 
 	//} else {
 	//
 	//	root = statedb.IntermediateRoot(true/*config.IsEIP158(header.Number)*/).Bytes()
 	//}
+
+	// check block gasused reach gaslimit
+	if big.NewInt(0).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
+		return nil, nil, ErrGasLimitReached
+	}
 
 	usedGas.Add(usedGas, gas)
 

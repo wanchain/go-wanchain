@@ -334,13 +334,14 @@ func init() {
 }
 
 type PrivicyTxInfo struct {
-	PublicKeys   []*ecdsa.PublicKey
-	KeyImage     *ecdsa.PublicKey
-	W_Random     []*big.Int
-	Q_Random     []*big.Int
-	CallData     []byte
-	StampBalance *big.Int
-	StampGas     uint64
+	PublicKeys         []*ecdsa.PublicKey
+	KeyImage           *ecdsa.PublicKey
+	W_Random           []*big.Int
+	Q_Random           []*big.Int
+	CallData           []byte
+	StampBalance       *big.Int
+	StampTotalGas      uint64
+	GasLeftSubRingSign uint64
 }
 
 func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivicyTxInfo, err error) {
@@ -360,14 +361,19 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 		return
 	}
 
-	stampGas := new(big.Int).Div(ringSignInfo.OTABalance, gasPrice).Uint64()
-	mixLen := len(ringSignInfo.PublicKeys)
-	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
-	if stampGas < ringSigDiffRequiredGas {
+	stampGasBigInt := new(big.Int).Div(ringSignInfo.OTABalance, gasPrice)
+	if stampGasBigInt.BitLen() > 64 {
 		return nil, vm.ErrOutOfGas
 	}
 
-	stampGas -= ringSigDiffRequiredGas
+	StampTotalGas := stampGasBigInt.Uint64()
+	mixLen := len(ringSignInfo.PublicKeys)
+	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
+	if StampTotalGas < ringSigDiffRequiredGas {
+		return nil, vm.ErrOutOfGas
+	}
+
+	GasLeftSubRingSign := StampTotalGas - ringSigDiffRequiredGas
 
 	info = &PrivicyTxInfo{
 		ringSignInfo.PublicKeys,
@@ -376,12 +382,17 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 		ringSignInfo.Q_Random,
 		TxDataWithRing.CxtCallParams[:],
 		ringSignInfo.OTABalance,
-		stampGas,
+		StampTotalGas,
+		GasLeftSubRingSign,
 	}
 	return
 }
 
 func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int) error {
+	if intrGas == nil || intrGas.BitLen() > 64 {
+		return vm.ErrOutOfGas
+	}
+
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return err
@@ -395,7 +406,7 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 		return errors.New("stamp has been spended")
 	}
 
-	if info.StampGas < intrGas.Uint64() {
+	if info.GasLeftSubRingSign < intrGas.Uint64() {
 		return vm.ErrOutOfGas
 	}
 
@@ -416,5 +427,5 @@ func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPri
 
 	vm.AddOTAImage(stateDB, kix, info.StampBalance.Bytes())
 
-	return info.CallData, new(big.Int).Div(info.StampBalance, gasPrice).Uint64(), info.StampGas, nil
+	return info.CallData, info.StampTotalGas, info.GasLeftSubRingSign, nil
 }
