@@ -1,15 +1,29 @@
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// The code is mostly inspired by POA of ethereum
+
 package ethash
 
 import (
-	"bytes"
 	"container/list"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"runtime/debug"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/functrace"
@@ -129,34 +143,28 @@ func (s *Snapshot) copy() *Snapshot {
 	return cpy
 }
 
-func (self *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
+func (s *Snapshot) updateSignerStatus(signer common.Address, isExist bool) {
 	functrace.Enter(signer.String())
 	defer functrace.Exit()
 
-	empty, _ := hexutil.Decode("0x0000000000000000000000000000000000000000")
-	if bytes.Equal(empty, signer[:]) {
-		functrace.Enter("dummy")
-		debug.PrintStack()
-		defer functrace.Exit()
-	}
 	if isExist {
 		//if signer already presence
-		if (self.RecentSignersWindow.Len()) > 0 {
-			self.RecentSignersWindow.PushFront(signer)
-			self.RecentSignersWindow.Remove(self.RecentSignersWindow.Back())
+		if (s.RecentSignersWindow.Len()) > 0 {
+			s.RecentSignersWindow.PushFront(signer)
+			s.RecentSignersWindow.Remove(s.RecentSignersWindow.Back())
 		}
 	} else {
 		// This is the first time the signer appear
-		self.UsedSigners[signer] = struct{}{}
-		preWindowLen := self.RecentSignersWindow.Len()
-		newWindowLen := (len(self.UsedSigners) - 1) / windowRatio
+		s.UsedSigners[signer] = struct{}{}
+		preWindowLen := s.RecentSignersWindow.Len()
+		newWindowLen := (len(s.UsedSigners) - 1) / windowRatio
 		if newWindowLen > preWindowLen {
-			self.RecentSignersWindow.PushFront(signer)
+			s.RecentSignersWindow.PushFront(signer)
 		} else {
 			//windowLen unchanged
 			if newWindowLen > 0 {
-				self.RecentSignersWindow.PushFront(signer)
-				self.RecentSignersWindow.Remove(self.RecentSignersWindow.Back())
+				s.RecentSignersWindow.PushFront(signer)
+				s.RecentSignersWindow.Remove(s.RecentSignersWindow.Back())
 			}
 		}
 	}
@@ -179,11 +187,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// Sanity check that the headers can be applied
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
-			return nil, errors.New("invaild---")
+			return nil, errors.New("invalid applied headers")
 		}
 	}
 	if headers[0].Number.Uint64() != s.Number+1 {
-		return nil, errors.New("invaild---")
+		return nil, errors.New("invalid applied header to snapshot")
 	}
 
 	snap := s.copy()
