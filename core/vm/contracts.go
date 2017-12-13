@@ -629,7 +629,8 @@ func init() {
 type wanchainStampSC struct{}
 
 func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
-	return params.CreateDataGas
+	// ota balance store gas + ota wanaddr store gas
+	return params.SstoreSetGas * 2
 }
 
 func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, error) {
@@ -763,10 +764,12 @@ func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
 		mixLen := len(publickeys)
 		ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
 
-		return ringSigDiffRequiredGas
+		// ringsign compute gas + ota image key store setting gas
+		return ringSigDiffRequiredGas + params.SstoreSetGas
 
 	} else {
-		return params.CreateDataGas
+		// ota balance store gas + ota wanaddr store gas
+		return params.SstoreSetGas * 2
 	}
 
 }

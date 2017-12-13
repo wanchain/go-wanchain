@@ -289,7 +289,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
 	} else {
-		usedGas = big.NewInt(int64(stampTotalGas))
+		usedGas = new(big.Int).SetUint64(stampTotalGas)
 	}
 
 	requiredGas = usedGas
@@ -369,12 +369,14 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	StampTotalGas := stampGasBigInt.Uint64()
 	mixLen := len(ringSignInfo.PublicKeys)
 	ringSigDiffRequiredGas := params.RequiredGasPerMixPub * (uint64(mixLen))
-	if StampTotalGas < ringSigDiffRequiredGas {
+
+	// ringsign compute gas + ota image key store setting gas
+	preSubGas := ringSigDiffRequiredGas + params.SstoreSetGas
+	if StampTotalGas < preSubGas {
 		return nil, vm.ErrOutOfGas
 	}
 
-	GasLeftSubRingSign := StampTotalGas - ringSigDiffRequiredGas
-
+	GasLeftSubRingSign := StampTotalGas - preSubGas
 	info = &PrivicyTxInfo{
 		ringSignInfo.PublicKeys,
 		ringSignInfo.KeyImage,
@@ -385,6 +387,7 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 		StampTotalGas,
 		GasLeftSubRingSign,
 	}
+
 	return
 }
 

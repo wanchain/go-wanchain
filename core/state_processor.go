@@ -115,7 +115,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	//}
 
 	// check block gasused reach gaslimit
-	if big.NewInt(0).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
+	if new(big.Int).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
 		return nil, nil, ErrGasLimitReached
 	}
 
