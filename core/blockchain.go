@@ -1127,7 +1127,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	}
 	//ppow extend
 	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
-		log.Error("wanchain willing revert")
+		log.Trace("wanchain willing revert")
 		err := ethash.VerifyPPOWReorg(bc, oldBlock, oldChain, newChain)
 		if err != nil {
 			log.Error("wanchain revert invalid")
