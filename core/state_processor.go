@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 )
 
@@ -103,6 +104,14 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		return nil, nil, err
 	}
 
+	// check block gasused reach gaslimit
+	if new(big.Int).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
+		log.Error("total used gas reached gas limit", "total used gas",
+			new(big.Int).Add(usedGas, gas).Uint64(), "gas limmit", header.GasLimit.Uint64(),
+			"gas pool left", (*big.Int)(gp).Uint64())
+		return nil, nil, ErrGasLimitReached
+	}
+
 	// Update the state with pending changes
 	var root []byte
 	//if config.IsByzantium(header.Number) {
@@ -113,11 +122,6 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	//
 	// root = statedb.IntermediateRoot(true /*config.IsEIP158(header.Number)*/).Bytes()
 	//}
-
-	// check block gasused reach gaslimit
-	if new(big.Int).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
-		return nil, nil, ErrGasLimitReached
-	}
 
 	usedGas.Add(usedGas, gas)
 
