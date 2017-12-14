@@ -458,7 +458,7 @@ func NewFakeDelayer(delay time.Duration, db ethdb.Database) *Ethash {
 // accepts all blocks as valid, without checking any consensus rules whatsoever.
 func NewFullFaker(db ethdb.Database) *Ethash {
 	recents, _ := lru.NewARC(256)
-	return &Ethash{fakeMode: true, fakeFull: true, db: db, recents:recents}
+	return &Ethash{fakeMode: true, fakeFull: true, db: db, recents: recents}
 }
 
 // NewShared creates a full sized ethash PoW shared between all requesters running
