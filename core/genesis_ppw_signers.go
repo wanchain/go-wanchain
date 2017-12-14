@@ -6,7 +6,7 @@ import (
 )
 
 
-func getPpwSingStr() string {
+func getPpwSignStr() string {
 
 	var buf bytes.Buffer
 	buf.WriteString("0x")
