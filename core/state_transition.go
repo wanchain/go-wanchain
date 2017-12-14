@@ -226,6 +226,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		}
 	}
 
+	log.Trace("after preCheck", "txType", st.msg.TxType(), "gas pool", st.gp.String())
+
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
 
@@ -235,13 +237,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	// Pay intrinsic gas
 	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation, true /*homestead*/)
+	log.Trace("get intrinsic gas", "gas", intrinsicGas.String())
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
 	var stampTotalGas uint64
 	if st.msg.TxType() == 6 {
-		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB, sender.Address().Bytes(), st.data, st.gasPrice)
+		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
+			sender.Address().Bytes(),
+			st.data, st.gasPrice)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
@@ -250,6 +255,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.gas = evmUseableGas
 		st.initialGas.SetUint64(evmUseableGas)
 		st.data = pureCallData[:]
+		log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
 		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
 		if err := st.gp.SubGas(big.NewInt(int64(totalUseableGas))); err != nil {
 			return nil, nil, nil, false, err
@@ -260,6 +266,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, err
 	}
 
+	log.Trace("subed intrinsic gas", "gas pool left", st.gp.String())
+
 	var (
 		evm = st.evm
 		// vm errors do not effect consensus and are therefor
@@ -269,10 +277,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	)
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
+		log.Trace("create contract", "left gas", st.gas, "err", vmerr)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
+		log.Trace("no create contract", "left gas", st.gas, "err", vmerr)
 	}
 
 	if vmerr != nil {
@@ -289,9 +299,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
+		log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
 	} else {
 		requiredGas = new(big.Int).SetUint64(stampTotalGas)
 		usedGas = requiredGas
+		log.Trace("calc used gas, privacy tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))

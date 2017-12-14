@@ -104,13 +104,14 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		return nil, nil, err
 	}
 
+	// commented. otherwise will lead to bug.
 	// check block gasused reach gaslimit
-	if new(big.Int).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
-		log.Error("total used gas reached gas limit", "total used gas",
-			new(big.Int).Add(usedGas, gas).Uint64(), "gas limmit", header.GasLimit.Uint64(),
-			"gas pool left", gp.String())
-		return nil, nil, ErrGasLimitReached
-	}
+	//if new(big.Int).Add(usedGas, gas).Cmp(header.GasLimit) > 0 {
+	//	log.Error("total used gas reached gas limit", "total used gas",
+	//		new(big.Int).Add(usedGas, gas).Uint64(), "gas limmit", header.GasLimit.Uint64(),
+	//		"gas pool left", gp.String())
+	//	return nil, nil, ErrGasLimitReached
+	//}
 
 	// Update the state with pending changes
 	var root []byte
