@@ -300,17 +300,18 @@ func TestGetNodeData63(t *testing.T) { testGetNodeData(t, 63) }
 
 func testGetNodeData(t *testing.T, protocol int) {
 	// Define three accounts to simulate transactions with
-	acc1Key, _ := crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
-	acc2Key, _ := crypto.HexToECDSA("49a7b37aa6f6645917e7b807e9d1c00d4fa71f18343b0d4122a4d2df64dd6fee")
+	acc1Key, _ := crypto.HexToECDSA("9780c4081b5b1191d664c5f55efab9c5de6f6c9678b9f61d7b1a17f3fc208aa3")
+	acc2Key, _ := crypto.HexToECDSA("3be6eec899911423f4f375f72bf0eaf5efdd248bc539fb45adcf17829c979bb1")
 	acc1Addr := crypto.PubkeyToAddress(acc1Key.PublicKey)
 	acc2Addr := crypto.PubkeyToAddress(acc2Key.PublicKey)
 
-	signer := types.HomesteadSigner{}
+	// signer := types.HomesteadSigner{}
+	signer := types.NewEIP155Signer(big.NewInt(1))
 	// Create a chain generator with some simple transactions (blatantly stolen from @fjl/chain_markets_test)
 	generator := func(i int, block *core.BlockGen) {
 		switch i {
 		case 0:
-			// In block 1, the test bank sends account #1 some ether.
+			// In block 1, the test bank sends account #1 some wan.
 			tx, _ := types.SignTx(types.NewTransaction(block.TxNonce(testBank), acc1Addr, big.NewInt(10000), bigTxGas, nil, nil), signer, testBankKey)
 			block.AddTx(tx)
 		case 1:

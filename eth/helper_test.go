@@ -38,11 +38,10 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
-	"github.com/wanchain/go-wanchain/params"
 )
 
 var (
-	testBankKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testBankKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	testBank       = crypto.PubkeyToAddress(testBankKey.PublicKey)
 )
 
@@ -51,17 +50,18 @@ var (
 // channels for different events.
 func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func(int, *core.BlockGen), newtx chan<- []*types.Transaction) (*ProtocolManager, error) {
 	var (
-		evmux  = new(event.TypeMux)
-		engine = ethash.NewFaker()
-		db, _  = ethdb.NewMemDatabase()
-		gspec  = &core.Genesis{
-			Config: params.TestChainConfig,
-			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
-		}
+		db, _         = ethdb.NewMemDatabase()
+		evmux         = new(event.TypeMux)
+		engine        = ethash.NewFaker(db)
+		gspec         = core.DefaultPPOWTestingGenesisBlock()
 		genesis       = gspec.MustCommit(db)
 		blockchain, _ = core.NewBlockChain(db, gspec.Config, engine, vm.Config{})
 	)
-	chain, _ := core.GenerateChain(gspec.Config, genesis, db, blocks, generator)
+
+	defer blockchain.Stop()
+	env := core.NewChainEnv(gspec.Config, gspec, engine, blockchain, db)
+
+	chain, _ := env.GenerateChain(genesis, blocks, generator)
 	if _, err := blockchain.InsertChain(chain); err != nil {
 		panic(err)
 	}

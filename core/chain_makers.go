@@ -41,6 +41,8 @@ var (
 	forkSeed                  = 2
 	fakedAddr                 = common.HexToAddress("0xf9b32578b4420a36f132db32b56f3831a7cc1804")
 	fakedAccountPrivateKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
+	extraVanity               = 32
+	extraSeal                 = 65
 )
 
 func fakeSignerFn(signer accounts.Account, hash []byte) ([]byte, error) {
@@ -113,7 +115,27 @@ func (b *BlockGen) SetCoinbase(addr common.Address) {
 
 // SetExtra sets the extra data field of the generated block.
 func (b *BlockGen) SetExtra(data []byte) {
-	b.header.Extra = data
+	// ensure the extra data has all its components
+
+	// if len(header.Extra) < extraVanity {
+	// 	header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
+	// }
+	// header.Extra = header.Extra[:extraVanity]
+
+	// if number%c.config.Epoch == 0 {
+	// 	for _, signer := range snap.signers() {
+	// 		header.Extra = append(header.Extra, signer[:]...)
+	// 	}
+	// }
+	// header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+
+	l := len(data)
+	if l > extraVanity {
+		fmt.Println("extra data too long")
+		return
+	}
+
+	copy(b.header.Extra[extraVanity-l:extraVanity], data)
 }
 
 // AddTx adds a transaction to the generated block. If no coinbase has
