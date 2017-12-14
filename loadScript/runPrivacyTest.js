@@ -12,7 +12,7 @@ var sendWanFromUnlock = function (From, To , V){
 
 
 var wait = function (conditionFunc) {
-    var loopLimit = 100;
+    var loopLimit = 300;
     var loopTimes = 0;
     while (!conditionFunc()) {
         admin.sleep(1);
@@ -29,7 +29,7 @@ personal.unlockAccount(eth.accounts[2],"wanglu",99999);
 personal.unlockAccount(eth.accounts[9],"wanglu",99999);
 
 cnt = 0;
-eth.sendTransaction({from:eth.accounts[9], to: eth.accounts[1], value: web3.toWin(100000)});
+//eth.sendTransaction({from:eth.accounts[9], to: eth.accounts[1], value: web3.toWin(100000)});
 
 
 
@@ -56,7 +56,9 @@ for(;;) {
     var otaAddr = wan.generateOneTimeAddress(wanAddr);
 
     txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWin(tranValue));
-    buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWin(tranValue), data:txBuyData, gas: 1000000, gasprice:'0x' + (200000).toString(16)});
+    buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWin(tranValue), data:txBuyData, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+
+    console.log("buy coin index")
     wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
 
 
@@ -72,7 +74,9 @@ for(;;) {
     console.log("Balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
     var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
     var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(tranValue))
-    var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000, gasprice:'0x' + (200000).toString(16)});
+    var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+    console.log("refund index")
+
     wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
 
     console.log("New balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
@@ -107,10 +111,13 @@ for(;;) {
 
     var wanAddr = wan.getWanAddress(eth.accounts[1]);
     var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
-    txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(0.001));
+    txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(0.005));
 
 
-    sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(0.001), data:txBuyData, gas: 1000000, gasprice:'0x' + (200000).toString(16)});
+    sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(0.005), data:txBuyData, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+
+    console.log("wait buy stamp")
+
     wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
@@ -126,17 +133,20 @@ for(;;) {
 
 
     var erc20simple_contract = web3.eth.contract([{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_toKey","type":"bytes"},{"name":"_value","type":"uint256"}],"name":"otatransfer","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"privacyBalance","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":false,"inputs":[{"name":"initialBase","type":"address"},{"name":"baseKeyBytes","type":"bytes"},{"name":"value","type":"uint256"}],"name":"initPrivacyAsset","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"otabalanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function","stateMutability":"view"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"otaKey","outputs":[{"name":"","type":"bytes"}],"payable":false,"type":"function","stateMutability":"view"}]);
-    contractAddr = '0x670c33ffcfbc15ae686210c0ca937671097d3005';
+
+    contractAddr = '0x0002435be99254eb3e94c6f9ab520178c576fe4c';
+
     erc20simple = erc20simple_contract.at(contractAddr)
-
-
 
     var wanAddr = wan.getWanAddress(eth.accounts[1]);
     var otaAddrTokenHolder = wan.generateOneTimeAddress(wanAddr);
     keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
     privateKeyTokenHolder = keyPairs[0];
     addrTokenHolder = keyPairs[2];
-    sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:1000000, gasprice:'0x' + (200000).toString(16)});
+    sendTx = erc20simple.initPrivacyAsset.sendTransaction(addrTokenHolder, otaAddrTokenHolder, initPriBalance,{from:eth.accounts[1], gas:200000, gasprice:'0x' + (20000000000).toString(16)});
+
+    console.log("wait init token in contract")
+
     wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
     ota1Balance = erc20simple.privacyBalance(addrTokenHolder)
@@ -160,7 +170,10 @@ for(;;) {
     glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
     combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
-    sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (200000).toString(16)}, privateKeyTokenHolder)
+    sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, gas:200000, gasprice:'0x' + (20000000000).toString(16),data: combinedData}, privateKeyTokenHolder)
+
+    console.log("wait privacy tx in blockchain")
+
     wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
