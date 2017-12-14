@@ -286,13 +286,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	if st.msg.TxType() != 6 {
+		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
 	} else {
-		usedGas = new(big.Int).SetUint64(stampTotalGas)
+		requiredGas = new(big.Int).SetUint64(stampTotalGas)
+		usedGas = requiredGas
 	}
 
-	requiredGas = usedGas
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
 	return ret, requiredGas, usedGas, vmerr != nil, err
 }
