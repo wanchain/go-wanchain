@@ -11,7 +11,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
-	"fmt"
 )
 
 type SignerInfo struct {
