@@ -102,10 +102,6 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	// blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), b.database, 1, func(int, *core.BlockGen) {})
-	// b.pendingBlock = blocks[0]
-	// b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.database))
-
 	blocks, _ := b.env.GenerateChain(b.env.Blockchain().CurrentBlock(), 1, nil)
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), state.NewDatabase(b.env.Database()))
@@ -116,14 +112,10 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	fmt.Println("current block number: ", b.env.Blockchain().CurrentBlock().Number())
-
 	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
 	statedb, _ := b.env.Blockchain().State()
-	fmt.Println("contract: ", contract)
-	fmt.Println("codeat: ", statedb.GetCode(contract))
 	return statedb.GetCode(contract), nil
 }
 
@@ -165,10 +157,10 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 // }
 
 // TransactionReceipt returns the receipt of a transaction.
-// func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-// 	receipt, _, _, _ := core.GetReceipt(b.database, txHash)
-// 	return receipt, nil
-// }
+func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	receipt, _, _, _ := core.GetReceipt(b.env.Database(), txHash)
+	return receipt, nil
+}
 
 // PendingCodeAt returns the code associated with an account in the pending state.
 func (b *SimulatedBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
@@ -286,9 +278,6 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 // SendTransaction updates the pending block to include the given transaction.
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-
-	// bc := b.env.Blockchain()
-
 	sender, err := types.Sender(types.NewEIP155Signer(big.NewInt(1)), tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))

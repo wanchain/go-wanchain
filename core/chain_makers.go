@@ -125,7 +125,6 @@ func (b *BlockGen) SetExtra(data []byte) {
 // added. Notably, contract code relying on the BLOCKHASH instruction
 // will panic during execution.
 func (b *BlockGen) AddTx(tx *types.Transaction) {
-	fmt.Println("transaction to be added: ", tx.String())
 	if b.gasPool == nil {
 		b.SetCoinbase(b.parent.Coinbase())
 	}

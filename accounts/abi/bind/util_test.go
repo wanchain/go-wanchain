@@ -18,9 +18,9 @@ package bind_test
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind/backends"
@@ -40,55 +40,49 @@ var waitDeployedTests = map[string]struct {
 	"successful deploy": {
 		code:        `6060604052600a8060106000396000f360606040526008565b00`,
 		gas:         big.NewInt(3000000),
-		wantAddress: common.HexToAddress("0x3a220f351252089d385b29beca14e27f204c296a"),
+		wantAddress: common.HexToAddress("0x361BB2e9d25D4950598643466DA50F466fE65c57"),
 	},
 	"empty code": {
 		code:        ``,
 		gas:         big.NewInt(300000),
 		wantErr:     bind.ErrNoCodeAfterDeploy,
-		wantAddress: common.HexToAddress("0x3a220f351252089d385b29beca14e27f204c296a"),
+		wantAddress: common.HexToAddress("0x361BB2e9d25D4950598643466DA50F466fE65c57"),
 	},
 }
 
 func TestWaitDeployed(t *testing.T) {
-	for _, test := range waitDeployedTests {
+	for name, test := range waitDeployedTests {
 		backend := backends.NewSimulatedBackend()
-		fmt.Println(backend)
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
 		tx, _ = types.SignTx(tx, types.NewEIP155Signer(big.NewInt(1)), testKey)
-		fmt.Println("tx: ", tx.String())
 
 		// Wait for it to get mined in the background.
 		var (
-			// 	err     error
-			// 	address common.Address
-			// 	mined   = make(chan struct{})
-			ctx = context.Background()
+			err     error
+			address common.Address
+			mined   = make(chan struct{})
+			ctx     = context.Background()
 		)
-		// go func() {
-		// 	address, err = bind.WaitDeployed(ctx, backend, tx)
-		// 	fmt.Println("err: ", err)
-		// 	fmt.Println("address: ", address)
-		// 	close(mined)
-		// }()
-
-		// fmt.Println("tx to be send: ", tx.String())
+		go func() {
+			address, err = bind.WaitDeployed(ctx, backend, tx)
+			close(mined)
+		}()
 
 		// Send and mine the transaction.
 		backend.SendTransaction(ctx, tx)
 		backend.Commit()
 
-		// select {
-		// case <-mined:
-		// 	if err != test.wantErr {
-		// 		t.Errorf("test %q: error mismatch: got %q, want %q", name, err, test.wantErr)
-		// 	}
-		// 	if address != test.wantAddress {
-		// 		t.Errorf("test %q: unexpected contract address %s", name, address.Hex())
-		// 	}
-		// case <-time.After(2 * time.Second):
-		// 	t.Errorf("test %q: timeout", name)
-		// }
+		select {
+		case <-mined:
+			if err != test.wantErr {
+				t.Errorf("test %q: error mismatch: got %q, want %q", name, err, test.wantErr)
+			}
+			if address != test.wantAddress {
+				t.Errorf("test %q: unexpected contract address %s", name, address.Hex())
+			}
+		case <-time.After(2 * time.Second):
+			t.Errorf("test %q: timeout", name)
+		}
 	}
 }

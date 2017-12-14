@@ -503,7 +503,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		if number == 0 {
 			genesis := chain.GetHeaderByNumber(0)
 			// verify genesis hash match
-			if err := self.VerifyHeader(chain,genesis, false); err != nil {
+			if err := self.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
 
