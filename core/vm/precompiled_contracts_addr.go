@@ -26,9 +26,13 @@ var (
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
 	// 0.01wan --> "0x0000000000000000000000010000000000000000"
-	otaBalancePercent1WStorageAddr = common.HexToAddress(WanStamp0dot3)
-	otaBalancePercent2WStorageAddr = common.HexToAddress(WanStamp0dot6)
-	otaBalancePercent5WStorageAddr = common.HexToAddress(WanStamp0dot9)
+	otaBalancePercent1WStorageAddr = common.HexToAddress(WanStamp0dot1)
+	otaBalancePercent2WStorageAddr = common.HexToAddress(WanStamp0dot2)
+	otaBalancePercent5WStorageAddr = common.HexToAddress(WanStamp0dot5)
+	
+	otaBalancePercent3WStorageAddr = common.HexToAddress(WanStamp0dot3)
+	otaBalancePercent6WStorageAddr = common.HexToAddress(WanStamp0dot6)
+	otaBalancePercent9WStorageAddr = common.HexToAddress(WanStamp0dot9)
 
 	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
 	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)

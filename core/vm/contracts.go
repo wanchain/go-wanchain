@@ -572,9 +572,13 @@ const (
 	Wancoin5000  = "5000000000000000000000"  //5000
 	Wancoin50000 = "50000000000000000000000" //50000
 
-	WanStamp0dot3 = "3000000000000000" //0.003
-	WanStamp0dot6 = "6000000000000000" //0.006
-	WanStamp0dot9 = "9000000000000000" //0.009
+	WanStamp0dot1 = "1000000000000000" //0.001
+	WanStamp0dot2 = "2000000000000000" //0.002
+	WanStamp0dot5 = "5000000000000000" //0.005
+
+	WanStamp0dot3 = "3000000000000000" //0.001
+	WanStamp0dot6 = "6000000000000000" //0.002
+	WanStamp0dot9 = "9000000000000000" //0.005
 )
 
 func init() {
@@ -588,14 +592,23 @@ func init() {
 
 	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
 
-	sval01, _ := new(big.Int).SetString(WanStamp0dot3, 10)
-	StampValueSet[sval01.Text(16)] = WanStamp0dot3
+	sval01, _ := new(big.Int).SetString(WanStamp0dot1, 10)
+	StampValueSet[sval01.Text(16)] = WanStamp0dot1
 
-	sval02, _ := new(big.Int).SetString(WanStamp0dot6, 10)
-	StampValueSet[sval02.Text(16)] = WanStamp0dot6
+	sval02, _ := new(big.Int).SetString(WanStamp0dot2, 10)
+	StampValueSet[sval02.Text(16)] = WanStamp0dot2
 
-	sval05, _ := new(big.Int).SetString(WanStamp0dot9, 10)
-	StampValueSet[sval05.Text(16)] = WanStamp0dot9
+	sval05, _ := new(big.Int).SetString(WanStamp0dot5, 10)
+	StampValueSet[sval05.Text(16)] = WanStamp0dot5
+
+	sval03, _ := new(big.Int).SetString(WanStamp0dot3, 10)
+	StampValueSet[sval03.Text(16)] = WanStamp0dot3
+
+	sval06, _ := new(big.Int).SetString(WanStamp0dot6, 10)
+	StampValueSet[sval06.Text(16)] = WanStamp0dot6
+
+	sval09, _ := new(big.Int).SetString(WanStamp0dot9, 10)
+	StampValueSet[sval09.Text(16)] = WanStamp0dot9
 
 	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	WanCoinValueSet[cval10.Text(16)] = Wancoin10
