@@ -33,7 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/hashicorp/golang-lru"
 )
 
 var (
