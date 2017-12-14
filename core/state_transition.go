@@ -257,7 +257,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.data = pureCallData[:]
 		log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
 		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
-		if err := st.gp.SubGas(big.NewInt(int64(totalUseableGas))); err != nil {
+		if err := st.gp.SubGas(new(big.Int).SetUint64(totalUseableGas)); err != nil {
 			return nil, nil, nil, false, err
 		}
 	}
