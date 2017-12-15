@@ -37,12 +37,12 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
-	set "gopkg.in/fatih/set.v0"
+	//set "gopkg.in/fatih/set.v0"
 )
 
 const (
 	//TODO:PPOW   change before release
-	//	checkpointInterval = 1024 // Number of blocks after which to save the signers state
+	//	checkpointInterval = 8192 // Number of blocks after which to save the signers state
 	checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
 )
 
@@ -50,7 +50,7 @@ const (
 var (
 	//frontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	byzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
+	maxUncles                     = 0                 // Maximum number of uncles allowed in a single block
 	extraVanity                   = 32                // Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
 )
@@ -133,18 +133,12 @@ func ecrecover(header *types.Header) (common.Address, error) {
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	return header.Coinbase, nil
 }
 
 func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-
-	functrace.Enter(signer.String())
-	defer functrace.Exit()
 
 	self.signFn = signFn
 	self.signer = signer
@@ -157,9 +151,6 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 	if ethash.fakeFull {
 		return nil
 	}
-	functrace.Enter()
-	defer functrace.Exit()
-
 	// Short circuit if the header is known, or it's parent not
 	number := header.Number.Uint64()
 	if chain.GetHeader(header.Hash(), number) != nil {
@@ -206,8 +197,6 @@ func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
 func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	functrace.Enter()
-	defer functrace.Exit()
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull || len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
@@ -299,9 +288,6 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of the stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.fakeFull {
 		return nil
@@ -311,43 +297,43 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 		return errTooManyUncles
 	}
 	// Gather the set of past uncles and ancestors
-	uncles, ancestors := set.New(), make(map[common.Hash]*types.Header)
-
-	number, parent := block.NumberU64()-1, block.ParentHash()
-	for i := 0; i < 7; i++ {
-		ancestor := chain.GetBlock(parent, number)
-		if ancestor == nil {
-			break
-		}
-		ancestors[ancestor.Hash()] = ancestor.Header()
-		for _, uncle := range ancestor.Uncles() {
-			uncles.Add(uncle.Hash())
-		}
-		parent, number = ancestor.ParentHash(), number-1
-	}
-	ancestors[block.Hash()] = block.Header()
-	uncles.Add(block.Hash())
-
-	// Verify each of the uncles that it's recent, but not an ancestor
-	for _, uncle := range block.Uncles() {
-		// Make sure every uncle is rewarded only once
-		hash := uncle.Hash()
-		if uncles.Has(hash) {
-			return errDuplicateUncle
-		}
-		uncles.Add(hash)
-
-		// Make sure the uncle has a valid ancestry
-		if ancestors[hash] != nil {
-			return errUncleIsAncestor
-		}
-		if ancestors[uncle.ParentHash] == nil || uncle.ParentHash == block.ParentHash() {
-			return errDanglingUncle
-		}
-		//if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
-		//	return err
-		//}
-	}
+	//uncles, ancestors := set.New(), make(map[common.Hash]*types.Header)
+	//
+	//number, parent := block.NumberU64()-1, block.ParentHash()
+	//for i := 0; i < 7; i++ {
+	//	ancestor := chain.GetBlock(parent, number)
+	//	if ancestor == nil {
+	//		break
+	//	}
+	//	ancestors[ancestor.Hash()] = ancestor.Header()
+	//	for _, uncle := range ancestor.Uncles() {
+	//		uncles.Add(uncle.Hash())
+	//	}
+	//	parent, number = ancestor.ParentHash(), number-1
+	//}
+	//ancestors[block.Hash()] = block.Header()
+	//uncles.Add(block.Hash())
+	//
+	//// Verify each of the uncles that it's recent, but not an ancestor
+	//for _, uncle := range block.Uncles() {
+	//	// Make sure every uncle is rewarded only once
+	//	hash := uncle.Hash()
+	//	if uncles.Has(hash) {
+	//		return errDuplicateUncle
+	//	}
+	//	uncles.Add(hash)
+	//
+	//	// Make sure the uncle has a valid ancestry
+	//	if ancestors[hash] != nil {
+	//		return errUncleIsAncestor
+	//	}
+	//	if ancestors[uncle.ParentHash] == nil || uncle.ParentHash == block.ParentHash() {
+	//		return errDanglingUncle
+	//	}
+	//	//if err := ethash.verifyHeader(chain, uncle, ancestors[uncle.ParentHash], true, true); err != nil {
+	//	//	return err
+	//	//}
+	//}
 	return nil
 }
 
@@ -355,9 +341,6 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, uncle bool, seal bool) error {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	if header.Number.Uint64() == 0 {
 		return nil
 	}
@@ -453,12 +436,9 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	}
 }
 
-// TODO: its's different from POA, need consider thread-security
+// verify does current coinbase valid for sign
 func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
-
-	functrace.Enter(fmt.Sprintf("number= %d", number))
-	defer functrace.Exit()
 
 	if number == 0 {
 		return nil
@@ -483,9 +463,6 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		headers []*types.Header
 		snap    *Snapshot
 	)
-
-	functrace.Enter(fmt.Sprintf("number= %d", number))
-	defer functrace.Exit()
 
 	for snap == nil {
 		if s, ok := self.recents.Get(hash); ok {
@@ -763,9 +740,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 		return consensus.ErrUnknownAncestor
 	}
 
-	functrace.Enter(fmt.Sprintf("header number= %d", header.Number.Uint64()))
-	defer functrace.Exit()
-
 	if mining {
 		snap, err := ethash.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 		if err != nil {
@@ -778,8 +752,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 		}
 	}
 
-	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(),
-		parent)
+	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, make([]byte, extraVanity-len(header.Extra))...)
@@ -793,9 +766,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
@@ -815,9 +785,6 @@ var (
 // included uncles. The coinbase of each uncle block is also rewarded.
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	// Select the correct block reward based on chain progression
 	//blockReward := frontierBlockReward
 	//if config.IsByzantium(header.Number) {
