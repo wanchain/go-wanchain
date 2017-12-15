@@ -30,8 +30,6 @@ import (
 func TestDefaultGenesisBlock(t *testing.T) {
 	block, _ := DefaultGenesisBlock().ToBlock()
 
-	//fmt.Print(common.ToHex(block.Hash().Bytes()))
-
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
@@ -44,9 +42,11 @@ func TestDefaultGenesisBlock(t *testing.T) {
 func TestDefaultTestnetGenesisBlock(t *testing.T) {
 	block, _ := DefaultTestnetGenesisBlock().ToBlock()
 
-	if block.Hash() != params.MainnetGenesisHash {
-		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
-	}
+	// fmt.Println(block.Hash().Hex())
+
+	// if block.Hash() != params.MainnetGenesisHash {
+	// 	t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
+	// }
 	block, _ = DefaultTestnetGenesisBlock().ToBlock()
 	if block.Hash() != params.TestnetGenesisHash {
 		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
@@ -125,33 +125,33 @@ func TestSetupGenesis(t *testing.T) {
 			wantHash:   customghash,
 			wantConfig: customg.Config,
 		},
-		
-	/*		
-		{
-			name: "incompatible config in DB",
-			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
-				// Commit the 'old' genesis block with Homestead transition at #2.
-				// Advance to block #4, past the homestead transition block of customg.
-				genesis := oldcustomg.MustCommit(db)
-				bc, _ := NewBlockChain(db, oldcustomg.Config, ethash.NewFullFaker(), vm.Config{})
-				defer bc.Stop()
-				bc.SetValidator(bproc{})
-				bc.InsertChain(makeBlockChainWithDiff(genesis, []int{2, 3, 4, 5}, 0))
-				bc.CurrentBlock()
-				// This should return a compatibility error.
-				return SetupGenesisBlock(db, &customg)
+
+		/*
+			{
+				name: "incompatible config in DB",
+				fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
+					// Commit the 'old' genesis block with Homestead transition at #2.
+					// Advance to block #4, past the homestead transition block of customg.
+					genesis := oldcustomg.MustCommit(db)
+					bc, _ := NewBlockChain(db, oldcustomg.Config, ethash.NewFullFaker(), vm.Config{})
+					defer bc.Stop()
+					bc.SetValidator(bproc{})
+					bc.InsertChain(makeBlockChainWithDiff(genesis, []int{2, 3, 4, 5}, 0))
+					bc.CurrentBlock()
+					// This should return a compatibility error.
+					return SetupGenesisBlock(db, &customg)
+				},
+				wantHash:   customghash,
+				wantConfig: customg.Config,
+				wantErr: &params.ConfigCompatError{
+					What:         "Homestead fork block",
+					StoredConfig: big.NewInt(2),
+					NewConfig:    big.NewInt(3),
+					RewindTo:     1,
+				},
 			},
-			wantHash:   customghash,
-			wantConfig: customg.Config,
-			wantErr: &params.ConfigCompatError{
-				What:         "Homestead fork block",
-				StoredConfig: big.NewInt(2),
-				NewConfig:    big.NewInt(3),
-				RewindTo:     1,
-			},
-		},
-	*/	
-	
+		*/
+
 	}
 
 	for _, test := range tests {
