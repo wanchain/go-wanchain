@@ -155,35 +155,35 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 // makeChainFork creates two chains of length n, such that h1[:f] and
 // h2[:f] are different but have a common suffix of length n-f.
-func (dl *downloadTester) makeChainFork(n, f int, parent *types.Block, parentReceipts types.Receipts, balanced bool) ([]common.Hash, []common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]types.Receipts) {
-	// Create the common suffix
-	hashes, headers, blocks, receipts := dl.makeChain(n-f, 0, parent, parentReceipts, false)
+// func (dl *downloadTester) makeChainFork(n, f int, parent *types.Block, parentReceipts types.Receipts, balanced bool) ([]common.Hash, []common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]types.Receipts) {
+// 	// Create the common suffix
+// 	hashes, headers, blocks, receipts := dl.makeChain(n-f, 0, parent, parentReceipts, false)
 
-	// Create the forks, making the second heavyer if non balanced forks were requested
-	hashes1, headers1, blocks1, receipts1 := dl.makeChain(f, 1, blocks[hashes[0]], receipts[hashes[0]], false)
-	hashes1 = append(hashes1, hashes[1:]...)
+// 	// Create the forks, making the second heavyer if non balanced forks were requested
+// 	hashes1, headers1, blocks1, receipts1 := dl.makeChain(f, 1, blocks[hashes[0]], receipts[hashes[0]], false)
+// 	hashes1 = append(hashes1, hashes[1:]...)
 
-	heavy := false
-	if !balanced {
-		heavy = true
-	}
-	hashes2, headers2, blocks2, receipts2 := dl.makeChain(f, 2, blocks[hashes[0]], receipts[hashes[0]], heavy)
-	hashes2 = append(hashes2, hashes[1:]...)
+// 	heavy := false
+// 	if !balanced {
+// 		heavy = true
+// 	}
+// 	hashes2, headers2, blocks2, receipts2 := dl.makeChain(f, 2, blocks[hashes[0]], receipts[hashes[0]], heavy)
+// 	hashes2 = append(hashes2, hashes[1:]...)
 
-	for hash, header := range headers {
-		headers1[hash] = header
-		headers2[hash] = header
-	}
-	for hash, block := range blocks {
-		blocks1[hash] = block
-		blocks2[hash] = block
-	}
-	for hash, receipt := range receipts {
-		receipts1[hash] = receipt
-		receipts2[hash] = receipt
-	}
-	return hashes1, hashes2, headers1, headers2, blocks1, blocks2, receipts1, receipts2
-}
+// 	for hash, header := range headers {
+// 		headers1[hash] = header
+// 		headers2[hash] = header
+// 	}
+// 	for hash, block := range blocks {
+// 		blocks1[hash] = block
+// 		blocks2[hash] = block
+// 	}
+// 	for hash, receipt := range receipts {
+// 		receipts1[hash] = receipt
+// 		receipts2[hash] = receipt
+// 	}
+// 	return hashes1, hashes2, headers1, headers2, blocks1, blocks2, receipts1, receipts2
+// }
 
 // terminate aborts any operations on the embedded downloader and releases all
 // held resources.
@@ -782,143 +782,143 @@ func testThrottling(t *testing.T, protocol int, mode SyncMode) {
 // Tests that simple synchronization against a forked chain works correctly. In
 // this test common ancestor lookup should *not* be short circuited, and a full
 // binary search should be executed.
-func TestForkedSync62(t *testing.T)      { testForkedSync(t, 62, FullSync) }
-func TestForkedSync63Full(t *testing.T)  { testForkedSync(t, 63, FullSync) }
-func TestForkedSync63Fast(t *testing.T)  { testForkedSync(t, 63, FastSync) }
-func TestForkedSync64Full(t *testing.T)  { testForkedSync(t, 64, FullSync) }
-func TestForkedSync64Fast(t *testing.T)  { testForkedSync(t, 64, FastSync) }
-func TestForkedSync64Light(t *testing.T) { testForkedSync(t, 64, LightSync) }
+// func TestForkedSync62(t *testing.T)      { testForkedSync(t, 62, FullSync) }
+// func TestForkedSync63Full(t *testing.T)  { testForkedSync(t, 63, FullSync) }
+// func TestForkedSync63Fast(t *testing.T)  { testForkedSync(t, 63, FastSync) }
+// func TestForkedSync64Full(t *testing.T)  { testForkedSync(t, 64, FullSync) }
+// func TestForkedSync64Fast(t *testing.T)  { testForkedSync(t, 64, FastSync) }
+// func TestForkedSync64Light(t *testing.T) { testForkedSync(t, 64, LightSync) }
 
-func testForkedSync(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
+// func testForkedSync(t *testing.T, protocol int, mode SyncMode) {
+// 	t.Parallel()
 
-	tester := newTester()
-	defer tester.terminate()
+// 	tester := newTester()
+// 	defer tester.terminate()
 
-	// Create a long enough forked chain
-	common, fork := MaxHashFetch, 2*MaxHashFetch
-	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
+// 	// Create a long enough forked chain
+// 	common, fork := MaxHashFetch, 2*MaxHashFetch
+// 	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
 
-	tester.newPeer("fork A", protocol, hashesA, headersA, blocksA, receiptsA)
-	tester.newPeer("fork B", protocol, hashesB, headersB, blocksB, receiptsB)
+// 	tester.newPeer("fork A", protocol, hashesA, headersA, blocksA, receiptsA)
+// 	tester.newPeer("fork B", protocol, hashesB, headersB, blocksB, receiptsB)
 
-	// Synchronise with the peer and make sure all blocks were retrieved
-	if err := tester.sync("fork A", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnChain(t, tester, common+fork+1)
+// 	// Synchronise with the peer and make sure all blocks were retrieved
+// 	if err := tester.sync("fork A", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnChain(t, tester, common+fork+1)
 
-	// Synchronise with the second peer and make sure that fork is pulled too
-	if err := tester.sync("fork B", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnForkedChain(t, tester, common+1, []int{common + fork + 1, common + fork + 1})
-}
+// 	// Synchronise with the second peer and make sure that fork is pulled too
+// 	if err := tester.sync("fork B", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnForkedChain(t, tester, common+1, []int{common + fork + 1, common + fork + 1})
+// }
 
 // Tests that synchronising against a much shorter but much heavyer fork works
 // corrently and is not dropped.
-func TestHeavyForkedSync62(t *testing.T)      { testHeavyForkedSync(t, 62, FullSync) }
-func TestHeavyForkedSync63Full(t *testing.T)  { testHeavyForkedSync(t, 63, FullSync) }
-func TestHeavyForkedSync63Fast(t *testing.T)  { testHeavyForkedSync(t, 63, FastSync) }
-func TestHeavyForkedSync64Full(t *testing.T)  { testHeavyForkedSync(t, 64, FullSync) }
-func TestHeavyForkedSync64Fast(t *testing.T)  { testHeavyForkedSync(t, 64, FastSync) }
-func TestHeavyForkedSync64Light(t *testing.T) { testHeavyForkedSync(t, 64, LightSync) }
+// func TestHeavyForkedSync62(t *testing.T)      { testHeavyForkedSync(t, 62, FullSync) }
+// func TestHeavyForkedSync63Full(t *testing.T)  { testHeavyForkedSync(t, 63, FullSync) }
+// func TestHeavyForkedSync63Fast(t *testing.T)  { testHeavyForkedSync(t, 63, FastSync) }
+// func TestHeavyForkedSync64Full(t *testing.T)  { testHeavyForkedSync(t, 64, FullSync) }
+// func TestHeavyForkedSync64Fast(t *testing.T)  { testHeavyForkedSync(t, 64, FastSync) }
+// func TestHeavyForkedSync64Light(t *testing.T) { testHeavyForkedSync(t, 64, LightSync) }
 
-func testHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
+// func testHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
+// 	t.Parallel()
 
-	tester := newTester()
-	defer tester.terminate()
+// 	tester := newTester()
+// 	defer tester.terminate()
 
-	// Create a long enough forked chain
-	common, fork := MaxHashFetch, 4*MaxHashFetch
-	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, false)
+// 	// Create a long enough forked chain
+// 	common, fork := MaxHashFetch, 4*MaxHashFetch
+// 	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, false)
 
-	tester.newPeer("light", protocol, hashesA, headersA, blocksA, receiptsA)
-	tester.newPeer("heavy", protocol, hashesB[fork/2:], headersB, blocksB, receiptsB)
+// 	tester.newPeer("light", protocol, hashesA, headersA, blocksA, receiptsA)
+// 	tester.newPeer("heavy", protocol, hashesB[fork/2:], headersB, blocksB, receiptsB)
 
-	// Synchronise with the peer and make sure all blocks were retrieved
-	if err := tester.sync("light", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnChain(t, tester, common+fork+1)
+// 	// Synchronise with the peer and make sure all blocks were retrieved
+// 	if err := tester.sync("light", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnChain(t, tester, common+fork+1)
 
-	// Synchronise with the second peer and make sure that fork is pulled too
-	if err := tester.sync("heavy", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnForkedChain(t, tester, common+1, []int{common + fork + 1, common + fork/2 + 1})
-}
+// 	// Synchronise with the second peer and make sure that fork is pulled too
+// 	if err := tester.sync("heavy", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnForkedChain(t, tester, common+1, []int{common + fork + 1, common + fork/2 + 1})
+// }
 
 // Tests that chain forks are contained within a certain interval of the current
 // chain head, ensuring that malicious peers cannot waste resources by feeding
 // long dead chains.
-func TestBoundedForkedSync62(t *testing.T)      { testBoundedForkedSync(t, 62, FullSync) }
-func TestBoundedForkedSync63Full(t *testing.T)  { testBoundedForkedSync(t, 63, FullSync) }
-func TestBoundedForkedSync63Fast(t *testing.T)  { testBoundedForkedSync(t, 63, FastSync) }
-func TestBoundedForkedSync64Full(t *testing.T)  { testBoundedForkedSync(t, 64, FullSync) }
-func TestBoundedForkedSync64Fast(t *testing.T)  { testBoundedForkedSync(t, 64, FastSync) }
-func TestBoundedForkedSync64Light(t *testing.T) { testBoundedForkedSync(t, 64, LightSync) }
+// func TestBoundedForkedSync62(t *testing.T)      { testBoundedForkedSync(t, 62, FullSync) }
+// func TestBoundedForkedSync63Full(t *testing.T)  { testBoundedForkedSync(t, 63, FullSync) }
+// func TestBoundedForkedSync63Fast(t *testing.T)  { testBoundedForkedSync(t, 63, FastSync) }
+// func TestBoundedForkedSync64Full(t *testing.T)  { testBoundedForkedSync(t, 64, FullSync) }
+// func TestBoundedForkedSync64Fast(t *testing.T)  { testBoundedForkedSync(t, 64, FastSync) }
+// func TestBoundedForkedSync64Light(t *testing.T) { testBoundedForkedSync(t, 64, LightSync) }
 
-func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
+// func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
+// 	t.Parallel()
 
-	tester := newTester()
-	defer tester.terminate()
+// 	tester := newTester()
+// 	defer tester.terminate()
 
-	// Create a long enough forked chain
-	common, fork := 13, int(MaxForkAncestry+17)
-	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
+// 	// Create a long enough forked chain
+// 	common, fork := 13, int(MaxForkAncestry+17)
+// 	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
 
-	tester.newPeer("original", protocol, hashesA, headersA, blocksA, receiptsA)
-	tester.newPeer("rewriter", protocol, hashesB, headersB, blocksB, receiptsB)
+// 	tester.newPeer("original", protocol, hashesA, headersA, blocksA, receiptsA)
+// 	tester.newPeer("rewriter", protocol, hashesB, headersB, blocksB, receiptsB)
 
-	// Synchronise with the peer and make sure all blocks were retrieved
-	if err := tester.sync("original", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnChain(t, tester, common+fork+1)
+// 	// Synchronise with the peer and make sure all blocks were retrieved
+// 	if err := tester.sync("original", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnChain(t, tester, common+fork+1)
 
-	// Synchronise with the second peer and ensure that the fork is rejected to being too old
-	if err := tester.sync("rewriter", nil, mode); err != errInvalidAncestor {
-		t.Fatalf("sync failure mismatch: have %v, want %v", err, errInvalidAncestor)
-	}
-}
+// 	// Synchronise with the second peer and ensure that the fork is rejected to being too old
+// 	if err := tester.sync("rewriter", nil, mode); err != errInvalidAncestor {
+// 		t.Fatalf("sync failure mismatch: have %v, want %v", err, errInvalidAncestor)
+// 	}
+// }
 
 // Tests that chain forks are contained within a certain interval of the current
 // chain head for short but heavy forks too. These are a bit special because they
 // take different ancestor lookup paths.
-func TestBoundedHeavyForkedSync62(t *testing.T)      { testBoundedHeavyForkedSync(t, 62, FullSync) }
-func TestBoundedHeavyForkedSync63Full(t *testing.T)  { testBoundedHeavyForkedSync(t, 63, FullSync) }
-func TestBoundedHeavyForkedSync63Fast(t *testing.T)  { testBoundedHeavyForkedSync(t, 63, FastSync) }
-func TestBoundedHeavyForkedSync64Full(t *testing.T)  { testBoundedHeavyForkedSync(t, 64, FullSync) }
-func TestBoundedHeavyForkedSync64Fast(t *testing.T)  { testBoundedHeavyForkedSync(t, 64, FastSync) }
-func TestBoundedHeavyForkedSync64Light(t *testing.T) { testBoundedHeavyForkedSync(t, 64, LightSync) }
+// func TestBoundedHeavyForkedSync62(t *testing.T)      { testBoundedHeavyForkedSync(t, 62, FullSync) }
+// func TestBoundedHeavyForkedSync63Full(t *testing.T)  { testBoundedHeavyForkedSync(t, 63, FullSync) }
+// func TestBoundedHeavyForkedSync63Fast(t *testing.T)  { testBoundedHeavyForkedSync(t, 63, FastSync) }
+// func TestBoundedHeavyForkedSync64Full(t *testing.T)  { testBoundedHeavyForkedSync(t, 64, FullSync) }
+// func TestBoundedHeavyForkedSync64Fast(t *testing.T)  { testBoundedHeavyForkedSync(t, 64, FastSync) }
+// func TestBoundedHeavyForkedSync64Light(t *testing.T) { testBoundedHeavyForkedSync(t, 64, LightSync) }
 
-func testBoundedHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
+// func testBoundedHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
+// 	t.Parallel()
 
-	tester := newTester()
-	defer tester.terminate()
+// 	tester := newTester()
+// 	defer tester.terminate()
 
-	// Create a long enough forked chain
-	common, fork := 13, int(MaxForkAncestry+17)
-	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, false)
+// 	// Create a long enough forked chain
+// 	common, fork := 13, int(MaxForkAncestry+17)
+// 	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, false)
 
-	tester.newPeer("original", protocol, hashesA, headersA, blocksA, receiptsA)
-	tester.newPeer("heavy-rewriter", protocol, hashesB[MaxForkAncestry-17:], headersB, blocksB, receiptsB) // Root the fork below the ancestor limit
+// 	tester.newPeer("original", protocol, hashesA, headersA, blocksA, receiptsA)
+// 	tester.newPeer("heavy-rewriter", protocol, hashesB[MaxForkAncestry-17:], headersB, blocksB, receiptsB) // Root the fork below the ancestor limit
 
-	// Synchronise with the peer and make sure all blocks were retrieved
-	if err := tester.sync("original", nil, mode); err != nil {
-		t.Fatalf("failed to synchronise blocks: %v", err)
-	}
-	assertOwnChain(t, tester, common+fork+1)
+// 	// Synchronise with the peer and make sure all blocks were retrieved
+// 	if err := tester.sync("original", nil, mode); err != nil {
+// 		t.Fatalf("failed to synchronise blocks: %v", err)
+// 	}
+// 	assertOwnChain(t, tester, common+fork+1)
 
-	// Synchronise with the second peer and ensure that the fork is rejected to being too old
-	if err := tester.sync("heavy-rewriter", nil, mode); err != errInvalidAncestor {
-		t.Fatalf("sync failure mismatch: have %v, want %v", err, errInvalidAncestor)
-	}
-}
+// 	// Synchronise with the second peer and ensure that the fork is rejected to being too old
+// 	if err := tester.sync("heavy-rewriter", nil, mode); err != errInvalidAncestor {
+// 		t.Fatalf("sync failure mismatch: have %v, want %v", err, errInvalidAncestor)
+// 	}
+// }
 
 // Tests that an inactive downloader will not accept incoming block headers and
 // bodies.
@@ -1434,78 +1434,78 @@ func testSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 // Tests that synchronisation progress (origin block number and highest block
 // number) is tracked and updated correctly in case of a fork (or manual head
 // revertal).
-func TestForkedSyncProgress62(t *testing.T)      { testForkedSyncProgress(t, 62, FullSync) }
-func TestForkedSyncProgress63Full(t *testing.T)  { testForkedSyncProgress(t, 63, FullSync) }
-func TestForkedSyncProgress63Fast(t *testing.T)  { testForkedSyncProgress(t, 63, FastSync) }
-func TestForkedSyncProgress64Full(t *testing.T)  { testForkedSyncProgress(t, 64, FullSync) }
-func TestForkedSyncProgress64Fast(t *testing.T)  { testForkedSyncProgress(t, 64, FastSync) }
-func TestForkedSyncProgress64Light(t *testing.T) { testForkedSyncProgress(t, 64, LightSync) }
+// func TestForkedSyncProgress62(t *testing.T)      { testForkedSyncProgress(t, 62, FullSync) }
+// func TestForkedSyncProgress63Full(t *testing.T)  { testForkedSyncProgress(t, 63, FullSync) }
+// func TestForkedSyncProgress63Fast(t *testing.T)  { testForkedSyncProgress(t, 63, FastSync) }
+// func TestForkedSyncProgress64Full(t *testing.T)  { testForkedSyncProgress(t, 64, FullSync) }
+// func TestForkedSyncProgress64Fast(t *testing.T)  { testForkedSyncProgress(t, 64, FastSync) }
+// func TestForkedSyncProgress64Light(t *testing.T) { testForkedSyncProgress(t, 64, LightSync) }
 
-func testForkedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
+// func testForkedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
+// 	t.Parallel()
 
-	tester := newTester()
-	defer tester.terminate()
+// 	tester := newTester()
+// 	defer tester.terminate()
 
-	// Create a forked chain to simulate origin revertal
-	common, fork := MaxHashFetch, 2*MaxHashFetch
-	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
+// 	// Create a forked chain to simulate origin revertal
+// 	common, fork := MaxHashFetch, 2*MaxHashFetch
+// 	hashesA, hashesB, headersA, headersB, blocksA, blocksB, receiptsA, receiptsB := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
 
-	// Set a sync init hook to catch progress changes
-	starting := make(chan struct{})
-	progress := make(chan struct{})
+// 	// Set a sync init hook to catch progress changes
+// 	starting := make(chan struct{})
+// 	progress := make(chan struct{})
 
-	tester.downloader.syncInitHook = func(origin, latest uint64) {
-		starting <- struct{}{}
-		<-progress
-	}
-	// Retrieve the sync progress and ensure they are zero (pristine sync)
-	if progress := tester.downloader.Progress(); progress.StartingBlock != 0 || progress.CurrentBlock != 0 || progress.HighestBlock != 0 {
-		t.Fatalf("Pristine progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, 0, 0, 0)
-	}
-	// Synchronise with one of the forks and check progress
-	tester.newPeer("fork A", protocol, hashesA, headersA, blocksA, receiptsA)
-	pending := new(sync.WaitGroup)
-	pending.Add(1)
+// 	tester.downloader.syncInitHook = func(origin, latest uint64) {
+// 		starting <- struct{}{}
+// 		<-progress
+// 	}
+// 	// Retrieve the sync progress and ensure they are zero (pristine sync)
+// 	if progress := tester.downloader.Progress(); progress.StartingBlock != 0 || progress.CurrentBlock != 0 || progress.HighestBlock != 0 {
+// 		t.Fatalf("Pristine progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, 0, 0, 0)
+// 	}
+// 	// Synchronise with one of the forks and check progress
+// 	tester.newPeer("fork A", protocol, hashesA, headersA, blocksA, receiptsA)
+// 	pending := new(sync.WaitGroup)
+// 	pending.Add(1)
 
-	go func() {
-		defer pending.Done()
-		if err := tester.sync("fork A", nil, mode); err != nil {
-			panic(fmt.Sprintf("failed to synchronise blocks: %v", err))
-		}
-	}()
-	<-starting
-	if progress := tester.downloader.Progress(); progress.StartingBlock != 0 || progress.CurrentBlock != 0 || progress.HighestBlock != uint64(len(hashesA)-1) {
-		t.Fatalf("Initial progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, 0, 0, len(hashesA)-1)
-	}
-	progress <- struct{}{}
-	pending.Wait()
+// 	go func() {
+// 		defer pending.Done()
+// 		if err := tester.sync("fork A", nil, mode); err != nil {
+// 			panic(fmt.Sprintf("failed to synchronise blocks: %v", err))
+// 		}
+// 	}()
+// 	<-starting
+// 	if progress := tester.downloader.Progress(); progress.StartingBlock != 0 || progress.CurrentBlock != 0 || progress.HighestBlock != uint64(len(hashesA)-1) {
+// 		t.Fatalf("Initial progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, 0, 0, len(hashesA)-1)
+// 	}
+// 	progress <- struct{}{}
+// 	pending.Wait()
 
-	// Simulate a successful sync above the fork
-	tester.downloader.syncStatsChainOrigin = tester.downloader.syncStatsChainHeight
+// 	// Simulate a successful sync above the fork
+// 	tester.downloader.syncStatsChainOrigin = tester.downloader.syncStatsChainHeight
 
-	// Synchronise with the second fork and check progress resets
-	tester.newPeer("fork B", protocol, hashesB, headersB, blocksB, receiptsB)
-	pending.Add(1)
+// 	// Synchronise with the second fork and check progress resets
+// 	tester.newPeer("fork B", protocol, hashesB, headersB, blocksB, receiptsB)
+// 	pending.Add(1)
 
-	go func() {
-		defer pending.Done()
-		if err := tester.sync("fork B", nil, mode); err != nil {
-			panic(fmt.Sprintf("failed to synchronise blocks: %v", err))
-		}
-	}()
-	<-starting
-	if progress := tester.downloader.Progress(); progress.StartingBlock != uint64(common) || progress.CurrentBlock != uint64(len(hashesA)-1) || progress.HighestBlock != uint64(len(hashesB)-1) {
-		t.Fatalf("Forking progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, common, len(hashesA)-1, len(hashesB)-1)
-	}
-	progress <- struct{}{}
-	pending.Wait()
+// 	go func() {
+// 		defer pending.Done()
+// 		if err := tester.sync("fork B", nil, mode); err != nil {
+// 			panic(fmt.Sprintf("failed to synchronise blocks: %v", err))
+// 		}
+// 	}()
+// 	<-starting
+// 	if progress := tester.downloader.Progress(); progress.StartingBlock != uint64(common) || progress.CurrentBlock != uint64(len(hashesA)-1) || progress.HighestBlock != uint64(len(hashesB)-1) {
+// 		t.Fatalf("Forking progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, common, len(hashesA)-1, len(hashesB)-1)
+// 	}
+// 	progress <- struct{}{}
+// 	pending.Wait()
 
-	// Check final progress after successful sync
-	if progress := tester.downloader.Progress(); progress.StartingBlock != uint64(common) || progress.CurrentBlock != uint64(len(hashesB)-1) || progress.HighestBlock != uint64(len(hashesB)-1) {
-		t.Fatalf("Final progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, common, len(hashesB)-1, len(hashesB)-1)
-	}
-}
+// 	// Check final progress after successful sync
+// 	if progress := tester.downloader.Progress(); progress.StartingBlock != uint64(common) || progress.CurrentBlock != uint64(len(hashesB)-1) || progress.HighestBlock != uint64(len(hashesB)-1) {
+// 		t.Fatalf("Final progress mismatch: have %v/%v/%v, want %v/%v/%v", progress.StartingBlock, progress.CurrentBlock, progress.HighestBlock, common, len(hashesB)-1, len(hashesB)-1)
+// 	}
+// }
 
 // Tests that if synchronisation is aborted due to some failure, then the progress
 // origin is not updated in the next sync cycle, as it should be considered the
