@@ -114,12 +114,12 @@ func BatCheckOTAExit(statedb StateDB, otaAXs [][]byte) (exit bool, balance *big.
 		if err != nil {
 			return false, nil, otaAX, err
 		} else if balanceTmp.Cmp(common.Big0) == 0 {
-			return false, nil, otaAX, errors.New("ota balance is 0!")
+			return false, nil, otaAX, errors.New("ota balance is 0! ota:" + common.ToHex(otaAX))
 		} else if balance == nil {
 			balance = balanceTmp
 			continue
 		} else if balance.Cmp(balanceTmp) != 0 {
-			return false, nil, otaAX, errors.New("otas have different balances!")
+			return false, nil, otaAX, errors.New("otas have different balances! ota:" + common.ToHex(otaAX))
 		}
 	}
 

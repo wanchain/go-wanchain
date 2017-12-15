@@ -709,7 +709,7 @@ func TestPrecompiledWanCoinSCReuqireGas(t *testing.T) {
 
 	gas := p.RequiredGas(in)
 
-	if gas != 3*params.RequiredGasPerMixPub {
+	if gas != 3*params.RequiredGasPerMixPub+params.SstoreSetGas {
 		t.Error(errors.New("gas used is not correct"))
 	}
 }
@@ -1224,9 +1224,9 @@ var (
 )
 
 func TestWanchainStampSC_InvalidTx(t *testing.T) {
-	Wancoin1 := "1000000000000000000"
-	cval1, _ := new(big.Int).SetString(Wancoin1, 10)
-	WanCoinValueSet[cval1.Text(16)] = Wancoin1
+	wanStamp0dot3 := "3000000000000000"
+	cval1, _ := new(big.Int).SetString(wanStamp0dot3, 10)
+	delete(StampValueSet, cval1.Text(16))
 
 	{
 		tx := types.Transaction{}
