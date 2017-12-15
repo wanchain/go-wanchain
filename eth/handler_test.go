@@ -325,14 +325,14 @@ func testGetNodeData(t *testing.T, protocol int) {
 			// Block 3 is empty but was mined by account #2.
 			block.SetCoinbase(acc2Addr)
 			block.SetExtra([]byte("yeehaw"))
-		case 3:
+			// case 3:
 			// Block 4 includes blocks 2 and 3 as uncle headers (with modified extra data).
-			b2 := block.PrevBlock(1).Header()
-			b2.Extra = []byte("foo")
-			block.AddUncle(b2)
-			b3 := block.PrevBlock(2).Header()
-			b3.Extra = []byte("foo")
-			block.AddUncle(b3)
+			// b2 := block.PrevBlock(1).Header()
+			// b2.Extra = []byte("foo")
+			// block.AddUncle(b2)
+			// b3 := block.PrevBlock(2).Header()
+			// b3.Extra = []byte("foo")
+			// block.AddUncle(b3)
 		}
 	}
 	// Assemble the test environment
@@ -417,14 +417,14 @@ func testGetReceipt(t *testing.T, protocol int) {
 			// Block 3 is empty but was mined by account #2.
 			block.SetCoinbase(acc2Addr)
 			block.SetExtra([]byte("yeehaw"))
-		case 3:
-			// Block 4 includes blocks 2 and 3 as uncle headers (with modified extra data).
-			b2 := block.PrevBlock(1).Header()
-			b2.Extra = []byte("foo")
-			block.AddUncle(b2)
-			b3 := block.PrevBlock(2).Header()
-			b3.Extra = []byte("foo")
-			block.AddUncle(b3)
+			// case 3:
+			// 	// Block 4 includes blocks 2 and 3 as uncle headers (with modified extra data).
+			// 	b2 := block.PrevBlock(1).Header()
+			// 	b2.Extra = []byte("foo")
+			// 	block.AddUncle(b2)
+			// 	b3 := block.PrevBlock(2).Header()
+			// 	b3.Extra = []byte("foo")
+			// 	block.AddUncle(b3)
 		}
 	}
 	// Assemble the test environment
