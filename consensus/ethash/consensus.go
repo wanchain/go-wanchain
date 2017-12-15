@@ -178,6 +178,7 @@ func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *
 	}
 
 	for _, b := range oldChain {
+		//using coinbase here, previously checked signature by node or verify headers
 		oldSignerSet[b.Coinbase()] = struct{}{}
 	}
 
