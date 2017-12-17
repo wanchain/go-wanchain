@@ -62,6 +62,22 @@ type ChainEnv struct {
 	// validSigners
 }
 
+// add for testing permission proof of work
+var (
+	totalSigner = 20
+	signerSet = make(map[common.Address]*ecdsa.PrivateKey)
+	addrSigners = make([]common.Address, 0)
+)
+
+func init(){
+	for i:=0; i < totalSigner; i++ {
+		private, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(private.PublicKey)
+		signerSet[addr] = private
+		addrSigners = append(addrSigners, addr)
+	}
+}
+
 func NewChainEnv(config *params.ChainConfig, g *Genesis, engine consensus.Engine, bc *BlockChain, db ethdb.Database) *ChainEnv {
 	ce := &ChainEnv{
 		config:       config,
@@ -259,6 +275,48 @@ func (self *ChainEnv) GenerateChain(parent *types.Block, n int, gen func(int, *B
 	}
 	return blocks, receipts
 }
+
+func fakeSignerFnEx(signer accounts.Account, hash []byte) ([]byte, error) {
+	return crypto.Sign(hash, signerSet[signer.Address])
+}
+
+func (self *ChainEnv) GenerateChainEx(parent *types.Block, signerSequence []int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+	blocks, receipts := make(types.Blocks, len(signerSequence)), make([]types.Receipts, len(signerSequence))
+	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
+		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: self.config}
+
+		// Execute any user modifications to the block and finalize it
+		if gen != nil {
+			gen(i, b)
+		}
+
+		ethash.AccumulateRewards(self.config, statedb, h, b.uncles)
+		root, err := statedb.CommitTo(self.db, true)
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
+		}
+		h.Root = root
+
+		self.engine.Authorize(addrSigners[i], fakeSignerFnEx)
+		h.Coinbase.Set(addrSigners[i])
+		rawBlock := types.NewBlock(h, b.txs, b.uncles, b.receipts)
+		sealBlock, _ := self.engine.Seal(self.blockChain, rawBlock, nil)
+		return sealBlock, b.receipts
+	}
+	for i := 0; i < len(signerSequence); i++ {
+		statedb, err := state.New(parent.Root(), state.NewDatabase(self.db))
+		if err != nil {
+			panic(err)
+		}
+		header := makeHeader(self.config, parent, statedb)
+		block, receipt := genblock(signerSequence[i], header, statedb)
+		blocks[i] = block
+		receipts[i] = receipt
+		parent = block
+	}
+	return blocks, receipts
+}
+
 
 func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.StateDB) *types.Header {
 	var time *big.Int

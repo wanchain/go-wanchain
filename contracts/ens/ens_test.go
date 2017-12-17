@@ -23,17 +23,18 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind/backends"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/core"
 )
 
 var (
-	key, _ = crypto.HexToECDSA("3efdddbf163faf1b5ec73e833b7820e87560137917773f63b7dc33e1dcb6dd24")
+	key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	name   = "my name on ENS"
 	hash   = crypto.Keccak256Hash([]byte("my content"))
 	addr   = crypto.PubkeyToAddress(key.PublicKey)
 )
 
 func TestENS(t *testing.T) {
-	contractBackend := backends.NewSimulatedBackend(nil)
+	contractBackend := backends.NewSimulatedBackendEx(core.GenesisAlloc{addr: {Balance: big.NewInt(1000000000)}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	// Workaround for bug estimating gas in the call to Register
 	transactOpts.GasLimit = big.NewInt(1000000)
@@ -42,10 +43,6 @@ func TestENS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-
-	// @anson
-	contractBackend.SetExtra()
-
 	contractBackend.Commit()
 
 	_, err = ens.Register(name)

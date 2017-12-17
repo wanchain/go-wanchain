@@ -38,10 +38,11 @@ import (
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 var (
-	testBankKey, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testBankKey, _  = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	testBankAddress = crypto.PubkeyToAddress(testBankKey.PublicKey)
 	testBankFunds   = big.NewInt(1000000)
 
@@ -105,12 +106,12 @@ func testChainGen(i int, block *core.BlockGen) {
 		block.AddTx(tx)
 	case 3:
 		// Block 4 includes blocks 2 and 3 as uncle headers (with modified extra data).
-		b2 := block.PrevBlock(1).Header()
-		b2.Extra = []byte("foo")
-		block.AddUncle(b2)
-		b3 := block.PrevBlock(2).Header()
-		b3.Extra = []byte("foo")
-		block.AddUncle(b3)
+		//b2 := block.PrevBlock(1).Header()
+		//b2.Extra = []byte("foo")
+		//block.AddUncle(b2)
+		//b3 := block.PrevBlock(2).Header()
+		//b3.Extra = []byte("foo")
+		//block.AddUncle(b3)
 		data := common.Hex2Bytes("C16431B900000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002")
 		tx, _ := types.SignTx(types.NewTransaction(block.TxNonce(testBankAddress), testContractAddr, big.NewInt(0), big.NewInt(100000), nil, data), signer, testBankKey)
 		block.AddTx(tx)
@@ -137,6 +138,7 @@ func newTestProtocolManager(lightSync bool, blocks int, generator func(int, *cor
 		gspec  = core.Genesis{
 			Config: params.TestChainConfig,
 			Alloc:  core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}},
+			ExtraData:  hexutil.MustDecode("0xf9b32578b4420a36f132db32b56f3831a7cc1804810524175efa012446103d1a04c9f4263a962accdb05642eabc8347ec78e21bdf0d906ba579d423ab5eb9bf02a924367ed9d4f86dfcb1c572cd9a4f80036805b6846f26ac35f2a7d7eda4a2a58f08e8ef073d4e52c506f3f288faa9db1c1e5ae0f1e70f8c38eb01bce9bcb61327532dc5a540da4cf484ae57e98bc5a465c1d2afa6b9376709a525981f53d493a46ef1eb55428b3b88a222d80d23531054ef51dbd100cf8286136659a7d63a38a154e28dbf3e0fd"),
 		}
 		genesis = gspec.MustCommit(db)
 		chain   BlockChain
@@ -149,7 +151,9 @@ func newTestProtocolManager(lightSync bool, blocks int, generator func(int, *cor
 		chain, _ = light.NewLightChain(odr, gspec.Config, engine)
 	} else {
 		blockchain, _ := core.NewBlockChain(db, gspec.Config, engine, vm.Config{})
-		gchain, _ := core.GenerateChain(gspec.Config, genesis, db, blocks, generator)
+		//gchain, _ := core.GenerateChain(gspec.Config, genesis, db, blocks, generator)
+		chainEnv := core.NewChainEnv(gspec.Config, &gspec, engine, blockchain, db)
+		gchain, _ := chainEnv.GenerateChain(genesis,blocks, generator)
 		if _, err := blockchain.InsertChain(gchain); err != nil {
 			panic(err)
 		}

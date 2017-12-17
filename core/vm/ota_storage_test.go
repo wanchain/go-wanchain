@@ -115,6 +115,24 @@ var (
 	}
 )
 
+func TestOTABalance2ContractAddr(t *testing.T) {
+
+	{
+		addr := OTABalance2ContractAddr(nil)
+		if (addr != common.Address{}) {
+			t.Error("expect empoty address!")
+		}
+	}
+
+	{
+		addr := OTABalance2ContractAddr(big.NewInt(10))
+		if (addr != common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}) {
+			t.Error("unexpect address!")
+		}
+	}
+
+}
+
 func TestGetOtaBalance(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
@@ -166,6 +184,16 @@ func TestCheckOTAExit(t *testing.T) {
 		balanceSet   = big.NewInt(10)
 	)
 
+	_, _, err := CheckOTAExit(nil, otaAX)
+	if err == nil {
+		t.Error("expect err: invalid input param!")
+	}
+
+	_, _, err = CheckOTAExit(statedb, otaAX[1:])
+	if err == nil {
+		t.Error("expect err: invalid input param!")
+	}
+
 	exit, balanceGet, err := CheckOTAExit(statedb, otaAX)
 	if err != nil {
 		t.Errorf("CheckOTAExit, err:%s", err.Error())
@@ -190,101 +218,140 @@ func TestCheckOTAExit(t *testing.T) {
 }
 
 func TestBatCheckOTAExit(t *testing.T) {
-	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
-		otaShortAddrBytes = [][]byte{
-			common.FromHex(otaShortAddrs[1]),
-			common.FromHex(otaShortAddrs[2]),
-			common.FromHex(otaShortAddrs[3]),
-			common.FromHex(otaShortAddrs[4]),
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+
+			otaShortAddrBytes = [][]byte{
+				common.FromHex(otaShortAddrs[1]),
+				common.FromHex(otaShortAddrs[2]),
+				common.FromHex(otaShortAddrs[3]),
+				common.FromHex(otaShortAddrs[4]),
+			}
+		)
+
+		otaAXs := make([][]byte, 0, 4)
+		for _, otaShortAddr := range otaShortAddrBytes {
+			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
 		}
 
-		balanceSet = big.NewInt(10)
-	)
+		_, _, _, err := BatCheckOTAExit(nil, otaAXs)
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
 
-	otaAXs := make([][]byte, 0, 4)
-	for _, otaShortAddr := range otaShortAddrBytes {
-		otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
+		_, _, _, err = BatCheckOTAExit(statedb, nil)
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+
+		otaAXs = append(otaAXs, otaAXs[0][1:])
+		_, _, _, err = BatCheckOTAExit(statedb, nil)
+		if err == nil {
+			t.Error("expect err: invalid input ota AX!")
+		}
+
 	}
 
-	exit, balanceGet, unexitotaAx, err := BatCheckOTAExit(statedb, otaAXs)
-	if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
-		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
-	}
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
-	if unexitotaAx == nil {
-		t.Errorf("unexitotaAX is nil!")
-	}
+			otaShortAddrBytes = [][]byte{
+				common.FromHex(otaShortAddrs[1]),
+				common.FromHex(otaShortAddrs[2]),
+				common.FromHex(otaShortAddrs[3]),
+				common.FromHex(otaShortAddrs[4]),
+			}
 
-	if common.ToHex(unexitotaAx) != common.ToHex(otaAXs[0]) {
-		t.Errorf("unexitotaAx:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(otaAXs[0]))
-	}
+			balanceSet = big.NewInt(10)
+		)
 
-	if err != nil {
-		t.Logf("err:%s", err.Error())
-	}
+		otaAXs := make([][]byte, 0, 4)
+		for _, otaShortAddr := range otaShortAddrBytes {
+			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
+		}
 
-	for _, otaShortAddr := range otaShortAddrBytes {
-		err = setOTA(statedb, balanceSet, otaShortAddr)
+		exit, balanceGet, unexitotaAx, err := BatCheckOTAExit(statedb, otaAXs)
+		if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
+			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		}
+
+		if unexitotaAx == nil {
+			t.Errorf("unexitotaAX is nil!")
+		}
+
+		if common.ToHex(unexitotaAx) != common.ToHex(otaAXs[0]) {
+			t.Errorf("unexitotaAx:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(otaAXs[0]))
+		}
+
+		if err != nil {
+			t.Logf("err:%s", err.Error())
+		}
+
+		for _, otaShortAddr := range otaShortAddrBytes {
+			err = setOTA(statedb, balanceSet, otaShortAddr)
+			if err != nil {
+				t.Errorf("err:%s", err.Error())
+			}
+		}
+
+		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
+		if !exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) != 0) {
+			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		}
+
+		if unexitotaAx != nil {
+			t.Errorf("unexitota:%s", common.ToHex(unexitotaAx))
+		}
+
 		if err != nil {
 			t.Errorf("err:%s", err.Error())
 		}
-	}
 
-	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-	if !exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) != 0) {
-		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
-	}
+		unexitotaShortAddr := common.FromHex(otaShortAddrs[5])
+		unexitotaAXSet := unexitotaShortAddr[1 : 1+common.HashLength]
+		otaAXs = append(otaAXs, unexitotaAXSet)
+		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
+		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		}
 
-	if unexitotaAx != nil {
-		t.Errorf("unexitota:%s", common.ToHex(unexitotaAx))
-	}
+		if unexitotaAx != nil {
+			t.Logf("unexitotaAx:%s", common.ToHex(unexitotaAx))
+		}
+		if err != nil {
+			t.Logf("err:%s", err.Error())
+		}
 
-	if err != nil {
-		t.Errorf("err:%s", err.Error())
-	}
+		err = setOTA(statedb, big.NewInt(0).Add(balanceSet, big.NewInt(10)), unexitotaShortAddr)
+		if err != nil {
+			t.Errorf("err:%s", err.Error())
+		}
 
-	unexitotaShortAddr := common.FromHex(otaShortAddrs[5])
-	unexitotaAXSet := unexitotaShortAddr[1 : 1+common.HashLength]
-	otaAXs = append(otaAXs, unexitotaAXSet)
-	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
-	}
+		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
+		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		}
 
-	if unexitotaAx != nil {
-		t.Logf("unexitotaAx:%s", common.ToHex(unexitotaAx))
-	}
-	if err != nil {
-		t.Logf("err:%s", err.Error())
-	}
+		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		}
 
-	err = setOTA(statedb, big.NewInt(0).Add(balanceSet, big.NewInt(10)), unexitotaShortAddr)
-	if err != nil {
-		t.Errorf("err:%s", err.Error())
-	}
+		if err != nil {
+			t.Logf("err:%s", err.Error())
+		}
 
-	exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
-	}
+		if unexitotaAx == nil {
+			t.Errorf("unexitota is nil!")
+		}
 
-	if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-		t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
-	}
-
-	if err != nil {
-		t.Logf("err:%s", err.Error())
-	}
-
-	if unexitotaAx == nil {
-		t.Errorf("unexitota is nil!")
-	}
-
-	if common.ToHex(unexitotaAx) != common.ToHex(unexitotaAXSet) {
-		t.Errorf("unexitota:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(unexitotaAXSet))
+		if common.ToHex(unexitotaAx) != common.ToHex(unexitotaAXSet) {
+			t.Errorf("unexitota:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(unexitotaAXSet))
+		}
 	}
 
 }
@@ -352,6 +419,101 @@ func TestAddOTAIfNotExit(t *testing.T) {
 	if balance == nil || balance.Cmp(balanceSet) != 0 {
 		t.Errorf("balance:%v", balance)
 	}
+}
+
+func TestSetOtaBalanceToAX(t *testing.T) {
+	{
+		err := SetOtaBalanceToAX(nil, make([]byte, common.HashLength), big1)
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		)
+
+		err := SetOtaBalanceToAX(statedb, make([]byte, common.HashLength-1), big1)
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		)
+
+		err := SetOtaBalanceToAX(statedb, make([]byte, common.HashLength), nil)
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+	}
+}
+
+func TestGetOtaBalanceFromWanAddr(t *testing.T) {
+	{
+		_, err := GetOtaBalanceFromWanAddr(nil, make([]byte, common.WAddressLength))
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		)
+
+		_, err := GetOtaBalanceFromWanAddr(statedb, make([]byte, common.WAddressLength-1))
+		if err == nil {
+			t.Error("expect err: invalid input param!")
+		}
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		)
+
+		balance, err := GetOtaBalanceFromWanAddr(statedb, make([]byte, common.WAddressLength))
+		if err != nil {
+			t.Error("err:", err.Error())
+		}
+
+		if balance == nil {
+			t.Error("unexpect balance, balance is nil")
+		}
+		if balance.Cmp(common.Big0) != 0 {
+			t.Error("unexpect balance, balance is not 0")
+		}
+	}
+
+	{
+		var (
+			db, _      = ethdb.NewMemDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			ota        = `0x026cdcfd3c29c5f9a69752efb510a2a1a161520668adea9c9c4bf106d671ea2bf703d8f814d98a644ea8ee9f2497e0fdcca6dbf6bcf7b4c58216ddd362a4c38a6e59`
+			balance    = big.NewInt(10)
+		)
+
+		otaWanAddr := common.FromHex(ota)
+		setOTA(statedb, balance, otaWanAddr)
+
+		balanceGet, err := GetOtaBalanceFromWanAddr(statedb, otaWanAddr)
+		if err != nil {
+			t.Error("err: ", err.Error())
+		}
+
+		if balanceGet == nil || balanceGet.Cmp(balance) != 0 {
+			t.Error("get invalid balance. expect:", balance.Uint64())
+		}
+	}
+
 }
 
 func TestGetOTAInfoFromAX(t *testing.T) {

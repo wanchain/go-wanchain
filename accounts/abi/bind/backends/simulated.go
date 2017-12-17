@@ -81,6 +81,24 @@ func NewSimulatedBackend() *SimulatedBackend {
 	return backend
 }
 
+func NewSimulatedBackendEx(alloc core.GenesisAlloc) *SimulatedBackend {
+	db, _ := ethdb.NewMemDatabase()
+	gspec := core.DefaultPPOWTestingGenesisBlock()
+	for k, v := range alloc{
+		gspec.Alloc[k] = v
+	}
+	gspec.MustCommit(db)
+
+	ce := ethash.NewFaker(db)
+	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
+	env := core.NewChainEnv(gspec.Config, gspec, ce, bc, db)
+
+	backend := &SimulatedBackend{env: env}
+	backend.rollback()
+	return backend
+}
+
+
 // Commit imports all the pending transactions as a single block and starts a
 // fresh new state.
 func (b *SimulatedBackend) Commit() {
@@ -120,41 +138,41 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 }
 
 // BalanceAt returns the wei balance of a certain account in the blockchain.
-// func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (*big.Int, error) {
-// 	b.mu.Lock()
-// 	defer b.mu.Unlock()
+func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (*big.Int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-// 		return nil, errBlockNumberUnsupported
-// 	}
-// 	statedb, _ := b.blockchain.State()
-// 	return statedb.GetBalance(contract), nil
-// }
+	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
+		return nil, errBlockNumberUnsupported
+	}
+	statedb, _ := b.env.Blockchain().State()
+	return statedb.GetBalance(contract), nil
+}
 
 // NonceAt returns the nonce of a certain account in the blockchain.
-// func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
-// 	b.mu.Lock()
-// 	defer b.mu.Unlock()
+func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-// 		return 0, errBlockNumberUnsupported
-// 	}
-// 	statedb, _ := b.blockchain.State()
-// 	return statedb.GetNonce(contract), nil
-// }
+	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
+		return 0, errBlockNumberUnsupported
+	}
+	statedb, _ := b.env.Blockchain().State()
+	return statedb.GetNonce(contract), nil
+}
 
 // StorageAt returns the value of key in the storage of an account in the blockchain.
-// func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
-// 	b.mu.Lock()
-// 	defer b.mu.Unlock()
+func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-// 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-// 		return nil, errBlockNumberUnsupported
-// 	}
-// 	statedb, _ := b.blockchain.State()
-// 	val := statedb.GetState(contract, key)
-// 	return val[:], nil
-// }
+	if blockNumber != nil && blockNumber.Cmp(b.env.Blockchain().CurrentBlock().Number()) != 0 {
+		return nil, errBlockNumberUnsupported
+	}
+	statedb, _ := b.env.Blockchain().State()
+	val := statedb.GetState(contract, key)
+	return val[:], nil
+}
 
 // TransactionReceipt returns the receipt of a transaction.
 func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
