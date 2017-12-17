@@ -1,6 +1,6 @@
 {
   "config": {
-        "chainId": 2,
+        "chainId": 3,
         "byzantiumBlock": 0
     },
   "alloc"      : {},
