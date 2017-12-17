@@ -36,12 +36,16 @@ func TestNodeIterator(t *testing.T) {
 	var (
 		fulldb, _  = ethdb.NewMemDatabase()
 		lightdb, _ = ethdb.NewMemDatabase()
-		gspec      = core.Genesis{Alloc: core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}}}
+		gspec      = core.DefaultPPOWTestingGenesisBlock()
 		genesis    = gspec.MustCommit(fulldb)
 	)
 	gspec.MustCommit(lightdb)
-	blockchain, _ := core.NewBlockChain(fulldb, params.TestChainConfig, ethash.NewFullFaker(), vm.Config{})
-	gchain, _ := core.GenerateChain(params.TestChainConfig, genesis, fulldb, 4, testChainGen)
+
+	engine := ethash.NewFullFaker(fulldb)
+	blockchain, _ := core.NewBlockChain(fulldb, params.TestChainConfig, engine, vm.Config{})
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, fulldb)
+
+	gchain, _ := chainEnv.GenerateChain(genesis, 4, testChainGen)
 	if _, err := blockchain.InsertChain(gchain); err != nil {
 		panic(err)
 	}

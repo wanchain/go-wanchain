@@ -39,7 +39,7 @@ import (
 )
 
 var (
-	testBankKey, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testBankKey, _  = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	testBankAddress = crypto.PubkeyToAddress(testBankKey.PublicKey)
 	testBankFunds   = big.NewInt(100000000)
 
@@ -218,12 +218,12 @@ func testChainGen(i int, block *core.BlockGen) {
 		block.AddTx(tx)
 	case 3:
 		// Block 4 includes blocks 2 and 3 as uncle headers (with modified extra data).
-		b2 := block.PrevBlock(1).Header()
-		b2.Extra = []byte("foo")
-		block.AddUncle(b2)
-		b3 := block.PrevBlock(2).Header()
-		b3.Extra = []byte("foo")
-		block.AddUncle(b3)
+		//b2 := block.PrevBlock(1).Header()
+		//b2.Extra = []byte("foo")
+		//block.AddUncle(b2)
+		//b3 := block.PrevBlock(2).Header()
+		//b3.Extra = []byte("foo")
+		//block.AddUncle(b3)
 		data := common.Hex2Bytes("C16431B900000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002")
 		tx, _ := types.SignTx(types.NewTransaction(block.TxNonce(testBankAddress), testContractAddr, big.NewInt(0), big.NewInt(100000), nil, data), signer, testBankKey)
 		block.AddTx(tx)
@@ -234,19 +234,23 @@ func testChainOdr(t *testing.T, protocol int, fn odrTestFn) {
 	var (
 		sdb, _  = ethdb.NewMemDatabase()
 		ldb, _  = ethdb.NewMemDatabase()
-		gspec   = core.Genesis{Alloc: core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}}}
+		gspec   = core.DefaultPPOWTestingGenesisBlock()
 		genesis = gspec.MustCommit(sdb)
 	)
 	gspec.MustCommit(ldb)
 	// Assemble the test environment
-	blockchain, _ := core.NewBlockChain(sdb, params.TestChainConfig, ethash.NewFullFaker(sdb), vm.Config{})
-	gchain, _ := core.GenerateChain(params.TestChainConfig, genesis, sdb, 4, testChainGen)
+	engine := ethash.NewFullFaker(sdb)
+	blockchain, _ := core.NewBlockChain(sdb, params.TestChainConfig, engine, vm.Config{})
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, sdb)
+
+	gchain, _ := chainEnv.GenerateChain(genesis,  4, testChainGen)
 	if _, err := blockchain.InsertChain(gchain); err != nil {
 		t.Fatal(err)
 	}
 
 	odr := &testOdr{sdb: sdb, ldb: ldb}
-	lightchain, err := NewLightChain(odr, params.TestChainConfig, ethash.NewFullFaker())
+	xdb, _  := ethdb.NewMemDatabase()
+	lightchain, err := NewLightChain(odr, params.TestChainConfig, ethash.NewFullFaker(xdb))
 	if err != nil {
 		t.Fatal(err)
 	}

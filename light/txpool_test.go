@@ -83,13 +83,16 @@ func TestTxPool(t *testing.T) {
 	var (
 		sdb, _  = ethdb.NewMemDatabase()
 		ldb, _  = ethdb.NewMemDatabase()
-		gspec   = core.Genesis{Alloc: core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}}}
+		gspec   = core.DefaultPPOWTestingGenesisBlock()
 		genesis = gspec.MustCommit(sdb)
 	)
 	gspec.MustCommit(ldb)
 	// Assemble the test environment
-	blockchain, _ := core.NewBlockChain(sdb, params.TestChainConfig, ethash.NewFullFaker(), vm.Config{})
-	gchain, _ := core.GenerateChain(params.TestChainConfig, genesis, sdb, poolTestBlocks, txPoolTestChainGen)
+	engine := ethash.NewFullFaker(sdb)
+	blockchain, _ := core.NewBlockChain(sdb, params.TestChainConfig, engine, vm.Config{})
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, sdb)
+
+	gchain, _ := chainEnv.GenerateChain(genesis, poolTestBlocks, txPoolTestChainGen)
 	if _, err := blockchain.InsertChain(gchain); err != nil {
 		panic(err)
 	}
@@ -100,7 +103,8 @@ func TestTxPool(t *testing.T) {
 		discard: make(chan int, 1),
 		mined:   make(chan int, 1),
 	}
-	lightchain, _ := NewLightChain(odr, params.TestChainConfig, ethash.NewFullFaker())
+	xdb, _  := ethdb.NewMemDatabase()
+	lightchain, _ := NewLightChain(odr, params.TestChainConfig, ethash.NewFullFaker(xdb))
 	txPermanent = 50
 	pool := NewTxPool(params.TestChainConfig, lightchain, relay)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

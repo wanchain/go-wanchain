@@ -27,18 +27,89 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/accounts"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // So we can deterministically seed different blockchains
 var (
 	canonicalSeed = 1
 	forkSeed      = 2
+	fakedAddr                 = common.HexToAddress("0xf9b32578b4420a36f132db32b56f3831a7cc1804")
+	fakedAccountPrivateKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
+	extraVanity               = 32
+	extraSeal                 = 65
 )
 
+func fakeSignerFn(signer accounts.Account, hash []byte) ([]byte, error) {
+	return crypto.Sign(hash, fakedAccountPrivateKey)
+}
+
+type LightChainEnv struct {
+	config       *params.ChainConfig
+	genesis      *core.Genesis
+	engine       *ethash.Ethash
+	blockChain   *LightChain
+	db           ethdb.Database
+	mapSigners   map[common.Address]struct{}
+	arraySigners []common.Address
+	signerKeys   []*ecdsa.PrivateKey
+	//set signers here for testing convenience
+	// validSigners
+}
+
+var (
+	totalSigner = 20
+	signerSet = make(map[common.Address]*ecdsa.PrivateKey)
+	addrSigners = make([]common.Address, 0)
+)
+
+func init(){
+	for i:=0; i < totalSigner; i++ {
+		private, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(private.PublicKey)
+		signerSet[addr] = private
+		addrSigners = append(addrSigners, addr)
+	}
+}
+
+func NewLightChainEnv(config *params.ChainConfig, g *core.Genesis, engine consensus.Engine, bc *LightChain, db ethdb.Database) *LightChainEnv {
+	ce := &LightChainEnv{
+		config:       config,
+		genesis:      g,
+		engine:       engine.(*ethash.Ethash),
+		blockChain:   bc,
+		db:           db,
+		mapSigners:   make(map[common.Address]struct{}),
+		arraySigners: make([]common.Address, len(g.ExtraData)/common.AddressLength),
+	}
+
+	for i := 0; i < len(ce.arraySigners); i++ {
+		copy(ce.arraySigners[i][:], g.ExtraData[i*common.AddressLength:])
+	}
+	for _, s := range ce.arraySigners {
+		ce.mapSigners[s] = struct{}{}
+	}
+
+	return ce
+}
+
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
-func makeHeaderChain(parent *types.Header, n int, db ethdb.Database, seed int) []*types.Header {
-	blocks, _ := core.GenerateChain(params.TestChainConfig, types.NewBlockWithHeader(parent), db, n, func(i int, b *core.BlockGen) {
-		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
+func (lce *LightChainEnv)makeHeaderChain(parent *types.Header, n int, seed int) []*types.Header {
+	gspec := core.DefaultPPOWTestingGenesisBlock()
+	db, _ := ethdb.NewMemDatabase()
+	gspec.MustCommit(db)
+	engine := ethash.NewFaker(db)
+
+	blockchain, _ := core.NewBlockChain(db, params.TestChainConfig, engine, vm.Config{})
+	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
+
+
+	blocks, _ := chainEnv.GenerateChain(types.NewBlockWithHeader(parent), n, func(i int, b *core.BlockGen) {
+		//b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
@@ -50,20 +121,23 @@ func makeHeaderChain(parent *types.Header, n int, db ethdb.Database, seed int) [
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.
-func newCanonical(n int) (ethdb.Database, *LightChain, error) {
+func newCanonical(n int) (ethdb.Database, *LightChain, error, *LightChainEnv) {
 	db, _ := ethdb.NewMemDatabase()
-	gspec := core.Genesis{Config: params.TestChainConfig}
+	//gspec := core.Genesis{Config: params.TestChainConfig}
+	gspec := core.DefaultPPOWTestingGenesisBlock()
 	genesis := gspec.MustCommit(db)
-	blockchain, _ := NewLightChain(&dummyOdr{db: db}, gspec.Config, ethash.NewFaker())
+	engine := ethash.NewFaker(db)
+	blockchain, _ := NewLightChain(&dummyOdr{db: db}, gspec.Config, engine)
+	chainEnv := NewLightChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
 
 	// Create and inject the requested chain
 	if n == 0 {
-		return db, blockchain, nil
+		return db, blockchain, nil, chainEnv
 	}
 	// Header-only chain requested
-	headers := makeHeaderChain(genesis.Header(), n, db, canonicalSeed)
+	headers := chainEnv.makeHeaderChain(genesis.Header(), n, canonicalSeed)
 	_, err := blockchain.InsertHeaderChain(headers, 1)
-	return db, blockchain, err
+	return db, blockchain, err, chainEnv
 }
 
 // newTestLightChain creates a LightChain that doesn't validate anything.
@@ -84,7 +158,7 @@ func newTestLightChain() *LightChain {
 // Test fork of length N starting from block i
 func testFork(t *testing.T, LightChain *LightChain, i, n int, comparator func(td1, td2 *big.Int)) {
 	// Copy old chain up to #i into a new db
-	db, LightChain2, err := newCanonical(i)
+	_, LightChain2, err, lce := newCanonical(i)
 	if err != nil {
 		t.Fatal("could not make new canonical in testFork", err)
 	}
@@ -96,7 +170,7 @@ func testFork(t *testing.T, LightChain *LightChain, i, n int, comparator func(td
 		t.Errorf("chain content mismatch at %d: have hash %v, want hash %v", i, hash2, hash1)
 	}
 	// Extend the newly created chain
-	headerChainB := makeHeaderChain(LightChain2.CurrentHeader(), n, db, forkSeed)
+	headerChainB := lce.makeHeaderChain(LightChain2.CurrentHeader(), n, forkSeed)
 	if _, err := LightChain2.InsertHeaderChain(headerChainB, 1); err != nil {
 		t.Fatalf("failed to insert forking chain: %v", err)
 	}
@@ -135,7 +209,7 @@ func TestExtendCanonicalHeaders(t *testing.T) {
 	length := 5
 
 	// Make first chain starting from genesis
-	_, processor, err := newCanonical(length)
+	_, processor, err,_ := newCanonical(length)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}
@@ -158,7 +232,7 @@ func TestShorterForkHeaders(t *testing.T) {
 	length := 10
 
 	// Make first chain starting from genesis
-	_, processor, err := newCanonical(length)
+	_, processor, err, _ := newCanonical(length)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}
@@ -183,7 +257,7 @@ func TestLongerForkHeaders(t *testing.T) {
 	length := 10
 
 	// Make first chain starting from genesis
-	_, processor, err := newCanonical(length)
+	_, processor, err, _ := newCanonical(length)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}
@@ -208,7 +282,7 @@ func TestEqualForkHeaders(t *testing.T) {
 	length := 10
 
 	// Make first chain starting from genesis
-	_, processor, err := newCanonical(length)
+	_, processor, err, _ := newCanonical(length)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}
@@ -230,12 +304,12 @@ func TestEqualForkHeaders(t *testing.T) {
 // Tests that chains missing links do not get accepted by the processor.
 func TestBrokenHeaderChain(t *testing.T) {
 	// Make chain starting from genesis
-	db, LightChain, err := newCanonical(10)
+	_, LightChain, err, lce := newCanonical(10)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}
 	// Create a forked chain, and try to insert with a missing link
-	chain := makeHeaderChain(LightChain.CurrentHeader(), 5, db, forkSeed)[1:]
+	chain := lce.makeHeaderChain(LightChain.CurrentHeader(), 5, forkSeed)[1:]
 	if err := testHeaderChainImport(chain, LightChain); err == nil {
 		t.Errorf("broken header chain not reported")
 	}
@@ -337,10 +411,8 @@ func TestReorgBadHeaderHashes(t *testing.T) {
 	core.BadHashes[headers[3].Hash()] = true
 	defer func() { delete(core.BadHashes, headers[3].Hash()) }()
 
-	db := ethdb.NewMemDatabase()
-
 	// Create a new LightChain and check that it rolled back the state.
-	ncm, err := NewLightChain(&dummyOdr{db: bc.chainDb}, params.TestChainConfig, ethash.NewFaker(db))
+	ncm, err := NewLightChain(&dummyOdr{db: bc.chainDb}, params.TestChainConfig, ethash.NewFaker(bc.chainDb))
 	if err != nil {
 		t.Fatalf("failed to create new chain manager: %v", err)
 	}
