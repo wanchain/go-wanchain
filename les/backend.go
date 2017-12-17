@@ -42,6 +42,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/discv5"
 	"github.com/wanchain/go-wanchain/params"
 	rpc "github.com/wanchain/go-wanchain/rpc"
+	"math/big"
 )
 
 type LightEthereum struct {
@@ -78,8 +79,8 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	if err != nil {
 		return nil, err
 	}
-	
-	config.Genesis = nil //used the default
+
+	config.Genesis.Config.ChainId = big.NewInt(2) //used the default testnet
 	
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, isCompat := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !isCompat {
