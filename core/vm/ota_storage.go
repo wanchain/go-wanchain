@@ -35,7 +35,7 @@ func GetAXFromWanAddr(otaWanAddr []byte) ([]byte, error) {
 
 // GetOtaBalanceFromAX retrieve ota balance from ota AX
 func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
-	if statedb == nil || otaAX == nil || len(otaAX) != common.HashLength {
+	if statedb == nil || len(otaAX) != common.HashLength {
 		return nil, errors.New("invalid input param!")
 	}
 

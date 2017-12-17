@@ -409,6 +409,10 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 		return vm.ErrOutOfGas
 	}
 
+	if gasPrice == nil || gasPrice.Cmp(common.Big0) <= 0 {
+		return vm.ErrInvalidGasPrice
+	}
+
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return err
