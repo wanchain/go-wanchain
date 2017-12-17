@@ -21,17 +21,16 @@ import (
 	"reflect"
 	"testing"
 
+	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	"fmt"
 )
 
 func TestDefaultGenesisBlock(t *testing.T) {
 	block, _ := DefaultGenesisBlock().ToBlock()
-
-	//fmt.Printf(common.ToHex(block.Hash().Bytes()))
 
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
@@ -44,11 +43,11 @@ func TestDefaultGenesisBlock(t *testing.T) {
 }
 
 func TestDefaultTestnetGenesisBlock(t *testing.T) {
-	block, _ := DefaultTestnetGenesisBlock().ToBlock()
-
+	block, _ := DefaultGenesisBlock().ToBlock()
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
+
 	block, _ = DefaultTestnetGenesisBlock().ToBlock()
 	if block.Hash() != params.TestnetGenesisHash {
 		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
