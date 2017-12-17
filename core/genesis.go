@@ -162,7 +162,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
-		} else if genesis.Config.ChainId.Cmp(big.NewInt(2))==0 {
+		} else if genesis.Config.ChainId.Cmp(big.NewInt(2)) == 0 {
 			log.Info("Writing default  test net genesis block")
 			genesis = DefaultTestnetGenesisBlock()
 		} else {
@@ -326,7 +326,7 @@ func DefaultPPOWTestingGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0xf9b32578b4420a36f132db32b56f3831a7cc1804810524175efa012446103d1a04c9f4263a962accdb05642eabc8347ec78e21bdf0d906ba579d423ab5eb9bf02a924367ed9d4f86dfcb1c572cd9a4f80036805b6846f26ac35f2a7d7eda4a2a58f08e8ef073d4e52c506f3f288faa9db1c1e5ae0f1e70f8c38eb01bce9bcb61327532dc5a540da4cf484ae57e98bc5a465c1d2afa6b9376709a525981f53d493a46ef1eb55428b3b88a222d80d23531054ef51dbd100cf8286136659a7d63a38a154e28dbf3e0fd"),
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
-		Alloc:      jsonPrealloc(wanchainTestAllocJson),
+		Alloc:      jsonPrealloc(wanchainPPOWTestAllocJson),
 	}
 }
 

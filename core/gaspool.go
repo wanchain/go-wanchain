@@ -17,8 +17,9 @@
 package core
 
 import (
-	"github.com/wanchain/go-wanchain/log"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/log"
 )
 
 // GasPool tracks the amount of gas available during
