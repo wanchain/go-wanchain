@@ -441,10 +441,6 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
 
-	if number == 0 {
-		return nil
-	}
-
 	s, err := self.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
