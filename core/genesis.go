@@ -340,7 +340,6 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
-
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
