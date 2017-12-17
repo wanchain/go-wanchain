@@ -340,15 +340,16 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
+
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Nonce:      66,
+		Nonce:      28, //same with the version
 		ExtraData:  hexutil.MustDecode(getPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
-		Alloc:      jsonPrealloc(wanchainAllocJson),
+		Alloc:      jsonPrealloc(wanchainTestAllocJson),
 	}
 }
 
