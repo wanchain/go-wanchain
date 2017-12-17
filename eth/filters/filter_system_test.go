@@ -26,9 +26,11 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/bloombits"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/params"
@@ -123,61 +125,73 @@ func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.Matc
 // - one at the start and should receive all posted chain events and a second (blockHashes)
 // - one that is created after a cutoff moment and uninstalled after a second cutoff moment (blockHashes[cutoff1:cutoff2])
 // - one that is created after the second cutoff moment (blockHashes[cutoff2:])
-// func TestBlockSubscription(t *testing.T) {
-// 	t.Parallel()
+func TestBlockSubscription(t *testing.T) {
+	t.Parallel()
 
-// 	var (
-// 		mux         = new(event.TypeMux)
-// 		db, _       = ethdb.NewMemDatabase()
-// 		txFeed      = new(event.Feed)
-// 		rmLogsFeed  = new(event.Feed)
-// 		logsFeed    = new(event.Feed)
-// 		chainFeed   = new(event.Feed)
-// 		backend     = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed}
-// 		api         = NewPublicFilterAPI(backend, false)
-// 		genesis     = new(core.Genesis).MustCommit(db)
-// 		chain, _    = core.GenerateChain(params.TestChainConfig, genesis, db, 10, func(i int, gen *core.BlockGen) {})
-// 		chainEvents = []core.ChainEvent{}
-// 	)
+	var (
+		mux        = new(event.TypeMux)
+		db, _      = ethdb.NewMemDatabase()
+		engine     = ethash.NewFaker(db)
+		txFeed     = new(event.Feed)
+		rmLogsFeed = new(event.Feed)
+		logsFeed   = new(event.Feed)
+		chainFeed  = new(event.Feed)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed}
+		api        = NewPublicFilterAPI(backend, false)
+		// genesis     = new(core.Genesis).MustCommit(db)
+		// chain, _    = core.GenerateChain(params.TestChainConfig, genesis, db, 10, func(i int, gen *core.BlockGen) {})
+		chainEvents = []core.ChainEvent{}
+	)
 
-// 	for _, blk := range chain {
-// 		chainEvents = append(chainEvents, core.ChainEvent{Hash: blk.Hash(), Block: blk})
-// 	}
+	// create a genesis block
+	gspec := core.DefaultPPOWTestingGenesisBlock()
+	genesis := gspec.MustCommit(db)
 
-// 	chan0 := make(chan *types.Header)
-// 	sub0 := api.events.SubscribeNewHeads(chan0)
-// 	chan1 := make(chan *types.Header)
-// 	sub1 := api.events.SubscribeNewHeads(chan1)
+	blockChain, _ := core.NewBlockChain(db, gspec.Config, engine, vm.Config{})
+	defer blockChain.Stop()
 
-// 	go func() { // simulate client
-// 		i1, i2 := 0, 0
-// 		for i1 != len(chainEvents) || i2 != len(chainEvents) {
-// 			select {
-// 			case header := <-chan0:
-// 				if chainEvents[i1].Hash != header.Hash() {
-// 					t.Errorf("sub0 received invalid hash on index %d, want %x, got %x", i1, chainEvents[i1].Hash, header.Hash())
-// 				}
-// 				i1++
-// 			case header := <-chan1:
-// 				if chainEvents[i2].Hash != header.Hash() {
-// 					t.Errorf("sub1 received invalid hash on index %d, want %x, got %x", i2, chainEvents[i2].Hash, header.Hash())
-// 				}
-// 				i2++
-// 			}
-// 		}
+	chainEnv := core.NewChainEnv(gspec.Config, gspec, engine, blockChain, db)
 
-// 		sub0.Unsubscribe()
-// 		sub1.Unsubscribe()
-// 	}()
+	chain, _ := chainEnv.GenerateChain(genesis, 10, func(i int, gen *core.BlockGen) {})
 
-// 	time.Sleep(1 * time.Second)
-// 	for _, e := range chainEvents {
-// 		chainFeed.Send(e)
-// 	}
+	for _, blk := range chain {
+		chainEvents = append(chainEvents, core.ChainEvent{Hash: blk.Hash(), Block: blk})
+	}
 
-// 	<-sub0.Err()
-// 	<-sub1.Err()
-// }
+	chan0 := make(chan *types.Header)
+	sub0 := api.events.SubscribeNewHeads(chan0)
+	chan1 := make(chan *types.Header)
+	sub1 := api.events.SubscribeNewHeads(chan1)
+
+	go func() { // simulate client
+		i1, i2 := 0, 0
+		for i1 != len(chainEvents) || i2 != len(chainEvents) {
+			select {
+			case header := <-chan0:
+				if chainEvents[i1].Hash != header.Hash() {
+					t.Errorf("sub0 received invalid hash on index %d, want %x, got %x", i1, chainEvents[i1].Hash, header.Hash())
+				}
+				i1++
+			case header := <-chan1:
+				if chainEvents[i2].Hash != header.Hash() {
+					t.Errorf("sub1 received invalid hash on index %d, want %x, got %x", i2, chainEvents[i2].Hash, header.Hash())
+				}
+				i2++
+			}
+		}
+
+		sub0.Unsubscribe()
+		sub1.Unsubscribe()
+	}()
+
+	time.Sleep(1 * time.Second)
+	for _, e := range chainEvents {
+		chainFeed.Send(e)
+	}
+
+	<-sub0.Err()
+	<-sub1.Err()
+}
 
 // TestPendingTxFilter tests whether pending tx filters retrieve all pending transactions that are posted to the event mux.
 func TestPendingTxFilter(t *testing.T) {
