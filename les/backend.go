@@ -80,7 +80,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 		return nil, err
 	}
 
-	config.Genesis.Config.ChainId = big.NewInt(2) //used the default testnet
+	config.Genesis.Config.ChainId = big.NewInt(3) //used the default testnet
 	
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, isCompat := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !isCompat {
