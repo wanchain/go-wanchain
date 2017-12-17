@@ -552,12 +552,16 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 		return nil, err
 	}
 
+	var otaAX []byte
 	otaWAddrByte := common.FromHex(otaWAddr)
-	if len(otaWAddrByte) != common.WAddressLength {
-		return nil, errors.New("invalid ota wan address!")
+	if len(otaWAddrByte) == common.WAddressLength {
+		otaAX, _ = vm.GetAXFromWanAddr(otaWAddrByte)
+	} else if len(otaWAddrByte) == common.HashLength {
+		otaAX = otaWAddrByte
+	} else {
+		return nil, errors.New("invalid ota address!")
 	}
 
-	otaAX := otaWAddrByte[1 : 1+common.HashLength]
 	return vm.GetOtaBalanceFromAX(state, otaAX)
 }
 
