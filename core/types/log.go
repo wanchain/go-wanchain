@@ -40,6 +40,7 @@ type Log struct {
 
 	// Derived fields. These fields are filled in by the node
 	// but not secured by consensus.
+
 	// block in which the transaction was included
 	BlockNumber uint64 `json:"blockNumber"`
 	// hash of the transaction
