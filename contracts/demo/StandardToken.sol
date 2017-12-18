@@ -100,17 +100,13 @@ library SafeMath {
 }
 
 contract StandardToken is ERC20Protocol {
+
     using SafeMath for uint;
-
-    /**
-    * @dev Fix for the ERC20 short address attack.
-    */
-    modifier onlyPayloadSize(uint size) {
-        require(msg.data.length >= size + 4);
-        _;
-    }
-
-    function transfer(address _to, uint _value) onlyPayloadSize(2 * 32) returns (bool success) {
+    string public constant name = "WanToken-Beta";
+    string public constant symbol = "WanToken";
+    uint public constant decimals = 18;
+	
+    function transfer(address _to, uint _value) returns (bool success) {
 
         if (balances[msg.sender] >= _value) {
             balances[msg.sender] -= _value;
@@ -120,7 +116,7 @@ contract StandardToken is ERC20Protocol {
         } else { return false; }
     }
 
-    function transferFrom(address _from, address _to, uint _value) onlyPayloadSize(3 * 32) returns (bool success) {
+    function transferFrom(address _from, address _to, uint _value) returns (bool success) {
 
         if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value) {
             balances[_to] += _value;
@@ -135,7 +131,7 @@ contract StandardToken is ERC20Protocol {
         return balances[_owner];
     }
 
-    function approve(address _spender, uint _value) onlyPayloadSize(2 * 32) returns (bool success) {
+    function approve(address _spender, uint _value) returns (bool success) {
 
         assert((_value == 0) || (allowed[msg.sender][_spender] == 0));
 
@@ -160,7 +156,7 @@ contract StandardToken is ERC20Protocol {
     {
         require(receipient != 0x0);
         require(msg.value >= 0.1 ether);
-
+		
 		balances[receipient] = balances[receipient].add(msg.value*10);
 
         wanport.transfer(msg.value);
@@ -172,4 +168,5 @@ contract StandardToken is ERC20Protocol {
 
     mapping (address => uint) balances;
     mapping (address => mapping (address => uint)) allowed;
+	
 }
