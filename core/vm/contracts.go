@@ -583,7 +583,7 @@ const (
 
 func init() {
 	if errCoinSCInit != nil || errStampSCInit != nil {
-		// TODO: refact panic
+		panic("err in coin sc initialize or stamp error initialize ")
 	}
 
 	copy(buyIdArr[:], coinAbi.Methods["buyCoinNote"].Id())
