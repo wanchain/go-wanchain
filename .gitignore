@@ -33,3 +33,6 @@ profile.cov
 
 # Docker Env 
 DOCKER/**
+
+# go unit test cover out
+*.out

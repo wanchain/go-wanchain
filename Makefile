@@ -38,10 +38,10 @@ test: all
 	build/env.sh go run build/ci.go test
 
 testCoin: all
-	./build/bin/geth --gasprice 200000 --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wancoin.js'
+	./build/bin/geth --dev --nodiscover --networkid 483855466823 --datadir './DOCKER/data-loadScript' --etherbase '0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8' --unlock '0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8' --password './DOCKER/data-loadScript/pwdfile' --mine --minerthreads 1 --nodiscover js './loadScript/wancoin.js'
 
 testToken: all
-	./build/bin/geth --gasprice 200000 --datadir "./DOCKER/data-loadScript" --mine --minerthreads 1 --nodiscover js './loadScript/wantoken.js'
+	./build/bin/geth --dev --nodiscover --networkid 483855466823 --datadir "./DOCKER/data-loadScript" --etherbase '0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8' --unlock '0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8' --password './DOCKER/data-loadScript/pwdfile' --mine --minerthreads 1 --nodiscover js './loadScript/wantoken.js'
 
 clean:
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
