@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"

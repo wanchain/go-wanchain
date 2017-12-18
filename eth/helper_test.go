@@ -48,7 +48,7 @@ var (
 // newTestProtocolManager creates a new protocol manager for testing purposes,
 // with the given number of blocks already known, and potential notification
 // channels for different events.
-func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func(int, *core.BlockGen), newtx chan<- []*types.Transaction) (*ProtocolManager, error) {
+func newTestProtocolManager(mode downloader.SyncMode, l int, generator func(int, *core.BlockGen), newtx chan<- []*types.Transaction) (*ProtocolManager, error) {
 	var (
 		db, _         = ethdb.NewMemDatabase()
 		evmux         = new(event.TypeMux)
@@ -58,18 +58,17 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 		blockchain, _ = core.NewBlockChain(db, gspec.Config, engine, vm.Config{})
 	)
 
-	defer blockchain.Stop()
 	env := core.NewChainEnv(gspec.Config, gspec, engine, blockchain, db)
+	blocks, _ := env.GenerateChain(genesis, l, generator)
 
-	chain, _ := env.GenerateChain(genesis, blocks, generator)
-	if _, err := blockchain.InsertChain(chain); err != nil {
+	if _, err := blockchain.InsertChain(blocks); err != nil {
 		panic(err)
 	}
-
 	pm, err := NewProtocolManager(gspec.Config, mode, DefaultConfig.NetworkId, evmux, &testTxPool{added: newtx}, engine, blockchain, db)
 	if err != nil {
 		return nil, err
 	}
+
 	pm.Start(1000)
 	return pm, nil
 }
@@ -79,6 +78,7 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 // channels for different events. In case of an error, the constructor force-
 // fails the test.
 func newTestProtocolManagerMust(t *testing.T, mode downloader.SyncMode, blocks int, generator func(int, *core.BlockGen), newtx chan<- []*types.Transaction) *ProtocolManager {
+
 	pm, err := newTestProtocolManager(mode, blocks, generator, newtx)
 	if err != nil {
 		t.Fatalf("Failed to create protocol manager: %v", err)

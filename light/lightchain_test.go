@@ -21,23 +21,24 @@ import (
 	"math/big"
 	"testing"
 
+	"crypto/ecdsa"
+
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/accounts"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // So we can deterministically seed different blockchains
 var (
-	canonicalSeed = 1
-	forkSeed      = 2
+	canonicalSeed             = 1
+	forkSeed                  = 2
 	fakedAddr                 = common.HexToAddress("0xf9b32578b4420a36f132db32b56f3831a7cc1804")
 	fakedAccountPrivateKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
 	extraVanity               = 32
@@ -63,12 +64,12 @@ type LightChainEnv struct {
 
 var (
 	totalSigner = 20
-	signerSet = make(map[common.Address]*ecdsa.PrivateKey)
+	signerSet   = make(map[common.Address]*ecdsa.PrivateKey)
 	addrSigners = make([]common.Address, 0)
 )
 
-func init(){
-	for i:=0; i < totalSigner; i++ {
+func init() {
+	for i := 0; i < totalSigner; i++ {
 		private, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(private.PublicKey)
 		signerSet[addr] = private
@@ -98,7 +99,7 @@ func NewLightChainEnv(config *params.ChainConfig, g *core.Genesis, engine consen
 }
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
-func (lce *LightChainEnv)makeHeaderChain(parent *types.Header, n int, seed int) []*types.Header {
+func (lce *LightChainEnv) makeHeaderChain(parent *types.Header, n int, seed int) []*types.Header {
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	db, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(db)
@@ -106,7 +107,6 @@ func (lce *LightChainEnv)makeHeaderChain(parent *types.Header, n int, seed int) 
 
 	blockchain, _ := core.NewBlockChain(db, params.TestChainConfig, engine, vm.Config{})
 	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
-
 
 	blocks, _ := chainEnv.GenerateChain(types.NewBlockWithHeader(parent), n, func(i int, b *core.BlockGen) {
 		//b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
@@ -209,7 +209,7 @@ func TestExtendCanonicalHeaders(t *testing.T) {
 	length := 5
 
 	// Make first chain starting from genesis
-	_, processor, err,_ := newCanonical(length)
+	_, processor, err, _ := newCanonical(length)
 	if err != nil {
 		t.Fatalf("failed to make new canonical chain: %v", err)
 	}

@@ -712,7 +712,7 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 func TestCanonicalSynchronisation62(t *testing.T)     { testCanonicalSynchronisation(t, 62, FullSync) }
 func TestCanonicalSynchronisation63Full(t *testing.T) { testCanonicalSynchronisation(t, 63, FullSync) }
 
-// func TestCanonicalSynchronisation63Fast(t *testing.T)  { testCanonicalSynchronisation(t, 63, FastSync) }
+// func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
 func TestCanonicalSynchronisation64Full(t *testing.T) { testCanonicalSynchronisation(t, 64, FullSync) }
 
 // func TestCanonicalSynchronisation64Fast(t *testing.T)  { testCanonicalSynchronisation(t, 64, FastSync) }
