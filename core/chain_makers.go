@@ -65,12 +65,12 @@ type ChainEnv struct {
 // add for testing permission proof of work
 var (
 	totalSigner = 20
-	signerSet = make(map[common.Address]*ecdsa.PrivateKey)
+	signerSet   = make(map[common.Address]*ecdsa.PrivateKey)
 	addrSigners = make([]common.Address, 0)
 )
 
-func init(){
-	for i:=0; i < totalSigner; i++ {
+func init() {
+	for i := 0; i < totalSigner; i++ {
 		private, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(private.PublicKey)
 		signerSet[addr] = private
@@ -316,7 +316,6 @@ func (self *ChainEnv) GenerateChainEx(parent *types.Block, signerSequence []int,
 	}
 	return blocks, receipts
 }
-
 
 func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.StateDB) *types.Header {
 	var time *big.Int

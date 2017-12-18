@@ -84,7 +84,7 @@ func NewSimulatedBackend() *SimulatedBackend {
 func NewSimulatedBackendEx(alloc core.GenesisAlloc) *SimulatedBackend {
 	db, _ := ethdb.NewMemDatabase()
 	gspec := core.DefaultPPOWTestingGenesisBlock()
-	for k, v := range alloc{
+	for k, v := range alloc {
 		gspec.Alloc[k] = v
 	}
 	gspec.MustCommit(db)
@@ -97,7 +97,6 @@ func NewSimulatedBackendEx(alloc core.GenesisAlloc) *SimulatedBackend {
 	backend.rollback()
 	return backend
 }
-
 
 // Commit imports all the pending transactions as a single block and starts a
 // fresh new state.
