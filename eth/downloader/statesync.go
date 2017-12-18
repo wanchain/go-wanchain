@@ -412,7 +412,7 @@ func (s *stateSync) process(req *stateReq) (bool, error) {
 		case trie.ErrAlreadyProcessed:
 			duplicate++
 		default:
-			return stale, fmt.Errorf("invalid state node %s: %v", hash.TerminalString(), err)
+			return stale, fmt.Errorf("invalid state node %s: %v", hash.String(), err)
 		}
 		// If the node delivered a requested item, mark the delivery non-stale
 		if _, ok := req.tasks[hash]; ok {
@@ -438,7 +438,7 @@ func (s *stateSync) process(req *stateReq) (bool, error) {
 		// If we've requested the node too many times already, it may be a malicious
 		// sync where nobody has the right data. Abort.
 		if len(task.attempts) >= npeers {
-			return stale, fmt.Errorf("state node %s failed with all peers (%d tries, %d peers)", hash.TerminalString(), len(task.attempts), npeers)
+			return stale, fmt.Errorf("state node %s failed with all peers (%d tries, %d peers)", hash.String(), len(task.attempts), npeers)
 		}
 		// Missing item, place into the retry queue.
 		s.tasks[hash] = task
