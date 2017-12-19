@@ -120,7 +120,7 @@ func TestVerifyHeadersFailed(t *testing.T)  {
 
 
 func TestVerifyHeaderLoadSnapshot(t *testing.T)  {
-	blockchain, chainEnv := newTestBlockChainEx(false)
+	blockchain, chainEnv := newTestBlockChainEx(true)
 	signerSeq := make([]int, 0)
 	for i := 0 ; i < 100; i++ {
 		signerSeq = append(signerSeq, i%20)
@@ -145,7 +145,7 @@ func create2ChainContextSameGenesis()(*BlockChain, *ChainEnv, *BlockChain, *Chai
 	gspec.Difficulty = big.NewInt(1)
 	genesisBlock = gspec.MustCommit(db)
 
-	engine := ethash.NewTester(db)
+	engine := ethash.NewFaker(db)
 	blockchain, err := NewBlockChain(db, gspec.Config, engine, vm.Config{})
 	if err != nil {
 		panic(err)

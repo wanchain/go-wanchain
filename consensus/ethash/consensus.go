@@ -527,7 +527,7 @@ func (self *Ethash) snapshot(chain consensus.ChainReader, number uint64, hash co
 		log.Trace("Stored ppow snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
-	return snap, nil
+	return snap, err
 }
 
 // Some weird constants to avoid constant memory allocs for them.
