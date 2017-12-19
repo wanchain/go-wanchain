@@ -174,7 +174,7 @@ func TestGetOtaBalance(t *testing.T) {
 	}
 }
 
-func TestCheckOTAExit(t *testing.T) {
+func TestCheckOTAExis(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
@@ -184,23 +184,23 @@ func TestCheckOTAExit(t *testing.T) {
 		balanceSet   = big.NewInt(10)
 	)
 
-	_, _, err := CheckOTAExit(nil, otaAX)
+	_, _, err := CheckOTAExis(nil, otaAX)
 	if err == nil {
 		t.Error("expect err: invalid input param!")
 	}
 
-	_, _, err = CheckOTAExit(statedb, otaAX[1:])
+	_, _, err = CheckOTAExis(statedb, otaAX[1:])
 	if err == nil {
 		t.Error("expect err: invalid input param!")
 	}
 
-	exit, balanceGet, err := CheckOTAExit(statedb, otaAX)
+	exis, balanceGet, err := CheckOTAExis(statedb, otaAX)
 	if err != nil {
-		t.Errorf("CheckOTAExit, err:%s", err.Error())
+		t.Errorf("CheckOTAExis, err:%s", err.Error())
 	}
 
-	if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
-		t.Errorf("exit:%t, balance:%v", exit, balanceGet)
+	if exis || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
+		t.Errorf("exis:%t, balance:%v", exis, balanceGet)
 	}
 
 	err = setOTA(statedb, balanceSet, otaShortAddr)
@@ -208,16 +208,16 @@ func TestCheckOTAExit(t *testing.T) {
 		t.Errorf("SetOTA err:%s", err.Error())
 	}
 
-	exit, balanceGet, err = CheckOTAExit(statedb, otaAX)
+	exis, balanceGet, err = CheckOTAExis(statedb, otaAX)
 	if err != nil {
-		t.Errorf("CheckOTAExit, err:%s", err.Error())
+		t.Errorf("CheckOTAExis, err:%s", err.Error())
 	}
-	if !exit || balanceGet == nil || balanceGet.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("ChechOTAExit, exit:%t, balanceGet:%v", exit, balanceGet)
+	if !exis || balanceGet == nil || balanceGet.Cmp(big.NewInt(10)) != 0 {
+		t.Errorf("ChechOTAExis, exis:%t, balanceGet:%v", exis, balanceGet)
 	}
 }
 
-func TestBatCheckOTAExit(t *testing.T) {
+func TestBatCheckOTAExis(t *testing.T) {
 
 	{
 		var (
@@ -237,18 +237,18 @@ func TestBatCheckOTAExit(t *testing.T) {
 			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
 		}
 
-		_, _, _, err := BatCheckOTAExit(nil, otaAXs)
+		_, _, _, err := BatCheckOTAExis(nil, otaAXs)
 		if err == nil {
 			t.Error("expect err: invalid input param!")
 		}
 
-		_, _, _, err = BatCheckOTAExit(statedb, nil)
+		_, _, _, err = BatCheckOTAExis(statedb, nil)
 		if err == nil {
 			t.Error("expect err: invalid input param!")
 		}
 
 		otaAXs = append(otaAXs, otaAXs[0][1:])
-		_, _, _, err = BatCheckOTAExit(statedb, nil)
+		_, _, _, err = BatCheckOTAExis(statedb, nil)
 		if err == nil {
 			t.Error("expect err: invalid input ota AX!")
 		}
@@ -275,17 +275,17 @@ func TestBatCheckOTAExit(t *testing.T) {
 			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
 		}
 
-		exit, balanceGet, unexitotaAx, err := BatCheckOTAExit(statedb, otaAXs)
-		if exit || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
-			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		exis, balanceGet, unexisotaAx, err := BatCheckOTAExis(statedb, otaAXs)
+		if exis || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
+			t.Errorf("exis:%t, balanceGet:%v", exis, balanceGet)
 		}
 
-		if unexitotaAx == nil {
-			t.Errorf("unexitotaAX is nil!")
+		if unexisotaAx == nil {
+			t.Errorf("unexisotaAX is nil!")
 		}
 
-		if common.ToHex(unexitotaAx) != common.ToHex(otaAXs[0]) {
-			t.Errorf("unexitotaAx:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(otaAXs[0]))
+		if common.ToHex(unexisotaAx) != common.ToHex(otaAXs[0]) {
+			t.Errorf("unexisotaAx:%s, expect:%s", common.ToHex(unexisotaAx), common.ToHex(otaAXs[0]))
 		}
 
 		if err != nil {
@@ -299,58 +299,58 @@ func TestBatCheckOTAExit(t *testing.T) {
 			}
 		}
 
-		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-		if !exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) != 0) {
-			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		exis, balanceGet, unexisotaAx, err = BatCheckOTAExis(statedb, otaAXs)
+		if !exis || (balanceGet != nil && balanceSet.Cmp(balanceGet) != 0) {
+			t.Errorf("exis:%t, balanceGet:%v", exis, balanceGet)
 		}
 
-		if unexitotaAx != nil {
-			t.Errorf("unexitota:%s", common.ToHex(unexitotaAx))
+		if unexisotaAx != nil {
+			t.Errorf("unexisota:%s", common.ToHex(unexisotaAx))
 		}
 
 		if err != nil {
 			t.Errorf("err:%s", err.Error())
 		}
 
-		unexitotaShortAddr := common.FromHex(otaShortAddrs[5])
-		unexitotaAXSet := unexitotaShortAddr[1 : 1+common.HashLength]
-		otaAXs = append(otaAXs, unexitotaAXSet)
-		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		unexisotaShortAddr := common.FromHex(otaShortAddrs[5])
+		unexisotaAXSet := unexisotaShortAddr[1 : 1+common.HashLength]
+		otaAXs = append(otaAXs, unexisotaAXSet)
+		exis, balanceGet, unexisotaAx, err = BatCheckOTAExis(statedb, otaAXs)
+		if exis || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exis:%t, balanceGet:%v", exis, balanceGet)
 		}
 
-		if unexitotaAx != nil {
-			t.Logf("unexitotaAx:%s", common.ToHex(unexitotaAx))
+		if unexisotaAx != nil {
+			t.Logf("unexisotaAx:%s", common.ToHex(unexisotaAx))
 		}
 		if err != nil {
 			t.Logf("err:%s", err.Error())
 		}
 
-		err = setOTA(statedb, big.NewInt(0).Add(balanceSet, big.NewInt(10)), unexitotaShortAddr)
+		err = setOTA(statedb, big.NewInt(0).Add(balanceSet, big.NewInt(10)), unexisotaShortAddr)
 		if err != nil {
 			t.Errorf("err:%s", err.Error())
 		}
 
-		exit, balanceGet, unexitotaAx, err = BatCheckOTAExit(statedb, otaAXs)
-		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		exis, balanceGet, unexisotaAx, err = BatCheckOTAExis(statedb, otaAXs)
+		if exis || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exis:%t, balanceGet:%v", exis, balanceGet)
 		}
 
-		if exit || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
-			t.Errorf("exit:%t, balanceGet:%v", exit, balanceGet)
+		if exis || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
+			t.Errorf("exis:%t, balanceGet:%v", exis, balanceGet)
 		}
 
 		if err != nil {
 			t.Logf("err:%s", err.Error())
 		}
 
-		if unexitotaAx == nil {
-			t.Errorf("unexitota is nil!")
+		if unexisotaAx == nil {
+			t.Errorf("unexisota is nil!")
 		}
 
-		if common.ToHex(unexitotaAx) != common.ToHex(unexitotaAXSet) {
-			t.Errorf("unexitota:%s, expect:%s", common.ToHex(unexitotaAx), common.ToHex(unexitotaAXSet))
+		if common.ToHex(unexisotaAx) != common.ToHex(unexisotaAXSet) {
+			t.Errorf("unexisota:%s, expect:%s", common.ToHex(unexisotaAx), common.ToHex(unexisotaAXSet))
 		}
 	}
 
@@ -383,7 +383,7 @@ func TestSetOTA(t *testing.T) {
 	}
 }
 
-func TestAddOTAIfNotExit(t *testing.T) {
+func TestAddOTAIfNotExis(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
@@ -393,7 +393,7 @@ func TestAddOTAIfNotExit(t *testing.T) {
 		balanceSet   = big.NewInt(10)
 	)
 
-	add, err := AddOTAIfNotExit(statedb, balanceSet, otaShortAddr)
+	add, err := AddOTAIfNotExis(statedb, balanceSet, otaShortAddr)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}
@@ -402,9 +402,9 @@ func TestAddOTAIfNotExit(t *testing.T) {
 		t.Errorf("add is false!")
 	}
 
-	add, err = AddOTAIfNotExit(statedb, balanceSet, otaShortAddr)
+	add, err = AddOTAIfNotExis(statedb, balanceSet, otaShortAddr)
 	if err == nil {
-		t.Errorf("expect err: ota exit already!")
+		t.Errorf("expect err: ota exis already!")
 	}
 
 	if add {
@@ -599,7 +599,7 @@ func TestGetOTASet(t *testing.T) {
 
 		_, _, err = GetOTASet(statedb, otaAX, setLen)
 		if err == nil {
-			t.Error("err is nil! expect err: no ota address exit! balance:10")
+			t.Error("err is nil! expect err: no ota address exis! balance:10")
 		}
 
 	}
@@ -1150,7 +1150,7 @@ func TestGetOTASet(t *testing.T) {
 	}
 }
 
-func TestCheckOTAImageExit(t *testing.T) {
+func TestCheckOTAImageExis(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
@@ -1162,13 +1162,13 @@ func TestCheckOTAImageExit(t *testing.T) {
 	otaImage := crypto.Keccak256(otaWanAddr)
 	otaImageValue := balanceSet.Bytes()
 
-	exit, otaImageValueGet, err := CheckOTAImageExit(statedb, otaImage)
+	exis, otaImageValueGet, err := CheckOTAImageExis(statedb, otaImage)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}
 
-	if exit {
-		t.Errorf("exit is true!")
+	if exis {
+		t.Errorf("exis is true!")
 	}
 
 	if otaImageValueGet != nil && len(otaImageValueGet) != 0 {
@@ -1180,7 +1180,7 @@ func TestCheckOTAImageExit(t *testing.T) {
 		t.Errorf("err:%s", err.Error())
 	}
 
-	exit, otaImageValueGet, err = CheckOTAImageExit(statedb, otaImage)
+	exis, otaImageValueGet, err = CheckOTAImageExis(statedb, otaImage)
 	if err != nil {
 		t.Errorf("err:%s", err.Error())
 	}
@@ -1189,8 +1189,8 @@ func TestCheckOTAImageExit(t *testing.T) {
 		t.Errorf("err:%s", err.Error())
 	}
 
-	if !exit {
-		t.Errorf("exit is false!")
+	if !exis {
+		t.Errorf("exis is false!")
 	}
 
 	if otaImageValueGet == nil || common.ToHex(otaImageValueGet) != common.ToHex(otaImageValue) {

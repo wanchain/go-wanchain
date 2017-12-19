@@ -42,7 +42,6 @@ func (self Code) String() string {
 
 type Storage map[common.Hash]common.Hash
 
-// lzh add
 type StorageByteArray map[common.Hash][]byte
 
 func (self Storage) String() (str string) {
@@ -62,7 +61,6 @@ func (self Storage) Copy() Storage {
 	return cpy
 }
 
-// lzh add
 func (self StorageByteArray) Copy() StorageByteArray {
 	cpy := make(StorageByteArray)
 	for key, value := range self {
@@ -98,7 +96,6 @@ type stateObject struct {
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
-	// lzh add
 	cachedStorageByteArray StorageByteArray
 	dirtyStorageByteArray  StorageByteArray
 
@@ -221,7 +218,6 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 	return value
 }
 
-// lzh add
 func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte {
 	value, exists := self.cachedStorageByteArray[key]
 	if exists {
@@ -255,7 +251,6 @@ func (self *stateObject) setState(key, value common.Hash) {
 	}
 }
 
-// lzh add
 func (self *stateObject) SetStateByteArray(db Database, key common.Hash, value []byte) {
 	self.db.journal = append(self.db.journal, storageByteArrayChange{
 		account:  &self.address,
@@ -266,7 +261,6 @@ func (self *stateObject) SetStateByteArray(db Database, key common.Hash, value [
 
 }
 
-// lzh add
 func (self *stateObject) setStateByteArray(key common.Hash, value []byte) {
 	self.cachedStorageByteArray[key] = value
 	self.dirtyStorageByteArray[key] = value
@@ -291,7 +285,6 @@ func (self *stateObject) updateTrie(db Database) Trie {
 		self.setError(tr.TryUpdate(key[:], v))
 	}
 
-	// lzh add
 	for key, value := range self.dirtyStorageByteArray {
 		delete(self.dirtyStorageByteArray, key)
 		if len(value) == 0 {

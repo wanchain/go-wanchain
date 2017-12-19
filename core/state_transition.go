@@ -419,10 +419,10 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	}
 
 	kix := crypto.FromECDSAPub(info.KeyImage)
-	exit, _, err := vm.CheckOTAImageExit(stateDB, kix)
+	exis, _, err := vm.CheckOTAImageExis(stateDB, kix)
 	if err != nil {
 		return err
-	} else if exit {
+	} else if exis {
 		return errors.New("stamp has been spended")
 	}
 
@@ -440,8 +440,8 @@ func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPri
 	}
 
 	kix := crypto.FromECDSAPub(info.KeyImage)
-	exit, _, err := vm.CheckOTAImageExit(stateDB, kix)
-	if err != nil || exit {
+	exis, _, err := vm.CheckOTAImageExis(stateDB, kix)
+	if err != nil || exis {
 		return nil, 0, 0, err
 	}
 

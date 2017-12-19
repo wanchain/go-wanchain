@@ -756,7 +756,7 @@ func TestWanCoinSC_InvalidTx_BuyCoin(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -913,9 +913,9 @@ func TestWanCoinSC_ValidRefundReq(t *testing.T) {
 		db, _ := ethdb.NewMemDatabase()
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaAddr))
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr1))
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr2))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaAddr))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr1))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr2))
 
 		var wcsc wanCoinSC
 		_, _, err := wcsc.ValidRefundReq(statedb, common.FromHex(refundPayloadDismatchBalance)[4:], common.FromHex(from))
@@ -941,9 +941,9 @@ func TestWanCoinSC_ValidRefundReq(t *testing.T) {
 		db, _ := ethdb.NewMemDatabase()
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaAddr))
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr1))
-		AddOTAIfNotExit(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr2))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaAddr))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr1))
+		AddOTAIfNotExis(statedb, otaBalanceBuyCoin, common.FromHex(otaMixAddr2))
 		AddOTAImage(statedb, common.FromHex(imageKey), otaBalanceBuyCoin.Bytes())
 
 		var wcsc wanCoinSC
@@ -1000,7 +1000,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1009,7 +1009,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1018,7 +1018,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1051,7 +1051,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1060,7 +1060,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1069,7 +1069,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1170,7 +1170,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1179,7 +1179,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1188,7 +1188,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1221,7 +1221,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1230,7 +1230,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1239,7 +1239,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1272,7 +1272,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1281,7 +1281,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1290,7 +1290,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin, otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin, otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1323,7 +1323,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(otaAddrBuyCoin)
-		add, err := AddOTAIfNotExit(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddr)
+		add, err := AddOTAIfNotExis(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1332,7 +1332,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix1 := common.FromHex(otaMix1)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix1)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix1)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1341,7 +1341,7 @@ func TestWanCoinSC_InvalidTx_Refund(t *testing.T) {
 		}
 
 		otaAddrMix2 := common.FromHex(otaMix2)
-		add, err = AddOTAIfNotExit(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix2)
+		add, err = AddOTAIfNotExis(statedb, otaBalanceBuyCoin.Mul(otaBalanceBuyCoin, common.Big2), otaAddrMix2)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}
@@ -1395,7 +1395,7 @@ func TestWanchainStampSC_InvalidTx(t *testing.T) {
 		}
 
 		otaAddr := common.FromHex(stampOTA)
-		add, err := AddOTAIfNotExit(statedb, stampBalance, otaAddr)
+		add, err := AddOTAIfNotExis(statedb, stampBalance, otaAddr)
 		if err != nil {
 			t.Errorf("add ota addr to statedb fail. err:%s", err.Error())
 		}

@@ -580,12 +580,12 @@ func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, valu
 	}
 
 	ax, err := GetAXFromWanAddr(wanAddr)
-	exit, _, err := CheckOTAExit(stateDB, ax)
+	exis, _, err := CheckOTAExis(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
 
-	if exit {
+	if exis {
 		return nil, ErrOTAReused
 	}
 
@@ -598,7 +598,7 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 		return nil, err
 	}
 
-	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, wanAddr)
+	add, err := AddOTAIfNotExis(evm.StateDB, contract.value, wanAddr)
 	if err != nil || !add {
 		return nil, errBuyStamp
 	}
@@ -741,12 +741,12 @@ func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *bi
 		return nil, err
 	}
 
-	exit, _, err := CheckOTAExit(stateDB, ax)
+	exis, _, err := CheckOTAExis(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
 
-	if exit {
+	if exis {
 		return nil, ErrOTAReused
 	}
 
@@ -759,7 +759,7 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, err
 	}
 
-	add, err := AddOTAIfNotExit(evm.StateDB, contract.value, otaAddr)
+	add, err := AddOTAIfNotExis(evm.StateDB, contract.value, otaAddr)
 	if err != nil || !add {
 		return nil, errBuyCoin
 	}
@@ -801,12 +801,12 @@ func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte)
 	}
 
 	kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
-	exit, _, err := CheckOTAImageExit(stateDB, kix)
+	exis, _, err := CheckOTAImageExis(stateDB, kix)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if exit {
+	if exis {
 		return nil, nil, ErrOTAReused
 	}
 
@@ -913,13 +913,13 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
 	}
 
-	exit, balanceGet, _, err := BatCheckOTAExit(stateDB, otaAXs)
+	exis, balanceGet, _, err := BatCheckOTAExis(stateDB, otaAXs)
 	if err != nil {
 		log.Error("verify mix ota fail", "err", err.Error())
 		return nil, err
 	}
 
-	if !exit {
+	if !exis {
 		return nil, ErrInvalidOTASet
 	}
 

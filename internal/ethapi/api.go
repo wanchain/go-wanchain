@@ -55,6 +55,7 @@ var (
 	ErrFailToGeneratePKPairFromWAddress = errors.New("Fail to generate publickey pair from WAddress")
 	ErrFailToGeneratePKPairSlice        = errors.New("Fail to generate publickey pair hex slice")
 	ErrInvalidPrivateKey                = errors.New("Invalid private key")
+	ErrInvalidOTAMixSet                 = errors.New("Invalid OTA mix set")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -1267,7 +1268,7 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 
 	otaAX := orgOtaAddr[:common.HashLength]
 	if len(orgOtaAddr) == common.WAddressLength {
-		otaAX = orgOtaAddr[1 : 1+common.HashLength]
+		otaAX, _ = vm.GetAXFromWanAddr(orgOtaAddr)
 	}
 
 	otaByteSet, _, err := vm.GetOTASet(state, otaAX, setLen)
@@ -1275,7 +1276,7 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 		return nil, err
 	}
 
-	ret := make([]string, 0)
+	ret := make([]string, 0, setLen)
 	for _, otaByte := range otaByteSet {
 		ret = append(ret, common.ToHex(otaByte))
 
@@ -1285,14 +1286,23 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 }
 
 func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
+	if len(privateKey) <= 2 {
+		return "", ErrInvalidPrivateKey
+	}
+
 	hmsg, err := hexutil.Decode(hashMsg)
+	if err != nil {
+		return "", err
+	}
+
+	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
 	if err != nil {
 		return "", err
 	}
 
 	privKey, err := hexutil.Decode(privateKey)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	if privKey == nil {
@@ -1300,9 +1310,8 @@ func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg 
 	}
 
 	wanAddresses := strings.Split(mixWanAdresses, "+")
-	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
-	if err != nil {
-		return "", err
+	if len(wanAddresses) == 0 {
+		return "", ErrInvalidOTAMixSet
 	}
 
 	return genRingSignData(hmsg, privKey, &ecdsaPrivateKey.PublicKey, wanAddresses)

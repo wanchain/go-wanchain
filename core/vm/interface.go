@@ -45,7 +45,6 @@ type StateDB interface {
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	// lzh add
 	GetStateByteArray(common.Address, common.Hash) []byte
 	SetStateByteArray(common.Address, common.Hash, []byte)
 
@@ -67,7 +66,6 @@ type StateDB interface {
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 
-	// lzh add
 	ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool)
 }
 
