@@ -1366,52 +1366,51 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	return outs, nil
 }
 
-var privacyContract common.Address
-
-func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
-	otas := []string{}
-	account := accounts.Account{Address: address}
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return otas, err
-	}
-
-	curBlock, err := s.GetBlockByNumber(ctx, n, true)
-	if err != nil {
-		return otas, err
-	}
-
-	element := curBlock["transactions"]
-	privacyContract[19] = 0x06
-	if txs, ok := element.([]interface{}); ok {
-		for i := 0; i < len(txs); i++ {
-			txi := txs[i]
-			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
-				if privacyContract.Str() == txrpc.To.Str() {
-					otas = append(otas, string(txrpc.To.Hex()))
-					otaWAddr, err := keystore.WaddrFromUncompressed(txrpc.Input[1:])
-					if err != nil || otaWAddr == nil {
-						return otas, err
-					}
-
-					isMine, err := wallet.CheckOTA(account, otaWAddr)
-					if err != nil {
-						return otas, err
-					}
-
-					if isMine == true {
-						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
-					}
-				}
-			}
-		}
-
-	} else {
-		return otas, errors.New("fetch txs failed")
-	}
-
-	return otas, nil
-}
+//var privacyContract common.Address
+//func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
+//	otas := []string{}
+//	account := accounts.Account{Address: address}
+//	wallet, err := s.b.AccountManager().Find(account)
+//	if err != nil {
+//		return otas, err
+//	}
+//
+//	curBlock, err := s.GetBlockByNumber(ctx, n, true)
+//	if err != nil {
+//		return otas, err
+//	}
+//
+//	element := curBlock["transactions"]
+//	privacyContract[19] = 0x64
+//	if txs, ok := element.([]interface{}); ok {
+//		for i := 0; i < len(txs); i++ {
+//			txi := txs[i]
+//			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
+//				if privacyContract.Str() == txrpc.To.Str() {
+//					otas = append(otas, string(txrpc.To.Hex()))
+//					otaWAddr, err := keystore.WaddrFromUncompressed(txrpc.Input[1:])
+//					if err != nil || otaWAddr == nil {
+//						return otas, err
+//					}
+//
+//					isMine, err := wallet.CheckOTA(account, otaWAddr)
+//					if err != nil {
+//						return otas, err
+//					}
+//
+//					if isMine == true {
+//						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
+//					}
+//				}
+//			}
+//		}
+//
+//	} else {
+//		return otas, errors.New("fetch txs failed")
+//	}
+//
+//	return otas, nil
+//}
 
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
