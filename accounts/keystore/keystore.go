@@ -428,7 +428,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
-// getEncryptedKeyfile loads an encrypted keyfile from the disk
+// getEncryptedKey loads an encrypted keyfile from the disk
 func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
 	a, err := ks.Find(a)
 	if err != nil {

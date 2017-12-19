@@ -57,7 +57,7 @@ type Key struct {
 	WAddress common.WAddress
 }
 
-// used 4 import and export raw keypair
+// Used to import and export raw keypair
 type keyPair struct {
 	D  string `json:"privateKey"`
 	D1 string `json:"privateKey1"`

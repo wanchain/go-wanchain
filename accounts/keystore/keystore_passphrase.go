@@ -131,7 +131,7 @@ func GenerateKeyWithWAddress(keyjson []byte) (*Key, error) {
 	}
 
 	waddress, ok := m["waddress"].(string)
-	// fmt.Printf("waddress: %s\n", waddress)
+
 	if !ok || waddress == "" {
 		return nil, ErrWAddressFieldNotExist
 	}
