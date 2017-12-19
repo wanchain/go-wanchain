@@ -395,7 +395,6 @@ func accountImport(ctx *cli.Context) error {
 	return nil
 }
 
-// @anson
 // accountExport exports an ecdsa private-key-pair to the given json file
 func accountExport(ctx *cli.Context) error {
 	// Params validation

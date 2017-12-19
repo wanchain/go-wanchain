@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+	"math/rand"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"math/big"
-	"math/rand"
 )
 
 // OTABalance2ContractAddr convert ota balance to ota storage address

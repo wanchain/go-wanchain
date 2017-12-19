@@ -347,7 +347,6 @@ func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAdd
 	return &tmp
 }
 
-// @anson
 // LoadECDSAPair loads a secp256k1 private key pair from the given file
 func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
 	// read the given file including private key pair
@@ -387,7 +386,6 @@ func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
 	return sk, sk1, err
 }
 
-// @anson
 // ExportECDSAPair returns an ecdsa-private-key pair
 func ExportECDSAPair(d, d1, fp string) error {
 	kp := keyPair{
@@ -406,7 +404,6 @@ func ExportECDSAPair(d, d1, fp string) error {
 	return err
 }
 
-// @anson
 func ExportECDSAPairStr(d, d1 string) (string, error) {
 	kp := keyPair{
 		D:  d,

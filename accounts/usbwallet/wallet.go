@@ -561,19 +561,16 @@ func (w *wallet) SignTxWithPassphrase(account accounts.Account, passphrase strin
 	return w.SignTx(account, tx, chainID)
 }
 
-// @anson
 // TODO: TBI
 func (w *wallet) GetWanAddress(account accounts.Account) (common.WAddress, error) {
 	return common.WAddress{}, nil
 }
 
-// @anson
 // TODO: TBI
 func (w *wallet) ComputeOTAPPKeys(account accounts.Account, AX, AY, BX, BY string) ([]string, error) {
 	return nil, nil
 }
 
-// @anson
 // TODO: TBI
 func (w *wallet) CheckOTA(account accounts.Account, wan *common.WAddress) (bool, error) {
 	return false, nil
