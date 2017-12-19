@@ -346,7 +346,7 @@ func init() {
 	}
 }
 
-type PrivicyTxInfo struct {
+type PrivacyTxInfo struct {
 	PublicKeys         []*ecdsa.PublicKey
 	KeyImage           *ecdsa.PublicKey
 	W_Random           []*big.Int
@@ -357,7 +357,7 @@ type PrivicyTxInfo struct {
 	GasLeftSubRingSign uint64
 }
 
-func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivicyTxInfo, err error) {
+func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivacyTxInfo, err error) {
 
 	var TxDataWithRing struct {
 		RingSignedData string
@@ -390,7 +390,7 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	}
 
 	GasLeftSubRingSign := StampTotalGas - preSubGas
-	info = &PrivicyTxInfo{
+	info = &PrivacyTxInfo{
 		ringSignInfo.PublicKeys,
 		ringSignInfo.KeyImage,
 		ringSignInfo.W_Random,

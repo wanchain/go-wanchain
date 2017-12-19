@@ -392,143 +392,12 @@ func (c *bn256Pairing) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 
 ///////////////////////for wan privacy tx /////////////////////////////////////////////////////////
 
-/////////////////////////////////////added by jqg ///////////////////////////////////
-
 var (
+
 	coinSCDefinition = `
-	[
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "buyCoinNote",
-    "outputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "inputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "refundCoin",
-    "outputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [],
-    "name": "getCoins",
-    "outputs": [
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  }
-]`
-	stampSCDefinition = `
-	[
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "buyStamp",
-    "outputs": [
-      {
-        "name": "OtaAddr",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "inputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "refundCoin",
-    "outputs": [
-      {
-        "name": "RingSignedData",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [],
-    "name": "getCoins",
-    "outputs": [
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  }
-]`
+	[{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}],"name": "buyCoinNote","outputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","inputs": [{"name":"RingSignedData","type": "string"},{"name": "Value","type": "uint256"}],"name": "refundCoin","outputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [],"name": "getCoins","outputs": [{"name":"Value","type": "uint256"}]}]`
+	
+	stampSCDefinition = `[{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [{"name":"OtaAddr","type": "string"},{"name": "Value","type": "uint256"}],"name": "buyStamp","outputs": [{"name": "OtaAddr","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","inputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}],"name": "refundCoin","outputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [],"name": "getCoins","outputs": [{"name": "Value","type": "uint256"}]}]`
 
 	coinAbi, errCoinSCInit               = abi.JSON(strings.NewReader(coinSCDefinition))
 	buyIdArr, refundIdArr, getCoinsIdArr [4]byte
@@ -576,9 +445,9 @@ const (
 	WanStamp0dot2 = "2000000000000000" //0.002
 	WanStamp0dot5 = "5000000000000000" //0.005
 
-	WanStamp0dot3 = "3000000000000000" //0.001
-	WanStamp0dot6 = "6000000000000000" //0.002
-	WanStamp0dot9 = "9000000000000000" //0.005
+	WanStamp0dot3 = "3000000000000000" //0.003
+	WanStamp0dot6 = "6000000000000000" //0.006
+	WanStamp0dot9 = "9000000000000000" //0.009
 )
 
 func init() {
@@ -1033,13 +902,11 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 
 	infoTmp := new(RingSignInfo)
 
-	//
 	err, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random = DecodeRingSignOut(ringSignedStr)
 	if err != nil {
 		return nil, err
 	}
 
-	//
 	otaAXs := make([][]byte, 0, len(infoTmp.PublicKeys))
 	for i := 0; i < len(infoTmp.PublicKeys); i++ {
 		pkBytes := crypto.FromECDSAPub(infoTmp.PublicKeys[i])
@@ -1058,13 +925,11 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 
 	infoTmp.OTABalance = balanceGet
 
-	//
 	valid := crypto.VerifyRingSign(hashInput, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random)
 	if !valid {
 		return nil, errInvalidRingSigned
 	}
-
-	//
+	
 	return infoTmp, nil
 }
 
