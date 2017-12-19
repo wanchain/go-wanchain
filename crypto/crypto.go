@@ -38,8 +38,9 @@ import (
 	"crypto/cipher"
 	"crypto/rsa"
 
-	"github.com/wanchain/go-wanchain/log"
 	Mrand "math/rand"
+
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var (

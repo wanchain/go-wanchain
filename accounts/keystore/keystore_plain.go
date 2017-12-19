@@ -61,7 +61,6 @@ func (ks keyStorePlain) JoinPath(filename string) string {
 	}
 }
 
-// @anson
 // TODO: to be implemented
 func (ks keyStorePlain) GetEncryptedKey(a common.Address, filename string) (*Key, error) {
 	return nil, nil

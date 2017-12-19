@@ -84,7 +84,6 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
-// @anson
 func TestImportExportECDSAPair(t *testing.T) {
 	// create a keystore wo work with
 	dir, ks := tmpKeyStore(t, true)

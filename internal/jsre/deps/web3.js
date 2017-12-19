@@ -5639,7 +5639,6 @@ var methods = function () {
 		params: 3
     });
 
-    // @anson 
     var exportRawKey = new Method({
         name: 'exportRawKey',
         call: 'personal_exportRawKey',
@@ -13648,7 +13647,6 @@ module.exports = XMLHttpRequest;
     }
 
     var methods = function () {
-        // @anson
         var getWanAddress = new Method({
             name: 'getWanAddress',
             call: 'wan_getWanAddress',
@@ -13656,7 +13654,6 @@ module.exports = XMLHttpRequest;
             inputFormatter: [formatters.inputAddressFormatter]
         });
 
-        // @anson
         var generateOneTimeAddress = new Method({
             name: 'generateOneTimeAddress',
             call: 'wan_generateOneTimeAddress',
@@ -13664,7 +13661,6 @@ module.exports = XMLHttpRequest;
             inputFormatter: [null]
         });
 
-        // @anson
         var getOTAMixSet = new Method({
             name: 'getOTAMixSet',
             call: 'wan_getOTAMixSet',
@@ -13679,7 +13675,6 @@ module.exports = XMLHttpRequest;
             inputFormatter: [formatters.inputTransactionFormatter, null]
         });
 
-        // @anson
         var computeOTAPPKeys = new Method({
             name: 'computeOTAPPKeys',
             call: 'wan_computeOTAPPKeys',
@@ -13687,7 +13682,6 @@ module.exports = XMLHttpRequest;
             inputFormatter: [formatters.inputAddressFormatter, null]
         });
 
-        // @anson
         var genRingSignData = new Method({
             name: 'genRingSignData',
             call: 'wan_genRingSignData',

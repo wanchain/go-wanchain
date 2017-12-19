@@ -183,15 +183,13 @@ func (tm *testMatcher) checkFailure(t *testing.T, name string, err error) error 
 func (tm *testMatcher) walk(t *testing.T, dir string, runTest interface{}) {
 	// Walk the directory.
 	dirinfo, err := os.Stat(dir)
-	// @anson
-	//fmt.Println("dirInfo: ", dirinfo.Name())
+
 	if os.IsNotExist(err) || !dirinfo.IsDir() {
 		fmt.Fprintf(os.Stderr, "can't find test files in %s, did you clone the tests submodule?\n", dir)
 		t.Skip("missing test files")
 	}
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		// @anson
-		//fmt.Println("filepath dir: ", dir)
+
 		name := filepath.ToSlash(strings.TrimPrefix(path, dir+string(filepath.Separator)))
 		if info.IsDir() {
 			if _, skipload := tm.findSkip(name + "/"); skipload {
