@@ -392,7 +392,7 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 func (s *PrivateAccountAPI) UpdateAccount(addr common.Address, oldPassword string, newPassword string) error {
 	keystore := fetchKeystore(s.am)
 	if keystore == nil {
-		return errors.New("no invalid keystore!")
+		return errors.New("invalid keystore!")
 	}
 
 	account := accounts.Account{Address: addr}
