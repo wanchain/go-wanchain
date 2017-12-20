@@ -42,8 +42,8 @@ func TestnetGenesis() string {
 }
 
 // RinkebyGenesis returns the JSON spec to use for the Rinkeby test network
-func RinkebyGenesis() string {
-	enc, err := json.Marshal(core.DefaultRinkebyGenesisBlock())
+func InternalGenesis() string {
+	enc, err := json.Marshal(core.DefaultInternalGenesisBlock())
 	if err != nil {
 		panic(err)
 	}
