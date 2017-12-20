@@ -33,7 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
-	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -104,9 +103,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 // INFO: copied from consensus/clique/clique.go
 // ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
 		return common.Address{}, errMissingSignature
@@ -260,9 +256,6 @@ func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 }
 
 func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -692,9 +685,6 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 		}
 		return nil
 	}
-
-	functrace.Enter()
-	defer functrace.Exit()
 
 	// If we're running a shared PoW, delegate verification to it
 	if ethash.shared != nil {

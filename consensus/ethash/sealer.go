@@ -28,16 +28,12 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
 // the block's difficulty requirements.
 func (ethash *Ethash) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
-	functrace.Enter()
-	defer functrace.Exit()
-
 	header := block.Header()
 	// permission signer signing the header
 	sighash, err := ethash.signFn(accounts.Account{Address: block.Coinbase()}, sigHash(block.Header()).Bytes())
