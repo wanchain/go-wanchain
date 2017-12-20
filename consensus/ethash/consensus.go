@@ -41,9 +41,8 @@ import (
 )
 
 const (
-	//TODO:PPOW   change before release
-	//	checkpointInterval = 8192 // Number of blocks after which to save the signers state
-	checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
+	checkpointInterval = 8192 // Number of blocks after which to save the signers state
+	//  checkpointInterval = 4 // Number of blocks after which to save the signers state, using small value for testing...
 )
 
 // Ethash proof-of-work protocol constants.
