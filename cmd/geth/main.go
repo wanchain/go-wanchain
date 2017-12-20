@@ -101,7 +101,7 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
-		utils.RinkebyFlag,
+		utils.DevInternalFlag,
 		utils.PlutoFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,

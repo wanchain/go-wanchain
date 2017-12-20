@@ -104,7 +104,7 @@ if already existing.`,
 			utils.SyncModeFlag,
 			utils.FakePoWFlag,
 			utils.TestnetFlag,
-			utils.RinkebyFlag,
+			utils.DevInternalFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `

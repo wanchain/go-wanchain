@@ -71,7 +71,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NoUSBFlag,
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
-			utils.RinkebyFlag,
+			utils.DevInternalFlag,
 			utils.PlutoFlag,
 			utils.DevModeFlag,
 			utils.SyncModeFlag,

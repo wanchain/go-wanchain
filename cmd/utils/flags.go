@@ -129,13 +129,15 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 6=Pluto)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
+
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
-		Usage: "Ropsten network: pre-configured proof-of-work test network",
+		Usage: "Wan test network: pre-configured proof-of-work test network",
 	}
-	RinkebyFlag = cli.BoolFlag{
-		Name:  "rinkeby",
-		Usage: "Rinkeby network: pre-configured proof-of-authority test network",
+
+	DevInternalFlag = cli.BoolFlag{
+		Name:  "internal",
+		Usage: "Internal network: pre-configured proof-of-authority internal test network",
 	}
 	PlutoFlag = cli.BoolFlag{
 		Name:  "pluto",
@@ -501,8 +503,9 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(TestnetFlag.Name) {
 			return filepath.Join(path, "testnet")
 		}
-		if ctx.GlobalBool(RinkebyFlag.Name) {
-			return filepath.Join(path, "rinkeby")
+
+		if ctx.GlobalBool(DevInternalFlag.Name) {
+			return filepath.Join(path, "interal")
 		}
 		if ctx.GlobalBool(PlutoFlag.Name) {
 			return filepath.Join(path, "pluto")
@@ -559,8 +562,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		urls = params.RinkebyBootnodes
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		urls = params.InternalBootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
 		urls = params.PlutoBootnodes
 	}
@@ -587,8 +590,8 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		} else {
 			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 		}
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		urls = params.RinkebyV5Bootnodes
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		urls = params.InternalV5Bootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
 		urls = params.PlutoV5ootnodes
 	case cfg.BootstrapNodesV5 != nil:
@@ -832,8 +835,8 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "internal")
 	case ctx.GlobalBool(PlutoFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
 	}
@@ -937,7 +940,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, RinkebyFlag, PlutoFlag)
+	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -993,11 +996,11 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 3
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
+	case ctx.GlobalBool(DevInternalFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 4
 		}
-		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
+		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 6
@@ -1093,8 +1096,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		genesis = core.DefaultRinkebyGenesisBlock()
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
 		genesis = core.DefaultPlutoGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):

@@ -76,7 +76,7 @@ var (
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
-	RinkebyChainConfig = &ChainConfig{
+	InternalChainConfig = &ChainConfig{
 		ChainId: big.NewInt(4),
 		//HomesteadBlock: big.NewInt(1),
 		//DAOForkBlock:   nil,
@@ -87,10 +87,7 @@ var (
 		//EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(0),
 
-		Clique: &CliqueConfig{
-			Period: 15,
-			Epoch:  30000,
-		},
+		Ethash: new(EthashConfig),
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
