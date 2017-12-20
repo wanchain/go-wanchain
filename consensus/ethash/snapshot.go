@@ -183,17 +183,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			return nil, err
 		}
 
-		if _, ok := snap.PermissionSigners[signer]; !ok {
-			return nil, errUnauthorized
-		}
-
-		for e := snap.RecentSignersWindow.Front(); e != nil; e = e.Next() {
-			if _, ok := e.Value.(common.Address); ok {
-				wSigner := e.Value.(common.Address)
-				if signer == wSigner {
-					return nil, errAuthorTooOften
-				}
-			}
+		err = snap.isLegal4Sign(signer)
+		if err != nil {
+			return nil, err
 		}
 
 		_, ok := snap.UsedSigners[signer]
