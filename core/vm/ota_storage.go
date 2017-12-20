@@ -219,18 +219,14 @@ func OTAInSet(otaSet [][]byte, ota []byte) bool {
 	return false
 }
 
-func randomSelOTA(setNum *int, getNum *int, loopTimes *int, rnd *int, otaWanAddrs *[][]byte, value []byte) bool {
+func randomSelOTA(loopTimes *int, rnd *int, otaWanAddrs *[][]byte, value []byte) bool {
 	*loopTimes++
 	if (*loopTimes)%(*rnd) == 0 {
 		*otaWanAddrs = append(*otaWanAddrs, value)
-		*getNum++
 		*rnd = rand.Intn(100) + 1
-
-		// not enough, return true to continue
-		return *getNum < *setNum
-	} else {
-		// return true to continue
 		return true
+	} else {
+		return false
 	}
 }
 
@@ -252,7 +248,13 @@ func doOTAStorageTravelCallBack(setNum *int, otaAX []byte, getNum *int, passNum 
 		}
 
 		// random select
-		return randomSelOTA(setNum, getNum, loopTimes, rnd, otaWanAddrs, value), nil
+		if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
+			*getNum++
+			return *getNum < *setNum, nil
+
+		} else {
+			return true, nil
+		}
 
 	} else if *passNum == 1 {
 		// second pass
@@ -275,7 +277,14 @@ func doOTAStorageTravelCallBack(setNum *int, otaAX []byte, getNum *int, passNum 
 			}
 
 			// random select
-			return randomSelOTA(setNum, getNum, loopTimes, rnd, otaWanAddrs, value), nil
+			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
+				*getNum++
+				return *getNum < *setNum, nil
+
+			} else {
+				return true, nil
+			}
+
 		} else {
 			return true, nil
 		}
@@ -284,7 +293,13 @@ func doOTAStorageTravelCallBack(setNum *int, otaAX []byte, getNum *int, passNum 
 		// third or more pass
 		if *setNum >= *mptEleCount {
 			// random select
-			return randomSelOTA(setNum, getNum, loopTimes, rnd, otaWanAddrs, value), nil
+			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
+				*getNum++
+				return *getNum < *setNum, nil
+
+			} else {
+				return true, nil
+			}
 		} else if !OTAInSet(*otaWanAddrs, value) {
 			// find self, continue
 			if isAXPointToWanAddr(otaAX, value) {
@@ -292,7 +307,13 @@ func doOTAStorageTravelCallBack(setNum *int, otaAX []byte, getNum *int, passNum 
 			}
 
 			// random select
-			return randomSelOTA(setNum, getNum, loopTimes, rnd, otaWanAddrs, value), nil
+			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
+				*getNum++
+				return *getNum < *setNum, nil
+
+			} else {
+				return true, nil
+			}
 		} else {
 			return true, nil
 		}
