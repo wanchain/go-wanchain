@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/log"
