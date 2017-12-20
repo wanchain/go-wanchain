@@ -80,7 +80,7 @@ type downloadTester struct {
 // newTester creates a new downloader test mocker.
 func newTester() *downloadTester {
 	testdb, _ := ethdb.NewMemDatabase()
-	// genesis := core.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
+	 //genesis := core.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	genesis := gspec.MustCommit(testdb)
 
@@ -100,7 +100,8 @@ func newTester() *downloadTester {
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
 	tester.stateDb, _ = ethdb.NewMemDatabase()
-	tester.stateDb.Put(genesis.Root().Bytes(), []byte{0x00})
+	//tester.stateDb.Put(genesis.Root().Bytes(), []byte{0x00})
+	gspec.MustCommit(tester.stateDb)
 
 	tester.downloader = New(FullSync, tester.stateDb, new(event.TypeMux), tester, nil, tester.dropPeer)
 
@@ -712,10 +713,11 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 func TestCanonicalSynchronisation62(t *testing.T)     { testCanonicalSynchronisation(t, 62, FullSync) }
 func TestCanonicalSynchronisation63Full(t *testing.T) { testCanonicalSynchronisation(t, 63, FullSync) }
 
-// func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
+ func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
 func TestCanonicalSynchronisation64Full(t *testing.T) { testCanonicalSynchronisation(t, 64, FullSync) }
 
-// func TestCanonicalSynchronisation64Fast(t *testing.T)  { testCanonicalSynchronisation(t, 64, FastSync) }
+func TestCanonicalSynchronisation64Fast(t *testing.T)  { testCanonicalSynchronisation(t, 64, FastSync) }
+
 func TestCanonicalSynchronisation64Light(t *testing.T) { testCanonicalSynchronisation(t, 64, LightSync) }
 
 func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
@@ -734,6 +736,9 @@ func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	if err := tester.sync("peer", nil, mode); err != nil {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
+
+	time.Sleep(120*time.Second);
+
 	assertOwnChain(t, tester, targetBlocks+1)
 }
 
