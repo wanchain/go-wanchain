@@ -196,7 +196,7 @@ func TestCheckOTAExist(t *testing.T) {
 
 	exist, balanceGet, err := CheckOTAExist(statedb, otaAX)
 	if err != nil {
-		t.Errorf("CheckOTAExis, err:%s", err.Error())
+		t.Errorf("CheckOTAExist, err:%s", err.Error())
 	}
 
 	if exist || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
@@ -210,10 +210,10 @@ func TestCheckOTAExist(t *testing.T) {
 
 	exist, balanceGet, err = CheckOTAExist(statedb, otaAX)
 	if err != nil {
-		t.Errorf("CheckOTAExis, err:%s", err.Error())
+		t.Errorf("CheckOTAExist, err:%s", err.Error())
 	}
 	if !exist || balanceGet == nil || balanceGet.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("ChechOTAExis, exis:%t, balanceGet:%v", exist, balanceGet)
+		t.Errorf("ChechOTAExist, exis:%t, balanceGet:%v", exist, balanceGet)
 	}
 }
 

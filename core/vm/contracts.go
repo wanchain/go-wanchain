@@ -393,10 +393,9 @@ func (c *bn256Pairing) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 ///////////////////////for wan privacy tx /////////////////////////////////////////////////////////
 
 var (
-
 	coinSCDefinition = `
 	[{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}],"name": "buyCoinNote","outputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","inputs": [{"name":"RingSignedData","type": "string"},{"name": "Value","type": "uint256"}],"name": "refundCoin","outputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [],"name": "getCoins","outputs": [{"name":"Value","type": "uint256"}]}]`
-	
+
 	stampSCDefinition = `[{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [{"name":"OtaAddr","type": "string"},{"name": "Value","type": "uint256"}],"name": "buyStamp","outputs": [{"name": "OtaAddr","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","inputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}],"name": "refundCoin","outputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [],"name": "getCoins","outputs": [{"name": "Value","type": "uint256"}]}]`
 
 	coinAbi, errCoinSCInit               = abi.JSON(strings.NewReader(coinSCDefinition))
@@ -580,12 +579,12 @@ func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, valu
 	}
 
 	ax, err := GetAXFromWanAddr(wanAddr)
-	exis, _, err := CheckOTAExis(stateDB, ax)
+	exist, _, err := CheckOTAExist(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
 
-	if exis {
+	if exist {
 		return nil, ErrOTAReused
 	}
 
@@ -598,7 +597,7 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 		return nil, err
 	}
 
-	add, err := AddOTAIfNotExis(evm.StateDB, contract.value, wanAddr)
+	add, err := AddOTAIfNotExist(evm.StateDB, contract.value, wanAddr)
 	if err != nil || !add {
 		return nil, errBuyStamp
 	}
@@ -741,12 +740,12 @@ func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *bi
 		return nil, err
 	}
 
-	exis, _, err := CheckOTAExis(stateDB, ax)
+	exist, _, err := CheckOTAExist(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
 
-	if exis {
+	if exist {
 		return nil, ErrOTAReused
 	}
 
@@ -759,7 +758,7 @@ func (c *wanCoinSC) buyCoin(in []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, err
 	}
 
-	add, err := AddOTAIfNotExis(evm.StateDB, contract.value, otaAddr)
+	add, err := AddOTAIfNotExist(evm.StateDB, contract.value, otaAddr)
 	if err != nil || !add {
 		return nil, errBuyCoin
 	}
@@ -801,12 +800,12 @@ func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte)
 	}
 
 	kix := crypto.FromECDSAPub(ringSignInfo.KeyImage)
-	exis, _, err := CheckOTAImageExis(stateDB, kix)
+	exist, _, err := CheckOTAImageExist(stateDB, kix)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if exis {
+	if exist {
 		return nil, nil, ErrOTAReused
 	}
 
@@ -913,13 +912,13 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
 	}
 
-	exis, balanceGet, _, err := BatCheckOTAExis(stateDB, otaAXs)
+	exist, balanceGet, _, err := BatCheckOTAExist(stateDB, otaAXs)
 	if err != nil {
 		log.Error("verify mix ota fail", "err", err.Error())
 		return nil, err
 	}
 
-	if !exis {
+	if !exist {
 		return nil, ErrInvalidOTASet
 	}
 
@@ -929,7 +928,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 	if !valid {
 		return nil, errInvalidRingSigned
 	}
-	
+
 	return infoTmp, nil
 }
 
