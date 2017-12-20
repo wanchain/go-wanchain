@@ -202,6 +202,7 @@ func (s *Snapshot) isLegal4Sign(signer common.Address) error {
 	if _, ok := s.PermissionSigners[signer]; !ok {
 		return errUnauthorized
 	}
+
 	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
 		if _, ok := e.Value.(common.Address); ok {
 			wSigner := e.Value.(common.Address)
