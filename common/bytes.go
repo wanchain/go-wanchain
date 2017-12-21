@@ -19,8 +19,6 @@ package common
 
 import (
 	"encoding/hex"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 )
 
 func ToHex(b []byte) string {
@@ -113,25 +111,4 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
-}
-
-///////for privacy tx///////
-func TwoPublicKeyToHexSlice(A *ecdsa.PublicKey, B *ecdsa.PublicKey) []string {
-
-	strAX := hexutil.Encode(LeftPadBytes(A.X.Bytes(), 32))
-	strAY := hexutil.Encode(LeftPadBytes(A.Y.Bytes(), 32))
-	strBX := hexutil.Encode(LeftPadBytes(B.X.Bytes(), 32))
-	strBY := hexutil.Encode(LeftPadBytes(B.Y.Bytes(), 32))
-
-	return []string{strAX, strAY, strBX, strBY}
-}
-
-func FourBigIntToHexSlice(AX, AY, BX, BY []byte) []string {
-
-	strAX := hexutil.Encode(LeftPadBytes(AX, 32))
-	strAY := hexutil.Encode(LeftPadBytes(AY, 32))
-	strBX := hexutil.Encode(LeftPadBytes(BX, 32))
-	strBY := hexutil.Encode(LeftPadBytes(BY, 32))
-
-	return []string{strAX, strAY, strBX, strBY}
 }
