@@ -13709,9 +13709,9 @@ module.exports = XMLHttpRequest;
             params: 0,
         });
 
-        var getPermiStampOTABalances = new Method ({
-            name: 'getPermiStampOTABalances',
-            call: 'wan_getPermiStampOTABalances',
+        var getSupportStampOTABalances = new Method ({
+            name: 'getSupportStampOTABalances',
+            call: 'wan_getSupportStampOTABalances',
             params: 0,
         });
 
@@ -13725,7 +13725,7 @@ module.exports = XMLHttpRequest;
             getOTABalance,
             scanOTAbyAccount,
             getPermiWanCoinOTABalances,
-            getPermiStampOTABalances,
+            getSupportStampOTABalances,
         ];
     };
     var properties = function () {
