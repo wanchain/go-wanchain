@@ -156,21 +156,12 @@ func newKeyFromECDSA(sk1, sk2 *ecdsa.PrivateKey) *Key {
 	}
 
 	updateWaddress(key)
-
 	return key
 }
 
 // updateWaddress adds WAddress field to the Key struct
-
 func updateWaddress(k *Key) {
-	k.WAddress = k.GenerateWaddress()
-}
-
-func (k *Key) GenerateWaddress() common.WAddress {
-	var tmpRaw common.WAddress
-	copy(tmpRaw[:33], ECDSAPKCompression(&k.PrivateKey.PublicKey))
-	copy(tmpRaw[33:], ECDSAPKCompression(&k.PrivateKey2.PublicKey))
-	return tmpRaw
+	k.WAddress = *GenerateWaddressFromPK(&k.PrivateKey.PublicKey, &k.PrivateKey2.PublicKey)
 }
 
 // ECDSAPKCompression serializes a public key in a 33-byte compressed format from btcec
