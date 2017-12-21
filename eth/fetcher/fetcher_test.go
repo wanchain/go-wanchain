@@ -52,25 +52,6 @@ var (
 // contains a transaction and every 5th an uncle to allow testing correct block
 // reassembly.
 func makeChain(n int, seed common.Address, parent *types.Block) ([]common.Hash, map[common.Hash]*types.Block) {
-
-	// blocks, _ := core.GenerateChain(params.TestChainConfig, parent, testdb, n, func(i int, block *core.BlockGen) {
-	// 	block.SetCoinbase(common.Address{seed})
-
-	// 	// If the block number is multiple of 3, send a bonus transaction to the miner
-	// 	if parent == genesis && i%3 == 0 {
-	// 		signer := types.MakeSigner(params.TestChainConfig, block.Number())
-	// 		tx, err := types.SignTx(types.NewTransaction(block.TxNonce(testAddress), common.Address{seed}, big.NewInt(1000), new(big.Int).SetUint64(params.TxGas), nil, nil), signer, testKey)
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 		block.AddTx(tx)
-	// 	}
-	// 	// If the block number is a multiple of 5, add a bonus uncle to the block
-	// 	if i%5 == 0 {
-	// 		block.AddUncle(&types.Header{ParentHash: block.PrevBlock(i - 1).Hash(), Number: big.NewInt(int64(i - 1))})
-	// 	}
-	// })
-
 	chain, _ := core.NewBlockChain(testdb, params.TestChainConfig, engine, vm.Config{})
 	defer chain.Stop()
 	env := core.NewChainEnv(params.TestChainConfig, gspec, engine, chain, testdb)
@@ -78,10 +59,6 @@ func makeChain(n int, seed common.Address, parent *types.Block) ([]common.Hash, 
 	blocks, _ := env.GenerateChain(parent, n, func(i int, block *core.BlockGen) {
 		block.SetCoinbase(seed)
 
-		// If a heavy chain is requested, delay blocks to raise difficulty
-		// if heavy {
-		// 	block.OffsetTime(-1)
-		// }
 		// If the block number is multiple of 3, send a bonus transaction to the miner
 		if parent == genesis && i%3 == 0 {
 			signer := types.MakeSigner(params.TestChainConfig, block.Number())
@@ -91,13 +68,7 @@ func makeChain(n int, seed common.Address, parent *types.Block) ([]common.Hash, 
 			}
 			block.AddTx(tx)
 		}
-		// If the block number is a multiple of 5, add a bonus uncle to the block
-		// if i > 0 && i%5 == 0 {
-		// 	block.AddUncle(&types.Header{
-		// 		ParentHash: block.PrevBlock(i - 1).Hash(),
-		// 		Number:     big.NewInt(block.Number().Int64() - 1),
-		// 	})
-		// }
+
 	})
 
 	hashes := make([]common.Hash, n+1)
@@ -793,7 +764,7 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 // 	hashes, blocks := makeChain(targetBlocks, testAddress, genesis)
 // 	attack := make(map[common.Hash]*types.Block)
 // 	for i := byte(0); len(attack) < blockLimit+2*maxQueueDist; i++ {
-// 		hashes, blocks := makeChain(maxQueueDist-1, i, unknownBlock)
+// 		hashes, blocks := makeChain(maxQueueDist-1, testAddress, unknownBlock)
 // 		for _, hash := range hashes[:maxQueueDist-2] {
 // 			attack[hash] = blocks[hash]
 // 		}
