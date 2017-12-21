@@ -292,6 +292,13 @@ func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, e
 	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
+func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAddress {
+	var tmp common.WAddress
+	copy(tmp[:33], ECDSAPKCompression(A))
+	copy(tmp[33:], ECDSAPKCompression(B))
+	return &tmp
+}
+
 func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
 	if len(raw) != 32*2*2 {
 		return nil, errors.New("invalid uncompressed wan address len")
@@ -330,13 +337,6 @@ func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	copy(u[96:], by[:32])
 
 	return u, nil
-}
-
-func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAddress {
-	var tmp common.WAddress
-	copy(tmp[:33], ECDSAPKCompression(A))
-	copy(tmp[33:], ECDSAPKCompression(B))
-	return &tmp
 }
 
 // LoadECDSAPair loads a secp256k1 private key pair from the given file

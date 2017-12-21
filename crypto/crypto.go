@@ -635,7 +635,7 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 	pb := &ecdsa.PublicKey{X: bnBX, Y: bnBY}
 
 	generatedA1, generatedR, err := generateOneTimeKey2528(pa, pb)
-	return common.TwoPublicKeyToHexSlice(generatedA1, generatedR), nil
+	return hexutil.PKPair2HexSlice(generatedA1, generatedR), nil
 }
 
 func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string) (retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
