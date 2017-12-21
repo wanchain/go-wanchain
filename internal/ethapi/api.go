@@ -1333,7 +1333,7 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 			return "", ErrInvalidWAddress
 		}
 
-		publicKeyA, _, err := keystore.GeneratePublicKeyFromWaddress(pubBytes)
+		publicKeyA, _, err := keystore.GeneratePKPairFromWAddress(pubBytes)
 		if err != nil {
 
 			return "", errors.New("Fail to generate public key from wan address!")

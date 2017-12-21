@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -575,29 +574,6 @@ func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, er
 
 	ret := unlockedKey.WAddress
 	return ret, nil
-}
-
-// GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
-func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	if len(w) != common.WAddressLength {
-		return nil, nil, ErrWAddressInvalid
-	}
-
-	tmp := make([]byte, 33)
-	copy(tmp[:], w[:33])
-	curve := btcec.S256()
-	PK1, err := btcec.ParsePubKey(tmp, curve)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	copy(tmp[:], w[33:])
-	PK2, err := btcec.ParsePubKey(tmp, curve)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
 // zeroKey zeroes a private key in memory.

@@ -269,26 +269,27 @@ func toISO8601(t time.Time) string {
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
 
-func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	if len(waddr) != common.WAddressLength {
+// GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
+func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	if len(w) != common.WAddressLength {
 		return nil, nil, ErrWAddressInvalid
 	}
 
 	tmp := make([]byte, 33)
-	copy(tmp[:33], waddr[:33])
+	copy(tmp[:], w[:33])
 	curve := btcec.S256()
-	pk1, err := btcec.ParsePubKey(tmp, curve)
+	PK1, err := btcec.ParsePubKey(tmp, curve)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	copy(tmp[:33], waddr[33:])
-	pk2, err := btcec.ParsePubKey(tmp, curve)
+	copy(tmp[:], w[33:])
+	PK2, err := btcec.ParsePubKey(tmp, curve)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
+	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
 func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
@@ -313,7 +314,7 @@ func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 		return nil, ErrWAddressInvalid
 	}
 
-	A, B, err := GeneratePublicKeyFromWaddress(waddr)
+	A, B, err := GeneratePKPairFromWAddress(waddr)
 	if err != nil {
 		return nil, err
 	}
