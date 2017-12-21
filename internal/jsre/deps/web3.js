@@ -13691,8 +13691,8 @@ module.exports = XMLHttpRequest;
         var getOTABalance = new Method({
             name: 'getOTABalance',
             call: 'wan_getOTABalance',
-            params: 1,
-            inputFormatter: [null],
+            params: 2,
+            inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
             outputFormatter: formatters.outputBigNumberFormatter
         });
 

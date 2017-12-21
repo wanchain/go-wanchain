@@ -547,8 +547,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 }
 
 // GetOTABalance returns OTA balance
-func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string) (*big.Int, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
 	}
