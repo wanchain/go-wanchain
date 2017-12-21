@@ -10,6 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+	"strconv"
 )
 
 // OTABalance2ContractAddr convert ota balance to ota storage address
@@ -32,6 +33,16 @@ func GetAXFromWanAddr(otaWanAddr []byte) ([]byte, error) {
 	}
 
 	return otaWanAddr[1 : 1+common.HashLength], nil
+}
+
+// IsAXPointToWanAddr check whether AX point to otaWanAddr or not
+func IsAXPointToWanAddr(AX []byte, otaWanAddr []byte) bool {
+	findAX, err := GetAXFromWanAddr(otaWanAddr)
+	if err != nil {
+		return false
+	}
+
+	return bytes.Equal(findAX, AX)
 }
 
 // GetOtaBalanceFromAX retrieve ota balance from ota AX
@@ -208,9 +219,17 @@ func GetOTAInfoFromAX(statedb StateDB, otaAX []byte) (otaWanAddr []byte, balance
 	return nil, balance, nil
 }
 
-// OTAInSet checks ota in set or not
-func OTAInSet(otaSet [][]byte, ota []byte) bool {
-	for _, exist := range otaSet {
+type GetOTASetEnv struct {
+	otaAX         []byte
+	setNum        int
+	getNum        int
+	loopTimes     int
+	rnd           int
+	otaWanAddrSet [][]byte
+}
+
+func (env *GetOTASetEnv) OTAInSet(ota []byte) bool {
+	for _, exist := range env.otaWanAddrSet {
 		if bytes.Equal(exist, ota) {
 			return true
 		}
@@ -219,109 +238,49 @@ func OTAInSet(otaSet [][]byte, ota []byte) bool {
 	return false
 }
 
-func randomSelOTA(loopTimes *int, rnd *int, otaWanAddrs *[][]byte, value []byte) bool {
-	*loopTimes++
-	if (*loopTimes)%(*rnd) == 0 {
-		*otaWanAddrs = append(*otaWanAddrs, value)
-		*rnd = rand.Intn(100) + 1
+func (env *GetOTASetEnv) UpdateRnd() {
+	env.rnd = rand.Intn(100) + 1
+}
+
+func (env *GetOTASetEnv) IsSetFull() bool {
+	return env.getNum >= env.setNum
+}
+
+func (env *GetOTASetEnv) RandomSelOTA(value []byte) bool {
+	env.loopTimes++
+	if env.loopTimes%env.rnd == 0 {
+		env.otaWanAddrSet = append(env.otaWanAddrSet, value)
+		env.getNum++
+		env.UpdateRnd()
 		return true
 	} else {
 		return false
 	}
 }
 
-func isAXPointToWanAddr(otaAX []byte, otaWanAddr []byte) bool {
-	findAX, _ := GetAXFromWanAddr(otaWanAddr)
-	return bytes.Equal(findAX, otaAX)
-}
+// doOTAStorageTravelCallBack implement ota mpt travel call back
+func doOTAStorageTravelCallBack(env *GetOTASetEnv, value []byte) (bool, error) {
+	// find self, return true to continue travel loop
+	if IsAXPointToWanAddr(env.otaAX, value) {
+		return true, nil
+	}
 
-func doOTAStorageTravelCallBack(setNum *int, otaAX []byte, getNum *int, passNum *int, mptEleCount *int,
-	loopTimes *int, rnd *int, otaWanAddrs *[][]byte, value []byte) (bool, error) {
+	// ota contained in set already, return true to continue travel loop
+	if env.OTAInSet(value) {
+		return true, nil
+	}
 
-	if *passNum == 0 {
-		// first pass, record total count
-		*mptEleCount++
-
-		// find self, continue
-		if isAXPointToWanAddr(otaAX, value) {
-			return true, nil
-		}
-
-		// random select
-		if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
-			*getNum++
-			return *getNum < *setNum, nil
-
-		} else {
-			return true, nil
-		}
-
-	} else if *passNum == 1 {
-		// second pass
-		if *setNum >= *mptEleCount {
-			if !OTAInSet(*otaWanAddrs, value) {
-				// mpt ele less than set num, reap the one don't exist in set
-				*otaWanAddrs = append(*otaWanAddrs, value)
-				*getNum++
-
-				// not enough, return true to continue
-				return *getNum < *setNum, nil
-			} else {
-				// return true to continue
-				return true, nil
-			}
-		} else if !OTAInSet(*otaWanAddrs, value) {
-			// find self, continue
-			if isAXPointToWanAddr(otaAX, value) {
-				return true, nil
-			}
-
-			// random select
-			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
-				*getNum++
-				return *getNum < *setNum, nil
-
-			} else {
-				return true, nil
-			}
-
-		} else {
-			return true, nil
-		}
-
+	// random select
+	// if set full already, return false to stop travel loop
+	if bGet := env.RandomSelOTA(value); bGet {
+		return !env.IsSetFull(), nil
 	} else {
-		// third or more pass
-		if *setNum >= *mptEleCount {
-			// random select
-			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
-				*getNum++
-				return *getNum < *setNum, nil
-
-			} else {
-				return true, nil
-			}
-		} else if !OTAInSet(*otaWanAddrs, value) {
-			// find self, continue
-			if isAXPointToWanAddr(otaAX, value) {
-				return true, nil
-			}
-
-			// random select
-			if bGet := randomSelOTA(loopTimes, rnd, otaWanAddrs, value); bGet {
-				*getNum++
-				return *getNum < *setNum, nil
-
-			} else {
-				return true, nil
-			}
-		} else {
-			return true, nil
-		}
+		return true, nil
 	}
 }
 
 // GetOTASet retrieve the setNum of same balance OTA address of the input OTA setting by otaAX.
-// As far as possible return the OTA set does not contain duplicate items and input otaAX self.
+// Assure returned slice doesn't contain duplicate items and input otaAX self.
 func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
 	if statedb == nil || len(otaAX) != common.HashLength {
 		return nil, nil, errors.New("invalid input param!")
@@ -331,30 +290,29 @@ func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte,
 	if err != nil {
 		return nil, nil, err
 	} else if balance == nil || balance.Cmp(common.Big0) == 0 {
-		return nil, nil, errors.New("cant find ota address balance!")
+		return nil, nil, errors.New("can't find ota address balance!")
 	}
 
 	mptAddr := OTABalance2ContractAddr(balance)
 	log.Debug("GetOTASet", "mptAddr", common.ToHex(mptAddr[:]))
 
-	otaWanAddrs = make([][]byte, 0, setNum)
-	rnd := rand.Intn(100) + 1
+	env := GetOTASetEnv{otaAX, setNum, 0, 0, 0, nil}
+	env.otaWanAddrSet = make([][]byte, 0, setNum)
+	env.UpdateRnd()
 
-	getNum := 0      // selected ota count
-	loopTimes := 0   // looped ota in storage total num, used to compare to rand number
-	passNum := 0     // travel ota mpt times
 	mptEleCount := 0 // total number of ota containing in mpt
 
 	for {
 		statedb.ForEachStorageByteArray(mptAddr, func(key common.Hash, value []byte) bool {
+			mptEleCount++
+
 			if len(value) != common.WAddressLength {
 				log.Error("invalid OTA address!", "balance", balance, "value", value)
 				err = errors.New(fmt.Sprint("invalid OTA address! balance:", balance, ", ota:", value))
 				return false
 			}
 
-			bContinue, err := doOTAStorageTravelCallBack(&setNum, otaAX, &getNum, &passNum,
-				&mptEleCount, &loopTimes, &rnd, &otaWanAddrs, value)
+			bContinue, err := doOTAStorageTravelCallBack(&env, value)
 			if err != nil {
 				return false
 			} else {
@@ -362,19 +320,18 @@ func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte,
 			}
 		})
 
-		if err != nil {
+		if env.IsSetFull() {
+			return env.otaWanAddrSet, balance, nil
+		} else if err != nil {
 			return nil, nil, err
+		} else if mptEleCount == 0 {
+			return nil, balance, errors.New("no ota exist! balance:" + balance.String())
+		} else if setNum >= mptEleCount {
+			return nil, balance, errors.New("too more required ota number! balance:" + balance.String() +
+				", exist count:" + strconv.Itoa(mptEleCount))
+		} else {
+			continue
 		}
-
-		if mptEleCount == 0 {
-			return nil, balance, errors.New("no ota address exist! balance:" + balance.String())
-		}
-
-		if getNum >= setNum {
-			return otaWanAddrs, balance, nil
-		}
-
-		passNum++
 	}
 }
 
