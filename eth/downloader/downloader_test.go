@@ -80,7 +80,6 @@ type downloadTester struct {
 // newTester creates a new downloader test mocker.
 func newTester() *downloadTester {
 	testdb, _ := ethdb.NewMemDatabase()
-	 //genesis := core.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	genesis := gspec.MustCommit(testdb)
 
@@ -99,8 +98,8 @@ func newTester() *downloadTester {
 		peerChainTds:      make(map[string]map[common.Hash]*big.Int),
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
+
 	tester.stateDb, _ = ethdb.NewMemDatabase()
-	//tester.stateDb.Put(genesis.Root().Bytes(), []byte{0x00})
 	gspec.MustCommit(tester.stateDb)
 
 	tester.downloader = New(FullSync, tester.stateDb, new(event.TypeMux), tester, nil, tester.dropPeer)
@@ -163,13 +162,6 @@ func (dl *downloadTester) makeChain(n int, seed common.Address, parent *types.Bl
 			}
 			block.AddTx(tx)
 		}
-		// If the block number is a multiple of 5, add a bonus uncle to the block
-		// if i > 0 && i%5 == 0 {
-		// 	block.AddUncle(&types.Header{
-		// 		ParentHash: block.PrevBlock(i - 1).Hash(),
-		// 		Number:     big.NewInt(block.Number().Int64() - 1),
-		// 	})
-		// }
 	})
 
 	// Convert the block-chain into a hash-chain and header/block maps
@@ -676,6 +668,7 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 		minReceipts += length - common - fsMinFullBlocks - fsPivotInterval
 		maxReceipts += length - common - fsMinFullBlocks
 	}
+
 	switch tester.downloader.mode {
 	case FullSync:
 		minReceipts, maxReceipts = 1, 1
@@ -699,6 +692,7 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 		} else {
 			index = len(tester.ownHashes) - lengths[len(lengths)-1] + int(tester.downloader.queue.fastSyncPivot)
 		}
+		fmt.Println("index: ", index)
 		if index > 0 {
 			if statedb, err := state.New(tester.ownHeaders[tester.ownHashes[index]].Root, state.NewDatabase(tester.stateDb)); statedb == nil || err != nil {
 				t.Fatalf("state reconstruction failed: %v", err)
@@ -713,10 +707,15 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 func TestCanonicalSynchronisation62(t *testing.T)     { testCanonicalSynchronisation(t, 62, FullSync) }
 func TestCanonicalSynchronisation63Full(t *testing.T) { testCanonicalSynchronisation(t, 63, FullSync) }
 
- func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
+func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
 func TestCanonicalSynchronisation64Full(t *testing.T) { testCanonicalSynchronisation(t, 64, FullSync) }
 
-func TestCanonicalSynchronisation64Fast(t *testing.T)  { testCanonicalSynchronisation(t, 64, FastSync) }
+func TestCanonicalSynchronisation64Fast(t *testing.T) { testCanonicalSynchronisation(t, 64, FastSync) }
+
+func TestCanonicalSynchronisation63Fast(t *testing.T) { testCanonicalSynchronisation(t, 63, FastSync) }
+func TestCanonicalSynchronisation64Full(t *testing.T) { testCanonicalSynchronisation(t, 64, FullSync) }
+
+func TestCanonicalSynchronisation64Fast(t *testing.T) { testCanonicalSynchronisation(t, 64, FastSync) }
 
 func TestCanonicalSynchronisation64Light(t *testing.T) { testCanonicalSynchronisation(t, 64, LightSync) }
 
@@ -727,7 +726,8 @@ func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheLimit - 15
+	// targetBlocks := blockCacheLimit - 15
+	targetBlocks := 150
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, testAddress, tester.genesis, nil, false)
 
 	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts)
@@ -736,8 +736,6 @@ func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	if err := tester.sync("peer", nil, mode); err != nil {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
-
-	time.Sleep(120*time.Second);
 
 	assertOwnChain(t, tester, targetBlocks+1)
 }
