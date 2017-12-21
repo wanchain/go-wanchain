@@ -932,7 +932,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 	return infoTmp, nil
 }
 
-func GetPermiWanCoinOTABalances() []*big.Int {
+func GetSupportWanCoinOTABalances() []*big.Int {
 	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	cval20, _ := new(big.Int).SetString(Wancoin20, 10)
 	cval50, _ := new(big.Int).SetString(Wancoin50, 10)
@@ -960,15 +960,15 @@ func GetPermiWanCoinOTABalances() []*big.Int {
 	return wancoinBalances
 }
 
-func GetPermiStampOTABalances() []*big.Int {
-	sval01, _ := new(big.Int).SetString(WanStamp0dot3, 10)
-	sval02, _ := new(big.Int).SetString(WanStamp0dot6, 10)
-	sval05, _ := new(big.Int).SetString(WanStamp0dot9, 10)
+func GetSupportStampOTABalances() []*big.Int {
+	sval03, _ := new(big.Int).SetString(WanStamp0dot3, 10)
+	sval06, _ := new(big.Int).SetString(WanStamp0dot6, 10)
+	sval09, _ := new(big.Int).SetString(WanStamp0dot9, 10)
 
 	stampBalances := []*big.Int{
-		sval01,
-		sval02,
-		sval05,
+		sval03,
+		sval06,
+		sval09,
 	}
 
 	return stampBalances
