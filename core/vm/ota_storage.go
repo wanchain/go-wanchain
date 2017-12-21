@@ -279,8 +279,19 @@ func doOTAStorageTravelCallBack(env *GetOTASetEnv, value []byte) (bool, error) {
 	}
 }
 
-// GetOTASet retrieve the setNum of same balance OTA address of the input OTA setting by otaAX.
-// Assure returned slice doesn't contain duplicate items and input otaAX self.
+// GetOTASet retrieve the setNum of same balance OTA address of the input OTA setting by otaAX, and ota balance.
+// Rules:
+//		1: The result can't contain otaAX self;
+//		2: The result can't contain duplicate items;
+//		3: No ota exist in the mpt, return error;
+//		4: OTA total count in the mpt less or equal to the setNum, return error(returned set must
+//		   can't contain otaAX self, so need more exist ota in mpt);
+//		5: If find invalid ota wanaddr, return error;
+//		6: Travel the ota mpt.Record loop exist ota cumulative times as loopTimes.
+// 		   Generate a random number as rnd.
+// 		   If loopTimes%rnd == 0, collect current exist ota to result set and update the rnd.
+//		   Loop checking exist ota and loop traveling ota mpt, untile collect enough ota or find error.
+//
 func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
 	if statedb == nil || len(otaAX) != common.HashLength {
 		return nil, nil, errors.New("invalid input param!")
