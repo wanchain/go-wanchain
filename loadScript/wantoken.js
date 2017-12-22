@@ -38,6 +38,16 @@ contractDef = eth.contract(abiDefStamp);
 stampContractAddr = "0x00000000000000000000000000000000000000c8";
 stampContract = contractDef.at(stampContractAddr);
 
+for (i = 0; i < 3; i++) {
+    var wanAddr = wan.getWanAddress(eth.accounts[1]);
+    var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
+    txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(stampBalance));
+
+
+    sendTx = eth.sendTransaction({from:eth.accounts[1], to:stampContractAddr, value:web3.toWin(stampBalance), data:txBuyData, gas: 1000000});
+    wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
+}
+
 var wanAddr = wan.getWanAddress(eth.accounts[1]);
 var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
 txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(stampBalance));

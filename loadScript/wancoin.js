@@ -30,11 +30,21 @@ contractDef = eth.contract(abiDef);
 coinContractAddr = "0x0000000000000000000000000000000000000064";
 coinContract = contractDef.at(coinContractAddr);
 
+wanUnlock(eth.accounts[1]);
+wanUnlock(eth.accounts[2]);
+
+for (i = 0; i < 3; i++) {
+    var wanAddr = wan.getWanAddress(eth.accounts[2]);
+    var otaAddr = wan.generateOneTimeAddress(wanAddr);
+
+    txBuyData = coinContract.buyCoinNote.getData(otaAddr, web3.toWin(tranValue));
+    buyCoinTx = eth.sendTransaction({from:eth.accounts[1], to:coinContractAddr, value:web3.toWin(tranValue), data:txBuyData, gas: 1000000, gasprice:'0x' + (200000).toString(16)});
+    wait(function(){return eth.getTransaction(buyCoinTx).blockNumber != null;});
+}
+
 var acc1OldBalance = parseFloat(wanBalance(eth.accounts[1]))
 var acc2OldBalance = parseFloat(wanBalance(eth.accounts[2]))
 
-wanUnlock(eth.accounts[1]);
-wanUnlock(eth.accounts[2]);
 
 var wanAddr = wan.getWanAddress(eth.accounts[2]);
 var otaAddr = wan.generateOneTimeAddress(wanAddr);
