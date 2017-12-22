@@ -17,6 +17,7 @@
 package fetcher
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"math/big"
 	"sync"
@@ -743,6 +744,27 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 	verifyImportDone(t, imported)
 }
 
+func preEnv() {
+	db := ethdb.NewMemDatabase()
+	engine := ethash.NewFaker(db)
+	l := 500
+	extraData := make([]byte, 0)
+	keySlice, addrSlice := make([]*ecdsa.PrivateKey, l), make([]common.Address, l)
+	for i := 0; i < l; i++ {
+		keySlice[i], _ = crypto.GenerateKey()
+		addrSlice[i] = crypto.PubkeyToAddress(keySlice[i].PublicKey)
+		extraData = append(extraData, addrSlice[i].Bytes()...)
+	}
+
+	gspec := &core.Genesis{
+		Config:     params.TestChainConfig,
+		ExtraData:  genExtra(),
+		Difficulty: big.NewInt(1),
+	}
+	genesis := gspec.MustCommit(db)
+
+}
+
 // Tests that blocks sent to the fetcher (either through propagation or via hash
 // announces and retrievals) don't pile up indefinitely, exhausting available
 // system memory.
@@ -764,6 +786,8 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 // 	hashes, blocks := makeChain(targetBlocks, testAddress, genesis)
 // 	attack := make(map[common.Hash]*types.Block)
 // 	for i := byte(0); len(attack) < blockLimit+2*maxQueueDist; i++ {
+// 		fmt.Println("i: ", i)
+// 		fmt.Println("attack length: ", len(attack))
 // 		hashes, blocks := makeChain(maxQueueDist-1, testAddress, unknownBlock)
 // 		for _, hash := range hashes[:maxQueueDist-2] {
 // 			attack[hash] = blocks[hash]

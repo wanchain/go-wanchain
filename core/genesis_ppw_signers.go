@@ -5,13 +5,12 @@ import (
 	//"fmt"
 )
 
-
 func getPpwSignStr() string {
 
 	var buf bytes.Buffer
 	buf.WriteString("0x")
 
-	for _,str := range ppwSigAddr {
+	for _, str := range ppwSigAddr {
 		buf.WriteString(str[2:])
 	}
 
@@ -213,4 +212,3 @@ var (
 		"0x2cc79fa3b80c5b9b02051facd02478ea88a78e2c",
 	}
 )
-
