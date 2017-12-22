@@ -34,9 +34,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common/math"
 	"math/big"
 	"strconv"
+
+	"github.com/wanchain/go-wanchain/common/math"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)

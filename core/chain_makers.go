@@ -17,16 +17,14 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-	//"github.com/wanchain/go-wanchain/consensus/misc"
-	"crypto/ecdsa"
-
-	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -132,19 +130,6 @@ func (b *BlockGen) SetCoinbase(addr common.Address) {
 // SetExtra sets the extra data field of the generated block.
 func (b *BlockGen) SetExtra(data []byte) {
 	// ensure the extra data has all its components
-
-	// if len(header.Extra) < extraVanity {
-	// 	header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
-	// }
-	// header.Extra = header.Extra[:extraVanity]
-
-	// if number%c.config.Epoch == 0 {
-	// 	for _, signer := range snap.signers() {
-	// 		header.Extra = append(header.Extra, signer[:]...)
-	// 	}
-	// }
-	// header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-
 	l := len(data)
 	if l > extraVanity {
 		fmt.Println("extra data too long")
