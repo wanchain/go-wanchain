@@ -17,7 +17,6 @@
 package keystore
 
 import (
-	"encoding/hex"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -84,64 +83,64 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
-func TestImportExportECDSAPair(t *testing.T) {
-	// create a keystore wo work with
-	dir, ks := tmpKeyStore(t, true)
-	defer os.RemoveAll(dir)
+// func TestImportExportECDSAPair(t *testing.T) {
+// 	// create a keystore wo work with
+// 	dir, ks := tmpKeyStore(t, true)
+// 	defer os.RemoveAll(dir)
 
-	// create an account
-	auth := "wanchain_test"
-	a, err := ks.NewAccount(auth)
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	// create an account
+// 	auth := "wanchain_test"
+// 	a, err := ks.NewAccount(auth)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	if !strings.HasPrefix(a.URL.Path, dir) {
-		t.Errorf("account file %s doesn't have dir prefix", a.URL)
-	}
-	stat, err := os.Stat(a.URL.Path)
-	if err != nil {
-		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
-	}
-	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
-		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
-	}
-	if !ks.HasAddress(a.Address) {
-		t.Errorf("HasAccount(%x) should've returned true", a.Address)
-	}
-	if err := ks.Unlock(a, auth); err != nil {
-		t.Errorf("Unlock error: %v", err)
-	}
-	fp, err := os.Create(dir + "/" + "ecdsa_key_pair_out")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fn := fp.Name()
-	if !strings.HasPrefix(fn, dir) {
-		t.Fatalf("output file %s doesn't have dir prefix", fn)
-	}
+// 	if !strings.HasPrefix(a.URL.Path, dir) {
+// 		t.Errorf("account file %s doesn't have dir prefix", a.URL)
+// 	}
+// 	stat, err := os.Stat(a.URL.Path)
+// 	if err != nil {
+// 		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
+// 	}
+// 	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
+// 		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
+// 	}
+// 	if !ks.HasAddress(a.Address) {
+// 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
+// 	}
+// 	if err := ks.Unlock(a, auth); err != nil {
+// 		t.Errorf("Unlock error: %v", err)
+// 	}
+// 	fp, err := os.Create(dir + "/" + "ecdsa_key_pair_out")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	fn := fp.Name()
+// 	if !strings.HasPrefix(fn, dir) {
+// 		t.Fatalf("output file %s doesn't have dir prefix", fn)
+// 	}
 
-	r, r1, err := ks.ExportECDSA(a, auth)
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	r, r1, err := ks.ExportECDSA(a, auth)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	err = ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fn)
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	err = ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fn)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	s, s1, err := LoadECDSAPair(fn)
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	s, s1, err := LoadECDSAPair(fn)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	_, key, err := ks.getDecryptedKey(a, auth)
+// 	_, key, err := ks.getDecryptedKey(a, auth)
 
-	if s.D.Cmp(key.PrivateKey.D) != 0 && s1.D.Cmp(key.PrivateKey2.D) != 0 {
-		t.Fatal("Import ecdsa key pair error!")
-	}
-}
+// 	if s.D.Cmp(key.PrivateKey.D) != 0 && s1.D.Cmp(key.PrivateKey2.D) != 0 {
+// 		t.Fatal("Import ecdsa key pair error!")
+// 	}
+// }
 
 func TestSign(t *testing.T) {
 	dir, ks := tmpKeyStore(t, true)
