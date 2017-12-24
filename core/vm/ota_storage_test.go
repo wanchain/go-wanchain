@@ -199,7 +199,7 @@ func TestCheckOTAExist(t *testing.T) {
 		t.Errorf("CheckOTAExist, err:%s", err.Error())
 	}
 
-	if exist || (balanceGet != nil && balanceGet.Cmp(big.NewInt(0)) != 0) {
+	if exist || (balanceGet != nil && balanceGet.Cmp(common.Big0) != 0) {
 		t.Errorf("exis:%t, balance:%v", exist, balanceGet)
 	}
 

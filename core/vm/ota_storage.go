@@ -69,29 +69,25 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 	return nil
 }
 
-// TODO: balance、ota full addr， 两个条件&& 改成 || ？？？？
-// ChechOTAExist checks the OTA exist or not
+// ChechOTAExist checks the OTA exist or not.
+//
+// In order to avoid additional ota have conflict with existing,
+// even if AX exist in balance storage already, will return true.
 func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int, err error) {
 	if statedb == nil || len(otaAX) < common.HashLength {
 		return false, nil, errors.New("invalid input param!")
 	}
 
-	otaAddrKey := common.BytesToHash(otaAX)
-	balance, err = GetOtaBalanceFromAX(statedb, otaAddrKey[:])
+	balance, err = GetOtaBalanceFromAX(statedb, otaAX[:common.HashLength])
 	if err != nil {
 		return false, nil, err
-	} else if balance.Cmp(common.Big0) == 0 {
+	}
+
+	if balance.Cmp(common.Big0) == 0 {
 		return false, nil, nil
 	}
 
-	mptAddr := OTABalance2ContractAddr(balance)
-
-	otaValue := statedb.GetStateByteArray(mptAddr, otaAddrKey)
-	if otaValue != nil && len(otaValue) != 0 {
-		return true, balance, nil
-	}
-
-	return false, nil, nil
+	return true, balance, nil
 }
 
 // BatCheckOTAExist batch check the OTAs exist or not.
