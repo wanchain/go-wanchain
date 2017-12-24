@@ -543,7 +543,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 	}
 	return txs
 }
-// type == 6
+
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
@@ -577,12 +577,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && types.IsNormalTransaction(tx.Txtype()) {
+	if types.IsNormalTransaction(tx.Txtype()) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if types.IsNormalTransaction(tx.Txtype()){
+	if types.IsNormalTransaction(tx.Txtype()) {
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
 		}
@@ -883,7 +883,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 		}
 	}
 }
-// type == 6
+
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
@@ -919,8 +919,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				queuedNofundsCounter.Inc(1)
 			}
 		}
-
-
 
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
@@ -1055,7 +1053,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 	}
 }
-// type == 6
+
 // demoteUnexecutables removes invalid and processed transactions from the pools
 // executable/pending queue and any subsequent transactions that become unexecutable
 // are moved back into the future queue.

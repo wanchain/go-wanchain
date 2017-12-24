@@ -296,7 +296,7 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		return (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0) && types.IsNormalTransaction(tx.Txtype())
+		return types.IsNormalTransaction(tx.Txtype()) && (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)
 	})
 
 	// If the list was strict, filter anything above the lowest nonce
