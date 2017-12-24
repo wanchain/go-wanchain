@@ -5639,12 +5639,6 @@ var methods = function () {
 		params: 3
     });
 
-    var exportRawKey = new Method({
-        name: 'exportRawKey',
-        call: 'personal_exportRawKey',
-        params: 2
-    });
-
     var sign = new Method({
         name: 'sign',
 		call: 'personal_sign',
@@ -5689,7 +5683,6 @@ var methods = function () {
     return [
         newAccount,
         importRawKey,
-        exportRawKey,
         unlockAccount,
         ecRecover,
         sign,

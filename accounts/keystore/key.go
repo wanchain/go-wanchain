@@ -37,7 +37,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 const (
@@ -379,32 +378,32 @@ func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
 }
 
 // ExportECDSAPair returns an ecdsa-private-key pair
-func ExportECDSAPair(d, d1, fp string) error {
-	kp := keyPair{
-		D:  d,
-		D1: d1,
-	}
-	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
-	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
+// func ExportECDSAPair(d, d1, fp string) error {
+// 	kp := keyPair{
+// 		D:  d,
+// 		D1: d1,
+// 	}
+// 	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
+// 	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer fh.Close()
 
-	var fileWriter io.Writer = fh
-	err = json.NewEncoder(fileWriter).Encode(kp)
-	return err
-}
+// 	var fileWriter io.Writer = fh
+// 	err = json.NewEncoder(fileWriter).Encode(kp)
+// 	return err
+// }
 
-func ExportECDSAPairStr(d, d1 string) (string, error) {
-	kp := keyPair{
-		D:  d,
-		D1: d1,
-	}
-	r, err := json.Marshal(kp)
-	if err != nil {
-		return "", err
-	}
+// func ExportECDSAPairStr(d, d1 string) (string, error) {
+// 	kp := keyPair{
+// 		D:  d,
+// 		D1: d1,
+// 	}
+// 	r, err := json.Marshal(kp)
+// 	if err != nil {
+// 		return "", err
+// 	}
 
-	return string(r), err
-}
+// 	return string(r), err
+// }
