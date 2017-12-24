@@ -484,7 +484,7 @@ func genOTA(wanStr string) (string, error) {
 		return "", err
 	}
 
-	rawWanAddr, err := WaddrFromUncompressed(raw)
+	rawWanAddr, err := WaddrFromUncompressedRawBytes(raw)
 	if err != nil || rawWanAddr == nil {
 		return "", nil
 	}

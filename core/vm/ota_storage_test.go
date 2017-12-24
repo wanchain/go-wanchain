@@ -454,68 +454,6 @@ func TestSetOtaBalanceToAX(t *testing.T) {
 	}
 }
 
-func TestGetOtaBalanceFromWanAddr(t *testing.T) {
-	{
-		_, err := GetOtaBalanceFromWanAddr(nil, make([]byte, common.WAddressLength))
-		if err == nil {
-			t.Error("expect err: invalid input param!")
-		}
-	}
-
-	{
-		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-		)
-
-		_, err := GetOtaBalanceFromWanAddr(statedb, make([]byte, common.WAddressLength-1))
-		if err == nil {
-			t.Error("expect err: invalid input param!")
-		}
-	}
-
-	{
-		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-		)
-
-		balance, err := GetOtaBalanceFromWanAddr(statedb, make([]byte, common.WAddressLength))
-		if err != nil {
-			t.Error("err:", err.Error())
-		}
-
-		if balance == nil {
-			t.Error("unexpect balance, balance is nil")
-		}
-		if balance.Cmp(common.Big0) != 0 {
-			t.Error("unexpect balance, balance is not 0")
-		}
-	}
-
-	{
-		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-			ota        = `0x026cdcfd3c29c5f9a69752efb510a2a1a161520668adea9c9c4bf106d671ea2bf703d8f814d98a644ea8ee9f2497e0fdcca6dbf6bcf7b4c58216ddd362a4c38a6e59`
-			balance    = big.NewInt(10)
-		)
-
-		otaWanAddr := common.FromHex(ota)
-		setOTA(statedb, balance, otaWanAddr)
-
-		balanceGet, err := GetOtaBalanceFromWanAddr(statedb, otaWanAddr)
-		if err != nil {
-			t.Error("err: ", err.Error())
-		}
-
-		if balanceGet == nil || balanceGet.Cmp(balance) != 0 {
-			t.Error("get invalid balance. expect:", balance.Uint64())
-		}
-	}
-
-}
-
 func TestGetOTAInfoFromAX(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()

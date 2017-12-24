@@ -543,7 +543,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 	}
 	return txs
 }
-
+// type == 6
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
@@ -883,7 +883,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 		}
 	}
 }
-
+// type == 6
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
@@ -1055,7 +1055,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 	}
 }
-
+// type == 6
 // demoteUnexecutables removes invalid and processed transactions from the pools
 // executable/pending queue and any subsequent transactions that become unexecutable
 // are moved back into the future queue.

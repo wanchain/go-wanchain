@@ -69,21 +69,7 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 	return nil
 }
 
-// GetOtaBalanceFromWanAddr retrieve ota balance from ota WanAddr
-func GetOtaBalanceFromWanAddr(statedb StateDB, otaWanAddr []byte) (*big.Int, error) {
-	if statedb == nil || len(otaWanAddr) != common.WAddressLength {
-		return nil, errors.New("invalid input param!")
-	}
-
-	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
-	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
-	if len(balance) == 0 {
-		return common.Big0, nil
-	}
-
-	return new(big.Int).SetBytes(balance), nil
-}
-
+// TODO: balance、ota full addr， 两个条件&& 改成 || ？？？？
 // ChechOTAExist checks the OTA exist or not
 func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int, err error) {
 	if statedb == nil || len(otaAX) < common.HashLength {

@@ -285,30 +285,6 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
 }
 
-func (ks *KeyStore) CheckOTA(a accounts.Account, ota *common.WAddress) (bool, error) {
-	if ota == nil {
-		return false, ErrWAddressInvalid
-	}
-
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	ret := false
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found || unlockedKey == nil {
-		return ret, ErrLocked
-	}
-
-	A := &unlockedKey.PrivateKey.PublicKey
-	A1, S1, err := GeneratePKPairFromWAddress(ota[:])
-	if err != nil {
-		return ret, err
-	}
-
-	ret = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1, A1)
-	return ret, nil
-}
-
 func (ks *KeyStore) ComputeOTAPPKeys(a accounts.Account, AX, AY, BX, BY string) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()

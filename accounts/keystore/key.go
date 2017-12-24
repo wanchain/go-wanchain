@@ -298,24 +298,21 @@ func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAdd
 	return &tmp
 }
 
-func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
+func WaddrFromUncompressedRawBytes(raw []byte) (*common.WAddress, error) {
 	if len(raw) != 32*2*2 {
 		return nil, errors.New("invalid uncompressed wan address len")
 	}
 
-	var waddr common.WAddress
 	pub := make([]byte, 65)
 	pub[0] = 0x004
 	copy(pub[1:], raw[:64])
 	A := crypto.ToECDSAPub(pub)
 	copy(pub[1:], raw[64:])
 	B := crypto.ToECDSAPub(pub)
-	wd := GenerateWaddressFromPK(A, B)
-	copy(waddr[:], wd[:])
-	return &waddr, nil
+	return GenerateWaddressFromPK(A, B), nil
 }
 
-func WaddrToUncompressed(waddr []byte) ([]byte, error) {
+func WaddrToUncompressedRawBytes(waddr []byte) ([]byte, error) {
 	if len(waddr) != common.WAddressLength {
 		return nil, ErrWAddressInvalid
 	}

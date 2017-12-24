@@ -132,9 +132,6 @@ type Wallet interface {
 
 	// ComputeOTAPPKeys returns one-time-address pair
 	ComputeOTAPPKeys(account Account, AX, AY, BX, BY string) ([]string, error)
-
-	// CheckOTA returns if a OTA exists
-	CheckOTA(account Account, w *common.WAddress) (bool, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can
