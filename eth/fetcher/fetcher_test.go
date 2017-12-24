@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -744,10 +745,19 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 	verifyImportDone(t, imported)
 }
 
-func preEnv() {
-	db := ethdb.NewMemDatabase()
+// mock environment to generate blocks with different coinbase
+type fetcherEnv struct {
+	keyS     []*ecdsa.PrivateKey
+	addrS    []common.Address
+	genesis  *types.Block
+	engine   consensus.Engine
+	chainEnv *core.ChainEnv
+}
+
+func genEnv() fetcherEnv {
+	db, _ := ethdb.NewMemDatabase()
 	engine := ethash.NewFaker(db)
-	l := 500
+	l := 5
 	extraData := make([]byte, 0)
 	keySlice, addrSlice := make([]*ecdsa.PrivateKey, l), make([]common.Address, l)
 	for i := 0; i < l; i++ {
@@ -758,65 +768,112 @@ func preEnv() {
 
 	gspec := &core.Genesis{
 		Config:     params.TestChainConfig,
-		ExtraData:  genExtra(),
+		ExtraData:  extraData,
 		Difficulty: big.NewInt(1),
 	}
+
 	genesis := gspec.MustCommit(db)
 
+	chain, _ := core.NewBlockChain(db, params.TestChainConfig, engine, vm.Config{})
+	defer chain.Stop()
+	env := core.NewChainEnv(params.TestChainConfig, gspec, engine, chain, db)
+
+	return fetcherEnv{
+		keyS:     keySlice,
+		addrS:    addrSlice,
+		genesis:  genesis,
+		engine:   engine,
+		chainEnv: env,
+	}
+}
+
+func genChain(n int, addr common.Address, parent *types.Block, env *core.ChainEnv) ([]common.Hash, map[common.Hash]*types.Block) {
+	blocks, _ := env.GenerateChainMulti(parent, n, func(i int, block *core.BlockGen) {
+
+		block.SetCoinbase(addr)
+
+		// If the block number is multiple of 3, send a bonus transaction to the miner
+		// if parent == genesis && i%3 == 0 {
+		// 	signer := types.MakeSigner(params.TestChainConfig, block.Number())
+		// 	tx, err := types.SignTx(types.NewTransaction(block.TxNonce(addr), addresses[i], big.NewInt(1000), new(big.Int).SetUint64(params.TxGas), nil, nil), signer, testKey)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	block.AddTx(tx)
+		// }
+
+	})
+
+	hashes := make([]common.Hash, n+1)
+	hashes[len(hashes)-1] = parent.Hash()
+	blockm := make(map[common.Hash]*types.Block, n+1)
+	blockm[parent.Hash()] = parent
+	for i, b := range blocks {
+		hashes[len(hashes)-i-2] = b.Hash()
+		blockm[b.Hash()] = b
+	}
+	return hashes, blockm
 }
 
 // Tests that blocks sent to the fetcher (either through propagation or via hash
 // announces and retrievals) don't pile up indefinitely, exhausting available
 // system memory.
-// func TestBlockMemoryExhaustionAttack(t *testing.T) {
-// 	// Create a tester with instrumented import hooks
-// 	tester := newTester()
+func TestBlockMemoryExhaustionAttack(t *testing.T) {
+	// Create a tester with instrumented import hooks
+	env := genEnv()
+	tester := &fetcherTester{
+		hashes: []common.Hash{env.genesis.Hash()},
+		blocks: map[common.Hash]*types.Block{env.genesis.Hash(): env.genesis},
+		drops:  make(map[string]bool),
+	}
+	tester.fetcher = New(tester.getBlock, tester.verifyHeader, tester.broadcastBlock, tester.chainHeight, tester.insertChain, tester.dropPeer)
+	tester.fetcher.Start()
 
-// 	imported, enqueued := make(chan *types.Block), int32(0)
-// 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
-// 	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
-// 		if added {
-// 			atomic.AddInt32(&enqueued, 1)
-// 		} else {
-// 			atomic.AddInt32(&enqueued, -1)
-// 		}
-// 	}
-// 	// Create a valid chain and a batch of dangling (but in range) blocks
-// 	targetBlocks := hashLimit + 2*maxQueueDist
-// 	hashes, blocks := makeChain(targetBlocks, testAddress, genesis)
-// 	attack := make(map[common.Hash]*types.Block)
-// 	for i := byte(0); len(attack) < blockLimit+2*maxQueueDist; i++ {
-// 		fmt.Println("i: ", i)
-// 		fmt.Println("attack length: ", len(attack))
-// 		hashes, blocks := makeChain(maxQueueDist-1, testAddress, unknownBlock)
-// 		for _, hash := range hashes[:maxQueueDist-2] {
-// 			attack[hash] = blocks[hash]
-// 		}
-// 	}
-// 	// Try to feed all the attacker blocks make sure only a limited batch is accepted
-// 	for _, block := range attack {
-// 		tester.fetcher.Enqueue("attacker", block)
-// 	}
-// 	time.Sleep(200 * time.Millisecond)
-// 	if queued := atomic.LoadInt32(&enqueued); queued != blockLimit {
-// 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit)
-// 	}
-// 	// Queue up a batch of valid blocks, and check that a new peer is allowed to do so
-// 	for i := 0; i < maxQueueDist-1; i++ {
-// 		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-3-i]])
-// 	}
-// 	time.Sleep(100 * time.Millisecond)
-// 	if queued := atomic.LoadInt32(&enqueued); queued != blockLimit+maxQueueDist-1 {
-// 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit+maxQueueDist-1)
-// 	}
-// 	// Insert the missing piece (and sanity check the import)
-// 	tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-2]])
-// 	verifyImportCount(t, imported, maxQueueDist)
+	imported, enqueued := make(chan *types.Block), int32(0)
+	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
+	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
+		if added {
+			atomic.AddInt32(&enqueued, 1)
+		} else {
+			atomic.AddInt32(&enqueued, -1)
+		}
+	}
 
-// 	// Insert the remaining blocks in chunks to ensure clean DOS protection
-// 	for i := maxQueueDist; i < len(hashes)-1; i++ {
-// 		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-2-i]])
-// 		verifyImportEvent(t, imported, true)
-// 	}
-// 	verifyImportDone(t, imported)
-// }
+	// Create a valid chain and a batch of dangling (but in range) blocks
+	targetBlocks := hashLimit + 2*maxQueueDist
+	hashes, blocks := genChain(targetBlocks, env.addrS[0], env.genesis, env.chainEnv)
+	attack := make(map[common.Hash]*types.Block)
+	for i := byte(0); len(attack) < blockLimit+2*maxQueueDist; i++ {
+		hashes, blocks := genChain(maxQueueDist-1, env.addrS[i], unknownBlock, env.chainEnv)
+		for _, hash := range hashes[:maxQueueDist-2] {
+			attack[hash] = blocks[hash]
+		}
+	}
+
+	// // Try to feed all the attacker blocks make sure only a limited batch is accepted
+	for _, block := range attack {
+		tester.fetcher.Enqueue("attacker", block)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != blockLimit {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit)
+	}
+	// Queue up a batch of valid blocks, and check that a new peer is allowed to do so
+	for i := 0; i < maxQueueDist-1; i++ {
+		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-3-i]])
+	}
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != blockLimit+maxQueueDist-1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit+maxQueueDist-1)
+	}
+	// // Insert the missing piece (and sanity check the import)
+	tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-2]])
+	verifyImportCount(t, imported, maxQueueDist)
+
+	// Insert the remaining blocks in chunks to ensure clean DOS protection
+	for i := maxQueueDist; i < len(hashes)-1; i++ {
+		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-2-i]])
+		verifyImportEvent(t, imported, true)
+	}
+	verifyImportDone(t, imported)
+}
