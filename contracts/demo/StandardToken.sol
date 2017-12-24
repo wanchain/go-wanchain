@@ -38,6 +38,17 @@ contract ERC20Protocol {
     /// @param _value The amount of token to be transferred
     /// @return Whether the transfer was successful or not
     function transferFrom(address _from, address _to, uint _value) returns (bool success);
+	
+    /// @notice send `_value` token to `_to` from `msg.sender`
+    /// @param _to The address of the recipient
+	/// @param _toKey the ota pubkey 
+    /// @param _value The amount of token to be transferred
+    /// @return Whether the transfer was successful or not	
+	function otatransfer(address _to, bytes _toKey, uint256 _value) returns (string);	
+	
+	/// @param _owner The address from which the ota balance will be retrieved
+    /// @return The balance
+	function otabalanceOf(address _owner) constant returns (uint256 balance)
 
     /// @notice `msg.sender` approves `_spender` to spend `_value` tokens
     /// @param _spender The address of the account able to transfer the tokens
@@ -164,9 +175,35 @@ contract StandardToken is ERC20Protocol {
         return true;
     }	
 	
+	
+	
 	address public wanport = 0x2cc79fa3b80c5b9b02051facd02478ea88a78e2c;
 
     mapping (address => uint) balances;
     mapping (address => mapping (address => uint)) allowed;
+	
+	// privacy balance, bytes for public key 
+    mapping (address => uint256) public privacyBalance;
+    mapping (address => bytes) public otaKey;
+	
+	//this only for initialize, only for test to mint token to one wan address
+    function initPrivacyAsset(address initialBase, bytes baseKeyBytes, uint256 value) {
+        privacyBalance[initialBase] = value;
+        otaKey[initialBase] = baseKeyBytes;
+    }   
+    
+    // return string just for debug
+    function otatransfer(address _to, bytes _toKey, uint256 _value) returns (string) {      
+        if(privacyBalance[msg.sender] < _value) return "sender token too low";
+        
+        privacyBalance[msg.sender] -= _value;
+        privacyBalance[_to] += _value;
+        otaKey[_to] = _toKey;
+        return "success";
+    } 
+
+    function otabalanceOf(address _owner) constant returns (uint256 balance) {
+        return privacyBalance[_owner];
+    }	
 	
 }
