@@ -577,18 +577,19 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && tx.Txtype() != 6 {
+	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 && types.IsNormalTransaction(tx.Txtype()) {
 		return ErrInsufficientFunds
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if tx.Txtype() == 6 {
-		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas); err != nil {
-			return err
-		}
-	} else {
+	if types.IsNormalTransaction(tx.Txtype()){
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
+		}
+
+	} else {
+		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas); err != nil {
+			return err
 		}
 	}
 
@@ -910,7 +911,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			if tx.Txtype() != 6 {
+			if types.IsNormalTransaction(tx.Txtype()) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable queued transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -918,6 +919,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				queuedNofundsCounter.Inc(1)
 			}
 		}
+
+
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
@@ -1070,7 +1074,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			if tx.Txtype() != 6 {
+			if types.IsNormalTransaction(tx.Txtype()) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable pending transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -1083,6 +1087,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Demoting pending transaction", "hash", hash)
 			pool.enqueueTx(hash, tx)
 		}
+
 		// Remove all invalid privacy transactions
 		invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer)
 		for _, tx := range invalidPrivacy {

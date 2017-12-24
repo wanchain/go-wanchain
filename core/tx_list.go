@@ -296,7 +296,7 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		return (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0) && tx.Txtype() != 6
+		return (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0) && types.IsNormalTransaction(tx.Txtype())
 	})
 
 	// If the list was strict, filter anything above the lowest nonce
@@ -317,7 +317,7 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 // InvalidPrivacyTx remove invalidate privacy transactions
 func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer) types.Transactions {
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		if tx.Txtype() != 6 {
+		if types.IsNormalTransaction(tx.Txtype()) {
 			return false
 		}
 

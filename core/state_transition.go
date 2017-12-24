@@ -30,6 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/core/types"
 )
 
 var (
@@ -220,7 +221,7 @@ func (st *StateTransition) preCheck() error {
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	if st.msg.TxType() != 6 {
+	if types.IsNormalTransaction(st.msg.TxType()) {
 		if err = st.preCheck(); err != nil {
 			return
 		}
@@ -243,7 +244,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	var stampTotalGas uint64
-	if st.msg.TxType() == 6 {
+	if !types.IsNormalTransaction(st.msg.TxType()) {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
 			sender.Address().Bytes(),
 			st.data, st.gasPrice)
@@ -295,7 +296,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		}
 	}
 
-	if st.msg.TxType() != 6 {
+	if types.IsNormalTransaction(st.msg.TxType()) {
 		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
