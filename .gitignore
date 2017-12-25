@@ -36,3 +36,8 @@ DOCKER/**
 
 # go unit test cover out
 *.out
+
+# tmp data directory
+data_pluto/*
+data_testnet/*
+
