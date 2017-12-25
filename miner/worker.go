@@ -125,6 +125,10 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	// Seal work used minimum time(second).
+	// If used less time actual, will wait time gap before deal with new mined block.
+	miniSealTime int64
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -144,6 +148,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		miniSealTime:   12,
 	}
 	// Subscribe TxPreEvent for tx pool
 	worker.txSub = eth.TxPool().SubscribeTxPreEvent(worker.txCh)
@@ -293,6 +298,21 @@ func (self *worker) wait() {
 			}
 			block := result.Block
 			work := result.Work
+
+			// waiting minimum sealing time
+			beginTime := block.Header().Time.Int64()
+			for time.Now().Unix()-beginTime < self.miniSealTime {
+				log.Trace("need wait minimum sealing time", "now", time.Now().Unix(), "block begin", beginTime)
+				time.Sleep(time.Millisecond * 100)
+
+				// if have synchronized new block from remote, stop waiting at once.
+				if self.chain.CurrentHeader().Number.Cmp(block.Header().Number) >= 0 {
+					log.Info("have synchronized new block from remote, should stop wait sealing minimum time at once",
+						"chain last block", self.chain.CurrentHeader().Number.Int64(),
+						"the waiting block", block.Header().Number.Int64())
+					break
+				}
+			}
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
