@@ -17,16 +17,14 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-	//"github.com/wanchain/go-wanchain/consensus/misc"
-	"crypto/ecdsa"
-
-	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -132,19 +130,6 @@ func (b *BlockGen) SetCoinbase(addr common.Address) {
 // SetExtra sets the extra data field of the generated block.
 func (b *BlockGen) SetExtra(data []byte) {
 	// ensure the extra data has all its components
-
-	// if len(header.Extra) < extraVanity {
-	// 	header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
-	// }
-	// header.Extra = header.Extra[:extraVanity]
-
-	// if number%c.config.Epoch == 0 {
-	// 	for _, signer := range snap.signers() {
-	// 		header.Extra = append(header.Extra, signer[:]...)
-	// 	}
-	// }
-	// header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-
 	l := len(data)
 	if l > extraVanity {
 		fmt.Println("extra data too long")
@@ -258,6 +243,42 @@ func (self *ChainEnv) GenerateChain(parent *types.Block, n int, gen func(int, *B
 
 		self.engine.Authorize(fakedAddr, fakeSignerFn)
 		h.Coinbase.Set(fakedAddr)
+		rawBlock := types.NewBlock(h, b.txs, b.uncles, b.receipts)
+		sealBlock, _ := self.engine.Seal(self.blockChain, rawBlock, nil)
+		return sealBlock, b.receipts
+	}
+	for i := 0; i < n; i++ {
+		statedb, err := state.New(parent.Root(), state.NewDatabase(self.db))
+		if err != nil {
+			panic(err)
+		}
+		header := makeHeader(self.config, parent, statedb)
+		block, receipt := genblock(i, header, statedb)
+		blocks[i] = block
+		receipts[i] = receipt
+		parent = block
+	}
+	return blocks, receipts
+}
+
+func (self *ChainEnv) GenerateChainMulti(parent *types.Block, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
+	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
+		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: self.config}
+
+		// Execute any user modifications to the block and finalize it
+		if gen != nil {
+			gen(i, b)
+		}
+
+		ethash.AccumulateRewards(self.config, statedb, h, b.uncles)
+		root, err := statedb.CommitTo(self.db, true)
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
+		}
+		h.Root = root
+
+		self.engine.Authorize(fakedAddr, fakeSignerFn)
 		rawBlock := types.NewBlock(h, b.txs, b.uncles, b.receipts)
 		sealBlock, _ := self.engine.Seal(self.blockChain, rawBlock, nil)
 		return sealBlock, b.receipts

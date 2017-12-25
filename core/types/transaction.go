@@ -99,7 +99,7 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
-		Txtype:       1,
+		Txtype:       NORMAL_TX,
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -495,7 +495,7 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 	addressDst = *to
 
 	d := txdata{
-		Txtype:       6,
+		Txtype:       PRIVACY_TX,
 		AccountNonce: nonce,
 		Recipient:    &addressDst,
 		Payload:      data,
@@ -517,4 +517,13 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 	}
 
 	return &Transaction{data: d}
+}
+
+const(
+	NORMAL_TX  = 1
+	PRIVACY_TX = 6
+)
+
+func IsNormalTransaction(txType uint64) bool {
+	return txType != PRIVACY_TX
 }

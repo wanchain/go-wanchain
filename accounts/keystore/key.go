@@ -37,7 +37,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 const (
@@ -156,21 +155,12 @@ func newKeyFromECDSA(sk1, sk2 *ecdsa.PrivateKey) *Key {
 	}
 
 	updateWaddress(key)
-
 	return key
 }
 
 // updateWaddress adds WAddress field to the Key struct
-
 func updateWaddress(k *Key) {
-	k.WAddress = k.GenerateWaddress()
-}
-
-func (k *Key) GenerateWaddress() common.WAddress {
-	var tmpRaw common.WAddress
-	copy(tmpRaw[:33], ECDSAPKCompression(&k.PrivateKey.PublicKey))
-	copy(tmpRaw[33:], ECDSAPKCompression(&k.PrivateKey2.PublicKey))
-	return tmpRaw
+	k.WAddress = *GenerateWaddressFromPK(&k.PrivateKey.PublicKey, &k.PrivateKey2.PublicKey)
 }
 
 // ECDSAPKCompression serializes a public key in a 33-byte compressed format from btcec
@@ -278,51 +268,56 @@ func toISO8601(t time.Time) string {
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
 
-func GeneratePublicKeyFromWaddress(waddr []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	if len(waddr) != common.WAddressLength {
+// GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
+func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
+	if len(w) != common.WAddressLength {
 		return nil, nil, ErrWAddressInvalid
 	}
 
 	tmp := make([]byte, 33)
-	copy(tmp[:33], waddr[:33])
+	copy(tmp[:], w[:33])
 	curve := btcec.S256()
-	pk1, err := btcec.ParsePubKey(tmp, curve)
+	PK1, err := btcec.ParsePubKey(tmp, curve)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	copy(tmp[:33], waddr[33:])
-	pk2, err := btcec.ParsePubKey(tmp, curve)
+	copy(tmp[:], w[33:])
+	PK2, err := btcec.ParsePubKey(tmp, curve)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return (*ecdsa.PublicKey)(pk1), (*ecdsa.PublicKey)(pk2), nil
+	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
-func WaddrFromUncompressed(raw []byte) (*common.WAddress, error) {
+func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAddress {
+	var tmp common.WAddress
+	copy(tmp[:33], ECDSAPKCompression(A))
+	copy(tmp[33:], ECDSAPKCompression(B))
+	return &tmp
+}
+
+func WaddrFromUncompressedRawBytes(raw []byte) (*common.WAddress, error) {
 	if len(raw) != 32*2*2 {
 		return nil, errors.New("invalid uncompressed wan address len")
 	}
 
-	var waddr common.WAddress
 	pub := make([]byte, 65)
 	pub[0] = 0x004
 	copy(pub[1:], raw[:64])
 	A := crypto.ToECDSAPub(pub)
 	copy(pub[1:], raw[64:])
 	B := crypto.ToECDSAPub(pub)
-	wd := GenerateWaddressFromPK(A, B)
-	copy(waddr[:], wd[:])
-	return &waddr, nil
+	return GenerateWaddressFromPK(A, B), nil
 }
 
-func WaddrToUncompressed(waddr []byte) ([]byte, error) {
+func WaddrToUncompressedRawBytes(waddr []byte) ([]byte, error) {
 	if len(waddr) != common.WAddressLength {
 		return nil, ErrWAddressInvalid
 	}
 
-	A, B, err := GeneratePublicKeyFromWaddress(waddr)
+	A, B, err := GeneratePKPairFromWAddress(waddr)
 	if err != nil {
 		return nil, err
 	}
@@ -338,13 +333,6 @@ func WaddrToUncompressed(waddr []byte) ([]byte, error) {
 	copy(u[96:], by[:32])
 
 	return u, nil
-}
-
-func GenerateWaddressFromPK(A *ecdsa.PublicKey, B *ecdsa.PublicKey) *common.WAddress {
-	var tmp common.WAddress
-	copy(tmp[:33], ECDSAPKCompression(A))
-	copy(tmp[33:], ECDSAPKCompression(B))
-	return &tmp
 }
 
 // LoadECDSAPair loads a secp256k1 private key pair from the given file
@@ -387,32 +375,32 @@ func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
 }
 
 // ExportECDSAPair returns an ecdsa-private-key pair
-func ExportECDSAPair(d, d1, fp string) error {
-	kp := keyPair{
-		D:  d,
-		D1: d1,
-	}
-	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
-	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
+// func ExportECDSAPair(d, d1, fp string) error {
+// 	kp := keyPair{
+// 		D:  d,
+// 		D1: d1,
+// 	}
+// 	log.Info("Exporting ECDSA Prikave-Key-Pair", "file", fp)
+// 	fh, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer fh.Close()
 
-	var fileWriter io.Writer = fh
-	err = json.NewEncoder(fileWriter).Encode(kp)
-	return err
-}
+// 	var fileWriter io.Writer = fh
+// 	err = json.NewEncoder(fileWriter).Encode(kp)
+// 	return err
+// }
 
-func ExportECDSAPairStr(d, d1 string) (string, error) {
-	kp := keyPair{
-		D:  d,
-		D1: d1,
-	}
-	r, err := json.Marshal(kp)
-	if err != nil {
-		return "", err
-	}
+// func ExportECDSAPairStr(d, d1 string) (string, error) {
+// 	kp := keyPair{
+// 		D:  d,
+// 		D1: d1,
+// 	}
+// 	r, err := json.Marshal(kp)
+// 	if err != nil {
+// 		return "", err
+// 	}
 
-	return string(r), err
-}
+// 	return string(r), err
+// }

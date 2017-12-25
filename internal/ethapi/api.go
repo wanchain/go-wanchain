@@ -352,27 +352,6 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password str
 	return acc.Address, err
 }
 
-// ExportRawKey exports the hex encoded ECDSA key into the given file in json foramt
-func (s *PrivateAccountAPI) ExportRawKey(addr common.Address, password string) (string, error) {
-	ks := fetchKeystore(s.am)
-	account, err := ks.Find(accounts.Account{Address: addr})
-	if err != nil {
-		return "", err
-	}
-
-	r, r1, err := ks.ExportECDSA(account, password)
-	if err != nil {
-		return "", err
-	}
-
-	str, err := keystore.ExportECDSAPairStr(hex.EncodeToString(r), hex.EncodeToString(r1))
-	if err != nil {
-		return "", err
-	}
-
-	return str, err
-}
-
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
@@ -547,8 +526,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 }
 
 // GetOTABalance returns OTA balance
-func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string) (*big.Int, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
 	}
@@ -1333,7 +1312,7 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 			return "", ErrInvalidWAddress
 		}
 
-		publicKeyA, _, err := keystore.GeneratePublicKeyFromWaddress(pubBytes)
+		publicKeyA, _, err := keystore.GeneratePKPairFromWAddress(pubBytes)
 		if err != nil {
 
 			return "", errors.New("Fail to generate public key from wan address!")
@@ -1375,52 +1354,6 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	return outs, nil
 }
 
-//var privacyContract common.Address
-//func (s *PublicBlockChainAPI) ScanOTAbyAccount(ctx context.Context, address common.Address, n rpc.BlockNumber) ([]string, error) {
-//	otas := []string{}
-//	account := accounts.Account{Address: address}
-//	wallet, err := s.b.AccountManager().Find(account)
-//	if err != nil {
-//		return otas, err
-//	}
-//
-//	curBlock, err := s.GetBlockByNumber(ctx, n, true)
-//	if err != nil {
-//		return otas, err
-//	}
-//
-//	element := curBlock["transactions"]
-//	privacyContract[19] = 0x64
-//	if txs, ok := element.([]interface{}); ok {
-//		for i := 0; i < len(txs); i++ {
-//			txi := txs[i]
-//			if txrpc, ok2 := txi.(*RPCTransaction); ok2 {
-//				if privacyContract.Str() == txrpc.To.Str() {
-//					otas = append(otas, string(txrpc.To.Hex()))
-//					otaWAddr, err := keystore.WaddrFromUncompressed(txrpc.Input[1:])
-//					if err != nil || otaWAddr == nil {
-//						return otas, err
-//					}
-//
-//					isMine, err := wallet.CheckOTA(account, otaWAddr)
-//					if err != nil {
-//						return otas, err
-//					}
-//
-//					if isMine == true {
-//						otas = append(otas, string(hexutil.Encode(txrpc.Input[1:])))
-//					}
-//				}
-//			}
-//		}
-//
-//	} else {
-//		return otas, errors.New("fetch txs failed")
-//	}
-//
-//	return otas, nil
-//}
-
 // 根据一次性地址拥有者的private key信息计算对应地址的两个private key
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
 	account := accounts.Account{Address: address}
@@ -1434,7 +1367,7 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 		return "", err
 	}
 
-	otaBytes, err := keystore.WaddrToUncompressed(wanBytes)
+	otaBytes, err := keystore.WaddrToUncompressedRawBytes(wanBytes)
 	if err != nil {
 		return "", err
 	}
@@ -1769,7 +1702,7 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 		return "", err
 	}
 
-	rawWanAddr, err := keystore.WaddrFromUncompressed(raw)
+	rawWanAddr, err := keystore.WaddrFromUncompressedRawBytes(raw)
 	if err != nil || rawWanAddr == nil {
 		return "", err
 	}

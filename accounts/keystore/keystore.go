@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -286,30 +285,6 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
 }
 
-func (ks *KeyStore) CheckOTA(a accounts.Account, ota *common.WAddress) (bool, error) {
-	if ota == nil {
-		return false, ErrWAddressInvalid
-	}
-
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	ret := false
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found || unlockedKey == nil {
-		return ret, ErrLocked
-	}
-
-	A := &unlockedKey.PrivateKey.PublicKey
-	A1, S1, err := GeneratePKPairFromWAddress(ota[:])
-	if err != nil {
-		return ret, err
-	}
-
-	ret = crypto.CompareA1(unlockedKey.PrivateKey2.D.Bytes(), A, S1, A1)
-	return ret, nil
-}
-
 func (ks *KeyStore) ComputeOTAPPKeys(a accounts.Account, AX, AY, BX, BY string) ([]string, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -503,13 +478,13 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 	return ks.importKey(key, newPassphrase)
 }
 
-func (ks *KeyStore) ExportECDSA(a accounts.Account, passphrase string) ([]byte, []byte, error) {
-	_, key, err := ks.getDecryptedKey(a, passphrase)
-	if err != nil {
-		return nil, nil, err
-	}
-	return crypto.FromECDSA(key.PrivateKey), crypto.FromECDSA(key.PrivateKey2), err
-}
+// func (ks *KeyStore) ExportECDSA(a accounts.Account, passphrase string) ([]byte, []byte, error) {
+// 	_, key, err := ks.getDecryptedKey(a, passphrase)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	return crypto.FromECDSA(key.PrivateKey), crypto.FromECDSA(key.PrivateKey2), err
+// }
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
@@ -575,29 +550,6 @@ func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, er
 
 	ret := unlockedKey.WAddress
 	return ret, nil
-}
-
-// GeneratePKPairFromWAddress represents the keystore to retrieve public key-pair from given WAddress
-func GeneratePKPairFromWAddress(w []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
-	if len(w) != common.WAddressLength {
-		return nil, nil, ErrWAddressInvalid
-	}
-
-	tmp := make([]byte, 33)
-	copy(tmp[:], w[:33])
-	curve := btcec.S256()
-	PK1, err := btcec.ParsePubKey(tmp, curve)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	copy(tmp[:], w[33:])
-	PK2, err := btcec.ParsePubKey(tmp, curve)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return (*ecdsa.PublicKey)(PK1), (*ecdsa.PublicKey)(PK2), nil
 }
 
 // zeroKey zeroes a private key in memory.

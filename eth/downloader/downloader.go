@@ -394,6 +394,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if p == nil {
 		return errUnknownPeer
 	}
+
 	return d.syncWithPeer(p, hash, td)
 }
 
