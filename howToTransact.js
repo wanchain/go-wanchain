@@ -113,7 +113,7 @@ var erc20simpleInt = erc20simple_contract.new(
   });
 
 // 实例化部署的合约，下面的地址用实际生成的地址替换
-var contractAddr = "0xaf509ab5856a7d20a283239133b16bc7acbeb40f"
+var contractAddr = "0xa6000c50b8ccf77702c7fde117b02f79f9e1989e"
 var erc20simple = erc20simple_contract.at(contractAddr)
 
 
