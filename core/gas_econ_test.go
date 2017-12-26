@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -202,6 +203,153 @@ func TestGasCoinMint(t *testing.T) {
 
 }
 
+func TestGasCoinRefund(t *testing.T) {
+	var (
+		initialBalance = big.NewInt(0)
+		// value of Wan coin to transfer
+		transferValue = big.NewInt(0)
+		// gasLimit
+		gl = new(big.Int).SetUint64(params.SstoreSetGas * 20)
+		// gas price
+		gp = big.NewInt(100)
+		// gas used by the transaction
+		gasUsed   = new(big.Int)
+		gasUsedC1 = new(big.Int)
+		gasUsedC2 = new(big.Int)
+		// ota set elements count, which does not include the true OTA
+		setSize           = 2
+		db, _             = ethdb.NewMemDatabase()
+		engine            = ethash.NewFaker(db)
+		sk, _             = crypto.GenerateKey()
+		skContributor1, _ = crypto.GenerateKey()
+		skContributor2, _ = crypto.GenerateKey()
+		rkA, _            = crypto.GenerateKey()
+		rkB, _            = crypto.GenerateKey()
+		ck, _             = crypto.GenerateKey()
+		sender            = crypto.PubkeyToAddress(sk.PublicKey)
+		contributor1      = crypto.PubkeyToAddress(skContributor1.PublicKey)
+		contributor2      = crypto.PubkeyToAddress(skContributor2.PublicKey)
+		coinbase          = crypto.PubkeyToAddress(ck.PublicKey)
+	)
+
+	initialBalance.SetString("20000000000000000000", 10)
+	transferValue.SetString("10000000000000000000", 10)
+
+	// generate OTAs
+	OTAStr, err := genOTAStr(&rkA.PublicKey, &rkB.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	OTAC1, err := genOTAStr(&rkA.PublicKey, &rkB.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	OTAC2, err := genOTAStr(&rkA.PublicKey, &rkB.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate ABI data
+	mintCoinData, err := genBuyCoinData(OTAStr, transferValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mintCoinDataContributor1, err := genBuyCoinData(OTAC1, transferValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mintCoinDataContributor2, err := genBuyCoinData(OTAC2, transferValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// initialize valid signers to write blocks
+	l := 5
+	extraData := append(make([]byte, 0), coinbase[:]...)
+	keySlice, addrSlice := make([]*ecdsa.PrivateKey, l), make([]common.Address, l)
+	for i := 0; i < l; i++ {
+		keySlice[i], _ = crypto.GenerateKey()
+		addrSlice[i] = crypto.PubkeyToAddress(keySlice[i].PublicKey)
+		extraData = append(extraData, addrSlice[i].Bytes()...)
+	}
+
+	// make the transaction
+	gspec := &Genesis{
+		Config:     params.TestChainConfig,
+		GasLimit:   0x47b760,
+		ExtraData:  extraData,
+		Difficulty: big.NewInt(1),
+		Alloc: GenesisAlloc{
+			sender:       {Balance: initialBalance},
+			contributor1: {Balance: initialBalance},
+			contributor2: {Balance: initialBalance},
+		},
+	}
+	genesis := gspec.MustCommit(db)
+	blockchain, _ := NewBlockChain(db, gspec.Config, engine, vm.Config{})
+	defer blockchain.Stop()
+
+	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
+
+	signer := types.NewEIP155Signer(big.NewInt(gspec.Config.ChainId.Int64()))
+	signerC1 := types.NewEIP155Signer(big.NewInt(gspec.Config.ChainId.Int64()))
+	signerC2 := types.NewEIP155Signer(big.NewInt(gspec.Config.ChainId.Int64()))
+	chain, _ := chainEnv.GenerateChainMulti(genesis, 1, func(i int, gen *BlockGen) {
+		// set coinbase
+		gen.SetCoinbase(coinbase)
+
+		// add transactions
+		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(sender), wanCoinSCAddr, transferValue, gl, gp, mintCoinData), signer, sk)
+		txC1, _ := types.SignTx(types.NewTransaction(gen.TxNonce(contributor1), wanCoinSCAddr, transferValue, gl, gp, mintCoinDataContributor1), signerC1, skContributor1)
+		txC2, _ := types.SignTx(types.NewTransaction(gen.TxNonce(contributor2), wanCoinSCAddr, transferValue, gl, gp, mintCoinDataContributor2), signerC2, skContributor2)
+
+		// collect gas used
+		gasUsed = gen.AddTxAndCalcGasUsed(tx)
+		gasUsedC1 = gen.AddTxAndCalcGasUsed(txC1)
+		gasUsedC2 = gen.AddTxAndCalcGasUsed(txC2)
+	})
+
+	if i, err := blockchain.InsertChain(chain); err != nil {
+		t.Fatalf("insert error (block %d): %v\n", chain[i].NumberU64(), err)
+		return
+	}
+
+	// retrieve current state and account balances after the coin-mint transaction
+	state, _ := blockchain.State()
+
+	senderBalance := state.GetBalance(sender)
+	contributor1Balance := state.GetBalance(contributor1)
+	contributor2Balance := state.GetBalance(contributor2)
+	OTABalance := getOTABalance(state, OTAStr)
+	OTAC1Balance := getOTABalance(state, OTAC1)
+	OTAC2Balance := getOTABalance(state, OTAC2)
+	coinbaseBalance := state.GetBalance(coinbase)
+
+	if blockchain.CurrentBlock().Number().Cmp(big.NewInt(1)) != 0 {
+		t.Fatal("fail to generate a new block")
+	}
+
+	if coinbaseBalance.Cmp(new(big.Int).Add(new(big.Int).Mul(gp, gasUsed), new(big.Int).Add(new(big.Int).Mul(gp, gasUsedC1), new(big.Int).Mul(gp, gasUsedC2)))) != 0 {
+		t.Fatal("coinbase rewards error")
+	}
+
+	if new(big.Int).Add(new(big.Int).Add(new(big.Int).Add(new(big.Int).Add(new(big.Int).Add(new(big.Int).Add(senderBalance, OTAC1Balance), coinbaseBalance), contributor1Balance), contributor2Balance), OTABalance), OTAC2Balance).Cmp(new(big.Int).Mul(big.NewInt(3), initialBalance)) != 0 {
+		t.Fatal("Wrong total balance")
+	}
+
+	OTASet, err := genOTASet(state, OTAStr, setSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range OTASet {
+		fmt.Println(v)
+	}
+}
+
 // generate recipient's OTA for privary transaction
 func genOTAStr(pk, pk1 *ecdsa.PublicKey) (string, error) {
 	PKPair := hexutil.PKPair2HexSlice(pk, pk1)
@@ -231,9 +379,24 @@ func genBuyCoinData(ota string, value *big.Int) ([]byte, error) {
 	return data, err
 }
 
+// retrieve OTA's balance from state trie
 func getOTABalance(db *state.StateDB, ota string) *big.Int {
-
 	otaAX, _ := vm.GetAXFromWanAddr(common.FromHex(ota))
 	balance := db.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
 	return new(big.Int).SetBytes(balance)
+}
+
+// return OTA set with num elements
+func genOTASet(db *state.StateDB, ota string, num int) ([]string, error) {
+	otaAX, _ := vm.GetAXFromWanAddr(common.FromHex(ota))
+	otaSet, _, err := vm.GetOTASet(db, otaAX, num)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, 0)
+	for _, ota := range otaSet {
+		ret = append(ret, common.ToHex(ota))
+	}
+
+	return ret, err
 }

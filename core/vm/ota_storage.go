@@ -7,10 +7,11 @@ import (
 	"math/big"
 	"math/rand"
 
+	"strconv"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"strconv"
 )
 
 // OTABalance2ContractAddr convert ota balance to ota storage address
