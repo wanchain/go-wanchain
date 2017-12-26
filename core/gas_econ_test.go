@@ -307,7 +307,7 @@ func TestGasCoinRefund(t *testing.T) {
 		txC1, _ := types.SignTx(types.NewTransaction(gen.TxNonce(contributor1), wanCoinSCAddr, transferValue, gl, gp, mintCoinDataContributor1), signerC1, skContributor1)
 		txC2, _ := types.SignTx(types.NewTransaction(gen.TxNonce(contributor2), wanCoinSCAddr, transferValue, gl, gp, mintCoinDataContributor2), signerC2, skContributor2)
 
-		// collect gas used
+		// collect gas spent
 		gasUsed = gen.AddTxAndCalcGasUsed(tx)
 		gasUsedC1 = gen.AddTxAndCalcGasUsed(txC1)
 		gasUsedC2 = gen.AddTxAndCalcGasUsed(txC2)
@@ -348,6 +348,12 @@ func TestGasCoinRefund(t *testing.T) {
 	for _, v := range OTASet {
 		fmt.Println(v)
 	}
+
+	keyPairs, err := computeOTAPubKeys(rkA, rkB, strings.Replace(OTAStr, "0x", "", -1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(keyPairs)
 }
 
 // generate recipient's OTA for privary transaction
@@ -399,4 +405,39 @@ func genOTASet(db *state.StateDB, ota string, num int) ([]string, error) {
 	}
 
 	return ret, err
+}
+
+func computeOTAPubKeys(pk, pk1 *ecdsa.PrivateKey, ota string) (string, error) {
+	strs := [4]string{}
+	l := 32
+	for i := 0; i < len(ota)/l; i++ {
+		strs[i] = "0x" + ota[i*l:(i+1)*l]
+	}
+
+	pub1, priv1, _, err := crypto.GenerteOTAPrivateKey(pk, pk1, strs[0], strs[1], strs[2], strs[3])
+	if err != nil {
+		return "", err
+	}
+
+	pub1X := hexutil.Encode(common.LeftPadBytes(pub1.X.Bytes(), 32))
+	pub1Y := hexutil.Encode(common.LeftPadBytes(pub1.Y.Bytes(), 32))
+	priv1D := hexutil.Encode(common.LeftPadBytes(priv1.D.Bytes(), 32))
+
+	otaPub := pub1X + pub1Y[2:]
+	otaPriv := priv1D
+
+	sk, err := crypto.HexToECDSA(otaPriv[2:])
+	if err != nil {
+		return "", err
+	}
+
+	var addr common.Address
+	pubkey := crypto.FromECDSAPub(&sk.PublicKey)
+	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return otaPriv + "+" + otaPub + "+" + hexutil.Encode(addr[:]), err
+}
+
+func genRingSignData(addr common.Address) {
+
 }
