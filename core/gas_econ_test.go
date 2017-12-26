@@ -114,9 +114,9 @@ func TestGasOrdinaryCoinTransfer(t *testing.T) {
 
 func TestGasCoinMint(t *testing.T) {
 	var (
-		initialBalance = big.NewInt(1000000000)
+		initialBalance = big.NewInt(0)
 		// value of Wan coin to transfer
-		transferValue = big.NewInt(100000)
+		transferValue = big.NewInt(0)
 		// gasLimit
 		gl = new(big.Int).SetUint64(params.SstoreSetGas * 20)
 		// gas price
@@ -132,6 +132,9 @@ func TestGasCoinMint(t *testing.T) {
 		sender   = crypto.PubkeyToAddress(sk.PublicKey)
 		coinbase = crypto.PubkeyToAddress(ck.PublicKey)
 	)
+
+	initialBalance.SetString("20000000000000000000", 10)
+	transferValue.SetString("10000000000000000000", 10)
 
 	OTAStr, err := genOTAStr(&rkA.PublicKey, &rkB.PublicKey)
 	if err != nil {
