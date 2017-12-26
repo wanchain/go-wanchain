@@ -56,6 +56,7 @@ var (
 	ErrFailToGeneratePKPairSlice        = errors.New("Fail to generate publickey pair hex slice")
 	ErrInvalidPrivateKey                = errors.New("Invalid private key")
 	ErrInvalidOTAMixSet                 = errors.New("Invalid OTA mix set")
+	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -1231,6 +1232,10 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
+	if !hexutil.Has0xPrefix(otaAddr) {
+		return []string{}, ErrInvalidOTAAddr
+	}
+
 	if setLen <= 0 {
 		return []string{}, errors.New("invalid mix set len")
 	}
@@ -1715,6 +1720,10 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 }
 
 func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+	if !hexutil.Has0xPrefix(sPrivateKey) {
+		return common.Hash{}, ErrInvalidPrivateKey
+	}
+
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err

@@ -13657,7 +13657,8 @@ module.exports = XMLHttpRequest;
         var getOTAMixSet = new Method({
             name: 'getOTAMixSet',
             call: 'wan_getOTAMixSet',
-            params: 2
+            params: 2,
+            inputFormatter: [null, null]
         });
 
         //jqg
