@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"bytes"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"

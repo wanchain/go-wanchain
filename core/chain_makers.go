@@ -160,6 +160,20 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	b.receipts = append(b.receipts, receipt)
 }
 
+func (b *BlockGen) AddTxAndCalcGasUsed(tx *types.Transaction) *big.Int {
+	if b.gasPool == nil {
+		b.SetCoinbase(b.parent.Coinbase())
+	}
+	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
+	receipt, gasUsed, err := ApplyTransaction(b.config, nil, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{})
+	if err != nil {
+		panic(err)
+	}
+	b.txs = append(b.txs, tx)
+	b.receipts = append(b.receipts, receipt)
+	return gasUsed
+}
+
 // Number returns the block number of the block being generated.
 func (b *BlockGen) Number() *big.Int {
 	return new(big.Int).Set(b.header.Number)

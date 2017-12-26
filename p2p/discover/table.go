@@ -266,8 +266,10 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 	for {
 		// ask the alpha closest nodes that we haven't asked yet
 		for i := 0; i < len(result.entries) && pendingQueries < alpha; i++ {
+
 			n := result.entries[i]
-			if !asked[n.ID] {
+
+			if !asked[n.ID] && n.addr().Port==17717 {
 				asked[n.ID] = true
 				pendingQueries++
 				go func() {
@@ -427,7 +429,13 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
-			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
+			var nn *Node
+			//fmt.Println(n.addr(),n.TCP)
+			if n.TCP != 17717 {
+				nn = nil
+			} else {
+				nn, _ = tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
+			}
 			rc <- nn
 		}(nodes[i])
 	}

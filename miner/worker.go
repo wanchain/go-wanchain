@@ -300,19 +300,19 @@ func (self *worker) wait() {
 			work := result.Work
 
 			// waiting minimum sealing time
-			beginTime := block.Header().Time.Int64()
-			for time.Now().Unix()-beginTime < self.miniSealTime {
-				log.Trace("need wait minimum sealing time", "now", time.Now().Unix(), "block begin", beginTime)
-				time.Sleep(time.Millisecond * 100)
-
-				// if have synchronized new block from remote, stop waiting at once.
-				if self.chain.CurrentHeader().Number.Cmp(block.Header().Number) >= 0 {
-					log.Info("have synchronized new block from remote, should stop wait sealing minimum time at once",
-						"chain last block", self.chain.CurrentHeader().Number.Int64(),
-						"the waiting block", block.Header().Number.Int64())
-					break
-				}
-			}
+			//beginTime := block.Header().Time.Int64()
+			//for time.Now().Unix()-beginTime < self.miniSealTime {
+			//	log.Trace("need wait minimum sealing time", "now", time.Now().Unix(), "block begin", beginTime)
+			//	time.Sleep(time.Millisecond * 100)
+			//
+			//	// if have synchronized new block from remote, stop waiting at once.
+			//	if self.chain.CurrentHeader().Number.Cmp(block.Header().Number) >= 0 {
+			//		log.Info("have synchronized new block from remote, should stop wait sealing minimum time at once",
+			//			"chain last block", self.chain.CurrentHeader().Number.Int64(),
+			//			"the waiting block", block.Header().Number.Int64())
+			//		break
+			//	}
+			//}
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
