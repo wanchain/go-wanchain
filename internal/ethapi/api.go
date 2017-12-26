@@ -1730,6 +1730,9 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 	}
 
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
+	if err != nil {
+		return common.Hash{}, err
+	}
 
 	var signed *types.Transaction
 	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
