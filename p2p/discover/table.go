@@ -269,7 +269,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 
 			n := result.entries[i]
 
-			if !asked[n.ID] && n.addr().Port==17717 {
+			if !asked[n.ID] {
 				asked[n.ID] = true
 				pendingQueries++
 				go func() {
@@ -431,11 +431,11 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 		go func(n *Node) {
 			var nn *Node
 			//fmt.Println(n.addr(),n.TCP)
-			if n.TCP != 17717 {
-				nn = nil
-			} else {
-				nn, _ = tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
-			}
+			//if n.TCP != 17717 {
+			//	nn = nil
+			//} else {
+			nn, _ = tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
+			//}
 			rc <- nn
 		}(nodes[i])
 	}
