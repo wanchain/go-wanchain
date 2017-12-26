@@ -519,7 +519,7 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 	return &Transaction{data: d}
 }
 
-const(
+const (
 	NORMAL_TX  = 1
 	PRIVACY_TX = 6
 )
