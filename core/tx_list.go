@@ -327,7 +327,11 @@ func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer) types
 		}
 
 		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
-		err = ValidPrivacyTx(stateDB, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas)
+
+
+		err = ValidPrivacyTx(stateDB, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas,tx.Value())
+
+
 		return err != nil
 	})
 

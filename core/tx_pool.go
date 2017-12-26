@@ -588,7 +588,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 
 	} else {
-		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas); err != nil {
+		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas,tx.Value()); err != nil {
 			return err
 		}
 	}

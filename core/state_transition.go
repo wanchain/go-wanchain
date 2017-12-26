@@ -405,9 +405,13 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	return
 }
 
-func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int) error {
+func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int,value *big.Int) error {
 	if intrGas == nil || intrGas.BitLen() > 64 {
 		return vm.ErrOutOfGas
+	}
+
+	if value.Cmp(big.NewInt(0)) != 0 {
+		return vm.ErrInvalidPrivacyValue
 	}
 
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) <= 0 {
