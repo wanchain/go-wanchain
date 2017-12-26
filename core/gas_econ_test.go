@@ -3,7 +3,6 @@ package core
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -175,7 +174,6 @@ func TestGasCoinMint(t *testing.T) {
 		gen.SetCoinbase(coinbase)
 		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(sender), wanCoinSCAddr, transferValue, gl, gp, mintCoinData), signer, sk)
 		gasUsed = gen.AddTxAndCalcGasUsed(tx)
-		fmt.Println("gasUsed: ", gasUsed.Uint64())
 	})
 
 	if i, err := blockchain.InsertChain(chain); err != nil {
@@ -190,9 +188,17 @@ func TestGasCoinMint(t *testing.T) {
 	OTABalance := getOTABalance(state, OTAStr)
 	coinbaseBalance := state.GetBalance(coinbase)
 
-	fmt.Println("sender balance: ", senderBalance.Uint64())
-	fmt.Println("ota balance: ", OTABalance.Uint64())
-	fmt.Println("coinbase balance: ", coinbaseBalance.Uint64())
+	if blockchain.CurrentBlock().Number().Cmp(big.NewInt(1)) != 0 {
+		t.Fatal("fail to generate new block")
+	}
+
+	if coinbaseBalance.Cmp(new(big.Int).Mul(gp, gasUsed)) != 0 {
+		t.Fatal("coinbase rewards error")
+	}
+
+	if initialBalance.Cmp(new(big.Int).Add(senderBalance, new(big.Int).Add(OTABalance, coinbaseBalance))) != 0 {
+		t.Fatal("wrong total balance")
+	}
 
 }
 
@@ -229,9 +235,5 @@ func getOTABalance(db *state.StateDB, ota string) *big.Int {
 
 	otaAX, _ := vm.GetAXFromWanAddr(common.FromHex(ota))
 	balance := db.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
-	if len(balance) == 0 {
-		return common.Big0
-	}
-
 	return new(big.Int).SetBytes(balance)
 }
