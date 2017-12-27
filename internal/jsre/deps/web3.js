@@ -13680,6 +13680,7 @@ module.exports = XMLHttpRequest;
             name: 'genRingSignData',
             call: 'wan_genRingSignData',
             params: 3,
+            inputFormatter: [null, null, null]
         });
 
         var getOTABalance = new Method({
@@ -13688,13 +13689,6 @@ module.exports = XMLHttpRequest;
             params: 2,
             inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
             outputFormatter: formatters.outputBigNumberFormatter
-        });
-
-        var scanOTAbyAccount = new Method ({
-            name: 'scanOTAbyAccount',
-            call: 'wan_scanOTAbyAccount',
-            params: 2,
-            inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
         });
 
         var getPermiWanCoinOTABalances = new Method ({
@@ -13717,7 +13711,6 @@ module.exports = XMLHttpRequest;
             getOTAMixSet,
             genRingSignData,
             getOTABalance,
-            scanOTAbyAccount,
             getPermiWanCoinOTABalances,
             getSupportStampOTABalances,
         ];

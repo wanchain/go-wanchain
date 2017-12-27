@@ -247,7 +247,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if !types.IsNormalTransaction(st.msg.TxType()) {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
 			sender.Address().Bytes(),
-			st.data, st.gasPrice)
+			st.data, st.gasPrice, st.value)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
@@ -405,12 +405,12 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	return
 }
 
-func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int,value *big.Int) error {
+func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int, txValue *big.Int) error {
 	if intrGas == nil || intrGas.BitLen() > 64 {
 		return vm.ErrOutOfGas
 	}
 
-	if value.Cmp(big.NewInt(0)) != 0 {
+	if txValue.Sign() != 0 {
 		return vm.ErrInvalidPrivacyValue
 	}
 
@@ -438,7 +438,11 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	return nil
 }
 
-func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (callData []byte, totalUseableGas uint64, evmUseableGas uint64, err error) {
+func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, txValue *big.Int) (callData []byte, totalUseableGas uint64, evmUseableGas uint64, err error) {
+	if txValue.Sign() != 0 {
+		return nil, 0, 0, vm.ErrInvalidPrivacyValue
+	}
+
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return nil, 0, 0, err

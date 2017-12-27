@@ -528,6 +528,10 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 // GetOTABalance returns OTA balance
 func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string, blockNr rpc.BlockNumber) (*big.Int, error) {
+	if !hexutil.Has0xPrefix(otaWAddr) {
+		return nil, ErrInvalidOTAAddr
+	}
+
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
@@ -535,12 +539,13 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 
 	var otaAX []byte
 	otaWAddrByte := common.FromHex(otaWAddr)
-	if len(otaWAddrByte) == common.WAddressLength {
-		otaAX, _ = vm.GetAXFromWanAddr(otaWAddrByte)
-	} else if len(otaWAddrByte) == common.HashLength {
+	switch len(otaWAddrByte) {
+	case common.HashLength:
 		otaAX = otaWAddrByte
-	} else {
-		return nil, errors.New("invalid ota address!")
+	case common.WAddressLength:
+		otaAX, _ = vm.GetAXFromWanAddr(otaWAddrByte)
+	default:
+		return nil, ErrInvalidOTAAddr
 	}
 
 	return vm.GetOtaBalanceFromAX(state, otaAX)
@@ -1242,7 +1247,7 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 
 	orgOtaAddr := common.FromHex(otaAddr)
 	if len(orgOtaAddr) < common.HashLength {
-		return []string{}, errors.New("invalid ota address")
+		return []string{}, ErrInvalidOTAAddr
 	}
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
@@ -1269,8 +1274,9 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 	return ret, nil
 }
 
+// GenRingSignData generate ring sign data
 func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	if len(privateKey) <= 2 {
+	if !hexutil.Has0xPrefix(privateKey) {
 		return "", ErrInvalidPrivateKey
 	}
 
@@ -1359,7 +1365,8 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	return outs, nil
 }
 
-// 根据一次性地址拥有者的private key信息计算对应地址的两个private key
+// ComputeOTAPPKeys compute ota private key, public key and short address
+// from account address and ota full address.
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
@@ -1387,9 +1394,9 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	BX := "0x" + otaAddr[128:192]
 	BY := "0x" + otaAddr[192:256]
 
-	sS, err2 := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
-	if err2 != nil {
-		return "", err2
+	sS, err := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
+	if err != nil {
+		return "", err
 	}
 
 	otaPub := sS[0] + sS[1][2:]
