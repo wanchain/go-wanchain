@@ -24,6 +24,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 )
@@ -322,23 +323,34 @@ func (self *stateObject) CommitTrie(db Database, dbw trie.DatabaseWriter) error 
 func (c *stateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
-	if amount.Sign() == 0 {
+	switch amount.Sign() {
+	case 1:
+		c.SetBalance(new(big.Int).Add(c.Balance(), amount))
+	case 0:
 		if c.empty() {
 			c.touch()
 		}
 
 		return
+	default:
+		log.Error("add balance, negative value!", "address", common.ToHex(c.address[:]), "amount", amount.Int64())
+		return
 	}
-	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 }
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
 func (c *stateObject) SubBalance(amount *big.Int) {
-	if amount.Sign() == 0 {
+
+	switch amount.Sign() {
+	case 1:
+		c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
+	case 0:
+		return
+	default:
+		log.Error("sub balance, negative value!", "address", common.ToHex(c.address[:]), "amount", amount.Int64())
 		return
 	}
-	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
 }
 
 func (self *stateObject) SetBalance(amount *big.Int) {
