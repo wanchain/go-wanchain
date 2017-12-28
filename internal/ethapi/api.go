@@ -551,7 +551,7 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 	return vm.GetOtaBalanceFromAX(state, otaAX)
 }
 
-func (s *PublicBlockChainAPI) GetPermiWanCoinOTABalances(ctx context.Context) []*big.Int {
+func (s *PublicBlockChainAPI) GetSupportWanCoinOTABalances(ctx context.Context) []*big.Int {
 	return vm.GetSupportWanCoinOTABalances()
 }
 

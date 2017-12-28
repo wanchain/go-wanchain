@@ -13691,9 +13691,9 @@ module.exports = XMLHttpRequest;
             outputFormatter: formatters.outputBigNumberFormatter
         });
 
-        var getPermiWanCoinOTABalances = new Method ({
-            name: 'getPermiWanCoinOTABalances',
-            call: 'wan_getPermiWanCoinOTABalances',
+        var getSupportWanCoinOTABalances = new Method ({
+            name: 'getSupportWanCoinOTABalances',
+            call: 'wan_getSupportWanCoinOTABalances',
             params: 0,
         });
 
@@ -13711,7 +13711,7 @@ module.exports = XMLHttpRequest;
             getOTAMixSet,
             genRingSignData,
             getOTABalance,
-            getPermiWanCoinOTABalances,
+            getSupportWanCoinOTABalances,
             getSupportStampOTABalances,
         ];
     };
