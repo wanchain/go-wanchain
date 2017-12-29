@@ -210,15 +210,16 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
-	var err error
 
-	_,err = nodesync.ParseNodeContext(ctx)
+	nc,err := nodesync.ParseNodeContext(ctx)
 
-	if err == nil {//err is nil means use hsm
+	if err == nil && nc != nil {//err is nil and nc is not means use hsm
 		err = nodesync.Nodesync(ctx)
 		if err != nil {
 			return err
 		}
+	} else if err != nil {
+		return err
 	}
 
 	node := makeFullNode(ctx)

@@ -34,7 +34,12 @@ var (
 
 	mineFlag = cli.StringFlag{
 		Name:  "minerthreads",
-		Usage: "password to decrypt keystore",
+		Usage: "mine thread flag",
+	}
+
+	testFlag = cli.StringFlag{
+		Name:  "testnet",
+		Usage: "start a test net",
 	}
 
 	HsmFlags = []cli.Flag{
@@ -51,14 +56,16 @@ func ParseNodeContext(c *cli.Context) (*NodeContext, error) {
 	nc.pwd 	   = c.String(PwdFlag.GetName())
 
 	mine 	   := c.String(mineFlag.GetName())
+	testnet    := c.String(testFlag.GetName())
 
-	//not mine node
-	if mine == "" {
-
+	//not test net node,allow to mine
+	if testnet == "true" {
 		return nil, nil
+	}
 
+	if mine == ""  {
+		return nil, nil
 	} else {
-
 		if nc.Address == "" || nc.NodePIN == "" || nc.pwd == "" {
 			return nil, errors.New("Invalid arguments!")
 		}
