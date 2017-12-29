@@ -39,7 +39,8 @@ func Nodesync(ctx *cli.Context)(error) {
 		fmt.Printf("Error: %s\n\n", err)
 		return err
 	}
-	fmt.Printf("ReceivedData: %s\n\n", keyjson)
+
+	//fmt.Printf("ReceivedData: %s\n\n", keyjson)
 
 	ks,err := keystore.DecryptKey(keyjson,nc.pwd)
 	if err != nil {

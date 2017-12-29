@@ -6,8 +6,8 @@ package syncFile
 
 const (
 	SYNC_PORT = ":20031"
-	SYNC_NODE_KEY = "./server.key"
-	SYNC_NODE_CERT = "./server.pem"
+	SYNC_NODE_KEY = "/.wanchain/server/server.key"
+	SYNC_NODE_CERT = "/.wanchain/server/server.pem"
 	SYNCFILE_ERROR_NONE = 0
 	SYNCFILE_ERROR_PIN	= 1
 	SYNCFILE_ERROR_FILEDATA = 2
