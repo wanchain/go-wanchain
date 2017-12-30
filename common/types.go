@@ -51,7 +51,7 @@ func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
 
 // Get the string representation of the underlying hash
-func (h Hash) Str() string   { return string(h[:]) }
+// func (h Hash) Str() string   { return string(h[:]) }
 func (h Hash) Bytes() []byte { return h[:] }
 func (h Hash) Big() *big.Int { return new(big.Int).SetBytes(h[:]) }
 func (h Hash) Hex() string   { return hexutil.Encode(h[:]) }
@@ -164,13 +164,13 @@ func IsHexAddress(s string) bool {
 }
 
 // Get the string representation of the underlying address
-func (a Address) Str() string   { return string(a[:]) }
+// func (a Address) Str() string   { return string(a[:]) }
 func (a Address) Bytes() []byte { return a[:] }
 func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 func (a Address) Hash() Hash    { return BytesToHash(a[:]) }
 
-// Hex returns an EIP55-compliant hex string representation of the address.
-func (a Address) Hex() string {
+// Hex returns an EIP55-compliant hex string representation of the address without the 0x
+func (a Address) HexNox() string {
 	unchecksummed := hex.EncodeToString(a[:])
 	sha := sha3.NewKeccak256()
 	sha.Write([]byte(unchecksummed))
@@ -184,11 +184,17 @@ func (a Address) Hex() string {
 		} else {
 			hashByte &= 0xf
 		}
-		if result[i] > '9' && hashByte > 7 {
+//		if result[i] > '9' && hashByte > 7 {
+		if result[i] > '9' && hashByte <= 7 {
 			result[i] -= 32
 		}
 	}
-	return "0x" + string(result)
+	return string(result)
+}
+
+// Hex returns an EIP55-compliant hex string representation of the address.
+func (a Address) Hex() string {
+	return "0x" + a.HexNox()
 }
 
 // String implements the stringer interface and is used also by the logger.

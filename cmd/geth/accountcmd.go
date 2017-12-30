@@ -298,7 +298,7 @@ func accountCreate(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Failed to create account: %v", err)
 	}
-	fmt.Printf("Address: {%x}\n", account.Address)
+	fmt.Printf("Address: {%s}\n", account.Address.HexNox())
 	return nil
 }
 
@@ -339,7 +339,7 @@ func importWallet(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("%v", err)
 	}
-	fmt.Printf("Address: {%x}\n", acct.Address)
+	fmt.Printf("Address: {%s}\n", acct.Address.HexNox())
 	return nil
 }
 
@@ -360,6 +360,6 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
-	fmt.Printf("Address: {%x}\n", acct.Address)
+	fmt.Printf("Address: {%s}\n", acct.Address.HexNox())
 	return nil
 }

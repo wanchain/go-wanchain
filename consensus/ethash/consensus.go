@@ -115,11 +115,14 @@ func ecrecover(header *types.Header) (common.Address, error) {
 
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	//log.Trace("ecrecover(): cr@zy seal hash", "Input hash", sigHash(header).String())
+
 	if err != nil {
 		return common.Address{}, err
 	}
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	log.Trace("ecrecover()", "recovered signer", signer)
 
 	return signer, nil
 }
