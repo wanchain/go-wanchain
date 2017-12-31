@@ -405,7 +405,8 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	return
 }
 
-func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int, txValue *big.Int) error {
+func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int,
+	intrGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
 	if intrGas == nil || intrGas.BitLen() > 64 {
 		return vm.ErrOutOfGas
 	}
@@ -421,6 +422,10 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return err
+	}
+
+	if info.StampTotalGas > gasLimit.Uint64() {
+		return ErrGasLimit
 	}
 
 	kix := crypto.FromECDSAPub(info.KeyImage)

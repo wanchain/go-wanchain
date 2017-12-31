@@ -14,6 +14,14 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 )
 
+var (
+	ErrUnknown          = errors.New("unknown error")
+	ErrInvalidOTAAddr   = errors.New("invalid OTA addrss")
+	ErrInvalidOTAAX     = errors.New("invalid OTA AX")
+	ErrOTAExistAlready  = errors.New("OTA exist already")
+	ErrOTABalanceIsZero = errors.New("OTA balance is 0")
+)
+
 // OTABalance2ContractAddr convert ota balance to ota storage address
 //
 // 1 wancoin --> (bigint)1000000000000000000 --> "0x0000000000000000000001000000000000000000"
@@ -30,7 +38,7 @@ func OTABalance2ContractAddr(balance *big.Int) common.Address {
 // GetAXFromWanAddr retrieve ota AX from ota WanAddr
 func GetAXFromWanAddr(otaWanAddr []byte) ([]byte, error) {
 	if len(otaWanAddr) != common.WAddressLength {
-		return nil, errors.New("invalid input param!")
+		return nil, ErrInvalidOTAAddr
 	}
 
 	return otaWanAddr[1 : 1+common.HashLength], nil
@@ -48,8 +56,12 @@ func IsAXPointToWanAddr(AX []byte, otaWanAddr []byte) bool {
 
 // GetOtaBalanceFromAX retrieve ota balance from ota AX
 func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
-	if statedb == nil || len(otaAX) != common.HashLength {
-		return nil, errors.New("invalid input param!")
+	if statedb == nil {
+		return nil, ErrUnknown
+	}
+
+	if len(otaAX) != common.HashLength {
+		return nil, ErrInvalidOTAAX
 	}
 
 	balance := statedb.GetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX))
@@ -62,8 +74,12 @@ func GetOtaBalanceFromAX(statedb StateDB, otaAX []byte) (*big.Int, error) {
 
 // SetOtaBalanceToAX set ota balance as 'balance'. Overwrite if ota balance exist already.
 func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
-	if statedb == nil || len(otaAX) != common.HashLength || balance == nil {
-		return errors.New("invalid input param!")
+	if statedb == nil || balance == nil {
+		return ErrUnknown
+	}
+
+	if len(otaAX) != common.HashLength {
+		return ErrInvalidOTAAX
 	}
 
 	statedb.SetStateByteArray(otaBalanceStorageAddr, common.BytesToHash(otaAX), balance.Bytes())
@@ -75,8 +91,12 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 // In order to avoid additional ota have conflict with existing,
 // even if AX exist in balance storage already, will return true.
 func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int, err error) {
-	if statedb == nil || len(otaAX) < common.HashLength {
-		return false, nil, errors.New("invalid input param!")
+	if statedb == nil {
+		return false, nil, ErrUnknown
+	}
+
+	if len(otaAX) != common.HashLength {
+		return false, nil, ErrInvalidOTAAX
 	}
 
 	balance, err = GetOtaBalanceFromAX(statedb, otaAX[:common.HashLength])
@@ -97,12 +117,12 @@ func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int,
 //
 func BatCheckOTAExist(statedb StateDB, otaAXs [][]byte) (exist bool, balance *big.Int, unexistOta []byte, err error) {
 	if statedb == nil || len(otaAXs) == 0 {
-		return false, nil, nil, errors.New("invalid input param!")
+		return false, nil, nil, ErrUnknown
 	}
 
 	for _, otaAX := range otaAXs {
 		if len(otaAX) < common.HashLength {
-			return false, nil, otaAX, errors.New("invalid input ota AX!")
+			return false, nil, otaAX, ErrInvalidOTAAX
 		}
 
 		balanceTmp, err := GetOtaBalanceFromAX(statedb, otaAX[:common.HashLength])
@@ -132,8 +152,11 @@ func BatCheckOTAExist(statedb StateDB, otaAXs [][]byte) (exist bool, balance *bi
 
 // setOTA storage ota info, include balance and WanAddr. Overwrite if ota exist already.
 func setOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
-	if statedb == nil || balance == nil || len(otaWanAddr) != common.WAddressLength {
-		return errors.New("invalid input param!")
+	if statedb == nil || balance == nil {
+		return ErrUnknown
+	}
+	if len(otaWanAddr) != common.WAddressLength {
+		return ErrInvalidOTAAddr
 	}
 
 	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
@@ -153,8 +176,11 @@ func setOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
 
 // AddOTAIfNotExist storage ota info if doesn't exist already.
 func AddOTAIfNotExist(statedb StateDB, balance *big.Int, otaWanAddr []byte) (bool, error) {
-	if statedb == nil || balance == nil || len(otaWanAddr) != common.WAddressLength {
-		return false, errors.New("invalid input param!")
+	if statedb == nil || balance == nil {
+		return false, ErrUnknown
+	}
+	if len(otaWanAddr) != common.WAddressLength {
+		return false, ErrInvalidOTAAddr
 	}
 
 	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
@@ -165,7 +191,7 @@ func AddOTAIfNotExist(statedb StateDB, balance *big.Int, otaWanAddr []byte) (boo
 	}
 
 	if exist {
-		return false, errors.New("ota exist already!")
+		return false, ErrOTAExistAlready
 	}
 
 	err = setOTA(statedb, balance, otaWanAddr)
@@ -178,8 +204,11 @@ func AddOTAIfNotExist(statedb StateDB, balance *big.Int, otaWanAddr []byte) (boo
 
 // GetOTAInfoFromAX retrieve ota info, include balance and WanAddr
 func GetOTAInfoFromAX(statedb StateDB, otaAX []byte) (otaWanAddr []byte, balance *big.Int, err error) {
-	if statedb == nil || len(otaAX) < common.HashLength {
-		return nil, nil, errors.New("invalid input param!")
+	if statedb == nil {
+		return nil, nil, ErrUnknown
+	}
+	if len(otaAX) < common.HashLength {
+		return nil, nil, ErrInvalidOTAAX
 	}
 
 	otaAddrKey := common.BytesToHash(otaAX)
@@ -189,7 +218,7 @@ func GetOTAInfoFromAX(statedb StateDB, otaAX []byte) (otaWanAddr []byte, balance
 	}
 
 	if balance == nil || balance.Cmp(common.Big0) == 0 {
-		return nil, nil, errors.New("ota balance is 0!")
+		return nil, nil, ErrOTABalanceIsZero
 	}
 
 	mptAddr := OTABalance2ContractAddr(balance)
@@ -276,8 +305,11 @@ func doOTAStorageTravelCallBack(env *GetOTASetEnv, value []byte) (bool, error) {
 //		   Loop checking exist ota and loop traveling ota mpt, untile collect enough ota or find error.
 //
 func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte, balance *big.Int, err error) {
-	if statedb == nil || len(otaAX) != common.HashLength {
-		return nil, nil, errors.New("invalid input param!")
+	if statedb == nil {
+		return nil, nil, ErrUnknown
+	}
+	if len(otaAX) != common.HashLength {
+		return nil, nil, ErrInvalidOTAAX
 	}
 
 	balance, err = GetOtaBalanceFromAX(statedb, otaAX)

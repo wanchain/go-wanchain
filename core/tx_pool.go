@@ -588,7 +588,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 
 	} else {
-		if err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas,tx.Value()); err != nil {
+		err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas, tx.Value(), pool.currentMaxGas)
+		if err != nil {
 			return err
 		}
 	}
@@ -920,6 +921,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			}
 		}
 
+		// Remove all invalid privacy transactions
+		invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		for _, tx := range invalidPrivacy {
+			hash := tx.Hash()
+			log.Trace("Removed invalid privacy transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			queuedNofundsCounter.Inc(1)
+		}
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
@@ -1087,7 +1098,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		}
 
 		// Remove all invalid privacy transactions
-		invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer)
+		invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer, pool.currentMaxGas)
 		for _, tx := range invalidPrivacy {
 			hash := tx.Hash()
 			log.Trace("Removed invalid privacy transaction", "hash", hash)
