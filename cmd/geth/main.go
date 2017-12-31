@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/cmd/utils"
@@ -35,8 +36,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
-	"github.com/wanchain/go-wanchain/hsm/nodesync"
-
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -177,7 +176,6 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, whisperFlags...)
-	app.Flags = append(app.Flags, nodesync.HsmFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -199,7 +197,6 @@ func init() {
 }
 
 func main() {
-
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -210,18 +207,6 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
-
-	nc,err := nodesync.ParseNodeContext(ctx)
-
-	if err == nil && nc != nil {//err is nil and nc is not means use hsm
-		err = nodesync.Nodesync(ctx)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()

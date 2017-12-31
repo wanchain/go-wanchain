@@ -37,7 +37,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	//set "gopkg.in/fatih/set.v0"
-	"github.com/wanchain/go-wanchain/hsm/nodesync"
 )
 
 const (
@@ -136,22 +135,8 @@ func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if nodesync.NodeSignKey == nil {
-
-		self.signFn = signFn
-		self.signer = signer
-
-	} else {//use hsm key
-
-
-		self.signFn = nodesync.SignHash
-
-		var signer common.Address
-		pubkey := crypto.FromECDSAPub(&nodesync.NodeSignKey.PublicKey)
-		copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
-		self.signer = signer
-
-	}
+	self.signFn = signFn
+	self.signer = signer
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
