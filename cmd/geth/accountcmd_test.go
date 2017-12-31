@@ -75,7 +75,7 @@ Your new account is locked with a password. Please give a password. Do not forge
 Passphrase: {{.InputLine "foobar"}}
 Repeat passphrase: {{.InputLine "foobar"}}
 `)
-	geth.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
+	geth.ExpectRegexp(`Address: \{[0-9a-fA-F]{40}\}\n`)
 }
 
 func TestAccountNewBadRepeat(t *testing.T) {
@@ -146,7 +146,7 @@ Passphrase: {{.InputLine "foobar"}}
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0xf466859eAD1932D743d622CB74FC058882E8648A",
+		"=0xF466859Ead1932d743D622cb74fc058882e8648a",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(geth.StderrText(), m) {
@@ -191,8 +191,8 @@ Passphrase: {{.InputLine "foobar"}}
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
-		"=0x289d485D9771714CCe91D3393D764E1311907ACc",
+		"=0x7ef5a6135F1fd6A02593EeDc869C6d41d934AEF8",
+		"=0x289D485d9771714ccE91d3393d764e1311907acC",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(geth.StderrText(), m) {
@@ -211,8 +211,8 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
-		"=0x289d485D9771714CCe91D3393D764E1311907ACc",
+		"=0x7ef5a6135F1fd6A02593EeDc869C6d41d934AEF8",
+		"=0x289D485d9771714ccE91d3393d764e1311907acC",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(geth.StderrText(), m) {
@@ -261,7 +261,7 @@ In order to avoid this warning, you need to remove the following duplicate key f
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0xf466859eAD1932D743d622CB74FC058882E8648A",
+		"=0xF466859Ead1932d743D622cb74fc058882e8648a",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(geth.StderrText(), m) {

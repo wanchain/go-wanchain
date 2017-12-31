@@ -184,7 +184,7 @@ func (a Address) Hex() string {
 		} else {
 			hashByte &= 0xf
 		}
-		if result[i] > '9' && hashByte > 7 {
+		if result[i] > '9' && hashByte <= 7 {
 			result[i] -= 32
 		}
 	}
