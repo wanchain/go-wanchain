@@ -803,36 +803,36 @@ func (ta *testAPI) appendFileContentsToEnd(t *testing.T) {
 	checkFile(t, testMountDir, "1.txt", line1and2)
 }
 
-//func TestFUSE(t *testing.T) {
-//	datadir, err := ioutil.TempDir("", "fuse")
-//	if err != nil {
-//		t.Fatalf("unable to create temp dir: %v", err)
-//	}
-//	os.RemoveAll(datadir)
-//
-//	dpa, err := storage.NewLocalDPA(datadir)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	ta := &testAPI{api: api.NewApi(dpa, nil)}
-//	dpa.Start()
-//	defer dpa.Stop()
-//
-//	t.Run("mountListAndUmount", ta.mountListAndUnmount)
-//	t.Run("maxMounts", ta.maxMounts)
-//	t.Run("remount", ta.remount)
-//	t.Run("unmount", ta.unmount)
-//	t.Run("unmountWhenResourceBusy", ta.unmountWhenResourceBusy)
-//	t.Run("seekInMultiChunkFile", ta.seekInMultiChunkFile)
-//	t.Run("createNewFile", ta.createNewFile)
-//	t.Run("createNewFileInsideDirectory", ta.createNewFileInsideDirectory)
-//	t.Run("createNewFileInsideNewDirectory", ta.createNewFileInsideNewDirectory)
-//	t.Run("removeExistingFile", ta.removeExistingFile)
-//	t.Run("removeExistingFileInsideDir", ta.removeExistingFileInsideDir)
-//	t.Run("removeNewlyAddedFile", ta.removeNewlyAddedFile)
-//	t.Run("addNewFileAndModifyContents", ta.addNewFileAndModifyContents)
-//	t.Run("removeEmptyDir", ta.removeEmptyDir)
-//	t.Run("removeDirWhichHasFiles", ta.removeDirWhichHasFiles)
-//	t.Run("removeDirWhichHasSubDirs", ta.removeDirWhichHasSubDirs)
-//	t.Run("appendFileContentsToEnd", ta.appendFileContentsToEnd)
-//}
+func TestFUSE(t *testing.T) {
+	datadir, err := ioutil.TempDir("", "fuse")
+	if err != nil {
+		t.Fatalf("unable to create temp dir: %v", err)
+	}
+	os.RemoveAll(datadir)
+
+	dpa, err := storage.NewLocalDPA(datadir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//ta := &testAPI{api: api.NewApi(dpa, nil)}
+	dpa.Start()
+	defer dpa.Stop()
+
+	//t.Run("mountListAndUmount", ta.mountListAndUnmount)
+	//t.Run("maxMounts", ta.maxMounts)
+	//t.Run("remount", ta.remount)
+	//t.Run("unmount", ta.unmount)
+	//t.Run("unmountWhenResourceBusy", ta.unmountWhenResourceBusy)
+	//t.Run("seekInMultiChunkFile", ta.seekInMultiChunkFile)
+	//t.Run("createNewFile", ta.createNewFile)
+	//t.Run("createNewFileInsideDirectory", ta.createNewFileInsideDirectory)
+	//t.Run("createNewFileInsideNewDirectory", ta.createNewFileInsideNewDirectory)
+	//t.Run("removeExistingFile", ta.removeExistingFile)
+	//t.Run("removeExistingFileInsideDir", ta.removeExistingFileInsideDir)
+	//t.Run("removeNewlyAddedFile", ta.removeNewlyAddedFile)
+	//t.Run("addNewFileAndModifyContents", ta.addNewFileAndModifyContents)
+	//t.Run("removeEmptyDir", ta.removeEmptyDir)
+	//t.Run("removeDirWhichHasFiles", ta.removeDirWhichHasFiles)
+	//t.Run("removeDirWhichHasSubDirs", ta.removeDirWhichHasSubDirs)
+	//t.Run("appendFileContentsToEnd", ta.appendFileContentsToEnd)
+}
