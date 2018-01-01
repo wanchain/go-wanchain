@@ -30,7 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/nat"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/params"
+
 )
 
 const Version = 4
@@ -231,11 +231,11 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 
 func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
 
-	realaddr := c.LocalAddr().(*net.UDPAddr)
-
-	if realaddr.Port != params.WanUdpPort {
-		return nil, nil, errors.New("port is not wan port")
-	}
+	//realaddr := c.LocalAddr().(*net.UDPAddr)
+	//
+	//if realaddr.Port != params.WanUdpPort {
+	//	return nil, nil, errors.New("port is not wan port")
+	//}
 
 	udp := &udp{
 		conn:        c,
@@ -245,7 +245,9 @@ func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath strin
 		gotreply:    make(chan reply),
 		addpending:  make(chan *pending),
 	}
-	//realaddr := c.LocalAddr().(*net.UDPAddr)
+
+	realaddr := c.LocalAddr().(*net.UDPAddr)
+
 	if natm != nil {
 		if !realaddr.IP.IsLoopback() {
 			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
@@ -473,9 +475,9 @@ func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 		return err
 	}
 
-	if toaddr.Port != params.WanUdpPort {
-		return errors.New("not specified port")
-	}
+	//if toaddr.Port != params.WanUdpPort {
+	//	return errors.New("not specified port")
+	//}
 	_, err = t.conn.WriteToUDP(packet, toaddr)
 	log.Trace(">> "+req.name(), "addr", toaddr, "err", err)
 	return err
@@ -533,9 +535,9 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 		return err
 	}
 
-	if from.Port != params.WanUdpPort {
-		return errors.New("the port is not specified")
-	}
+	//if from.Port != params.WanUdpPort {
+	//	return errors.New("the port is not specified")
+	//}
 
 	err = packet.handle(t, from, fromID, hash)
 	log.Trace("<< "+packet.name(), "addr", from, "err", err)

@@ -33,8 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/discv5"
 	"github.com/wanchain/go-wanchain/p2p/nat"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
-	"strings"
-	"github.com/wanchain/go-wanchain/params"
 )
 
 const (
@@ -559,10 +557,9 @@ running:
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, c)
 
-
-
-			if err == nil && strings.Contains(truncateName(c.name),params.VersionMeta) {
-				// The handshakes are done and it passed all checks.
+			//if err == nil && strings.Contains(truncateName(c.name),params.VersionMeta) {
+			if err == nil {
+			// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
 				// If message events are enabled, pass the peerFeed
 				// to the peer
