@@ -289,6 +289,7 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	return <-errc
 }
 
+
 func (t *udp) waitping(from NodeID) error {
 	return <-t.pending(from, pingPacket, func(interface{}) bool { return true })
 }

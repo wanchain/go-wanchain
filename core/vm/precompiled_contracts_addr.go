@@ -38,9 +38,10 @@ var (
 	otaBalancePercentdot06WStorageAddr = common.HexToAddress(WanStampdot06)
 	otaBalancePercentdot09WStorageAddr = common.HexToAddress(WanStampdot09)
 
-	otaBalancePercentdot3WStorageAddr = common.HexToAddress(WanStampdot3)
+	otaBalancePercentdot5WStorageAddr = common.HexToAddress(WanStampdot5)
 
 	otaBalancePercent1WStorageAddr = common.HexToAddress(WanStamp1wan)
+	otaBalancePercent1dot5WStorageAddr = common.HexToAddress(WanStamp1dot5wan)
 
 	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
 	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)

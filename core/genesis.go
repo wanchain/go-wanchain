@@ -220,6 +220,9 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.WanchainChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
+	case ghash == params.InternalGenesisHash:
+		return params.TestnetChainConfig
+
 	case ghash == params.PlutoGenesisHash:
 		return params.PlutoChainConfig
 	default:
@@ -354,7 +357,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	}
 }
 
-// DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
+// DefaultInternalGenesisBlock returns the Rinkeby network genesis block.
 func DefaultInternalGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.InternalChainConfig,
