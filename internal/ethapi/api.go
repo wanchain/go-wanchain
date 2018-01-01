@@ -57,6 +57,8 @@ var (
 	ErrInvalidPrivateKey                = errors.New("Invalid private key")
 	ErrInvalidOTAMixSet                 = errors.New("Invalid OTA mix set")
 	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
+	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
+	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -1237,12 +1239,16 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
-	if !hexutil.Has0xPrefix(otaAddr) {
-		return []string{}, ErrInvalidOTAAddr
+	if setLen <= 0 {
+		return []string{}, ErrInvalidOTAMixNum
 	}
 
-	if setLen <= 0 {
-		return []string{}, errors.New("invalid mix set len")
+	if uint64(setLen) > params.GetOTAMixSetMaxSize {
+		return []string{}, ErrReqTooManyOTAMix
+	}
+
+	if !hexutil.Has0xPrefix(otaAddr) {
+		return []string{}, ErrInvalidOTAAddr
 	}
 
 	orgOtaAddr := common.FromHex(otaAddr)
