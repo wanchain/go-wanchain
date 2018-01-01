@@ -43,6 +43,12 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
+	"os"
+	"strings"
+	"compress/gzip"
+	"syscall"
+	"path/filepath"
+	"io/ioutil"
 )
 
 var (
@@ -1135,6 +1141,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	}
 
+	// Backup old block chain in case of restore data after attack event
+	bc.BackupBlockChain("./backup_chain")
+
 	// Ensure the user sees large reorgs
 	if len(oldChain) > 0 && len(newChain) > 0 {
 		logFn := log.Debug
@@ -1389,4 +1398,102 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) event.Su
 // SubscribeLogsEvent registers a subscription of []*types.Log.
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
+}
+
+// Backup old block chain in case of restore data after attack event
+func (bc *BlockChain) BackupBlockChain(dir string) {
+	err := os.MkdirAll(dir, 0777)
+	if err != nil {
+		log.Error("Create backup dir failed!", "dir", dir, "err", err)
+		return
+	}
+
+	bc.delOldFiles(dir)
+	fileName := "block_chain_" + time.Now().Format("2006-01-02_15:04:05") + ".tar.gz"
+	log.Info("Backup block chain", "file", fileName)
+	_, err = bc.ExportChain(dir + "/" + fileName)
+	if err != nil {
+		log.Info("Export chain failed", "err", err)
+	}
+	return
+}
+
+// ExportChain exports the current block chain into a local file.
+func (bc *BlockChain) ExportChain(file string) (bool, error) {
+	// Make sure we can create the file to export into
+	out, err := os.OpenFile(file, os.O_CREATE | os.O_WRONLY | os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return false, err
+	}
+	defer out.Close()
+
+	var writer io.Writer = out
+	if strings.HasSuffix(file, ".gz") {
+		writer = gzip.NewWriter(writer)
+		defer writer.(*gzip.Writer).Close()
+	}
+
+	// Export the block chain
+	first := uint64(0)
+	last := bc.currentBlock.NumberU64()
+
+	log.Info("Exporting batch of blocks", "count", last - first + 1)
+	for nr := first; nr <= last; nr++ {
+		block := bc.GetBlockByNumber(nr)
+		if block == nil {
+			return false, fmt.Errorf("export failed on #%d: not found", nr)
+		}
+		if err := block.EncodeRLP(writer); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (bc *BlockChain) getFreeDiskSpace() (uint64, error) {
+	var stat syscall.Statfs_t
+	wd, err := os.Getwd()
+	if err != nil {
+		return 0, err
+	}
+	syscall.Statfs(wd, &stat)
+	return stat.Bavail * uint64(stat.Bsize), nil
+}
+
+// Delete files older than 1 week
+func (bc *BlockChain) delOldFiles(dir string) {
+	const aWeek = 24 * 7
+	files, _ := ioutil.ReadDir(dir)
+	for _, f := range files {
+		if !f.IsDir() && int(time.Now().Sub(f.ModTime()).Hours()) > aWeek {
+			os.Remove(dir + "/" + f.Name())
+		}
+	}
+	return
+}
+
+func (bc *BlockChain) delOldestFile(dir string) error {
+	var file string
+	t := time.Now()
+	err := filepath.Walk(dir,
+		func(path string, f os.FileInfo, err error) error {
+			if f == nil {
+				log.Info("Get file info nil:", "path", path)
+				return nil
+			}
+			if !f.IsDir() && filepath.Ext(f.Name()) == ".gz" && f.ModTime().Before(t) {
+				t = f.ModTime()
+				file = path
+			}
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+	if file == "" {
+		return fmt.Errorf("no backup file found in %s", dir)
+	}
+	log.Debug("Remove the oldest backup file", "file", file)
+	os.Remove(file)
+	return nil
 }
