@@ -1738,6 +1738,22 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 }
 
 func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+
+	//deal with panic error because
+	var retHash common.Hash
+	var reError error
+
+	//if abi unpack error,the system will give panic,not give error, so use this function to catch the panic
+	defer func() (common.Hash, error){
+		if err := recover(); err != nil {
+			log.Error("privacy tx abi unpack failed", "err", err)
+			return common.Hash{}, errors.New("abi unpack failed")
+		}
+
+		return retHash,reError
+
+	}()
+
 	if !hexutil.Has0xPrefix(sPrivateKey) {
 		return common.Hash{}, ErrInvalidPrivateKey
 	}
@@ -1754,6 +1770,15 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 	if config := s.b.ChainConfig(); config != nil {
 		chainID = config.ChainId
+	}
+
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
+	if err != nil {
+		return  common.Hash{}, errors.New("error in abi data")
 	}
 
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
@@ -1774,5 +1799,8 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		return common.Hash{}, err
 	}
 
-	return submitTransaction(ctx, s.b, signed)
+
+	retHash,reError = submitTransaction(ctx, s.b, signed)
+
+	return retHash,reError
 }

@@ -122,10 +122,16 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 }
 
 func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
-	if len(pub) == 0 {
+	//check input error
+	if len(pub) != 65{
 		return nil
 	}
+
 	x, y := elliptic.Unmarshal(S256(), pub)
+	if x == nil || y == nil {
+		return nil
+	}
+
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
 }
 

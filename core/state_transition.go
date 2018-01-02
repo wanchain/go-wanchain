@@ -339,6 +339,8 @@ var (
 	utilAbiDefinition = `[{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}],"name":"combine","outputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}]}]`
 
 	utilAbi, errAbiInit = abi.JSON(strings.NewReader(utilAbiDefinition))
+
+	TokenAbi = utilAbi
 )
 
 func init() {
@@ -363,6 +365,10 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	var TxDataWithRing struct {
 		RingSignedData string
 		CxtCallParams  []byte
+	}
+
+	if len(in) < 4 {
+		return
 	}
 
 	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])

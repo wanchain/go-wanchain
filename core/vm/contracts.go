@@ -809,6 +809,15 @@ func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte)
 		return nil, nil, errors.New("unknown error")
 	}
 
+	//if abi unpack error,the system will give panic,not give error, so use this function to catch the panic
+	defer func() (image []byte, value *big.Int, err error){
+		if err := recover(); err != nil {
+			log.Error("abi unpack failed", "err", err)
+			return nil,nil, errors.New("refund abi unpack failed")
+		}
+		return
+	}()
+
 	var RefundStruct struct {
 		RingSignedData string
 		Value          *big.Int
@@ -873,6 +882,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	pa := strings.Split(ps, "&")
 	publickeys := make([]*ecdsa.PublicKey, 0)
 	for _, pi := range pa {
+
 		publickey := crypto.ToECDSAPub(common.FromHex(pi))
 		if publickey == nil || publickey.X == nil || publickey.Y == nil {
 			return errInvalidRingSigned, nil, nil, nil, nil
