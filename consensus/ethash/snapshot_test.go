@@ -250,7 +250,7 @@ func TestPPOWApplyingNotContinueNumberHeaders(t *testing.T) {
 func internalApply(snap *Snapshot, snapNumber uint64, headers []*types.Header, state *internalState) (uint64, *internalState) {
 	backupState := state.copy()
 	if len(headers) == 0 {
-		return snapNumber,backupState
+		return snapNumber, backupState
 	}
 
 	for i := 0; i < len(headers)-1; i++ {
@@ -325,17 +325,17 @@ type internalState struct {
 	testWindow      []common.Address
 }
 
-func (self *internalState)copy()(*internalState){
+func (self *internalState) copy() *internalState {
 	cpy := &internalState{
 		testUsedSigners: make(map[common.Address]struct{}),
 		testWindow:      make([]common.Address, 0),
 	}
 
-	for k := range self.testUsedSigners{
+	for k := range self.testUsedSigners {
 		cpy.testUsedSigners[k] = struct{}{}
 	}
 
-	for _, e := range self.testWindow{
+	for _, e := range self.testWindow {
 		cpy.testWindow = append(cpy.testWindow, e)
 	}
 	return cpy
@@ -343,25 +343,25 @@ func (self *internalState)copy()(*internalState){
 
 // generate x times random headers to apply
 func TestPPOWApplyingRandom(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		headersLen int
 		loopTimes  int
 	}{
 		{
 			headersLen: 1,
-			loopTimes: 100,
+			loopTimes:  100,
 		},
 		{
 			headersLen: 2,
-			loopTimes: 80,
+			loopTimes:  80,
 		},
 		{
-			headersLen:3,
-			loopTimes: 60,
+			headersLen: 3,
+			loopTimes:  60,
 		},
 		{
 			headersLen: 5,
-			loopTimes: 50,
+			loopTimes:  50,
 		},
 	}
 	for _, loopInfo := range tests {
@@ -382,7 +382,7 @@ func TestPPOWApplyingRandom(t *testing.T) {
 			number := s.Number + 1
 			indexes := make([]int, 0)
 			numbers := make([]int, 0)
-			for ri := 0; ri < loopInfo.headersLen; ri++{
+			for ri := 0; ri < loopInfo.headersLen; ri++ {
 				selectNumber := rand.Intn(usingSigners)
 				indexes = append(indexes, selectNumber)
 				numbers = append(numbers, int(number))
@@ -441,7 +441,7 @@ func TestIsSignerLegal(t *testing.T) {
 		blockNumber++
 	}
 	headers := prepareHeaders(signerIndexes, blockNumbers)
-	s, _= s.apply(headers)
+	s, _ = s.apply(headers)
 
 	if nil == s.isLegal4Sign(unAuthorizedSigner) {
 		t.Error("invalid process unauthorized signer")
@@ -451,7 +451,7 @@ func TestIsSignerLegal(t *testing.T) {
 		t.Error("invalid process in window signer")
 	}
 
-	if nil != s.isLegal4Sign(addrArray[usingSigners]){
+	if nil != s.isLegal4Sign(addrArray[usingSigners]) {
 		t.Error("invalid process valid signer")
 	}
 }

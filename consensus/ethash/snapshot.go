@@ -179,7 +179,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 	for _, header := range headers {
 		signer, err := ecrecover(header)
-		if err != nil || 0 != strings.Compare(signer.String(), header.Coinbase.String()){
+		if err != nil || 0 != strings.Compare(signer.String(), header.Coinbase.String()) {
 			return nil, err
 		}
 
