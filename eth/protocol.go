@@ -30,12 +30,12 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	eth62 = 62
-	eth63 = 63
+	eth62 = 63
+	eth63 = 64
 )
 
 // Official short name of the protocol used during capability negotiation.
-var ProtocolName = "eth"
+var ProtocolName = "wan"
 
 // Supported versions of the eth protocol (first is primary).
 var ProtocolVersions = []uint{eth63, eth62}

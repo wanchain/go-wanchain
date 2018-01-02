@@ -43,11 +43,15 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"bytes"
 )
 
 const (
 	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+)
+
+var (
+	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 50 * params.Shannon),params.WanGasTimesFactor)
 )
 
 var (
@@ -691,8 +695,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if gas.Sign() == 0 {
 		gas = big.NewInt(50000000)
 	}
+
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+		gasPrice = defaultGasPrice
 	}
 
 	// Create new call message
@@ -1755,6 +1760,13 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 	if err != nil {
 		return common.Hash{}, err
 	}
+
+	//for fixing bug send privacy tx with a different private key
+	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	if !bytes.Equal(fromAddr[:],args.From[:]) {
+		return  common.Hash{},errors.New("from address mismatch private key")
+	}
+
 
 	var signed *types.Transaction
 	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
