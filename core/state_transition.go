@@ -370,10 +370,6 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 		CxtCallParams  []byte
 	}
 
-	if len(in) < 4 {
-		return
-	}
-
 	err = utilAbi.Unpack(&TxDataWithRing, "combine", in[4:])
 	if err != nil {
 		return
