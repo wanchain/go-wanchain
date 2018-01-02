@@ -258,7 +258,7 @@ var (
 	errInvalidCurvePoint = errors.New("invalid elliptic curve point")
 
 	// invalid ring signed info
-	errInvalidRingSigned = errors.New("invalid ring signed info")
+	ErrInvalidRingSigned = errors.New("invalid ring signed info")
 )
 
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
@@ -448,15 +448,15 @@ const (
 	WanStampdot006 = "6000000000000000" //0.006
 	WanStampdot009 = "9000000000000000" //0.009
 
-	WanStampdot03  = "30000000000000000" //0.03
-	WanStampdot06  = "60000000000000000" //0.06
-	WanStampdot09  = "90000000000000000" //0.09
+	WanStampdot03 = "30000000000000000" //0.03
+	WanStampdot06 = "60000000000000000" //0.06
+	WanStampdot09 = "90000000000000000" //0.09
 
-	WanStampdot5   = "500000000000000000" //0.5
+	WanStampdot5 = "500000000000000000" //0.5
 
-	WanStamp1wan   = "1000000000000000000" //1
+	WanStamp1wan = "1000000000000000000" //1
 
-	WanStamp1dot5wan   = "1500000000000000000" //1
+	WanStamp1dot5wan = "1500000000000000000" //1.5
 
 )
 
@@ -871,7 +871,7 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	if len(ss) < 4 {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	ps := ss[0]
@@ -885,7 +885,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 
 		publickey := crypto.ToECDSAPub(common.FromHex(pi))
 		if publickey == nil || publickey.X == nil || publickey.Y == nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		publickeys = append(publickeys, publickey)
@@ -893,7 +893,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 
 	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
 	if keyimgae == nil || keyimgae.X == nil || keyimgae.Y == nil {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	wa := strings.Split(ws, "&")
@@ -901,7 +901,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	for _, wi := range wa {
 		bi, err := hexutil.DecodeBig(wi)
 		if bi == nil || err != nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		w = append(w, bi)
@@ -912,14 +912,14 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	for _, qi := range qa {
 		bi, err := hexutil.DecodeBig(qi)
 		if bi == nil || err != nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		q = append(q, bi)
 	}
 
 	if len(publickeys) != len(w) || len(publickeys) != len(q) {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	return nil, publickeys, keyimgae, w, q
@@ -965,7 +965,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 
 	valid := crypto.VerifyRingSign(hashInput, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random)
 	if !valid {
-		return nil, errInvalidRingSigned
+		return nil, ErrInvalidRingSigned
 	}
 
 	return infoTmp, nil

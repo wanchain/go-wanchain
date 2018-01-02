@@ -361,6 +361,9 @@ type PrivacyTxInfo struct {
 }
 
 func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivacyTxInfo, err error) {
+	if len(in) < 4 {
+		return nil, vm.ErrInvalidRingSigned
+	}
 
 	var TxDataWithRing struct {
 		RingSignedData string
