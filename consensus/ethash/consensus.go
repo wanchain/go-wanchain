@@ -121,6 +121,9 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
+	// The signer's address should match the coinbase address in Wanchain Release 1, shall we add a warning if it's not?
+	log.Trace("ecrecover()", "recovered signer", signer)
+
 	return signer, nil
 }
 
