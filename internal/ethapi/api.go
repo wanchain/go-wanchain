@@ -1743,17 +1743,6 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 	var retHash common.Hash
 	var reError error
 
-	//if abi unpack error,the system will give panic,not give error, so use this function to catch the panic
-	defer func() (common.Hash, error){
-		if err := recover(); err != nil {
-			log.Error("privacy tx abi unpack failed", "err", err)
-			return common.Hash{}, errors.New("abi unpack failed")
-		}
-
-		return retHash,reError
-
-	}()
-
 	if !hexutil.Has0xPrefix(sPrivateKey) {
 		return common.Hash{}, ErrInvalidPrivateKey
 	}
