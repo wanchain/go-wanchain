@@ -2268,11 +2268,11 @@ var isAddress = function (address) {
 var isChecksumAddress = function (address) {
     // Check each case
     address = address.replace('0x','');
-    var addressHash = sha3(address.toLowerCase());
+    var addressHash = sha3(address.toUpperCase());
 
     for (var i = 0; i < 40; i++ ) {
         // the nth letter should be uppercase if the nth digit of casemap is 1
-        if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
+        if ((parseInt(addressHash[i], 16) > 7 && address[i].toLowerCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toUpperCase() !== address[i])) {
             return false;
         }
     }
@@ -2291,14 +2291,14 @@ var isChecksumAddress = function (address) {
 var toChecksumAddress = function (address) {
     if (typeof address === 'undefined') return '';
 
-    address = address.toLowerCase().replace('0x','');
+    address = address.toUpperCase().replace('0x','');
     var addressHash = sha3(address);
     var checksumAddress = '0x';
 
     for (var i = 0; i < address.length; i++ ) {
         // If ith character is 9 to f then make it uppercase
         if (parseInt(addressHash[i], 16) > 7) {
-          checksumAddress += address[i].toUpperCase();
+          checksumAddress += address[i].toLowerCase();
         } else {
             checksumAddress += address[i];
         }
