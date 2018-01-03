@@ -37,6 +37,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	//set "gopkg.in/fatih/set.v0"
+	"os"
 )
 
 const (
@@ -790,4 +791,31 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	//	reward.Add(reward, r)
 	//}
 	//state.AddBalance(header.Coinbase, reward)
+}
+
+// Backup used signers and signers window into a text file
+func (ethash *Ethash) BackupSigners(file string, chain consensus.ChainReader, block *types.Block) error {
+	s, err := ethash.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+	if err != nil {
+		return err
+	}
+	outputFile, outputError := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0666)
+	if outputError != nil {
+		log.Error("Open file failed", "file", file, "err", outputError)
+		return err
+	}
+	defer outputFile.Close()
+
+	outputFile.WriteString("Block height: ")
+	outputFile.WriteString(block.Number().String() + "\n")
+	outputFile.WriteString("\nUsed signers:\n")
+	for i:= range s.UsedSigners {
+		outputFile.WriteString(i.String() + "\n")
+	}
+	outputFile.WriteString("\nSigner window:\n")
+	for e := s.RecentSignersWindow.Front(); e != nil; e = e.Next() {
+		addr := e.Value.(common.Address)
+		outputFile.WriteString(addr.String() + "\n")
+	}
+	return nil
 }

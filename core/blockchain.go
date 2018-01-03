@@ -1409,11 +1409,21 @@ func (bc *BlockChain) BackupBlockChain(dir string) {
 	}
 
 	bc.delOldFiles(dir)
-	fileName := "block_chain_" + time.Now().Format("2006-01-02_15:04:05") + ".tar.gz"
-	log.Info("Backup block chain", "file", fileName)
-	_, err = bc.ExportChain(dir + "/" + fileName)
+
+	fileName := "block_chain_" + time.Now().Format("2006-01-02_15:04:05")
+	tarFile := fileName + ".tar.gz"
+	txtFile := fileName + ".txt"
+	log.Info("Backup block chain", "file", tarFile)
+	_, err = bc.ExportChain(dir + "/" + tarFile)
 	if err != nil {
-		log.Info("Export chain failed", "err", err)
+		log.Error("Export chain failed", "err", err)
+	}
+
+	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
+		err := ethash.BackupSigners(dir + "/" + txtFile, bc, bc.currentBlock)
+		if err != nil {
+			log.Error("backup failed", "err", err)
+		}
 	}
 	return
 }
