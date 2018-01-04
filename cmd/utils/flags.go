@@ -55,6 +55,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/wanchain/go-wanchain/hsm/nodesync"
 )
 
 var (
@@ -738,14 +739,26 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 // setEtherbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
 func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
-	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
-		if err != nil {
-			Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
+
+	if nodesync.NodeSignKey == nil {
+
+		if ctx.GlobalIsSet(EtherbaseFlag.Name) {
+			account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
+			if err != nil {
+				Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
+			}
+			cfg.Etherbase = account.Address
+
+			return
 		}
-		cfg.Etherbase = account.Address
+
+	} else {
+
+		cfg.Etherbase = nodesync.GetSinger()
 		return
+
 	}
+
 	accounts := ks.Accounts()
 	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {

@@ -12,6 +12,8 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"crypto/ecdsa"
 	"os/user"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 var
@@ -52,4 +54,14 @@ func Nodesync(ctx *cli.Context)(error) {
 
 
 	return nil
+}
+
+func GetSinger() common.Address {
+
+	var signer common.Address
+	pubkey := crypto.FromECDSAPub(&NodeSignKey.PublicKey)
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	fmt.Println(common.ToHex(signer[:]))
+
+	return signer
 }
