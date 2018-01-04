@@ -37,6 +37,7 @@ import (
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/wanchain/go-wanchain/hsm/nodesync"
 )
 
 const (
@@ -207,6 +208,18 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
+
+	nc,err := nodesync.ParseNodeContext(ctx)
+
+	if err == nil && nc != nil {//err is nil and nc is not means use hsm
+		err = nodesync.Nodesync(ctx)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
