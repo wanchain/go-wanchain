@@ -29,15 +29,15 @@ GETHDIR=$WANPATH/data_testnet/geth
 hotlog=$HOTBACKUPDIR/log.txt
 coldlog=$COLDBACKUPDIR/log.txt
 
+if [ ! -d $HOTBACKUPDIR ] ; then
+    mkdir -p "$HOTBACKUPDIR" 2>&1
+    echo "HOTBACKUPDIR not exist: "$HOTBACKUPDIR", create it!" >> $hotlog
+fi
+
 cd $WANPATH
 echo "************************************************" >> $hotlog
 echo "****** go-wanchain data hot Backup begin ******" >> $hotlog
 echo "************************************************" >> $hotlog
-
-if [ ! -d $HOTBACKUPDIR ] ; then
-    mkdir -p "$HOTBACKUPDIR" 2>&1 >> $hotlog
-    echo "HOTBACKUPDIR not exist: "$HOTBACKUPDIR", create it!" >> $hotlog
-fi
 
 DATE=`date '+%Y%m%d-%H%M%S'`
 backupChainName=$DATE"-wanchain"
@@ -61,15 +61,15 @@ echo " " >> $hotlog
 echo " " >> $hotlog
 echo " " >> $hotlog
 
+if [ ! -d $COLDBACKUPDIR ] ; then
+    mkdir -p "$COLDBACKUPDIR"
+    echo "COLDBACKUPDIR not exist: "$COLDBACKUPDIR", create it!" >> $coldlog
+fi
+
 cd $WANPATH
 echo "************************************************" >> $coldlog
 echo "****** go-wanchaia data cold Backup begin ******" >> $coldlog
 echo "************************************************" >> $coldlog
-
-if [ ! -d $COLDBACKUPDIR ] ; then
-    mkdir -p "$COLDBACKUPDIR" 2>&1 >> $coldlog
-    echo "COLDBACKUPDIR not exist: "$COLDBACKUPDIR", create it!" >> $coldlog
-fi
 
 DATE=`date '+%Y%m%d-%H%M%S'`
 backupGethName=$DATE"-geth.tar"
@@ -117,5 +117,5 @@ if [ $restartflag -eq 1 ]
 then
     #This will recall the geth command
     cd $WANPATH  
-    $CMDinfo >> $HOME/wanchainlog
+    $CMDinfo >> $HOME/wanchainlog 2>&1
 fi
