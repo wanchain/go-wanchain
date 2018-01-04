@@ -43,11 +43,15 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"bytes"
 )
 
 const (
 	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+)
+
+var (
+	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 18 * params.Shannon),params.WanGasTimesFactor)
 )
 
 var (
@@ -57,6 +61,8 @@ var (
 	ErrInvalidPrivateKey                = errors.New("Invalid private key")
 	ErrInvalidOTAMixSet                 = errors.New("Invalid OTA mix set")
 	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
+	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
+	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -689,8 +695,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if gas.Sign() == 0 {
 		gas = big.NewInt(50000000)
 	}
+
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+		gasPrice = defaultGasPrice
 	}
 
 	// Create new call message
@@ -1237,12 +1244,16 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 }
 
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
-	if !hexutil.Has0xPrefix(otaAddr) {
-		return []string{}, ErrInvalidOTAAddr
+	if setLen <= 0 {
+		return []string{}, ErrInvalidOTAMixNum
 	}
 
-	if setLen <= 0 {
-		return []string{}, errors.New("invalid mix set len")
+	if uint64(setLen) > params.GetOTAMixSetMaxSize {
+		return []string{}, ErrReqTooManyOTAMix
+	}
+
+	if !hexutil.Has0xPrefix(otaAddr) {
+		return []string{}, ErrInvalidOTAAddr
 	}
 
 	orgOtaAddr := common.FromHex(otaAddr)
@@ -1727,6 +1738,11 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 }
 
 func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+
+	//deal with panic error because
+	var retHash common.Hash
+	var reError error
+
 	if !hexutil.Has0xPrefix(sPrivateKey) {
 		return common.Hash{}, ErrInvalidPrivateKey
 	}
@@ -1745,10 +1761,26 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		chainID = config.ChainId
 	}
 
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
+	if err != nil {
+		return  common.Hash{}, errors.New("error in abi data")
+	}
+
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
 	if err != nil {
 		return common.Hash{}, err
 	}
+
+	//for fixing bug send privacy tx with a different private key
+	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	if !bytes.Equal(fromAddr[:],args.From[:]) {
+		return  common.Hash{},errors.New("from address mismatch private key")
+	}
+
 
 	var signed *types.Transaction
 	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
@@ -1756,5 +1788,8 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		return common.Hash{}, err
 	}
 
-	return submitTransaction(ctx, s.b, signed)
+
+	retHash,reError = submitTransaction(ctx, s.b, signed)
+
+	return retHash,reError
 }

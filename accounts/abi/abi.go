@@ -86,17 +86,27 @@ var (
 )
 
 // Unpack output in v according to the abi specification
-func (abi ABI) Unpack(v interface{}, name string, output []byte) error {
+func (abi ABI) Unpack(v interface{}, name string, output []byte) (errRet error) {
 	var method = abi.Methods[name]
+	errRet = nil
+
+	defer func(){
+		if r := recover(); r != nil {
+			errRet = fmt.Errorf("abi Unpack panic unexpected!")
+		}
+	}()
+
 
 	if len(output) == 0 {
-		return fmt.Errorf("abi: unmarshalling empty output")
+		errRet = fmt.Errorf("abi: unmarshalling empty output")
+		return
 	}
 
 	// make sure the passed value is a pointer
 	valueOf := reflect.ValueOf(v)
 	if reflect.Ptr != valueOf.Kind() {
-		return fmt.Errorf("abi: Unpack(non-pointer %T)", v)
+		errRet = fmt.Errorf("abi: Unpack(non-pointer %T)", v)
+		return
 	}
 
 	var (
@@ -112,7 +122,8 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) error {
 			for i := 0; i < len(method.Outputs); i++ {
 				marshalledValue, err := toGoType(i, method.Outputs[i], output)
 				if err != nil {
-					return err
+					errRet = err
+					return
 				}
 				reflectValue := reflect.ValueOf(marshalledValue)
 
@@ -121,33 +132,38 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) error {
 					// TODO read tags: `abi:"fieldName"`
 					if field.Name == strings.ToUpper(method.Outputs[i].Name[:1])+method.Outputs[i].Name[1:] {
 						if err := set(value.Field(j), reflectValue, method.Outputs[i]); err != nil {
-							return err
+							errRet = err
+							return
 						}
 					}
 				}
 			}
 		case reflect.Slice:
 			if !value.Type().AssignableTo(r_interSlice) {
-				return fmt.Errorf("abi: cannot marshal tuple in to slice %T (only []interface{} is supported)", v)
+				errRet = fmt.Errorf("abi: cannot marshal tuple in to slice %T (only []interface{} is supported)", v)
+				return
 			}
 
 			// if the slice already contains values, set those instead of the interface slice itself.
 			if value.Len() > 0 {
 				if len(method.Outputs) > value.Len() {
-					return fmt.Errorf("abi: cannot marshal in to slices of unequal size (require: %v, got: %v)", len(method.Outputs), value.Len())
+					errRet = fmt.Errorf("abi: cannot marshal in to slices of unequal size (require: %v, got: %v)", len(method.Outputs), value.Len())
+					return
 				}
 
 				for i := 0; i < len(method.Outputs); i++ {
 					marshalledValue, err := toGoType(i, method.Outputs[i], output)
 					if err != nil {
-						return err
+						errRet = err
+						return
 					}
 					reflectValue := reflect.ValueOf(marshalledValue)
 					if err := set(value.Index(i).Elem(), reflectValue, method.Outputs[i]); err != nil {
-						return err
+						errRet = err
+						return
 					}
 				}
-				return nil
+				return
 			}
 
 			// create a new slice and start appending the unmarshalled
@@ -156,26 +172,30 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) error {
 			for i := 0; i < len(method.Outputs); i++ {
 				marshalledValue, err := toGoType(i, method.Outputs[i], output)
 				if err != nil {
-					return err
+					errRet = err
+					return
 				}
 				z = reflect.Append(z, reflect.ValueOf(marshalledValue))
 			}
 			value.Set(z)
 		default:
-			return fmt.Errorf("abi: cannot unmarshal tuple in to %v", typ)
+			errRet = fmt.Errorf("abi: cannot unmarshal tuple in to %v", typ)
+			return
 		}
 
 	} else {
 		marshalledValue, err := toGoType(0, method.Outputs[0], output)
 		if err != nil {
-			return err
+			errRet = err
+			return
 		}
 		if err := set(value, reflect.ValueOf(marshalledValue), method.Outputs[0]); err != nil {
-			return err
+			errRet = err
+			return
 		}
 	}
 
-	return nil
+	return
 }
 
 func (abi *ABI) UnmarshalJSON(data []byte) error {
