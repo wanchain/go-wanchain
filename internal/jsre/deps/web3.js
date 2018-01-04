@@ -2268,11 +2268,11 @@ var isAddress = function (address) {
 var isChecksumAddress = function (address) {
     // Check each case
     address = address.replace('0x','');
-    var addressHash = sha3(address.toLowerCase());
+    var addressHash = sha3(address.toUpperCase());
 
     for (var i = 0; i < 40; i++ ) {
         // the nth letter should be uppercase if the nth digit of casemap is 1
-        if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
+        if ((parseInt(addressHash[i], 16) > 7 && address[i].toLowerCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toUpperCase() !== address[i])) {
             return false;
         }
     }
@@ -2291,14 +2291,14 @@ var isChecksumAddress = function (address) {
 var toChecksumAddress = function (address) {
     if (typeof address === 'undefined') return '';
 
-    address = address.toLowerCase().replace('0x','');
+    address = address.toUpperCase().replace('0x','');
     var addressHash = sha3(address);
     var checksumAddress = '0x';
 
     for (var i = 0; i < address.length; i++ ) {
         // If ith character is 9 to f then make it uppercase
         if (parseInt(addressHash[i], 16) > 7) {
-          checksumAddress += address[i].toUpperCase();
+          checksumAddress += address[i].toLowerCase();
         } else {
             checksumAddress += address[i];
         }
@@ -13657,7 +13657,8 @@ module.exports = XMLHttpRequest;
         var getOTAMixSet = new Method({
             name: 'getOTAMixSet',
             call: 'wan_getOTAMixSet',
-            params: 2
+            params: 2,
+            inputFormatter: [null, null]
         });
 
         //jqg
@@ -13679,6 +13680,7 @@ module.exports = XMLHttpRequest;
             name: 'genRingSignData',
             call: 'wan_genRingSignData',
             params: 3,
+            inputFormatter: [null, null, null]
         });
 
         var getOTABalance = new Method({
@@ -13689,16 +13691,9 @@ module.exports = XMLHttpRequest;
             outputFormatter: formatters.outputBigNumberFormatter
         });
 
-        var scanOTAbyAccount = new Method ({
-            name: 'scanOTAbyAccount',
-            call: 'wan_scanOTAbyAccount',
-            params: 2,
-            inputFormatter: [formatters.inputAddressFormatter,formatters.inputBlockNumberFormatter]
-        });
-
-        var getPermiWanCoinOTABalances = new Method ({
-            name: 'getPermiWanCoinOTABalances',
-            call: 'wan_getPermiWanCoinOTABalances',
+        var getSupportWanCoinOTABalances = new Method ({
+            name: 'getSupportWanCoinOTABalances',
+            call: 'wan_getSupportWanCoinOTABalances',
             params: 0,
         });
 
@@ -13716,8 +13711,7 @@ module.exports = XMLHttpRequest;
             getOTAMixSet,
             genRingSignData,
             getOTABalance,
-            scanOTAbyAccount,
-            getPermiWanCoinOTABalances,
+            getSupportWanCoinOTABalances,
             getSupportStampOTABalances,
         ];
     };

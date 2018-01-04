@@ -26,4 +26,5 @@ var (
 	ErrInsufficientBalance      = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision = errors.New("contract address collision")
 	ErrInvalidGasPrice          = errors.New("invalid gas price")
+	ErrInvalidPrivacyValue          = errors.New("invalid privacy transaction value")
 )

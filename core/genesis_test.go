@@ -31,13 +31,20 @@ import (
 
 func TestDefaultGenesisBlock(t *testing.T) {
 	block, _ := DefaultGenesisBlock().ToBlock()
-
+	fmt.Println(common.ToHex(block.Hash().Bytes()))
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
+
 	block, _ = DefaultTestnetGenesisBlock().ToBlock()
-	fmt.Printf(common.ToHex(block.Hash().Bytes()))
+	fmt.Println(common.ToHex(block.Hash().Bytes()))
 	if block.Hash() != params.TestnetGenesisHash {
+		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	}
+
+	block, _ = DefaultInternalGenesisBlock().ToBlock()
+	fmt.Println(common.ToHex(block.Hash().Bytes()))
+	if block.Hash() != params.InternalGenesisHash {
 		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
 	}
 }

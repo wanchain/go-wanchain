@@ -122,10 +122,16 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 }
 
 func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
-	if len(pub) == 0 {
+	//check input error
+	if len(pub) != 65{
 		return nil
 	}
+
 	x, y := elliptic.Unmarshal(S256(), pub)
+	if x == nil || y == nil {
+		return nil
+	}
+
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
 }
 
@@ -201,10 +207,10 @@ func zeroBytes(bytes []byte) {
 	}
 }
 
-/////////////for ring signature////////////////////////////
-//PublicKeyToInt for json 把公钥数组点转int数组，(0放x，1放y)
-//PublicKeys[n]数组时，调用 outInt=PublicKeyToInt(PublicKeys...），
-//单个公钥KeyImage时，调用outInt=PublicKeyToInt（KeyImage),    outInt[0]为返回值
+
+// PublicKeyToInt converts PublicKey data structure to Big int data structure
+// and return outInt[0] as return value. 
+// storage structure is like ((x,y)(x,y)(x,y)(x,y)....)
 func PublicKeyToInt(PublicKeys ...*ecdsa.PublicKey) []*hexutil.Big {
 	n := len(PublicKeys)
 	outInt := make([]*hexutil.Big, 2*n)
@@ -216,7 +222,7 @@ func PublicKeyToInt(PublicKeys ...*ecdsa.PublicKey) []*hexutil.Big {
 	return outInt
 }
 
-//IntToPublicKey from json 把int数组点转公钥数组点
+// IntToPublicKey converts Big int data structure to PublicKey data structure
 func IntToPublicKey(in ...*big.Int) []*ecdsa.PublicKey {
 	n := len(in)
 	PublicKeys := make([]*ecdsa.PublicKey, n/2)
@@ -230,7 +236,8 @@ func IntToPublicKey(in ...*big.Int) []*ecdsa.PublicKey {
 	return PublicKeys
 }
 
-//2528 Shi TeemoGuo
+// AES encryption algorithm
+// Shi,TeemoGuo added
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	// AES-128 is selected due to size of encryptKey.
 	aesBlock, err := aes.NewCipher(key)
@@ -243,12 +250,12 @@ func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	return outText, err
 }
 
-//2528 Shi TeemoGuo
+// AES encryption algorithm interface
+// Shi，TeemoGuo added
 func AesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	return aesCTRXOR(key, inText, iv)
 }
 
-//2528 add
 
 var bigOne = big.NewInt(1)
 var bigZero = big.NewInt(0)
@@ -276,13 +283,16 @@ func modInverse(a, n *big.Int) (ia *big.Int, ok bool) {
 	return x, true
 }
 
-//2528 add
+// RSA encryption algorithm interface
+// Shi，TeemoGuo added
 func Rsa_encrypt(c *big.Int, pub *rsa.PublicKey, m *big.Int) *big.Int {
 	e := big.NewInt(int64(pub.E))
 	c.Exp(m, e, pub.N)
 	return c
 }
 
+// RSA decryption algorithm interface
+// Shi，TeemoGuo added
 func Rsa_decrypt(random io.Reader, priv *rsa.PrivateKey, c *big.Int) (m *big.Int, err error) {
 	// TODO(agl): can we get away with reusing blinds?
 	if c.Cmp(priv.N) > 0 {
@@ -362,6 +372,7 @@ func Rsa_decrypt(random io.Reader, priv *rsa.PrivateKey, c *big.Int) (m *big.Int
 	return
 }
 
+// randFieldElement2528 returns a random element of the field
 func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
 	params := S256().Params()
 	b := make([]byte, params.BitSize/8+8)
@@ -377,7 +388,7 @@ func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
 	return
 }
 
-///calc [x]Hash(P)
+// calc [x]Hash(P)
 func xScalarHashP(x []byte, pub *ecdsa.PublicKey) (I *ecdsa.PublicKey) {
 	KeyImg := new(ecdsa.PublicKey)
 	I = new(ecdsa.PublicKey)
@@ -392,8 +403,8 @@ var (
 	ErrRingSignFail          = errors.New("ring sign fail")
 )
 
-//明文，私钥x，公钥组，(P的公钥放在第0位,0....n)  环签名
-//2528 Pengbo add Shi TeemoGuo revise
+// RingSign is the function of ring signature
+// Pengbo added, Shi,TeemoGuo revised
 func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int, error) {
 	if M == nil || x == nil || len(PublicKeys) == 0 {
 		return nil, nil, nil, nil, ErrInvalidRingSignParams
@@ -411,9 +422,9 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 		return nil, nil, nil, nil, ErrRingSignFail
 	}
 
-	s := Mrand.Intn(n) //s位放主签名公钥
+	s := Mrand.Intn(n) //s is the random position for real key 
 	if s > 0 {
-		PublicKeys[0], PublicKeys[s] = PublicKeys[s], PublicKeys[0] //交换位置
+		PublicKeys[0], PublicKeys[s] = PublicKeys[s], PublicKeys[0] //exchange position
 	}
 
 	var (
@@ -492,7 +503,8 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 	return PublicKeys, I, w, q, nil
 }
 
-//VerifyRingSign 验证环签名
+// VerifyRingSign verifies the validity of ring signature
+// Pengbo added, Shi,TeemoGuo revised
 func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey, c []*big.Int, r []*big.Int) bool {
 	if M == nil || PublicKeys == nil || I == nil || c == nil || r == nil {
 		return false
@@ -578,7 +590,8 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 	return hash.Cmp(SumC) == 0
 }
 
-// 2528 Pengbo add TeemoGuo revise: A1=[hash([r]B)]G+A
+// A1=[hash([r]B)]G+A
+// Pengbo added, TeemoGuo revised 
 func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKey {
 	A1 := new(ecdsa.PublicKey)
 	A1.X, A1.Y = S256().ScalarMult(B.X, B.Y, r)   //A1=[r]B
@@ -597,7 +610,8 @@ func CompareA1(b []byte, A *ecdsa.PublicKey, S1 *ecdsa.PublicKey, A1 *ecdsa.Publ
 	return false
 }
 
-// 2528 Pengbo add TeemoGuo revise
+// generateOneTimeKey2528 generates an OTA account for receiver using receiver's publickey
+// Pengbo added, TeemoGuo revised
 func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.PublicKey, R *ecdsa.PublicKey, err error) {
 	RPrivateKey, err := GenerateKey()
 	if err != nil {
@@ -609,6 +623,7 @@ func generateOneTimeKey2528(A *ecdsa.PublicKey, B *ecdsa.PublicKey) (A1 *ecdsa.P
 	return A1, R, err
 }
 
+// Generate OTA account interface
 func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []string, err error) {
 	bytesAX, err := hexutil.Decode(AX)
 	if err != nil {
@@ -638,6 +653,8 @@ func GenerateOneTimeKey(AX string, AY string, BX string, BY string) (ret []strin
 	return hexutil.PKPair2HexSlice(generatedA1, generatedR), nil
 }
 
+// GenerteOTAPrivateKey generates the privatekey for an OTA account using receiver's main account's privatekey
+// Pengbo added, TeemoGuo revised
 func GenerteOTAPrivateKey(privateKey *ecdsa.PrivateKey, privateKey2 *ecdsa.PrivateKey, AX string, AY string, BX string, BY string) (retPub *ecdsa.PublicKey, retPriv1 *ecdsa.PrivateKey, retPriv2 *ecdsa.PrivateKey, err error) {
 	bytesAX, err := hexutil.Decode(AX)
 	if err != nil {

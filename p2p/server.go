@@ -556,8 +556,10 @@ running:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, c)
+
+			//if err == nil && strings.Contains(truncateName(c.name),params.VersionMeta) {
 			if err == nil {
-				// The handshakes are done and it passed all checks.
+			// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
 				// If message events are enabled, pass the peerFeed
 				// to the peer
@@ -565,6 +567,8 @@ running:
 					p.events = &srv.peerFeed
 				}
 				name := truncateName(c.name)
+
+
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				peers[c.id] = p
 				go srv.runPeer(p)

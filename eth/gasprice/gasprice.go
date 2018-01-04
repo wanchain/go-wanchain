@@ -28,7 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
-var maxPrice = big.NewInt(500 * params.Shannon)
+var maxPrice = big.NewInt(0).Mul(big.NewInt(500 * params.Shannon),params.WanGasTimesFactor)
 
 type Config struct {
 	Blocks     int

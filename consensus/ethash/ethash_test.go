@@ -19,11 +19,11 @@ package ethash
 import (
 	"math/big"
 	"testing"
-	
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
+
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 // func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
@@ -41,7 +41,8 @@ import (
 // Tests that ethash works correctly in test mode.
 var fakedAddr = common.HexToAddress("0xf9b32578b4420a36f132db32b56f3831a7cc1804")
 var fakedAccountPrivateKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
-func fakeSignerFn(signer accounts.Account, hash []byte) ([]byte, error){
+
+func fakeSignerFn(signer accounts.Account, hash []byte) ([]byte, error) {
 	return crypto.Sign(hash, fakedAccountPrivateKey)
 }
 
@@ -49,7 +50,7 @@ func TestTestMode(t *testing.T) {
 	head := &types.Header{Number: big.NewInt(1), Difficulty: big.NewInt(100)}
 	head.Coinbase = fakedAddr
 
-	head.Extra = make([]byte, extraSeal + extraVanity)
+	head.Extra = make([]byte, extraSeal+extraVanity)
 	sighash4Extra, err := fakeSignerFn(accounts.Account{}, sigHash(head).Bytes())
 	copy(head.Extra[len(head.Extra)-extraSeal:], sighash4Extra)
 

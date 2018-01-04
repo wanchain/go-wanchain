@@ -43,11 +43,15 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"bytes"
 )
 
 const (
 	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+)
+
+var (
+	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 18 * params.Shannon),params.WanGasTimesFactor)
 )
 
 var (
@@ -56,6 +60,9 @@ var (
 	ErrFailToGeneratePKPairSlice        = errors.New("Fail to generate publickey pair hex slice")
 	ErrInvalidPrivateKey                = errors.New("Invalid private key")
 	ErrInvalidOTAMixSet                 = errors.New("Invalid OTA mix set")
+	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
+	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
+	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -527,6 +534,10 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 // GetOTABalance returns OTA balance
 func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string, blockNr rpc.BlockNumber) (*big.Int, error) {
+	if !hexutil.Has0xPrefix(otaWAddr) {
+		return nil, ErrInvalidOTAAddr
+	}
+
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
@@ -534,18 +545,19 @@ func (s *PublicBlockChainAPI) GetOTABalance(ctx context.Context, otaWAddr string
 
 	var otaAX []byte
 	otaWAddrByte := common.FromHex(otaWAddr)
-	if len(otaWAddrByte) == common.WAddressLength {
-		otaAX, _ = vm.GetAXFromWanAddr(otaWAddrByte)
-	} else if len(otaWAddrByte) == common.HashLength {
+	switch len(otaWAddrByte) {
+	case common.HashLength:
 		otaAX = otaWAddrByte
-	} else {
-		return nil, errors.New("invalid ota address!")
+	case common.WAddressLength:
+		otaAX, _ = vm.GetAXFromWanAddr(otaWAddrByte)
+	default:
+		return nil, ErrInvalidOTAAddr
 	}
 
 	return vm.GetOtaBalanceFromAX(state, otaAX)
 }
 
-func (s *PublicBlockChainAPI) GetPermiWanCoinOTABalances(ctx context.Context) []*big.Int {
+func (s *PublicBlockChainAPI) GetSupportWanCoinOTABalances(ctx context.Context) []*big.Int {
 	return vm.GetSupportWanCoinOTABalances()
 }
 
@@ -683,8 +695,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if gas.Sign() == 0 {
 		gas = big.NewInt(50000000)
 	}
+
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+		gasPrice = defaultGasPrice
 	}
 
 	// Create new call message
@@ -1232,12 +1245,20 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 
 func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr string, setLen int) ([]string, error) {
 	if setLen <= 0 {
-		return []string{}, errors.New("invalid mix set len")
+		return []string{}, ErrInvalidOTAMixNum
+	}
+
+	if uint64(setLen) > params.GetOTAMixSetMaxSize {
+		return []string{}, ErrReqTooManyOTAMix
+	}
+
+	if !hexutil.Has0xPrefix(otaAddr) {
+		return []string{}, ErrInvalidOTAAddr
 	}
 
 	orgOtaAddr := common.FromHex(otaAddr)
 	if len(orgOtaAddr) < common.HashLength {
-		return []string{}, errors.New("invalid ota address")
+		return []string{}, ErrInvalidOTAAddr
 	}
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
@@ -1264,8 +1285,9 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 	return ret, nil
 }
 
+// GenRingSignData generate ring sign data
 func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	if len(privateKey) <= 2 {
+	if !hexutil.Has0xPrefix(privateKey) {
 		return "", ErrInvalidPrivateKey
 	}
 
@@ -1354,7 +1376,8 @@ func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey,
 	return outs, nil
 }
 
-// 根据一次性地址拥有者的private key信息计算对应地址的两个private key
+// ComputeOTAPPKeys compute ota private key, public key and short address
+// from account address and ota full address.
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
 	account := accounts.Account{Address: address}
 	wallet, err := s.b.AccountManager().Find(account)
@@ -1382,9 +1405,9 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 	BX := "0x" + otaAddr[128:192]
 	BY := "0x" + otaAddr[192:256]
 
-	sS, err2 := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
-	if err2 != nil {
-		return "", err2
+	sS, err := wallet.ComputeOTAPPKeys(account, AX, AY, BX, BY)
+	if err != nil {
+		return "", err
 	}
 
 	otaPub := sS[0] + sS[1][2:]
@@ -1715,6 +1738,15 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 }
 
 func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+
+	//deal with panic error because
+	var retHash common.Hash
+	var reError error
+
+	if !hexutil.Has0xPrefix(sPrivateKey) {
+		return common.Hash{}, ErrInvalidPrivateKey
+	}
+
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
@@ -1729,7 +1761,26 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		chainID = config.ChainId
 	}
 
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
+	if err != nil {
+		return  common.Hash{}, errors.New("error in abi data")
+	}
+
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	//for fixing bug send privacy tx with a different private key
+	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	if !bytes.Equal(fromAddr[:],args.From[:]) {
+		return  common.Hash{},errors.New("from address mismatch private key")
+	}
+
 
 	var signed *types.Transaction
 	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
@@ -1737,5 +1788,8 @@ func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context
 		return common.Hash{}, err
 	}
 
-	return submitTransaction(ctx, s.b, signed)
+
+	retHash,reError = submitTransaction(ctx, s.b, signed)
+
+	return retHash,reError
 }

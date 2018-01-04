@@ -187,5 +187,8 @@ func CheckRelayIP(sender, addr net.IP) error {
 	if IsLAN(addr) && !IsLAN(sender) {
 		return errLAN
 	}
+
+
+
 	return nil
 }

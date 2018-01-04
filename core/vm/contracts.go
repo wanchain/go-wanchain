@@ -258,7 +258,7 @@ var (
 	errInvalidCurvePoint = errors.New("invalid elliptic curve point")
 
 	// invalid ring signed info
-	errInvalidRingSigned = errors.New("invalid ring signed info")
+	ErrInvalidRingSigned = errors.New("invalid ring signed info")
 )
 
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
@@ -440,13 +440,20 @@ const (
 	Wancoin5000  = "5000000000000000000000"  //5000
 	Wancoin50000 = "50000000000000000000000" //50000
 
-	WanStamp0dot1 = "1000000000000000" //0.001
-	WanStamp0dot2 = "2000000000000000" //0.002
-	WanStamp0dot5 = "5000000000000000" //0.005
+	WanStampdot001 = "1000000000000000" //0.001
+	WanStampdot002 = "2000000000000000" //0.002
+	WanStampdot005 = "5000000000000000" //0.005
 
-	WanStamp0dot3 = "3000000000000000" //0.003
-	WanStamp0dot6 = "6000000000000000" //0.006
-	WanStamp0dot9 = "9000000000000000" //0.009
+	WanStampdot003 = "3000000000000000" //0.003
+	WanStampdot006 = "6000000000000000" //0.006
+	WanStampdot009 = "9000000000000000" //0.009
+
+	WanStampdot03 = "30000000000000000" //0.03
+	WanStampdot06 = "60000000000000000" //0.06
+	WanStampdot09 = "90000000000000000" //0.09
+	WanStampdot2 = "200000000000000000" //0.5
+	WanStampdot5 = "500000000000000000" //0.5
+
 )
 
 func init() {
@@ -460,23 +467,39 @@ func init() {
 
 	copy(stBuyId[:], stampAbi.Methods["buyStamp"].Id())
 
-	sval01, _ := new(big.Int).SetString(WanStamp0dot1, 10)
-	StampValueSet[sval01.Text(16)] = WanStamp0dot1
+	svaldot001, _ := new(big.Int).SetString(WanStampdot001, 10)
+	StampValueSet[svaldot001.Text(16)] = WanStampdot001
 
-	sval02, _ := new(big.Int).SetString(WanStamp0dot2, 10)
-	StampValueSet[sval02.Text(16)] = WanStamp0dot2
+	svaldot002, _ := new(big.Int).SetString(WanStampdot002, 10)
+	StampValueSet[svaldot002.Text(16)] = WanStampdot002
 
-	sval05, _ := new(big.Int).SetString(WanStamp0dot5, 10)
-	StampValueSet[sval05.Text(16)] = WanStamp0dot5
+	svaldot005, _ := new(big.Int).SetString(WanStampdot005, 10)
+	StampValueSet[svaldot005.Text(16)] = WanStampdot005
 
-	sval03, _ := new(big.Int).SetString(WanStamp0dot3, 10)
-	StampValueSet[sval03.Text(16)] = WanStamp0dot3
+	svaldot003, _ := new(big.Int).SetString(WanStampdot003, 10)
+	StampValueSet[svaldot003.Text(16)] = WanStampdot003
 
-	sval06, _ := new(big.Int).SetString(WanStamp0dot6, 10)
-	StampValueSet[sval06.Text(16)] = WanStamp0dot6
+	svaldot006, _ := new(big.Int).SetString(WanStampdot006, 10)
+	StampValueSet[svaldot006.Text(16)] = WanStampdot006
 
-	sval09, _ := new(big.Int).SetString(WanStamp0dot9, 10)
-	StampValueSet[sval09.Text(16)] = WanStamp0dot9
+	svaldot009, _ := new(big.Int).SetString(WanStampdot009, 10)
+	StampValueSet[svaldot009.Text(16)] = WanStampdot009
+
+	svaldot03, _ := new(big.Int).SetString(WanStampdot03, 10)
+	StampValueSet[svaldot03.Text(16)] = WanStampdot03
+
+	svaldot06, _ := new(big.Int).SetString(WanStampdot06, 10)
+	StampValueSet[svaldot06.Text(16)] = WanStampdot06
+
+	svaldot09, _ := new(big.Int).SetString(WanStampdot09, 10)
+	StampValueSet[svaldot09.Text(16)] = WanStampdot09
+
+	svaldot2, _ := new(big.Int).SetString(WanStampdot2, 10)
+	StampValueSet[svaldot2.Text(16)] = WanStampdot2
+
+	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
+	StampValueSet[svaldot5.Text(16)] = WanStampdot5
+
 
 	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	WanCoinValueSet[cval10.Text(16)] = Wancoin10
@@ -833,7 +856,7 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	if len(ss) < 4 {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	ps := ss[0]
@@ -844,9 +867,10 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	pa := strings.Split(ps, "&")
 	publickeys := make([]*ecdsa.PublicKey, 0)
 	for _, pi := range pa {
+
 		publickey := crypto.ToECDSAPub(common.FromHex(pi))
 		if publickey == nil || publickey.X == nil || publickey.Y == nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		publickeys = append(publickeys, publickey)
@@ -854,7 +878,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 
 	keyimgae := crypto.ToECDSAPub(common.FromHex(k))
 	if keyimgae == nil || keyimgae.X == nil || keyimgae.Y == nil {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	wa := strings.Split(ws, "&")
@@ -862,7 +886,7 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	for _, wi := range wa {
 		bi, err := hexutil.DecodeBig(wi)
 		if bi == nil || err != nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		w = append(w, bi)
@@ -873,14 +897,14 @@ func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, [
 	for _, qi := range qa {
 		bi, err := hexutil.DecodeBig(qi)
 		if bi == nil || err != nil {
-			return errInvalidRingSigned, nil, nil, nil, nil
+			return ErrInvalidRingSigned, nil, nil, nil, nil
 		}
 
 		q = append(q, bi)
 	}
 
 	if len(publickeys) != len(w) || len(publickeys) != len(q) {
-		return errInvalidRingSigned, nil, nil, nil, nil
+		return ErrInvalidRingSigned, nil, nil, nil, nil
 	}
 
 	return nil, publickeys, keyimgae, w, q
@@ -926,7 +950,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 
 	valid := crypto.VerifyRingSign(hashInput, infoTmp.PublicKeys, infoTmp.KeyImage, infoTmp.W_Random, infoTmp.Q_Random)
 	if !valid {
-		return nil, errInvalidRingSigned
+		return nil, ErrInvalidRingSigned
 	}
 
 	return infoTmp, nil
@@ -961,14 +985,17 @@ func GetSupportWanCoinOTABalances() []*big.Int {
 }
 
 func GetSupportStampOTABalances() []*big.Int {
-	sval03, _ := new(big.Int).SetString(WanStamp0dot3, 10)
-	sval06, _ := new(big.Int).SetString(WanStamp0dot6, 10)
-	sval09, _ := new(big.Int).SetString(WanStamp0dot9, 10)
+
+	svaldot09, _ := new(big.Int).SetString(WanStampdot09, 10)
+	svaldot2, _ := new(big.Int).SetString(WanStampdot2, 10)
+	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
 
 	stampBalances := []*big.Int{
-		sval03,
-		sval06,
-		sval09,
+		//svaldot03,
+		//svaldot06,
+		svaldot09,
+		svaldot2,
+		svaldot5,
 	}
 
 	return stampBalances

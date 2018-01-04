@@ -247,7 +247,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if !types.IsNormalTransaction(st.msg.TxType()) {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
 			sender.Address().Bytes(),
-			st.data, st.gasPrice)
+			st.data, st.gasPrice, st.value)
 		if err != nil {
 			return nil, nil, nil, false, err
 		}
@@ -339,6 +339,8 @@ var (
 	utilAbiDefinition = `[{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}],"name":"combine","outputs":[{"name":"RingSignedData","type":"string"},{"name":"CxtCallParams","type":"bytes"}]}]`
 
 	utilAbi, errAbiInit = abi.JSON(strings.NewReader(utilAbiDefinition))
+
+	TokenAbi = utilAbi
 )
 
 func init() {
@@ -359,6 +361,9 @@ type PrivacyTxInfo struct {
 }
 
 func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (info *PrivacyTxInfo, err error) {
+	if len(in) < 4 {
+		return nil, vm.ErrInvalidRingSigned
+	}
 
 	var TxDataWithRing struct {
 		RingSignedData string
@@ -405,9 +410,14 @@ func FetchPrivacyTxInfo(stateDB vm.StateDB, hashInput []byte, in []byte, gasPric
 	return
 }
 
-func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, intrGas *big.Int) error {
+func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int,
+	intrGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
 	if intrGas == nil || intrGas.BitLen() > 64 {
 		return vm.ErrOutOfGas
+	}
+
+	if txValue.Sign() != 0 {
+		return vm.ErrInvalidPrivacyValue
 	}
 
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) <= 0 {
@@ -417,6 +427,10 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return err
+	}
+
+	if info.StampTotalGas > gasLimit.Uint64() {
+		return ErrGasLimit
 	}
 
 	kix := crypto.FromECDSAPub(info.KeyImage)
@@ -434,7 +448,11 @@ func ValidPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *b
 	return nil
 }
 
-func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int) (callData []byte, totalUseableGas uint64, evmUseableGas uint64, err error) {
+func PreProcessPrivacyTx(stateDB vm.StateDB, hashInput []byte, in []byte, gasPrice *big.Int, txValue *big.Int) (callData []byte, totalUseableGas uint64, evmUseableGas uint64, err error) {
+	if txValue.Sign() != 0 {
+		return nil, 0, 0, vm.ErrInvalidPrivacyValue
+	}
+
 	info, err := FetchPrivacyTxInfo(stateDB, hashInput, in, gasPrice)
 	if err != nil {
 		return nil, 0, 0, err

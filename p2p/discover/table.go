@@ -269,7 +269,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 
 			n := result.entries[i]
 
-			if !asked[n.ID] && n.addr().Port==17717 {
+			if !asked[n.ID] {
 				asked[n.ID] = true
 				pendingQueries++
 				go func() {
@@ -384,6 +384,9 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// them. This should yield a few previously seen nodes that are
 	// (hopefully) still alive.
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
+
+
+
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
@@ -429,18 +432,12 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
-			var nn *Node
-			//fmt.Println(n.addr(),n.TCP)
-			if n.TCP != 17717 {
-				nn = nil
-			} else {
-				nn, _ = tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
-			}
+			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])
 	}
 	for range nodes {
-		if n := <-rc; n != nil {
+		if n := <-rc; n != nil{
 			result = append(result, n)
 		}
 	}

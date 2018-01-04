@@ -30,6 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/nat"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/rlp"
+
 )
 
 const Version = 4
@@ -229,6 +230,13 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 }
 
 func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
+
+	//realaddr := c.LocalAddr().(*net.UDPAddr)
+	//
+	//if realaddr.Port != params.WanUdpPort {
+	//	return nil, nil, errors.New("port is not wan port")
+	//}
+
 	udp := &udp{
 		conn:        c,
 		priv:        priv,
@@ -237,7 +245,9 @@ func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath strin
 		gotreply:    make(chan reply),
 		addpending:  make(chan *pending),
 	}
+
 	realaddr := c.LocalAddr().(*net.UDPAddr)
+
 	if natm != nil {
 		if !realaddr.IP.IsLoopback() {
 			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
@@ -278,6 +288,7 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	})
 	return <-errc
 }
+
 
 func (t *udp) waitping(from NodeID) error {
 	return <-t.pending(from, pingPacket, func(interface{}) bool { return true })
@@ -464,6 +475,10 @@ func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 	if err != nil {
 		return err
 	}
+
+	//if toaddr.Port != params.WanUdpPort {
+	//	return errors.New("not specified port")
+	//}
 	_, err = t.conn.WriteToUDP(packet, toaddr)
 	log.Trace(">> "+req.name(), "addr", toaddr, "err", err)
 	return err
@@ -509,6 +524,7 @@ func (t *udp) readLoop() {
 			log.Debug("UDP read error", "err", err)
 			return
 		}
+
 		t.handlePacket(from, buf[:nbytes])
 	}
 }
@@ -519,6 +535,11 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 		log.Debug("Bad discv4 packet", "addr", from, "err", err)
 		return err
 	}
+
+	//if from.Port != params.WanUdpPort {
+	//	return errors.New("the port is not specified")
+	//}
+
 	err = packet.handle(t, from, fromID, hash)
 	log.Trace("<< "+packet.name(), "addr", from, "err", err)
 	return err
@@ -616,6 +637,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		if netutil.CheckRelayIP(from.IP, n.IP) != nil {
 			continue
 		}
+
 		p.Nodes = append(p.Nodes, nodeToRPC(n))
 		if len(p.Nodes) == maxNeighbors || i == len(closest)-1 {
 			t.send(from, neighborsPacket, &p)
@@ -639,7 +661,9 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 	return nil
 }
 
-func (req *neighbors) name() string { return "NEIGHBORS/v4" }
+func (req *neighbors) name() string {
+	return "NEIGHBORS/v4"
+}
 
 func expired(ts uint64) bool {
 	return time.Unix(int64(ts), 0).Before(time.Now())

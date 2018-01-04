@@ -70,7 +70,8 @@ const (
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
-	RequiredGasPerMixPub 	uint64 = 4000   // ring signature mix difficulty gas
+	RequiredGasPerMixPub uint64 = 4000 // ring signature mix difficulty gas
+	GetOTAMixSetMaxSize  uint64 = 20   // Max number of mix ota set size from once getting
 )
 
 var (
@@ -82,4 +83,7 @@ var (
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	WanGasTimesFactor	   = big.NewInt(10)
+	//WanGasTimesFactor	   = big.NewInt(1)
+
 )

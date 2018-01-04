@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"runtime"
+	//"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -130,10 +130,11 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	defer func() {
 		if err := recover(); err != nil {
-			const size = 64 << 10
-			buf := make([]byte, size)
-			buf = buf[:runtime.Stack(buf, false)]
-			log.Error(string(buf))
+			//const size = 64 << 10
+			//buf := make([]byte, size)
+			//buf = buf[:runtime.Stack(buf, false)]
+			//log.Error(string(buf))
+			log.Error("RPC serveRequest error")
 		}
 		s.codecsMu.Lock()
 		s.codecs.Remove(codec)

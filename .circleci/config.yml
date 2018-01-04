@@ -21,6 +21,7 @@ jobs:
     steps:
       - checkout
       - run: make all
+      - run: make test
       - run: make testCoin
       - run: make testToken
       - run: echo "good"
