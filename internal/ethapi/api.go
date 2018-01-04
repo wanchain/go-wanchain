@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 50 * params.Shannon),params.WanGasTimesFactor)
+	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 18 * params.Shannon),params.WanGasTimesFactor)
 )
 
 var (

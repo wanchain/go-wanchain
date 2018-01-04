@@ -451,12 +451,8 @@ const (
 	WanStampdot03 = "30000000000000000" //0.03
 	WanStampdot06 = "60000000000000000" //0.06
 	WanStampdot09 = "90000000000000000" //0.09
-
+	WanStampdot2 = "200000000000000000" //0.5
 	WanStampdot5 = "500000000000000000" //0.5
-
-	WanStamp1wan = "1000000000000000000" //1
-
-	WanStamp1dot5wan = "1500000000000000000" //1.5
 
 )
 
@@ -498,14 +494,12 @@ func init() {
 	svaldot09, _ := new(big.Int).SetString(WanStampdot09, 10)
 	StampValueSet[svaldot09.Text(16)] = WanStampdot09
 
-	svaldot3, _ := new(big.Int).SetString(WanStampdot5, 10)
-	StampValueSet[svaldot3.Text(16)] = WanStampdot5
+	svaldot2, _ := new(big.Int).SetString(WanStampdot2, 10)
+	StampValueSet[svaldot2.Text(16)] = WanStampdot2
 
-	sval1wan, _ := new(big.Int).SetString(WanStamp1wan, 10)
-	StampValueSet[sval1wan.Text(16)] = WanStamp1wan
+	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
+	StampValueSet[svaldot5.Text(16)] = WanStampdot5
 
-	sval1dot5wan, _ := new(big.Int).SetString(WanStamp1dot5wan, 10)
-	StampValueSet[sval1dot5wan.Text(16)] = WanStamp1dot5wan
 
 	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	WanCoinValueSet[cval10.Text(16)] = Wancoin10
@@ -991,19 +985,17 @@ func GetSupportWanCoinOTABalances() []*big.Int {
 }
 
 func GetSupportStampOTABalances() []*big.Int {
-	//svaldot03, _ := new(big.Int).SetString(WanStampdot03, 10)
-	//svaldot06, _ := new(big.Int).SetString(WanStampdot06, 10)
-	//svaldot09, _ := new(big.Int).SetString(WanStampdot09, 10)
+
+	svaldot09, _ := new(big.Int).SetString(WanStampdot09, 10)
+	svaldot2, _ := new(big.Int).SetString(WanStampdot2, 10)
 	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
-	sval1wan, _ := new(big.Int).SetString(WanStamp1wan, 10)
-	sval1dot5wan, _ := new(big.Int).SetString(WanStamp1dot5wan, 10)
+
 	stampBalances := []*big.Int{
 		//svaldot03,
 		//svaldot06,
-		//svaldot09,
+		svaldot09,
+		svaldot2,
 		svaldot5,
-		sval1wan,
-		sval1dot5wan,
 	}
 
 	return stampBalances
