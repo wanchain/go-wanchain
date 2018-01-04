@@ -113,7 +113,7 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	log.Trace(fmt.Sprintf(header.String()))
 
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
-	//log.Trace("ecrecover(): cr@zy seal hash", "Input hash", sigHash(header).String())
+	//log.Trace("ecrecover(): Seal hash", "Input hash", sigHash(header).String())
 	if err != nil {
 		return common.Address{}, err
 	}
