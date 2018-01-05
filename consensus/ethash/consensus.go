@@ -397,10 +397,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 		}
 	}
 
-	if seal {
-		if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
-			return err
-		}
+	//if seal
+	if err := ethash.verifySignerIdentity(chain, header, parents); err != nil {
+		return err
 	}
 
 	// If all checks passed, validate any special fields for hard forks
