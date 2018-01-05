@@ -337,7 +337,7 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.WanchainChainConfig,
 		Nonce:      67,
-		ExtraData:  hexutil.MustDecode(getPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(getMainNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
 		//Difficulty: big.NewInt(17179869184),
@@ -350,7 +350,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
 		Nonce:      28, //same with the version
-		ExtraData:  hexutil.MustDecode(getPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(getTestNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),
@@ -362,7 +362,7 @@ func DefaultInternalGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.InternalChainConfig,
 		Nonce:      20,
-		ExtraData:  hexutil.MustDecode(getPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),
