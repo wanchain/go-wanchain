@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"strings"
+	"fmt"
 )
 
 const (
@@ -200,6 +201,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 func (s *Snapshot) isLegal4Sign(signer common.Address) error {
 	if _, ok := s.PermissionSigners[signer]; !ok {
+		fmt.Println(common.ToHex(signer[:]))
 		return errUnauthorized
 	}
 
