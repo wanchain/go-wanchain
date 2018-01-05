@@ -49,6 +49,7 @@ import (
 	"syscall"
 	"path/filepath"
 	"io/ioutil"
+	"os/user"
 )
 
 var (
@@ -1142,7 +1143,15 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	}
 
 	// Backup old block chain in case of restore data after attack event
-	bc.BackupBlockChain("./backup_chain")
+	home := os.Getenv("HOME")
+	if home == "" {
+		if user, err := user.Current(); err == nil {
+			home = user.HomeDir
+		} else {
+			home = "."
+		}
+	}
+	bc.BackupBlockChain(home + "/.wanchain/backup_chain")
 
 	// Ensure the user sees large reorgs
 	if len(oldChain) > 0 && len(newChain) > 0 {
