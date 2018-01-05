@@ -16,21 +16,22 @@
 
 # 
 
-CURPATH="$( cd "$( dirname "$0"  )" && pwd  )" 
-WANPATH=$CURPATH/..
-HOTBACKUPDIR=$WANPATH/wanchainbackup/hotbackup
-COLDBACKUPDIR=$WANPATH/wanchainbackup/coldbackup
+version="v0.9.4"
+WANPATH=$HOME/wanchain/$version
+wanchainLogPath=$HOME/wanchainbackup/logbackup/wanchainlog.txt
+HOTBACKUPDIR=$HOME/wanchainbackup/hotbackup
+COLDBACKUPDIR=$HOME/wanchainbackup/coldbackup
 restartflag=0
 backupNum=56
 
-ipcPath=$HOME/.wanchain/testnet/gwan.ipc
-GETHDIR=$WANPATH/data_testnet/geth
+ipcPath=$HOME/.wanchain/gwan.ipc
+GETHDIR=$HOME/.wanchain/geth
 
 hotlog=$HOTBACKUPDIR/log.txt
 coldlog=$COLDBACKUPDIR/log.txt
 
 if [ ! -d $HOTBACKUPDIR ] ; then
-    mkdir -p "$HOTBACKUPDIR" 2>&1
+    mkdir -p "$HOTBACKUPDIR"
     echo "HOTBACKUPDIR not exist: "$HOTBACKUPDIR", create it!" >> $hotlog
 fi
 
@@ -45,7 +46,7 @@ backupChainName=$DATE"-wanchain"
 echo " *** BACKUPTIME: " $DATE >> $hotlog
 
 echo " " >> $hotlog
-echo "admin.exportChain('$HOTBACKUPDIR/$backupChainName')" | ./build/bin/geth attach ipc:$ipcPath exit 2>&1 >> $hotlog
+echo "admin.exportChain('$HOTBACKUPDIR/$backupChainName')" | ./bin/geth attach ipc:$ipcPath exit 2>&1 >> $hotlog
 echo " *** BACKUP Chain Name: " $backupChainName >> $hotlog
 
 if [ $(ls $HOTBACKUPDIR -l | grep "wanchain" | wc -l) -gt $backupNum ]
@@ -78,15 +79,15 @@ echo " *** BACKUPTIME:" $DATE >> $coldlog
 cd $GETHDIR
 echo " " >> $coldlog
 
-if [ $(ps -ef | grep geth | grep -v 'grep\|attach' | wc -l) -gt 0 ]
+if [ $(ps -ef | grep geth | grep -v 'grep\|attach\|daemon_geth' | wc -l) -gt 0 ]
 then
     echo "before compress wan-chain geth data, the geth process will be killed" >> $coldlog
-    proinfo=`ps -ef | grep geth | grep -v 'grep\|attach'`
+    proinfo=`ps -ef | grep geth | grep -v 'grep\|attach\|daemon_geth'`
     label=`echo $proinfo | awk '{print $7}'`
     CMDinfo=`echo ${proinfo#*$label}`
     echo "follow process will be killed" >> $coldlog
     echo $CMDinfo >> $coldlog
-    ps -ef | grep geth | grep -v 'grep\|attach' | awk '{print $2}' | xargs kill -9
+    ps -ef | grep geth | grep -v 'grep\|attach\|daemon_geth' | awk '{print $2}' | xargs kill -9
     restartflag=1
 fi
 
@@ -117,5 +118,5 @@ if [ $restartflag -eq 1 ]
 then
     #This will recall the geth command
     cd $WANPATH  
-    $CMDinfo >> $HOME/wanchainlog 2>&1
+    $CMDinfo >> $wanchainLogPath 2>&1
 fi
