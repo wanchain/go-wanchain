@@ -1484,7 +1484,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts := master.makeChain(5, testAddress, master.genesis, nil, false)
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 150; i++ {
 		tester := newTester()
 		tester.peerDb = master.peerDb
 
