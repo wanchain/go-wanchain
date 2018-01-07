@@ -48,6 +48,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/hsm/nodesync"
 )
 
 type LesServer interface {
@@ -340,12 +341,20 @@ func (s *Ethereum) StartMining(local bool) error {
 	}
 
 	if ethash, ok := s.engine.(*ethash.Ethash); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-		if wallet == nil || err != nil {
-			log.Error("Etherbase account unavailable locally", "err", err)
-			return fmt.Errorf("singer missing: %v", err)
+
+		if nodesync.NodeSignKey == nil {
+
+			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			if wallet == nil || err != nil {
+				log.Error("Etherbase account unavailable locally", "err", err)
+				return fmt.Errorf("singer missing: %v", err)
+			}
+			ethash.Authorize(eb, wallet.SignHash)
+
+		} else {
+			ethash.Authorize(nodesync.GetSinger(), nodesync.SignHash)
 		}
-		ethash.Authorize(eb, wallet.SignHash)
+
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
