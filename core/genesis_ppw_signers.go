@@ -50,7 +50,7 @@ func getInternalNetPpwSignStr() string {
 	var buf bytes.Buffer
 	buf.WriteString("0x")
 
-	for _, str := range ppwTestNetSigAddr {
+	for _, str := range ppwInternalSigAddr {
 		addr := strings.ToLower(str[:])
 		if strings.HasPrefix(addr,"0x") {
 			buf.WriteString(strings.ToLower(str[2:]))
