@@ -63,6 +63,7 @@ var (
 	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
 	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
 	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
+	ErrInvalidInput                     = errors.New("Invalid input")	
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -447,6 +448,10 @@ func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args 
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
+	
+	if args.To == nil || len(args.Data) == 0 {
+		return common.Hash{},ErrInvalidInput
+	}	
 
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()

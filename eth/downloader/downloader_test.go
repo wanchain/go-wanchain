@@ -944,7 +944,7 @@ func testEmptyShortCircuit(t *testing.T, protocol int, mode SyncMode) {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	assertOwnChain(t, tester, targetBlocks+1)
 
