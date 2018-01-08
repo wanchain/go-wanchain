@@ -5635,21 +5635,21 @@ var methods = function () {
 
     var importRawKey = new Method({
         name: 'importRawKey',
-		call: 'personal_importRawKey',
-		params: 3
+		    call: 'personal_importRawKey',
+		    params: 3
     });
 
     var sign = new Method({
         name: 'sign',
-		call: 'personal_sign',
-		params: 3,
-		inputFormatter: [null, formatters.inputAddressFormatter, null]
+		    call: 'personal_sign',
+		    params: 3,
+		    inputFormatter: [null, formatters.inputAddressFormatter, null]
     });
 
     var ecRecover = new Method({
         name: 'ecRecover',
-		call: 'personal_ecRecover',
-		params: 2
+		    call: 'personal_ecRecover',
+		    params: 2
     });
 
     var unlockAccount = new Method({
@@ -5662,6 +5662,13 @@ var methods = function () {
     var sendTransaction = new Method({
         name: 'sendTransaction',
         call: 'personal_sendTransaction',
+        params: 2,
+        inputFormatter: [formatters.inputTransactionFormatter, null]
+    });
+
+    var sendPrivacyCxtTransaction = new Method({
+        name: 'sendPrivacyCxtTransaction',
+        call: 'personal_sendPrivacyCxtTransaction',
         params: 2,
         inputFormatter: [formatters.inputTransactionFormatter, null]
     });
@@ -5680,6 +5687,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, null, null]
     });
 
+    var genRingSignData = new Method({
+        name: 'genRingSignData',
+        call: 'personal_genRingSignData',
+        params: 3,
+        inputFormatter: [null, null, null]
+    });
+
     return [
         newAccount,
         importRawKey,
@@ -5687,6 +5701,8 @@ var methods = function () {
         ecRecover,
         sign,
         sendTransaction,
+        sendPrivacyCxtTransaction,
+        genRingSignData,
         lockAccount,
         updateAccount
     ];
@@ -13661,26 +13677,11 @@ module.exports = XMLHttpRequest;
             inputFormatter: [null, null]
         });
 
-        //jqg
-        var sendPrivacyCxtTransaction = new Method({
-            name: 'sendPrivacyCxtTransaction',
-            call: 'wan_sendPrivacyCxtTransaction',
-            params: 2,
-            inputFormatter: [formatters.inputTransactionFormatter, null]
-        });
-
         var computeOTAPPKeys = new Method({
             name: 'computeOTAPPKeys',
             call: 'wan_computeOTAPPKeys',
             params: 2,
             inputFormatter: [formatters.inputAddressFormatter, null]
-        });
-
-        var genRingSignData = new Method({
-            name: 'genRingSignData',
-            call: 'wan_genRingSignData',
-            params: 3,
-            inputFormatter: [null, null, null]
         });
 
         var getOTABalance = new Method({
@@ -13705,11 +13706,9 @@ module.exports = XMLHttpRequest;
 
         return [
             computeOTAPPKeys,
-            sendPrivacyCxtTransaction,
             getWanAddress,
             generateOneTimeAddress,
             getOTAMixSet,
-            genRingSignData,
             getOTABalance,
             getSupportWanCoinOTABalances,
             getSupportStampOTABalances,

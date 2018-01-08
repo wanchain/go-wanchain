@@ -64,7 +64,7 @@ keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr).split('+');
 privateKey = keyPairs[0];
 
 console.log("Balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
-var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
+var ringSignData = personal.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
 var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(tranValue))
 var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 2000000, gasprice:'0x' + (20000000000).toString(16)});
 wait(function(){return eth.getTransaction(refundTx).blockNumber != null;});
