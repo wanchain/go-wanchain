@@ -40,7 +40,7 @@ stampContract = contractDef.at(stampContractAddr);
 
 for (i = 0; i < 3; i++) {
     var wanAddr = wan.getWanAddress(eth.accounts[1]);
-    var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
+    var otaAddrStamp = personal.generateOneTimeAddress(wanAddr);
     txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(stampBalance));
 
 
@@ -87,10 +87,10 @@ if (ota1Balance != initPriBalance) {
 
 
 var hashMsg = addrTokenHolder
-var ringSignData = wan.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
+var ringSignData = personal.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
 var wanAddr = wan.getWanAddress(eth.accounts[2]);
-var otaAddr4Account2 = wan.generateOneTimeAddress(wanAddr);
+var otaAddr4Account2 = personal.generateOneTimeAddress(wanAddr);
 keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
 privateKeyOtaAcc2 = keyPairs[0];
 addrOTAAcc2 = keyPairs[2];
@@ -101,7 +101,7 @@ glueContractDef = eth.contract([{"constant":false,"type":"function","inputs":[{"
 glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
 combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
-sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (200000000000).toString(16)}, privateKeyTokenHolder)
+sendTx = personal.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (200000000000).toString(16)}, privateKeyTokenHolder)
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 

@@ -457,15 +457,6 @@ func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args 
 		chainID = config.ChainId
 	}
 
-	var TxDataWithRing struct {
-		RingSignedData string
-		CxtCallParams  []byte
-	}
-	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
-	if err != nil {
-		return common.Hash{}, errors.New("error in abi data")
-	}
-
 	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
 	if err != nil {
 		return common.Hash{}, err

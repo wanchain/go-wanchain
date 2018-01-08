@@ -72,7 +72,7 @@ for(;;) {
     privateKey = keyPairs[0];
 
     console.log("Balance of ", eth.accounts[2], " is ", web3.fromWin(eth.getBalance(eth.accounts[2])));
-    var ringSignData = wan.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
+    var ringSignData = personal.genRingSignData(eth.accounts[2], privateKey, mixSetWith0x.join("+"))
     var txRefundData = coinContract.refundCoin.getData(ringSignData, web3.toWin(tranValue))
     var refundTx = eth.sendTransaction({from:eth.accounts[2], to:coinContractAddr, value:0, data:txRefundData, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
     console.log("refund index")
@@ -156,7 +156,7 @@ for(;;) {
 
 
     var hashMsg = addrTokenHolder
-    var ringSignData = wan.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
+    var ringSignData = personal.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
     var wanAddr = wan.getWanAddress(eth.accounts[2]);
     var otaAddr4Account2 = wan.generateOneTimeAddress(wanAddr);
@@ -170,7 +170,7 @@ for(;;) {
     glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
     combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
-    sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, gas:200000, gasprice:'0x' + (20000000000).toString(16),data: combinedData}, privateKeyTokenHolder)
+    sendTx = personal.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, gas:200000, gasprice:'0x' + (20000000000).toString(16),data: combinedData}, privateKeyTokenHolder)
 
     console.log("wait privacy tx in blockchain")
 
