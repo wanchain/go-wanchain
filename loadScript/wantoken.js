@@ -40,7 +40,7 @@ stampContract = contractDef.at(stampContractAddr);
 
 for (i = 0; i < 3; i++) {
     var wanAddr = wan.getWanAddress(eth.accounts[1]);
-    var otaAddrStamp = personal.generateOneTimeAddress(wanAddr);
+    var otaAddrStamp = wan.generateOneTimeAddress(wanAddr);
     txBuyData = stampContract.buyStamp.getData(otaAddrStamp, web3.toWin(stampBalance));
 
 
