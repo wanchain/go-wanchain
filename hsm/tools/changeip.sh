@@ -2,11 +2,11 @@
 #Assume it is executed under IP cert folder.
 #Usage: changeip [ipaddress] 
 ###############################
-serverPath="./"
-#serverPath="~/.wanchain/server/"
-serverkey="server.key"
-serverpem="server.pem"
-sslcnf="ssl.cnf"
+#serverPath="./"
+serverPath="~/.wanchain/server/"
+serverkey="${serverPath}server.key"
+serverpem="${serverPath}server.pem"
+sslcnf="${serverPath}ssl.cnf"
 ipaddress=""
 
 if [ "$#" -eq  "1" ]
