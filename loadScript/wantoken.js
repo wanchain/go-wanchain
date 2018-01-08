@@ -90,7 +90,7 @@ var hashMsg = addrTokenHolder
 var ringSignData = personal.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
 var wanAddr = wan.getWanAddress(eth.accounts[2]);
-var otaAddr4Account2 = personal.generateOneTimeAddress(wanAddr);
+var otaAddr4Account2 = wan.generateOneTimeAddress(wanAddr);
 keyPairs = wan.computeOTAPPKeys(eth.accounts[2], otaAddr4Account2).split('+');
 privateKeyOtaAcc2 = keyPairs[0];
 addrOTAAcc2 = keyPairs[2];

@@ -940,6 +940,9 @@ func testEmptyShortCircuit(t *testing.T, protocol int, mode SyncMode) {
 	if err := tester.sync("peer", nil, mode); err != nil {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
+
+	time.Sleep(60 * time.Second)
+
 	assertOwnChain(t, tester, targetBlocks+1)
 
 	// Validate the number of block bodies that should have been requested
