@@ -17,6 +17,7 @@
 package ethapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -43,15 +44,14 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"bytes"
 )
 
 const (
-	defaultGas      = 90000
+	defaultGas = 90000
 )
 
 var (
-	defaultGasPrice = big.NewInt(0).Mul(big.NewInt( 18 * params.Shannon),params.WanGasTimesFactor)
+	defaultGasPrice = big.NewInt(0).Mul(big.NewInt(18*params.Shannon), params.WanGasTimesFactor)
 )
 
 var (
@@ -429,6 +429,154 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, signed)
+}
+
+// SendPrivacyCxtTransaction will create a transaction from the given arguments and
+// tries to sign it with the OTA key associated with args.To.
+func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
+
+	//deal with panic error because
+	var retHash common.Hash
+	var reError error
+
+	if !hexutil.Has0xPrefix(sPrivateKey) {
+		return common.Hash{}, ErrInvalidPrivateKey
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx := args.toOTATransaction()
+
+	var chainID *big.Int
+	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config != nil {
+		chainID = config.ChainId
+	}
+
+	var TxDataWithRing struct {
+		RingSignedData string
+		CxtCallParams  []byte
+	}
+	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
+	if err != nil {
+		return common.Hash{}, errors.New("error in abi data")
+	}
+
+	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	//for fixing bug send privacy tx with a different private key
+	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	if !bytes.Equal(fromAddr[:], args.From[:]) {
+		return common.Hash{}, errors.New("from address mismatch private key")
+	}
+
+	var signed *types.Transaction
+	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	retHash, reError = submitTransaction(ctx, s.b, signed)
+
+	return retHash, reError
+}
+
+// GenRingSignData generate ring sign data
+func (s *PrivateAccountAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
+	if !hexutil.Has0xPrefix(privateKey) {
+		return "", ErrInvalidPrivateKey
+	}
+
+	hmsg, err := hexutil.Decode(hashMsg)
+	if err != nil {
+		return "", err
+	}
+
+	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
+	if err != nil {
+		return "", err
+	}
+
+	privKey, err := hexutil.Decode(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	if privKey == nil {
+		return "", ErrInvalidPrivateKey
+	}
+
+	wanAddresses := strings.Split(mixWanAdresses, "+")
+	if len(wanAddresses) == 0 {
+		return "", ErrInvalidOTAMixSet
+	}
+
+	return genRingSignData(hmsg, privKey, &ecdsaPrivateKey.PublicKey, wanAddresses)
+}
+
+func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error) {
+	otaPrivD := new(big.Int).SetBytes(privateKey)
+
+	publicKeys := make([]*ecdsa.PublicKey, 0)
+	publicKeys = append(publicKeys, actualPub)
+
+	for _, strWanAddr := range mixWanAdress {
+		pubBytes, err := hexutil.Decode(strWanAddr)
+		if err != nil {
+			return "", errors.New("fail to decode wan address!")
+		}
+
+		if len(pubBytes) != common.WAddressLength {
+			return "", ErrInvalidWAddress
+		}
+
+		publicKeyA, _, err := keystore.GeneratePKPairFromWAddress(pubBytes)
+		if err != nil {
+
+			return "", errors.New("Fail to generate public key from wan address!")
+
+		}
+
+		publicKeys = append(publicKeys, publicKeyA)
+	}
+
+	retPublicKeys, keyImage, w_random, q_random, err := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
+	if err != nil {
+		return "", err
+	}
+
+	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
+}
+
+//  encode all ring sign out data to a string
+func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
+	tmp := make([]string, 0)
+	for _, pk := range publicKeys {
+		tmp = append(tmp, common.ToHex(crypto.FromECDSAPub(pk)))
+	}
+
+	pkStr := strings.Join(tmp, "&")
+	k := common.ToHex(crypto.FromECDSAPub(keyimage))
+	wa := make([]string, 0)
+	for _, wi := range Ws {
+		wa = append(wa, hexutil.EncodeBig(wi))
+	}
+
+	wStr := strings.Join(wa, "&")
+	qa := make([]string, 0)
+	for _, qi := range Qs {
+		qa = append(qa, hexutil.EncodeBig(qi))
+	}
+	qStr := strings.Join(qa, "&")
+	outs := strings.Join([]string{pkStr, k, wStr, qStr}, "+")
+	return outs, nil
 }
 
 // signHash is a helper function that calculates a hash for the given message that can be
@@ -1285,97 +1433,6 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 	return ret, nil
 }
 
-// GenRingSignData generate ring sign data
-func (s *PublicTransactionPoolAPI) GenRingSignData(ctx context.Context, hashMsg string, privateKey string, mixWanAdresses string) (string, error) {
-	if !hexutil.Has0xPrefix(privateKey) {
-		return "", ErrInvalidPrivateKey
-	}
-
-	hmsg, err := hexutil.Decode(hashMsg)
-	if err != nil {
-		return "", err
-	}
-
-	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
-	if err != nil {
-		return "", err
-	}
-
-	privKey, err := hexutil.Decode(privateKey)
-	if err != nil {
-		return "", err
-	}
-
-	if privKey == nil {
-		return "", ErrInvalidPrivateKey
-	}
-
-	wanAddresses := strings.Split(mixWanAdresses, "+")
-	if len(wanAddresses) == 0 {
-		return "", ErrInvalidOTAMixSet
-	}
-
-	return genRingSignData(hmsg, privKey, &ecdsaPrivateKey.PublicKey, wanAddresses)
-}
-
-func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicKey, mixWanAdress []string) (string, error) {
-	otaPrivD := new(big.Int).SetBytes(privateKey)
-
-	publicKeys := make([]*ecdsa.PublicKey, 0)
-	publicKeys = append(publicKeys, actualPub)
-
-	for _, strWanAddr := range mixWanAdress {
-		pubBytes, err := hexutil.Decode(strWanAddr)
-		if err != nil {
-			return "", errors.New("fail to decode wan address!")
-		}
-
-		if len(pubBytes) != common.WAddressLength {
-			return "", ErrInvalidWAddress
-		}
-
-		publicKeyA, _, err := keystore.GeneratePKPairFromWAddress(pubBytes)
-		if err != nil {
-
-			return "", errors.New("Fail to generate public key from wan address!")
-
-		}
-
-		publicKeys = append(publicKeys, publicKeyA)
-	}
-
-	retPublicKeys, keyImage, w_random, q_random, err := crypto.RingSign(hashMsg, otaPrivD, publicKeys)
-	if err != nil {
-		return "", err
-	}
-
-	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
-}
-
-//  encode all ring sign out data to a string
-func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
-	tmp := make([]string, 0)
-	for _, pk := range publicKeys {
-		tmp = append(tmp, common.ToHex(crypto.FromECDSAPub(pk)))
-	}
-
-	pkStr := strings.Join(tmp, "&")
-	k := common.ToHex(crypto.FromECDSAPub(keyimage))
-	wa := make([]string, 0)
-	for _, wi := range Ws {
-		wa = append(wa, hexutil.EncodeBig(wi))
-	}
-
-	wStr := strings.Join(wa, "&")
-	qa := make([]string, 0)
-	for _, qi := range Qs {
-		qa = append(qa, hexutil.EncodeBig(qi))
-	}
-	qStr := strings.Join(qa, "&")
-	outs := strings.Join([]string{pkStr, k, wStr, qStr}, "+")
-	return outs, nil
-}
-
 // ComputeOTAPPKeys compute ota private key, public key and short address
 // from account address and ota full address.
 func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address common.Address, inOtaAddr string) (string, error) {
@@ -1735,61 +1792,4 @@ func (s *PublicTransactionPoolAPI) GenerateOneTimeAddress(ctx context.Context, w
 
 func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 	return types.NewOTATransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
-}
-
-func (s *PublicTransactionPoolAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
-
-	//deal with panic error because
-	var retHash common.Hash
-	var reError error
-
-	if !hexutil.Has0xPrefix(sPrivateKey) {
-		return common.Hash{}, ErrInvalidPrivateKey
-	}
-
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	// Assemble the transaction and sign with the wallet
-	tx := args.toOTATransaction()
-
-	var chainID *big.Int
-	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-	if config := s.b.ChainConfig(); config != nil {
-		chainID = config.ChainId
-	}
-
-	var TxDataWithRing struct {
-		RingSignedData string
-		CxtCallParams  []byte
-	}
-	err := core.TokenAbi.Unpack(&TxDataWithRing, "combine", tx.Data()[4:])
-	if err != nil {
-		return  common.Hash{}, errors.New("error in abi data")
-	}
-
-	privateKey, err := crypto.HexToECDSA(sPrivateKey[2:])
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	//for fixing bug send privacy tx with a different private key
-	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
-	if !bytes.Equal(fromAddr[:],args.From[:]) {
-		return  common.Hash{},errors.New("from address mismatch private key")
-	}
-
-
-	var signed *types.Transaction
-	signed, err = types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-
-	retHash,reError = submitTransaction(ctx, s.b, signed)
-
-	return retHash,reError
 }
