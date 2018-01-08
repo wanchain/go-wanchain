@@ -63,7 +63,7 @@ var (
 	ErrInvalidOTAAddr                   = errors.New("Invalid OTA address")
 	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
 	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
-	ErrInvalidInput                     = errors.New("Invalid input")	
+	ErrInvalidInput                     = errors.New("Invalid input")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -436,10 +436,6 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the OTA key associated with args.To.
 func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args SendTxArgs, sPrivateKey string) (common.Hash, error) {
 
-	//deal with panic error because
-	var retHash common.Hash
-	var reError error
-
 	if !hexutil.Has0xPrefix(sPrivateKey) {
 		return common.Hash{}, ErrInvalidPrivateKey
 	}
@@ -448,10 +444,10 @@ func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args 
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	
+
 	if args.To == nil || len(args.Data) == 0 {
-		return common.Hash{},ErrInvalidInput
-	}	
+		return common.Hash{}, ErrInvalidInput
+	}
 
 	// Assemble the transaction and sign with the wallet
 	tx := args.toOTATransaction()
@@ -479,9 +475,7 @@ func (s *PrivateAccountAPI) SendPrivacyCxtTransaction(ctx context.Context, args 
 		return common.Hash{}, err
 	}
 
-	retHash, reError = submitTransaction(ctx, s.b, signed)
-
-	return retHash, reError
+	return submitTransaction(ctx, s.b, signed)
 }
 
 // GenRingSignData generate ring sign data
