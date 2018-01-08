@@ -5668,7 +5668,7 @@ var methods = function () {
 
     var sendPrivacyCxtTransaction = new Method({
         name: 'sendPrivacyCxtTransaction',
-        call: 'wan_sendPrivacyCxtTransaction',
+        call: 'personal_sendPrivacyCxtTransaction',
         params: 2,
         inputFormatter: [formatters.inputTransactionFormatter, null]
     });
@@ -5689,7 +5689,7 @@ var methods = function () {
 
     var genRingSignData = new Method({
         name: 'genRingSignData',
-        call: 'wan_genRingSignData',
+        call: 'personal_genRingSignData',
         params: 3,
         inputFormatter: [null, null, null]
     });
