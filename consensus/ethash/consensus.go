@@ -110,10 +110,10 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	// Recover the public key and the Ethereum address
-	log.Trace(fmt.Sprintf(header.String()))
+	//log.Trace(fmt.Sprintf(header.String()))
 
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
-	//log.Trace("ecrecover(): Seal hash", "Input hash", sigHash(header).String())
+	// log.Trace("ecrecover(): Seal hash", "Input hash", sigHash(header).String())
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -121,7 +121,7 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
 	// The signer's address should match the coinbase address in Wanchain Release 1, shall we add a warning if it's not?
-	log.Trace("ecrecover()", "recovered signer", signer)
+	// log.Trace("ecrecover()", "recovered signer", signer)
 
 	return signer, nil
 }
