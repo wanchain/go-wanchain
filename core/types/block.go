@@ -414,11 +414,9 @@ func (h *Header) String() string {
 	GasLimit:	    %v
 	GasUsed:	    %v
 	Time:		    %v
-	ExtraFront:		%x
-	ExtraSign:      %x
 	MixDigest:      %x
 	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, string(h.Extra[:32]), h.Extra[32:], h.MixDigest, h.Nonce)
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.MixDigest, h.Nonce)
 }
 
 type Blocks []*Block
