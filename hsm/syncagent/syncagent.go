@@ -9,7 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/hsm/agentUtil"
 	"github.com/wanchain/go-wanchain/hsm/fileHandler"
 	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
+//	"io/ioutil"
 )
 
 func handleSyncFile(ac *AgentContext) error {
