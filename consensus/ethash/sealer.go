@@ -1,3 +1,4 @@
+// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
