@@ -307,7 +307,7 @@ func testHasherCorrectness(bmt hash.Hash, hasher BaseHasher, d []byte, n, count 
 	data := d[:n]
 	rbmt := NewRefHasher(hasher, count)
 	exp := rbmt.Hash(data)
-	timeout := time.NewTimer(time.Second)
+	timeout := time.NewTimer(10*time.Second)
 	c := make(chan error)
 
 	go func() {
