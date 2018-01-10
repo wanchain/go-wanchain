@@ -811,13 +811,11 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download and the tester
-	targetBlocks := 20
+	targetBlocks := 15
 	if targetBlocks >= MaxHashFetch {
 		targetBlocks = MaxHashFetch - 15
 	}
-	if targetBlocks >= MaxHeaderFetch {
-		targetBlocks = MaxHeaderFetch - 15
-	}
+
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, testAddress, tester.genesis, nil, false)
 
 	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts)
@@ -832,7 +830,7 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	tester.downloader.Cancel()
 	if !tester.downloader.queue.Idle() {
