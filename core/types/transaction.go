@@ -528,3 +528,7 @@ const (
 func IsNormalTransaction(txType uint64) bool {
 	return txType != PRIVACY_TX
 }
+
+func IsValidTransactionType(txType uint64) bool {
+	return (txType == NORMAL_TX || txType == PRIVACY_TX)
+}
