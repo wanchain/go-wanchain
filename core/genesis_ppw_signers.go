@@ -1,3 +1,5 @@
+// Copyright 2018 Wanchain Foundation Ltd
+
 package core
 
 import (
@@ -13,7 +15,7 @@ func getMainNetPpwSignStr() string {
 
 	for _, str := range ppwMainNetSigAddr {
 		addr := strings.ToLower(str[:])
-		if strings.HasPrefix(addr,"0x") {
+		if strings.HasPrefix(addr, "0x") {
 			buf.WriteString(strings.ToLower(str[2:]))
 		} else {
 			buf.WriteString(strings.ToLower(str[:]))
@@ -25,7 +27,6 @@ func getMainNetPpwSignStr() string {
 
 }
 
-
 func getTestNetPpwSignStr() string {
 
 	var buf bytes.Buffer
@@ -33,7 +34,7 @@ func getTestNetPpwSignStr() string {
 
 	for _, str := range ppwTestNetSigAddr {
 		addr := strings.ToLower(str[:])
-		if strings.HasPrefix(addr,"0x") {
+		if strings.HasPrefix(addr, "0x") {
 			buf.WriteString(strings.ToLower(str[2:]))
 		} else {
 			buf.WriteString(strings.ToLower(str[:]))
@@ -50,9 +51,9 @@ func getInternalNetPpwSignStr() string {
 	var buf bytes.Buffer
 	buf.WriteString("0x")
 
-	for _, str := range ppwTestNetSigAddr {
+	for _, str := range ppwInternalSigAddr {
 		addr := strings.ToLower(str[:])
-		if strings.HasPrefix(addr,"0x") {
+		if strings.HasPrefix(addr, "0x") {
 			buf.WriteString(strings.ToLower(str[2:]))
 		} else {
 			buf.WriteString(strings.ToLower(str[:]))
@@ -65,7 +66,6 @@ func getInternalNetPpwSignStr() string {
 }
 
 var (
-
 	ppwMainNetSigAddr []string = []string{
 		"1F60504D91f9d0A6C928cD6c496065e7896C94e5",
 		"7D8865d4edDf5A28ece62f298530970a0a18690f",

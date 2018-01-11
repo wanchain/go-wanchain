@@ -1,3 +1,4 @@
+// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -24,7 +25,7 @@ import (
 )
 
 var (
-	MainnetGenesisHash = common.HexToHash("0xce8f6f7ce4b00c350d9ba280bc7714c1d4e1bab4e3a15b4f9dcd1cb96adf3afd") // Mainnet genesis hash to enforce below configs on
+	MainnetGenesisHash = common.HexToHash("0x5bdb7e6d94a7677bcea87c1c99716b65e0322e8ac61d9009ebd49a87e22906b9") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0xa37b811609a9d1e898fb49b3901728023e5e72e18e58643d9a7a82db483bfeb0") // Testnet genesis hash to enforce below configs on
 	PlutoGenesisHash   = common.HexToHash("0x7b67a3f28e0d12b57e5fdaa445c4d6dbe68bffa9b808e944e5c67726669d62b6") // Pluto genesis hash to enforce below configs on
 

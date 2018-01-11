@@ -1,3 +1,4 @@
+// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -526,4 +527,8 @@ const (
 
 func IsNormalTransaction(txType uint64) bool {
 	return txType != PRIVACY_TX
+}
+
+func IsValidTransactionType(txType uint64) bool {
+	return (txType == NORMAL_TX || txType == PRIVACY_TX)
 }

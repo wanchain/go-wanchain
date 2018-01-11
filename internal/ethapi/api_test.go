@@ -1,3 +1,5 @@
+// Copyright 2018 Wanchain Foundation Ltd
+
 package ethapi
 
 import (

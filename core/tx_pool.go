@@ -1,3 +1,4 @@
+// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -79,6 +80,9 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	// ErrInvalidTxType is returned if input transaction's type is unknown.
+	ErrInvalidTxType = errors.New("invalid transaction type")
 )
 
 var (
@@ -547,6 +551,10 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+	if !types.IsValidTransactionType(tx.Txtype()) {
+		return ErrInvalidTxType
+	}
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData

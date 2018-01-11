@@ -16,7 +16,7 @@ var sendWanFromUnlock = function (From, To , V){
 }
 
 var wait = function (conditionFunc) {
-	var loopLimit = 120;
+	var loopLimit = 130;
 	var loopTimes = 0;
 	while (!conditionFunc()) {
 		admin.sleep(2);
@@ -30,7 +30,7 @@ var wait = function (conditionFunc) {
 wanUnlock(eth.accounts[1])
 wanUnlock(eth.accounts[2])
 
-stampBalance = 0.009;
+stampBalance = 0.09;
 
 abiDefStamp = [{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}],"name":"buyStamp","outputs":[{"name":"OtaAddr","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}],"name":"refundCoin","outputs":[{"name":"RingSignedData","type":"string"},{"name":"Value","type":"uint256"}]},{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[],"name":"getCoins","outputs":[{"name":"Value","type":"uint256"}]}];
 
@@ -72,8 +72,6 @@ var erc20simple_contract = web3.eth.contract([{"constant":false,"inputs":[{"name
 contractAddr = '0x18f940983efda661f29b8b18609daf28d0cd5bff';
 erc20simple = erc20simple_contract.at(contractAddr)
 
-		
-
 var wanAddr = wan.getWanAddress(eth.accounts[1]);
 var otaAddrTokenHolder = wan.generateOneTimeAddress(wanAddr);
 keyPairs = wan.computeOTAPPKeys(eth.accounts[1], otaAddrTokenHolder).split('+');
@@ -89,7 +87,7 @@ if (ota1Balance != initPriBalance) {
 
 
 var hashMsg = addrTokenHolder
-var ringSignData = wan.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
+var ringSignData = personal.genRingSignData(hashMsg, privateKeyStamp, mixSetWith0x.join("+"))
 
 var wanAddr = wan.getWanAddress(eth.accounts[2]);
 var otaAddr4Account2 = wan.generateOneTimeAddress(wanAddr);
@@ -103,7 +101,7 @@ glueContractDef = eth.contract([{"constant":false,"type":"function","inputs":[{"
 glueContract = glueContractDef.at("0x0000000000000000000000000000000000000000")
 combinedData = glueContract.combine.getData(ringSignData, cxtInterfaceCallData)
 
-sendTx = wan.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (20000000000).toString(16)}, privateKeyTokenHolder)
+sendTx = personal.sendPrivacyCxtTransaction({from:addrTokenHolder, to:contractAddr, value:0, data: combinedData, gasprice:'0x' + (200000000000).toString(16)}, privateKeyTokenHolder)
 wait(function(){return eth.getTransaction(sendTx).blockNumber != null;});
 
 
