@@ -114,7 +114,7 @@ contract StandardToken is ERC20Protocol {
 
     using SafeMath for uint;
     string public constant name = "WanToken-Beta";
-    string public constant symbol = "WanToken";
+    string public constant symbol = "WTB";
     uint public constant decimals = 18;
     
     function transfer(address _to, uint _value) public returns (bool success) {
@@ -155,16 +155,11 @@ contract StandardToken is ERC20Protocol {
       return allowed[_owner][_spender];
     }
 
-    ////////////////////////////////////////////////////////////////////////
     function () public payable {
         buyWanCoin(msg.sender);
     }
     
-   function buyWanCoin(address receipient) 
-        public 
-        payable 
-        returns (bool) 
-    {
+    function buyWanCoin(address receipient) public payable returns (bool) {
         require(receipient != 0x0);
         require(msg.value >= 0.1 ether);
         
@@ -175,9 +170,7 @@ contract StandardToken is ERC20Protocol {
         return true;
     }   
     
-    
-    
-    address public wanport = 0x2cc79fa3b80c5b9b02051facd02478ea88a78e2c;
+    address public wanport = 0x2CC79FA3B80c5b9b02051fACD02478EA88a78E2c;
 
     mapping (address => uint) balances;
     mapping (address => mapping (address => uint)) allowed;
@@ -207,3 +200,5 @@ contract StandardToken is ERC20Protocol {
     }   
     
 }
+
+1000000000000000000

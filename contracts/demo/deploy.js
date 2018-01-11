@@ -6,15 +6,10 @@ var standardtoken = standardtokenContract.new(
      gas: '4700000'
    }, function (e, contract){
    	if (e) {
-   		console.log('deploy contract error: ', e)
+   	  console.log('Deploy contract error: ', e)
    	}
 
-    // console.log('transaction hash: ', contract.transactionHash);
-
-    // if (contract.address) {
-    // 	console.log('contract address is: ', contract.address)
-    // }
     if (typeof contract.address !== 'undefined') {
-         console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
+      console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
     }
  })
