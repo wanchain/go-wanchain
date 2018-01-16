@@ -40,6 +40,6 @@ sudo chmod 644 $wanchainLogRotateConf
 
 #add daily schedule to crontab
 sudo chmod 777 /etc/crontab
-echo "59 23 * * * root run-parts /etc/cron.daily" >> /etc/crontab
+sed -n '/cron.daily/p' /etc/crontab | sudo sed -i 's/25 6/59 23/g' /etc/crontab
 sudo chmod 644 /etc/crontab
 
