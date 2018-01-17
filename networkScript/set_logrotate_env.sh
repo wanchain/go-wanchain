@@ -14,7 +14,7 @@
 #
 
 #add wanchainlog logrotateconf 
-version="v0.9.6"
+version="v1.0.0"
 wanchainLogPath=$HOME/wanchain/$version/log/running.log
 wanchainLogRotateConf=/etc/logrotate.d/wanchainlog
 sudo touch $wanchainLogRotateConf
@@ -38,4 +38,6 @@ sudo chmod 644 $wanchainLogRotateConf
 sudo chmod 777 /etc/crontab
 sed -n '/cron.daily/p' /etc/crontab | sudo sed -i 's/25 6/59 23/g' /etc/crontab
 sudo chmod 644 /etc/crontab
+
+sudo /etc/init.d/cron restart
 
