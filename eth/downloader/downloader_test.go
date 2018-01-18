@@ -830,11 +830,7 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 		t.Fatalf("failed to synchronise blocks: %v", err)
 	}
 
-<<<<<<< .mine
-	time.Sleep(40 * time.Second)
-=======
 	time.Sleep(45 * time.Second)
->>>>>>> .theirs
 
 	tester.downloader.Cancel()
 	if !tester.downloader.queue.Idle() {
