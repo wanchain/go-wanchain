@@ -577,10 +577,12 @@ func (ethash *Ethash) dataset(block uint64) []uint32 {
 		// New current dataset, set its initial timestamp
 		current.used = time.Now()
 	}
-	ethash.lock.Unlock()
 
 	// Wait for generation finish, bump the timestamp and finalize the cache
 	current.generate(ethash.dagdir, ethash.dagsondisk, ethash.tester)
+
+	ethash.lock.Unlock()
+
 
 	current.lock.Lock()
 	current.used = time.Now()
