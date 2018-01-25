@@ -292,6 +292,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 
 	// Combine header+nonce into a 64 byte seed
 	seed := make([]byte, 40)
+	runtime.KeepAlive(seed)
 	copy(seed, hash)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
@@ -320,9 +321,12 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	mix = mix[:len(mix)/4]
 
 	digest := make([]byte, common.HashLength)
+	runtime.KeepAlive(digest)
+
 	for i, val := range mix {
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
+
 	return digest, crypto.Keccak256(append(seed, digest...))
 }
 
