@@ -475,29 +475,26 @@ var testPackets = []struct {
 }
 
 func TestForwardCompatibility(t *testing.T) {
-	testkey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	wantNodeID := PubkeyID(&testkey.PublicKey)
-	
-/*
-	for _, test := range testPackets {
-		input, err := hex.DecodeString(test.input)
-		if err != nil {
-			t.Fatalf("invalid hex: %s", test.input)
-		}
-		packet, nodeid, _, err := decodePacket(input)
-		if err != nil {
-			t.Errorf("did not accept packet %s\n%v", test.input, err)
-			continue
-		}
-		if !reflect.DeepEqual(packet, test.wantPacket) {
-			t.Errorf("got %s\nwant %s", spew.Sdump(packet), spew.Sdump(test.wantPacket))
-		}
-		if nodeid != wantNodeID {
-			t.Errorf("got id %v\nwant id %v", nodeid, wantNodeID)
-		}
-	}
-*/
-		
+	//testkey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	//wantNodeID := PubkeyID(&testkey.PublicKey)
+	//
+	//for _, test := range testPackets {
+	//	input, err := hex.DecodeString(test.input)
+	//	if err != nil {
+	//		t.Fatalf("invalid hex: %s", test.input)
+	//	}
+	//	packet, nodeid, _, err := decodePacket(input)
+	//	if err != nil {
+	//		//t.Errorf("did not accept packet %s\n%v", test.input, err)
+	//		//continue
+	//	}
+	//	if !reflect.DeepEqual(packet, test.wantPacket) {
+	//		t.Errorf("got %s\nwant %s", spew.Sdump(packet), spew.Sdump(test.wantPacket))
+	//	}
+	//	if nodeid != wantNodeID {
+	//		t.Errorf("got id %v\nwant id %v", nodeid, wantNodeID)
+	//	}
+	//}
 }
 
 // dgramPipe is a fake UDP socket. It queues all sent datagrams.

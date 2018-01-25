@@ -139,6 +139,8 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 				attempts = 0
 			}
 			// Compute the PoW value of this nonce
+			runtime.KeepAlive(dataset)
+
 			digest, result := hashimotoFull(dataset, hash, nonce)
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				// Correct nonce found, create a new header with it
