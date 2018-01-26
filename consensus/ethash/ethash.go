@@ -514,10 +514,13 @@ func (ethash *Ethash) cache(block uint64) []uint32 {
 		// New current cache, set its initial timestamp
 		current.used = time.Now()
 	}
+
 	ethash.lock.Unlock()
 
 	// Wait for generation finish, bump the timestamp and finalize the cache
 	current.generate(ethash.cachedir, ethash.cachesondisk, ethash.tester)
+
+
 
 	current.lock.Lock()
 	current.used = time.Now()
@@ -577,6 +580,7 @@ func (ethash *Ethash) dataset(block uint64) []uint32 {
 		// New current dataset, set its initial timestamp
 		current.used = time.Now()
 	}
+
 	ethash.lock.Unlock()
 
 	// Wait for generation finish, bump the timestamp and finalize the cache
