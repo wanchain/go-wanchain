@@ -32,7 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
-const Version = 4
+const Version = 5
 
 // Errors
 var (

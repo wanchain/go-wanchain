@@ -309,7 +309,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	for i := 0; i < loopAccesses; i++ {
 		parent := fnv(uint32(i)^seedHead, mix[i%len(mix)]) % rows
 		for j := uint32(0); j < mixBytes/hashBytes; j++ {
-			copy(temp[j*hashWords:], lookup(2*parent+j))
+			copy(temp[j*hashWords:],lookup(2*parent+j))
 		}
 		fnvHash(mix, temp)
 	}
@@ -320,9 +320,12 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	mix = mix[:len(mix)/4]
 
 	digest := make([]byte, common.HashLength)
+
+
 	for i, val := range mix {
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
+
 	return digest, crypto.Keccak256(append(seed, digest...))
 }
 
@@ -350,7 +353,9 @@ func hashimotoLight(size uint64, cache []uint32, hash []byte, nonce uint64) ([]b
 func hashimotoFull(dataset []uint32, hash []byte, nonce uint64) ([]byte, []byte) {
 	lookup := func(index uint32) []uint32 {
 		offset := index * hashWords
-		return dataset[offset : offset+hashWords]
+		ds := dataset[offset : offset+hashWords]
+		runtime.KeepAlive(ds)
+		return ds
 	}
 	return hashimoto(hash, nonce, uint64(len(dataset))*4, lookup)
 }
