@@ -12,6 +12,9 @@
 GOBIN = build/bin
 GO ?= latest
 
+linuxDir=$(shell echo gwan-linux-amd64-`cat ./VERSION`-`git rev-parse --short=8 HEAD`)
+windowsDir=$(shell echo gwan-windows-amd64-`cat ./VERSION`-`git rev-parse --short=8 HEAD`)
+darwinDir=$(shell echo gwan-mac-amd64-`cat ./VERSION`-`git rev-parse --short=8 HEAD`)
 # The gwan target build gwan binary
 gwan:
 	build/env.sh  go run   -gcflags "-N -l"    build/ci.go   install ./cmd/gwan
@@ -80,10 +83,13 @@ devtools:
 # 	@echo "Linux 386 cross compilation done:"
 # 	@ls -ld $(GOBIN)/geth-linux-* | grep 386
 
-# geth-linux-amd64:
-# 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/geth
-# 	@echo "Linux amd64 cross compilation done:"
-# 	@ls -ld $(GOBIN)/geth-linux-* | grep amd64
+gwan-linux-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/gwan
+	@echo "Linux amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gwan-linux-* | grep amd64
+	mkdir -p ${linuxDir}
+	cp ./build/bin/gwan-linux-* ${linuxDir}/gwan
+	tar zcf ${linuxDir}.tar.gz ${linuxDir}/gwan
 
 # geth-linux-arm: geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
 # 	@echo "Linux ARM cross compilation done:"
@@ -138,10 +144,13 @@ devtools:
 # 	@echo "Darwin 386 cross compilation done:"
 # 	@ls -ld $(GOBIN)/geth-darwin-* | grep 386
 
-# geth-darwin-amd64:
-# 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/geth
-# 	@echo "Darwin amd64 cross compilation done:"
-# 	@ls -ld $(GOBIN)/geth-darwin-* | grep amd64
+gwan-darwin-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/gwan
+	@echo "Darwin amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gwan-darwin-* | grep amd64
+	mkdir -p ${darwinDir}
+	cp ./build/bin/gwan-darwin-* ${darwinDir}/gwan
+	tar zcf ${darwinDir}.tar.gz ${darwinDir}/gwan
 
 # geth-windows: geth-windows-386 geth-windows-amd64
 # 	@echo "Windows cross compilation done:"
@@ -152,7 +161,12 @@ devtools:
 # 	@echo "Windows 386 cross compilation done:"
 # 	@ls -ld $(GOBIN)/geth-windows-* | grep 386
 
-# geth-windows-amd64:
-# 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/geth
-# 	@echo "Windows amd64 cross compilation done:"
-# 	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
+gwan-windows-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/gwan
+	@echo "Windows amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gwan-windows-* | grep amd64
+	mkdir -p ${windowsDir}
+	cp ./build/bin/gwan-windows-* ${windowsDir}/gwan.exe
+	zip ${windowsDir}.zip ${windowsDir}/gwan.exe
+
+release: clean gwan-linux-amd64 gwan-windows-amd64 gwan-darwin-amd64
