@@ -14,7 +14,7 @@
 #
 
 #add wanchainlog logrotateconf 
-version="v1.0.0"
+version="v1.0.1"
 wanchainLogPath=$HOME/wanchain/$version/log/running.log
 wanchainLogRotateConf=/etc/logrotate.d/wanchainlog
 sudo touch $wanchainLogRotateConf
@@ -24,8 +24,7 @@ $wanchainLogPath
 {
    daily
    dateext
-   rotate 7
-   delaycompress
+   rotate 31
    compress
    notifempty
    missingok
