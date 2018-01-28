@@ -488,7 +488,7 @@ func NewTester(db ethdb.Database) *Ethash {
 
 	return &Ethash{
 
-		config:Config{ CachesInMem: 1,PowMode: ModeTest},
+		config:Config{ CachesInMem: 1,PowMode: ModeFake},
 		update:      make(chan struct{}),
 		hashrate:    metrics.NewMeter(),
 		recents:     recents,
@@ -512,37 +512,53 @@ func NewFaker(db ethdb.Database) *Ethash {
 	}
 }
 
+
 // NewFakeFailer creates a ethash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid apart from the single one specified, though they
 // still have to conform to the Ethereum consensus rules.
-func NewFakeFailer(fail uint64) *Ethash {
+func NewFakeFailer(fail uint64, db ethdb.Database) *Ethash {
+	recents, _ := lruCache.NewARC(256)
+
 	return &Ethash{
 		config: Config{
 			PowMode: ModeFake,
 		},
 		fakeFail: fail,
+		recents:  recents,
+		db:       db,
 	}
 }
 
 // NewFakeDelayer creates a ethash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid, but delays verifications by some time, though
 // they still have to conform to the Ethereum consensus rules.
-func NewFakeDelayer(delay time.Duration) *Ethash {
+
+func NewFakeDelayer(delay time.Duration, db ethdb.Database) *Ethash {
+
+	recents, _ := lruCache.NewARC(256)
+
 	return &Ethash{
 		config: Config{
 			PowMode: ModeFake,
 		},
 		fakeDelay: delay,
+		recents:   recents,
+		db:        db,
 	}
 }
 
 // NewFullFaker creates an ethash consensus engine with a full fake scheme that
 // accepts all blocks as valid, without checking any consensus rules whatsoever.
-func NewFullFaker() *Ethash {
+
+
+func NewFullFaker(db ethdb.Database) *Ethash {
+	recents, _ := lruCache.NewARC(256)
 	return &Ethash{
 		config: Config{
-			PowMode: ModeFullFake,
+				PowMode: ModeFullFake,
 		},
+		db: db,
+		recents: recents,
 	}
 }
 
