@@ -22,6 +22,7 @@ sudo chmod 777 $wanchainLogRotateConf
 echo "
 $wanchainLogPath
 {
+   su root list
    daily
    dateext
    rotate 31
