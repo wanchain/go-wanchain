@@ -206,7 +206,7 @@ func (self *StateDB) GetTotalBalance() *big.Int {
 			return totalBalance
 		}
 
-		fmt.Println("loop, account:", addr.String(), "balance:", data.Balance.String())
+		log.Debug("total balance", "account:", addr.String(), "balance:", data.Balance.String())
 		totalBalance.Add(totalBalance, data.Balance)
 	}
 
