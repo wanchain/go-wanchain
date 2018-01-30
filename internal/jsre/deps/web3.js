@@ -5694,6 +5694,15 @@ var methods = function () {
         inputFormatter: [null, null, null]
     });
 
+    var getTotalBalance = new Method({
+        name: 'getTotalBalance',
+        call: 'personal_getTotalBalance',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
+
     return [
         newAccount,
         importRawKey,
@@ -5704,7 +5713,8 @@ var methods = function () {
         sendPrivacyCxtTransaction,
         genRingSignData,
         lockAccount,
-        updateAccount
+        updateAccount,
+        getTotalBalance
     ];
 };
 

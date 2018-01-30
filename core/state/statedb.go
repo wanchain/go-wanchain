@@ -193,6 +193,26 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
+func (self *StateDB) GetTotalBalance() *big.Int {
+	totalBalance := big.NewInt(0)
+	it := trie.NewIterator(self.trie.NodeIterator(nil))
+	for it.Next() {
+		// ignore cached values
+		//key := common.BytesToHash(self.trie.GetKey(it.Key))
+		addr := common.BytesToAddress(it.Key)
+		var data Account
+		if err := rlp.DecodeBytes(it.Value, &data); err != nil {
+			log.Error("Failed to decode state object", "addr", addr, "err", err)
+			return totalBalance
+		}
+
+		fmt.Println("loop, account:", addr.String(), "balance:", data.Balance.String())
+		totalBalance.Add(totalBalance, data.Balance)
+	}
+
+	return totalBalance
+}
+
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {

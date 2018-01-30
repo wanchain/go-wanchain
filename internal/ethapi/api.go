@@ -546,6 +546,16 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 	return encodeRingSignOut(retPublicKeys, keyImage, w_random, q_random)
 }
 
+func (s *PrivateAccountAPI) GetTotalBalance(ctx context.Context, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	b := state.GetTotalBalance()
+	return b, state.Error()
+}
+
 //  encode all ring sign out data to a string
 func encodeRingSignOut(publicKeys []*ecdsa.PublicKey, keyimage *ecdsa.PublicKey, Ws []*big.Int, Qs []*big.Int) (string, error) {
 	tmp := make([]string, 0)
