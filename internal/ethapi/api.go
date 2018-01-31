@@ -552,8 +552,17 @@ func (s *PrivateAccountAPI) GetTotalBalance(ctx context.Context, blockNr rpc.Blo
 		return nil, err
 	}
 
-	b := state.GetTotalBalance()
-	return b, state.Error()
+	accB := state.GetTotalBalance()
+	if state.Error() != nil {
+		return common.Big0, state.Error()
+	}
+
+	otaB, err := vm.GetUnspendOTATotalBalance(state)
+	if err != nil {
+		return common.Big0, err
+	}
+
+	return accB.Add(accB, otaB), state.Error()
 }
 
 //  encode all ring sign out data to a string

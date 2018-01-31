@@ -388,3 +388,40 @@ func AddOTAImage(statedb StateDB, otaImage []byte, value []byte) error {
 	statedb.SetStateByteArray(otaImageStorageAddr, otaImageKey, value)
 	return nil
 }
+
+func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
+	if statedb == nil {
+		return nil, ErrUnknown
+	}
+
+	totalOTABalance, totalSpendedOTABalance := big.NewInt(0), big.NewInt(0)
+
+	// total history OTA balance (include spended)
+	statedb.ForEachStorageByteArray(otaBalanceStorageAddr, func(key common.Hash, value []byte) bool {
+		if len(value) == 0 {
+			log.Warn("total ota balance. value is empoty!", "key", key.String())
+			return true
+		}
+
+		balance := new(big.Int).SetBytes(value)
+		totalOTABalance.Add(totalOTABalance, balance)
+		log.Debug("total ota balance.", "key", key.String(), "balance:", balance.String())
+		return true
+	})
+
+	// total spended OTA balance
+	statedb.ForEachStorageByteArray(otaImageStorageAddr, func(key common.Hash, value []byte) bool {
+		if len(value) == 0 {
+			log.Warn("total spended ota balance. value is empoty!", "key", key.String())
+			return true
+		}
+
+		balance := new(big.Int).SetBytes(value)
+		totalSpendedOTABalance.Add(totalSpendedOTABalance, balance)
+		log.Debug("total spended ota balance.", "key", key.String(), "balance:", balance.String())
+		return true
+	})
+
+	log.Debug("total unspended OTA balance", "total history OTA balance:", totalOTABalance.String(), "total spended OTA balance:", totalSpendedOTABalance.String())
+	return totalOTABalance.Sub(totalOTABalance, totalSpendedOTABalance), nil
+}
