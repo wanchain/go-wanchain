@@ -421,7 +421,7 @@ func WriteTd(db ethdb.Putter, hash common.Hash, number uint64, td *big.Int) erro
 	}
 	key := append(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...), tdSuffix...)
 	if err := db.Put(key, data); err != nil {
-		log.Crit("Failed to store block total difficulty", "err", err)
+		log.Error("Failed to store block total difficulty", "err", err)
 	}
 	return nil
 }
