@@ -64,6 +64,7 @@ func newSnapshot(number uint64, hash common.Hash, signers []common.Address) *Sna
 	for _, s := range signers {
 		snap.PermissionSigners[s] = struct{}{}
 	}
+
 	return snap
 }
 

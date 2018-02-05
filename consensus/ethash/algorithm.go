@@ -309,7 +309,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	for i := 0; i < loopAccesses; i++ {
 		parent := fnv(uint32(i)^seedHead, mix[i%len(mix)]) % rows
 		for j := uint32(0); j < mixBytes/hashBytes; j++ {
-			copy(temp[j*hashWords:], lookup(2*parent+j))
+			copy(temp[j*hashWords:],lookup(2*parent+j))
 		}
 		fnvHash(mix, temp)
 	}
@@ -320,9 +320,12 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	mix = mix[:len(mix)/4]
 
 	digest := make([]byte, common.HashLength)
+
+
 	for i, val := range mix {
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
+
 	return digest, crypto.Keccak256(append(seed, digest...))
 }
 
@@ -355,9 +358,11 @@ func hashimotoFull(dataset []uint32, hash []byte, nonce uint64) ([]byte, []byte)
 	return hashimoto(hash, nonce, uint64(len(dataset))*4, lookup)
 }
 
+const maxEpoch = 2048
+
 // datasetSizes is a lookup table for the ethash dataset size for the first 2048
 // epochs (i.e. 61440000 blocks).
-var datasetSizes = []uint64{
+var datasetSizes = [maxEpoch]uint64{
 	1073739904, 1082130304, 1090514816, 1098906752, 1107293056,
 	1115684224, 1124070016, 1132461952, 1140849536, 1149232768,
 	1157627776, 1166013824, 1174404736, 1182786944, 1191180416,
@@ -771,7 +776,7 @@ var datasetSizes = []uint64{
 
 // cacheSizes is a lookup table for the ethash verification cache size for the
 // first 2048 epochs (i.e. 61440000 blocks).
-var cacheSizes = []uint64{
+var cacheSizes = [maxEpoch]uint64{
 	16776896, 16907456, 17039296, 17170112, 17301056, 17432512, 17563072,
 	17693888, 17824192, 17955904, 18087488, 18218176, 18349504, 18481088,
 	18611392, 18742336, 18874304, 19004224, 19135936, 19267264, 19398208,

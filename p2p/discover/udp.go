@@ -31,6 +31,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/rlp"
 
+	//"github.com/wanchain/go-wanchain/params"
 )
 
 const Version = 5
@@ -131,6 +132,11 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
 	if rn.UDP <= 1024 {
 		return nil, errors.New("low port")
 	}
+
+	//if rn.TCP != params.WanTcpPort {
+	//	return nil, errors.New("wrong wanchain tcp port")
+	//}
+
 	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
 		return nil, err
 	}
