@@ -405,7 +405,7 @@ func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
 
 		balance := new(big.Int).SetBytes(value)
 		totalOTABalance.Add(totalOTABalance, balance)
-		log.Debug("total ota balance.", "key", key.String(), "balance:", balance.String())
+		log.Debug("total ota balance.", "key", key.String(), "balance", balance.String())
 		return true
 	})
 
@@ -418,10 +418,10 @@ func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
 
 		balance := new(big.Int).SetBytes(value)
 		totalSpendedOTABalance.Add(totalSpendedOTABalance, balance)
-		log.Debug("total spended ota balance.", "key", key.String(), "balance:", balance.String())
+		log.Debug("total spended ota balance.", "key", key.String(), "balance", balance.String())
 		return true
 	})
 
-	log.Debug("total unspended OTA balance", "total history OTA balance:", totalOTABalance.String(), "total spended OTA balance:", totalSpendedOTABalance.String())
+	log.Debug("total unspended OTA balance", "total history OTA balance", totalOTABalance.String(), "total spended OTA balance", totalSpendedOTABalance.String())
 	return totalOTABalance.Sub(totalOTABalance, totalSpendedOTABalance), nil
 }

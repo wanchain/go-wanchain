@@ -547,6 +547,7 @@ func genRingSignData(hashMsg []byte, privateKey []byte, actualPub *ecdsa.PublicK
 }
 
 func (s *PrivateAccountAPI) GetTotalBalance(ctx context.Context, blockNr rpc.BlockNumber) (*big.Int, error) {
+	log.Debug("GetTotalBalance begin.", "blockNum", blockNr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
