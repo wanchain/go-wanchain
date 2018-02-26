@@ -545,12 +545,15 @@ func (f *faucet) loop() {
 				price   *big.Int
 				err     error
 			)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
 			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
+			fmt.Println("balance")
 			if err == nil {
 				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
+				fmt.Println("nonce")
 				if err == nil {
 					price, err = f.client.SuggestGasPrice(ctx)
+					fmt.Println("price")
 				}
 			}
 			cancel()
@@ -577,14 +580,14 @@ func (f *faucet) loop() {
 				if err := send(conn, map[string]interface{}{
 					"funds":    balance,
 					"funded":   f.nonce,
-					"peers":    f.stack.Server().PeerCount(),
+					"peers":    1,//f.stack.Server().PeerCount(),
 					"requests": f.reqs,
 				}, time.Second); err != nil {
 					log.Warn("Failed to send stats to client", "err", err)
 					conn.Close()
 					continue
 				}
-				if err := send(conn, head, time.Second); err != nil {
+				if err := send(conn, head, 10*time.Second); err != nil {
 					log.Warn("Failed to send header to client", "err", err)
 					conn.Close()
 				}
@@ -609,7 +612,7 @@ func (f *faucet) loop() {
 // setting a write deadline to prevent waiting forever on the node.
 func send(conn *websocket.Conn, value interface{}, timeout time.Duration) error {
 	if timeout == 0 {
-		timeout = 60 * time.Second
+		timeout = 6 * time.Second
 	}
 	conn.SetWriteDeadline(time.Now().Add(timeout))
 	return websocket.JSON.Send(conn, value)
