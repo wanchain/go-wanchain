@@ -14,6 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+
 )
 
 var (
@@ -92,7 +93,7 @@ func SetOtaBalanceToAX(statedb StateDB, otaAX []byte, balance *big.Int) error {
 //
 // In order to avoid additional ota have conflict with existing,
 // even if AX exist in balance storage already, will return true.
-func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int, err error) {
+func CheckOTAAXExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int, err error) {
 	if statedb == nil {
 		return false, nil, ErrUnknown
 	}
@@ -113,43 +114,113 @@ func CheckOTAExist(statedb StateDB, otaAX []byte) (exist bool, balance *big.Int,
 	return true, balance, nil
 }
 
-// BatCheckOTAExist batch check the OTAs exist or not.
-//
-// return true means all OTAs exist and their have same balance
-//
-func BatCheckOTAExist(statedb StateDB, otaAXs [][]byte) (exist bool, balance *big.Int, unexistOta []byte, err error) {
-	if statedb == nil || len(otaAXs) == 0 {
+func CheckOTALongAddrExist(statedb StateDB, otaLongAddr []byte) (exist bool, balance *big.Int, err error) {
+	if statedb == nil {
+		return false, nil, ErrUnknown
+	}
+
+	if len(otaLongAddr) != 33 {
+		return false, nil, ErrInvalidOTAAX
+	}
+
+	otaAX := otaLongAddr[1 : 1+common.HashLength]
+	if err != nil {
+		return false, nil, err
+	}
+
+	balance, err = GetOtaBalanceFromAX(statedb, otaAX)
+	if err != nil {
+		return false, nil, err
+	}
+
+	if balance.Cmp(common.Big0) == 0 {
+		return false, nil, nil
+	}
+
+	mptAddr := OTABalance2ContractAddr(balance)
+	otaStored := statedb.GetStateByteArray(mptAddr, common.BytesToHash(otaAX))
+
+	fmt.Println(common.ToHex(mptAddr.Bytes()))
+	fmt.Println(common.ToHex(otaLongAddr))
+
+	if otaStored == nil {
+		return false, nil, nil
+	}
+
+	if !bytes.Equal(otaLongAddr, otaStored[:33]) {
+		return false, nil, nil
+	}
+
+	return true, balance, nil
+}
+
+
+
+func BatCheckOTAExist(statedb StateDB, otaLongAddrs [][]byte) (exist bool, balance *big.Int, unexistOta []byte, err error) {
+	if statedb == nil || len(otaLongAddrs) == 0 {
 		return false, nil, nil, ErrUnknown
 	}
 
-	for _, otaAX := range otaAXs {
-		if len(otaAX) < common.HashLength {
-			return false, nil, otaAX, ErrInvalidOTAAX
+	for _, otaLongAddr := range otaLongAddrs {
+		if len(otaLongAddr) != 33 {
+			return false, nil, otaLongAddr, ErrInvalidOTAAX
 		}
 
-		balanceTmp, err := GetOtaBalanceFromAX(statedb, otaAX[:common.HashLength])
+		exist, balanceTmp, err := CheckOTALongAddrExist(statedb, otaLongAddr)
 		if err != nil {
-			return false, nil, otaAX, err
+			return false, nil, otaLongAddr, err
+		} else if !exist {
+			return false, nil, otaLongAddr, errors.New("ota doesn't exist:" + common.ToHex(otaLongAddr))
 		} else if balanceTmp.Cmp(common.Big0) == 0 {
-			return false, nil, otaAX, errors.New("ota balance is 0! ota:" + common.ToHex(otaAX))
+			return false, nil, otaLongAddr, errors.New("ota balance is 0! ota:" + common.ToHex(otaLongAddr))
 		} else if balance == nil {
 			balance = balanceTmp
 			continue
 		} else if balance.Cmp(balanceTmp) != 0 {
-			return false, nil, otaAX, errors.New("otas have different balances! ota:" + common.ToHex(otaAX))
-		}
-	}
-
-	mptAddr := OTABalance2ContractAddr(balance)
-	for _, otaAX := range otaAXs {
-		otaAddrKey := common.BytesToHash(otaAX)
-		otaValue := statedb.GetStateByteArray(mptAddr, otaAddrKey)
-		if len(otaValue) == 0 {
-			return false, nil, otaAX, errors.New("ota doesn't exist:" + common.ToHex(otaAX))
+			return false, nil, otaLongAddr, errors.New("otas have different balances! ota:" + common.ToHex(otaLongAddr))
 		}
 	}
 
 	return true, balance, nil, nil
+}
+
+
+func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
+	if statedb == nil {
+		return nil, ErrUnknown
+	}
+
+	totalOTABalance, totalSpendedOTABalance := big.NewInt(0), big.NewInt(0)
+
+	// total history OTA balance (include spended)
+	statedb.ForEachStorageByteArray(otaBalanceStorageAddr, func(key common.Hash, value []byte) bool {
+		if len(value) == 0 {
+			log.Warn("total ota balance. value is empoty!", "key", key.String())
+			return true
+		}
+
+		balance := new(big.Int).SetBytes(value)
+		totalOTABalance.Add(totalOTABalance, balance)
+		log.Debug("total ota balance.", "key", key.String(), "balance:", balance.String())
+		return true
+	})
+
+	// total spended OTA balance
+	statedb.ForEachStorageByteArray(otaImageStorageAddr, func(key common.Hash, value []byte) bool {
+		if len(value) == 0 {
+			log.Warn("total spended ota balance. value is empoty!", "key", key.String())
+			return true
+		}
+
+		balance := new(big.Int).SetBytes(value)
+		totalSpendedOTABalance.Add(totalSpendedOTABalance, balance)
+		log.Debug("total spended ota balance.", "key", key.String(), "balance:", balance.String())
+		return true
+	})
+
+	log.Debug("total unspended OTA balance", "total history OTA balance:", totalOTABalance.String(), "total spended OTA balance:", totalSpendedOTABalance.String())
+
+	return totalOTABalance.Sub(totalOTABalance, totalSpendedOTABalance), nil
 }
 
 // setOTA storage ota info, include balance and WanAddr. Overwrite if ota exist already.
@@ -187,7 +258,7 @@ func AddOTAIfNotExist(statedb StateDB, balance *big.Int, otaWanAddr []byte) (boo
 
 	otaAX, _ := GetAXFromWanAddr(otaWanAddr)
 	otaAddrKey := common.BytesToHash(otaAX)
-	exist, _, err := CheckOTAExist(statedb, otaAddrKey[:])
+	exist, _, err := CheckOTAAXExist(statedb, otaAddrKey[:])
 	if err != nil {
 		return false, err
 	}
