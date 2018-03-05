@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -449,11 +450,11 @@ const (
 	WanStampdot006 = "6000000000000000" //0.006
 	WanStampdot009 = "9000000000000000" //0.009
 
-	WanStampdot03 = "30000000000000000" //0.03
-	WanStampdot06 = "60000000000000000" //0.06
-	WanStampdot09 = "90000000000000000" //0.09
-	WanStampdot2 = "200000000000000000" //0.2
-	WanStampdot5 = "500000000000000000" //0.5
+	WanStampdot03 = "30000000000000000"  //0.03
+	WanStampdot06 = "60000000000000000"  //0.06
+	WanStampdot09 = "90000000000000000"  //0.09
+	WanStampdot2  = "200000000000000000" //0.2
+	WanStampdot5  = "500000000000000000" //0.5
 
 )
 
@@ -500,7 +501,6 @@ func init() {
 
 	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
 	StampValueSet[svaldot5.Text(16)] = WanStampdot5
-
 
 	cval10, _ := new(big.Int).SetString(Wancoin10, 10)
 	WanCoinValueSet[cval10.Text(16)] = Wancoin10
@@ -603,7 +603,7 @@ func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, valu
 	}
 
 	ax, err := GetAXFromWanAddr(wanAddr)
-	exist, _, err := CheckOTAExist(stateDB, ax)
+	exist, _, err := CheckOTAAXExist(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
@@ -764,7 +764,7 @@ func (c *wanCoinSC) ValidBuyCoinReq(stateDB StateDB, payload []byte, txValue *bi
 		return nil, err
 	}
 
-	exist, _, err := CheckOTAExist(stateDB, ax)
+	exist, _, err := CheckOTAAXExist(stateDB, ax)
 	if err != nil {
 		return nil, err
 	}
@@ -931,13 +931,12 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 		return nil, err
 	}
 
-	otaAXs := make([][]byte, 0, len(infoTmp.PublicKeys))
+	otaLongs := make([][]byte, 0, len(infoTmp.PublicKeys))
 	for i := 0; i < len(infoTmp.PublicKeys); i++ {
-		pkBytes := crypto.FromECDSAPub(infoTmp.PublicKeys[i])
-		otaAXs = append(otaAXs, pkBytes[1:1+common.HashLength])
+		otaLongs = append(otaLongs, keystore.ECDSAPKCompression(infoTmp.PublicKeys[i]))
 	}
 
-	exist, balanceGet, _, err := BatCheckOTAExist(stateDB, otaAXs)
+	exist, balanceGet, _, err := BatCheckOTAExist(stateDB, otaLongs)
 	if err != nil {
 		log.Error("verify mix ota fail", "err", err.Error())
 		return nil, err
