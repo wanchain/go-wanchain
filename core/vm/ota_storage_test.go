@@ -186,17 +186,17 @@ func TestCheckOTAExist(t *testing.T) {
 		balanceSet   = big.NewInt(10)
 	)
 
-	_, _, err := CheckOTAExist(nil, otaAX)
+	_, _, err := CheckOTAAXExist(nil, otaAX)
 	if err == nil {
 		t.Error("expect err: invalid input param!")
 	}
 
-	_, _, err = CheckOTAExist(statedb, otaAX[1:])
+	_, _, err = CheckOTAAXExist(statedb, otaAX[1:])
 	if err == nil {
 		t.Error("expect err: invalid input param!")
 	}
 
-	exist, balanceGet, err := CheckOTAExist(statedb, otaAX)
+	exist, balanceGet, err := CheckOTAAXExist(statedb, otaAX)
 	if err != nil {
 		t.Errorf("CheckOTAExist, err:%s", err.Error())
 	}
@@ -210,7 +210,7 @@ func TestCheckOTAExist(t *testing.T) {
 		t.Errorf("SetOTA err:%s", err.Error())
 	}
 
-	exist, balanceGet, err = CheckOTAExist(statedb, otaAX)
+	exist, balanceGet, err = CheckOTAAXExist(statedb, otaAX)
 	if err != nil {
 		t.Errorf("CheckOTAExist, err:%s", err.Error())
 	}
@@ -236,7 +236,7 @@ func TestBatCheckOTAExist(t *testing.T) {
 
 		otaAXs := make([][]byte, 0, 4)
 		for _, otaShortAddr := range otaShortAddrBytes {
-			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
+			otaAXs = append(otaAXs, otaShortAddr[0:1+common.HashLength])
 		}
 
 		_, _, _, err := BatCheckOTAExist(nil, otaAXs)
@@ -274,7 +274,7 @@ func TestBatCheckOTAExist(t *testing.T) {
 
 		otaAXs := make([][]byte, 0, 4)
 		for _, otaShortAddr := range otaShortAddrBytes {
-			otaAXs = append(otaAXs, otaShortAddr[1:1+common.HashLength])
+			otaAXs = append(otaAXs, otaShortAddr[0:1+common.HashLength])
 		}
 
 		exist, balanceGet, unexisotaAx, err := BatCheckOTAExist(statedb, otaAXs)
@@ -315,7 +315,7 @@ func TestBatCheckOTAExist(t *testing.T) {
 		}
 
 		unexisotaShortAddr := common.FromHex(otaShortAddrs[5])
-		unexisotaAXSet := unexisotaShortAddr[1 : 1+common.HashLength]
+		unexisotaAXSet := unexisotaShortAddr[0 : 1+common.HashLength]
 		otaAXs = append(otaAXs, unexisotaAXSet)
 		exist, balanceGet, unexisotaAx, err = BatCheckOTAExist(statedb, otaAXs)
 		if exist || (balanceGet != nil && balanceSet.Cmp(balanceGet) == 0) {
@@ -462,7 +462,7 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 
 		otaShortAddr = common.FromHex(otaShortAddrs[4])
-		otaAX        = otaShortAddr[1 : 1+common.HashLength]
+		otaAX        = otaShortAddr[0 : 1+common.HashLength]
 		balanceSet   = big.NewInt(10)
 	)
 
