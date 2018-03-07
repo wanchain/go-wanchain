@@ -103,6 +103,7 @@ var (
 		utils.TestnetFlag,
 		utils.DevInternalFlag,
 		utils.PlutoFlag,
+		utils.StoremanFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,

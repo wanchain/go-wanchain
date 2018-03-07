@@ -525,7 +525,7 @@ func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 	//	return errors.New("not specified port")
 	//}
 	_, err = t.conn.WriteToUDP(packet, toaddr)
-	log.Info(">> "+req.name(), "addr", toaddr, "err", err)
+	log.Trace(">> "+req.name(), "addr", toaddr, "err", err)
 	return err
 }
 

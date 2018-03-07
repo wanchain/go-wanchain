@@ -143,6 +143,10 @@ var (
 		Name:  "pluto",
 		Usage: "Pluto network: pre-configured wanchain proof-of-authority test network",
 	}
+	StoremanFlag = cli.BoolFlag{
+		Name:  "storeman",
+		Usage: "Enable storeman feature",
+	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
@@ -791,7 +795,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || ctx.GlobalBool(LightModeFlag.Name) {
 		cfg.NoDiscovery = true
 	}
-
+	if ctx.GlobalBool(StoremanFlag.Name) {
+		cfg.StoremanEnabled = true
+	}
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
