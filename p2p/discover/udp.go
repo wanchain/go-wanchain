@@ -657,6 +657,7 @@ func (req *pong) name() string {
 }
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	fmt.Println("received findnode req: ", req.Target)
 	if expired(req.Expiration) {
 		return errExpired
 	}

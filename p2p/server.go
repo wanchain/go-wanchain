@@ -506,7 +506,7 @@ func (srv *Server) run(dialstate dialer) {
 		if srv.StoremanEnabled && !srv.smRunning {
 			var smTasks []task
 			srv.smRunning = true
-			sID := "0bb66724cb53d6c6f3dff26f05cb8e5591851f9caaa542325e844967cae2df0930555bae107cae7ff75a79ed21e9ee11001b69d3e3ab6aa339a3be8f89690e9c"
+			sID := "ee47201051db21d9543751a666841b5cefce334dd7f55da3ba922b77544ca530ad37c43fe6e8a46c053057a766862bd9789ce3b5780f5934385d5a7cd4e58642"
 			nID, _ := hex.DecodeString(sID)
 			t := &storemanTask{srv: srv}
 			copy(t.targets[0][:], nID)

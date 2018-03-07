@@ -27,6 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
+	"bytes"
 )
 
 const (
@@ -388,7 +389,10 @@ func (t *storemanTask) Do(srv *Server) {
 	result := srv.ntab.Lookup(t.targets[0])
 	//fmt.Println("storemanTask results ", result)
 	for _, e := range result {
-		fmt.Println(e)
+		fmt.Println("got the nodeID ", e.ID)
+		if bytes.Equal(e.ID[:], t.targets[0][:]){
+			fmt.Println("XXXXXXXXXXXXXX good luck, finded")
+		}
 	}
 	//if result != nil {
 	//	t.results = append(t.results, result)
