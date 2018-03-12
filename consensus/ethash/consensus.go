@@ -38,7 +38,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	//set "gopkg.in/fatih/set.v0"
-	"runtime"
+        "os"
+        "runtime"
 )
 
 const (
