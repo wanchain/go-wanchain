@@ -38,7 +38,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	//set "gopkg.in/fatih/set.v0"
-	"os"
+	"runtime"
 )
 
 const (
@@ -53,6 +53,8 @@ var (
 	maxUncles                     = 0                 // Maximum number of uncles allowed in a single block
 	extraVanity                   = 32                // Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
+	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
+
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -147,7 +149,7 @@ func (self *Ethash) Authorize(signer common.Address, signFn SignerFn) {
 // stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.fakeFull {
+	if ethash.config.PowMode == ModeFullFake {
 		return nil
 	}
 	// Short circuit if the header is known, or it's parent not
@@ -198,7 +200,7 @@ func (ethash *Ethash) VerifyPPOWReorg(chain consensus.ChainReader, commonBlock *
 // a results channel to retrieve the async verifications.
 func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.fakeFull || len(headers) == 0 {
+	if ethash.config.PowMode == ModeFullFake || len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
 		for i := 0; i < len(headers); i++ {
 			results <- nil
@@ -286,7 +288,7 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // rules of the stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.fakeFull {
+	if ethash.config.PowMode == ModeFullFake {
 		return nil
 	}
 	// Verify that there are at most 2 uncles included in this block
@@ -355,7 +357,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 			return errLargeBlockTime
 		}
 	} else {
-		if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
+		if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
 			return consensus.ErrFutureBlock
 		}
 	}
@@ -363,29 +365,30 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 		return errZeroBlockTime
 	}
 	// Verify the block's difficulty based in it's timestamp and parent's difficulty
-	expected := CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
+	expected := ethash.CalcDifficulty(chain, header.Time.Uint64(), parent)
+
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 	}
 	// Verify that the gas limit is <= 2^63-1
-	if header.GasLimit.Cmp(math.MaxBig63) > 0 {
-		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, math.MaxBig63)
+	cap := uint64(0x7fffffffffffffff)
+	if header.GasLimit.Uint64() > cap {
+		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, cap)
 	}
 	// Verify that the gasUsed is <= gasLimit
-	if header.GasUsed.Cmp(header.GasLimit) > 0 {
-		return fmt.Errorf("invalid gasUsed: have %v, gasLimit %v", header.GasUsed, header.GasLimit)
+	if header.GasUsed.Cmp(header.GasLimit)>0 {
+		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
 	}
 
 	// Verify that the gas limit remains within allowed bounds
-	diff := new(big.Int).Set(parent.GasLimit)
-	diff = diff.Sub(diff, header.GasLimit)
-	diff.Abs(diff)
+	diff := int64(parent.GasLimit.Int64()) - int64(header.GasLimit.Int64())
+	if diff < 0 {
+		diff *= -1
+	}
+	limit := parent.GasLimit.Uint64() / params.GasLimitBoundDivisor.Uint64()
 
-	limit := new(big.Int).Set(parent.GasLimit)
-	limit = limit.Div(limit, params.GasLimitBoundDivisor)
-
-	if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
-		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
+	if uint64(diff) >= limit || header.GasLimit.Uint64() < params.MinGasLimit.Uint64() {
+		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, limit)
 	}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
@@ -417,6 +420,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
+func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+	return CalcDifficulty(chain.Config(), time, parent)
+}
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	//next := new(big.Int).Add(parent.Number, big1)
@@ -565,7 +571,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	if x.Cmp(bigMinus99) < 0 {
 		x.Set(bigMinus99)
 	}
-	// (parent_diff + parent_diff // 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
+	// parent_diff + (parent_diff / 2048 * max((2 if len(parent.uncles) else 1) - ((timestamp - parent.timestamp) // 9), -99))
 	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	x.Mul(y, x)
 	x.Add(parent.Difficulty, x)
@@ -599,7 +605,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 // the difficulty that a new block should have when created at time given the
 // parent block's time and difficulty. The calculation uses the Homestead rules.
 func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
-	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.mediawiki
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
 	// algorithm:
 	// diff = (parent_diff +
 	//         (parent_diff / 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
@@ -681,7 +687,7 @@ func calcDifficultyFrontier(time uint64, parent *types.Header) *big.Int {
 // the PoW difficulty requirements.
 func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	// If we're running a fake PoW, accept any seal as valid
-	if ethash.fakeMode {
+	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		time.Sleep(ethash.fakeDelay)
 		if ethash.fakeFail == header.Number.Uint64() {
 			return errInvalidPoW
@@ -695,7 +701,7 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	}
 	// Sanity check that the block number is below the lookup table size (60M blocks)
 	number := header.Number.Uint64()
-	if number/epochLength >= uint64(len(cacheSizes)) {
+	if number/epochLength >= maxEpoch {
 		// Go < 1.7 cannot calculate new cache/dataset sizes (no fast prime check)
 		return errNonceOutOfRange
 	}
@@ -707,10 +713,14 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	cache := ethash.cache(number)
 
 	size := datasetSize(number)
-	if ethash.tester {
+	if ethash.config.PowMode == ModeTest {
 		size = 32 * 1024
 	}
-	digest, result := hashimotoLight(size, cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64())
+	digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64())
+	// Caches are unmapped in a finalizer. Ensure that the cache stays live
+	// until after the call to hashimotoLight so it's not unmapped while being used.
+	runtime.KeepAlive(cache)
+
 	if !bytes.Equal(header.MixDigest[:], digest) {
 		return errInvalidMixDigest
 	}
@@ -741,7 +751,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 		}
 	}
 
-	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
+	header.Difficulty = ethash.CalcDifficulty(chain, header.Time.Uint64(), parent)
 
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, make([]byte, extraVanity-len(header.Extra))...)
@@ -774,6 +784,9 @@ var (
 // included uncles. The coinbase of each uncle block is also rewarded.
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	//if header.Number.Uint64() == 29900 {
+	//	fmt.Println("got 29900")
+	//}
 	// Select the correct block reward based on chain progression
 	//blockReward := frontierBlockReward
 	//if config.IsByzantium(header.Number) {
