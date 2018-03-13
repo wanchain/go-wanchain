@@ -55,6 +55,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	//"encoding/hex"
+	"encoding/json"
 	"encoding/hex"
 )
 
@@ -803,10 +805,23 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		if err != nil {
 			panic(err)
 		}
-		sID := string(b)
-		Sid, _ := hex.DecodeString(sID)
-		copy(cfg.Sid[:], Sid)
-		fmt.Println("target is ", sID)
+		var SIDs []string
+		errUnmarshal := json.Unmarshal(b, &SIDs)
+		if(errUnmarshal != nil) {
+			fmt.Println(errUnmarshal)
+		} else {
+			fmt.Println(SIDs);
+			index := 0
+			for _, ID := range SIDs {
+				eID, errDec := hex.DecodeString(ID)
+				if errDec == nil {
+					fmt.Println(eID)
+					copy(cfg.Sid[index][:], eID)
+					index++
+				}
+			}
+			fmt.Println("target is ", cfg.Sid)
+		}
 	}
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying

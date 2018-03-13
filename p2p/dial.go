@@ -27,7 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
-    "bytes"
+	"bytes"
 )
 
 const (
@@ -363,7 +363,8 @@ func (t *discoverTask) Do(srv *Server) {
 	var target discover.NodeID
 	//
 	if srv.StoremanEnabled {
-		copy(target[:], srv.Sid[:])
+		// TODO find the first one for test
+		copy(target[:], srv.Sid[0][:])
 	} else {
 		rand.Read(target[:])
 	}
@@ -371,7 +372,7 @@ func (t *discoverTask) Do(srv *Server) {
 	t.results = srv.ntab.Lookup(target)
 	for _, e := range t.results {
 		fmt.Println("got the nodeID ", e.ID)
-		if bytes.Equal(e.ID[:], srv.Sid[:]){
+		if bytes.Equal(e.ID[:], srv.Sid[0][:]) {
 			fmt.Println("XXXXXXXXXXXXXX good luck, finded")
 		}
 	}

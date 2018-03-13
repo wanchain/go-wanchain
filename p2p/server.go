@@ -75,7 +75,7 @@ type Config struct {
 	NoDiscovery bool
 
 	StoremanEnabled bool
-	Sid [64]byte
+	Sid [21][64]byte
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
