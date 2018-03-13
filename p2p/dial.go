@@ -27,7 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
-	"bytes"
+    "bytes"
 )
 
 const (
@@ -75,7 +75,6 @@ type dialstate struct {
 	netrestrict *netutil.Netlist
 
 	lookupRunning bool
-	smLookupRunning bool
 	dialing       map[discover.NodeID]connFlag
 	lookupBuf     []*discover.Node // current discovery lookup results
 	randomNodes   []*discover.Node // filled from Table
@@ -122,11 +121,7 @@ type dialTask struct {
 type discoverTask struct {
 	results []*discover.Node
 }
-type storemanTask struct {
-	srv *Server
-	targets [1]discover.NodeID
-	results []*discover.Node
-}
+
 // A waitExpireTask is generated if there are no other tasks
 // to keep the loop in Server.run ticking.
 type waitExpireTask struct {
@@ -243,6 +238,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		s.lookupRunning = true
 		newtasks = append(newtasks, &discoverTask{})
 	}
+
 	// Launch a timer to wait for the next node to expire if all
 	// candidates have been tried and no task is currently active.
 	// This should prevent cases where the dialer logic is not ticked
@@ -287,9 +283,6 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 	case *discoverTask:
 		s.lookupRunning = false
 		s.lookupBuf = append(s.lookupBuf, t.results...)
-	case *storemanTask:
-		fmt.Println("storeman taskNone")
-		t.srv.smRunning = false
 	}
 }
 
@@ -368,38 +361,24 @@ func (t *discoverTask) Do(srv *Server) {
 	}
 	srv.lastLookup = time.Now()
 	var target discover.NodeID
-	rand.Read(target[:])
+	//
+	if srv.StoremanEnabled {
+		copy(target[:], srv.Sid[:])
+	} else {
+		rand.Read(target[:])
+	}
+	fmt.Println("discoverTask.Do nID: ", target)
 	t.results = srv.ntab.Lookup(target)
+	for _, e := range t.results {
+		fmt.Println("got the nodeID ", e.ID)
+		if bytes.Equal(e.ID[:], srv.Sid[:]){
+			fmt.Println("XXXXXXXXXXXXXX good luck, finded")
+		}
+	}
 }
 
 func (t *discoverTask) String() string {
 	s := "discovery lookup"
-	if len(t.results) > 0 {
-		s += fmt.Sprintf(" (%d results)", len(t.results))
-	}
-	return s
-}
-
-func (t *storemanTask) Do(srv *Server) {
-	// newTasks generates a lookup task whenever dynamic dials are
-	// necessary. Lookups need to take some time, otherwise the
-	// event loop spins too fast.
-	fmt.Println("Storeman task start, target id is ", t.targets);
-	//result := srv.ntab.Resolve(t.targets[0])
-	result := srv.ntab.Lookup(t.targets[0])
-	//fmt.Println("storemanTask results ", result)
-	for _, e := range result {
-		fmt.Println("got the nodeID ", e.ID)
-		if bytes.Equal(e.ID[:], t.targets[0][:]){
-			fmt.Println("XXXXXXXXXXXXXX good luck, finded")
-		}
-	}
-	//if result != nil {
-	//	t.results = append(t.results, result)
-	//}
-}
-func (t *storemanTask) String() string {
-	s := "storeman lookup"
 	if len(t.results) > 0 {
 		s += fmt.Sprintf(" (%d results)", len(t.results))
 	}

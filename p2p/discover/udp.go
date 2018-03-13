@@ -65,8 +65,6 @@ const (
 	pongPacket
 	findnodePacket
 	neighborsPacket
-	findstoremanPacket
-	storemanPacket
 )
 
 // RPC request structures
@@ -102,21 +100,6 @@ type (
 
 	// reply to findnode
 	neighbors struct {
-		Nodes      []rpcNode
-		Expiration uint64
-		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
-	}
-
-	// findstoreman is a query for nodes  to the given target.
-	findstoreman struct {
-		Target     NodeID // doesn't need to be an actual public key
-		Expiration uint64
-		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
-	}
-
-	storeman struct {
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
@@ -342,29 +325,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node
 	err := <-errc
 	return nodes, err
 }
-func (t *udp) findstoreman(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node, error) {
-	nodes := make([]*Node, 0, bucketSize)
-	nreceived := 0
-	errc := t.pending(toid, storemanPacket, func(r interface{}) bool {
-		reply := r.(*storeman)
-		for _, rn := range reply.Nodes {
-			nreceived++
-			n, err := t.nodeFromRPC(toaddr, rn)
-			if err != nil {
-				log.Trace("Invalid storeman node received", "ip", rn.IP, "addr", toaddr, "err", err)
-				continue
-			}
-			nodes = append(nodes, n)
-		}
-		return nreceived >= bucketSize
-	})
-	t.send(toaddr, findstoremanPacket, &findstoreman{
-		Target:     target,
-		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
-	err := <-errc
-	return nodes, err
-}
+
 // pending adds a reply callback to the pending reply queue.
 // see the documentation of type pending for a detailed explanation.
 func (t *udp) pending(id NodeID, ptype byte, callback func(interface{}) bool) <-chan error {
@@ -657,7 +618,6 @@ func (req *pong) name() string {
 }
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	fmt.Println("received findnode req: ", req.Target)
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -695,63 +655,6 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 
 func (req *findnode) name() string {
 	return "FINDNODE/v4"
-}
-
-
-func (req *findstoreman) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	if expired(req.Expiration) {
-		return errExpired
-	}
-	if t.db.node(fromID) == nil {
-		// TODO: what to do?
-		// No bond exists, we don't process the packet. This prevents
-		// an attack vector where the discovery protocol could be used
-		// to amplify traffic in a DDOS attack. A malicious actor
-		// would send a findnode request with the IP address and UDP
-		// port of the target as the source address. The recipient of
-		// the findnode packet would then send a neighbors packet
-		// (which is a much bigger packet than findnode) to the victim.
-		return errUnknownNode
-	}
-	target := crypto.Keccak256Hash(req.Target[:])
-	t.mutex.Lock()
-	closest := t.closest(target, bucketSize).entries
-	t.mutex.Unlock()
-
-	p := storeman{Expiration: uint64(time.Now().Add(expiration).Unix())}
-	// Send neighbors in chunks with at most maxNeighbors per packet
-	// to stay below the 1280 byte limit.
-	for i, n := range closest {
-		if netutil.CheckRelayIP(from.IP, n.IP) != nil {
-			continue
-		}
-
-		p.Nodes = append(p.Nodes, nodeToRPC(n))
-		if len(p.Nodes) == maxNeighbors || i == len(closest)-1 {
-			t.send(from, storemanPacket, &p)
-			p.Nodes = p.Nodes[:0]
-		}
-	}
-	return nil
-}
-
-func (req *findstoreman) name() string {
-	return "FINDSTOREMAN/v1"
-}
-
-
-func (req *storeman) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	if expired(req.Expiration) {
-		return errExpired
-	}
-	if !t.handleReply(fromID, storemanPacket, req) {
-		return errUnsolicitedReply
-	}
-	return nil
-}
-
-func (req *storeman) name() string {
-	return "STOREMAN/v1"
 }
 
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {

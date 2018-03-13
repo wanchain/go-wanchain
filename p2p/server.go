@@ -33,7 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/discv5"
 	"github.com/wanchain/go-wanchain/p2p/nat"
 	"github.com/wanchain/go-wanchain/p2p/netutil"
-	"encoding/hex"
 )
 
 const (
@@ -75,8 +74,8 @@ type Config struct {
 	// Disabling is useful for protocol debugging (manual topology).
 	NoDiscovery bool
 
-	// StoremanEnabled bool
 	StoremanEnabled bool
+	Sid [64]byte
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
@@ -157,7 +156,6 @@ type Server struct {
 
 	lock    sync.Mutex // protects running
 	running bool
-	smRunning bool
 
 	ntab         discoverTable
 	listener     net.Listener
@@ -503,26 +501,12 @@ func (srv *Server) run(dialstate dialer) {
 	scheduleTasks := func() {
 		// Start from queue first.
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
-		if srv.StoremanEnabled && !srv.smRunning {
-			var smTasks []task
-			srv.smRunning = true
-			sID := "ee47201051db21d9543751a666841b5cefce334dd7f55da3ba922b77544ca530ad37c43fe6e8a46c053057a766862bd9789ce3b5780f5934385d5a7cd4e58642"
-			nID, _ := hex.DecodeString(sID)
-			t := &storemanTask{srv: srv}
-			copy(t.targets[0][:], nID)
-			log.Info("New storeman task", "task", t)
-			fmt.Println("server.Run targets ID", t.targets)
-			smTasks = append(smTasks, t)
-			smTasksed := startTasks(smTasks)
-			queuedTasks = append(queuedTasks, smTasksed...)
-		}
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
-
 
 running:
 	for {

@@ -55,6 +55,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	"encoding/hex"
 )
 
 var (
@@ -797,6 +798,15 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	if ctx.GlobalBool(StoremanFlag.Name) {
 		cfg.StoremanEnabled = true
+		// TODO: get from file
+		b, err := ioutil.ReadFile("./storemans.json")
+		if err != nil {
+			panic(err)
+		}
+		sID := string(b)
+		Sid, _ := hex.DecodeString(sID)
+		copy(cfg.Sid[:], Sid)
+		fmt.Println("target is ", sID)
 	}
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
@@ -1057,6 +1067,14 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 	}
 }
 
+// RegisterSmService configure Storeman and adds it to the given node
+func RegisterSmService(stack *node.Node, cfg *whisper.Config) {
+	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
+		return whisper.New(cfg), nil
+	}); err != nil {
+		Fatalf("Failed to register the Storeman service: %v", err)
+	}
+}
 // RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
 // th egiven node.
 func RegisterEthStatsService(stack *node.Node, url string) {

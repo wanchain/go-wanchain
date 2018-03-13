@@ -274,7 +274,6 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 				pendingQueries++
 				go func() {
 					// Find potential neighbors to bond with
-					fmt.Println("send findnode to ", n.addr())
 					r, err := tab.net.findnode(n.ID, n.addr(), targetID)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
