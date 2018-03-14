@@ -361,19 +361,30 @@ func (t *discoverTask) Do(srv *Server) {
 	}
 	srv.lastLookup = time.Now()
 	var target discover.NodeID
-	//
+
+	//find the first storeman which hasn't discovered.
+	sindex := -1
 	if srv.StoremanEnabled {
 		// TODO find the first one for test
-		copy(target[:], srv.Sid[0][:])
-	} else {
+		for i, smNode := range srv.StoremanNodes {
+			if smNode != nil && len(smNode.IP) == 0 {
+				copy(target[:], smNode.ID[:])
+				sindex = i
+				break
+			}
+		}
+	}
+	if -1 == sindex {
 		rand.Read(target[:])
 	}
 	fmt.Println("discoverTask.Do nID: ", target)
 	t.results = srv.ntab.Lookup(target)
 	for _, e := range t.results {
-		fmt.Println("got the nodeID ", e.ID)
-		if bytes.Equal(e.ID[:], srv.Sid[0][:]) {
-			fmt.Println("XXXXXXXXXXXXXX good luck, finded")
+		if bytes.Equal(e.ID[:], target[:]) {
+			fmt.Println("Find the target: ", target)
+			if(sindex != -1) {
+				srv.StoremanNodes[sindex] = e
+			}
 		}
 	}
 }

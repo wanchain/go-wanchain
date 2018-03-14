@@ -816,11 +816,13 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 				eID, errDec := hex.DecodeString(ID)
 				if errDec == nil {
 					fmt.Println(eID)
-					copy(cfg.Sid[index][:], eID)
+					var n discover.Node
+					copy(n.ID[:], eID)
+					cfg.StoremanNodes[index] = &n
 					index++
 				}
 			}
-			fmt.Println("target is ", cfg.Sid)
+			fmt.Println("target is ", cfg.StoremanNodes)
 		}
 	}
 	// if we're running a light client or server, force enable the v5 peer discovery
