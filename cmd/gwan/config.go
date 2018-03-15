@@ -35,6 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
+	"github.com/wanchain/go-wanchain/storeman"
 )
 
 var (
@@ -78,6 +79,7 @@ type ethstatsConfig struct {
 type gethConfig struct {
 	Eth      eth.Config
 	Shh      whisper.Config
+	Sm       storeman.Config
 	Node     node.Config
 	Ethstats ethstatsConfig
 }
@@ -115,6 +117,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 		Eth:  eth.DefaultConfig,
 		Shh:  whisper.DefaultConfig,
 		Node: defaultNodeConfig(),
+		Sm: storeman.DefaultConfig,
 	}
 
 	// Load config file.
@@ -171,6 +174,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
+	}
+	if ctx.GlobalIsSet(utils.StoremanFlag.Name) {
+		utils.RegisterSmService(stack, &cfg.Sm)
 	}
 
 	// Add the release oracle service so it boots along with node.

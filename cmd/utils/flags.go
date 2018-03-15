@@ -58,6 +58,7 @@ import (
 	//"encoding/hex"
 	"encoding/json"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/storeman"
 )
 
 var (
@@ -1085,9 +1086,9 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 }
 
 // RegisterSmService configure Storeman and adds it to the given node
-func RegisterSmService(stack *node.Node, cfg *whisper.Config) {
+func RegisterSmService(stack *node.Node, cfg *storeman.Config) {
 	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
-		return whisper.New(cfg), nil
+		return storeman.New(cfg), nil
 	}); err != nil {
 		Fatalf("Failed to register the Storeman service: %v", err)
 	}
