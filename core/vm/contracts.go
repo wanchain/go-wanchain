@@ -36,6 +36,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
+	"fmt"
 )
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -454,6 +455,7 @@ const (
 	WanStampdot06 = "60000000000000000"  //0.06
 	WanStampdot09 = "90000000000000000"  //0.09
 	WanStampdot2  = "200000000000000000" //0.2
+	WanStampdot3  = "300000000000000000" //0.3
 	WanStampdot5  = "500000000000000000" //0.5
 
 )
@@ -498,6 +500,9 @@ func init() {
 
 	svaldot2, _ := new(big.Int).SetString(WanStampdot2, 10)
 	StampValueSet[svaldot2.Text(16)] = WanStampdot2
+
+	svaldot3, _ := new(big.Int).SetString(WanStampdot3, 10)
+	StampValueSet[svaldot3.Text(16)] = WanStampdot3
 
 	svaldot5, _ := new(big.Int).SetString(WanStampdot5, 10)
 	StampValueSet[svaldot5.Text(16)] = WanStampdot5
@@ -840,6 +845,8 @@ func (c *wanCoinSC) ValidRefundReq(stateDB StateDB, payload []byte, from []byte)
 func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	kix, value, err := c.ValidRefundReq(evm.StateDB, all, contract.CallerAddress.Bytes())
 	if err != nil {
+		fmt.Println("failed refund")
+		fmt.Println(evm.BlockNumber)
 		return nil, err
 	}
 
@@ -938,6 +945,7 @@ func FetchRingSignInfo(stateDB StateDB, hashInput []byte, ringSignedStr string) 
 
 	exist, balanceGet, _, err := BatCheckOTAExist(stateDB, otaLongs)
 	if err != nil {
+
 		log.Error("verify mix ota fail", "err", err.Error())
 		return nil, err
 	}
