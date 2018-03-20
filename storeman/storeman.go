@@ -3,7 +3,9 @@ package storeman
 import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
+	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 	"sync"
 	"fmt"
 )
@@ -13,6 +15,7 @@ type Storeman struct {
 	protocol p2p.Protocol
 	peers  map[*Peer]struct{} // Set of currently active peers
 	peerMu sync.RWMutex       // Mutex to sync the active peer set
+	quit         chan struct{}  // Channel used for graceful exit
 }
 type Config struct {
 }
@@ -21,17 +24,66 @@ var DefaultConfig = Config{
 
 const (
 	ProtocolName = "storeman"
-	ProtocolVersion = 1
+	ProtocolVersion = uint64(1)
 	ProtocolVersionStr = "1.0"
 	NumberOfMessageCodes = 3
 
+	statusCode           = 0 // used by storeman protocol
+	messagesCode         = 1 // normal whisper message
+	keepaliveCode		=2
+	keepaliveOkCode		=3
+	txAuthenCode		=5
+	txAuthenResultCode	=6
+
+	keepaliveCycle = 5
+
 )
 
+type StoremanKeepalive struct {
+	version 	int
+	magic 		int
+	recipient 	discover.NodeID
+}
 
+type StoremanKeepaliveOk struct {
+	version 	int
+	magic 		int
+	status	 	int
+}
+const keepaliveMagic = 0x33
+
+// MaxMessageSize returns the maximum accepted message size.
+func (sm *Storeman) MaxMessageSize() uint32 {
+	// TODO what is the max size of storeman???
+	return uint32(1024)
+}
 // runMessageLoop reads and processes inbound messages directly to merge into client-global state.
 func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 	for {
-		return nil
+		// fetch the next packet
+		packet, err := rw.ReadMsg()
+		if err != nil {
+			log.Warn("Storeman message loop", "peer", p.peer.ID(), "err", err)
+			return err
+		}
+		if packet.Size > sm.MaxMessageSize() {
+			log.Warn("oversized message received", "peer", p.peer.ID())
+			return errors.New("oversized message received")
+		}
+
+		switch packet.Code {
+		case statusCode:
+			// this should not happen, but no need to panic; just ignore this message.
+			log.Warn("unxepected status message received", "peer", p.peer.ID())
+		case keepaliveCode:
+			p.sendKeepaliveOk()
+
+		default:
+			// New message types might be implemented in the future versions of Whisper.
+			// For forward compatibility, just ignore.
+		}
+
+		packet.Discard()
 	}
 }
 type StoremanAPI struct{}
@@ -88,6 +140,7 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 
 	// Run the peer handshake and state updates
 	if err := storemanPeer.handshake(); err != nil {
+		fmt.Println("storemanPeer.handshake failed: ", err)
 		return err
 	}
 	storemanPeer.start()
@@ -99,6 +152,9 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 // New creates a Whisper client ready to communicate through the Ethereum P2P network.
 func New(cfg *Config) *Storeman {
 	storeman := &Storeman{
+		peers:        make(map[*Peer]struct{}),
+		quit:         make(chan struct{}),
+
 	}
 
 	// p2p storeman sub protocol handler
