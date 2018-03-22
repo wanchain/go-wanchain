@@ -29,9 +29,9 @@ Section "Geth" GETH_IDX
   SimpleFC::AdvRemoveRule "Geth UDP discovery (UDP:17717)"
 
   # Firewall - add rules
-  SimpleFC::AdvAddRule "Geth incoming peers (TCP:17717)" ""  6 1 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" 17717 "" "" ""
-  SimpleFC::AdvAddRule "Geth outgoing peers (TCP:17717)" ""  6 2 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" "" 17717 "" ""
-  SimpleFC::AdvAddRule "Geth UDP discovery (UDP:17717)" "" 17 2 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" "" 17717 "" ""
+  SimpleFC::AdvAddRule "Geth incoming peers (TCP:17717)" ""  6 1 1 2147483647 1 "$INSTDIR\gwan.exe" "" "" "Ethereum" 17717 "" "" ""
+  SimpleFC::AdvAddRule "Geth outgoing peers (TCP:17717)" ""  6 2 1 2147483647 1 "$INSTDIR\gwan.exe" "" "" "Ethereum" "" 17717 "" ""
+  SimpleFC::AdvAddRule "Geth UDP discovery (UDP:17717)" "" 17 2 1 2147483647 1 "$INSTDIR\gwan.exe" "" "" "Ethereum" "" 17717 "" ""
 
   # Set default IPC endpoint (https://github.com/ethereum/EIPs/issues/147)
   ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "R" "HKLM" "\\.\pipe\geth.ipc"
