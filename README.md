@@ -17,6 +17,10 @@ Once the dependencies are installed, run
 or, to build the full suite of utilities:
 
     make all
+	
+or, to build the release version
+
+    make release	
 
 ## Running gwan
 
