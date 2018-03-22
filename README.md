@@ -6,9 +6,6 @@ master    | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/mast
 develop   | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/develop.svg?style=shield)](https://circleci.com/gh/wanchain/go-wanchain/tree/develop) 
 
 
-Requirement: Docker
-
-
 ## Building the source
 
 Building gwan requires both a Go (version 1.7 or later) and a C compiler.
