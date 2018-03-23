@@ -9,6 +9,8 @@ develop   | [![CircleCI](https://circleci.com/gh/wanchain/go-wanchain/tree/devel
 ## Building the source
 
 Building gwan requires both a Go (version 1.7 or later) and a C compiler.
+If build release version,Docker is required
+
 You can install them using your favourite package manager.
 Once the dependencies are installed, run
 
