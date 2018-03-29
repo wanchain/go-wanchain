@@ -184,7 +184,7 @@ func BatCheckOTAExist(statedb StateDB, otaLongAddrs [][]byte) (exist bool, balan
 	return true, balance, nil, nil
 }
 
-
+/*
 func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
 	if statedb == nil {
 		return nil, ErrUnknown
@@ -222,6 +222,7 @@ func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
 
 	return totalOTABalance.Sub(totalOTABalance, totalSpendedOTABalance), nil
 }
+*/
 
 // setOTA storage ota info, include balance and WanAddr. Overwrite if ota exist already.
 func setOTA(statedb StateDB, balance *big.Int, otaWanAddr []byte) error {
