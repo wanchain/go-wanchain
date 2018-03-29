@@ -1522,11 +1522,18 @@ func (CTStateDB) AddPreimage(common.Hash, []byte)                               
 func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)     {}
 func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
+var (
+	balanceAddr = "0x0000000000000000000000001000000000000000";
+	accountAddr = "0x03b854fc72fb01a0e36ee918b085ff52280d1842eeb282b389a1fb3d3752ed7aed"
+)
+
 func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
 
 	if !bytes.Equal(addr.Bytes(), otaImageStorageAddr.Bytes()) {
 
-		if dbMockRetVal != nil {
+		if bytes.Equal(common.FromHex(balanceAddr), addr.Bytes()) {
+			return common.FromHex(accountAddr)
+		} else if  dbMockRetVal!=nil {
 			return dbMockRetVal.Bytes()
 		} else {
 			return nil

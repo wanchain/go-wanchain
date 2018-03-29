@@ -1,19 +1,16 @@
+# Build Gwan in a stock Go builder container
+FROM golang:1.10-alpine as builder
 
-FROM alpine:3.6
+RUN apk add --no-cache make gcc git musl-dev linux-headers
 
-RUN mkdir /wanchain
+ADD . /go-wanchain
+RUN cd /go-wanchain && make gwan
 
-ADD ./DOCKER/data /wanchain/data
-ADD . /wanchain/src
+# Pull Geth into a second stage deploy alpine container
+FROM alpine:latest
 
-RUN \
-  apk add --update git go make gcc musl-dev linux-headers gdb && \
-  (cd wanchain/src && make geth)                              && \
-  cp /wanchain/src/build/bin/geth /usr/local/bin/
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /go-wanchain/build/bin/gwan /usr/local/bin/
 
-EXPOSE 8545
-EXPOSE 17717
-EXPOSE 17717/udp
-
-# ENTRYPOINT ["geth", "--verbosity", "5", "--datadir", "/wanchain/data", "--etherbase", "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e", "--networkid", "5201314", "--mine", "--minerthreads", "1", "--nodiscover", "--rpc"]
-
+EXPOSE 8545 17717/tcp 17717/udp
+ENTRYPOINT ["gwan"]

@@ -27,6 +27,7 @@ evm:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/evm\" to start the evm."
 
+	
 # The all target build all the wanchain tools
 all:
 	build/env.sh go run build/ci.go install
