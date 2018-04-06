@@ -1,11 +1,14 @@
 package storeman
 
 import (
+	"context"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/syndtr/goleveldb/leveldb/errors"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"sync"
 	"fmt"
 )
@@ -26,7 +29,7 @@ const (
 	ProtocolName = "storeman"
 	ProtocolVersion = uint64(1)
 	ProtocolVersionStr = "1.0"
-	NumberOfMessageCodes = 3
+	NumberOfMessageCodes = 6
 
 	statusCode           = 0 // used by storeman protocol
 	messagesCode         = 1 // normal whisper message
@@ -87,8 +90,27 @@ func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 	}
 }
 type StoremanAPI struct{}
-func (sa *StoremanAPI)Version()(v string){
+func (sa *StoremanAPI)Version(ctx context.Context,)(v string){
 	return ProtocolVersionStr
+}
+
+
+type SendTxArgs struct {
+	From     common.Address  `json:"from"`
+	To       *common.Address `json:"to"`
+	Gas      *hexutil.Big    `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Value    *hexutil.Big    `json:"value"`
+	Data     hexutil.Bytes   `json:"data"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+}
+func (sa *StoremanAPI) HandleTxEth(tx SendTxArgs) (bool){
+	fmt.Println("call HandleTxEth with: ", tx)
+	if *tx.Nonce > 100 {
+		return true
+	} else {
+		return false
+	}
 }
 // APIs returns the RPC descriptors the Whisper implementation offers
 func (sm *Storeman) APIs() []rpc.API {
@@ -163,6 +185,11 @@ func New(cfg *Config) *Storeman {
 		Version: uint(ProtocolVersion),
 		Length:  NumberOfMessageCodes,
 		Run:     storeman.HandlePeer,
+		NodeInfo: func() interface{} {
+			return map[string]interface{}{
+				"version":        ProtocolVersionStr,
+			}
+		},
 	}
 
 	return storeman
