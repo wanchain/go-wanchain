@@ -75,7 +75,7 @@ type Config struct {
 	NoDiscovery bool
 
 	StoremanEnabled bool
-	StoremanNodes  [21]*discover.Node
+	StoremanNodes  []*discover.Node
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.

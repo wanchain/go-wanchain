@@ -57,7 +57,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	//"encoding/hex"
 	"encoding/json"
-	"encoding/hex"
+	//"encoding/hex"
 	"github.com/wanchain/go-wanchain/storeman"
 )
 
@@ -810,18 +810,16 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		errUnmarshal := json.Unmarshal(b, &SIDs)
 		if(errUnmarshal != nil) {
 			fmt.Println(errUnmarshal)
+			panic(errUnmarshal)
 		} else {
 			fmt.Println(SIDs);
-			index := 0
-			for _, ID := range SIDs {
-				eID, errDec := hex.DecodeString(ID)
-				if errDec == nil {
-					fmt.Println(eID)
-					var n discover.Node
-					copy(n.ID[:], eID)
-					cfg.StoremanNodes[index] = &n
-					index++
+			for _, url := range SIDs {
+				node, err := discover.ParseNode(url)
+				if err != nil {
+					log.Error("Storeman URL invalid", "enode", url, "err", err)
+					continue
 				}
+				cfg.StoremanNodes = append(cfg.StoremanNodes, node)
 			}
 			fmt.Println("target is ", cfg.StoremanNodes)
 		}
