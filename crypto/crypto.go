@@ -424,7 +424,10 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 		return nil, nil, nil, nil, ErrRingSignFail
 	}
 
-	rnd,_:= Mrand.Int(rand.Reader, big.NewInt(int64(n)))
+	rnd,rnderr := Mrand.Int(rand.Reader, big.NewInt(int64(n)))
+	if rnderr != nil {
+		return nil, nil, nil, nil, ErrRingSignFail
+	}
 	s := int(rnd.Int64())//s is the random position for real key
 
 	if s > 0 {
