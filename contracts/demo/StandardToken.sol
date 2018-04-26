@@ -200,5 +200,3 @@ contract StandardToken is ERC20Protocol {
     }   
     
 }
-
-1000000000000000000
