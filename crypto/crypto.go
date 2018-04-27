@@ -38,9 +38,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
-
-	Mrand "crypto/rand"
-
+	
 	"github.com/wanchain/go-wanchain/log"
 
 )
@@ -424,7 +422,7 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 		return nil, nil, nil, nil, ErrRingSignFail
 	}
 
-	rnd,rnderr := Mrand.Int(rand.Reader, big.NewInt(int64(n)))
+	rnd,rnderr := rand.Int(rand.Reader, big.NewInt(int64(n)))
 	if rnderr != nil {
 		return nil, nil, nil, nil, ErrRingSignFail
 	}
