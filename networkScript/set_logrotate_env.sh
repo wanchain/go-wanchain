@@ -15,8 +15,20 @@
 
 #add wanchainlog logrotateconf 
 version="v1.0.1"
+if [ ! -n "$1" ];then
+    echo "There is no version parameter input"
+    tmp=`ls -lt $HOME/wanchain | grep '^d' | awk '{print $9}' | head -1`
+    if [ -f "$HOME/wanchain/$tmp/bin/gwan" ];then
+        version=$tmp
+        echo "The newest version is $version"
+    fi
+else
+    echo "The input version parameter is $1"
+    version=$1
+fi
 wanchainLogPath=$HOME/wanchain/$version/log/running.log
 wanchainLogRotateConf=/etc/logrotate.d/wanchainlog
+
 sudo touch $wanchainLogRotateConf
 sudo chmod 777 $wanchainLogRotateConf
 echo "
@@ -40,4 +52,3 @@ sed -n '/cron.daily/p' /etc/crontab | sudo sed -i 's/25 6/59 23/g' /etc/crontab
 sudo chmod 644 /etc/crontab
 
 sudo /etc/init.d/cron restart
-

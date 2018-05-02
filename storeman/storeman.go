@@ -16,7 +16,8 @@ import (
 
 type Storeman struct {
 	protocol p2p.Protocol
-	peers  map[*Peer]struct{} // Set of currently active peers
+	//peers  map[*Peer]struct{} // Set of currently active peers
+	peers        map[discover.NodeID]*Peer
 	peerMu sync.RWMutex       // Mutex to sync the active peer set
 	quit         chan struct{}  // Channel used for graceful exit
 }
@@ -89,9 +90,19 @@ func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 		packet.Discard()
 	}
 }
-type StoremanAPI struct{}
-func (sa *StoremanAPI)Version(ctx context.Context,)(v string){
+type StoremanAPI struct{
+	sm *Storeman
+}
+func (sa *StoremanAPI)Version(ctx context.Context)(v string){
 	return ProtocolVersionStr
+}
+
+func (sa *StoremanAPI)Peers(ctx context.Context)( [] *p2p.PeerInfo){
+	var ps []*p2p.PeerInfo
+	for _, p := range sa.sm.peers {
+		ps = append(ps, p.peer.Info())
+	}
+	return ps
 }
 
 
@@ -104,7 +115,7 @@ type SendTxArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 }
-func (sa *StoremanAPI) HandleTxEth(tx SendTxArgs) (bool){
+func (sa *StoremanAPI) HandleTxEth(ctx context.Context, tx SendTxArgs) (bool){
 	fmt.Println("call HandleTxEth with: ", tx)
 	if *tx.Nonce > 100 {
 		return true
@@ -118,7 +129,7 @@ func (sm *Storeman) APIs() []rpc.API {
 		{
 			Namespace: ProtocolName,
 			Version:   ProtocolVersionStr,
-			Service:   &StoremanAPI{},
+			Service:   &StoremanAPI{sm:sm},
 			Public:    true,
 		},
 	}
@@ -151,12 +162,12 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	storemanPeer := newPeer(sm, peer, rw)
 
 	sm.peerMu.Lock()
-	sm.peers[storemanPeer] = struct{}{}
+	sm.peers[storemanPeer.ID()] = storemanPeer
 	sm.peerMu.Unlock()
 
 	defer func() {
 		sm.peerMu.Lock()
-		delete(sm.peers, storemanPeer)
+		delete(sm.peers, storemanPeer.ID())
 		sm.peerMu.Unlock()
 	}()
 
@@ -174,7 +185,7 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 // New creates a Whisper client ready to communicate through the Ethereum P2P network.
 func New(cfg *Config) *Storeman {
 	storeman := &Storeman{
-		peers:        make(map[*Peer]struct{}),
+		peers:        make(map[discover.NodeID]*Peer),
 		quit:         make(chan struct{}),
 
 	}

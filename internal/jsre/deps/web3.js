@@ -13754,10 +13754,15 @@ module.exports = Wan;
                 params: 1,
                 inputFormatter: [null],
             });
-
+            var peers = new Method ({
+                name: 'peers',
+                call: 'storeman_peers',
+                params: 0
+            });
             return [
                 version,
                 handleTxEth,
+                peers,
             ];
         };
         var properties = function () {

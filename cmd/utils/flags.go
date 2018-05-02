@@ -55,9 +55,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
-	//"encoding/hex"
 	"encoding/json"
-	//"encoding/hex"
 	"github.com/wanchain/go-wanchain/storeman"
 )
 
