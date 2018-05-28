@@ -35,6 +35,7 @@ import (
 // Client defines typed wrappers for the Ethereum RPC API.
 type Client struct {
 	c *rpc.Client
+	C *rpc.Client
 }
 
 // Dial connects a client to the given URL.
@@ -48,7 +49,7 @@ func Dial(rawurl string) (*Client, error) {
 
 // NewClient creates a client that uses the given RPC client.
 func NewClient(c *rpc.Client) *Client {
-	return &Client{c}
+	return &Client{c,c}
 }
 
 // Blockchain Access
