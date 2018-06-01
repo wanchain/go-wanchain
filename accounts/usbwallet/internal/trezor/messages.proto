@@ -638,7 +638,8 @@ message TxAck {
 
 /**
  * Request: Ask device to sign transaction
- * All fields are optional from the protocol's point of view. Each field defaults to value `0` if missing.
+ * All fields are optional from the protocol's point of view. Each field defaults to value `0` if missing. The API consumer (e.g. GUI Wallet Application)
+ *  need to ensure the these fields are correct, otherwise, the transaction will be refused.
  * Note: the first at most 1024 bytes of data MUST be transmitted as part of this message.
  * @next PassphraseRequest
  * @next PinMatrixRequest
@@ -655,7 +656,7 @@ message EthereumSignTx {
 	optional bytes data_initial_chunk = 7;		// The initial data chunk (<= 1024 bytes)
 	optional uint32 data_length = 8;		// Length of transaction payload
 	optional uint32 chain_id = 9;			// Chain Id for EIP 155
-	optional bytes tx_type = 10;
+	optional bytes tx_type = 10;        // Transaction type - normal or privacy
 }
 
 /**
