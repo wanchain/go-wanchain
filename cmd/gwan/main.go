@@ -1,3 +1,4 @@
+// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -141,7 +142,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The go-wanchain Authors"
+	app.Copyright = "Copyright 2013-2017 The go-ethereum Authors; Copyright 2018 Wanchain Foundation Ltd"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
