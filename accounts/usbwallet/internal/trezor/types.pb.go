@@ -36,6 +36,7 @@ const (
 	FailureType_Failure_ProcessError      FailureType = 9
 	FailureType_Failure_NotEnoughFunds    FailureType = 10
 	FailureType_Failure_NotInitialized    FailureType = 11
+	FailureType_Failure_PinMismatch       FailureType = 12
 	FailureType_Failure_FirmwareError     FailureType = 99
 )
 
@@ -51,6 +52,7 @@ var FailureType_name = map[int32]string{
 	9:  "Failure_ProcessError",
 	10: "Failure_NotEnoughFunds",
 	11: "Failure_NotInitialized",
+	12: "Failure_PinMismatch",
 	99: "Failure_FirmwareError",
 }
 var FailureType_value = map[string]int32{
@@ -65,6 +67,7 @@ var FailureType_value = map[string]int32{
 	"Failure_ProcessError":      9,
 	"Failure_NotEnoughFunds":    10,
 	"Failure_NotInitialized":    11,
+	"Failure_PinMismatch":       12,
 	"Failure_FirmwareError":     99,
 }
 
@@ -85,7 +88,7 @@ func (x *FailureType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (FailureType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{0}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{0}
 }
 
 // *
@@ -136,7 +139,7 @@ func (x *OutputScriptType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (OutputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{1}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{1}
 }
 
 // *
@@ -184,7 +187,7 @@ func (x *InputScriptType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (InputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{2}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{2}
 }
 
 // *
@@ -232,7 +235,7 @@ func (x *RequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (RequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{3}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{3}
 }
 
 // *
@@ -241,17 +244,20 @@ func (RequestType) EnumDescriptor() ([]byte, []int) {
 type ButtonRequestType int32
 
 const (
-	ButtonRequestType_ButtonRequest_Other            ButtonRequestType = 1
-	ButtonRequestType_ButtonRequest_FeeOverThreshold ButtonRequestType = 2
-	ButtonRequestType_ButtonRequest_ConfirmOutput    ButtonRequestType = 3
-	ButtonRequestType_ButtonRequest_ResetDevice      ButtonRequestType = 4
-	ButtonRequestType_ButtonRequest_ConfirmWord      ButtonRequestType = 5
-	ButtonRequestType_ButtonRequest_WipeDevice       ButtonRequestType = 6
-	ButtonRequestType_ButtonRequest_ProtectCall      ButtonRequestType = 7
-	ButtonRequestType_ButtonRequest_SignTx           ButtonRequestType = 8
-	ButtonRequestType_ButtonRequest_FirmwareCheck    ButtonRequestType = 9
-	ButtonRequestType_ButtonRequest_Address          ButtonRequestType = 10
-	ButtonRequestType_ButtonRequest_PublicKey        ButtonRequestType = 11
+	ButtonRequestType_ButtonRequest_Other             ButtonRequestType = 1
+	ButtonRequestType_ButtonRequest_FeeOverThreshold  ButtonRequestType = 2
+	ButtonRequestType_ButtonRequest_ConfirmOutput     ButtonRequestType = 3
+	ButtonRequestType_ButtonRequest_ResetDevice       ButtonRequestType = 4
+	ButtonRequestType_ButtonRequest_ConfirmWord       ButtonRequestType = 5
+	ButtonRequestType_ButtonRequest_WipeDevice        ButtonRequestType = 6
+	ButtonRequestType_ButtonRequest_ProtectCall       ButtonRequestType = 7
+	ButtonRequestType_ButtonRequest_SignTx            ButtonRequestType = 8
+	ButtonRequestType_ButtonRequest_FirmwareCheck     ButtonRequestType = 9
+	ButtonRequestType_ButtonRequest_Address           ButtonRequestType = 10
+	ButtonRequestType_ButtonRequest_PublicKey         ButtonRequestType = 11
+	ButtonRequestType_ButtonRequest_MnemonicWordCount ButtonRequestType = 12
+	ButtonRequestType_ButtonRequest_MnemonicInput     ButtonRequestType = 13
+	ButtonRequestType_ButtonRequest_PassphraseType    ButtonRequestType = 14
 )
 
 var ButtonRequestType_name = map[int32]string{
@@ -266,19 +272,25 @@ var ButtonRequestType_name = map[int32]string{
 	9:  "ButtonRequest_FirmwareCheck",
 	10: "ButtonRequest_Address",
 	11: "ButtonRequest_PublicKey",
+	12: "ButtonRequest_MnemonicWordCount",
+	13: "ButtonRequest_MnemonicInput",
+	14: "ButtonRequest_PassphraseType",
 }
 var ButtonRequestType_value = map[string]int32{
-	"ButtonRequest_Other":            1,
-	"ButtonRequest_FeeOverThreshold": 2,
-	"ButtonRequest_ConfirmOutput":    3,
-	"ButtonRequest_ResetDevice":      4,
-	"ButtonRequest_ConfirmWord":      5,
-	"ButtonRequest_WipeDevice":       6,
-	"ButtonRequest_ProtectCall":      7,
-	"ButtonRequest_SignTx":           8,
-	"ButtonRequest_FirmwareCheck":    9,
-	"ButtonRequest_Address":          10,
-	"ButtonRequest_PublicKey":        11,
+	"ButtonRequest_Other":             1,
+	"ButtonRequest_FeeOverThreshold":  2,
+	"ButtonRequest_ConfirmOutput":     3,
+	"ButtonRequest_ResetDevice":       4,
+	"ButtonRequest_ConfirmWord":       5,
+	"ButtonRequest_WipeDevice":        6,
+	"ButtonRequest_ProtectCall":       7,
+	"ButtonRequest_SignTx":            8,
+	"ButtonRequest_FirmwareCheck":     9,
+	"ButtonRequest_Address":           10,
+	"ButtonRequest_PublicKey":         11,
+	"ButtonRequest_MnemonicWordCount": 12,
+	"ButtonRequest_MnemonicInput":     13,
+	"ButtonRequest_PassphraseType":    14,
 }
 
 func (x ButtonRequestType) Enum() *ButtonRequestType {
@@ -298,7 +310,7 @@ func (x *ButtonRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (ButtonRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{4}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{4}
 }
 
 // *
@@ -340,7 +352,7 @@ func (x *PinMatrixRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (PinMatrixRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{5}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{5}
 }
 
 // *
@@ -386,7 +398,7 @@ func (x *RecoveryDeviceType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (RecoveryDeviceType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{6}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{6}
 }
 
 // *
@@ -428,7 +440,262 @@ func (x *WordRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (WordRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{7}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{7}
+}
+
+// *
+// Structure representing passphrase source
+// @used_in ApplySettings
+type PassphraseSourceType int32
+
+const (
+	PassphraseSourceType_ASK    PassphraseSourceType = 0
+	PassphraseSourceType_DEVICE PassphraseSourceType = 1
+	PassphraseSourceType_HOST   PassphraseSourceType = 2
+)
+
+var PassphraseSourceType_name = map[int32]string{
+	0: "ASK",
+	1: "DEVICE",
+	2: "HOST",
+}
+var PassphraseSourceType_value = map[string]int32{
+	"ASK":    0,
+	"DEVICE": 1,
+	"HOST":   2,
+}
+
+func (x PassphraseSourceType) Enum() *PassphraseSourceType {
+	p := new(PassphraseSourceType)
+	*p = x
+	return p
+}
+func (x PassphraseSourceType) String() string {
+	return proto.EnumName(PassphraseSourceType_name, int32(x))
+}
+func (x *PassphraseSourceType) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(PassphraseSourceType_value, data, "PassphraseSourceType")
+	if err != nil {
+		return err
+	}
+	*x = PassphraseSourceType(value)
+	return nil
+}
+func (PassphraseSourceType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{8}
+}
+
+// *
+// Type of levy which will be used for mosaic
+// @used_in NEMMosaicDefinition
+type NEMMosaicLevy int32
+
+const (
+	NEMMosaicLevy_MosaicLevy_Absolute   NEMMosaicLevy = 1
+	NEMMosaicLevy_MosaicLevy_Percentile NEMMosaicLevy = 2
+)
+
+var NEMMosaicLevy_name = map[int32]string{
+	1: "MosaicLevy_Absolute",
+	2: "MosaicLevy_Percentile",
+}
+var NEMMosaicLevy_value = map[string]int32{
+	"MosaicLevy_Absolute":   1,
+	"MosaicLevy_Percentile": 2,
+}
+
+func (x NEMMosaicLevy) Enum() *NEMMosaicLevy {
+	p := new(NEMMosaicLevy)
+	*p = x
+	return p
+}
+func (x NEMMosaicLevy) String() string {
+	return proto.EnumName(NEMMosaicLevy_name, int32(x))
+}
+func (x *NEMMosaicLevy) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(NEMMosaicLevy_value, data, "NEMMosaicLevy")
+	if err != nil {
+		return err
+	}
+	*x = NEMMosaicLevy(value)
+	return nil
+}
+func (NEMMosaicLevy) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{9}
+}
+
+// *
+// Type of supply change which will be applied to mosaic
+// @used_in NEMMosaicSupplyChange
+type NEMSupplyChangeType int32
+
+const (
+	NEMSupplyChangeType_SupplyChange_Increase NEMSupplyChangeType = 1
+	NEMSupplyChangeType_SupplyChange_Decrease NEMSupplyChangeType = 2
+)
+
+var NEMSupplyChangeType_name = map[int32]string{
+	1: "SupplyChange_Increase",
+	2: "SupplyChange_Decrease",
+}
+var NEMSupplyChangeType_value = map[string]int32{
+	"SupplyChange_Increase": 1,
+	"SupplyChange_Decrease": 2,
+}
+
+func (x NEMSupplyChangeType) Enum() *NEMSupplyChangeType {
+	p := new(NEMSupplyChangeType)
+	*p = x
+	return p
+}
+func (x NEMSupplyChangeType) String() string {
+	return proto.EnumName(NEMSupplyChangeType_name, int32(x))
+}
+func (x *NEMSupplyChangeType) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(NEMSupplyChangeType_value, data, "NEMSupplyChangeType")
+	if err != nil {
+		return err
+	}
+	*x = NEMSupplyChangeType(value)
+	return nil
+}
+func (NEMSupplyChangeType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{10}
+}
+
+// *
+// Type of cosignatory modification
+// @used_in NEMCosignatoryModification
+type NEMModificationType int32
+
+const (
+	NEMModificationType_CosignatoryModification_Add    NEMModificationType = 1
+	NEMModificationType_CosignatoryModification_Delete NEMModificationType = 2
+)
+
+var NEMModificationType_name = map[int32]string{
+	1: "CosignatoryModification_Add",
+	2: "CosignatoryModification_Delete",
+}
+var NEMModificationType_value = map[string]int32{
+	"CosignatoryModification_Add":    1,
+	"CosignatoryModification_Delete": 2,
+}
+
+func (x NEMModificationType) Enum() *NEMModificationType {
+	p := new(NEMModificationType)
+	*p = x
+	return p
+}
+func (x NEMModificationType) String() string {
+	return proto.EnumName(NEMModificationType_name, int32(x))
+}
+func (x *NEMModificationType) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(NEMModificationType_value, data, "NEMModificationType")
+	if err != nil {
+		return err
+	}
+	*x = NEMModificationType(value)
+	return nil
+}
+func (NEMModificationType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{11}
+}
+
+// *
+// Mode of importance transfer
+// @used_in NEMModificationType
+type NEMImportanceTransferMode int32
+
+const (
+	NEMImportanceTransferMode_ImportanceTransfer_Activate   NEMImportanceTransferMode = 1
+	NEMImportanceTransferMode_ImportanceTransfer_Deactivate NEMImportanceTransferMode = 2
+)
+
+var NEMImportanceTransferMode_name = map[int32]string{
+	1: "ImportanceTransfer_Activate",
+	2: "ImportanceTransfer_Deactivate",
+}
+var NEMImportanceTransferMode_value = map[string]int32{
+	"ImportanceTransfer_Activate":   1,
+	"ImportanceTransfer_Deactivate": 2,
+}
+
+func (x NEMImportanceTransferMode) Enum() *NEMImportanceTransferMode {
+	p := new(NEMImportanceTransferMode)
+	*p = x
+	return p
+}
+func (x NEMImportanceTransferMode) String() string {
+	return proto.EnumName(NEMImportanceTransferMode_name, int32(x))
+}
+func (x *NEMImportanceTransferMode) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(NEMImportanceTransferMode_value, data, "NEMImportanceTransferMode")
+	if err != nil {
+		return err
+	}
+	*x = NEMImportanceTransferMode(value)
+	return nil
+}
+func (NEMImportanceTransferMode) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{12}
+}
+
+// *
+// Type of Lisk transaction
+// @used_in LiskTransactionCommon
+type LiskTransactionType int32
+
+const (
+	LiskTransactionType_Transfer                      LiskTransactionType = 0
+	LiskTransactionType_RegisterSecondPassphrase      LiskTransactionType = 1
+	LiskTransactionType_RegisterDelegate              LiskTransactionType = 2
+	LiskTransactionType_CastVotes                     LiskTransactionType = 3
+	LiskTransactionType_RegisterMultisignatureAccount LiskTransactionType = 4
+	LiskTransactionType_CreateDapp                    LiskTransactionType = 5
+	LiskTransactionType_TransferIntoDapp              LiskTransactionType = 6
+	LiskTransactionType_TransferOutOfDapp             LiskTransactionType = 7
+)
+
+var LiskTransactionType_name = map[int32]string{
+	0: "Transfer",
+	1: "RegisterSecondPassphrase",
+	2: "RegisterDelegate",
+	3: "CastVotes",
+	4: "RegisterMultisignatureAccount",
+	5: "CreateDapp",
+	6: "TransferIntoDapp",
+	7: "TransferOutOfDapp",
+}
+var LiskTransactionType_value = map[string]int32{
+	"Transfer":                      0,
+	"RegisterSecondPassphrase":      1,
+	"RegisterDelegate":              2,
+	"CastVotes":                     3,
+	"RegisterMultisignatureAccount": 4,
+	"CreateDapp":                    5,
+	"TransferIntoDapp":              6,
+	"TransferOutOfDapp":             7,
+}
+
+func (x LiskTransactionType) Enum() *LiskTransactionType {
+	p := new(LiskTransactionType)
+	*p = x
+	return p
+}
+func (x LiskTransactionType) String() string {
+	return proto.EnumName(LiskTransactionType_name, int32(x))
+}
+func (x *LiskTransactionType) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(LiskTransactionType_value, data, "LiskTransactionType")
+	if err != nil {
+		return err
+	}
+	*x = LiskTransactionType(value)
+	return nil
+}
+func (LiskTransactionType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{13}
 }
 
 // *
@@ -454,7 +721,7 @@ func (m *HDNodeType) Reset()         { *m = HDNodeType{} }
 func (m *HDNodeType) String() string { return proto.CompactTextString(m) }
 func (*HDNodeType) ProtoMessage()    {}
 func (*HDNodeType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{0}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{0}
 }
 func (m *HDNodeType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodeType.Unmarshal(m, b)
@@ -528,7 +795,7 @@ func (m *HDNodePathType) Reset()         { *m = HDNodePathType{} }
 func (m *HDNodePathType) String() string { return proto.CompactTextString(m) }
 func (*HDNodePathType) ProtoMessage()    {}
 func (*HDNodePathType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{1}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{1}
 }
 func (m *HDNodePathType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodePathType.Unmarshal(m, b)
@@ -563,124 +830,6 @@ func (m *HDNodePathType) GetAddressN() []uint32 {
 }
 
 // *
-// Structure representing Coin
-// @used_in Features
-type CoinType struct {
-	CoinName             *string  `protobuf:"bytes,1,opt,name=coin_name,json=coinName" json:"coin_name,omitempty"`
-	CoinShortcut         *string  `protobuf:"bytes,2,opt,name=coin_shortcut,json=coinShortcut" json:"coin_shortcut,omitempty"`
-	AddressType          *uint32  `protobuf:"varint,3,opt,name=address_type,json=addressType,def=0" json:"address_type,omitempty"`
-	MaxfeeKb             *uint64  `protobuf:"varint,4,opt,name=maxfee_kb,json=maxfeeKb" json:"maxfee_kb,omitempty"`
-	AddressTypeP2Sh      *uint32  `protobuf:"varint,5,opt,name=address_type_p2sh,json=addressTypeP2sh,def=5" json:"address_type_p2sh,omitempty"`
-	SignedMessageHeader  *string  `protobuf:"bytes,8,opt,name=signed_message_header,json=signedMessageHeader" json:"signed_message_header,omitempty"`
-	XpubMagic            *uint32  `protobuf:"varint,9,opt,name=xpub_magic,json=xpubMagic,def=76067358" json:"xpub_magic,omitempty"`
-	XprvMagic            *uint32  `protobuf:"varint,10,opt,name=xprv_magic,json=xprvMagic,def=76066276" json:"xprv_magic,omitempty"`
-	Segwit               *bool    `protobuf:"varint,11,opt,name=segwit" json:"segwit,omitempty"`
-	Forkid               *uint32  `protobuf:"varint,12,opt,name=forkid" json:"forkid,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *CoinType) Reset()         { *m = CoinType{} }
-func (m *CoinType) String() string { return proto.CompactTextString(m) }
-func (*CoinType) ProtoMessage()    {}
-func (*CoinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{2}
-}
-func (m *CoinType) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_CoinType.Unmarshal(m, b)
-}
-func (m *CoinType) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_CoinType.Marshal(b, m, deterministic)
-}
-func (dst *CoinType) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CoinType.Merge(dst, src)
-}
-func (m *CoinType) XXX_Size() int {
-	return xxx_messageInfo_CoinType.Size(m)
-}
-func (m *CoinType) XXX_DiscardUnknown() {
-	xxx_messageInfo_CoinType.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_CoinType proto.InternalMessageInfo
-
-const Default_CoinType_AddressType uint32 = 0
-const Default_CoinType_AddressTypeP2Sh uint32 = 5
-const Default_CoinType_XpubMagic uint32 = 76067358
-const Default_CoinType_XprvMagic uint32 = 76066276
-
-func (m *CoinType) GetCoinName() string {
-	if m != nil && m.CoinName != nil {
-		return *m.CoinName
-	}
-	return ""
-}
-
-func (m *CoinType) GetCoinShortcut() string {
-	if m != nil && m.CoinShortcut != nil {
-		return *m.CoinShortcut
-	}
-	return ""
-}
-
-func (m *CoinType) GetAddressType() uint32 {
-	if m != nil && m.AddressType != nil {
-		return *m.AddressType
-	}
-	return Default_CoinType_AddressType
-}
-
-func (m *CoinType) GetMaxfeeKb() uint64 {
-	if m != nil && m.MaxfeeKb != nil {
-		return *m.MaxfeeKb
-	}
-	return 0
-}
-
-func (m *CoinType) GetAddressTypeP2Sh() uint32 {
-	if m != nil && m.AddressTypeP2Sh != nil {
-		return *m.AddressTypeP2Sh
-	}
-	return Default_CoinType_AddressTypeP2Sh
-}
-
-func (m *CoinType) GetSignedMessageHeader() string {
-	if m != nil && m.SignedMessageHeader != nil {
-		return *m.SignedMessageHeader
-	}
-	return ""
-}
-
-func (m *CoinType) GetXpubMagic() uint32 {
-	if m != nil && m.XpubMagic != nil {
-		return *m.XpubMagic
-	}
-	return Default_CoinType_XpubMagic
-}
-
-func (m *CoinType) GetXprvMagic() uint32 {
-	if m != nil && m.XprvMagic != nil {
-		return *m.XprvMagic
-	}
-	return Default_CoinType_XprvMagic
-}
-
-func (m *CoinType) GetSegwit() bool {
-	if m != nil && m.Segwit != nil {
-		return *m.Segwit
-	}
-	return false
-}
-
-func (m *CoinType) GetForkid() uint32 {
-	if m != nil && m.Forkid != nil {
-		return *m.Forkid
-	}
-	return 0
-}
-
-// *
 // Type of redeem script used in input
 // @used_in TxInputType
 type MultisigRedeemScriptType struct {
@@ -696,7 +845,7 @@ func (m *MultisigRedeemScriptType) Reset()         { *m = MultisigRedeemScriptTy
 func (m *MultisigRedeemScriptType) String() string { return proto.CompactTextString(m) }
 func (*MultisigRedeemScriptType) ProtoMessage()    {}
 func (*MultisigRedeemScriptType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{3}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{2}
 }
 func (m *MultisigRedeemScriptType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MultisigRedeemScriptType.Unmarshal(m, b)
@@ -750,6 +899,8 @@ type TxInputType struct {
 	ScriptType           *InputScriptType          `protobuf:"varint,6,opt,name=script_type,json=scriptType,enum=InputScriptType,def=0" json:"script_type,omitempty"`
 	Multisig             *MultisigRedeemScriptType `protobuf:"bytes,7,opt,name=multisig" json:"multisig,omitempty"`
 	Amount               *uint64                   `protobuf:"varint,8,opt,name=amount" json:"amount,omitempty"`
+	DecredTree           *uint32                   `protobuf:"varint,9,opt,name=decred_tree,json=decredTree" json:"decred_tree,omitempty"`
+	DecredScriptVersion  *uint32                   `protobuf:"varint,10,opt,name=decred_script_version,json=decredScriptVersion" json:"decred_script_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
 	XXX_unrecognized     []byte                    `json:"-"`
 	XXX_sizecache        int32                     `json:"-"`
@@ -759,7 +910,7 @@ func (m *TxInputType) Reset()         { *m = TxInputType{} }
 func (m *TxInputType) String() string { return proto.CompactTextString(m) }
 func (*TxInputType) ProtoMessage()    {}
 func (*TxInputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{4}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{3}
 }
 func (m *TxInputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxInputType.Unmarshal(m, b)
@@ -838,6 +989,20 @@ func (m *TxInputType) GetAmount() uint64 {
 	return 0
 }
 
+func (m *TxInputType) GetDecredTree() uint32 {
+	if m != nil && m.DecredTree != nil {
+		return *m.DecredTree
+	}
+	return 0
+}
+
+func (m *TxInputType) GetDecredScriptVersion() uint32 {
+	if m != nil && m.DecredScriptVersion != nil {
+		return *m.DecredScriptVersion
+	}
+	return 0
+}
+
 // *
 // Structure representing transaction output
 // @used_in SimpleSignTx
@@ -849,6 +1014,7 @@ type TxOutputType struct {
 	ScriptType           *OutputScriptType         `protobuf:"varint,4,req,name=script_type,json=scriptType,enum=OutputScriptType" json:"script_type,omitempty"`
 	Multisig             *MultisigRedeemScriptType `protobuf:"bytes,5,opt,name=multisig" json:"multisig,omitempty"`
 	OpReturnData         []byte                    `protobuf:"bytes,6,opt,name=op_return_data,json=opReturnData" json:"op_return_data,omitempty"`
+	DecredScriptVersion  *uint32                   `protobuf:"varint,7,opt,name=decred_script_version,json=decredScriptVersion" json:"decred_script_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
 	XXX_unrecognized     []byte                    `json:"-"`
 	XXX_sizecache        int32                     `json:"-"`
@@ -858,7 +1024,7 @@ func (m *TxOutputType) Reset()         { *m = TxOutputType{} }
 func (m *TxOutputType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputType) ProtoMessage()    {}
 func (*TxOutputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{5}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{4}
 }
 func (m *TxOutputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputType.Unmarshal(m, b)
@@ -920,12 +1086,20 @@ func (m *TxOutputType) GetOpReturnData() []byte {
 	return nil
 }
 
+func (m *TxOutputType) GetDecredScriptVersion() uint32 {
+	if m != nil && m.DecredScriptVersion != nil {
+		return *m.DecredScriptVersion
+	}
+	return 0
+}
+
 // *
 // Structure representing compiled transaction output
 // @used_in TransactionType
 type TxOutputBinType struct {
 	Amount               *uint64  `protobuf:"varint,1,req,name=amount" json:"amount,omitempty"`
 	ScriptPubkey         []byte   `protobuf:"bytes,2,req,name=script_pubkey,json=scriptPubkey" json:"script_pubkey,omitempty"`
+	DecredScriptVersion  *uint32  `protobuf:"varint,3,opt,name=decred_script_version,json=decredScriptVersion" json:"decred_script_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -935,7 +1109,7 @@ func (m *TxOutputBinType) Reset()         { *m = TxOutputBinType{} }
 func (m *TxOutputBinType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputBinType) ProtoMessage()    {}
 func (*TxOutputBinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{6}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{5}
 }
 func (m *TxOutputBinType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputBinType.Unmarshal(m, b)
@@ -969,9 +1143,16 @@ func (m *TxOutputBinType) GetScriptPubkey() []byte {
 	return nil
 }
 
+func (m *TxOutputBinType) GetDecredScriptVersion() uint32 {
+	if m != nil && m.DecredScriptVersion != nil {
+		return *m.DecredScriptVersion
+	}
+	return 0
+}
+
 // *
 // Structure representing transaction
-// @used_in SimpleSignTx
+// @used_in TxAck
 type TransactionType struct {
 	Version              *uint32            `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
 	Inputs               []*TxInputType     `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty"`
@@ -982,6 +1163,8 @@ type TransactionType struct {
 	OutputsCnt           *uint32            `protobuf:"varint,7,opt,name=outputs_cnt,json=outputsCnt" json:"outputs_cnt,omitempty"`
 	ExtraData            []byte             `protobuf:"bytes,8,opt,name=extra_data,json=extraData" json:"extra_data,omitempty"`
 	ExtraDataLen         *uint32            `protobuf:"varint,9,opt,name=extra_data_len,json=extraDataLen" json:"extra_data_len,omitempty"`
+	Expiry               *uint32            `protobuf:"varint,10,opt,name=expiry" json:"expiry,omitempty"`
+	Overwintered         *bool              `protobuf:"varint,11,opt,name=overwintered" json:"overwintered,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
 	XXX_unrecognized     []byte             `json:"-"`
 	XXX_sizecache        int32              `json:"-"`
@@ -991,7 +1174,7 @@ func (m *TransactionType) Reset()         { *m = TransactionType{} }
 func (m *TransactionType) String() string { return proto.CompactTextString(m) }
 func (*TransactionType) ProtoMessage()    {}
 func (*TransactionType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{7}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{6}
 }
 func (m *TransactionType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionType.Unmarshal(m, b)
@@ -1074,6 +1257,20 @@ func (m *TransactionType) GetExtraDataLen() uint32 {
 	return 0
 }
 
+func (m *TransactionType) GetExpiry() uint32 {
+	if m != nil && m.Expiry != nil {
+		return *m.Expiry
+	}
+	return 0
+}
+
+func (m *TransactionType) GetOverwintered() bool {
+	if m != nil && m.Overwintered != nil {
+		return *m.Overwintered
+	}
+	return false
+}
+
 // *
 // Structure representing request details
 // @used_in TxRequest
@@ -1091,7 +1288,7 @@ func (m *TxRequestDetailsType) Reset()         { *m = TxRequestDetailsType{} }
 func (m *TxRequestDetailsType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestDetailsType) ProtoMessage()    {}
 func (*TxRequestDetailsType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{8}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{7}
 }
 func (m *TxRequestDetailsType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestDetailsType.Unmarshal(m, b)
@@ -1155,7 +1352,7 @@ func (m *TxRequestSerializedType) Reset()         { *m = TxRequestSerializedType
 func (m *TxRequestSerializedType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestSerializedType) ProtoMessage()    {}
 func (*TxRequestSerializedType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{9}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{8}
 }
 func (m *TxRequestSerializedType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestSerializedType.Unmarshal(m, b)
@@ -1215,7 +1412,7 @@ func (m *IdentityType) Reset()         { *m = IdentityType{} }
 func (m *IdentityType) String() string { return proto.CompactTextString(m) }
 func (*IdentityType) ProtoMessage()    {}
 func (*IdentityType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ccfddd123d774afb, []int{10}
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{9}
 }
 func (m *IdentityType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IdentityType.Unmarshal(m, b)
@@ -1279,6 +1476,1080 @@ func (m *IdentityType) GetIndex() uint32 {
 	return Default_IdentityType_Index
 }
 
+// *
+// Structure representing the common part for NEM transactions
+// @used_in NEMSignTx
+type NEMTransactionCommon struct {
+	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
+	Network              *uint32  `protobuf:"varint,2,opt,name=network" json:"network,omitempty"`
+	Timestamp            *uint32  `protobuf:"varint,3,opt,name=timestamp" json:"timestamp,omitempty"`
+	Fee                  *uint64  `protobuf:"varint,4,opt,name=fee" json:"fee,omitempty"`
+	Deadline             *uint32  `protobuf:"varint,5,opt,name=deadline" json:"deadline,omitempty"`
+	Signer               []byte   `protobuf:"bytes,6,opt,name=signer" json:"signer,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NEMTransactionCommon) Reset()         { *m = NEMTransactionCommon{} }
+func (m *NEMTransactionCommon) String() string { return proto.CompactTextString(m) }
+func (*NEMTransactionCommon) ProtoMessage()    {}
+func (*NEMTransactionCommon) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{10}
+}
+func (m *NEMTransactionCommon) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMTransactionCommon.Unmarshal(m, b)
+}
+func (m *NEMTransactionCommon) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMTransactionCommon.Marshal(b, m, deterministic)
+}
+func (dst *NEMTransactionCommon) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMTransactionCommon.Merge(dst, src)
+}
+func (m *NEMTransactionCommon) XXX_Size() int {
+	return xxx_messageInfo_NEMTransactionCommon.Size(m)
+}
+func (m *NEMTransactionCommon) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMTransactionCommon.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMTransactionCommon proto.InternalMessageInfo
+
+func (m *NEMTransactionCommon) GetAddressN() []uint32 {
+	if m != nil {
+		return m.AddressN
+	}
+	return nil
+}
+
+func (m *NEMTransactionCommon) GetNetwork() uint32 {
+	if m != nil && m.Network != nil {
+		return *m.Network
+	}
+	return 0
+}
+
+func (m *NEMTransactionCommon) GetTimestamp() uint32 {
+	if m != nil && m.Timestamp != nil {
+		return *m.Timestamp
+	}
+	return 0
+}
+
+func (m *NEMTransactionCommon) GetFee() uint64 {
+	if m != nil && m.Fee != nil {
+		return *m.Fee
+	}
+	return 0
+}
+
+func (m *NEMTransactionCommon) GetDeadline() uint32 {
+	if m != nil && m.Deadline != nil {
+		return *m.Deadline
+	}
+	return 0
+}
+
+func (m *NEMTransactionCommon) GetSigner() []byte {
+	if m != nil {
+		return m.Signer
+	}
+	return nil
+}
+
+// *
+// Structure representing the transfer transaction part for NEM transactions
+// @used_in NEMSignTx
+type NEMTransfer struct {
+	Recipient            *string      `protobuf:"bytes,1,opt,name=recipient" json:"recipient,omitempty"`
+	Amount               *uint64      `protobuf:"varint,2,opt,name=amount" json:"amount,omitempty"`
+	Payload              []byte       `protobuf:"bytes,3,opt,name=payload" json:"payload,omitempty"`
+	PublicKey            []byte       `protobuf:"bytes,4,opt,name=public_key,json=publicKey" json:"public_key,omitempty"`
+	Mosaics              []*NEMMosaic `protobuf:"bytes,5,rep,name=mosaics" json:"mosaics,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *NEMTransfer) Reset()         { *m = NEMTransfer{} }
+func (m *NEMTransfer) String() string { return proto.CompactTextString(m) }
+func (*NEMTransfer) ProtoMessage()    {}
+func (*NEMTransfer) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{11}
+}
+func (m *NEMTransfer) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMTransfer.Unmarshal(m, b)
+}
+func (m *NEMTransfer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMTransfer.Marshal(b, m, deterministic)
+}
+func (dst *NEMTransfer) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMTransfer.Merge(dst, src)
+}
+func (m *NEMTransfer) XXX_Size() int {
+	return xxx_messageInfo_NEMTransfer.Size(m)
+}
+func (m *NEMTransfer) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMTransfer.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMTransfer proto.InternalMessageInfo
+
+func (m *NEMTransfer) GetRecipient() string {
+	if m != nil && m.Recipient != nil {
+		return *m.Recipient
+	}
+	return ""
+}
+
+func (m *NEMTransfer) GetAmount() uint64 {
+	if m != nil && m.Amount != nil {
+		return *m.Amount
+	}
+	return 0
+}
+
+func (m *NEMTransfer) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *NEMTransfer) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+func (m *NEMTransfer) GetMosaics() []*NEMMosaic {
+	if m != nil {
+		return m.Mosaics
+	}
+	return nil
+}
+
+// *
+// Structure representing the mosaic attachment for NEM transfer transactions
+// @used_in NEMTransfer
+type NEMMosaic struct {
+	Namespace            *string  `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
+	Mosaic               *string  `protobuf:"bytes,2,opt,name=mosaic" json:"mosaic,omitempty"`
+	Quantity             *uint64  `protobuf:"varint,3,opt,name=quantity" json:"quantity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NEMMosaic) Reset()         { *m = NEMMosaic{} }
+func (m *NEMMosaic) String() string { return proto.CompactTextString(m) }
+func (*NEMMosaic) ProtoMessage()    {}
+func (*NEMMosaic) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{12}
+}
+func (m *NEMMosaic) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMMosaic.Unmarshal(m, b)
+}
+func (m *NEMMosaic) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMMosaic.Marshal(b, m, deterministic)
+}
+func (dst *NEMMosaic) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMMosaic.Merge(dst, src)
+}
+func (m *NEMMosaic) XXX_Size() int {
+	return xxx_messageInfo_NEMMosaic.Size(m)
+}
+func (m *NEMMosaic) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMMosaic.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMMosaic proto.InternalMessageInfo
+
+func (m *NEMMosaic) GetNamespace() string {
+	if m != nil && m.Namespace != nil {
+		return *m.Namespace
+	}
+	return ""
+}
+
+func (m *NEMMosaic) GetMosaic() string {
+	if m != nil && m.Mosaic != nil {
+		return *m.Mosaic
+	}
+	return ""
+}
+
+func (m *NEMMosaic) GetQuantity() uint64 {
+	if m != nil && m.Quantity != nil {
+		return *m.Quantity
+	}
+	return 0
+}
+
+// *
+// Structure representing the provision namespace part for NEM transactions
+// @used_in NEMSignTx
+type NEMProvisionNamespace struct {
+	Namespace            *string  `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
+	Parent               *string  `protobuf:"bytes,2,opt,name=parent" json:"parent,omitempty"`
+	Sink                 *string  `protobuf:"bytes,3,opt,name=sink" json:"sink,omitempty"`
+	Fee                  *uint64  `protobuf:"varint,4,opt,name=fee" json:"fee,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NEMProvisionNamespace) Reset()         { *m = NEMProvisionNamespace{} }
+func (m *NEMProvisionNamespace) String() string { return proto.CompactTextString(m) }
+func (*NEMProvisionNamespace) ProtoMessage()    {}
+func (*NEMProvisionNamespace) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{13}
+}
+func (m *NEMProvisionNamespace) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMProvisionNamespace.Unmarshal(m, b)
+}
+func (m *NEMProvisionNamespace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMProvisionNamespace.Marshal(b, m, deterministic)
+}
+func (dst *NEMProvisionNamespace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMProvisionNamespace.Merge(dst, src)
+}
+func (m *NEMProvisionNamespace) XXX_Size() int {
+	return xxx_messageInfo_NEMProvisionNamespace.Size(m)
+}
+func (m *NEMProvisionNamespace) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMProvisionNamespace.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMProvisionNamespace proto.InternalMessageInfo
+
+func (m *NEMProvisionNamespace) GetNamespace() string {
+	if m != nil && m.Namespace != nil {
+		return *m.Namespace
+	}
+	return ""
+}
+
+func (m *NEMProvisionNamespace) GetParent() string {
+	if m != nil && m.Parent != nil {
+		return *m.Parent
+	}
+	return ""
+}
+
+func (m *NEMProvisionNamespace) GetSink() string {
+	if m != nil && m.Sink != nil {
+		return *m.Sink
+	}
+	return ""
+}
+
+func (m *NEMProvisionNamespace) GetFee() uint64 {
+	if m != nil && m.Fee != nil {
+		return *m.Fee
+	}
+	return 0
+}
+
+// *
+// Structure representing the mosaic definition creation part for NEM transactions
+// @used_in NEMSignTx
+type NEMMosaicCreation struct {
+	Definition           *NEMMosaicDefinition `protobuf:"bytes,1,opt,name=definition" json:"definition,omitempty"`
+	Sink                 *string              `protobuf:"bytes,2,opt,name=sink" json:"sink,omitempty"`
+	Fee                  *uint64              `protobuf:"varint,3,opt,name=fee" json:"fee,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *NEMMosaicCreation) Reset()         { *m = NEMMosaicCreation{} }
+func (m *NEMMosaicCreation) String() string { return proto.CompactTextString(m) }
+func (*NEMMosaicCreation) ProtoMessage()    {}
+func (*NEMMosaicCreation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{14}
+}
+func (m *NEMMosaicCreation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMMosaicCreation.Unmarshal(m, b)
+}
+func (m *NEMMosaicCreation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMMosaicCreation.Marshal(b, m, deterministic)
+}
+func (dst *NEMMosaicCreation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMMosaicCreation.Merge(dst, src)
+}
+func (m *NEMMosaicCreation) XXX_Size() int {
+	return xxx_messageInfo_NEMMosaicCreation.Size(m)
+}
+func (m *NEMMosaicCreation) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMMosaicCreation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMMosaicCreation proto.InternalMessageInfo
+
+func (m *NEMMosaicCreation) GetDefinition() *NEMMosaicDefinition {
+	if m != nil {
+		return m.Definition
+	}
+	return nil
+}
+
+func (m *NEMMosaicCreation) GetSink() string {
+	if m != nil && m.Sink != nil {
+		return *m.Sink
+	}
+	return ""
+}
+
+func (m *NEMMosaicCreation) GetFee() uint64 {
+	if m != nil && m.Fee != nil {
+		return *m.Fee
+	}
+	return 0
+}
+
+// *
+// Structure representing a mosaic definition
+// @used_in NEMMosaicCreation
+type NEMMosaicDefinition struct {
+	Name                 *string        `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Ticker               *string        `protobuf:"bytes,2,opt,name=ticker" json:"ticker,omitempty"`
+	Namespace            *string        `protobuf:"bytes,3,opt,name=namespace" json:"namespace,omitempty"`
+	Mosaic               *string        `protobuf:"bytes,4,opt,name=mosaic" json:"mosaic,omitempty"`
+	Divisibility         *uint32        `protobuf:"varint,5,opt,name=divisibility" json:"divisibility,omitempty"`
+	Levy                 *NEMMosaicLevy `protobuf:"varint,6,opt,name=levy,enum=NEMMosaicLevy" json:"levy,omitempty"`
+	Fee                  *uint64        `protobuf:"varint,7,opt,name=fee" json:"fee,omitempty"`
+	LevyAddress          *string        `protobuf:"bytes,8,opt,name=levy_address,json=levyAddress" json:"levy_address,omitempty"`
+	LevyNamespace        *string        `protobuf:"bytes,9,opt,name=levy_namespace,json=levyNamespace" json:"levy_namespace,omitempty"`
+	LevyMosaic           *string        `protobuf:"bytes,10,opt,name=levy_mosaic,json=levyMosaic" json:"levy_mosaic,omitempty"`
+	Supply               *uint64        `protobuf:"varint,11,opt,name=supply" json:"supply,omitempty"`
+	MutableSupply        *bool          `protobuf:"varint,12,opt,name=mutable_supply,json=mutableSupply" json:"mutable_supply,omitempty"`
+	Transferable         *bool          `protobuf:"varint,13,opt,name=transferable" json:"transferable,omitempty"`
+	Description          *string        `protobuf:"bytes,14,opt,name=description" json:"description,omitempty"`
+	Networks             []uint32       `protobuf:"varint,15,rep,name=networks" json:"networks,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *NEMMosaicDefinition) Reset()         { *m = NEMMosaicDefinition{} }
+func (m *NEMMosaicDefinition) String() string { return proto.CompactTextString(m) }
+func (*NEMMosaicDefinition) ProtoMessage()    {}
+func (*NEMMosaicDefinition) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{15}
+}
+func (m *NEMMosaicDefinition) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMMosaicDefinition.Unmarshal(m, b)
+}
+func (m *NEMMosaicDefinition) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMMosaicDefinition.Marshal(b, m, deterministic)
+}
+func (dst *NEMMosaicDefinition) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMMosaicDefinition.Merge(dst, src)
+}
+func (m *NEMMosaicDefinition) XXX_Size() int {
+	return xxx_messageInfo_NEMMosaicDefinition.Size(m)
+}
+func (m *NEMMosaicDefinition) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMMosaicDefinition.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMMosaicDefinition proto.InternalMessageInfo
+
+func (m *NEMMosaicDefinition) GetName() string {
+	if m != nil && m.Name != nil {
+		return *m.Name
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetTicker() string {
+	if m != nil && m.Ticker != nil {
+		return *m.Ticker
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetNamespace() string {
+	if m != nil && m.Namespace != nil {
+		return *m.Namespace
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetMosaic() string {
+	if m != nil && m.Mosaic != nil {
+		return *m.Mosaic
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetDivisibility() uint32 {
+	if m != nil && m.Divisibility != nil {
+		return *m.Divisibility
+	}
+	return 0
+}
+
+func (m *NEMMosaicDefinition) GetLevy() NEMMosaicLevy {
+	if m != nil && m.Levy != nil {
+		return *m.Levy
+	}
+	return NEMMosaicLevy_MosaicLevy_Absolute
+}
+
+func (m *NEMMosaicDefinition) GetFee() uint64 {
+	if m != nil && m.Fee != nil {
+		return *m.Fee
+	}
+	return 0
+}
+
+func (m *NEMMosaicDefinition) GetLevyAddress() string {
+	if m != nil && m.LevyAddress != nil {
+		return *m.LevyAddress
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetLevyNamespace() string {
+	if m != nil && m.LevyNamespace != nil {
+		return *m.LevyNamespace
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetLevyMosaic() string {
+	if m != nil && m.LevyMosaic != nil {
+		return *m.LevyMosaic
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetSupply() uint64 {
+	if m != nil && m.Supply != nil {
+		return *m.Supply
+	}
+	return 0
+}
+
+func (m *NEMMosaicDefinition) GetMutableSupply() bool {
+	if m != nil && m.MutableSupply != nil {
+		return *m.MutableSupply
+	}
+	return false
+}
+
+func (m *NEMMosaicDefinition) GetTransferable() bool {
+	if m != nil && m.Transferable != nil {
+		return *m.Transferable
+	}
+	return false
+}
+
+func (m *NEMMosaicDefinition) GetDescription() string {
+	if m != nil && m.Description != nil {
+		return *m.Description
+	}
+	return ""
+}
+
+func (m *NEMMosaicDefinition) GetNetworks() []uint32 {
+	if m != nil {
+		return m.Networks
+	}
+	return nil
+}
+
+// *
+// Structure representing the mosaic supply change part for NEM transactions
+// @used_in NEMSignTx
+type NEMMosaicSupplyChange struct {
+	Namespace            *string              `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
+	Mosaic               *string              `protobuf:"bytes,2,opt,name=mosaic" json:"mosaic,omitempty"`
+	Type                 *NEMSupplyChangeType `protobuf:"varint,3,opt,name=type,enum=NEMSupplyChangeType" json:"type,omitempty"`
+	Delta                *uint64              `protobuf:"varint,4,opt,name=delta" json:"delta,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *NEMMosaicSupplyChange) Reset()         { *m = NEMMosaicSupplyChange{} }
+func (m *NEMMosaicSupplyChange) String() string { return proto.CompactTextString(m) }
+func (*NEMMosaicSupplyChange) ProtoMessage()    {}
+func (*NEMMosaicSupplyChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{16}
+}
+func (m *NEMMosaicSupplyChange) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMMosaicSupplyChange.Unmarshal(m, b)
+}
+func (m *NEMMosaicSupplyChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMMosaicSupplyChange.Marshal(b, m, deterministic)
+}
+func (dst *NEMMosaicSupplyChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMMosaicSupplyChange.Merge(dst, src)
+}
+func (m *NEMMosaicSupplyChange) XXX_Size() int {
+	return xxx_messageInfo_NEMMosaicSupplyChange.Size(m)
+}
+func (m *NEMMosaicSupplyChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMMosaicSupplyChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMMosaicSupplyChange proto.InternalMessageInfo
+
+func (m *NEMMosaicSupplyChange) GetNamespace() string {
+	if m != nil && m.Namespace != nil {
+		return *m.Namespace
+	}
+	return ""
+}
+
+func (m *NEMMosaicSupplyChange) GetMosaic() string {
+	if m != nil && m.Mosaic != nil {
+		return *m.Mosaic
+	}
+	return ""
+}
+
+func (m *NEMMosaicSupplyChange) GetType() NEMSupplyChangeType {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return NEMSupplyChangeType_SupplyChange_Increase
+}
+
+func (m *NEMMosaicSupplyChange) GetDelta() uint64 {
+	if m != nil && m.Delta != nil {
+		return *m.Delta
+	}
+	return 0
+}
+
+// *
+// Structure representing the aggregate modification part for NEM transactions
+// @used_in NEMSignTx
+type NEMAggregateModification struct {
+	Modifications        []*NEMCosignatoryModification `protobuf:"bytes,1,rep,name=modifications" json:"modifications,omitempty"`
+	RelativeChange       *int32                        `protobuf:"zigzag32,2,opt,name=relative_change,json=relativeChange" json:"relative_change,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                      `json:"-"`
+	XXX_unrecognized     []byte                        `json:"-"`
+	XXX_sizecache        int32                         `json:"-"`
+}
+
+func (m *NEMAggregateModification) Reset()         { *m = NEMAggregateModification{} }
+func (m *NEMAggregateModification) String() string { return proto.CompactTextString(m) }
+func (*NEMAggregateModification) ProtoMessage()    {}
+func (*NEMAggregateModification) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{17}
+}
+func (m *NEMAggregateModification) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMAggregateModification.Unmarshal(m, b)
+}
+func (m *NEMAggregateModification) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMAggregateModification.Marshal(b, m, deterministic)
+}
+func (dst *NEMAggregateModification) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMAggregateModification.Merge(dst, src)
+}
+func (m *NEMAggregateModification) XXX_Size() int {
+	return xxx_messageInfo_NEMAggregateModification.Size(m)
+}
+func (m *NEMAggregateModification) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMAggregateModification.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMAggregateModification proto.InternalMessageInfo
+
+func (m *NEMAggregateModification) GetModifications() []*NEMCosignatoryModification {
+	if m != nil {
+		return m.Modifications
+	}
+	return nil
+}
+
+func (m *NEMAggregateModification) GetRelativeChange() int32 {
+	if m != nil && m.RelativeChange != nil {
+		return *m.RelativeChange
+	}
+	return 0
+}
+
+// *
+// Structure representing the cosignatory modification for aggregate modification transactions
+// @used_in NEMAggregateMdofiication
+type NEMCosignatoryModification struct {
+	Type                 *NEMModificationType `protobuf:"varint,1,opt,name=type,enum=NEMModificationType" json:"type,omitempty"`
+	PublicKey            []byte               `protobuf:"bytes,2,opt,name=public_key,json=publicKey" json:"public_key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *NEMCosignatoryModification) Reset()         { *m = NEMCosignatoryModification{} }
+func (m *NEMCosignatoryModification) String() string { return proto.CompactTextString(m) }
+func (*NEMCosignatoryModification) ProtoMessage()    {}
+func (*NEMCosignatoryModification) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{18}
+}
+func (m *NEMCosignatoryModification) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMCosignatoryModification.Unmarshal(m, b)
+}
+func (m *NEMCosignatoryModification) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMCosignatoryModification.Marshal(b, m, deterministic)
+}
+func (dst *NEMCosignatoryModification) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMCosignatoryModification.Merge(dst, src)
+}
+func (m *NEMCosignatoryModification) XXX_Size() int {
+	return xxx_messageInfo_NEMCosignatoryModification.Size(m)
+}
+func (m *NEMCosignatoryModification) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMCosignatoryModification.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMCosignatoryModification proto.InternalMessageInfo
+
+func (m *NEMCosignatoryModification) GetType() NEMModificationType {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return NEMModificationType_CosignatoryModification_Add
+}
+
+func (m *NEMCosignatoryModification) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+// *
+// Structure representing the importance transfer part for NEM transactions
+// @used_in NEMSignTx
+type NEMImportanceTransfer struct {
+	Mode                 *NEMImportanceTransferMode `protobuf:"varint,1,opt,name=mode,enum=NEMImportanceTransferMode" json:"mode,omitempty"`
+	PublicKey            []byte                     `protobuf:"bytes,2,opt,name=public_key,json=publicKey" json:"public_key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
+}
+
+func (m *NEMImportanceTransfer) Reset()         { *m = NEMImportanceTransfer{} }
+func (m *NEMImportanceTransfer) String() string { return proto.CompactTextString(m) }
+func (*NEMImportanceTransfer) ProtoMessage()    {}
+func (*NEMImportanceTransfer) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{19}
+}
+func (m *NEMImportanceTransfer) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NEMImportanceTransfer.Unmarshal(m, b)
+}
+func (m *NEMImportanceTransfer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NEMImportanceTransfer.Marshal(b, m, deterministic)
+}
+func (dst *NEMImportanceTransfer) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NEMImportanceTransfer.Merge(dst, src)
+}
+func (m *NEMImportanceTransfer) XXX_Size() int {
+	return xxx_messageInfo_NEMImportanceTransfer.Size(m)
+}
+func (m *NEMImportanceTransfer) XXX_DiscardUnknown() {
+	xxx_messageInfo_NEMImportanceTransfer.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NEMImportanceTransfer proto.InternalMessageInfo
+
+func (m *NEMImportanceTransfer) GetMode() NEMImportanceTransferMode {
+	if m != nil && m.Mode != nil {
+		return *m.Mode
+	}
+	return NEMImportanceTransferMode_ImportanceTransfer_Activate
+}
+
+func (m *NEMImportanceTransfer) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+// *
+// Describes a Stellar asset
+// @used_in StellarTxOpAck
+type StellarAssetType struct {
+	Type                 *uint32  `protobuf:"varint,1,opt,name=type" json:"type,omitempty"`
+	Code                 *string  `protobuf:"bytes,2,opt,name=code" json:"code,omitempty"`
+	Issuer               *string  `protobuf:"bytes,3,opt,name=issuer" json:"issuer,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *StellarAssetType) Reset()         { *m = StellarAssetType{} }
+func (m *StellarAssetType) String() string { return proto.CompactTextString(m) }
+func (*StellarAssetType) ProtoMessage()    {}
+func (*StellarAssetType) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{20}
+}
+func (m *StellarAssetType) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_StellarAssetType.Unmarshal(m, b)
+}
+func (m *StellarAssetType) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_StellarAssetType.Marshal(b, m, deterministic)
+}
+func (dst *StellarAssetType) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StellarAssetType.Merge(dst, src)
+}
+func (m *StellarAssetType) XXX_Size() int {
+	return xxx_messageInfo_StellarAssetType.Size(m)
+}
+func (m *StellarAssetType) XXX_DiscardUnknown() {
+	xxx_messageInfo_StellarAssetType.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StellarAssetType proto.InternalMessageInfo
+
+func (m *StellarAssetType) GetType() uint32 {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return 0
+}
+
+func (m *StellarAssetType) GetCode() string {
+	if m != nil && m.Code != nil {
+		return *m.Code
+	}
+	return ""
+}
+
+func (m *StellarAssetType) GetIssuer() string {
+	if m != nil && m.Issuer != nil {
+		return *m.Issuer
+	}
+	return ""
+}
+
+// *
+// Structure representing the common part for Lisk transactions
+// @used_in LiskSignTx
+type LiskTransactionCommon struct {
+	Type                 *LiskTransactionType  `protobuf:"varint,1,opt,name=type,enum=LiskTransactionType" json:"type,omitempty"`
+	Amount               *uint64               `protobuf:"varint,2,opt,name=amount,def=0" json:"amount,omitempty"`
+	Fee                  *uint64               `protobuf:"varint,3,opt,name=fee" json:"fee,omitempty"`
+	RecipientId          *string               `protobuf:"bytes,4,opt,name=recipient_id,json=recipientId" json:"recipient_id,omitempty"`
+	SenderPublicKey      []byte                `protobuf:"bytes,5,opt,name=sender_public_key,json=senderPublicKey" json:"sender_public_key,omitempty"`
+	RequesterPublicKey   []byte                `protobuf:"bytes,6,opt,name=requester_public_key,json=requesterPublicKey" json:"requester_public_key,omitempty"`
+	Signature            []byte                `protobuf:"bytes,7,opt,name=signature" json:"signature,omitempty"`
+	Timestamp            *uint32               `protobuf:"varint,8,opt,name=timestamp" json:"timestamp,omitempty"`
+	Asset                *LiskTransactionAsset `protobuf:"bytes,9,opt,name=asset" json:"asset,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *LiskTransactionCommon) Reset()         { *m = LiskTransactionCommon{} }
+func (m *LiskTransactionCommon) String() string { return proto.CompactTextString(m) }
+func (*LiskTransactionCommon) ProtoMessage()    {}
+func (*LiskTransactionCommon) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{21}
+}
+func (m *LiskTransactionCommon) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LiskTransactionCommon.Unmarshal(m, b)
+}
+func (m *LiskTransactionCommon) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LiskTransactionCommon.Marshal(b, m, deterministic)
+}
+func (dst *LiskTransactionCommon) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LiskTransactionCommon.Merge(dst, src)
+}
+func (m *LiskTransactionCommon) XXX_Size() int {
+	return xxx_messageInfo_LiskTransactionCommon.Size(m)
+}
+func (m *LiskTransactionCommon) XXX_DiscardUnknown() {
+	xxx_messageInfo_LiskTransactionCommon.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LiskTransactionCommon proto.InternalMessageInfo
+
+const Default_LiskTransactionCommon_Amount uint64 = 0
+
+func (m *LiskTransactionCommon) GetType() LiskTransactionType {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return LiskTransactionType_Transfer
+}
+
+func (m *LiskTransactionCommon) GetAmount() uint64 {
+	if m != nil && m.Amount != nil {
+		return *m.Amount
+	}
+	return Default_LiskTransactionCommon_Amount
+}
+
+func (m *LiskTransactionCommon) GetFee() uint64 {
+	if m != nil && m.Fee != nil {
+		return *m.Fee
+	}
+	return 0
+}
+
+func (m *LiskTransactionCommon) GetRecipientId() string {
+	if m != nil && m.RecipientId != nil {
+		return *m.RecipientId
+	}
+	return ""
+}
+
+func (m *LiskTransactionCommon) GetSenderPublicKey() []byte {
+	if m != nil {
+		return m.SenderPublicKey
+	}
+	return nil
+}
+
+func (m *LiskTransactionCommon) GetRequesterPublicKey() []byte {
+	if m != nil {
+		return m.RequesterPublicKey
+	}
+	return nil
+}
+
+func (m *LiskTransactionCommon) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+func (m *LiskTransactionCommon) GetTimestamp() uint32 {
+	if m != nil && m.Timestamp != nil {
+		return *m.Timestamp
+	}
+	return 0
+}
+
+func (m *LiskTransactionCommon) GetAsset() *LiskTransactionAsset {
+	if m != nil {
+		return m.Asset
+	}
+	return nil
+}
+
+// *
+// Structure representing the asset field in the Lisk transaction
+// @used_in LiskTransactionCommon
+type LiskTransactionAsset struct {
+	Signature            *LiskSignatureType      `protobuf:"bytes,1,opt,name=signature" json:"signature,omitempty"`
+	Delegate             *LiskDelegateType       `protobuf:"bytes,2,opt,name=delegate" json:"delegate,omitempty"`
+	Votes                []string                `protobuf:"bytes,3,rep,name=votes" json:"votes,omitempty"`
+	Multisignature       *LiskMultisignatureType `protobuf:"bytes,4,opt,name=multisignature" json:"multisignature,omitempty"`
+	Data                 *string                 `protobuf:"bytes,5,opt,name=data" json:"data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
+}
+
+func (m *LiskTransactionAsset) Reset()         { *m = LiskTransactionAsset{} }
+func (m *LiskTransactionAsset) String() string { return proto.CompactTextString(m) }
+func (*LiskTransactionAsset) ProtoMessage()    {}
+func (*LiskTransactionAsset) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{22}
+}
+func (m *LiskTransactionAsset) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LiskTransactionAsset.Unmarshal(m, b)
+}
+func (m *LiskTransactionAsset) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LiskTransactionAsset.Marshal(b, m, deterministic)
+}
+func (dst *LiskTransactionAsset) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LiskTransactionAsset.Merge(dst, src)
+}
+func (m *LiskTransactionAsset) XXX_Size() int {
+	return xxx_messageInfo_LiskTransactionAsset.Size(m)
+}
+func (m *LiskTransactionAsset) XXX_DiscardUnknown() {
+	xxx_messageInfo_LiskTransactionAsset.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LiskTransactionAsset proto.InternalMessageInfo
+
+func (m *LiskTransactionAsset) GetSignature() *LiskSignatureType {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+func (m *LiskTransactionAsset) GetDelegate() *LiskDelegateType {
+	if m != nil {
+		return m.Delegate
+	}
+	return nil
+}
+
+func (m *LiskTransactionAsset) GetVotes() []string {
+	if m != nil {
+		return m.Votes
+	}
+	return nil
+}
+
+func (m *LiskTransactionAsset) GetMultisignature() *LiskMultisignatureType {
+	if m != nil {
+		return m.Multisignature
+	}
+	return nil
+}
+
+func (m *LiskTransactionAsset) GetData() string {
+	if m != nil && m.Data != nil {
+		return *m.Data
+	}
+	return ""
+}
+
+// *
+// Structure representing the signature field in the Lisk transaction asset field
+// @used_in LiskTransactionAsset
+type LiskSignatureType struct {
+	PublicKey            []byte   `protobuf:"bytes,1,opt,name=public_key,json=publicKey" json:"public_key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *LiskSignatureType) Reset()         { *m = LiskSignatureType{} }
+func (m *LiskSignatureType) String() string { return proto.CompactTextString(m) }
+func (*LiskSignatureType) ProtoMessage()    {}
+func (*LiskSignatureType) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{23}
+}
+func (m *LiskSignatureType) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LiskSignatureType.Unmarshal(m, b)
+}
+func (m *LiskSignatureType) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LiskSignatureType.Marshal(b, m, deterministic)
+}
+func (dst *LiskSignatureType) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LiskSignatureType.Merge(dst, src)
+}
+func (m *LiskSignatureType) XXX_Size() int {
+	return xxx_messageInfo_LiskSignatureType.Size(m)
+}
+func (m *LiskSignatureType) XXX_DiscardUnknown() {
+	xxx_messageInfo_LiskSignatureType.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LiskSignatureType proto.InternalMessageInfo
+
+func (m *LiskSignatureType) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+// *
+// Structure representing the delegate field in the Lisk transaction asset field
+// @used_in LiskTransactionAsset
+type LiskDelegateType struct {
+	Username             *string  `protobuf:"bytes,1,opt,name=username" json:"username,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *LiskDelegateType) Reset()         { *m = LiskDelegateType{} }
+func (m *LiskDelegateType) String() string { return proto.CompactTextString(m) }
+func (*LiskDelegateType) ProtoMessage()    {}
+func (*LiskDelegateType) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{24}
+}
+func (m *LiskDelegateType) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LiskDelegateType.Unmarshal(m, b)
+}
+func (m *LiskDelegateType) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LiskDelegateType.Marshal(b, m, deterministic)
+}
+func (dst *LiskDelegateType) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LiskDelegateType.Merge(dst, src)
+}
+func (m *LiskDelegateType) XXX_Size() int {
+	return xxx_messageInfo_LiskDelegateType.Size(m)
+}
+func (m *LiskDelegateType) XXX_DiscardUnknown() {
+	xxx_messageInfo_LiskDelegateType.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LiskDelegateType proto.InternalMessageInfo
+
+func (m *LiskDelegateType) GetUsername() string {
+	if m != nil && m.Username != nil {
+		return *m.Username
+	}
+	return ""
+}
+
+// *
+// Structure representing the multisignature field in the Lisk transaction asset field
+// @used_in LiskTransactionAsset
+type LiskMultisignatureType struct {
+	Min                  *uint32  `protobuf:"varint,1,opt,name=min" json:"min,omitempty"`
+	LifeTime             *uint32  `protobuf:"varint,2,opt,name=life_time,json=lifeTime" json:"life_time,omitempty"`
+	KeysGroup            []string `protobuf:"bytes,3,rep,name=keys_group,json=keysGroup" json:"keys_group,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *LiskMultisignatureType) Reset()         { *m = LiskMultisignatureType{} }
+func (m *LiskMultisignatureType) String() string { return proto.CompactTextString(m) }
+func (*LiskMultisignatureType) ProtoMessage()    {}
+func (*LiskMultisignatureType) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_4695cc9bb9242eeb, []int{25}
+}
+func (m *LiskMultisignatureType) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LiskMultisignatureType.Unmarshal(m, b)
+}
+func (m *LiskMultisignatureType) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LiskMultisignatureType.Marshal(b, m, deterministic)
+}
+func (dst *LiskMultisignatureType) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LiskMultisignatureType.Merge(dst, src)
+}
+func (m *LiskMultisignatureType) XXX_Size() int {
+	return xxx_messageInfo_LiskMultisignatureType.Size(m)
+}
+func (m *LiskMultisignatureType) XXX_DiscardUnknown() {
+	xxx_messageInfo_LiskMultisignatureType.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LiskMultisignatureType proto.InternalMessageInfo
+
+func (m *LiskMultisignatureType) GetMin() uint32 {
+	if m != nil && m.Min != nil {
+		return *m.Min
+	}
+	return 0
+}
+
+func (m *LiskMultisignatureType) GetLifeTime() uint32 {
+	if m != nil && m.LifeTime != nil {
+		return *m.LifeTime
+	}
+	return 0
+}
+
+func (m *LiskMultisignatureType) GetKeysGroup() []string {
+	if m != nil {
+		return m.KeysGroup
+	}
+	return nil
+}
+
 var E_WireIn = &proto.ExtensionDesc{
 	ExtendedType:  (*descriptor.EnumValueOptions)(nil),
 	ExtensionType: (*bool)(nil),
@@ -1336,7 +2607,6 @@ var E_WireBootloader = &proto.ExtensionDesc{
 func init() {
 	proto.RegisterType((*HDNodeType)(nil), "HDNodeType")
 	proto.RegisterType((*HDNodePathType)(nil), "HDNodePathType")
-	proto.RegisterType((*CoinType)(nil), "CoinType")
 	proto.RegisterType((*MultisigRedeemScriptType)(nil), "MultisigRedeemScriptType")
 	proto.RegisterType((*TxInputType)(nil), "TxInputType")
 	proto.RegisterType((*TxOutputType)(nil), "TxOutputType")
@@ -1345,6 +2615,22 @@ func init() {
 	proto.RegisterType((*TxRequestDetailsType)(nil), "TxRequestDetailsType")
 	proto.RegisterType((*TxRequestSerializedType)(nil), "TxRequestSerializedType")
 	proto.RegisterType((*IdentityType)(nil), "IdentityType")
+	proto.RegisterType((*NEMTransactionCommon)(nil), "NEMTransactionCommon")
+	proto.RegisterType((*NEMTransfer)(nil), "NEMTransfer")
+	proto.RegisterType((*NEMMosaic)(nil), "NEMMosaic")
+	proto.RegisterType((*NEMProvisionNamespace)(nil), "NEMProvisionNamespace")
+	proto.RegisterType((*NEMMosaicCreation)(nil), "NEMMosaicCreation")
+	proto.RegisterType((*NEMMosaicDefinition)(nil), "NEMMosaicDefinition")
+	proto.RegisterType((*NEMMosaicSupplyChange)(nil), "NEMMosaicSupplyChange")
+	proto.RegisterType((*NEMAggregateModification)(nil), "NEMAggregateModification")
+	proto.RegisterType((*NEMCosignatoryModification)(nil), "NEMCosignatoryModification")
+	proto.RegisterType((*NEMImportanceTransfer)(nil), "NEMImportanceTransfer")
+	proto.RegisterType((*StellarAssetType)(nil), "StellarAssetType")
+	proto.RegisterType((*LiskTransactionCommon)(nil), "LiskTransactionCommon")
+	proto.RegisterType((*LiskTransactionAsset)(nil), "LiskTransactionAsset")
+	proto.RegisterType((*LiskSignatureType)(nil), "LiskSignatureType")
+	proto.RegisterType((*LiskDelegateType)(nil), "LiskDelegateType")
+	proto.RegisterType((*LiskMultisignatureType)(nil), "LiskMultisignatureType")
 	proto.RegisterEnum("FailureType", FailureType_name, FailureType_value)
 	proto.RegisterEnum("OutputScriptType", OutputScriptType_name, OutputScriptType_value)
 	proto.RegisterEnum("InputScriptType", InputScriptType_name, InputScriptType_value)
@@ -1353,6 +2639,12 @@ func init() {
 	proto.RegisterEnum("PinMatrixRequestType", PinMatrixRequestType_name, PinMatrixRequestType_value)
 	proto.RegisterEnum("RecoveryDeviceType", RecoveryDeviceType_name, RecoveryDeviceType_value)
 	proto.RegisterEnum("WordRequestType", WordRequestType_name, WordRequestType_value)
+	proto.RegisterEnum("PassphraseSourceType", PassphraseSourceType_name, PassphraseSourceType_value)
+	proto.RegisterEnum("NEMMosaicLevy", NEMMosaicLevy_name, NEMMosaicLevy_value)
+	proto.RegisterEnum("NEMSupplyChangeType", NEMSupplyChangeType_name, NEMSupplyChangeType_value)
+	proto.RegisterEnum("NEMModificationType", NEMModificationType_name, NEMModificationType_value)
+	proto.RegisterEnum("NEMImportanceTransferMode", NEMImportanceTransferMode_name, NEMImportanceTransferMode_value)
+	proto.RegisterEnum("LiskTransactionType", LiskTransactionType_name, LiskTransactionType_value)
 	proto.RegisterExtension(E_WireIn)
 	proto.RegisterExtension(E_WireOut)
 	proto.RegisterExtension(E_WireDebugIn)
@@ -1361,127 +2653,192 @@ func init() {
 	proto.RegisterExtension(E_WireBootloader)
 }
 
-func init() { proto.RegisterFile("types.proto", fileDescriptor_types_ccfddd123d774afb) }
+func init() { proto.RegisterFile("types.proto", fileDescriptor_types_4695cc9bb9242eeb) }
 
-var fileDescriptor_types_ccfddd123d774afb = []byte{
-	// 1899 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x57, 0xdb, 0x72, 0x1a, 0xc9,
-	0x19, 0xf6, 0x00, 0x92, 0xe0, 0x07, 0xc4, 0xa8, 0x7d, 0xd0, 0x78, 0x6d, 0xaf, 0x31, 0x76, 0x62,
-	0x45, 0x55, 0x61, 0x77, 0xc9, 0x5a, 0x8e, 0x55, 0xa9, 0x24, 0x3a, 0xa0, 0x15, 0x65, 0x0b, 0x51,
-	0xc3, 0x28, 0x56, 0x72, 0x33, 0x35, 0xcc, 0xb4, 0xa0, 0x4b, 0x43, 0x37, 0xe9, 0xe9, 0x91, 0xd1,
-	0xde, 0xe4, 0x2a, 0xc9, 0x55, 0x5e, 0x23, 0x6f, 0x91, 0xaa, 0xbc, 0x41, 0xaa, 0x36, 0xa7, 0xcb,
-	0xbc, 0x41, 0xae, 0xf2, 0x00, 0xa9, 0x3e, 0x0c, 0x02, 0xc9, 0xde, 0xd2, 0x1d, 0xfd, 0x7d, 0xff,
-	0xf9, 0xd0, 0x3d, 0x40, 0x59, 0x5c, 0x4e, 0x70, 0xd2, 0x9c, 0x70, 0x26, 0xd8, 0x67, 0xf5, 0x21,
-	0x63, 0xc3, 0x18, 0x7f, 0xa1, 0x4e, 0x83, 0xf4, 0xec, 0x8b, 0x08, 0x27, 0x21, 0x27, 0x13, 0xc1,
-	0xb8, 0x96, 0x68, 0xfc, 0xd5, 0x02, 0x38, 0xdc, 0xef, 0xb2, 0x08, 0x7b, 0x97, 0x13, 0x8c, 0xee,
-	0xc1, 0x52, 0x84, 0x27, 0x62, 0xe4, 0x58, 0xf5, 0xdc, 0x46, 0xd5, 0xd5, 0x07, 0x54, 0x87, 0xf2,
-	0x19, 0xa1, 0x43, 0xcc, 0x27, 0x9c, 0x50, 0xe1, 0xe4, 0x14, 0x37, 0x0f, 0xa1, 0x47, 0x50, 0x0a,
-	0x47, 0x24, 0x8e, 0x7c, 0x9a, 0x8e, 0x9d, 0xbc, 0xe2, 0x8b, 0x0a, 0xe8, 0xa6, 0x63, 0xf4, 0x04,
-	0x20, 0x1c, 0x05, 0x84, 0xfa, 0x21, 0x8b, 0xb0, 0x53, 0xa8, 0xe7, 0x36, 0x2a, 0x6e, 0x49, 0x21,
-	0x7b, 0x2c, 0xc2, 0xe8, 0x29, 0x94, 0x27, 0x9c, 0x5c, 0x04, 0x02, 0xfb, 0xe7, 0xf8, 0xd2, 0x59,
-	0xaa, 0x5b, 0x1b, 0x15, 0x17, 0x0c, 0xf4, 0x16, 0x5f, 0x4a, 0xfd, 0x49, 0x3a, 0x88, 0x49, 0xa8,
-	0xf8, 0x65, 0xc5, 0x97, 0x34, 0xf2, 0x16, 0x5f, 0x36, 0xba, 0xb0, 0xaa, 0x33, 0xe8, 0x05, 0x62,
-	0xa4, 0xb2, 0x78, 0x0a, 0x05, 0x2a, 0x5d, 0xc9, 0x24, 0xca, 0xad, 0x72, 0xf3, 0x2a, 0x41, 0x57,
-	0x11, 0x32, 0xdc, 0x20, 0x8a, 0x38, 0x4e, 0x12, 0x9f, 0x3a, 0xb9, 0x7a, 0x5e, 0x86, 0x6b, 0x80,
-	0x6e, 0xe3, 0x7f, 0x39, 0x28, 0xee, 0x31, 0x42, 0x95, 0x29, 0x99, 0x18, 0x23, 0xd4, 0xa7, 0xc1,
-	0x58, 0xda, 0xb3, 0x36, 0x4a, 0x6e, 0x51, 0x02, 0xdd, 0x60, 0x8c, 0xd1, 0x73, 0xa8, 0x2a, 0x32,
-	0x19, 0x31, 0x2e, 0xc2, 0x54, 0x56, 0x46, 0x0a, 0x54, 0x24, 0xd8, 0x37, 0x18, 0x7a, 0x01, 0x95,
-	0xcc, 0x97, 0x6c, 0x8d, 0x93, 0xaf, 0x5b, 0x1b, 0xd5, 0x6d, 0xeb, 0x4b, 0xb7, 0x6c, 0xe0, 0xcc,
-	0xcf, 0x38, 0x98, 0x9e, 0x61, 0xec, 0x9f, 0x0f, 0x9c, 0x42, 0xdd, 0xda, 0x28, 0xb8, 0x45, 0x0d,
-	0xbc, 0x1d, 0xa0, 0x1f, 0xc3, 0xda, 0xbc, 0x09, 0x7f, 0xd2, 0x4a, 0x46, 0xaa, 0x4e, 0xd5, 0x6d,
-	0xeb, 0x95, 0x5b, 0x9b, 0xb3, 0xd3, 0x6b, 0x25, 0x23, 0xd4, 0x82, 0xfb, 0x09, 0x19, 0x52, 0x1c,
-	0xf9, 0x63, 0x9c, 0x24, 0xc1, 0x10, 0xfb, 0x23, 0x1c, 0x44, 0x98, 0x3b, 0x45, 0x15, 0xde, 0x5d,
-	0x4d, 0x1e, 0x69, 0xee, 0x50, 0x51, 0xe8, 0x25, 0xc0, 0x74, 0x92, 0x0e, 0xfc, 0x71, 0x30, 0x24,
-	0xa1, 0x53, 0x52, 0xb6, 0x8b, 0xaf, 0xb7, 0xbe, 0xdc, 0x7a, 0xfd, 0x93, 0x57, 0x3f, 0x75, 0x4b,
-	0x92, 0x3b, 0x92, 0x94, 0x16, 0xe4, 0x17, 0x46, 0x10, 0xae, 0x04, 0xb7, 0x5a, 0xaf, 0xb7, 0xa4,
-	0x20, 0xbf, 0xd0, 0x82, 0x0f, 0x60, 0x39, 0xc1, 0xc3, 0x0f, 0x44, 0x38, 0xe5, 0xba, 0xb5, 0x51,
-	0x74, 0xcd, 0x49, 0xe2, 0x67, 0x8c, 0x9f, 0x93, 0xc8, 0xa9, 0x48, 0x65, 0xd7, 0x9c, 0x1a, 0x09,
-	0x38, 0x47, 0x69, 0x2c, 0x48, 0x42, 0x86, 0x2e, 0x8e, 0x30, 0x1e, 0xf7, 0xd5, 0xa4, 0xaa, 0xea,
-	0xfc, 0x08, 0x56, 0x26, 0xe9, 0xe0, 0x1c, 0x5f, 0x26, 0x8e, 0x55, 0xcf, 0x6f, 0x94, 0x5b, 0xb5,
-	0xe6, 0x62, 0xcb, 0xdd, 0x8c, 0x47, 0x9f, 0x03, 0xc8, 0xfc, 0x02, 0x91, 0x72, 0x9c, 0xa8, 0xde,
-	0x56, 0xdc, 0x39, 0x04, 0x55, 0xc0, 0x1a, 0xeb, 0x1e, 0xb8, 0xd6, 0xb8, 0xf1, 0x97, 0x1c, 0x94,
-	0xbd, 0x69, 0x87, 0x4e, 0x52, 0x91, 0xb5, 0xe1, 0x6a, 0x30, 0xac, 0xc5, 0xc1, 0x90, 0xe4, 0x84,
-	0xe3, 0x0b, 0x7f, 0x14, 0x24, 0x23, 0xb5, 0x04, 0x15, 0xb7, 0x28, 0x81, 0xc3, 0x20, 0x19, 0xa9,
-	0x21, 0x95, 0x24, 0xa1, 0x11, 0x9e, 0x9a, 0x15, 0x50, 0xe2, 0x1d, 0x09, 0x48, 0x5a, 0x6f, 0x9e,
-	0x9f, 0x90, 0xa1, 0x6a, 0x70, 0xc5, 0x2d, 0x69, 0xa4, 0x4f, 0x86, 0xe8, 0x87, 0x50, 0x4c, 0xf0,
-	0x6f, 0x53, 0x4c, 0x43, 0x6c, 0x1a, 0x0b, 0x5f, 0xb7, 0xde, 0x7c, 0xfd, 0x66, 0xeb, 0x75, 0xeb,
-	0xcd, 0x2b, 0x77, 0xc6, 0xa1, 0x5f, 0x40, 0xd9, 0x98, 0x51, 0xb3, 0x24, 0x77, 0x61, 0xb5, 0x65,
-	0x37, 0x55, 0x02, 0x57, 0xf5, 0xda, 0xae, 0xf4, 0x7b, 0xed, 0xee, 0xfe, 0xce, 0xfe, 0xbe, 0xdb,
-	0xee, 0xf7, 0x5d, 0xe3, 0x59, 0x25, 0xf8, 0x0a, 0x8a, 0x63, 0x53, 0x65, 0x67, 0xa5, 0x6e, 0x6d,
-	0x94, 0x5b, 0x0f, 0x9b, 0x9f, 0x2a, 0xbb, 0x3b, 0x13, 0x95, 0x4d, 0x0b, 0xc6, 0x2c, 0xa5, 0x42,
-	0xcd, 0x50, 0xc1, 0x35, 0xa7, 0xc6, 0x7f, 0x2d, 0xa8, 0x78, 0xd3, 0xe3, 0x54, 0x64, 0x05, 0x74,
-	0x60, 0xc5, 0xd4, 0xcb, 0x6c, 0x4b, 0x76, 0xfc, 0xde, 0x9d, 0x9b, 0xb3, 0x2f, 0x2b, 0x37, 0xb3,
-	0x8f, 0x5a, 0x8b, 0xf9, 0xca, 0xbb, 0x63, 0xb5, 0xb5, 0xd6, 0xd4, 0x0e, 0xe7, 0x22, 0xfd, 0x54,
-	0x8a, 0x4b, 0xb7, 0x4f, 0xf1, 0x05, 0xac, 0xb2, 0x89, 0xcf, 0xb1, 0x48, 0x39, 0xf5, 0xa3, 0x40,
-	0x04, 0xe6, 0xa6, 0xa9, 0xb0, 0x89, 0xab, 0xc0, 0xfd, 0x40, 0x04, 0x8d, 0x2e, 0xd4, 0xb2, 0x7c,
-	0x77, 0xcd, 0x15, 0x71, 0x15, 0xbb, 0xb5, 0x10, 0xfb, 0x73, 0xa8, 0x9a, 0xd8, 0xf5, 0x6c, 0x9a,
-	0x91, 0xa9, 0x68, 0xb0, 0xa7, 0xb0, 0xc6, 0xdf, 0x72, 0x50, 0xf3, 0x78, 0x40, 0x93, 0x20, 0x14,
-	0x84, 0xd1, 0xac, 0x86, 0x17, 0x98, 0x27, 0x84, 0x51, 0x55, 0xc3, 0xaa, 0x9b, 0x1d, 0xd1, 0x0b,
-	0x58, 0x26, 0xb2, 0xd5, 0x7a, 0xb0, 0xcb, 0xad, 0x4a, 0x73, 0x6e, 0x78, 0x5d, 0xc3, 0xa1, 0xaf,
-	0xa0, 0x3c, 0x20, 0xd4, 0x67, 0x2a, 0xca, 0xc4, 0xc9, 0x2b, 0x51, 0xbb, 0x79, 0x2d, 0x6e, 0x17,
-	0x06, 0x84, 0x6a, 0x24, 0x41, 0x2f, 0x61, 0x25, 0x13, 0x5f, 0x52, 0xe2, 0xd5, 0xe6, 0x7c, 0x5b,
-	0xdd, 0x8c, 0x95, 0x5d, 0x8c, 0x59, 0x78, 0xee, 0x0b, 0x32, 0xc6, 0x6a, 0x8c, 0xab, 0x6e, 0x51,
-	0x02, 0x1e, 0x19, 0x63, 0x39, 0xe4, 0x3a, 0x04, 0x3f, 0xa4, 0x42, 0x95, 0xaf, 0xea, 0x96, 0x34,
-	0xb2, 0x47, 0x85, 0xbc, 0xe8, 0x8d, 0x19, 0xc5, 0xaf, 0x28, 0x1e, 0x0c, 0x24, 0x05, 0x9e, 0x00,
-	0xe0, 0xa9, 0xe0, 0x81, 0x2e, 0x7f, 0x51, 0x2f, 0x89, 0x42, 0x64, 0xed, 0x65, 0x87, 0xae, 0x68,
-	0x3f, 0xc6, 0x54, 0xdf, 0x53, 0x6e, 0x65, 0x26, 0xf2, 0x0e, 0xd3, 0xc6, 0x9f, 0x2d, 0xb8, 0xe7,
-	0x4d, 0x5d, 0xb9, 0x31, 0x89, 0xd8, 0xc7, 0x22, 0x20, 0xb1, 0xbe, 0x62, 0x9f, 0x43, 0x95, 0x6b,
-	0xd4, 0x2c, 0xa9, 0x2e, 0x6e, 0xc5, 0x80, 0x7a, 0x4f, 0xd7, 0x61, 0x45, 0x4c, 0xb3, 0x0d, 0x97,
-	0xfe, 0x97, 0xc5, 0x54, 0xed, 0xf7, 0x4d, 0xe7, 0xf9, 0x9b, 0xce, 0xd1, 0x26, 0xac, 0xcd, 0x49,
-	0xb1, 0xb3, 0xb3, 0x04, 0x0b, 0x53, 0xa6, 0xda, 0x4c, 0xf0, 0x58, 0xc1, 0x8d, 0xdf, 0x5b, 0xb0,
-	0x3e, 0x0b, 0xb4, 0x8f, 0x39, 0x09, 0x62, 0xf2, 0x2d, 0x8e, 0x54, 0xac, 0x2f, 0xa1, 0x36, 0xbb,
-	0xb3, 0x16, 0xa2, 0x5d, 0x9d, 0xc1, 0x3a, 0xde, 0xc7, 0x50, 0x9a, 0x21, 0x26, 0xe2, 0x2b, 0x40,
-	0x8d, 0xe0, 0xcc, 0xb0, 0x2f, 0xa6, 0x2a, 0x66, 0x39, 0x82, 0x57, 0xde, 0xa6, 0x8d, 0x3f, 0x59,
-	0x50, 0xe9, 0x44, 0x98, 0x0a, 0x22, 0x2e, 0xb3, 0x8f, 0x00, 0xf5, 0x71, 0x60, 0x36, 0x58, 0x1f,
-	0x10, 0x82, 0x42, 0x9a, 0x60, 0x6e, 0xde, 0x38, 0xf5, 0x5b, 0x62, 0x23, 0x96, 0x08, 0x65, 0xb6,
-	0xe4, 0xaa, 0xdf, 0x12, 0x9b, 0x30, 0xae, 0xb3, 0x2e, 0xb9, 0xea, 0xb7, 0xc2, 0x02, 0xa1, 0xdf,
-	0x2c, 0x89, 0x05, 0x62, 0x84, 0xd6, 0x61, 0x49, 0x27, 0xb6, 0x9c, 0x3d, 0x88, 0xfa, 0xbc, 0xf9,
-	0x5d, 0x0e, 0xca, 0x07, 0x01, 0x89, 0x53, 0xae, 0xbf, 0x49, 0x9e, 0xc0, 0x43, 0x73, 0xf4, 0x4f,
-	0x28, 0x9e, 0x4e, 0x70, 0x28, 0x66, 0xaf, 0x97, 0x6d, 0xa1, 0xcf, 0xe0, 0x41, 0x46, 0xef, 0xa6,
-	0x42, 0x30, 0xda, 0x36, 0x22, 0x76, 0x0e, 0xdd, 0x87, 0xb5, 0x8c, 0x93, 0x85, 0x6f, 0x73, 0xce,
-	0xb8, 0x9d, 0x47, 0x8f, 0x60, 0x3d, 0x83, 0x77, 0xd4, 0xda, 0xed, 0x05, 0x34, 0xc4, 0x71, 0x8c,
-	0x23, 0xbb, 0x80, 0xd6, 0xe1, 0x6e, 0x46, 0xf6, 0xc8, 0x95, 0xb1, 0x25, 0xe4, 0xc0, 0xbd, 0x39,
-	0xe2, 0x4a, 0x65, 0x19, 0x3d, 0x00, 0x34, 0xc7, 0x74, 0xe8, 0x45, 0x10, 0x93, 0xc8, 0x5e, 0x41,
-	0x8f, 0xc1, 0xc9, 0x70, 0x03, 0xf6, 0xb3, 0xd6, 0xd8, 0xc5, 0x05, 0x7b, 0x9c, 0x85, 0x38, 0x49,
-	0x74, 0x7c, 0xa5, 0xf9, 0x94, 0xba, 0x4c, 0xb4, 0x29, 0x4b, 0x87, 0xa3, 0x83, 0x94, 0x46, 0x89,
-	0x0d, 0xd7, 0xb8, 0x0e, 0x25, 0xc2, 0x74, 0xd2, 0x2e, 0xa3, 0x87, 0x70, 0x3f, 0xe3, 0x0e, 0x08,
-	0x1f, 0x7f, 0x08, 0x38, 0xd6, 0x26, 0xc3, 0xcd, 0x3f, 0x5a, 0x60, 0x5f, 0xbf, 0x35, 0x91, 0x0d,
-	0x95, 0xde, 0xce, 0xaf, 0xbd, 0x63, 0xf3, 0x50, 0xd8, 0x77, 0xd0, 0x5d, 0xa8, 0x29, 0xa4, 0xbf,
-	0xe7, 0x76, 0x7a, 0xde, 0xe1, 0x4e, 0xff, 0xd0, 0xb6, 0xd0, 0x1a, 0x54, 0x15, 0x78, 0x74, 0xf2,
-	0xce, 0xeb, 0xf4, 0x3b, 0xdf, 0xd8, 0xb9, 0x19, 0x74, 0xdc, 0x73, 0xdb, 0xde, 0x89, 0xdb, 0xb5,
-	0xf3, 0x33, 0x63, 0xef, 0x3b, 0x5e, 0x57, 0x1a, 0x2b, 0xa0, 0x7b, 0x60, 0x2b, 0xa4, 0xd7, 0xea,
-	0x1f, 0x66, 0xe8, 0xd2, 0x66, 0x0c, 0xb5, 0x6b, 0xcf, 0x95, 0x54, 0x9d, 0x7f, 0xb0, 0xec, 0x3b,
-	0xd2, 0xbe, 0x42, 0x66, 0x2e, 0x2d, 0x54, 0x81, 0x62, 0xfb, 0xd4, 0x6b, 0xbb, 0xdd, 0x9d, 0x77,
-	0x76, 0x6e, 0xa6, 0x92, 0xd9, 0xcd, 0x4b, 0x6f, 0x0a, 0x99, 0xf7, 0x56, 0xd8, 0x3c, 0x81, 0xb2,
-	0xd9, 0x30, 0xe5, 0xa9, 0x0c, 0x2b, 0xde, 0x69, 0xa7, 0xdb, 0x3b, 0xf1, 0xec, 0x3b, 0xd2, 0xa2,
-	0x77, 0x7a, 0x7c, 0xe2, 0xc9, 0x93, 0x85, 0x00, 0x96, 0xbd, 0xd3, 0xa3, 0xb6, 0xb7, 0x63, 0xe7,
-	0xd0, 0x2a, 0x80, 0x77, 0x7a, 0xd0, 0xe9, 0x76, 0xfa, 0x87, 0xed, 0x7d, 0x3b, 0x8f, 0x6a, 0x50,
-	0xf6, 0x4e, 0xdb, 0xa7, 0x9e, 0xbb, 0xb3, 0xbf, 0xe3, 0xed, 0xd8, 0x85, 0xcd, 0xff, 0xe4, 0x60,
-	0x4d, 0x4f, 0xdb, 0xbc, 0xf5, 0x75, 0xb8, 0xbb, 0x00, 0xfa, 0xc7, 0x62, 0x84, 0xb9, 0x6d, 0xa1,
-	0x06, 0x7c, 0xbe, 0x48, 0x1c, 0x60, 0x7c, 0x7c, 0x81, 0xb9, 0x37, 0xe2, 0x38, 0x19, 0xb1, 0x58,
-	0xce, 0xea, 0x53, 0x78, 0xb4, 0x28, 0xb3, 0xc7, 0xe8, 0x19, 0xe1, 0x63, 0xdd, 0x35, 0x3b, 0x2f,
-	0xf7, 0x60, 0x51, 0xc0, 0xc5, 0x09, 0x16, 0xfb, 0xf8, 0x82, 0x84, 0xd8, 0x2e, 0xdc, 0xa4, 0x8d,
-	0xfe, 0x7b, 0xc6, 0xe5, 0xf4, 0x3e, 0x06, 0x67, 0x91, 0x7e, 0x4f, 0x26, 0xd8, 0x28, 0x2f, 0xdf,
-	0x54, 0xee, 0x71, 0x26, 0x70, 0x28, 0xf6, 0x82, 0x38, 0xb6, 0x57, 0xe4, 0xa8, 0x2e, 0xd2, 0x72,
-	0x8e, 0xbd, 0xa9, 0x5d, 0xbc, 0x19, 0x75, 0x36, 0x78, 0x7b, 0x23, 0x1c, 0x9e, 0xdb, 0x25, 0x39,
-	0x93, 0x8b, 0x02, 0x3b, 0xfa, 0xcd, 0xb7, 0x41, 0xae, 0xe1, 0x35, 0xa7, 0xd9, 0x37, 0xbd, 0x5d,
-	0xde, 0xfc, 0x1d, 0xdc, 0xeb, 0x11, 0x7a, 0x14, 0x08, 0x4e, 0xa6, 0xf3, 0x35, 0xae, 0xc3, 0xe3,
-	0x8f, 0xe1, 0xfe, 0x5e, 0xca, 0x39, 0xa6, 0xc2, 0xb6, 0xd0, 0x33, 0x78, 0xf2, 0x51, 0x89, 0x2e,
-	0xfe, 0x70, 0x40, 0x78, 0x22, 0xec, 0x9c, 0xec, 0xc7, 0xa7, 0x44, 0xfa, 0x38, 0x64, 0x34, 0xb2,
-	0xf3, 0x9b, 0xbf, 0x01, 0xe4, 0xe2, 0x90, 0x5d, 0x60, 0x7e, 0xa9, 0xcb, 0xa4, 0xdc, 0xff, 0x00,
-	0x9e, 0xdd, 0x44, 0xfd, 0x7e, 0xc8, 0x83, 0xf1, 0x20, 0xc6, 0x91, 0x2c, 0x76, 0x62, 0xdf, 0x91,
-	0xf5, 0xfc, 0x88, 0x98, 0x76, 0x68, 0x5b, 0x9b, 0x67, 0x50, 0x93, 0x92, 0xf3, 0x79, 0x3d, 0x84,
-	0xfb, 0xd7, 0x20, 0xbf, 0x17, 0x07, 0x84, 0xda, 0x77, 0x64, 0x9d, 0xae, 0x53, 0xda, 0xd2, 0x1b,
-	0xdb, 0xfa, 0x34, 0xb9, 0x65, 0xe7, 0xb6, 0x7f, 0x06, 0x2b, 0x1f, 0x88, 0x7a, 0x41, 0xd0, 0xb3,
-	0xa6, 0xfe, 0x2f, 0xd8, 0xcc, 0xfe, 0x0b, 0x36, 0xdb, 0x34, 0x1d, 0xff, 0x2a, 0x88, 0x53, 0x7c,
-	0x3c, 0x91, 0x77, 0x60, 0xe2, 0x7c, 0xf7, 0x87, 0xbc, 0xfe, 0x52, 0x97, 0x3a, 0x1d, 0xba, 0xfd,
-	0x73, 0x28, 0x2a, 0x6d, 0x96, 0x8a, 0xdb, 0xa8, 0xff, 0xdd, 0xa8, 0x2b, 0x97, 0xc7, 0xa9, 0xd8,
-	0xfe, 0x06, 0xaa, 0x4a, 0x3f, 0xc2, 0x83, 0x74, 0x78, 0xcb, 0x18, 0xfe, 0x61, 0x8c, 0x94, 0xa5,
-	0xe6, 0xbe, 0x54, 0xec, 0xd0, 0xed, 0x0e, 0xac, 0xce, 0x19, 0xba, 0x65, 0x38, 0xff, 0x34, 0x96,
-	0x2a, 0x33, 0x4b, 0x32, 0xa6, 0x5f, 0x42, 0x49, 0x99, 0x12, 0x84, 0x5e, 0xde, 0xc6, 0xca, 0xbf,
-	0x8c, 0x15, 0x55, 0x09, 0x8f, 0xd0, 0xcb, 0xed, 0x77, 0x50, 0x53, 0x16, 0x06, 0x8c, 0x89, 0x98,
-	0xa9, 0x3f, 0x4f, 0xb7, 0xb0, 0xf3, 0x6f, 0x63, 0x47, 0x25, 0xb2, 0x3b, 0x53, 0xdd, 0xfd, 0x0a,
-	0x9e, 0x87, 0x6c, 0xdc, 0x4c, 0x02, 0xc1, 0x92, 0x11, 0x89, 0x83, 0x41, 0xd2, 0x14, 0x1c, 0x7f,
-	0xcb, 0x78, 0x33, 0x26, 0x83, 0x99, 0xbd, 0x5d, 0xf0, 0x14, 0x28, 0xdb, 0xfb, 0xff, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x70, 0x88, 0xcd, 0x71, 0xe2, 0x0f, 0x00, 0x00,
+var fileDescriptor_types_4695cc9bb9242eeb = []byte{
+	// 2939 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x59, 0x4f, 0x6f, 0x1b, 0xc7,
+	0x15, 0xf7, 0x92, 0x94, 0x48, 0x3e, 0x92, 0xd2, 0x6a, 0x2d, 0xd9, 0xf4, 0xbf, 0x58, 0xa6, 0x9d,
+	0x46, 0x55, 0x51, 0x26, 0x21, 0x92, 0x14, 0x16, 0x8a, 0xa6, 0x34, 0x49, 0xc7, 0x84, 0x2d, 0x4a,
+	0x58, 0xd2, 0x8e, 0x1b, 0xa0, 0x20, 0x56, 0xbb, 0x43, 0x72, 0xa0, 0xe5, 0xee, 0x66, 0x76, 0x56,
+	0x16, 0x73, 0x29, 0x50, 0xa0, 0xe9, 0xa1, 0xe8, 0xa5, 0x1f, 0x21, 0x87, 0xde, 0xfb, 0x0d, 0x7a,
+	0x6a, 0xef, 0xfd, 0x7f, 0xe9, 0xa5, 0xd7, 0x7e, 0x89, 0xe2, 0xcd, 0xcc, 0x2e, 0x77, 0x29, 0x29,
+	0x31, 0x7a, 0xdb, 0xf9, 0xbd, 0x37, 0xef, 0xff, 0x7b, 0x33, 0x43, 0x42, 0x85, 0x2f, 0x02, 0x12,
+	0x36, 0x03, 0xe6, 0x73, 0xff, 0xf6, 0xee, 0xd4, 0xf7, 0xa7, 0x2e, 0x79, 0x5f, 0xac, 0x4e, 0xa2,
+	0xc9, 0xfb, 0x0e, 0x09, 0x6d, 0x46, 0x03, 0xee, 0x33, 0xc9, 0xd1, 0xf8, 0xa3, 0x06, 0xf0, 0xac,
+	0x3b, 0xf0, 0x1d, 0x32, 0x5a, 0x04, 0xc4, 0xd8, 0x86, 0x35, 0x87, 0x04, 0x7c, 0x56, 0xd7, 0x76,
+	0x73, 0x7b, 0x35, 0x53, 0x2e, 0x8c, 0x5d, 0xa8, 0x4c, 0xa8, 0x37, 0x25, 0x2c, 0x60, 0xd4, 0xe3,
+	0xf5, 0x9c, 0xa0, 0xa5, 0x21, 0xe3, 0x0e, 0x94, 0xed, 0x19, 0x75, 0x9d, 0xb1, 0x17, 0xcd, 0xeb,
+	0x79, 0x41, 0x2f, 0x09, 0x60, 0x10, 0xcd, 0x8d, 0x7b, 0x00, 0xf6, 0xcc, 0xa2, 0xde, 0xd8, 0xf6,
+	0x1d, 0x52, 0x2f, 0xec, 0xe6, 0xf6, 0xaa, 0x66, 0x59, 0x20, 0x1d, 0xdf, 0x21, 0xc6, 0x7d, 0xa8,
+	0x04, 0x8c, 0x9e, 0x59, 0x9c, 0x8c, 0x4f, 0xc9, 0xa2, 0xbe, 0xb6, 0xab, 0xed, 0x55, 0x4d, 0x50,
+	0xd0, 0x73, 0xb2, 0xc0, 0xfd, 0x41, 0x74, 0xe2, 0x52, 0x5b, 0xd0, 0xd7, 0x05, 0xbd, 0x2c, 0x91,
+	0xe7, 0x64, 0xd1, 0x18, 0xc0, 0x86, 0xf4, 0xe0, 0xd8, 0xe2, 0x33, 0xe1, 0xc5, 0x7d, 0x28, 0x78,
+	0xa8, 0x0a, 0x9d, 0xa8, 0xb4, 0x2a, 0xcd, 0xa5, 0x83, 0xa6, 0x20, 0xa0, 0xb9, 0x96, 0xe3, 0x30,
+	0x12, 0x86, 0x63, 0xaf, 0x9e, 0xdb, 0xcd, 0xa3, 0xb9, 0x0a, 0x18, 0x34, 0x42, 0xa8, 0x1f, 0x46,
+	0x2e, 0xa7, 0x21, 0x9d, 0x9a, 0xc4, 0x21, 0x64, 0x3e, 0x14, 0x21, 0x13, 0x92, 0xbf, 0x0f, 0xc5,
+	0x20, 0x3a, 0x39, 0x25, 0x8b, 0xb0, 0xae, 0xed, 0xe6, 0xf7, 0x2a, 0xad, 0xcd, 0x66, 0x56, 0xb7,
+	0x19, 0xd3, 0x8d, 0x77, 0x00, 0x42, 0x3a, 0xf5, 0x2c, 0x1e, 0x31, 0x12, 0x0a, 0x25, 0x55, 0x33,
+	0x85, 0x18, 0x55, 0xd0, 0x30, 0x54, 0xda, 0x5e, 0xcd, 0xd4, 0xe6, 0x8d, 0xdf, 0xe5, 0xa1, 0x32,
+	0x3a, 0xef, 0x7b, 0x41, 0x24, 0x15, 0x65, 0x2c, 0xd4, 0xb2, 0x16, 0x22, 0x31, 0x60, 0xe4, 0x6c,
+	0x3c, 0xb3, 0xc2, 0x99, 0xc8, 0x46, 0xd5, 0x2c, 0x21, 0xf0, 0xcc, 0x0a, 0x67, 0x22, 0x5a, 0x48,
+	0xa4, 0x9e, 0x43, 0xce, 0x55, 0x2e, 0x04, 0x7b, 0x1f, 0x01, 0x24, 0xcb, 0x12, 0x18, 0x87, 0x74,
+	0x5a, 0x2f, 0xc8, 0x60, 0x4a, 0x64, 0x48, 0xa7, 0xc6, 0xf7, 0xa0, 0x14, 0x92, 0x2f, 0x23, 0xe2,
+	0xd9, 0x44, 0x64, 0xa2, 0x76, 0x00, 0x1f, 0xb5, 0x1e, 0x7f, 0xf4, 0xf8, 0x93, 0x1f, 0xb5, 0x1e,
+	0x7f, 0x6c, 0x26, 0x34, 0xe3, 0x53, 0xa8, 0x28, 0x31, 0x58, 0x6f, 0x22, 0x29, 0x1b, 0x2d, 0xbd,
+	0x29, 0x1c, 0x58, 0xc6, 0xeb, 0xa0, 0x3a, 0x3c, 0xee, 0x0d, 0xba, 0xed, 0x6e, 0xd7, 0xec, 0x0d,
+	0x87, 0xa6, 0xd2, 0x2c, 0x1c, 0xfc, 0x18, 0x4a, 0x73, 0x15, 0xe5, 0x7a, 0x71, 0x57, 0xdb, 0xab,
+	0xb4, 0x6e, 0x35, 0xaf, 0x0a, 0xbb, 0x99, 0xb0, 0x1a, 0x37, 0x60, 0xdd, 0x9a, 0xfb, 0x91, 0xc7,
+	0xeb, 0xa5, 0x5d, 0x6d, 0xaf, 0x60, 0xaa, 0x15, 0x16, 0x91, 0x43, 0x6c, 0x46, 0x9c, 0x31, 0x67,
+	0x84, 0xd4, 0xcb, 0x22, 0xae, 0x20, 0xa1, 0x11, 0x23, 0xc4, 0x68, 0xc1, 0x8e, 0x62, 0x50, 0x76,
+	0x9f, 0x11, 0x16, 0x52, 0xdf, 0xab, 0x83, 0x60, 0xbd, 0x2e, 0x89, 0x52, 0xe7, 0x2b, 0x49, 0x6a,
+	0x7c, 0x93, 0x83, 0xea, 0xe8, 0xfc, 0x28, 0xe2, 0x71, 0x56, 0xea, 0x50, 0x54, 0x49, 0xa8, 0x6b,
+	0xbb, 0xda, 0x5e, 0xd9, 0x8c, 0x97, 0xdf, 0x5a, 0x51, 0x29, 0xa3, 0x31, 0x1d, 0x4b, 0xa3, 0x5b,
+	0xd9, 0x20, 0x62, 0x67, 0x6c, 0xb4, 0xb6, 0x9a, 0x52, 0x61, 0xca, 0xfd, 0xab, 0xe2, 0xb6, 0xf6,
+	0xf6, 0x71, 0x7b, 0x04, 0x1b, 0x7e, 0x30, 0x66, 0x84, 0x47, 0xcc, 0x1b, 0x3b, 0x16, 0xb7, 0x54,
+	0x1f, 0x55, 0xfd, 0xc0, 0x14, 0x60, 0xd7, 0xe2, 0xd6, 0xd5, 0x41, 0x2a, 0x5e, 0x1d, 0xa4, 0x5f,
+	0x6a, 0xb0, 0x19, 0x07, 0xe9, 0x09, 0xf5, 0x84, 0x91, 0x4b, 0x87, 0xb5, 0x8c, 0xc3, 0x0f, 0xa1,
+	0xa6, 0x04, 0xcb, 0x2e, 0x51, 0xc5, 0x5b, 0x95, 0xe0, 0xb1, 0xc0, 0xae, 0x36, 0x22, 0x7f, 0xb5,
+	0x11, 0xbf, 0xc9, 0xc3, 0xe6, 0x88, 0x59, 0x5e, 0x68, 0xd9, 0x9c, 0xfa, 0x5e, 0x9c, 0xac, 0x78,
+	0xa7, 0x26, 0x76, 0xc6, 0x4b, 0xe3, 0x11, 0xac, 0x53, 0x2c, 0x54, 0xd9, 0x96, 0x95, 0x56, 0xb5,
+	0x99, 0x6a, 0x3d, 0x53, 0xd1, 0x8c, 0x0f, 0xa1, 0x72, 0x42, 0xbd, 0xb1, 0x2f, 0x3c, 0x0b, 0xeb,
+	0x79, 0xc1, 0xaa, 0x37, 0x57, 0x7c, 0x35, 0xe1, 0x84, 0x7a, 0x12, 0x09, 0x8d, 0xf7, 0xa0, 0x18,
+	0xb3, 0xaf, 0x09, 0xf6, 0x5a, 0x33, 0x5d, 0x3f, 0x66, 0x4c, 0xc5, 0x72, 0x71, 0x7d, 0xfb, 0x74,
+	0xcc, 0xe9, 0x9c, 0x88, 0x26, 0xac, 0x99, 0x25, 0x04, 0x46, 0x74, 0x4e, 0xb0, 0x45, 0xa5, 0x09,
+	0x63, 0xdb, 0xe3, 0x22, 0x4f, 0x35, 0xb3, 0x2c, 0x91, 0x8e, 0x2c, 0x75, 0x25, 0x46, 0xd0, 0x65,
+	0x6a, 0x40, 0x41, 0xc8, 0x70, 0x0f, 0x80, 0x9c, 0x73, 0x66, 0xc9, 0x3c, 0x97, 0x64, 0x8b, 0x0b,
+	0x44, 0x24, 0xf9, 0x11, 0x6c, 0x2c, 0xc9, 0x63, 0x97, 0x78, 0xaa, 0x5b, 0xaa, 0x09, 0xcb, 0x0b,
+	0xe2, 0x61, 0x0a, 0xc9, 0x79, 0x40, 0xd9, 0x42, 0x35, 0x88, 0x5a, 0x19, 0x0d, 0xa8, 0xfa, 0x67,
+	0x84, 0xbd, 0xa1, 0x1e, 0x27, 0x8c, 0x38, 0xf5, 0xca, 0xae, 0xb6, 0x57, 0x32, 0x33, 0x58, 0xe3,
+	0xf7, 0x1a, 0x6c, 0x8f, 0xce, 0x4d, 0x9c, 0x15, 0x21, 0xef, 0x12, 0x6e, 0x51, 0x37, 0x14, 0x29,
+	0x79, 0x08, 0x35, 0x26, 0x51, 0x35, 0x9e, 0x64, 0x62, 0xaa, 0x0a, 0x94, 0x13, 0xea, 0x26, 0x14,
+	0xf9, 0x79, 0x3c, 0xdb, 0xd0, 0xf6, 0x75, 0x7e, 0x2e, 0x26, 0xdb, 0x45, 0xc3, 0xf3, 0x97, 0x18,
+	0xbe, 0x0f, 0x5b, 0x29, 0x2e, 0x7f, 0x32, 0x09, 0x09, 0x57, 0x21, 0xde, 0x4c, 0x18, 0x8f, 0x04,
+	0xdc, 0xf8, 0x95, 0x06, 0x37, 0x13, 0x43, 0x87, 0x84, 0x51, 0xcb, 0xa5, 0x5f, 0x11, 0x47, 0xd8,
+	0xfa, 0x1e, 0x6c, 0x26, 0xd3, 0x3a, 0x63, 0xed, 0x46, 0x02, 0x4b, 0x7b, 0xef, 0x42, 0x39, 0x41,
+	0x94, 0xc5, 0x4b, 0x40, 0x94, 0x7c, 0x22, 0x78, 0xcc, 0xcf, 0x85, 0xcd, 0x58, 0xf2, 0x4b, 0x6d,
+	0xe7, 0x8d, 0xdf, 0x6a, 0x50, 0xed, 0x3b, 0xc4, 0xe3, 0x94, 0x2f, 0xe2, 0x73, 0x58, 0x9c, 0xcf,
+	0x6a, 0xcc, 0xc8, 0x85, 0x61, 0x40, 0x21, 0x0a, 0x09, 0x13, 0x4a, 0xca, 0xa6, 0xf8, 0x46, 0x6c,
+	0xe6, 0x87, 0x5c, 0x88, 0x2d, 0x9b, 0xe2, 0x1b, 0xb1, 0xc0, 0x67, 0xd2, 0xeb, 0xb2, 0x29, 0xbe,
+	0x05, 0x66, 0xf1, 0x99, 0x98, 0x19, 0x88, 0x59, 0x7c, 0x66, 0xdc, 0x84, 0x35, 0xe9, 0x98, 0xa8,
+	0xb1, 0x03, 0xed, 0x03, 0x53, 0xae, 0x1b, 0x7f, 0xd0, 0x60, 0x7b, 0xd0, 0x3b, 0x4c, 0x75, 0x54,
+	0xc7, 0x9f, 0xcf, 0x7d, 0xef, 0xdb, 0x8f, 0xa5, 0x3a, 0x14, 0x3d, 0xc2, 0xdf, 0xf8, 0xec, 0x54,
+	0x58, 0x58, 0x33, 0xe3, 0x25, 0x86, 0x08, 0x2b, 0x3d, 0xe4, 0xd6, 0x3c, 0x50, 0x49, 0x5b, 0x02,
+	0x86, 0x0e, 0xf9, 0x09, 0x91, 0x6d, 0x50, 0x30, 0xf1, 0xd3, 0xb8, 0x0d, 0x25, 0x87, 0x58, 0x8e,
+	0x4b, 0x3d, 0x75, 0x0a, 0x99, 0xc9, 0x1a, 0x0b, 0x13, 0xa3, 0x4b, 0x98, 0x9a, 0x60, 0x6a, 0xd5,
+	0xf8, 0x46, 0x83, 0x4a, 0x6c, 0xf3, 0x84, 0x30, 0xd4, 0xc9, 0x88, 0x4d, 0x03, 0x4a, 0xc4, 0x18,
+	0x42, 0xaf, 0x97, 0x40, 0x6a, 0x42, 0xe5, 0x32, 0xe7, 0x48, 0x1d, 0x8a, 0x81, 0xb5, 0x70, 0x7d,
+	0xcb, 0x51, 0x89, 0x8a, 0x97, 0x2b, 0xb7, 0x90, 0xc2, 0xca, 0x2d, 0xc4, 0x78, 0x04, 0xc5, 0xb9,
+	0x1f, 0x5a, 0xd4, 0x8e, 0x5b, 0x1f, 0x9a, 0x83, 0xde, 0xe1, 0xa1, 0x80, 0xcc, 0x98, 0xd4, 0xf8,
+	0x39, 0x94, 0x13, 0x14, 0x2d, 0xf4, 0xac, 0x39, 0x09, 0x03, 0xcb, 0x26, 0xb1, 0x85, 0x09, 0x80,
+	0x16, 0xca, 0x5d, 0x2a, 0xdd, 0x6a, 0x85, 0xb1, 0xf9, 0x32, 0xb2, 0x44, 0xa9, 0x08, 0x13, 0x0b,
+	0x66, 0xb2, 0x6e, 0x84, 0xb0, 0x33, 0xe8, 0x1d, 0x1e, 0x33, 0xff, 0x8c, 0xe2, 0xa0, 0x1b, 0x24,
+	0xc2, 0xbe, 0x53, 0x55, 0x60, 0x31, 0xa2, 0x82, 0x51, 0x36, 0xd5, 0x0a, 0x6b, 0x26, 0xa4, 0xde,
+	0x69, 0x5c, 0x5b, 0xf8, 0x7d, 0x31, 0x59, 0x0d, 0x1f, 0xb6, 0x12, 0x9f, 0x3a, 0x8c, 0x58, 0x58,
+	0x2e, 0xc6, 0x47, 0x00, 0x0e, 0x99, 0x50, 0x8f, 0xf2, 0x78, 0xfe, 0x56, 0x5a, 0xdb, 0xcb, 0x88,
+	0x74, 0x13, 0x9a, 0x99, 0xe2, 0x4b, 0x14, 0xe6, 0x2e, 0x2a, 0xcc, 0x2f, 0x15, 0xfe, 0x3b, 0x0f,
+	0xd7, 0x2f, 0x91, 0x84, 0xbb, 0xd1, 0x27, 0xe5, 0x9f, 0xf8, 0x46, 0xd7, 0x38, 0xb5, 0x4f, 0x93,
+	0xa6, 0x51, 0xab, 0x6c, 0x40, 0xf2, 0x57, 0xc7, 0xbe, 0x90, 0x89, 0x7d, 0x03, 0xaa, 0x0e, 0xc5,
+	0xd8, 0x9e, 0x50, 0x17, 0xe3, 0x2f, 0x6b, 0x33, 0x83, 0x19, 0x0d, 0x28, 0xb8, 0xe4, 0x6c, 0xa1,
+	0xae, 0x44, 0x1b, 0x4b, 0x9f, 0x5f, 0x90, 0xb3, 0x85, 0x29, 0x68, 0xb1, 0x4f, 0xc5, 0x65, 0xc5,
+	0x3f, 0x80, 0x2a, 0x52, 0xc6, 0xf1, 0xf5, 0xa2, 0x24, 0xf4, 0x56, 0x10, 0x6b, 0xab, 0x2b, 0xc6,
+	0xbb, 0xb0, 0x21, 0x58, 0x96, 0x76, 0x97, 0x05, 0x53, 0x0d, 0xd1, 0x65, 0xaa, 0xef, 0x83, 0xd8,
+	0x35, 0x56, 0x0e, 0x80, 0xe0, 0x01, 0x84, 0x54, 0xd9, 0x61, 0x03, 0x45, 0x41, 0xe0, 0x2e, 0xc4,
+	0xec, 0x2e, 0x98, 0x6a, 0x85, 0xf2, 0xe7, 0x11, 0xb7, 0x4e, 0x5c, 0x32, 0x56, 0xf4, 0xaa, 0x98,
+	0xed, 0x35, 0x85, 0x0e, 0x25, 0x5b, 0x03, 0xaa, 0x5c, 0xf5, 0x18, 0xa2, 0xf5, 0x9a, 0x3c, 0x00,
+	0xd2, 0x18, 0x3e, 0x18, 0xe2, 0x97, 0x06, 0xa6, 0x7f, 0x43, 0x3a, 0x93, 0x82, 0xb0, 0x8a, 0xd5,
+	0x70, 0x08, 0xeb, 0x9b, 0x72, 0x8e, 0xc4, 0x6b, 0x9c, 0x86, 0x3b, 0x49, 0xd4, 0xa4, 0xd6, 0xce,
+	0xcc, 0xf2, 0xa6, 0xe4, 0xff, 0xec, 0x98, 0x3d, 0x28, 0x88, 0xfb, 0x55, 0x5e, 0x64, 0x44, 0x54,
+	0x61, 0x5a, 0xaa, 0x7c, 0x17, 0xf0, 0xe4, 0xf9, 0xe3, 0x72, 0x4b, 0x95, 0xb7, 0x5c, 0x34, 0xbe,
+	0xd6, 0xa0, 0x3e, 0xe8, 0x1d, 0xb6, 0xa7, 0x53, 0x46, 0xa6, 0x16, 0x27, 0x87, 0xbe, 0x43, 0x27,
+	0xd4, 0x96, 0x85, 0xde, 0x86, 0xda, 0x3c, 0xb5, 0x8e, 0xdf, 0x05, 0x77, 0x50, 0x4b, 0xc7, 0x97,
+	0xe7, 0x80, 0xcf, 0x16, 0xe9, 0x3d, 0x66, 0x76, 0x07, 0x9e, 0x34, 0x8c, 0xb8, 0x16, 0xa7, 0x67,
+	0x64, 0x6c, 0x0b, 0x93, 0x84, 0x03, 0x5b, 0xe6, 0x46, 0x0c, 0x4b, 0x43, 0x1b, 0x04, 0x6e, 0x5f,
+	0x2d, 0x35, 0x71, 0x53, 0x5b, 0xba, 0x99, 0xa6, 0xa7, 0xdc, 0xcc, 0x8e, 0xb2, 0xdc, 0xea, 0x83,
+	0x6a, 0x22, 0xc2, 0xdf, 0x9f, 0xe3, 0xb9, 0x61, 0x79, 0x36, 0x49, 0x46, 0x6a, 0x13, 0x0a, 0x73,
+	0xf9, 0xae, 0x42, 0x0d, 0xb7, 0x9b, 0x97, 0x72, 0x1d, 0xfa, 0x0e, 0x31, 0x05, 0xdf, 0x77, 0xe9,
+	0x31, 0x41, 0x1f, 0x72, 0xe2, 0xba, 0x16, 0x6b, 0x87, 0x21, 0x91, 0xd7, 0x5b, 0x23, 0xe5, 0x44,
+	0x4d, 0x99, 0x6b, 0x40, 0x41, 0xbc, 0x1c, 0xd5, 0x54, 0xc0, 0x6f, 0xcc, 0x35, 0x0d, 0xc3, 0x88,
+	0x30, 0xd5, 0xbc, 0x6a, 0xd5, 0xf8, 0x57, 0x0e, 0x76, 0x5e, 0xd0, 0xf0, 0xf4, 0xe2, 0xd1, 0xb5,
+	0x1a, 0x9e, 0x15, 0xae, 0x54, 0x78, 0x6e, 0x65, 0xcf, 0x06, 0x3c, 0x17, 0xe3, 0xe3, 0xe1, 0xc2,
+	0x30, 0xc2, 0xc6, 0x4d, 0x4e, 0x95, 0x31, 0x75, 0xd4, 0xc0, 0xa8, 0x24, 0x58, 0xdf, 0xc1, 0x1b,
+	0x49, 0x48, 0x3c, 0x87, 0xb0, 0x71, 0x2a, 0x1a, 0xf2, 0x99, 0xbb, 0x29, 0x09, 0xc7, 0xc9, 0x31,
+	0xf2, 0x01, 0x6c, 0xab, 0xcb, 0x50, 0x96, 0x5d, 0x9e, 0x75, 0x46, 0x42, 0x5b, 0xee, 0xc8, 0x5c,
+	0x3f, 0x8a, 0xab, 0xd7, 0x8f, 0xcc, 0xc9, 0x5b, 0x5a, 0x3d, 0x79, 0x7f, 0x00, 0x6b, 0x16, 0x86,
+	0x5e, 0x4c, 0x92, 0x4a, 0x6b, 0x67, 0x35, 0x28, 0x22, 0x2f, 0xa6, 0xe4, 0x69, 0xfc, 0x47, 0x83,
+	0xed, 0xcb, 0xe8, 0xc6, 0x07, 0x69, 0x0b, 0xe4, 0xa8, 0x37, 0x84, 0xa4, 0x61, 0x8c, 0x8a, 0xe0,
+	0xa6, 0xac, 0xfa, 0x21, 0x9e, 0xef, 0xae, 0x68, 0x26, 0x11, 0xe3, 0x4a, 0x6b, 0x4b, 0x6c, 0xe8,
+	0x2a, 0x50, 0x3e, 0x5e, 0x62, 0x16, 0x6c, 0xcb, 0x33, 0x9f, 0x13, 0x79, 0x07, 0x2f, 0x9b, 0x72,
+	0x61, 0x7c, 0x8a, 0xf3, 0x4a, 0x3e, 0x6f, 0x94, 0xee, 0x82, 0x10, 0x75, 0x53, 0x88, 0x3a, 0xcc,
+	0x90, 0x84, 0xc0, 0x15, 0x76, 0xac, 0x2b, 0x71, 0x43, 0x56, 0x57, 0x22, 0xfc, 0x6e, 0xb4, 0x60,
+	0xeb, 0x82, 0xe5, 0x2b, 0x75, 0xac, 0xad, 0xd6, 0x71, 0x13, 0xf4, 0x55, 0xe3, 0x71, 0xbe, 0xe1,
+	0xf5, 0x2c, 0x75, 0x1e, 0x25, 0xeb, 0xc6, 0x04, 0x6e, 0x5c, 0x6e, 0x21, 0x96, 0xd7, 0x9c, 0xc6,
+	0xcf, 0x15, 0xfc, 0x14, 0x0f, 0x05, 0x3a, 0x21, 0xf2, 0xa1, 0x90, 0x53, 0x0f, 0x05, 0x3a, 0x21,
+	0xf1, 0x43, 0xe1, 0x94, 0x2c, 0xc2, 0xf1, 0x94, 0xf9, 0x51, 0xa0, 0x82, 0x53, 0x46, 0xe4, 0x33,
+	0x04, 0xf6, 0xff, 0x9b, 0x83, 0xca, 0x53, 0x8b, 0xba, 0x4b, 0x37, 0x6e, 0xa9, 0xe5, 0xf8, 0xa5,
+	0x47, 0xce, 0x03, 0x62, 0x73, 0xe2, 0x1c, 0x92, 0x30, 0xb4, 0xa6, 0x44, 0xd7, 0x8c, 0xdb, 0x70,
+	0x23, 0x26, 0x3f, 0x89, 0x38, 0xf7, 0xbd, 0x9e, 0x62, 0xd1, 0x73, 0xc6, 0x0e, 0x6c, 0xc5, 0x34,
+	0xbc, 0x3e, 0xf7, 0x18, 0xf3, 0x99, 0x9e, 0x37, 0xee, 0xc0, 0xcd, 0x18, 0x6e, 0xcb, 0x5e, 0xc3,
+	0x49, 0xe0, 0xba, 0xc4, 0xd1, 0x0b, 0xc6, 0x4d, 0xb8, 0x1e, 0x13, 0x8f, 0xe9, 0x52, 0xd8, 0x9a,
+	0x51, 0x87, 0xed, 0x14, 0x61, 0xb9, 0x65, 0xdd, 0xb8, 0x01, 0x46, 0x8a, 0xd2, 0xf7, 0xce, 0x2c,
+	0x97, 0x3a, 0x7a, 0xd1, 0xb8, 0x0b, 0xf5, 0x18, 0x57, 0x60, 0x92, 0x20, 0xbd, 0x94, 0x91, 0xc7,
+	0x7c, 0x9b, 0x84, 0xa1, 0xb4, 0xaf, 0x9c, 0x76, 0x69, 0xe0, 0xf3, 0x9e, 0xe7, 0x47, 0xd3, 0xd9,
+	0xd3, 0xc8, 0x73, 0x42, 0x1d, 0x56, 0x68, 0x7d, 0xbc, 0x43, 0xc8, 0xfb, 0xb8, 0x5e, 0x59, 0x31,
+	0xfd, 0x90, 0x86, 0x73, 0x8b, 0xdb, 0x33, 0xbd, 0x6a, 0xdc, 0x82, 0x9d, 0x98, 0xf0, 0x94, 0xb2,
+	0xf9, 0x1b, 0x8b, 0x11, 0xa9, 0xcb, 0xde, 0xff, 0xb5, 0x06, 0xfa, 0xea, 0xcb, 0xdd, 0xd0, 0xa1,
+	0x7a, 0xdc, 0xfe, 0xd9, 0xe8, 0x48, 0xfd, 0x02, 0xa2, 0x5f, 0x33, 0xae, 0xc3, 0xa6, 0x40, 0x86,
+	0x1d, 0xb3, 0x7f, 0x3c, 0x7a, 0xd6, 0x1e, 0x3e, 0xd3, 0x35, 0x63, 0x0b, 0x6a, 0x02, 0x3c, 0x7c,
+	0xf9, 0x62, 0xd4, 0x1f, 0xf6, 0x3f, 0xd3, 0x73, 0x09, 0x74, 0x74, 0x6c, 0xf6, 0x46, 0x2f, 0xcd,
+	0x81, 0x9e, 0x4f, 0x84, 0x7d, 0xde, 0x1f, 0x0d, 0x50, 0x58, 0xc1, 0xd8, 0x06, 0x5d, 0x20, 0xc7,
+	0xad, 0xe1, 0xb3, 0x18, 0x5d, 0xdb, 0x77, 0x61, 0x73, 0xe5, 0x77, 0x18, 0xdc, 0x9a, 0xfe, 0x25,
+	0x46, 0xbf, 0x86, 0xf2, 0x05, 0x92, 0xa8, 0xd4, 0x8c, 0x2a, 0x94, 0x7a, 0xaf, 0x47, 0x3d, 0x73,
+	0xd0, 0x7e, 0xa1, 0xe7, 0x92, 0x2d, 0xb1, 0xdc, 0x3c, 0x6a, 0x13, 0x48, 0x5a, 0x5b, 0x61, 0xff,
+	0x25, 0x54, 0xd4, 0x03, 0x4a, 0x68, 0xaa, 0x40, 0x71, 0xf4, 0xba, 0x3f, 0x38, 0x7e, 0x39, 0xd2,
+	0xaf, 0xa1, 0xc4, 0xd1, 0xeb, 0xa3, 0x97, 0x23, 0x5c, 0x69, 0x06, 0xc0, 0xfa, 0xe8, 0xf5, 0x61,
+	0x6f, 0xd4, 0xd6, 0x73, 0xc6, 0x06, 0xc0, 0xe8, 0xf5, 0xd3, 0xfe, 0xa0, 0x3f, 0x7c, 0xd6, 0xeb,
+	0xea, 0x79, 0x63, 0x13, 0x2a, 0xa3, 0xd7, 0xbd, 0xd7, 0x23, 0xb3, 0xdd, 0x6d, 0x8f, 0xda, 0x7a,
+	0x61, 0xff, 0xcf, 0x79, 0xd8, 0x92, 0x65, 0x98, 0x96, 0x7e, 0x13, 0xae, 0x67, 0xc0, 0xf1, 0x11,
+	0x9f, 0x11, 0xa6, 0x6b, 0x46, 0x03, 0xde, 0xc9, 0x12, 0x9e, 0x12, 0x72, 0x74, 0x46, 0xd8, 0x68,
+	0xc6, 0x48, 0x38, 0xf3, 0x5d, 0x2c, 0xe2, 0xfb, 0x70, 0x27, 0xcb, 0xd3, 0xf1, 0xbd, 0x09, 0x65,
+	0x73, 0x99, 0x35, 0x3d, 0x8f, 0x0d, 0x92, 0x65, 0x30, 0x49, 0x48, 0x78, 0x97, 0x9c, 0x51, 0x9b,
+	0xe8, 0x85, 0x8b, 0x64, 0xb5, 0xff, 0x73, 0x9f, 0x61, 0x59, 0xdf, 0x85, 0x7a, 0x96, 0xfc, 0x39,
+	0x0d, 0x88, 0xda, 0xbc, 0x7e, 0x71, 0xf3, 0x31, 0xf3, 0x39, 0xb1, 0x79, 0xc7, 0x72, 0x5d, 0xbd,
+	0x88, 0x35, 0x9c, 0x25, 0x63, 0x81, 0x8f, 0xce, 0xf5, 0xd2, 0x45, 0xab, 0xe3, 0xc2, 0xeb, 0xcc,
+	0x88, 0x7d, 0xaa, 0x97, 0xb1, 0x26, 0xb3, 0x0c, 0xea, 0xc2, 0xa8, 0x03, 0xf6, 0xe7, 0x8a, 0xd2,
+	0x78, 0x68, 0xe9, 0x15, 0xe3, 0x21, 0xdc, 0xcf, 0x12, 0x0f, 0x3d, 0x32, 0xf7, 0x3d, 0x6a, 0xa3,
+	0x3f, 0x1d, 0x3c, 0xee, 0xf4, 0xea, 0x45, 0xed, 0x31, 0x93, 0xa8, 0x30, 0xbd, 0x66, 0xec, 0xc2,
+	0xdd, 0x15, 0x15, 0x56, 0x18, 0x06, 0x33, 0x66, 0x85, 0x62, 0xe8, 0xe8, 0x1b, 0xfb, 0xbf, 0x80,
+	0x6d, 0x6c, 0x22, 0x8b, 0x33, 0x7a, 0x9e, 0xce, 0xe5, 0x2e, 0xdc, 0xbd, 0x0c, 0x1f, 0x77, 0x22,
+	0x86, 0xaf, 0x0f, 0x5d, 0x33, 0x1e, 0xc0, 0xbd, 0x4b, 0x39, 0x06, 0xe4, 0xcd, 0x53, 0xca, 0x42,
+	0xae, 0xe7, 0x30, 0xef, 0x57, 0xb1, 0x0c, 0x89, 0xed, 0x7b, 0x8e, 0x9e, 0xdf, 0xff, 0x02, 0x0c,
+	0x93, 0xd8, 0xfe, 0x19, 0x61, 0x0b, 0x99, 0x0e, 0xa1, 0xfe, 0x5d, 0x78, 0x70, 0x11, 0x1d, 0x0f,
+	0x6d, 0x66, 0xcd, 0x4f, 0x5c, 0xe2, 0x60, 0x10, 0x42, 0xfd, 0x1a, 0xe6, 0xed, 0x12, 0x36, 0xa9,
+	0x50, 0xd7, 0xf6, 0x27, 0xb0, 0x89, 0x9c, 0x69, 0xbf, 0x6e, 0xc1, 0xce, 0x0a, 0x34, 0x3e, 0x76,
+	0x2d, 0xea, 0xe9, 0xd7, 0x30, 0x1f, 0xab, 0x24, 0x29, 0xe9, 0xb1, 0xae, 0x5d, 0x4d, 0xfc, 0x44,
+	0xcf, 0xed, 0x7f, 0x0c, 0xdb, 0xcb, 0xc0, 0x0e, 0xfd, 0x88, 0x29, 0x2f, 0x8a, 0x90, 0x6f, 0x0f,
+	0x9f, 0xeb, 0xd7, 0xb0, 0xb9, 0xba, 0xbd, 0x57, 0xfd, 0x4e, 0x4f, 0xd7, 0x8c, 0x12, 0x14, 0x9e,
+	0x1d, 0x0d, 0x47, 0x7a, 0x6e, 0xbf, 0x03, 0xb5, 0xcc, 0xfb, 0x03, 0x1b, 0x68, 0xb9, 0x1a, 0xb7,
+	0x4f, 0x42, 0xdf, 0x8d, 0x38, 0x4e, 0xff, 0x5b, 0xb0, 0x93, 0x22, 0x1c, 0x13, 0x66, 0x13, 0x8f,
+	0x53, 0x97, 0xe8, 0xb9, 0xfd, 0xe7, 0xe2, 0xb9, 0xb5, 0x7a, 0x65, 0xc6, 0x1d, 0x69, 0x6c, 0xdc,
+	0xf7, 0x6c, 0x46, 0xac, 0x50, 0x09, 0xcb, 0x90, 0xba, 0x44, 0x91, 0x72, 0xfb, 0x5f, 0xa8, 0xb7,
+	0x5b, 0xf6, 0x62, 0x8a, 0x75, 0x76, 0xc5, 0xbd, 0x16, 0xcb, 0x59, 0x36, 0xf8, 0x55, 0x0c, 0x78,
+	0xf0, 0x72, 0x94, 0x3d, 0x86, 0x5b, 0x57, 0x5e, 0x49, 0x51, 0xc3, 0x45, 0x8a, 0x38, 0xb6, 0xce,
+	0x2c, 0x11, 0x81, 0x07, 0x70, 0xef, 0x12, 0x86, 0x2e, 0xb1, 0x62, 0x96, 0xdc, 0xfe, 0x9f, 0x34,
+	0xb8, 0x7e, 0xc9, 0xbd, 0x51, 0xcc, 0x39, 0xb5, 0x41, 0xbf, 0x86, 0x83, 0xc0, 0x24, 0x53, 0x8a,
+	0xd7, 0x34, 0x59, 0x83, 0xcb, 0xcc, 0xe9, 0x1a, 0x4e, 0xd1, 0x98, 0x1a, 0xdf, 0x18, 0xf4, 0x9c,
+	0x51, 0x83, 0x72, 0xc7, 0x0a, 0xf9, 0x2b, 0xbc, 0xd9, 0xe8, 0x79, 0xb4, 0x25, 0x66, 0xca, 0x5e,
+	0x13, 0xda, 0xb6, 0x2d, 0x3a, 0xb3, 0x80, 0x13, 0x54, 0xbc, 0xb6, 0x49, 0xd7, 0x0a, 0x02, 0x7d,
+	0x0d, 0xe5, 0xc6, 0x36, 0xf4, 0x3d, 0xee, 0x0b, 0x74, 0x1d, 0x0f, 0xee, 0x18, 0x3d, 0x8a, 0xf8,
+	0xd1, 0x44, 0xc0, 0xc5, 0x83, 0x1f, 0x43, 0xf1, 0x0d, 0x15, 0xbf, 0x6b, 0x19, 0x0f, 0x9a, 0xf2,
+	0x4f, 0xa2, 0x66, 0xfc, 0x27, 0x51, 0xb3, 0xe7, 0x45, 0xf3, 0x57, 0x96, 0x1b, 0x91, 0xa3, 0x40,
+	0x3e, 0x69, 0xfe, 0xf2, 0x75, 0x5e, 0x3c, 0xf2, 0xd6, 0x71, 0x4f, 0xdf, 0x3b, 0xf8, 0x09, 0x94,
+	0xc4, 0x6e, 0x3f, 0xe2, 0x6f, 0xb3, 0xfd, 0xaf, 0x6a, 0xbb, 0x50, 0x79, 0x14, 0xf1, 0x83, 0xcf,
+	0xa0, 0x26, 0xf6, 0x3b, 0xe4, 0x24, 0x9a, 0xbe, 0xa5, 0x0d, 0x7f, 0x53, 0x42, 0x2a, 0xb8, 0xb3,
+	0x8b, 0x1b, 0xfb, 0xde, 0x41, 0x1f, 0x36, 0x52, 0x82, 0xde, 0xd2, 0x9c, 0xbf, 0x2b, 0x49, 0xd5,
+	0x44, 0x12, 0xda, 0xf4, 0x53, 0x28, 0x0b, 0x51, 0x9c, 0x7a, 0x8b, 0xb7, 0x91, 0xf2, 0x0f, 0x25,
+	0x45, 0x44, 0x62, 0x44, 0xbd, 0xc5, 0xc1, 0x0b, 0xd8, 0x14, 0x12, 0x4e, 0x7c, 0x9f, 0xbb, 0xbe,
+	0xe5, 0x10, 0xf6, 0x36, 0x72, 0xfe, 0xa9, 0xe4, 0x08, 0x47, 0x9e, 0x24, 0x5b, 0x9f, 0x7c, 0x08,
+	0x0f, 0x6d, 0x7f, 0xde, 0x0c, 0x2d, 0xee, 0x87, 0x33, 0xea, 0x5a, 0x27, 0x61, 0x93, 0x33, 0xf2,
+	0x95, 0xcf, 0x9a, 0x2e, 0x3d, 0x49, 0xe4, 0x3d, 0x81, 0x91, 0x00, 0xb1, 0x0a, 0xff, 0x17, 0x00,
+	0x00, 0xff, 0xff, 0xf0, 0x08, 0x19, 0xcb, 0xfb, 0x1b, 0x00, 0x00,
 }
