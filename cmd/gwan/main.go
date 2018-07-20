@@ -36,6 +36,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
+	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -103,6 +104,8 @@ var (
 		utils.TestnetFlag,
 		utils.DevInternalFlag,
 		utils.PlutoFlag,
+		utils.StoremanFlag,
+		utils.AwsKmsFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -128,6 +131,14 @@ var (
 		utils.WSAllowedOriginsFlag,
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
+	}
+
+	syslogFlags = []cli.Flag{
+		utils.SysLogFlag,
+		utils.SyslogNetFlag,
+		utils.SyslogSvrFlag,
+		utils.SyslogLevelFlag,
+		utils.SyslogTagFlag,
 	}
 
 	whisperFlags = []cli.Flag{
@@ -176,6 +187,7 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, whisperFlags...)
+	app.Flags = append(app.Flags, syslogFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -217,6 +229,17 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	if ctx.GlobalBool(utils.SysLogFlag.Name) {
+		err := mpcsyslog.StartSyslog(
+			ctx.GlobalString(utils.SyslogNetFlag.Name),
+			ctx.GlobalString(utils.SyslogSvrFlag.Name),
+			ctx.GlobalString(utils.SyslogLevelFlag.Name),
+			ctx.GlobalString(utils.SyslogTagFlag.Name))
+		if err != nil {
+			log.Error("start mpc syslog fail", "err", err)
+		}
+	}
+
 	// Start up the node itself
 	utils.StartNode(stack)
 

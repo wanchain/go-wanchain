@@ -143,6 +143,14 @@ var (
 		Name:  "pluto",
 		Usage: "Pluto network: pre-configured wanchain proof-of-authority test network",
 	}
+	StoremanFlag = cli.BoolFlag{
+		Name:  "storeman",
+		Usage: "Enable storeman feature",
+	}
+	AwsKmsFlag = cli.BoolFlag{
+		Name:  "kms",
+		Usage: "Enable kms feature",
+	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
@@ -493,6 +501,32 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	// syslog
+	SysLogFlag = cli.BoolFlag{
+		Name:  "syslog",
+		Usage: "Enable the syslog",
+	}
+	SyslogNetFlag = cli.StringFlag{
+		Name:  "syslognet",
+		Usage: "syslog net protocol",
+		Value: "tcp",
+	}
+	SyslogSvrFlag = cli.StringFlag{
+		Name:  "syslogsvr",
+		Usage: "syslog server address",
+	}
+	SyslogLevelFlag = cli.StringFlag{
+		Name:  "sysloglevel",
+		Usage: "syslog level",
+		Value: "INFO",
+	}
+	SyslogTagFlag = cli.StringFlag{
+		Name:  "syslogtag",
+		Usage: "syslog tag",
+		Value: "gwan_mpc",
+	}
+
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -820,6 +854,23 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
+func GetActualDataDir(ctx *cli.Context) string {
+	switch {
+	case ctx.GlobalIsSet(DataDirFlag.Name):
+		return ctx.GlobalString(DataDirFlag.Name)
+	case ctx.GlobalBool(DevModeFlag.Name):
+		return filepath.Join(os.TempDir(), "ethereum_dev_mode")
+	case ctx.GlobalBool(TestnetFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "internal")
+	case ctx.GlobalBool(PlutoFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "pluto")
+	}
+
+	return node.DefaultDataDir()
+}
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
@@ -828,18 +879,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	switch {
-	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(DevInternalFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "internal")
-	case ctx.GlobalBool(PlutoFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
-	}
+	cfg.DataDir = GetActualDataDir(ctx);
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
