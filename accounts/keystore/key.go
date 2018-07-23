@@ -37,6 +37,8 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
+	"math/big"
+	"encoding/binary"
 )
 
 const (
@@ -214,7 +216,28 @@ func newKey(rand io.Reader) (*Key, error) {
 	}
 	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
 }
+func newStoremanKey(pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64) (*Key, error) {
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = crypto.S256()
+	priv.D = pShare
+	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(pShare.Bytes())
+	id := uuid.NewRandom()
+	key := &Key{
+		Id:          id,
+		Address:     crypto.PubkeyToAddress(*pKey),
+		PrivateKey:  priv,
+		PrivateKey2: priv,
+	}
 
+	//3 bytes for every seed
+	for i,seed := range seeds{
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b,seed)
+		copy(key.WAddress[i*3:],b[5:])
+	}
+
+	return key , nil
+}
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
@@ -227,7 +250,19 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	}
 	return key, a, err
 }
-
+//cranelv add storemanKey
+func storeStoremanKey(ks keyStore,pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64,passphrase string)(*Key, accounts.Account, error){
+	key,err := newStoremanKey(pKey,pShare,seeds)
+	if err!= nil {
+		return nil, accounts.Account{}, err
+	}
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	if err := ks.StoreKey(a.URL.Path, key, passphrase); err != nil {
+		zeroKey(key.PrivateKey)
+		return nil, a, err
+	}
+	return key, a, err
+}
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.

@@ -78,6 +78,7 @@ type dialstate struct {
 	lookupBuf     []*discover.Node // current discovery lookup results
 	randomNodes   []*discover.Node // filled from Table
 	static        map[discover.NodeID]*dialTask
+	storeman        map[discover.NodeID]*dialTask
 	hist          *dialHistory
 
 	start     time.Time        // time when the dialer was first used
@@ -127,12 +128,13 @@ type waitExpireTask struct {
 	time.Duration
 }
 
-func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int, netrestrict *netutil.Netlist) *dialstate {
+func newDialState(static []*discover.Node, storeman []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int, netrestrict *netutil.Netlist) *dialstate {
 	s := &dialstate{
 		maxDynDials: maxdyn,
 		ntab:        ntab,
 		netrestrict: netrestrict,
 		static:      make(map[discover.NodeID]*dialTask),
+		storeman:    make(map[discover.NodeID]*dialTask),
 		dialing:     make(map[discover.NodeID]connFlag),
 		bootnodes:   make([]*discover.Node, len(bootnodes)),
 		randomNodes: make([]*discover.Node, maxdyn/2),
@@ -141,6 +143,10 @@ func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab disc
 	copy(s.bootnodes, bootnodes)
 	for _, n := range static {
 		s.addStatic(n)
+	}
+
+	for _, m := range storeman {
+		s.addStoreman(m)
 	}
 	return s
 }
@@ -155,7 +161,16 @@ func (s *dialstate) removeStatic(n *discover.Node) {
 	// This removes a task so future attempts to connect will not be made.
 	delete(s.static, n.ID)
 }
+func (s *dialstate) addStoreman(n *discover.Node) {
+	// This overwites the task instead of updating an existing
+	// entry, giving users the opportunity to force a resolve operation.
+	s.storeman[n.ID] = &dialTask{flags: storemanDialedConn, dest: n}
+}
 
+func (s *dialstate) removeStoreman(n *discover.Node) {
+	// This removes a task so future attempts to connect will not be made.
+	delete(s.storeman, n.ID)
+}
 func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now time.Time) []task {
 	if s.start == (time.Time{}) {
 		s.start = now
@@ -173,7 +188,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	}
 
 	// Compute number of dynamic dials necessary at this point.
-	needDynDials := s.maxDynDials
+	needDynDials := s.maxDynDials  // (srv.MaxPeers + 1) / 2
 	for _, p := range peers {
 		if p.rw.is(dynDialedConn) {
 			needDynDials--
@@ -200,6 +215,21 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			newtasks = append(newtasks, t)
 		}
 	}
+
+	// Create dials for storeman nodes if they are not connected.
+	for id, t := range s.storeman {
+		err := s.checkDial(t.dest, peers)
+		switch err {
+		case errNotWhitelisted, errSelf:
+			log.Warn("Removing storeman dial candidate", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
+			delete(s.storeman, t.dest.ID)
+		case nil:
+			s.dialing[id] = t.flags
+			newtasks = append(newtasks, t)
+		}
+	}
+
+
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This
 	// scenario is useful for the testnet (and private networks) where the discovery
 	// table might be full of mostly bad peers, making it hard to find good ones.
@@ -287,13 +317,19 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 
 func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
+		if t.flags&storemanDialedConn != 0 {
+			log.Debug("Start to resolve storeman node ", "dest id", t.dest.ID)
+		}
 		if !t.resolve(srv) {
 			return
 		}
 	}
+	if t.flags&storemanDialedConn != 0 {
+		log.Debug("Resolved storeman node ", "dest id", t.dest.ID)
+	}
 	success := t.dial(srv, t.dest)
 	// Try resolving the ID of static nodes if dialing failed.
-	if !success && t.flags&staticDialedConn != 0 {
+	if !success && (t.flags&staticDialedConn != 0 || t.flags&storemanDialedConn != 0) {
 		if t.resolve(srv) {
 			t.dial(srv, t.dest)
 		}

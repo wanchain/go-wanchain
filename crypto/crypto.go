@@ -38,13 +38,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
-	
-	"github.com/wanchain/go-wanchain/log"
 
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
 	secp256k1_N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	Secp256k1_N = secp256k1_N
 	secp256k1_halfN = new(big.Int).Div(secp256k1_N, big.NewInt(2))
 )
 
@@ -371,7 +371,10 @@ func Rsa_decrypt(random io.Reader, priv *rsa.PrivateKey, c *big.Int) (m *big.Int
 
 	return
 }
-
+//cranelv Export randFieldElement2528
+func RandFieldElement2528(rand io.Reader) (k *big.Int, err error) {
+	return randFieldElement2528(rand)
+}
 // randFieldElement2528 returns a random element of the field
 func randFieldElement2528(rand io.Reader) (k *big.Int, err error) {
 	params := S256().Params()

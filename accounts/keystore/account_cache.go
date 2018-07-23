@@ -300,6 +300,14 @@ func (ac *accountCache) scanAccounts() error {
 		}
 	)
 	readAccount := func(path string) *accounts.Account {
+		// add for storeman mpc account
+		if strings.LastIndex(path, "-cipher") == (len(path) - len("-cipher")) {
+			addrBegin := strings.LastIndex(path[:len(path) - len("-cipher")], "-")
+			if addrBegin != -1 {
+				return &accounts.Account{Address: common.HexToAddress(path[addrBegin+1:addrBegin+41]), URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
+			}
+		}
+
 		fd, err := os.Open(path)
 		if err != nil {
 			log.Trace("Failed to open keystore file", "path", path, "err", err)

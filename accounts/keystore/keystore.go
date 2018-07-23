@@ -394,6 +394,9 @@ func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	ks.cache.mu.Unlock()
 	return a, err
 }
+func (ks *KeyStore) GetDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
+	return ks.getDecryptedKey(a,auth)
+}
 
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
 	a, err := ks.Find(a)
@@ -442,6 +445,17 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 // encrypting it with the passphrase.
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+	if err != nil {
+		return accounts.Account{}, err
+	}
+	// Add the account to the cache immediately rather
+	// than waiting for file system notifications to pick it up.
+	ks.cache.add(account)
+	ks.refreshWallets()
+	return account, nil
+}
+func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64,passphrase string) (accounts.Account, error) {
+	_, account, err := storeStoremanKey(ks.storage,pKey,pShare,seeds, passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
