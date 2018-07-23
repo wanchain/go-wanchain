@@ -72,7 +72,6 @@ func (step *BaseStep) FinishStep() error {
 		step.msgChan <- nil
 		return mpcprotocol.ErrTimeOut
 	}
-	return nil
 }
 
 func (step *BaseStep) GetMessageChan() chan *mpcprotocol.StepMessage {

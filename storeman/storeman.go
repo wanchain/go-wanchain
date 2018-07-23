@@ -92,9 +92,6 @@ func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 
 		packet.Discard()
 	}
-
-	mpcsyslog.Debug("runMessageLoop end")
-	return nil
 }
 
 type StoremanAPI struct {

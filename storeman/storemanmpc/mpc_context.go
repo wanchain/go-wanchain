@@ -45,7 +45,7 @@ func (mpcCtx *MpcContext) getMpcResult() []byte {
 }
 
 func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.MpcMessage, peers *[]mpcprotocol.PeerInfo) error {
-	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{0, PeerID, peers, msg.Data, msg.BytesData}
+	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{Msgcode:0, PeerID:PeerID, Peers:peers, Data:msg.Data, BytesData:msg.BytesData}
 	return nil
 }
 

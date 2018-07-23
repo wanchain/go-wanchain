@@ -400,7 +400,7 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 		preSetValue = append(preSetValue, *value)
 	} else {
 		for i := 0; i < len(mpcServer.StoreManGroup); i++ {
-			peers = append(peers, mpcprotocol.PeerInfo{mpcServer.StoreManGroup[i], 0})
+			peers = append(peers, mpcprotocol.PeerInfo{PeerID:mpcServer.StoreManGroup[i], Seed:0})
 		}
 	}
 

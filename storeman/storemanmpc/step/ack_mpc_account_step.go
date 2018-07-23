@@ -40,7 +40,12 @@ func (ack *AckMpcAccountStep) InitStep(result mpcprotocol.MpcResultInterface) er
 }
 
 func (ack *AckMpcAccountStep) CreateMessage() []mpcprotocol.StepMessage {
-	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{mpcprotocol.MPCMessage, nil, nil, nil, [][]byte{ack.mpcAddr}}}
+	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
+		Msgcode:mpcprotocol.MPCMessage,
+		PeerID:nil,
+		Peers:nil,
+		Data:nil,
+		BytesData:[][]byte{ack.mpcAddr}}}
 }
 
 func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {

@@ -81,7 +81,12 @@ func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *Req
 }
 
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
-	msg := mpcprotocol.StepMessage{mpcprotocol.RequestMPC, nil, req.peers, nil, nil}
+	msg := mpcprotocol.StepMessage{
+		Msgcode:mpcprotocol.RequestMPC,
+		PeerID:nil,
+		Peers:req.peers,
+		Data:nil,
+		BytesData:nil}
 	msg.Data = make([]big.Int, 1)
 	msg.Data[0].SetInt64(req.messageType)
 	if req.messageType == mpcprotocol.MpcTXSignLeader {

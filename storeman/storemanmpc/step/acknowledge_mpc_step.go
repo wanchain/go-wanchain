@@ -23,7 +23,12 @@ func CreateAcknowledgeMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) 
 func (ack *AcknowledgeMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	data := make([]big.Int, 1)
 	data[0].SetInt64(ack.messageType)
-	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{mpcprotocol.MPCMessage, nil, nil, data, nil}}
+	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
+		Msgcode:mpcprotocol.MPCMessage,
+		PeerID:nil,
+		Peers:nil,
+		Data:data,
+		BytesData:nil}}
 }
 
 func (ack *AcknowledgeMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
