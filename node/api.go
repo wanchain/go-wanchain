@@ -59,6 +59,20 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	return true, nil
 }
 
+func (api *PrivateAdminAPI) GetStoremans() ([]string) {
+	var s []string
+	// Make sure the server is running, fail otherwise
+	server := api.node.Server()
+	if server == nil {
+		return s
+	}
+	for _, n := range server.StoremanNodes {
+		if n!= nil {
+			s = append(s, n.String())
+		}
+	}
+	return s
+}
 // RemovePeer disconnects from a a remote node if the connection exists
 func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
