@@ -22,7 +22,7 @@ func TestMpcSelectPeers(t *testing.T) {
 
 	t.Log("mpcIDValue", mpcID)
 	msger := testP2pMessager{}
-	mpcDistributor := CreateMpcDistributor(nil, &msger, "1111")
+	mpcDistributor := CreateMpcDistributor(nil, &msger, "", "", "", "1111")
 	nThread := 21
 	nodeId := common.Hex2Bytes("8f8581b96c387d80c64b8924ec466b17d3994db98ea5601c4ccb4b0a5acead74f43b7ffde50cfcf96efd19005e3986186268d0c0865b4217d28eff61d693bc16")
 	peers := make([]mpcprotocol.PeerInfo, nThread)
