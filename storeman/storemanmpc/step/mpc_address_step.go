@@ -4,10 +4,11 @@ import mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protoco
 
 type MpcAddressStep struct {
 	MpcPoint_Step
+	accType string
 }
 
-func CreateMpcAddressStep(peers *[]mpcprotocol.PeerInfo) *MpcAddressStep {
-	mpc := &MpcAddressStep{MpcPoint_Step: *CreateMpcPoint_Step(peers, mpcprotocol.MpcPublicShare, mpcprotocol.PublicKeyResult)}
+func CreateMpcAddressStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcAddressStep {
+	mpc := &MpcAddressStep{MpcPoint_Step: *CreateMpcPoint_Step(peers, mpcprotocol.MpcPublicShare, mpcprotocol.PublicKeyResult), accType:accType}
 	return mpc
 }
 
@@ -17,5 +18,5 @@ func (addStep *MpcAddressStep) FinishStep(result mpcprotocol.MpcResultInterface,
 		return err
 	}
 
-	return mpc.CreateKeystore(result, addStep.peers)
+	return mpc.CreateKeystore(result, addStep.peers, addStep.accType)
 }

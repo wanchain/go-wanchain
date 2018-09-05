@@ -24,7 +24,8 @@ const (
 	KeepaliveCycle
 	NumberOfMessageCodes
 
-	MPCDegree          = 8
+	//MPCDegree          = 8
+	MPCDegree          = 1
 	MPCTimeOut         = time.Second * 100
 	ProtocolName       = "storeman"
 	ProtocolVersion    = uint64(1)
@@ -58,6 +59,7 @@ const (
 	MpcAddress      = "MpcAddress"
 	MPCActoin       = "MPCActoin"
 	MPCSignedFrom   = "MPCSignedFrom"
+	MpcStmAccType   = "MpcStmAccType"
 )
 
 type PeerInfo struct {
@@ -87,10 +89,19 @@ type StepMessage struct {
 	Data      []big.Int //message data
 	BytesData [][]byte
 }
+
 type MpcMessage struct {
 	ContextID uint64
 	StepID    uint64
 	Peers     []byte
 	Data      []big.Int //message data
 	BytesData [][]byte
+}
+
+func CheckAccountType(accType string) bool {
+	if accType == "WAN" || accType == "ETH" || accType == "BTC" {
+		return true
+	}
+
+	return false
 }

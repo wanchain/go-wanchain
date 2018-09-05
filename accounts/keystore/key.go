@@ -43,7 +43,12 @@ import (
 
 const (
 	version = 3
+	StoremanWanAcc = "WAN"
+	StoremanEthAcc = "ETH"
+	StoremanBtcAcc = "BTC"
 )
+
+
 
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
@@ -216,15 +221,24 @@ func newKey(rand io.Reader) (*Key, error) {
 	}
 	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
 }
-func newStoremanKey(pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64) (*Key, error) {
+
+func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accType string) (*Key, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = crypto.S256()
 	priv.D = pShare
 	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(pShare.Bytes())
 	id := uuid.NewRandom()
+
+	addr := common.Address{}
+	if accType == StoremanBtcAcc {
+		addr = crypto.PubkeyToRipemd160(*pKey)
+	} else {
+		addr = crypto.PubkeyToAddress(*pKey)
+	}
+
 	key := &Key{
 		Id:          id,
-		Address:     crypto.PubkeyToAddress(*pKey),
+		Address:     addr,
 		PrivateKey:  priv,
 		PrivateKey2: priv,
 	}
@@ -238,6 +252,7 @@ func newStoremanKey(pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64) (*Key,
 
 	return key , nil
 }
+
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
@@ -250,19 +265,23 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	}
 	return key, a, err
 }
+
 //cranelv add storemanKey
-func storeStoremanKey(ks keyStore,pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64,passphrase string)(*Key, accounts.Account, error){
-	key,err := newStoremanKey(pKey,pShare,seeds)
+func storeStoremanKey(ks keyStore, pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string)(*Key, accounts.Account, error){
+	key, err := newStoremanKey(pKey, pShare, seeds, accType)
 	if err!= nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileNameWithType(key.Address, accType))}}
 	if err := ks.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
 	}
+
 	return key, a, err
 }
+
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
@@ -290,6 +309,13 @@ func writeKeyFile(file string, content []byte) error {
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.Hex()[2:])
+}
+
+// keyFileName implements the naming convention for keyfiles:
+// UTC--<created_at UTC ISO8601>-<account type>-<address hex>
+func keyFileNameWithType(keyAddr common.Address, accType string) string {
+	ts := time.Now().UTC()
+	return fmt.Sprintf("UTC--%s--%s--%s", toISO8601(ts), accType, keyAddr.Hex()[2:])
 }
 
 func toISO8601(t time.Time) string {

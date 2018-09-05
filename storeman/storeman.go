@@ -111,8 +111,12 @@ func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
 	return ps
 }
 
-func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context) (common.Address, error) {
+func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (common.Address, error) {
 	mpcsyslog.Debug("CreateMpcAccount begin")
+	log.Warn("-----------------CreateMpcAccount begin", "accType", accType)
+	if !mpcprotocol.CheckAccountType(accType) {
+		return common.Address{}, mpcprotocol.ErrInvalidStmAccType
+	}
 
 	if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
 		return common.Address{}, mpcprotocol.ErrTooLessStoreman
@@ -122,7 +126,7 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context) (common.Address, er
 		return common.Address{}, mpcprotocol.ErrTooMoreStoreman
 	}
 
-	addr, err := sa.sm.mpcDistributor.CreateRequestStoremanAccount()
+	addr, err := sa.sm.mpcDistributor.CreateRequestStoremanAccount(accType)
 	if err == nil {
 		mpcsyslog.Info("CreateMpcAccount end, addr:%s", addr.String())
 	} else {

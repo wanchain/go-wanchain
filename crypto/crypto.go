@@ -40,6 +40,7 @@ import (
 	"crypto/rsa"
 
 	"github.com/wanchain/go-wanchain/log"
+	"golang.org/x/crypto/ripemd160"
 )
 
 var (
@@ -199,6 +200,13 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
+}
+
+func PubkeyToRipemd160(p ecdsa.PublicKey) common.Address  {
+	pubBytes := FromECDSAPub(&p)
+	ripemd := ripemd160.New()
+	ripemd.Write(pubBytes)
+	return common.BytesToAddress(ripemd.Sum(nil)[:20])
 }
 
 func zeroBytes(bytes []byte) {

@@ -454,8 +454,8 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	ks.refreshWallets()
 	return account, nil
 }
-func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey,pShare *big.Int,seeds []uint64,passphrase string) (accounts.Account, error) {
-	_, account, err := storeStoremanKey(ks.storage,pKey,pShare,seeds, passphrase)
+func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (accounts.Account, error) {
+	_, account, err := storeStoremanKey(ks.storage, pKey, pShare, seeds, passphrase, accType)
 	if err != nil {
 		return accounts.Account{}, err
 	}

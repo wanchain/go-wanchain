@@ -3,6 +3,7 @@ package storemanmpc
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 type BaseMpcResult struct {
@@ -48,6 +49,8 @@ func (mpc *BaseMpcResult) GetByteValue(key string) ([]byte, error) {
 	if exist {
 		return value, nil
 	}
+
+	log.Error("-----------------GetByteValue fail", "key", key)
 	return value, mpcprotocol.ErrQuit
 }
 

@@ -83,6 +83,7 @@ func (step *BaseStep) HandleMessage(msger mpcprotocol.GetMessageInterface) error
 	select {
 	case msg = <-step.msgChan:
 		if msg == nil {
+			log.Info("-----------------HandleMessage. BaseStep get a quit msg")
 			mpcsyslog.Info("BaseStep get a quit msg")
 			return mpcprotocol.ErrQuit
 		}

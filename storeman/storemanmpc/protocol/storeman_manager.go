@@ -9,6 +9,6 @@ type StoremanManager interface {
 	BoardcastMessage([]discover.NodeID, uint64, interface{}) error
 	SetMessagePeers(*MpcMessage, *[]PeerInfo)
 	SelfNodeId() *discover.NodeID
-	CreateKeystore(MpcResultInterface, *[]PeerInfo) error
+	CreateKeystore(MpcResultInterface, *[]PeerInfo, string) error
 	SignTransaction(MpcResultInterface) error
 }

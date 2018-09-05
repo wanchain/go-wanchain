@@ -13745,19 +13745,19 @@ module.exports = Wan;
             var version = new Method({
                 name: 'version',
                 call: 'storeman_version',
-                params: 0,
+                params: 0
             });
-
             var createMpcAccount = new Method ({
                 name: 'createMpcAccount',
                 call: 'storeman_createMpcAccount',
-                params: 0,
+                params: 1,
+                inputFormatter: [null]
             });
             var signMpcTransaction = new Method ({
                 name: 'signMpcTransaction',
                 call: 'storeman_signMpcTransaction',
                 params: 1,
-                inputFormatter: [null],
+                inputFormatter: [null]
             });
             var peers = new Method ({
                 name: 'peers',

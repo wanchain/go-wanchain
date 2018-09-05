@@ -107,6 +107,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 	return writeKeyFile(filename, keyjson)
 }
 
+
 // Implements GetEncryptedKey method of keystore interface
 func (ks keyStorePassphrase) GetEncryptedKey(a common.Address, filename string) (*Key, error) {
 	// load the encrypted json keyfile

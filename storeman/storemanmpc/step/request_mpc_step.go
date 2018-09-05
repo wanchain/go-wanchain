@@ -13,6 +13,7 @@ import (
 type RequestMpcStep struct {
 	BaseStep
 	messageType int64
+	accType     []byte
 	txHash      big.Int
 	address     big.Int
 	chainID     big.Int
@@ -37,6 +38,17 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 				break
 			}
 		}
+
+		accType, err := result.GetByteValue(mpcprotocol.MpcStmAccType)
+		if err != nil {
+			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcAddress)
+			log.Error("-----------------RequestMpcStep.InitStep, GetValue fail.", "key", mpcprotocol.MpcStmAccType)
+			return err
+		}
+
+		req.accType = accType
+		log.Warn("-----------------RequestMpcStep.InitStep", "accType", string(accType[:]))
+
 	} else if req.messageType == mpcprotocol.MpcTXSignLeader {
 		hash, err := result.GetValue(mpcprotocol.MpcTxHash)
 		if err != nil {
@@ -96,6 +108,9 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.BytesData = make([][]byte, 2)
 		msg.BytesData[0] = req.chainType
 		msg.BytesData[1] = req.txCode
+	} else if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
+		msg.BytesData = make([][]byte, 1)
+		msg.BytesData[0] = req.accType
 	}
 
 	return []mpcprotocol.StepMessage{msg}

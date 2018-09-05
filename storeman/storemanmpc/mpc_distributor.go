@@ -316,9 +316,13 @@ func (mpcServer *MpcDistributor) selectPeers(ctxType int, allPeers []mpcprotocol
 	return peers
 }
 
-func (mpcServer *MpcDistributor) CreateRequestStoremanAccount() (common.Address, error) {
+func (mpcServer *MpcDistributor) CreateRequestStoremanAccount(accType string) (common.Address, error) {
 	mpcsyslog.Debug("CreateRequestStoremanAccount begin")
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader)
+	log.Warn("-----------------CreateRequestStoremanAccount begin", "accType", accType)
+	preSetValue := make([]MpcValue, 0, 1)
+	preSetValue = append(preSetValue, MpcValue{Key:mpcprotocol.MpcStmAccType, ByteValue:[]byte(accType)})
+
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader, preSetValue...)
 	if err != nil {
 		return common.Address{}, err
 	} else {
@@ -436,6 +440,11 @@ func (mpcServer *MpcDistributor) QuitMpcContext(msg *mpcprotocol.MpcMessage) {
 }
 
 func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMessage, preSetValue ...MpcValue) error {
+	log.Warn("-----------------createMpcContext begin");
+	for _, byteData := range mpcMessage.BytesData {
+		log.Warn("-----------------createMpcContext", "byteData", string(byteData[:]))
+	}
+
 	mpcServer.mu.RLock()
 	_, exist := mpcServer.mpcMap[mpcMessage.ContextID]
 	mpcServer.mu.RUnlock()
@@ -477,7 +486,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		}
 
 		if len(mpcMessage.Data) > 1 {
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash, []big.Int{mpcMessage.Data[1]}, nil})
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash, nil, mpcMessage.BytesData[0]})
 			log.Debug("createMpcContext", "from", common.BigToAddress(&mpcMessage.Data[2]), "txHash", common.BigToHash(&mpcMessage.Data[1]))
 			mpcsyslog.Debug("createMpcContext. from:%s, txHash:%s", common.BigToAddress(&mpcMessage.Data[2]).String(), common.BigToHash(&mpcMessage.Data[1]).String())
 			address := common.BigToAddress(&mpcMessage.Data[2])
@@ -488,6 +497,17 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 
 			preSetValue = append(preSetValue, *value)
 		}
+	} else if ctxType == mpcprotocol.MpcCreateLockAccountPeer {
+		if len(mpcMessage.BytesData) == 0 {
+			return mpcprotocol.ErrInvalidStmAccType
+		}
+
+		accType := string(mpcMessage.BytesData[0][:])
+		if !mpcprotocol.CheckAccountType(accType) {
+			return mpcprotocol.ErrInvalidStmAccType
+		}
+
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcStmAccType, nil, mpcMessage.BytesData[0]})
 	}
 
 	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)
@@ -591,9 +611,9 @@ func (mpcServer *MpcDistributor) BoardcastMessage(peers []discover.NodeID, code 
 	return nil
 }
 
-func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string) (accounts.Account, error) {
+func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (accounts.Account, error) {
 	ks := mpcServer.AccountManager.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	account, err := ks.NewStoremanAccount(pKey, pShare, seeds, passphrase)
+	account, err := ks.NewStoremanAccount(pKey, pShare, seeds, passphrase, accType)
 	if err != nil {
 		mpcsyslog.Err("NewStoremanKeyStore fail. err:%s", err.Error())
 		log.Error("NewStoremanKeyStore fail", "err", err)
@@ -605,7 +625,7 @@ func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey, pSha
 	return account, err
 }
 
-func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInterface, peers *[]mpcprotocol.PeerInfo) error {
+func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInterface, peers *[]mpcprotocol.PeerInfo, accType string) error {
 	mpcsyslog.Debug("MpcDistributor.CreateKeystore begin")
 	point, err := result.GetValue(mpcprotocol.PublicKeyResult)
 	if err != nil {
@@ -628,7 +648,7 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 		seed[i] = item.Seed
 	}
 
-	account, err := mpcServer.newStoremanKeyStore(result1, &private[0], seed, mpcServer.password)
+	account, err := mpcServer.newStoremanKeyStore(result1, &private[0], seed, mpcServer.password, accType)
 	if err != nil {
 		return err
 	}
