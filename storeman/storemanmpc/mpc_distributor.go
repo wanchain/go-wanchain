@@ -486,7 +486,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		}
 
 		if len(mpcMessage.Data) > 1 {
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash, nil, mpcMessage.BytesData[0]})
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash, []big.Int{mpcMessage.Data[1]}, nil})
 			log.Debug("createMpcContext", "from", common.BigToAddress(&mpcMessage.Data[2]), "txHash", common.BigToHash(&mpcMessage.Data[1]))
 			mpcsyslog.Debug("createMpcContext. from:%s, txHash:%s", common.BigToAddress(&mpcMessage.Data[2]).String(), common.BigToHash(&mpcMessage.Data[1]).String())
 			address := common.BigToAddress(&mpcMessage.Data[2])

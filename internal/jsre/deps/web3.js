@@ -13759,6 +13759,17 @@ module.exports = Wan;
                 params: 1,
                 inputFormatter: [null]
             });
+            var addValidMpcTxRaw = new Method ({
+                name: 'addValidMpcTxRaw',
+                call: 'storeman_addValidMpcTxRaw',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+            var addValidMpcBtcTxRaw = new Method ({
+                name: 'addValidMpcBtcTxRaw',
+                call: 'storeman_addValidMpcBtcTxRaw',
+                params: 1
+            });
             var peers = new Method ({
                 name: 'peers',
                 call: 'storeman_peers',
@@ -13768,6 +13779,8 @@ module.exports = Wan;
                 version,
                 createMpcAccount,
                 signMpcTransaction,
+                addValidMpcTxRaw,
+                addValidMpcBtcTxRaw,
                 peers,
             ];
         };

@@ -23,6 +23,7 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/validator"
+	"github.com/wanchain/go-wanchain/storeman/btc"
 )
 
 type Storeman struct {
@@ -176,7 +177,9 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 
 // APIs returns the RPC descriptors the Whisper implementation offers
 //MpcTxRaw stores raw data of cross chain transaction for MPC signing verification
-func (sa *StoremanAPI) MpcTxRaw(ctx context.Context, tx SendTxArgs) error {
+func (sa *StoremanAPI) AddValidMpcTxRaw(ctx context.Context, tx SendTxArgs) error {
+	log.Warn("-----------------AddValidMpcTxRaw begin", "tx", tx)
+
 	var key, val []byte
 	if tx.Value == nil {
 		err := errors.New("tx.Value field is required")
@@ -230,6 +233,66 @@ func (sa *StoremanAPI) MpcTxRaw(ctx context.Context, tx SendTxArgs) error {
 	mpcsyslog.Info("Succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
 	return nil
 }
+
+
+func (sa *StoremanAPI) AddValidMpcBtcTxRaw(ctx context.Context, args btc.MsgTxArgs) error {
+	log.Warn("-----------------AddValidMpcBTCTxRaw begin", "args", args)
+	msgTx, err := btc.GetMsgTxFromMsgTxArgs(&args)
+	if err != nil {
+		return err
+	}
+
+	log.Warn("-----------------AddValidMpcBTCTxRaw", "msgTx", msgTx)
+	for _, txIn := range msgTx.TxIn {
+		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxIn", *txIn)
+	}
+	for _, txOut := range msgTx.TxOut {
+		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
+	}
+
+
+	var key, val []byte
+	key = append(key, tx.Value.ToInt().Bytes()...)
+	key = append(key, tx.Data...)
+	key = crypto.Keccak256(key)
+
+	val, err := json.Marshal(&tx)
+	if err != nil {
+		log.Error("MpcTxRaw, marshal fail", "error", err)
+		mpcsyslog.Err("MpcTxRaw, marshal fail. err:%s", err.Error())
+		return err
+	}
+
+	sdb, err := validator.GetDB()
+	if err != nil {
+		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		return err
+	}
+
+	err = sdb.Put(key, val)
+	if err != nil {
+		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		return err
+	}
+
+	log.Info("MpcTxRaw", "key", common.ToHex(key))
+	mpcsyslog.Info("MpcTxRaw. key:%s", common.ToHex(key))
+	ret, err := sdb.Get(key)
+	if err != nil {
+		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		return err
+	}
+
+	log.Info("Succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
+	mpcsyslog.Info("Succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
+	return nil
+
+	return nil
+}
+
 
 // APIs returns the RPC descriptors the Whisper implementation offers
 func (sm *Storeman) APIs() []rpc.API {
