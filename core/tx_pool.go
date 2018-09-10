@@ -805,7 +805,13 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	if !replace {
 		from, _ := types.Sender(pool.signer, tx) // already validated
 		pool.promoteExecutables([]common.Address{from})
+		
+	}  else {//fixing the bug that replaced tx can not be broadcast
+		if err==nil {
+		   go pool.txFeed.Send(TxPreEvent{tx})
+		}
 	}
+	
 	return nil
 }
 
