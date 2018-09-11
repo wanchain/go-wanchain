@@ -12,6 +12,8 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"time"
+	"github.com/wanchain/go-wanchain/storeman/btc"
+	"math/big"
 )
 
 type SendTxArgs struct {
@@ -130,4 +132,83 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 			return false
 		}
 	}
+}
+
+
+func ValidateBtcTx(args *btc.MsgTxArgs) bool {
+	if args == nil {
+		return false
+	}
+
+	keyWithoutTxin, keyWithTxin := GetKeyFromBtcTx(args)
+	log.Info("-----------------GetKeyFromBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin))
+	log.Info("-----------------GetKeyFromBtcTx", "keyWithTxin", common.ToHex(keyWithTxin))
+
+	followerDB, err := GetDB()
+	if err != nil {
+		mpcsyslog.Err("ValidateBtcTx get database fail. err:%s", err.Error())
+		log.Error("ValidateBtcTx get database fail", "error", err)
+		return false
+	}
+
+	start := time.Now()
+	for {
+		isExist, err := followerDB.Has(keyWithTxin)
+		if err != nil {
+			mpcsyslog.Err("ValidateBtcTx, keyWithTxin check has fail. err:%s", err.Error())
+			log.Error("ValidateBtcTx, keyWithTxin check has fail", "error", err)
+			return false
+		} else if isExist {
+			mpcsyslog.Info("ValidateBtcTx, keyWithTxin is got")
+			log.Info("ValidateBtcTx, keyWithTxin is got")
+			return true
+		}
+
+		isExist, err = followerDB.Has(keyWithoutTxin)
+		if err != nil {
+			mpcsyslog.Err("ValidateBtcTx, keyWithoutTxin check has fail. err:%s", err.Error())
+			log.Error("ValidateBtcTx, keyWithoutTxin check has fail", "error", err)
+			return false
+		} else if isExist {
+			mpcsyslog.Info("ValidateBtcTx, keyWithoutTxin is got")
+			log.Info("ValidateBtcTx, keyWithoutTxin is got")
+			return true
+		}
+
+		if time.Now().Sub(start) >= mpcprotocol.MPCTimeOut {
+			mpcsyslog.Info("ValidateBtcTx time out")
+			log.Info("ValidateBtcTx time out")
+			return false
+		}
+
+		time.Sleep(200 * time.Microsecond)
+	}
+}
+
+
+func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []byte) {
+	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.Version)).Bytes()...)
+	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.LockTime)).Bytes()...)
+
+	for _, out := range args.TxOut {
+		keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(out.Value).Bytes()...)
+		keyWithoutTxIn = append(keyWithoutTxIn, []byte(out.PkScript)...)
+	}
+
+	keyWithTxIn = make([]byte, len(keyWithoutTxIn))
+	copy(keyWithTxIn, keyWithoutTxIn)
+	log.Info("-----------------GetKeyFromBtcTx", "keyWithTxin", common.ToHex(keyWithTxIn))
+	log.Info("-----------------GetKeyFromBtcTx", "keyWithoutTxIn", common.ToHex(keyWithoutTxIn))
+	for _, in := range args.TxIn {
+		log.Warn("-----------------GetKeyFromBtcTx, add txIn info to key")
+		keyWithTxIn = append(keyWithTxIn, in.PreviousOutPoint.Hash[:]...)
+		keyWithTxIn = append(keyWithTxIn, big.NewInt(int64(in.PreviousOutPoint.Index)).Bytes()...)
+		keyWithTxIn = append(keyWithTxIn, []byte(in.SignatureScript)...)
+		keyWithTxIn = append(keyWithTxIn, big.NewInt(int64(in.Sequence)).Bytes()...)
+	}
+
+	keyWithoutTxIn = crypto.Keccak256(keyWithoutTxIn)
+	keyWithTxIn = crypto.Keccak256(keyWithTxIn)
+
+	return keyWithoutTxIn, keyWithTxIn
 }

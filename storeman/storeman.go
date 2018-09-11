@@ -250,17 +250,8 @@ func (sa *StoremanAPI) AddValidMpcBtcTxRaw(ctx context.Context, args btc.MsgTxAr
 		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
 	}
 
-	var key, val []byte
-	key = append(key, big.NewInt(int64(args.Version)).Bytes()...)
-	key = append(key, big.NewInt(int64(args.LockTime)).Bytes()...)
-
-	for _, out := range args.TxOut {
-		key = append(key, big.NewInt(out.Value).Bytes()...)
-		key = append(key, []byte(out.PkScript)...)
-	}
-
-	key = crypto.Keccak256(key)
-	val, err = json.Marshal(&args)
+	_, key := validator.GetKeyFromBtcTx(&args)
+	val, err := json.Marshal(&args)
 	if err != nil {
 		log.Error("AddValidMpcBtcTxRaw, marshal fail", "error", err)
 		mpcsyslog.Err("AddValidMpcBtcTxRaw, marshal fail. err:%s", err.Error())
