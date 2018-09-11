@@ -183,15 +183,15 @@ func (sa *StoremanAPI) AddValidMpcTxRaw(ctx context.Context, tx SendTxArgs) erro
 	var key, val []byte
 	if tx.Value == nil {
 		err := errors.New("tx.Value field is required")
-		log.Error("MpcTxRaw, invalid input", "error", err)
-		mpcsyslog.Err("MpcTxRaw, invalid input. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, invalid input", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, invalid input. err:%s", err.Error())
 		return err
 	}
 
 	if tx.Data == nil {
 		err := errors.New("tx.Data should not be empty")
-		log.Error("MpcTxRaw, invalid input", "error", err)
-		mpcsyslog.Err("MpcTxRaw, invalid input. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, invalid input", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, invalid input. err:%s", err.Error())
 		return err
 	}
 
@@ -201,36 +201,36 @@ func (sa *StoremanAPI) AddValidMpcTxRaw(ctx context.Context, tx SendTxArgs) erro
 
 	val, err := json.Marshal(&tx)
 	if err != nil {
-		log.Error("MpcTxRaw, marshal fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, marshal fail. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, marshal fail", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, marshal fail. err:%s", err.Error())
 		return err
 	}
 
 	sdb, err := validator.GetDB()
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
 	err = sdb.Put(key, val)
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
-	log.Info("MpcTxRaw", "key", common.ToHex(key))
-	mpcsyslog.Info("MpcTxRaw. key:%s", common.ToHex(key))
+	log.Info("AddValidMpcTxRaw", "key", common.ToHex(key))
+	mpcsyslog.Info("AddValidMpcTxRaw. key:%s", common.ToHex(key))
 	ret, err := sdb.Get(key)
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
-	log.Info("Succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
-	mpcsyslog.Info("Succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
+	log.Info("AddValidMpcTxRaws succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
+	mpcsyslog.Info("AddValidMpcTxRaw succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
 	return nil
 }
 
@@ -250,44 +250,48 @@ func (sa *StoremanAPI) AddValidMpcBtcTxRaw(ctx context.Context, args btc.MsgTxAr
 		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
 	}
 
-
 	var key, val []byte
-	key = append(key, tx.Value.ToInt().Bytes()...)
-	key = append(key, tx.Data...)
-	key = crypto.Keccak256(key)
+	key = append(key, big.NewInt(int64(args.Version)).Bytes()...)
+	key = append(key, big.NewInt(int64(args.LockTime)).Bytes()...)
 
-	val, err := json.Marshal(&tx)
+	for _, out := range args.TxOut {
+		key = append(key, big.NewInt(out.Value).Bytes()...)
+		key = append(key, []byte(out.PkScript)...)
+	}
+
+	key = crypto.Keccak256(key)
+	val, err = json.Marshal(&args)
 	if err != nil {
-		log.Error("MpcTxRaw, marshal fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, marshal fail. err:%s", err.Error())
+		log.Error("AddValidMpcBtcTxRaw, marshal fail", "error", err)
+		mpcsyslog.Err("AddValidMpcBtcTxRaw, marshal fail. err:%s", err.Error())
 		return err
 	}
 
 	sdb, err := validator.GetDB()
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
 	err = sdb.Put(key, val)
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
-	log.Info("MpcTxRaw", "key", common.ToHex(key))
-	mpcsyslog.Info("MpcTxRaw. key:%s", common.ToHex(key))
+	log.Info("AddValidMpcBtcTxRaw", "key", common.ToHex(key))
+	mpcsyslog.Info("AddValidMpcBtcTxRaw. key:%s", common.ToHex(key))
 	ret, err := sdb.Get(key)
 	if err != nil {
-		log.Error("MpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("MpcTxRaw, getting storeman database fail. err:%s", err.Error())
+		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
+		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
 		return err
 	}
 
-	log.Info("Succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
-	mpcsyslog.Info("Succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
+	log.Info("AddValidMpcBtcTxRaw succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
+	mpcsyslog.Info("AddValidMpcBtcTxRaw succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
 	return nil
 
 	return nil
