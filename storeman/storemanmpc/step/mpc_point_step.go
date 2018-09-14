@@ -9,12 +9,18 @@ import (
 
 type MpcPoint_Step struct {
 	BaseMpcStep
-	resultKey string
+	resultKeys []string
+	signNum int
 }
 
-func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKey string, resultKey string) *MpcPoint_Step {
-	mpc := &MpcPoint_Step{*CreateBaseMpcStep(peers, 1), resultKey}
-	mpc.messages[0] = createPointGenerator(preValueKey)
+func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPoint_Step {
+	signNum := len(preValueKeys)
+	mpc := &MpcPoint_Step{*CreateBaseMpcStep(peers, signNum), resultKeys, signNum}
+
+	for i := 0; i < signNum; i++ {
+		mpc.messages[i] = createPointGenerator(preValueKeys[i])
+	}
+
 	return mpc
 }
 
@@ -23,7 +29,10 @@ func (ptStep *MpcPoint_Step) CreateMessage() []mpcprotocol.StepMessage {
 	pointer := ptStep.messages[0].(*mpcPointGenerator)
 	message[0].Msgcode = mpcprotocol.MPCMessage
 	message[0].PeerID = nil
-	message[0].Data = pointer.seed[:]
+
+	for i := 0; i < ptStep.signNum; i++ {
+		message[0].Data = append(message[0].Data, pointer.seed[:]...)
+	}
 	return message
 }
 
@@ -33,12 +42,14 @@ func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 		return err
 	}
 
-	pointer := ptStep.messages[0].(*mpcPointGenerator)
-	err = result.SetValue(ptStep.resultKey, pointer.result[:])
-	log.Debug("mpc point finish", "x", pointer.result[0].String(), "y", pointer.result[1].String())
-	if err != nil {
-		mpcsyslog.Err("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
-		return err
+	for i := 0; i < ptStep.signNum; i++  {
+		pointer := ptStep.messages[i].(*mpcPointGenerator)
+		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
+		log.Debug("mpc point finish", "x", pointer.result[0].String(), "y", pointer.result[1].String())
+		if err != nil {
+			mpcsyslog.Err("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
+			return err
+		}
 	}
 
 	return nil
@@ -52,13 +63,21 @@ func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 		log.Error("MpcPoint_Step Not Find:", "peerID", msg.PeerID)
 	}
 
-	pointer := ptStep.messages[0].(*mpcPointGenerator)
-	_, exist := pointer.message[seed]
-	if exist {
-		mpcsyslog.Err("MpcPoint_Step.HandleMessage, get msg from seed fail. peer:%s", msg.PeerID.String())
+	if len(msg.Data) != 2*ptStep.signNum {
+		log.Error("MpcPoint_Step HandleMessage, msg data len doesn't match requiremant", "data len", len(msg.Data))
 		return false
 	}
 
-	pointer.message[seed] = [2]big.Int{msg.Data[0], msg.Data[1]}
+	for i := 0; i < ptStep.signNum; i++ {
+		pointer := ptStep.messages[i].(*mpcPointGenerator)
+		_, exist := pointer.message[seed]
+		if exist {
+			mpcsyslog.Err("MpcPoint_Step.HandleMessage, get msg from seed fail. peer:%s", msg.PeerID.String())
+			return false
+		}
+
+		pointer.message[seed] = [2]big.Int{msg.Data[2*i + 0], msg.Data[2*i + 1]}
+	}
+
 	return true
 }

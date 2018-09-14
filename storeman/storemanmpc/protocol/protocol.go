@@ -5,6 +5,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"math/big"
 	"time"
+	"strconv"
 )
 
 const (
@@ -104,4 +105,13 @@ func CheckAccountType(accType string) bool {
 	}
 
 	return false
+}
+
+func GetPreSetKeyArr(keySeed string, num int) []string {
+	keyArr := []string{}
+	for i := 0; i < num; i++ {
+		keyArr = append(keyArr, keySeed + "_" + strconv.Itoa(i))
+	}
+
+	return keyArr
 }

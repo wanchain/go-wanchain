@@ -155,7 +155,7 @@ type SendTxArgs struct {
 	SignType  string          `json:"signType"` //input 'hash' for hash sign (r,s,v), else for full sign(rawTransaction)
 }
 
-//rawtransaction
+//
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (hexutil.Bytes, error) {
 	mpcsyslog.Debug("SignMpcTransaction begin")
 	log.Info("Call SignMpcTransaction", "from", tx.From, "to", tx.To, "Gas", tx.Gas, "GasPrice", tx.GasPrice, "value", tx.Value, "data", tx.Data, "nonce", tx.Nonce, "ChainType", tx.ChainType, "SignType", tx.SignType)
@@ -174,6 +174,38 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 
 	return signed, err
 }
+
+func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) (hexutil.Bytes, error) {
+	mpcsyslog.Debug("SignMpcBtcTransaction begin")
+	log.Warn("-----------------SignMpcBtcTransaction begin", "args", args)
+
+	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
+		return nil, mpcprotocol.ErrTooLessStoreman
+	}
+
+	msgTx, err := btc.GetMsgTxFromMsgTxArgs(&args)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Warn("-----------------AddValidMpcBTCTxRaw", "msgTx", msgTx)
+	for _, txIn := range msgTx.TxIn {
+		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxIn", *txIn)
+	}
+	for _, txOut := range msgTx.TxOut {
+		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
+	}
+
+	signed, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
+	if err == nil {
+		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signed))
+	} else {
+		mpcsyslog.Err("SignMpcBtcTransaction end, err:%s", err.Error())
+	}
+
+	return signed, err
+}
+
 
 // APIs returns the RPC descriptors the Whisper implementation offers
 //MpcTxRaw stores raw data of cross chain transaction for MPC signing verification
