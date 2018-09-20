@@ -183,8 +183,6 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 }
 
 func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) ([]hexutil.Bytes, error) {
-
-
 	{
 		priv := new(ecdsa.PrivateKey)
 		priv.PublicKey.Curve = crypto.S256()
@@ -195,7 +193,6 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 		log.Warn("-----------------SignMpcBtcTransaction", "1 address", addr.String())
 
 	}
-
 
 	mpcsyslog.Debug("SignMpcBtcTransaction begin")
 	log.Warn("-----------------SignMpcBtcTransaction begin", "args", args)
@@ -218,12 +215,13 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	}
 
 	signeds, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
-	if err == nil {
-		for i := 0; i < len(signeds); i++ {
-			mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
-		}
-	} else {
+	if err != nil {
 		mpcsyslog.Err("SignMpcBtcTransaction end, err:%s", err.Error())
+		return nil, err
+	}
+
+	for i := 0; i < len(signeds); i++ {
+		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
 	}
 
 	// test

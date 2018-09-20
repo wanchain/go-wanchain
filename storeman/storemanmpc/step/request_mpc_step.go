@@ -18,6 +18,7 @@ type RequestMpcStep struct {
 	address     big.Int
 	chainID     big.Int
 	chainType   []byte
+	signType	[]byte
 	txCode      []byte
 	message     map[discover.NodeID]bool
 }
@@ -62,6 +63,12 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		req.chainType, err = result.GetByteValue(mpcprotocol.MpcChainType)
 		if err != nil {
 			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcChainType)
+			return err
+		}
+
+		req.signType, err = result.GetByteValue(mpcprotocol.MpcSignType)
+		if err != nil {
+			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcSignType)
 			return err
 		}
 
@@ -112,9 +119,11 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.Data = append(msg.Data, req.txHash)
 		msg.Data = append(msg.Data, req.address)
 		msg.Data = append(msg.Data, req.chainID)
-		msg.BytesData = make([][]byte, 2)
+		msg.Data = append(msg.Data, req.address)
+		msg.BytesData = make([][]byte, 3)
 		msg.BytesData[0] = req.chainType
 		msg.BytesData[1] = req.txCode
+		msg.BytesData[2] = req.signType
 	} else if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
 		msg.BytesData = make([][]byte, 1)
 		msg.BytesData[0] = req.accType

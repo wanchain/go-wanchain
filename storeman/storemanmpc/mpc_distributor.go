@@ -403,8 +403,12 @@ func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) ([
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcAddress, []big.Int{*args.From.Big()}, nil})
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcChainType, nil, []byte("BTC")})
+	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
 
 	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, preSetValues...)
+	if err != nil {
+		return nil, err
+	}
 
 	ret := make([]hexutil.Bytes, 0, len(args.TxIn))
 	pot := 0
@@ -454,6 +458,7 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 
 		value, peers1, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
+			log.Error("-----------------createRequestMpcContext, loadStoremanAddress fail", "err", err);
 			mpcsyslog.Err("load storeman address fail. address:%s", address.String())
 			return []byte{}, err
 		}
@@ -524,25 +529,40 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 
 		log.Warn("-----------------createMpcContext MpcTXSignPeer");
 
-		// load account
-		address := common.BigToAddress(&mpcMessage.Data[2])
-		log.Warn("-----------------createMpcContext", "address", address.String());
-
 		chainType := string(mpcMessage.BytesData[0])
-		log.Warn("-----------------createMpcContext", "chainType", chainType);
+		log.Warn("-----------------createMpcContext", "chainType", string(chainType));
 
 		txBytesData := mpcMessage.BytesData[1]
 		log.Warn("-----------------createMpcContext", "txData", common.ToHex(txBytesData));
 
+		txSignType := mpcMessage.BytesData[2]
+		log.Warn("-----------------createMpcContext", "signType", string(txSignType));
+
 		txHash := mpcMessage.Data[1]
 		log.Warn("-----------------createMpcContext", "txHash", txHash.String());
 
+		address := common.BigToAddress(&mpcMessage.Data[2])
+		log.Warn("-----------------createMpcContext", "address", address.String());
+
+		chainId := mpcMessage.Data[3]
+		log.Warn("-----------------createMpcContext", "chainId", chainId.String());
+
+		mpcAddress := mpcMessage.Data[4]
+		log.Warn("-----------------createMpcContext", "mpcAddress", mpcAddress.String());
+
+		// load account
 		MpcPrivateShare, _, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
 			return err
 		}
 
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, mpcMessage.BytesData[0]})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{mpcAddress}, nil})
+
 		if chainType != "BTC" {
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, mpcMessage.BytesData[2]})
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainID, []big.Int{chainId}, nil})
+
 			signer, err := mpcServer.createMPCTxSigner(chainType, &mpcMessage.Data[3])
 			if err != nil {
 				mpcsyslog.Err("createMPCTxSigner fail. err:%s", err.Error())
@@ -598,7 +618,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 			preSetValue = append(preSetValue, *MpcPrivateShare)
 			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
 			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, []byte("BTC")})
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
 		}
 
 	} else if ctxType == mpcprotocol.MpcCreateLockAccountPeer {
@@ -765,7 +785,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 	log.Warn("-----------------MpcDistributor.SignTransaction begin", "signNum", signNum)
 
 	chainType, err1 := result.GetByteValue(mpcprotocol.MpcChainType)
-	log.Warn("-----------------MpcDistributor.SignTransaction", "chainType", chainType)
+	log.Warn("-----------------MpcDistributor.SignTransaction", "chainType", string(chainType))
 
 	if bytes.Equal(chainType, []byte("BTC")) {
 		txSigns := make([]byte, 0)
