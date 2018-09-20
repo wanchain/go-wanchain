@@ -381,7 +381,7 @@ func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction, fro
 	return value, err
 }
 
-func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) (hexutil.Bytes, error) {
+func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) ([]hexutil.Bytes, error) {
 	mpcsyslog.Debug("CreateRequestBtcMpcSign begin")
 
 	txBytesData, err := rlp.EncodeToBytes(args)
@@ -405,7 +405,15 @@ func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) (h
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcChainType, nil, []byte("BTC")})
 
 	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, preSetValues...)
-	return value, err
+
+	ret := make([]hexutil.Bytes, 0, len(args.TxIn))
+	pot := 0
+	for pot < len(value) {
+		ret = append(ret, value[pot+1:pot+1+int(value[pot])])
+		pot += int(value[pot]) +1
+	}
+
+	return ret, err
 }
 
 //func (mpcServer *MpcDistributor) CreateRequestMpcSignHash(txHash common.Hash, from common.Address) (hexutil.Bytes, error) {
@@ -794,6 +802,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 			log.Warn("-----------------MpcDistributor.SignTransaction", "R", common.ToHex(R[0].Bytes()), "S", common.ToHex(S[0].Bytes()))
 			sign := sinature.Serialize()
 			log.Warn("-----------------MpcDistributor.SignTransaction", "sign", common.ToHex(sign))
+			txSigns = append(txSigns, byte(len(sign) + 1))
 			txSigns = append(txSigns, sign...)
 			log.Warn("-----------------MpcDistributor.SignTransaction", "txSigns", common.ToHex(txSigns))
 			txSigns = append(txSigns, byte(txscript.SigHashAll))

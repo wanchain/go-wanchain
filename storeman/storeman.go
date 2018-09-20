@@ -182,7 +182,7 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 	return signed, err
 }
 
-func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) (hexutil.Bytes, error) {
+func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) ([]hexutil.Bytes, error) {
 
 
 	{
@@ -217,9 +217,11 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxOut", *txOut)
 	}
 
-	signed, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
+	signeds, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
 	if err == nil {
-		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signed))
+		for i := 0; i < len(signeds); i++ {
+			mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
+		}
 	} else {
 		mpcsyslog.Err("SignMpcBtcTransaction end, err:%s", err.Error())
 	}
@@ -227,16 +229,18 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	// test
 	{
 		pk := common.FromHex("03de47cc362c17511f028ceefa6c7e5c5fe10be8b39264f40ddf7b3f33ca59bec2")
-		//signatureScript, _ := txscript.NewScriptBuilder().AddOp(txscript.OP_PUSHDATA1).AddData(signed).AddOp(txscript.OP_PUSHDATA1).AddData(pk).Script()
-		signatureScript, _ := txscript.NewScriptBuilder().AddData(signed).AddData(pk).Script()
-		msgTx.TxIn[0].SignatureScript = signatureScript
+
+		for i, txIn := range msgTx.TxIn {
+			signatureScript, _ := txscript.NewScriptBuilder().AddData(signeds[i]).AddData(pk).Script()
+			txIn.SignatureScript = signatureScript
+		}
+
 		buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSizeStripped()))
 		_ = msgTx.SerializeNoWitness(buf)
 		log.Warn("-----------------SignMpcBtcTransaction, succeed", "rawtx", common.ToHex(buf.Bytes()))
 	}
 
-
-	return signed, err
+	return signeds, err
 }
 
 
