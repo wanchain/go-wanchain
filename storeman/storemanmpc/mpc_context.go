@@ -50,6 +50,8 @@ func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.M
 }
 
 func createMpcContext(contextID uint64, peers []mpcprotocol.PeerInfo, mpcResult mpcprotocol.MpcResultInterface) *MpcContext {
+	log.Warn("-----------------createMpcContext begin")
+
 	mpc := &MpcContext{
 		ContextID:   contextID,
 		peers:       peers,

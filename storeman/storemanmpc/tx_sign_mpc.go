@@ -29,11 +29,13 @@ func acknowledgeTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValu
 }
 
 func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
+	log.Warn("-----------------generateTxSignMpc begin")
 	signNum, err := getSignNumFromTxInfo(mpc)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Warn("-----------------generateTxSignMpc", "signNum", signNum)
 	JRJZ := step.CreateTXSignJR_JZ_Step(mpcprotocol.MPCDegree, &mpc.peers, signNum)
 
 	pointStepPreValueKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignA0, signNum)

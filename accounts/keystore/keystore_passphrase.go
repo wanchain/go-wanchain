@@ -183,6 +183,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		key.Id.String(),
 		version,
 		hex.EncodeToString(key.WAddress[:]),
+		key.Exten,
 	}
 	return json.Marshal(encryptedKeyJSONV3)
 }

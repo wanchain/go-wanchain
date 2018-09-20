@@ -13759,6 +13759,12 @@ module.exports = Wan;
                 params: 1,
                 inputFormatter: [null]
             });
+            var signMpcBtcTransaction = new Method ({
+                name: 'signMpcBtcTransaction',
+                call: 'storeman_signMpcBtcTransaction',
+                params: 1,
+                inputFormatter: [null]
+            });
             var addValidMpcTxRaw = new Method ({
                 name: 'addValidMpcTxRaw',
                 call: 'storeman_addValidMpcTxRaw',
@@ -13779,6 +13785,7 @@ module.exports = Wan;
                 version,
                 createMpcAccount,
                 signMpcTransaction,
+                signMpcBtcTransaction,
                 addValidMpcTxRaw,
                 addValidMpcBtcTxRaw,
                 peers,

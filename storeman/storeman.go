@@ -24,6 +24,13 @@ import (
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/validator"
 	"github.com/wanchain/go-wanchain/storeman/btc"
+	"bytes"
+	"github.com/btcsuite/btcd/txscript"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	//"github.com/btcsuite/btcutil"
+	//"github.com/btcsuite/btcd/chaincfg"
+	//"github.com/btcsuite/btcd/btcec"
 )
 
 type Storeman struct {
@@ -176,6 +183,20 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 }
 
 func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) (hexutil.Bytes, error) {
+
+
+	{
+		priv := new(ecdsa.PrivateKey)
+		priv.PublicKey.Curve = crypto.S256()
+		priv.D = big.NewInt(1)
+		priv.PublicKey.X, priv.PublicKey.Y = crypto.S256().ScalarBaseMult(priv.D.Bytes())
+		log.Warn("-----------------SignMpcBtcTransaction", "1 publicKey", common.Bytes2Hex(keystore.ECDSAPKCompression(&priv.PublicKey)))
+		addr := crypto.PubkeyToRipemd160(&priv.PublicKey)
+		log.Warn("-----------------SignMpcBtcTransaction", "1 address", addr.String())
+
+	}
+
+
 	mpcsyslog.Debug("SignMpcBtcTransaction begin")
 	log.Warn("-----------------SignMpcBtcTransaction begin", "args", args)
 
@@ -188,12 +209,12 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 		return nil, err
 	}
 
-	log.Warn("-----------------AddValidMpcBTCTxRaw", "msgTx", msgTx)
+	log.Warn("-----------------SignMpcBtcTransaction", "msgTx", msgTx)
 	for _, txIn := range msgTx.TxIn {
-		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxIn", *txIn)
+		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxIn", *txIn)
 	}
 	for _, txOut := range msgTx.TxOut {
-		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
+		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxOut", *txOut)
 	}
 
 	signed, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
@@ -202,6 +223,18 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	} else {
 		mpcsyslog.Err("SignMpcBtcTransaction end, err:%s", err.Error())
 	}
+
+	// test
+	{
+		pk := common.FromHex("03de47cc362c17511f028ceefa6c7e5c5fe10be8b39264f40ddf7b3f33ca59bec2")
+		//signatureScript, _ := txscript.NewScriptBuilder().AddOp(txscript.OP_PUSHDATA1).AddData(signed).AddOp(txscript.OP_PUSHDATA1).AddData(pk).Script()
+		signatureScript, _ := txscript.NewScriptBuilder().AddData(signed).AddData(pk).Script()
+		msgTx.TxIn[0].SignatureScript = signatureScript
+		buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSizeStripped()))
+		_ = msgTx.SerializeNoWitness(buf)
+		log.Warn("-----------------SignMpcBtcTransaction, succeed", "rawtx", common.ToHex(buf.Bytes()))
+	}
+
 
 	return signed, err
 }

@@ -61,6 +61,8 @@ type Key struct {
 	PrivateKey2 *ecdsa.PrivateKey
 	// compact wanchain address format
 	WAddress common.WAddress
+	// extended info
+	Exten string
 }
 
 // Used to import and export raw keypair
@@ -94,6 +96,7 @@ type encryptedKeyJSONV3 struct {
 	Id       string     `json:"id"`
 	Version  int        `json:"version"`
 	WAddress string     `json:"waddress"`
+	Exten    string     `json:"exten"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -229,9 +232,13 @@ func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accT
 	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(pShare.Bytes())
 	id := uuid.NewRandom()
 
+	exten := ""
 	addr := common.Address{}
 	if accType == StoremanBtcAcc {
-		addr = crypto.PubkeyToRipemd160(*pKey)
+		addr = crypto.PubkeyToRipemd160(pKey)
+		exten = common.Bytes2Hex(ECDSAPKCompression(pKey))
+
+
 	} else {
 		addr = crypto.PubkeyToAddress(*pKey)
 	}
@@ -241,6 +248,7 @@ func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accT
 		Address:     addr,
 		PrivateKey:  priv,
 		PrivateKey2: priv,
+		Exten:       exten,
 	}
 
 	//3 bytes for every seed

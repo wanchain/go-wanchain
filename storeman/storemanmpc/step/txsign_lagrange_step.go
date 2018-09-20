@@ -14,6 +14,7 @@ type TXSign_Lagrange_Step struct {
 }
 
 func CreateTXSign_Lagrange_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *TXSign_Lagrange_Step {
+	log.Warn("-----------------CreateTXSign_Lagrange_Step begin")
 	signNum := len(preValueKeys)
 	mpc := &TXSign_Lagrange_Step{*CreateBaseMpcStep(peers, signNum), resultKeys, signNum}
 
@@ -25,39 +26,27 @@ func CreateTXSign_Lagrange_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []st
 }
 
 func (lagStep *TXSign_Lagrange_Step) CreateMessage() []mpcprotocol.StepMessage {
+	log.Warn("-----------------TXSign_Lagrange_Step.CreateMessage begin")
 	message := make([]mpcprotocol.StepMessage, 1)
 	message[0].Msgcode = mpcprotocol.MPCMessage
 	message[0].PeerID = nil
-	message[0].Data = make([]big.Int, 1)
+	message[0].Data = make([]big.Int, 0, lagStep.signNum)
 
 	for i := 0; i < lagStep.signNum; i++ {
 		lag := lagStep.messages[i].(*lagrangeGenerator)
 		message[0].Data = append(message[0].Data, lag.seed)
+		log.Warn("-----------------TXSign_Lagrange_Step.CreateMessage", "seed", lag.seed.String())
 	}
 
 	return message
 }
 
-func (lagStep *TXSign_Lagrange_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	err := lagStep.BaseMpcStep.FinishStep()
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < lagStep.signNum; i++ {
-		lag := lagStep.messages[i].(*lagrangeGenerator)
-		err = result.SetValue(lagStep.resultKeys[i], []big.Int{lag.result})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (lagStep *TXSign_Lagrange_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+	log.Warn("-----------------TXSign_Lagrange_Step.HandleMessage begin")
+
 	log.Debug("lagrange step", "peerID", msg.PeerID)
 	seed := lagStep.getPeerSeed(msg.PeerID)
+	log.Warn("-----------------TXSign_Lagrange_Step.HandleMessage", "peer", msg.PeerID.String(), "seed", seed)
 	if seed == 0 {
 		mpcsyslog.Err("TXSign_Lagrange_Step.HandleMessage, get seed fail. peer:%s", msg.PeerID.String())
 		log.Error("lagrange step", "peerID", msg.PeerID)
@@ -72,7 +61,31 @@ func (lagStep *TXSign_Lagrange_Step) HandleMessage(msg *mpcprotocol.StepMessage)
 		}
 
 		lag.message[seed] = msg.Data[i]
+		log.Warn("-----------------TXSign_Lagrange_Step.HandleMessage", "seed", seed, "i", i, "data", msg.Data[i].String())
 	}
 
+	log.Warn("-----------------TXSign_Lagrange_Step.HandleMessage succees")
 	return true
 }
+
+func (lagStep *TXSign_Lagrange_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+	log.Warn("-----------------TXSign_Lagrange_Step.FinishStep begin")
+	err := lagStep.BaseMpcStep.FinishStep()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < lagStep.signNum; i++ {
+		lag := lagStep.messages[i].(*lagrangeGenerator)
+		err = result.SetValue(lagStep.resultKeys[i], []big.Int{lag.result})
+		log.Warn("-----------------TXSign_Lagrange_Step.FinishStep", "key", lagStep.resultKeys[i], "value", lag.result.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Warn("-----------------TXSign_Lagrange_Step.FinishStep succeed")
+	return nil
+}
+
+

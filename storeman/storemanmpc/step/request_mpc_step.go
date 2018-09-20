@@ -23,6 +23,8 @@ type RequestMpcStep struct {
 }
 
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
+	log.Warn("-----------------RequestMpcStep.InitStep begin")
+
 	if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
 		findMap := make(map[uint64]bool)
 		rand.Seed(time.Now().UnixNano())
@@ -50,13 +52,6 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		log.Warn("-----------------RequestMpcStep.InitStep", "accType", string(accType[:]))
 
 	} else if req.messageType == mpcprotocol.MpcTXSignLeader {
-		hash, err := result.GetValue(mpcprotocol.MpcTxHash)
-		if err != nil {
-			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcTxHash)
-			return err
-		}
-
-		req.txHash = hash[0]
 		addr, err := result.GetValue(mpcprotocol.MpcAddress)
 		if err != nil {
 			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcAddress)
@@ -76,23 +71,35 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 			return err
 		}
 
-		chainID, err := result.GetValue(mpcprotocol.MpcChainID)
-		if err != nil {
-			mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcChainID)
-			return err
-		}
+		if string(req.chainType) != "BTC" {
+			hash, err := result.GetValue(mpcprotocol.MpcTxHash + "_0")
+			if err != nil {
+				mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcTxHash)
+				return err
+			}
 
-		req.chainID = chainID[0]
+			req.txHash = hash[0]
+			chainID, err := result.GetValue(mpcprotocol.MpcChainID)
+			if err != nil {
+				mpcsyslog.Err("RequestMpcStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcChainID)
+				return err
+			}
+
+			req.chainID = chainID[0]
+		}
 	}
 
 	return nil
 }
 
 func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *RequestMpcStep {
+	log.Warn("-----------------CreateRequestMpcStep begin")
+
 	return &RequestMpcStep{BaseStep: *CreateBaseStep(peers, len(*peers)-1), messageType: messageType, message: make(map[discover.NodeID]bool)}
 }
 
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
+	log.Warn("-----------------RequestMpcStep.CreateMessage begin")
 	msg := mpcprotocol.StepMessage{
 		Msgcode:mpcprotocol.RequestMPC,
 		PeerID:nil,
@@ -117,6 +124,7 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 }
 
 func (req *RequestMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+	log.Warn("-----------------RequestMpcStep.FinishStep begin")
 	err := req.BaseStep.FinishStep()
 	if err != nil {
 		return err
@@ -129,6 +137,7 @@ func (req *RequestMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc
 }
 
 func (req *RequestMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+	log.Warn("-----------------RequestMpcStep.HandleMessage begin", "peerID", msg.PeerID)
 	log.Debug("RequestMpcStep handle message", "peerID", msg.PeerID)
 	_, exist := req.message[*msg.PeerID]
 	if exist {

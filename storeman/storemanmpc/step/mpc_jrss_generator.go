@@ -6,6 +6,8 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 type RandomPolynomialValue struct {
@@ -35,6 +37,8 @@ func (poly *RandomPolynomialValue) initialize(peers *[]mpcprotocol.PeerInfo, res
 	if !poly.bJRSS {
 		poly.randCoefficient[0] = *big.NewInt(0)
 	}
+
+	log.Warn("-----------------RandomPolynomialValue.initialize", "randCoefficient 0", common.ToHex(poly.randCoefficient[0].Bytes()))
 
 	for i := 0; i < len(poly.polyValue); i++ {
 		poly.polyValue[i] = mpccrypto.EvaluatePoly(poly.randCoefficient, new(big.Int).SetUint64((*peers)[i].Seed))

@@ -40,7 +40,11 @@ import (
 	"crypto/rsa"
 
 	"github.com/wanchain/go-wanchain/log"
-	"golang.org/x/crypto/ripemd160"
+	//"golang.org/x/crypto/ripemd160"
+	//"crypto/sha256"
+	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/btcec"
 )
 
 var (
@@ -202,11 +206,26 @@ func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
 
-func PubkeyToRipemd160(p ecdsa.PublicKey) common.Address  {
-	pubBytes := FromECDSAPub(&p)
-	ripemd := ripemd160.New()
-	ripemd.Write(pubBytes)
-	return common.BytesToAddress(ripemd.Sum(nil)[:20])
+func PubkeyToRipemd160(p *ecdsa.PublicKey) common.Address  {
+	//pk := (*btcec.PublicKey)(&p).SerializeUncompressed()
+	pk := (*btcec.PublicKey)(p).SerializeCompressed()
+	log.Warn("-----------------PubkeyToRipemd160 begin", "pk", common.ToHex(pk))
+	address, err := btcutil.NewAddressPubKeyHash(
+		btcutil.Hash160(pk), &chaincfg.TestNet3Params)
+	if err != nil {
+		log.Error("get btc address from pubkey fail.", "err", err)
+		return common.Address{}
+	}
+
+	var ret common.Address
+	copy(ret[:], address.Hash160()[:])
+
+	//pubBytes := FromECDSAPub(&p)
+	//h256 := sha256.Sum256(pubBytes)
+	//ripemd := ripemd160.New()
+	//ripemd.Write(h256[:])
+	//return common.BytesToAddress(ripemd.Sum(nil)[:20])
+	return ret
 }
 
 func zeroBytes(bytes []byte) {

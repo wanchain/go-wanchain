@@ -12,7 +12,11 @@ type BaseMpcResult struct {
 }
 
 func (result *BaseMpcResult) InitializeValue(preSetValue ...MpcValue) {
+	log.Warn("-----------------BaseMpcResult.InitializeValue begin")
+
 	for i := 0; i < len(preSetValue); i++ {
+		log.Warn("-----------------BaseMpcResult.InitializeValue", "value", preSetValue[i].String())
+
 		if preSetValue[i].Value != nil {
 			result.SetValue(preSetValue[i].Key, preSetValue[i].Value)
 		} else if preSetValue[i].ByteValue != nil {
@@ -22,6 +26,8 @@ func (result *BaseMpcResult) InitializeValue(preSetValue ...MpcValue) {
 }
 
 func createMpcBaseMpcResult() *BaseMpcResult {
+	log.Warn("-----------------createMpcBaseMpcResult begin")
+
 	return &BaseMpcResult{make(map[string][]big.Int), make(map[string][]byte)}
 }
 
@@ -36,6 +42,7 @@ func (mpc *BaseMpcResult) GetValue(key string) ([]big.Int, error) {
 		return value, nil
 	}
 
+	log.Error("BaseMpcResult GetValue fail.", "key", key)
 	return value, mpcprotocol.ErrMpcResultExist
 }
 
@@ -55,5 +62,6 @@ func (mpc *BaseMpcResult) GetByteValue(key string) ([]byte, error) {
 }
 
 func (mpc *BaseMpcResult) Initialize() error {
+	log.Warn("-----------------BaseMpcResult.Initialize begin")
 	return nil
 }

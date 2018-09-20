@@ -18,6 +18,7 @@ type TxSign_CalSignStep struct {
 }
 
 func CreateTxSign_CalSignStep(peers *[]mpcprotocol.PeerInfo, resultKey string, signNum int) *TxSign_CalSignStep {
+	log.Warn("-----------------CreateTxSign_CalSignStep begin")
 	signSeedKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcTxSignSeed, signNum)
 	resultKeys := mpcprotocol.GetPreSetKeyArr(resultKey, signNum)
 	mpc := &TxSign_CalSignStep{*CreateTXSign_Lagrange_Step(peers, signSeedKeys, resultKeys), signNum}
@@ -25,15 +26,20 @@ func CreateTxSign_CalSignStep(peers *[]mpcprotocol.PeerInfo, resultKey string, s
 }
 
 func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface) error {
+	log.Warn("-----------------TxSign_CalSignStep.InitStep begin")
 
 	privateKey, err := result.GetValue(mpcprotocol.MpcPrivateShare)
+	log.Warn("-----------------TxSign_CalSignStep.InitStep", mpcprotocol.MpcPrivateShare, common.ToHex(privateKey[0].Bytes()))
 	if err != nil {
 		mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s", mpcprotocol.MpcPrivateShare)
 		return err
 	}
 
 	for i := 0; i < txStep.signNum; i++ {
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "i", i)
+
 		ar, err := result.GetValue(mpcprotocol.MpcSignARResult + "_" + strconv.Itoa(i))
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcSignARResult + "_" + strconv.Itoa(i), "value", ar[0].String())
 		if err != nil {
 			mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s, i:%d", mpcprotocol.MpcSignARResult, i)
 			log.Error("TxSign_CalSignStep InitStep, getValue fail.", "key", mpcprotocol.MpcSignARResult, "i", i)
@@ -41,6 +47,7 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 		}
 
 		aPoint, err := result.GetValue(mpcprotocol.MpcSignAPoint + "_" + strconv.Itoa(i))
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcSignAPoint + "_" + strconv.Itoa(i), "value", aPoint[0].String())
 		if err != nil {
 			mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s, i:%d", mpcprotocol.MpcSignAPoint, i)
 			log.Error("TxSign_CalSignStep InitStep, getValue fail.", "key", mpcprotocol.MpcSignAPoint, "i", i)
@@ -48,6 +55,7 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 		}
 
 		r, err := result.GetValue(mpcprotocol.MpcSignR + "_" + strconv.Itoa(i))
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcSignR + "_" + strconv.Itoa(i), "value", r[0].String())
 		if err != nil {
 			mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s, i:%d", mpcprotocol.MpcSignR, i)
 			log.Error("TxSign_CalSignStep InitStep, getValue fail.", "key", mpcprotocol.MpcSignR, "i", i)
@@ -55,6 +63,7 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 		}
 
 		c, err := result.GetValue(mpcprotocol.MpcSignC + "_" + strconv.Itoa(i))
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcSignC + "_" + strconv.Itoa(i), "value", c[0].String())
 		if err != nil {
 			mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s, i:%d", mpcprotocol.MpcSignC, i)
 			log.Error("TxSign_CalSignStep InitStep, getValue fail.", "key", mpcprotocol.MpcSignC, "i", i)
@@ -62,6 +71,7 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 		}
 
 		txHash, err := result.GetValue(mpcprotocol.MpcTxHash + "_" + strconv.Itoa(i))
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcTxHash + "_" + strconv.Itoa(i), "value", common.ToHex(txHash[0].Bytes()))
 		if err != nil {
 			mpcsyslog.Err("TxSign_CalSignStep.InitStep, GetValue fail. key:%s, i:%d", mpcprotocol.MpcTxHash, i)
 			log.Error("TxSign_CalSignStep InitStep, getValue fail.", "key", mpcprotocol.MpcTxHash, "i", i)
@@ -93,6 +103,8 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 			v |= 1
 		}
 
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcTxSignResultR + "_" + strconv.Itoa(i), "value", SignSeed.String(), "key", mpcprotocol.MpcTxSignResultV + "_" + strconv.Itoa(i), "value", v)
+
 		log.Debug("calsign", "v", v)
 		result.SetValue(mpcprotocol.MpcTxSignResultR + "_" + strconv.Itoa(i), []big.Int{*SignSeed})
 		result.SetValue(mpcprotocol.MpcTxSignResultV + "_" + strconv.Itoa(i), []big.Int{*big.NewInt(v)})
@@ -108,12 +120,15 @@ func (txStep *TxSign_CalSignStep) InitStep(result mpcprotocol.MpcResultInterface
 
 		log.Debug("calsign", "seed", SignSeed.String())
 		result.SetValue(mpcprotocol.MpcTxSignSeed + "_" + strconv.Itoa(i), []big.Int{*SignSeed})
+		log.Warn("-----------------TxSign_CalSignStep.InitStep", "key", mpcprotocol.MpcTxSignSeed + "_" + strconv.Itoa(i), "value", SignSeed.String())
 	}
 
 	return txStep.TXSign_Lagrange_Step.InitStep(result)
 }
 
 func (txStep *TxSign_CalSignStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+	log.Warn("-----------------TxSign_CalSignStep.FinishStep begin")
+
 	err := txStep.TXSign_Lagrange_Step.FinishStep(result, mpc)
 	if err != nil {
 		return err
@@ -154,5 +169,6 @@ func (txStep *TxSign_CalSignStep) FinishStep(result mpcprotocol.MpcResultInterfa
 		}
 	}
 
+	log.Warn("-----------------TxSign_CalSignStep.FinishStep succeed")
 	return nil
 }

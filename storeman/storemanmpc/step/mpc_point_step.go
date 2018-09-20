@@ -14,6 +14,12 @@ type MpcPoint_Step struct {
 }
 
 func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPoint_Step {
+	log.Warn("-----------------CreateMpcPoint_Step begin")
+	for i := range preValueKeys {
+		log.Warn("-----------------CreateMpcPoint_Step", "i", i, "preValueKey", preValueKeys[i])
+		log.Warn("-----------------CreateMpcPoint_Step", "i", i, "resultKey", resultKeys[i])
+	}
+
 	signNum := len(preValueKeys)
 	mpc := &MpcPoint_Step{*CreateBaseMpcStep(peers, signNum), resultKeys, signNum}
 
@@ -25,37 +31,20 @@ func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, r
 }
 
 func (ptStep *MpcPoint_Step) CreateMessage() []mpcprotocol.StepMessage {
+	log.Warn("-----------------MpcPoint_Step.CreateMessage begin")
 	message := make([]mpcprotocol.StepMessage, 1)
-	pointer := ptStep.messages[0].(*mpcPointGenerator)
 	message[0].Msgcode = mpcprotocol.MPCMessage
 	message[0].PeerID = nil
 
 	for i := 0; i < ptStep.signNum; i++ {
+		pointer := ptStep.messages[i].(*mpcPointGenerator)
 		message[0].Data = append(message[0].Data, pointer.seed[:]...)
 	}
 	return message
 }
 
-func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	err := ptStep.BaseMpcStep.FinishStep()
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < ptStep.signNum; i++  {
-		pointer := ptStep.messages[i].(*mpcPointGenerator)
-		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
-		log.Debug("mpc point finish", "x", pointer.result[0].String(), "y", pointer.result[1].String())
-		if err != nil {
-			mpcsyslog.Err("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+	log.Warn("-----------------MpcPoint_Step.HandleMessage begin")
 	log.Debug("mpc point handle message", "peerID", msg.PeerID)
 	seed := ptStep.getPeerSeed(msg.PeerID)
 	if seed == 0 {
@@ -81,3 +70,26 @@ func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 
 	return true
 }
+
+func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+	log.Warn("-----------------MpcPoint_Step.FinishStep begin")
+	err := ptStep.BaseMpcStep.FinishStep()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < ptStep.signNum; i++  {
+		pointer := ptStep.messages[i].(*mpcPointGenerator)
+		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
+		log.Warn("-----------------MpcPoint_Step.FinishStep", "key", ptStep.resultKeys[i], "value0", pointer.result[0].String(), "value1", pointer.result[1].String())
+		log.Debug("mpc point finish", "x", pointer.result[0].String(), "y", pointer.result[1].String())
+		if err != nil {
+			mpcsyslog.Err("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
+			return err
+		}
+	}
+
+	log.Warn("-----------------MpcPoint_Step.FinishStep succeed")
+	return nil
+}
+

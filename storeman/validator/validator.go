@@ -30,6 +30,11 @@ type SendTxArgs struct {
 }
 
 func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLeaderHashBytes []byte) bool {
+
+	// *************test
+	return true;
+
+
 	var leaderTx types.Transaction
 	err := rlp.DecodeBytes(leaderTxRawData, &leaderTx)
 	if err != nil {
@@ -191,7 +196,7 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.LockTime)).Bytes()...)
 
 	for _, out := range args.TxOut {
-		keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(out.Value).Bytes()...)
+		keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(out.Value)).Bytes()...)
 		keyWithoutTxIn = append(keyWithoutTxIn, []byte(out.PkScript)...)
 	}
 
