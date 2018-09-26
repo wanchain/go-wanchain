@@ -78,7 +78,7 @@ func (lagStep *TXSign_Lagrange_Step) FinishStep(result mpcprotocol.MpcResultInte
 	for i := 0; i < lagStep.signNum; i++ {
 		lag := lagStep.messages[i].(*lagrangeGenerator)
 		err = result.SetValue(lagStep.resultKeys[i], []big.Int{lag.result})
-		log.Warn("-----------------TXSign_Lagrange_Step.FinishStep", "key", lagStep.resultKeys[i], "value", lag.result.String())
+		log.Warn("-----------------TXSign_Lagrange_Step.FinishStep", lagStep.resultKeys[i], lag.result.String())
 		if err != nil {
 			return err
 		}

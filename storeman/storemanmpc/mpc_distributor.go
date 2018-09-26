@@ -605,6 +605,21 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 
 			log.Warn("-----------------createMpcContext, rlp deencode tx succeed", "btcTx", btcTx)
 
+			verifyResult := validator.ValidateBtcTx(&btcTx)
+			if !verifyResult {
+				mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcMessage.ContextID,
+					StepID: 0,
+					Peers:  []byte(mpcprotocol.ErrFailedTxVerify.Error())}
+				peerInfo := mpcServer.getMessagePeers(mpcMessage)
+				peerIDs := make([]discover.NodeID, 0)
+				for _, item := range *peerInfo {
+					peerIDs = append(peerIDs, item.PeerID)
+				}
+
+				mpcServer.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
+				return mpcprotocol.ErrFailedTxVerify
+			}
+
 			txHashes, err := btc.GetHashedForEachTxIn(&btcTx)
 			if err != nil {
 				log.Warn("-----------------createMpcContext, GetHashedForEachTxIn fail", "err", err)
@@ -837,7 +852,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 		}
 
 		result.SetByteValue(mpcprotocol.MpcContextResult, txSigns)
-		log.Warn("-----------------MpcDistributor.SignTransaction", "key", mpcprotocol.MpcContextResult, "value", common.ToHex(txSigns))
+		log.Warn("-----------------MpcDistributor.SignTransaction", mpcprotocol.MpcContextResult, common.ToHex(txSigns))
 		return nil
 
 	} else {

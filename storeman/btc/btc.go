@@ -24,7 +24,7 @@ type TxInArgs struct {
 	PreviousOutPoint OutPointArg
 	SignatureScript  string			// hex string
 	Sequence         uint32
-	PubKeyScrip		 string			// hex string
+	PkScript		 string			// hex string
 }
 
 type TxOutArgs struct {
@@ -40,6 +40,50 @@ type MsgTxArgs struct {
 	From     common.Address
 }
 
+func (msg *MsgTxArgs)Cmp(arg *MsgTxArgs) bool {
+	if arg == nil {
+		return msg == nil
+	}
+
+	if msg == nil {
+		return false
+	}
+
+	if msg.Version != arg.Version {
+		return false
+	}
+
+	if msg.LockTime != arg.LockTime {
+		return false
+	}
+
+	if msg.From != arg.From {
+		return false
+	}
+
+	if len(msg.TxIn) != len(arg.TxIn) {
+		return false
+	}
+
+	if len(msg.TxOut) != len(arg.TxOut) {
+		return false
+	}
+
+	for i, txIn := range msg.TxIn {
+		if txIn != arg.TxIn[i] {
+			return false
+		}
+	}
+
+	for i, txOut := range msg.TxOut {
+		if txOut != msg.TxOut[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 	if args == nil {
 		return nil, errors.New("invalid btc MsgTxArgs")
@@ -47,10 +91,6 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 
 	if args.Version != BTC_VERSION {
 		return nil, errors.New("invalid btc tx version")
-	}
-
-	if args.LockTime != 0 {
-		return nil, errors.New("invalid btc tx lock time")
 	}
 
 	ret := &wire.MsgTx{int32(args.Version), make([]*wire.TxIn, 0, len(args.TxIn)), make([]*wire.TxOut, 0, len(args.TxOut)), args.LockTime}
@@ -90,13 +130,6 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 	return ret, nil
 }
 
-//func PrintBtcTx(args * MsgTxArgs) {
-//	if args == nil {
-//		return
-//	}
-//
-//
-//}
 
 func GetHashedForEachTxIn(args *MsgTxArgs) ([]common.Hash, error) {
 	log.Warn("-----------------GetHashedForEachTxIn begin")
@@ -107,8 +140,8 @@ func GetHashedForEachTxIn(args *MsgTxArgs) ([]common.Hash, error) {
 
 	hashes := []common.Hash{}
 	for i := 0; i < len(args.TxIn); i++ {
-		log.Warn("-----------------GetHashedForEachTxIn", "i", i, "pkScript", args.TxIn[i].PubKeyScrip)
-		hash, err := txscript.CalcSignatureHash(common.FromHex(args.TxIn[i].PubKeyScrip), txscript.SigHashAll, tx, i)
+		log.Warn("-----------------GetHashedForEachTxIn", "i", i, "pkScript", args.TxIn[i].PkScript)
+		hash, err := txscript.CalcSignatureHash(common.FromHex(args.TxIn[i].PkScript), txscript.SigHashAll, tx, i)
 		if err != nil {
 			log.Error("GetHashedForEachTxIn, CalcSignatureHash fail.", "err", err)
 			return nil, err

@@ -13,13 +13,14 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 )
 
 func TestMpcDatabase(t *testing.T) {
 	to1 := common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a")
 	nonce := hexutil.Uint64(100)
 
-	tx := SendTxArgs{
+	tx := mpcprotocol.SendTxArgs{
 		From:      common.HexToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
 		To:        &to1,
 		Gas:       (*hexutil.Big)(big.NewInt(100)),
@@ -71,7 +72,7 @@ func TestMpcDatabase(t *testing.T) {
 		log.Error("database storeage ERROR", "error", errors.New("database storeage ERROR"))
 	}
 
-	var dec SendTxArgs
+	var dec mpcprotocol.SendTxArgs
 	err = json.Unmarshal(ret, &dec)
 	if err != nil {
 		log.Error("error", "error", err)

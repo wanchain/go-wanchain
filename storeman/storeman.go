@@ -2,7 +2,6 @@ package storeman
 
 import (
 	"context"
-	"encoding/json"
 	"math/big"
 	"path/filepath"
 	"sync"
@@ -14,7 +13,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
@@ -24,13 +22,6 @@ import (
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/validator"
 	"github.com/wanchain/go-wanchain/storeman/btc"
-	"bytes"
-	"github.com/btcsuite/btcd/txscript"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	//"github.com/btcsuite/btcutil"
-	//"github.com/btcsuite/btcd/chaincfg"
-	//"github.com/btcsuite/btcd/btcec"
 )
 
 type Storeman struct {
@@ -144,26 +135,9 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 	return addr, err
 }
 
-type SignTxHashArgs struct {
-	From   common.Address `json:"from"`
-	TxHash common.Hash    `json:"txhash"`
-}
-
-type SendTxArgs struct {
-	From      common.Address  `json:"from"`
-	To        *common.Address `json:"to"`
-	Gas       *hexutil.Big    `json:"gas"`
-	GasPrice  *hexutil.Big    `json:"gasPrice"`
-	Value     *hexutil.Big    `json:"value"`
-	Data      hexutil.Bytes   `json:"data"`
-	Nonce     *hexutil.Uint64 `json:"nonce"`
-	ChainType string          `json:"chainType"`// 'WAN' or 'ETH'
-	ChainID   *hexutil.Big    `json:"chainID"`
-	SignType  string          `json:"signType"` //input 'hash' for hash sign (r,s,v), else for full sign(rawTransaction)
-}
 
 //
-func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (hexutil.Bytes, error) {
+func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
 	mpcsyslog.Debug("SignMpcTransaction begin")
 	log.Info("Call SignMpcTransaction", "from", tx.From, "to", tx.To, "Gas", tx.Gas, "GasPrice", tx.GasPrice, "value", tx.Value, "data", tx.Data, "nonce", tx.Nonce, "ChainType", tx.ChainType, "SignType", tx.SignType)
 
@@ -183,17 +157,6 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx SendTxArgs) (h
 }
 
 func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) ([]hexutil.Bytes, error) {
-	{
-		priv := new(ecdsa.PrivateKey)
-		priv.PublicKey.Curve = crypto.S256()
-		priv.D = big.NewInt(1)
-		priv.PublicKey.X, priv.PublicKey.Y = crypto.S256().ScalarBaseMult(priv.D.Bytes())
-		log.Warn("-----------------SignMpcBtcTransaction", "1 publicKey", common.Bytes2Hex(keystore.ECDSAPKCompression(&priv.PublicKey)))
-		addr := crypto.PubkeyToRipemd160(&priv.PublicKey)
-		log.Warn("-----------------SignMpcBtcTransaction", "1 address", addr.String())
-
-	}
-
 	mpcsyslog.Debug("SignMpcBtcTransaction begin")
 	log.Warn("-----------------SignMpcBtcTransaction begin", "args", args)
 
@@ -224,137 +187,20 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
 	}
 
-	// test
-	{
-		pk := common.FromHex("03de47cc362c17511f028ceefa6c7e5c5fe10be8b39264f40ddf7b3f33ca59bec2")
-
-		for i, txIn := range msgTx.TxIn {
-			signatureScript, _ := txscript.NewScriptBuilder().AddData(signeds[i]).AddData(pk).Script()
-			txIn.SignatureScript = signatureScript
-		}
-
-		buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSizeStripped()))
-		_ = msgTx.SerializeNoWitness(buf)
-		log.Warn("-----------------SignMpcBtcTransaction, succeed", "rawtx", common.ToHex(buf.Bytes()))
-	}
-
 	return signeds, err
 }
 
 
 // APIs returns the RPC descriptors the Whisper implementation offers
-//MpcTxRaw stores raw data of cross chain transaction for MPC signing verification
-func (sa *StoremanAPI) AddValidMpcTxRaw(ctx context.Context, tx SendTxArgs) error {
-	log.Warn("-----------------AddValidMpcTxRaw begin", "tx", tx)
-
-	var key, val []byte
-	if tx.Value == nil {
-		err := errors.New("tx.Value field is required")
-		log.Error("AddValidMpcTxRaw, invalid input", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, invalid input. err:%s", err.Error())
-		return err
-	}
-
-	if tx.Data == nil {
-		err := errors.New("tx.Data should not be empty")
-		log.Error("AddValidMpcTxRaw, invalid input", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, invalid input. err:%s", err.Error())
-		return err
-	}
-
-	key = append(key, tx.Value.ToInt().Bytes()...)
-	key = append(key, tx.Data...)
-	key = crypto.Keccak256(key)
-
-	val, err := json.Marshal(&tx)
-	if err != nil {
-		log.Error("AddValidMpcTxRaw, marshal fail", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, marshal fail. err:%s", err.Error())
-		return err
-	}
-
-	sdb, err := validator.GetDB()
-	if err != nil {
-		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	err = sdb.Put(key, val)
-	if err != nil {
-		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	log.Info("AddValidMpcTxRaw", "key", common.ToHex(key))
-	mpcsyslog.Info("AddValidMpcTxRaw. key:%s", common.ToHex(key))
-	ret, err := sdb.Get(key)
-	if err != nil {
-		log.Error("AddValidMpcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	log.Info("AddValidMpcTxRaws succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
-	mpcsyslog.Info("AddValidMpcTxRaw succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
-	return nil
+//AddValidMpcTx stores raw data of cross chain transaction for MPC signing verification
+func (sa *StoremanAPI) AddValidMpcTx(ctx context.Context, tx mpcprotocol.SendTxArgs) error {
+	return validator.AddValidMpcTx(&tx)
 }
 
 
-func (sa *StoremanAPI) AddValidMpcBtcTxRaw(ctx context.Context, args btc.MsgTxArgs) error {
-	log.Warn("-----------------AddValidMpcBTCTxRaw begin", "args", args)
-	msgTx, err := btc.GetMsgTxFromMsgTxArgs(&args)
-	if err != nil {
-		return err
-	}
-
-	log.Warn("-----------------AddValidMpcBTCTxRaw", "msgTx", msgTx)
-	for _, txIn := range msgTx.TxIn {
-		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxIn", *txIn)
-	}
-	for _, txOut := range msgTx.TxOut {
-		log.Warn("-----------------AddValidMpcBTCTxRaw, msgTx", "TxOut", *txOut)
-	}
-
-	_, key := validator.GetKeyFromBtcTx(&args)
-	val, err := json.Marshal(&args)
-	if err != nil {
-		log.Error("AddValidMpcBtcTxRaw, marshal fail", "error", err)
-		mpcsyslog.Err("AddValidMpcBtcTxRaw, marshal fail. err:%s", err.Error())
-		return err
-	}
-
-	sdb, err := validator.GetDB()
-	if err != nil {
-		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	err = sdb.Put(key, val)
-	if err != nil {
-		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	log.Info("AddValidMpcBtcTxRaw", "key", common.ToHex(key))
-	mpcsyslog.Info("AddValidMpcBtcTxRaw. key:%s", common.ToHex(key))
-	ret, err := sdb.Get(key)
-	if err != nil {
-		log.Error("AddValidMpcBtcTxRaw, getting storeman database fail", "error", err)
-		mpcsyslog.Err("AddValidMpcBtcTxRaw, getting storeman database fail. err:%s", err.Error())
-		return err
-	}
-
-	log.Info("AddValidMpcBtcTxRaw succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
-	mpcsyslog.Info("AddValidMpcBtcTxRaw succeed to get data from leveldb after putting key-val pair. ret:%s", string(ret))
-	return nil
-
-	return nil
+func (sa *StoremanAPI) AddValidMpcBtcTx(ctx context.Context, args btc.MsgTxArgs) error {
+	return validator.AddValidMpcBtcTx(&args)
 }
-
 
 // APIs returns the RPC descriptors the Whisper implementation offers
 func (sm *Storeman) APIs() []rpc.API {

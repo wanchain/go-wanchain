@@ -39,7 +39,7 @@ func (lag *lagrangeGenerator) calculateResult() error {
 	f := []big.Int{}
 	seed := []big.Int{}
 	for key, value := range lag.message {
-		log.Warn("-----------------lagrangeGenerator.calculateResult", "key", key, "value", value.String())
+		log.Warn("-----------------lagrangeGenerator.calculateResult", key, value.String())
 
 		f = append(f, value)
 		seed = append(seed, *new(big.Int).SetUint64(key))
