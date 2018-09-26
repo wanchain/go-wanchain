@@ -16,6 +16,7 @@ import (
 	"strings"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/storeman/btc"
+	"fmt"
 )
 
 var (
@@ -46,7 +47,7 @@ var (
 		From : common.HexToAddress("0x0000000000000000000000000000000000000011"),
 	}
 
-	noticeSCDefine = `[{"constant":false,"inputs":[{"name":"storeman","type":"address"},{"name":"userWanAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"btc2wbtcLockNotice","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"storeman","type":"address"},{"name":"userBtcAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"wbtc2btcLockNotice","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"storeman","type":"address"},{"name":"userWanAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"btc2wbtcLockNotice2","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"storeman","type":"address"},{"name":"userBtcAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"wbtc2btcLockNotice2","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
+	noticeSCDefine = `[{"constant":false,"inputs":[{"name":"stmWanAddr","type":"address"},{"name":"userBtcAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"btc2wbtcLockNotice","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"stmBtcAddr","type":"address"},{"name":"userWanAddr","type":"address"},{"name":"userBtcAddr","type":"address"},{"name":"xHash","type":"bytes32"},{"name":"txHash","type":"bytes32"},{"name":"lockedTimestamp","type":"uint256"}],"name":"wbtc2btcLockNotice","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
 )
 
 
@@ -193,8 +194,9 @@ func TestIsNoticeTransaction(t *testing.T) {
 		"wbtc2btcLockNotice",
 		common.HexToAddress("0x01"),
 		common.HexToAddress("0x02"),
-		common.HexToHash("0x03"),
+		common.HexToAddress("0x03"),
 		common.HexToHash("0x04"),
+		common.HexToHash("0x05"),
 		big.NewInt(2))
 
 	data3, _ := noticeABI.Pack(
@@ -209,9 +211,13 @@ func TestIsNoticeTransaction(t *testing.T) {
 		"wbtc2btcLockNotice2",
 		common.HexToAddress("0x01"),
 		common.HexToAddress("0x02"),
-		common.HexToHash("0x03"),
+		common.HexToAddress("0x03"),
 		common.HexToHash("0x04"),
+		common.HexToHash("0x05"),
 		big.NewInt(4))
+
+	fmt.Println("data1:", common.ToHex(data1[:4]))
+	fmt.Println("data2:", common.ToHex(data2[:4]))
 
 	if is, err := IsNoticeTransaction(data1); err != nil || !is {
 		t.Error("check btc2wbtcLockNotice transaction fail")
@@ -219,10 +225,10 @@ func TestIsNoticeTransaction(t *testing.T) {
 	if is, err := IsNoticeTransaction(data2); err != nil || !is  {
 		t.Error("check wbtc2btcLockNotice transaction fail")
 	}
-	if is, err := IsNoticeTransaction(data3); err != nil || is  {
+	if is, err := IsNoticeTransaction(data3); err == nil && is  {
 		t.Error("check btc2wbtcLockNotice2 transaction fail")
 	}
-	if is, err := IsNoticeTransaction(data4); err != nil || is  {
+	if is, err := IsNoticeTransaction(data4); err == nil && is  {
 		t.Error("check wbtc2btcLockNotice2 transaction fail")
 	}
 }

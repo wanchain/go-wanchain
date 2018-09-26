@@ -14,6 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/storeman/btc"
 	"math/big"
 	"errors"
+	"fmt"
 )
 
 var noticeFuncIds [][4]byte
@@ -21,17 +22,20 @@ var noticeFuncIds [][4]byte
 func init() {
 	noticeFuncDefs := []string{
 		"btc2wbtcLockNotice(address,address,bytes32,bytes32,uint256)",
-		"wbtc2btcLockNotice(address,address,bytes32,bytes32,uint256)",}
+		"wbtc2btcLockNotice(address,address,address,bytes32,bytes32,uint256)",}
 
 	var funcId [4]byte
 	for _, funcDef := range noticeFuncDefs {
 		copy(funcId[:], crypto.Keccak256([]byte(funcDef))[:4])
 		noticeFuncIds = append(noticeFuncIds, funcId)
-		log.Debug("validator.init, add notice func id", "id", common.ToHex(funcId[:]))
+		log.Warn("-----------------validator.init, add notice func id", "id", common.ToHex(funcId[:]))
+		fmt.Println("validator.init, add notice func id, id:", common.ToHex(funcId[:]))
 	}
 }
 
 func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLeaderHashBytes []byte) bool {
+	log.Warn("-----------------ValidateTx, begin")
+
 	var leaderTx types.Transaction
 	err := rlp.DecodeBytes(leaderTxRawData, &leaderTx)
 	if err != nil {
@@ -40,6 +44,7 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 		return false
 	}
 
+	log.Warn("-----------------ValidateTx", "leaderTx", leaderTx)
 	isNotice, err := IsNoticeTransaction(leaderTx.Data())
 	if err != nil {
 		log.Error("ValidateTx, check notice transaction fail", "err", err)
@@ -108,13 +113,14 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 
 
 func ValidateBtcTx(args *btc.MsgTxArgs) bool {
+	log.Warn("-----------------ValidateTx, begin", "args", args)
 	if args == nil {
 		return false
 	}
 
 	keyWithoutTxin, keyWithTxin := GetKeyFromBtcTx(args)
-	log.Info("-----------------GetKeyFromBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin))
-	log.Info("-----------------GetKeyFromBtcTx", "keyWithTxin", common.ToHex(keyWithTxin))
+	log.Info("-----------------ValidateBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin))
+	log.Info("-----------------ValidateBtcTx", "keyWithTxin", common.ToHex(keyWithTxin))
 
 	key, err := waitKeyFromDB([][]byte{keyWithTxin, keyWithoutTxin})
 	if err != nil {
@@ -129,6 +135,11 @@ func ValidateBtcTx(args *btc.MsgTxArgs) bool {
 }
 
 func waitKeyFromDB(keys [][]byte) ([]byte, error) {
+	log.Warn("-----------------waitKeyFromDB, begin")
+	for _, key := range keys {
+		log.Warn("-----------------waitKeyFromDB", "key", common.ToHex(key))
+	}
+
 	db, err := GetDB()
 	if err != nil {
 		mpcsyslog.Err("waitKeyFromDB get database fail. err:%s", err.Error())
@@ -141,15 +152,17 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 		for _, key := range keys {
 			isExist, err := db.Has(key)
 			if err != nil {
+				log.Warn("-----------------waitKeyFromDB, fail", "err", err)
 				return nil, err
 			} else if isExist {
+				log.Warn("-----------------waitKeyFromDB, got it", "key", key)
 				return key, nil
 			}
 		}
 
 		if time.Now().Sub(start) >= mpcprotocol.MPCTimeOut {
 			mpcsyslog.Info("ValidateBtcTx time out")
-			log.Info("ValidateBtcTx time out")
+			log.Warn("-----------------waitKeyFromDB, time out")
 			return nil, errors.New("time out")
 		}
 
@@ -161,6 +174,8 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 
 
 func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []byte) {
+	log.Warn("-----------------GetKeyFromBtcTx, begin")
+
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.Version)).Bytes()...)
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.LockTime)).Bytes()...)
 
@@ -188,6 +203,7 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 }
 
 func IsNoticeTransaction(payload []byte) (bool, error) {
+	log.Warn("-----------------IsNoticeTransaction, begin", "payload", common.ToHex(payload))
 	if len(payload) < 4 {
 		return false, errors.New("invalid payload length")
 	}
@@ -197,10 +213,12 @@ func IsNoticeTransaction(payload []byte) (bool, error) {
 	log.Debug("IsNoticeTransaction", "callFuncId", common.ToHex(callFuncId[:]))
 	for _, noticeFuncId := range noticeFuncIds {
 		if callFuncId == noticeFuncId {
+			log.Warn("-----------------IsNoticeTransaction, is notice")
 			return true, nil
 		}
 	}
 
+	log.Warn("-----------------IsNoticeTransaction, is not notice")
 	return false, nil
 }
 
@@ -264,6 +282,7 @@ func AddValidMpcBtcTx(args *btc.MsgTxArgs) error {
 }
 
 func addKeyValueToDB(key, value []byte) error {
+	log.Warn("-----------------addKeyValueToDB, begin", "key", common.ToHex(key))
 	sdb, err := GetDB()
 	if err != nil {
 		log.Error("addKeyValueToDB, getting storeman database fail", "error", err)

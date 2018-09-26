@@ -119,10 +119,6 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 		ret.TxOut = append(ret.TxOut, &wire.TxOut{int64(txOutArgs.Value), scriptBytes})
 	}
 
-	if len(ret.TxIn) == 0 {
-		return nil, errors.New("invalid btc MsgTxArgs, doesn't have TxIn")
-	}
-
 	if len(ret.TxOut) == 0 {
 		return nil, errors.New("invalid btc MsgTxArgs, doesn't have TxOut")
 	}

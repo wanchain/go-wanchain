@@ -169,6 +169,10 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 		return nil, err
 	}
 
+	if len(msgTx.TxIn) == 0 {
+		return nil, errors.New("invalid btc MsgTxArgs, doesn't have TxIn")
+	}
+
 	log.Warn("-----------------SignMpcBtcTransaction", "msgTx", msgTx)
 	for _, txIn := range msgTx.TxIn {
 		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxIn", *txIn)
