@@ -25,8 +25,8 @@ const (
 	KeepaliveCycle
 	NumberOfMessageCodes
 
-	//MPCDegree          = 8
-	MPCDegree          = 1
+	MPCDegree          = 8
+	//MPCDegree          = 1
 	MPCTimeOut         = time.Second * 100
 	ProtocolName       = "storeman"
 	ProtocolVersion    = uint64(1)

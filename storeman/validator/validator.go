@@ -113,7 +113,7 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 
 
 func ValidateBtcTx(args *btc.MsgTxArgs) bool {
-	log.Warn("-----------------ValidateTx, begin", "args", args)
+	log.Warn("-----------------ValidateBtcTx, begin", "args", args)
 	if args == nil {
 		return false
 	}
