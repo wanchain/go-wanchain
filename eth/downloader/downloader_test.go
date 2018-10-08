@@ -831,7 +831,7 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	}
 
 
-	time.Sleep(45 * time.Second)
+	time.Sleep(60 * time.Second)
 
 
 	tester.downloader.Cancel()
