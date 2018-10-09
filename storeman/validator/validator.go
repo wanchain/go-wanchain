@@ -15,6 +15,8 @@ import (
 	"math/big"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/txscript"
+	"bytes"
 )
 
 var noticeFuncIds [][4]byte
@@ -118,9 +120,26 @@ func ValidateBtcTx(args *btc.MsgTxArgs) bool {
 		return false
 	}
 
+	var txOutScript [25]byte
+	txOutScript[0] = txscript.OP_DUP
+	txOutScript[1] = txscript.OP_HASH160
+	txOutScript[2] = 0x14
+	copy(txOutScript[3:23], args.From[:])
+	txOutScript[23] = txscript.OP_EQUALVERIFY
+	txOutScript[24] = txscript.OP_CHECKSIG
+
+	for i := 1; i < len(args.TxOut); i++ {
+		if !bytes.Equal(txOutScript[:], common.FromHex(args.TxOut[i].PkScript)) {
+			mpcsyslog.Err("ValidateBtcTx, check has fail. err:invalid tx out pkscript")
+			log.Error("ValidateBtcTx, check has fail", "error", "invalid tx out pkscript")
+			return false
+		}
+	}
+
 	keyWithoutTxin, keyWithTxin := GetKeyFromBtcTx(args)
 	log.Info("-----------------ValidateBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin))
 	log.Info("-----------------ValidateBtcTx", "keyWithTxin", common.ToHex(keyWithTxin))
+
 
 	key, err := waitKeyFromDB([][]byte{keyWithTxin, keyWithoutTxin})
 	if err != nil {
@@ -182,6 +201,8 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 	for _, out := range args.TxOut {
 		keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(out.Value)).Bytes()...)
 		keyWithoutTxIn = append(keyWithoutTxIn, []byte(out.PkScript)...)
+
+		break
 	}
 
 	keyWithTxIn = make([]byte, len(keyWithoutTxIn))

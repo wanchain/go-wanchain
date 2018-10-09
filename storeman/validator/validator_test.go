@@ -35,14 +35,50 @@ var (
 		SignType:  "hash", //nil
 	}
 
-	btcTx = btc.MsgTxArgs {
+	btcTx1 = btc.MsgTxArgs {
 		Version : 1,
 		TxIn : []btc.TxInArgs{
 				{btc.OutPointArg{"0000000000000000000000000000000000000000000000000000000000000001", 0}, "0x0012345678", 0, "0x76a914fd1c8e80f5dea6295ea3f82d8b103e3cf7d04b9288ac"},
 			},
 		TxOut: []btc.TxOutArgs{
 				{Value:1000000, PkScript: "0x76a91491c6e41ae47789e7a98cd5625f27f0473e5b0d1d88ac"},
+				{Value:1000001, PkScript: "0x76a914000000000000000000000000000000000000001188ac"},
 			},
+		LockTime: 0,
+		From : common.HexToAddress("0x0000000000000000000000000000000000000011"),
+	}
+	btcTx2 = btc.MsgTxArgs {
+		Version : 1,
+		TxIn : []btc.TxInArgs{
+			{btc.OutPointArg{"0000000000000000000000000000000000000000000000000000000000000001", 0}, "0x0012345678", 0, "0x76a914fd1c8e80f5dea6295ea3f82d8b103e3cf7d04b9288ac"},
+		},
+		TxOut: []btc.TxOutArgs{
+			{Value:1000000, PkScript: "0x76a91491c6e41ae47789e7a98cd5625f27f0473e5b0d1d88ac"},
+			{Value:1000022, PkScript: "0x76a914000000000000000000000000000000000000001188ac"},
+		},
+		LockTime: 0,
+		From : common.HexToAddress("0x0000000000000000000000000000000000000011"),
+	}
+	btcTx3 = btc.MsgTxArgs {
+		Version : 1,
+		TxIn : []btc.TxInArgs{
+			{btc.OutPointArg{"0000000000000000000000000000000000000000000000000000000000000001", 0}, "0x0012345678", 0, "0x76a914fd1c8e80f5dea6295ea3f82d8b103e3cf7d04b9288ac"},
+		},
+		TxOut: []btc.TxOutArgs{
+			{Value:1000000, PkScript: "0x76a91491c6e41ae47789e7a98cd5625f27f0473e5b0d1d88ac"},
+			{Value:1000022, PkScript: "0x76a914000000000000000000000000000000000000001188ac"},
+		},
+		LockTime: 0,
+		From : common.HexToAddress("0x0000000000000000000000000000000000002211"),
+	}
+	btcTx4 = btc.MsgTxArgs {
+		Version : 1,
+		TxIn : []btc.TxInArgs{
+			{btc.OutPointArg{"0000000000000000000000000000000000000000000000000000000000000001", 0}, "0x0012345678", 0, "0x76a914fd1c8e80f5dea6295ea3f82d8b103e3cf7d04b9288ac"},
+		},
+		TxOut: []btc.TxOutArgs{
+			{Value:1000000, PkScript: "0x76a91491c6e41ae47789e7a98cd5625f27f0473e5b0d1d88ac"},
+		},
 		LockTime: 0,
 		From : common.HexToAddress("0x0000000000000000000000000000000000000011"),
 	}
@@ -241,12 +277,12 @@ func TestAddValidMpcBtcTx(t *testing.T) {
 		t.Fatal("create database fail, err:", err)
 	}
 
-	err = AddValidMpcBtcTx(&btcTx)
+	err = AddValidMpcBtcTx(&btcTx1)
 	if err != nil {
 		t.Fatal("AddValidMpcBtcTx fail. err:", err)
 	}
 
-	_, key := GetKeyFromBtcTx(&btcTx)
+	_, key := GetKeyFromBtcTx(&btcTx1)
 	sdb, err := GetDB()
 	if err != nil {
 		t.Fatal("GetDB fail. err", err)
@@ -263,7 +299,7 @@ func TestAddValidMpcBtcTx(t *testing.T) {
 		t.Fatal("json unmarshal fail. err", err)
 	}
 
-	if !tx.Cmp(&btcTx) {
+	if !tx.Cmp(&btcTx1) {
 		t.Fatal("getting tx data doesn't equal to original data")
 	}
 }
@@ -276,17 +312,32 @@ func TestValidateBtcTx(t *testing.T)  {
 		t.Fatal("create database fail, err:", err)
 	}
 
-	bValid := ValidateBtcTx(&btcTx)
+	bValid := ValidateBtcTx(&btcTx1)
 	if bValid {
 		t.Fatal("validateBtcTx fail, expect return false")
 	}
 
-	err = AddValidMpcBtcTx(&btcTx)
+	err = AddValidMpcBtcTx(&btcTx1)
 	if err != nil {
 		t.Fatal("AddValidMpcBtcTx fail. err:", err)
 	}
 
-	bValid = ValidateBtcTx(&btcTx)
+	bValid = ValidateBtcTx(&btcTx1)
+	if !bValid {
+		t.Fatal("validateBtcTx fail, expect return true")
+	}
+
+	bValid = ValidateBtcTx(&btcTx2)
+	if !bValid {
+		t.Fatal("validateBtcTx fail, expect return true")
+	}
+
+	bValid = ValidateBtcTx(&btcTx3)
+	if bValid {
+		t.Fatal("validateBtcTx fail, expect return false")
+	}
+
+	bValid = ValidateBtcTx(&btcTx4)
 	if !bValid {
 		t.Fatal("validateBtcTx fail, expect return true")
 	}

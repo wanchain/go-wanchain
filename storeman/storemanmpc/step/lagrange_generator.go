@@ -6,6 +6,7 @@ import (
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
 	"github.com/wanchain/go-wanchain/log"
+	"strconv"
 )
 
 type lagrangeGenerator struct {
@@ -39,7 +40,7 @@ func (lag *lagrangeGenerator) calculateResult() error {
 	f := []big.Int{}
 	seed := []big.Int{}
 	for key, value := range lag.message {
-		log.Warn("-----------------lagrangeGenerator.calculateResult", key, value.String())
+		log.Warn("-----------------lagrangeGenerator.calculateResult", strconv.FormatInt(int64(key), 10), value.String())
 
 		f = append(f, value)
 		seed = append(seed, *new(big.Int).SetUint64(key))
