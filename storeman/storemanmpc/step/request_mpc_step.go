@@ -119,7 +119,6 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.Data = append(msg.Data, req.txHash)
 		msg.Data = append(msg.Data, req.address)
 		msg.Data = append(msg.Data, req.chainID)
-		msg.Data = append(msg.Data, req.address)
 		msg.BytesData = make([][]byte, 3)
 		msg.BytesData[0] = req.chainType
 		msg.BytesData[1] = req.txCode

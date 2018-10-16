@@ -547,9 +547,6 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		chainId := mpcMessage.Data[3]
 		log.Warn("-----------------createMpcContext", "chainId", chainId.String());
 
-		mpcAddress := mpcMessage.Data[4]
-		log.Warn("-----------------createMpcContext", "mpcAddress", mpcAddress.String());
-
 		// load account
 		MpcPrivateShare, _, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
@@ -557,7 +554,8 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		}
 
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, mpcMessage.BytesData[0]})
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{mpcAddress}, nil})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
 
 		if chainType != "BTC" {
 			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, mpcMessage.BytesData[2]})
@@ -631,8 +629,6 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 			}
 
 			preSetValue = append(preSetValue, *MpcPrivateShare)
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
 			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
 		}
 
