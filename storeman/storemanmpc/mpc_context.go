@@ -50,8 +50,6 @@ func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.M
 }
 
 func createMpcContext(contextID uint64, peers []mpcprotocol.PeerInfo, mpcResult mpcprotocol.MpcResultInterface) *MpcContext {
-	log.Warn("-----------------createMpcContext begin")
-
 	mpc := &MpcContext{
 		ContextID:   contextID,
 		peers:       peers,
@@ -90,7 +88,7 @@ func (mpcCtx *MpcContext) quit(err error) {
 }
 
 func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanManager) error {
-	mpcsyslog.Debug("mainMPCProcess begin, ctxid:%d", mpcCtx.ContextID)
+	mpcsyslog.Info("mainMPCProcess begin, ctxid:%d", mpcCtx.ContextID)
 	mpcErr := error(nil)
 	for _, mpcCt := range mpcCtx.MpcSteps {
 		err := mpcCt.InitMessageLoop(mpcCt)
@@ -114,7 +112,7 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 				break
 			}
 
-			mpcsyslog.Debug("step init finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+			mpcsyslog.Info("step init finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
 			msg := mpcCtx.MpcSteps[i].CreateMessage()
 			if msg != nil {
 				for _, item := range msg {
@@ -125,15 +123,15 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 					StoremanManager.SetMessagePeers(mpcMsg, item.Peers)
 					if item.PeerID != nil {
 						StoremanManager.P2pMessage(item.PeerID, item.Msgcode, mpcMsg)
-						mpcsyslog.Debug("step send a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+						mpcsyslog.Info("step send a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
 					} else {
 						StoremanManager.BoardcastMessage(peerIDs, item.Msgcode, mpcMsg)
-						mpcsyslog.Debug("step boardcast a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+						mpcsyslog.Info("step boardcast a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
 					}
 				}
 			}
 
-			mpcsyslog.Debug("step send p2p msg finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+			mpcsyslog.Info("step send p2p msg finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
 			err = mpcCtx.MpcSteps[i].FinishStep(mpcCtx.mpcResult, StoremanManager)
 			if err != nil {
 				mpcErr = err

@@ -2,6 +2,7 @@ package storemanmpc
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
+	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
 	"github.com/wanchain/go-wanchain/log"
 )
@@ -12,11 +13,10 @@ type BaseMpcResult struct {
 }
 
 func (result *BaseMpcResult) InitializeValue(preSetValue ...MpcValue) {
-	log.Warn("-----------------BaseMpcResult.InitializeValue begin")
+	log.Info("BaseMpcResult.InitializeValue begin")
+	mpcsyslog.Info("BaseMpcResult.InitializeValue begin")
 
 	for i := 0; i < len(preSetValue); i++ {
-		log.Warn("-----------------BaseMpcResult.InitializeValue", "value", preSetValue[i].String())
-
 		if preSetValue[i].Value != nil {
 			result.SetValue(preSetValue[i].Key, preSetValue[i].Value)
 		} else if preSetValue[i].ByteValue != nil {
@@ -26,8 +26,6 @@ func (result *BaseMpcResult) InitializeValue(preSetValue ...MpcValue) {
 }
 
 func createMpcBaseMpcResult() *BaseMpcResult {
-	log.Warn("-----------------createMpcBaseMpcResult begin")
-
 	return &BaseMpcResult{make(map[string][]big.Int), make(map[string][]byte)}
 }
 
@@ -43,6 +41,7 @@ func (mpc *BaseMpcResult) GetValue(key string) ([]big.Int, error) {
 	}
 
 	log.Error("BaseMpcResult GetValue fail.", "key", key)
+	mpcsyslog.Err("BaseMpcResult GetValue fail. key:%s", key)
 	return value, mpcprotocol.ErrMpcResultExist
 }
 
@@ -57,11 +56,11 @@ func (mpc *BaseMpcResult) GetByteValue(key string) ([]byte, error) {
 		return value, nil
 	}
 
-	log.Error("-----------------GetByteValue fail", "key", key)
+	log.Error("GetByteValue fail", "key", key)
+	mpcsyslog.Err("GetByteValue fail, key:%s", key)
 	return value, mpcprotocol.ErrQuit
 }
 
 func (mpc *BaseMpcResult) Initialize() error {
-	log.Warn("-----------------BaseMpcResult.Initialize begin")
 	return nil
 }

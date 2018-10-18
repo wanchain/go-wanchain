@@ -2,6 +2,7 @@ package storemanmpc
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
+	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -29,13 +30,13 @@ func acknowledgeTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValu
 }
 
 func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
-	log.Warn("-----------------generateTxSignMpc begin")
+	log.Info("generateTxSignMpc begin")
+
 	signNum, err := getSignNumFromTxInfo(mpc)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Warn("-----------------generateTxSignMpc", "signNum", signNum)
 	JRJZ := step.CreateTXSignJR_JZ_Step(mpcprotocol.MPCDegree, &mpc.peers, signNum)
 
 	pointStepPreValueKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignA0, signNum)
@@ -55,27 +56,32 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 	signNum := 1
 	chainType, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcChainType)
 	if err != nil {
-		log.Error("generateTxSignMpc, get chainType fail.", "err", err)
+		log.Error("getSignNumFromTxInfo, get chainType fail.", "err", err)
+		mpcsyslog.Err("getSignNumFromTxInfo, get chainType fail. err:%s", err.Error())
 		return 0, err
 	}
 
 	if string(chainType) == "BTC" {
 		btcTxData, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcTransaction)
 		if err != nil {
-			log.Error("generateTxSignMpx, get tx rlp data fail.", "err", err)
+			log.Error("getSignNumFromTxInfo, get tx rlp data fail.", "err", err)
+			mpcsyslog.Err("getSignNumFromTxInfo, get tx rlp date fail. err:%s", err.Error())
 			return 0, err
 		}
 
 		var args btc.MsgTxArgs
 		err = rlp.DecodeBytes(btcTxData, &args)
 		if err != nil {
-			log.Error("generateTxSignMpx, decode tx rlp data fail.", "err", err)
+			log.Error("getSignNumFromTxInfo, decode tx rlp data fail.", "err", err)
+			mpcsyslog.Err("getSignNumFromTxInfo, decode tx rlp data fail. err:%s", err.Error())
 			return 0, err
 		}
 
 		signNum = len(args.TxIn)
 	}
 
+	log.Info("getSignNumFromTxInfo, succeed", "signNum", signNum)
+	mpcsyslog.Info("getSignNumFromTxInfo, succeed. signNum:%d", signNum)
 	return signNum, nil
 }
 

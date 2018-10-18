@@ -27,19 +27,20 @@ func CreateBaseStep(peers *[]mpcprotocol.PeerInfo, wait int) *BaseStep {
 }
 
 func (step *BaseStep) InitMessageLoop(msger mpcprotocol.GetMessageInterface) error {
-	mpcsyslog.Debug("BaseStep.InitMessageLoop begin")
+	mpcsyslog.Info("BaseStep.InitMessageLoop begin")
 	if step.waiting <= 0 {
 		step.finish <- nil
 	} else {
 		go func() {
 			log.Debug("InitMessageLoop begin")
-			mpcsyslog.Debug("InitMessageLoop begin")
+			mpcsyslog.Info("InitMessageLoop begin")
 
 			for {
 				err := step.HandleMessage(msger)
 				if err != nil {
 					if err != mpcprotocol.ErrQuit {
 						log.Error("InitMessageLoop fail", "get message err", err)
+						mpcsyslog.Err("InitMessageLoop fail, get message err, err:%s", err.Error())
 					}
 
 					break
@@ -62,12 +63,14 @@ func (step *BaseStep) FinishStep() error {
 	select {
 	case err := <-step.finish:
 		if err != nil {
+			log.Error("BaseStep.FinishStep, get a step finish error", "err", err.Error())
 			mpcsyslog.Err("BaseStep.FinishStep, get a step finish error. err:%s", err.Error())
 		}
 
 		step.msgChan <- nil
 		return err
 	case <-time.After(mpcprotocol.MPCTimeOut):
+		log.Error("BaseStep.FinishStep, wait step finish timeout")
 		mpcsyslog.Err("BaseStep.FinishStep, wait step finish timeout")
 		step.msgChan <- nil
 		return mpcprotocol.ErrTimeOut
@@ -83,7 +86,7 @@ func (step *BaseStep) HandleMessage(msger mpcprotocol.GetMessageInterface) error
 	select {
 	case msg = <-step.msgChan:
 		if msg == nil {
-			log.Info("-----------------HandleMessage. BaseStep get a quit msg")
+			log.Info("HandleMessage. BaseStep get a quit msg")
 			mpcsyslog.Info("BaseStep get a quit msg")
 			return mpcprotocol.ErrQuit
 		}

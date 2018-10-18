@@ -40,7 +40,7 @@ func newPeer(host *Storeman, remote *p2p.Peer, rw p2p.MsgReadWriter) *Peer {
 // into the network.
 func (p *Peer) start() {
 	log.Trace("storeman peer start", "peer", p.ID())
-	mpcsyslog.Debug("storeman peer start. peer:%s", p.ID().String())
+	mpcsyslog.Info("storeman peer start. peer:%s", p.ID().String())
 }
 
 // update executes periodic operations on the peer, including message transmission
@@ -65,7 +65,7 @@ func (p *Peer) update() {
 func (p *Peer) stop() {
 	close(p.quit)
 	log.Trace("storeman peer stop", "peer", p.ID())
-	mpcsyslog.Debug("storeman peer stop. peer:%s", p.ID().String())
+	mpcsyslog.Info("storeman peer stop. peer:%s", p.ID().String())
 }
 
 func (p *Peer) sendKeepalive() {
@@ -93,7 +93,7 @@ func (p *Peer) handshake() error {
 	}
 	defer packet.Discard()
 
-	mpcsyslog.Debug("storeman received handshake. peer:%s. code:%d", p.ID().String(), packet.Code)
+	mpcsyslog.Info("storeman received handshake. peer:%s. code:%d", p.ID().String(), packet.Code)
 	log.Debug("storman received handshake", "peer", p.ID().String(), "packet.Code", packet.Code)
 	if packet.Code != mpcprotocol.StatusCode {
 		mpcsyslog.Err("storeman peer [%s] sent packet %x before status packet", p.ID().String(), packet.Code)

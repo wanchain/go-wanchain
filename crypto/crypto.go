@@ -207,9 +207,7 @@ func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 }
 
 func PubkeyToRipemd160(p *ecdsa.PublicKey) common.Address  {
-	//pk := (*btcec.PublicKey)(&p).SerializeUncompressed()
 	pk := (*btcec.PublicKey)(p).SerializeCompressed()
-	log.Warn("-----------------PubkeyToRipemd160 begin", "pk", common.ToHex(pk))
 	address, err := btcutil.NewAddressPubKeyHash(
 		btcutil.Hash160(pk), &chaincfg.TestNet3Params)
 	if err != nil {
@@ -219,12 +217,6 @@ func PubkeyToRipemd160(p *ecdsa.PublicKey) common.Address  {
 
 	var ret common.Address
 	copy(ret[:], address.Hash160()[:])
-
-	//pubBytes := FromECDSAPub(&p)
-	//h256 := sha256.Sum256(pubBytes)
-	//ripemd := ripemd160.New()
-	//ripemd.Write(h256[:])
-	//return common.BytesToAddress(ripemd.Sum(nil)[:20])
 	return ret
 }
 

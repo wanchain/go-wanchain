@@ -20,9 +20,9 @@ func requestCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, pre
 
 //get message from leader and create Context
 func acknowledgeCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
-	log.Warn("-----------------acknowledgeCreateLockAccountMpc begin.")
+	log.Info("acknowledgeCreateLockAccountMpc begin.")
 	for _, preSetValuebyteData := range preSetValue {
-		log.Warn("-----------------acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
+		log.Info("acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
 	}
 
 	findMap := make(map[uint64]bool)

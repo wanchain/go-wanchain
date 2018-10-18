@@ -21,7 +21,7 @@ func CreateAckMpcAccountStep(peers *[]mpcprotocol.PeerInfo) *AckMpcAccountStep {
 }
 
 func (ack *AckMpcAccountStep) InitStep(result mpcprotocol.MpcResultInterface) error {
-	mpcsyslog.Debug("AckMpcAccountStep.InitStep begin")
+	mpcsyslog.Info("AckMpcAccountStep.InitStep begin")
 	mpcAddr, err := result.GetByteValue(mpcprotocol.MpcContextResult)
 	if err != nil {
 		mpcsyslog.Err("ack mpc account step, init fail. err:%s", err.Error())
@@ -49,7 +49,7 @@ func (ack *AckMpcAccountStep) CreateMessage() []mpcprotocol.StepMessage {
 }
 
 func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	mpcsyslog.Debug("AckMpcAccountStep.FinishStep begin")
+	mpcsyslog.Info("AckMpcAccountStep.FinishStep begin")
 	err := ack.BaseStep.FinishStep()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, 
 }
 
 func (ack *AckMpcAccountStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
-	mpcsyslog.Debug("AckMpcAccountStep.HandleMessage begin")
+	mpcsyslog.Info("AckMpcAccountStep.HandleMessage begin")
 	log.Info("ack mpc account step, handle mpc address", "msg", msg)
 	_, exist := ack.message[*msg.PeerID]
 	if exist {

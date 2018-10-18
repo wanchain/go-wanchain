@@ -66,18 +66,18 @@ func (sm *Storeman) MaxMessageSize() uint32 {
 
 // runMessageLoop reads and processes inbound messages directly to merge into client-global state.
 func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
-	mpcsyslog.Debug("runMessageLoop begin")
+	mpcsyslog.Info("runMessageLoop begin")
 
 	for {
 		// fetch the next packet
 		packet, err := rw.ReadMsg()
 		if err != nil {
 			mpcsyslog.Err("runMessageLoop, peer:%s, err:%s", p.Peer.ID().String(), err.Error())
-			log.Error("Storeman message loop", "peer", p.Peer.ID(), "err", err)
+			log.Error("Storeman message loop", "peer", p.Peer.ID().String(), "err", err)
 			return err
 		}
 
-		mpcsyslog.Debug("runMessageLoop, received a msg, peer:%s, packet size:%d", p.Peer.ID().String(), packet.Size)
+		mpcsyslog.Info("runMessageLoop, received a msg, peer:%s, packet size:%d", p.Peer.ID().String(), packet.Size)
 		if packet.Size > sm.MaxMessageSize() {
 			mpcsyslog.Warning("runMessageLoop, oversized message received, peer:%s, packet size:%d", p.Peer.ID().String(), packet.Size)
 			log.Warn("oversized message received", "peer", p.Peer.ID())
@@ -111,8 +111,9 @@ func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
 }
 
 func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (common.Address, error) {
-	mpcsyslog.Debug("CreateMpcAccount begin")
-	log.Warn("-----------------CreateMpcAccount begin", "accType", accType)
+	log.Info("CreateMpcAccount begin", "accType", accType)
+	mpcsyslog.Info("CreateMpcAccount begin, accType:%s", accType)
+
 	if !mpcprotocol.CheckAccountType(accType) {
 		return common.Address{}, mpcprotocol.ErrInvalidStmAccType
 	}
@@ -136,10 +137,9 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 }
 
 
-//
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
-	mpcsyslog.Debug("SignMpcTransaction begin")
-	log.Info("Call SignMpcTransaction", "from", tx.From, "to", tx.To, "Gas", tx.Gas, "GasPrice", tx.GasPrice, "value", tx.Value, "data", tx.Data, "nonce", tx.Nonce, "ChainType", tx.ChainType, "SignType", tx.SignType)
+	mpcsyslog.Info("SignMpcTransaction begin")
+	log.Info("Call SignMpcTransaction", "from", tx.From, "to", tx.To, "Gas", tx.Gas, "GasPrice", tx.GasPrice, "value", tx.Value, "data", common.ToHex(tx.Data), "nonce", tx.Nonce, "ChainType", tx.ChainType, "SignType", tx.SignType)
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
 		return nil, mpcprotocol.ErrTooLessStoreman
@@ -157,8 +157,8 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.Se
 }
 
 func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) ([]hexutil.Bytes, error) {
-	mpcsyslog.Debug("SignMpcBtcTransaction begin")
-	log.Warn("-----------------SignMpcBtcTransaction begin", "args", args)
+	mpcsyslog.Info("SignMpcBtcTransaction begin, txInfo:%s", args.String())
+	log.Info("SignMpcBtcTransaction begin", "txInfo", args.String())
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
 		return nil, mpcprotocol.ErrTooLessStoreman
@@ -170,24 +170,17 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	}
 
 	if len(msgTx.TxIn) == 0 {
+		mpcsyslog.Err("SignMpcBtcTransaction, invalid btc MsgTxArgs, doesn't have TxIn")
 		return nil, errors.New("invalid btc MsgTxArgs, doesn't have TxIn")
-	}
-
-	log.Warn("-----------------SignMpcBtcTransaction", "msgTx", msgTx)
-	for _, txIn := range msgTx.TxIn {
-		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxIn", *txIn)
-	}
-	for _, txOut := range msgTx.TxOut {
-		log.Warn("-----------------SignMpcBtcTransaction, msgTx", "TxOut", *txOut)
 	}
 
 	signeds, err := sa.sm.mpcDistributor.CreateRequestBtcMpcSign(&args)
 	if err != nil {
-		mpcsyslog.Err("SignMpcBtcTransaction end, err:%s", err.Error())
 		return nil, err
 	}
 
 	for i := 0; i < len(signeds); i++ {
+		log.Info("SignMpcBtcTransaction end", "signed", common.ToHex(signeds[i]))
 		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
 	}
 
@@ -203,6 +196,8 @@ func (sa *StoremanAPI) AddValidMpcTx(ctx context.Context, tx mpcprotocol.SendTxA
 
 
 func (sa *StoremanAPI) AddValidMpcBtcTx(ctx context.Context, args btc.MsgTxArgs) error {
+	log.Info("AddValidMpcBtcTx", "txInfo", args.String())
+	mpcsyslog.Info("AddValidMpcBtcTx, txInfo:%s", args.String())
 	return validator.AddValidMpcBtcTx(&args)
 }
 
@@ -271,7 +266,7 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 		return errors.New("Peer is not in storemangroup")
 	}
 
-	mpcsyslog.Debug("handle new peer, remoteAddr:%s, peerID:%s", peer.RemoteAddr().String(), peer.ID().String())
+	mpcsyslog.Info("handle new peer, remoteAddr:%s, peerID:%s", peer.RemoteAddr().String(), peer.ID().String())
 
 	// Create the new peer and start tracking it
 	storemanPeer := newPeer(sm, peer, rw)

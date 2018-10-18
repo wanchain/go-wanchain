@@ -14,7 +14,6 @@ import (
 	"github.com/wanchain/go-wanchain/storeman/btc"
 	"math/big"
 	"errors"
-	"fmt"
 	"github.com/btcsuite/btcd/txscript"
 	"bytes"
 )
@@ -30,13 +29,12 @@ func init() {
 	for _, funcDef := range noticeFuncDefs {
 		copy(funcId[:], crypto.Keccak256([]byte(funcDef))[:4])
 		noticeFuncIds = append(noticeFuncIds, funcId)
-		log.Warn("-----------------validator.init, add notice func id", "id", common.ToHex(funcId[:]))
-		fmt.Println("validator.init, add notice func id, id:", common.ToHex(funcId[:]))
+		log.Info("validator.init, add notice func id", "id", common.ToHex(funcId[:]))
 	}
 }
 
 func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLeaderHashBytes []byte) bool {
-	log.Warn("-----------------ValidateTx, begin")
+	log.Info("ValidateTx, begin")
 	mpcsyslog.Info("ValidateTx, leaderTxLeaderHashBytes:%s, leaderTxRawData:%s", common.ToHex(leaderTxLeaderHashBytes), common.ToHex(leaderTxRawData))
 
 	var leaderTx types.Transaction
@@ -47,7 +45,7 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 		return false
 	}
 
-	log.Warn("-----------------ValidateTx", "leaderTx", leaderTx)
+	log.Info("ValidateTx", "leaderTx", leaderTx)
 	mpcsyslog.Info("ValidateTx, leaderTxData:%s", common.ToHex(leaderTx.Data()))
 	isNotice, err := IsNoticeTransaction(leaderTx.Data())
 	if err != nil {
@@ -69,33 +67,33 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 
 	followerDB, err := GetDB()
 	if err != nil {
-		mpcsyslog.Err("ValidateTx leader get database fail. err:%s", err.Error())
 		log.Error("ValidateTx leader get database fail", "error", err)
+		mpcsyslog.Err("ValidateTx leader get database fail. err:%s", err.Error())
 		return false
 	}
 
 	_, err = waitKeyFromDB([][]byte{key})
 	if err != nil {
-		mpcsyslog.Err("ValidateTx, check has fail. err:%s", err.Error())
 		log.Error("ValidateTx, check has fail", "error", err)
+		mpcsyslog.Err("ValidateTx, check has fail. err:%s", err.Error())
 		return false
 	}
 
 	followerTxRawData, err := followerDB.Get(key)
 	if err != nil {
-		mpcsyslog.Err("ValidateTx, getting followerTxRawData fail. err:%s", err.Error())
 		log.Error("ValidateTx, getting followerTxRawData fail", "error", err)
+		mpcsyslog.Err("ValidateTx, getting followerTxRawData fail. err:%s", err.Error())
 		return false
 	}
 
-	mpcsyslog.Info("ValidateTx, followerTxRawData is got")
 	log.Info("ValidateTx, followerTxRawData is got")
+	mpcsyslog.Info("ValidateTx, followerTxRawData is got")
 
 	var followerRawTx mpcprotocol.SendTxArgs
 	err = json.Unmarshal(followerTxRawData, &followerRawTx)
 	if err != nil {
-		mpcsyslog.Err("ValidateTx, follower tx data decode fail. err:%s", err.Error())
 		log.Error("ValidateTx, follower tx data decode fail", "error", err)
+		mpcsyslog.Err("ValidateTx, follower tx data decode fail. err:%s", err.Error())
 		return false
 	}
 
@@ -105,14 +103,14 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 	leaderTxLeaderHash := common.BytesToHash(leaderTxLeaderHashBytes)
 
 	if followerCreatedHash == leaderTxLeaderHash {
-		mpcsyslog.Info("ValidateTx, validate success")
 		log.Info("ValidateTx, validate success")
+		mpcsyslog.Info("ValidateTx, validate success")
 		return true
 	} else {
-		mpcsyslog.Err("ValidateTx, leader tx hash is not same with follower tx hash. leaderTxLeaderHash:%s, followerCreatedHash:%s",
-			leaderTxLeaderHash.String(), followerCreatedHash.String())
 		log.Error("ValidateTx, leader tx hash is not same with follower tx hash", "leaderTxLeaderHash",
 			leaderTxLeaderHash, "followerCreatedHash", followerCreatedHash)
+		mpcsyslog.Err("ValidateTx, leader tx hash is not same with follower tx hash. leaderTxLeaderHash:%s, followerCreatedHash:%s",
+			leaderTxLeaderHash.String(), followerCreatedHash.String())
 		return false
 	}
 }
@@ -123,8 +121,8 @@ func ValidateBtcTx(args *btc.MsgTxArgs) bool {
 		return false
 	}
 
-	log.Warn("-----------------ValidateBtcTx, begin", "args", args)
-	mpcsyslog.Info("ValidateBtcTx, begin, tx lockTime:%d", args.LockTime)
+	log.Info("ValidateBtcTx, begin", "txInfo", args.String())
+	mpcsyslog.Info("ValidateBtcTx, begin, txInfo", args.String())
 
 	var txOutScript [25]byte
 	txOutScript[0] = txscript.OP_DUP
@@ -138,41 +136,41 @@ func ValidateBtcTx(args *btc.MsgTxArgs) bool {
 		mpcsyslog.Info("ValidateBtcTx, outScript:%s", args.TxOut[i].PkScript)
 
 		if !bytes.Equal(txOutScript[:], common.FromHex(args.TxOut[i].PkScript)) {
-			mpcsyslog.Err("ValidateBtcTx, check has fail. err:invalid tx out pkscript")
 			log.Error("ValidateBtcTx, check has fail", "error", "invalid tx out pkscript")
+			mpcsyslog.Err("ValidateBtcTx, check has fail. err:invalid tx out pkscript")
 			return false
 		}
 	}
 
 	keyWithoutTxin, keyWithTxin := GetKeyFromBtcTx(args)
-	log.Info("-----------------ValidateBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin))
-	log.Info("-----------------ValidateBtcTx", "keyWithTxin", common.ToHex(keyWithTxin))
+	log.Info("ValidateBtcTx", "keyWithoutTxin", common.ToHex(keyWithoutTxin), "keyWithTxin", common.ToHex(keyWithTxin))
 	mpcsyslog.Info("ValidateBtcTx, keyWithoutTxin:%s, keyWithTxin:%s", common.ToHex(keyWithoutTxin), common.ToHex(keyWithTxin))
 
 	key, err := waitKeyFromDB([][]byte{keyWithTxin, keyWithoutTxin})
 	if err != nil {
-		mpcsyslog.Err("ValidateBtcTx, check has fail. err:%s", err.Error())
 		log.Error("ValidateBtcTx, check has fail", "error", err)
+		mpcsyslog.Err("ValidateBtcTx, check has fail. err:%s", err.Error())
 		return false
 	} else {
-		mpcsyslog.Info("ValidateBtcTx, key is got, key:" + common.ToHex(key))
 		log.Info("ValidateBtcTx, key is got", "key", common.ToHex(key))
+		mpcsyslog.Info("ValidateBtcTx, key is got, key:" + common.ToHex(key))
 		return true
 	}
 }
 
 func waitKeyFromDB(keys [][]byte) ([]byte, error) {
-	log.Warn("-----------------waitKeyFromDB, begin")
+	log.Info("waitKeyFromDB, begin")
 	mpcsyslog.Info("waitKeyFromDB, begin")
+
 	for i, key := range keys {
+		log.Info("waitKeyFromDB", "i", i, "key", common.ToHex(key))
 		mpcsyslog.Info("waitKeyFromDB, i:%d, key:%s", i, common.ToHex(key))
-		log.Warn("-----------------waitKeyFromDB", "i", i, "key", common.ToHex(key))
 	}
 
 	db, err := GetDB()
 	if err != nil {
-		mpcsyslog.Err("waitKeyFromDB get database fail. err:%s", err.Error())
 		log.Error("ValidateBtcTx get database fail", "error", err)
+		mpcsyslog.Err("waitKeyFromDB get database fail. err:%s", err.Error())
 		return nil, err
 	}
 
@@ -181,11 +179,11 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 		for _, key := range keys {
 			isExist, err := db.Has(key)
 			if err != nil {
-				log.Warn("-----------------waitKeyFromDB, fail", "err", err)
+				log.Info("waitKeyFromDB, fail", "err", err)
 				mpcsyslog.Err("waitKeyFromDB fail, err:%s", err.Error())
 				return nil, err
 			} else if isExist {
-				log.Warn("-----------------waitKeyFromDB, got it", "key", key)
+				log.Info("waitKeyFromDB, got it", "key", key)
 				mpcsyslog.Info("waitKeyFromDB, got it, key:%s", common.ToHex(key))
 				return key, nil
 			}
@@ -193,7 +191,7 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 
 		if time.Now().Sub(start) >= mpcprotocol.MPCTimeOut {
 			mpcsyslog.Info("waitKeyFromDB, time out")
-			log.Warn("-----------------waitKeyFromDB, time out")
+			log.Info("waitKeyFromDB, time out")
 			return nil, errors.New("waitKeyFromDB, time out")
 		}
 
@@ -205,7 +203,7 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 
 
 func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []byte) {
-	log.Warn("-----------------GetKeyFromBtcTx, begin")
+	log.Info("GetKeyFromBtcTx, begin")
 
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.Version)).Bytes()...)
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.LockTime)).Bytes()...)
@@ -219,10 +217,9 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 
 	keyWithTxIn = make([]byte, len(keyWithoutTxIn))
 	copy(keyWithTxIn, keyWithoutTxIn)
-	log.Info("-----------------GetKeyFromBtcTx", "keyWithTxin", common.ToHex(keyWithTxIn))
-	log.Info("-----------------GetKeyFromBtcTx", "keyWithoutTxIn", common.ToHex(keyWithoutTxIn))
+	log.Info("GetKeyFromBtcTx", "keyWithTxin", common.ToHex(keyWithTxIn), "keyWithoutTxIn", common.ToHex(keyWithoutTxIn))
 	for _, in := range args.TxIn {
-		log.Warn("-----------------GetKeyFromBtcTx, add txIn info to key", "txInPreOutHash", in.PreviousOutPoint.Hash, "index", in.PreviousOutPoint.Index)
+		log.Info("GetKeyFromBtcTx, add txIn info to key", "txInPreOutHash", in.PreviousOutPoint.Hash, "index", in.PreviousOutPoint.Index)
 		mpcsyslog.Info("GetKeyFromBtcTx, txInPreOutHash:%s, txInIndex:%d", in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index)
 		keyWithTxIn = append(keyWithTxIn, in.PreviousOutPoint.Hash[:]...)
 		keyWithTxIn = append(keyWithTxIn, big.NewInt(int64(in.PreviousOutPoint.Index)).Bytes()...)
@@ -237,7 +234,7 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 }
 
 func IsNoticeTransaction(payload []byte) (bool, error) {
-	log.Warn("-----------------IsNoticeTransaction, begin", "payload", common.ToHex(payload))
+	log.Info("IsNoticeTransaction, begin", "payload", common.ToHex(payload))
 	mpcsyslog.Info("IsNoticeTransaction, payload:%s", common.ToHex(payload))
 	if len(payload) < 4 {
 		return false, errors.New("invalid payload length")
@@ -248,20 +245,20 @@ func IsNoticeTransaction(payload []byte) (bool, error) {
 	log.Debug("IsNoticeTransaction", "callFuncId", common.ToHex(callFuncId[:]))
 	for _, noticeFuncId := range noticeFuncIds {
 		if callFuncId == noticeFuncId {
-			log.Warn("-----------------IsNoticeTransaction, is notice")
+			log.Info("IsNoticeTransaction, is notice")
 			mpcsyslog.Info("IsNoticeTransaction, is notice")
 			return true, nil
 		}
 	}
 
-	log.Warn("-----------------IsNoticeTransaction, is not notice")
+	log.Info("IsNoticeTransaction, is not notice")
 	mpcsyslog.Info("IsNoticeTransaction, is not notice")
 	return false, nil
 }
 
 
 func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
-	log.Warn("-----------------AddValidMpcTx begin", "tx", tx)
+	log.Info("AddValidMpcTx begin", "txInfo", tx)
 	mpcsyslog.Info("AddValidMpcTx, data:%s", common.ToHex([]byte(tx.Data)))
 
 	var key, val []byte
@@ -294,19 +291,20 @@ func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
 }
 
 func AddValidMpcBtcTx(args *btc.MsgTxArgs) error {
-	log.Warn("-----------------AddValidMpcBtcTx begin", "args", args)
+	log.Info("AddValidMpcBtcTx, begin", "txInfo", args.String())
+	mpcsyslog.Info("AddValidMpcBtcTx, begin, txInfo:%s", args.String())
+
 	msgTx, err := btc.GetMsgTxFromMsgTxArgs(args)
 	if err != nil {
 		return err
 	}
 
-	log.Warn("-----------------AddValidMpcBtcTx", "msgTx", msgTx)
 	for _, txIn := range msgTx.TxIn {
-		log.Warn("-----------------AddValidMpcBtcTx, msgTx", "TxIn", *txIn)
+		log.Info("AddValidMpcBtcTx, msgTx", "TxIn", *txIn)
 		mpcsyslog.Info("AddValidMpcBtcTx, txInPreOutHash:%s, txInIndex:%d", txIn.PreviousOutPoint.Hash.String(), txIn.PreviousOutPoint.Index)
 	}
 	for _, txOut := range msgTx.TxOut {
-		log.Warn("-----------------AddValidMpcBtcTx, msgTx", "TxOut", *txOut)
+		log.Info("AddValidMpcBtcTx, msgTx", "TxOut", *txOut)
 		mpcsyslog.Info("AddValidMpcBtcTx, txOutPkScript:%s", common.ToHex(txOut.PkScript))
 	}
 
@@ -322,7 +320,7 @@ func AddValidMpcBtcTx(args *btc.MsgTxArgs) error {
 }
 
 func addKeyValueToDB(key, value []byte) error {
-	log.Warn("-----------------addKeyValueToDB, begin", "key", common.ToHex(key))
+	log.Info("addKeyValueToDB, begin", "key", common.ToHex(key))
 	mpcsyslog.Info("addKeyValueToDB, begin, key:", common.ToHex(key))
 	sdb, err := GetDB()
 	if err != nil {
