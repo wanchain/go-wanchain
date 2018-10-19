@@ -507,8 +507,8 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 
 	result := mpc.getMpcResult()
 
-	log.Info("MpcDistributor createRequestMpcContext, succeed")
-	mpcsyslog.Err("MpcDistributor createRequestMpcContext, succeed")
+	log.Info("MpcDistributor createRequestMpcContext, succeed", "result", common.ToHex(result))
+	mpcsyslog.Err("MpcDistributor createRequestMpcContext, succeed, result:%s", common.ToHex(result))
 	return result, nil
 }
 
@@ -894,6 +894,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 		if (err == nil && bytes.Equal(SignType, []byte("hash"))) || err1 != nil {
 			txSign, err := mpccrypto.TransSignature(&R[0], &S[0], &V[0])
 			if err != nil {
+				log.Error("mpccrypto tans signature fail", "err", err)
 				mpcsyslog.Err("mpccrypto tans signature fail. err:%s", err.Error())
 				return err
 			}
@@ -901,8 +902,11 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 			result.SetByteValue(mpcprotocol.MpcContextResult, txSign)
 			txHash, err := result.GetValue(mpcprotocol.MpcTxHash + "_0")
 			if err == nil {
-				from, err := mpccrypto.SenderEcrecover(txHash[0].Bytes(), txSign)
-				if err == nil {
+				from, err := mpccrypto.SenderEcrecover(common.BytesToHash(txHash[0].Bytes()).Bytes(), txSign)
+				if err != nil {
+					log.Error("MpcDistributor.SignTransaction, SenderEcrecover fail.", "err", err)
+					mpcsyslog.Err("MpcDistributor.SignTransaction, SenderEcrecover fail, err:%s", err.Error())
+				} else {
 					result.SetByteValue(mpcprotocol.MPCSignedFrom, from[:])
 				}
 			}

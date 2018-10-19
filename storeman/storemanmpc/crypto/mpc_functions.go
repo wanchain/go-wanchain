@@ -119,11 +119,15 @@ func TransSignature(R *big.Int, S *big.Int, V *big.Int) ([]byte, error) {
 }
 
 func SenderEcrecover(sighash, sig []byte) (common.Address, error) {
+	log.Info("SenderEcrecover", "sigHash", common.ToHex(sighash), "sig", common.ToHex(sig))
+
 	pub, err := crypto.Ecrecover(sighash, sig)
 	if err != nil {
+		log.Error("SenderEcrecover, crypto Ecrecover fail", "err", err)
 		return common.Address{}, err
 	}
 	if len(pub) == 0 || pub[0] != 4 {
+		log.Error("SenderEcrecover, pub's value isn't zero in first byte")
 		return common.Address{}, errors.New("invalid public key")
 	}
 	var addr common.Address

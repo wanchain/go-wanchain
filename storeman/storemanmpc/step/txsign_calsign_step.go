@@ -139,7 +139,6 @@ func (txStep *TxSign_CalSignStep) FinishStep(result mpcprotocol.MpcResultInterfa
 	address := common.BigToAddress(&from[0])
 	signedFrom, err := result.GetByteValue(mpcprotocol.MPCSignedFrom)
 	if err != nil {
-		mpcsyslog.Info("TxSign_CalSignStep.FinishStep, GetValue fail. key:%s", mpcprotocol.MPCSignedFrom)
 		return nil
 	}
 
