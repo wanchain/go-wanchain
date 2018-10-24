@@ -138,8 +138,8 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 
 
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
-	mpcsyslog.Info("SignMpcTransaction begin")
-	log.Info("Call SignMpcTransaction", "from", tx.From, "to", tx.To, "Gas", tx.Gas, "GasPrice", tx.GasPrice, "value", tx.Value, "data", common.ToHex(tx.Data), "nonce", tx.Nonce, "ChainType", tx.ChainType, "SignType", tx.SignType)
+	log.Info("Call SignMpcTransaction", "txInfo", tx.String())
+	mpcsyslog.Info("SignMpcTransaction begin, txInfo:%s", tx.String())
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
 		return nil, mpcprotocol.ErrTooLessStoreman

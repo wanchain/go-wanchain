@@ -3,6 +3,7 @@ package protocol
 import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"fmt"
 )
 
 type SendTxArgs struct {
@@ -18,3 +19,18 @@ type SendTxArgs struct {
 	SignType  string          `json:"signType"` //input 'hash' for hash sign (r,s,v), else for full sign(rawTransaction)
 }
 
+
+func (tx *SendTxArgs) String() string {
+	return fmt.Sprintf(
+			"From:%s, To:%s, Gas:%s, GasPrice:%s, Value:%s, Data:%s, Nonce:%d, ChainType:%s, ChainID:%s, SignType:%s",
+			tx.From.String(),
+			tx.To.String(),
+			tx.Gas.String(),
+			tx.GasPrice.String(),
+			tx.Value.String(),
+			common.ToHex(tx.Data),
+			*tx.Nonce,
+			tx.ChainType,
+			tx.ChainID.String(),
+			tx.SignType)
+}

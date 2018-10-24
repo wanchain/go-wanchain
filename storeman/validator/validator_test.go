@@ -35,6 +35,18 @@ var (
 		SignType:  "hash", //nil
 	}
 
+	btcTx0 = btc.MsgTxArgs {
+		Version : 1,
+		TxIn : []btc.TxInArgs{
+			{btc.OutPointArg{"0000000000000000000000000000000000000000000000000000000000001111", 0}, "0x0012345678", 0, "0x76a914fd1c8e80f5dea6295ea3f82d8b103e3cf7d04b9288ac"},
+		},
+		TxOut: []btc.TxOutArgs{
+			{Value:1110000, PkScript: "0x00a91491c6e41ae47789e7a98cd5625f27f0473e5b0d1d88ac"},
+			{Value:1110001, PkScript: "0x00a914000000000000000000000000000000000000001188ac"},
+		},
+		LockTime: 0,
+		From : common.HexToAddress("0x0000000000000000000000000000000000000011"),
+	}
 	btcTx1 = btc.MsgTxArgs {
 		Version : 1,
 		TxIn : []btc.TxInArgs{
@@ -277,12 +289,12 @@ func TestAddValidMpcBtcTx(t *testing.T) {
 		t.Fatal("create database fail, err:", err)
 	}
 
-	err = AddValidMpcBtcTx(&btcTx1)
+	err = AddValidMpcBtcTx(&btcTx0)
 	if err != nil {
 		t.Fatal("AddValidMpcBtcTx fail. err:", err)
 	}
 
-	_, key := GetKeyFromBtcTx(&btcTx1)
+	_, key := GetKeyFromBtcTx(&btcTx0)
 	sdb, err := GetDB()
 	if err != nil {
 		t.Fatal("GetDB fail. err", err)
@@ -299,7 +311,7 @@ func TestAddValidMpcBtcTx(t *testing.T) {
 		t.Fatal("json unmarshal fail. err", err)
 	}
 
-	if !tx.Cmp(&btcTx1) {
+	if !tx.Cmp(&btcTx0) {
 		t.Fatal("getting tx data doesn't equal to original data")
 	}
 }

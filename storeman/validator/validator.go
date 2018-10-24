@@ -258,8 +258,8 @@ func IsNoticeTransaction(payload []byte) (bool, error) {
 
 
 func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
-	log.Info("AddValidMpcTx begin", "txInfo", tx)
-	mpcsyslog.Info("AddValidMpcTx, data:%s", common.ToHex([]byte(tx.Data)))
+	log.Info("AddValidMpcTx begin", "txInfo", tx.String())
+	mpcsyslog.Info("AddValidMpcTx, txInfo:%s", tx.String())
 
 	var key, val []byte
 	if tx.Value == nil {
