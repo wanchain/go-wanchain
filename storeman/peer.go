@@ -2,7 +2,6 @@ package storeman
 
 import (
 	"fmt"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -39,7 +38,6 @@ func newPeer(host *Storeman, remote *p2p.Peer, rw p2p.MsgReadWriter) *Peer {
 // start initiates the peer updater, periodically broadcasting the whisper packets
 // into the network.
 func (p *Peer) start() {
-	log.Trace("storeman peer start", "peer", p.ID())
 	mpcsyslog.Info("storeman peer start. peer:%s", p.ID().String())
 }
 
@@ -64,7 +62,6 @@ func (p *Peer) update() {
 // stop terminates the peer updater, stopping message forwarding to it.
 func (p *Peer) stop() {
 	close(p.quit)
-	log.Trace("storeman peer stop", "peer", p.ID())
 	mpcsyslog.Info("storeman peer stop. peer:%s", p.ID().String())
 }
 
@@ -88,13 +85,11 @@ func (p *Peer) handshake() error {
 	packet, err := p.ws.ReadMsg()
 	if err != nil {
 		mpcsyslog.Err("storeman peer read msg fail. peer:%s. err:%s", p.ID().String(), err.Error())
-		log.Error("storeman peer read msg fail", "peer", p.ID().String(), "err", err)
 		return err
 	}
 	defer packet.Discard()
 
 	mpcsyslog.Info("storeman received handshake. peer:%s. code:%d", p.ID().String(), packet.Code)
-	log.Debug("storman received handshake", "peer", p.ID().String(), "packet.Code", packet.Code)
 	if packet.Code != mpcprotocol.StatusCode {
 		mpcsyslog.Err("storeman peer [%s] sent packet %x before status packet", p.ID().String(), packet.Code)
 		return fmt.Errorf("storman peer [%s] sent packet %x before status packet", p.ID().String(), packet.Code)

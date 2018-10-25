@@ -1,7 +1,6 @@
 package storemanmpc
 
 import (
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
@@ -139,7 +138,6 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 			}
 
 			mpcsyslog.Info("step mssage finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
-			log.Info("step mssage finished", "ctxid", mpcCtx.ContextID, "stepId", i)
 		}
 	}
 
@@ -153,6 +151,5 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 
 	mpcCtx.quit(nil)
 	mpcsyslog.Info("MpcContext finished. ctx ID:%d", mpcCtx.ContextID)
-	log.Info("MpcContext finished", "ctx ID", mpcCtx.ContextID)
 	return mpcErr
 }

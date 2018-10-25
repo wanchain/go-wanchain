@@ -1,7 +1,6 @@
 package step
 
 import (
-	"github.com/wanchain/go-wanchain/log"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
@@ -52,10 +51,8 @@ func (jrss *MpcJRSS_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc 
 
 func (jrss *MpcJRSS_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 	seed := jrss.getPeerSeed(msg.PeerID)
-	log.Debug("MpcJRSS_Step getMessage:", "peerID", msg.PeerID, "seed", seed)
 	if seed == 0 {
 		mpcsyslog.Err("MpcJRSS_Step, can't find peer seed. peerID:%s", msg.PeerID.String())
-		log.Error("MpcJRSS_Step, can't find peer seed", "peerID", msg.PeerID)
 	}
 
 	JRSSvalue := jrss.messages[0].(*RandomPolynomialValue)

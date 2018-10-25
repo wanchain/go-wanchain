@@ -7,7 +7,6 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 type mpcPointGenerator struct {
@@ -22,7 +21,6 @@ func createPointGenerator(preValueKey string) *mpcPointGenerator {
 }
 
 func (point *mpcPointGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result mpcprotocol.MpcResultInterface) error {
-	log.Info("mpcPointGenerator.initialize begin")
 	mpcsyslog.Info("mpcPointGenerator.initialize begin")
 
 	value, err := result.GetValue(point.preValueKey)
@@ -34,20 +32,17 @@ func (point *mpcPointGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result
 	curve := crypto.S256()
 	x, y := curve.ScalarBaseMult(value[0].Bytes())
 	if x == nil || y == nil {
-		log.Error("mpcPointGenerator.ScalarBaseMult fail", "err", mpcprotocol.ErrPointZero)
 		mpcsyslog.Err("mpcPointGenerator.ScalarBaseMult fail. err:%s", mpcprotocol.ErrPointZero.Error())
 		return mpcprotocol.ErrPointZero
 	}
 
 	point.seed = [2]big.Int{*x, *y}
 
-	log.Info("mpcPointGenerator.initialize succeed")
 	mpcsyslog.Info("mpcPointGenerator.initialize succeed")
 	return nil
 }
 
 func (point *mpcPointGenerator) calculateResult() error {
-	log.Info("mpcPointGenerator.calculateResult begin")
 	mpcsyslog.Info("mpcPointGenerator.calculateResult begin")
 
 	result := new(ecdsa.PublicKey)
@@ -64,14 +59,12 @@ func (point *mpcPointGenerator) calculateResult() error {
 	}
 
 	if !mpccrypto.ValidatePublicKey(result) {
-		log.Error("mpcPointGenerator.ValidatePublicKey fail", "err", mpcprotocol.ErrPointZero)
 		mpcsyslog.Err("mpcPointGenerator.ValidatePublicKey fail. err:%s", mpcprotocol.ErrPointZero.Error())
 		return mpcprotocol.ErrPointZero
 	}
 
 	point.result = [2]big.Int{*result.X, *result.Y}
 
-	log.Info("mpcPointGenerator.calculateResult succeed")
 	mpcsyslog.Info("mpcPointGenerator.calculateResult succeed")
 	return nil
 }

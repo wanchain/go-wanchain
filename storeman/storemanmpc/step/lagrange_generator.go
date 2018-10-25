@@ -5,7 +5,6 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 type lagrangeGenerator struct {
@@ -20,7 +19,6 @@ func createLagrangeGenerator(preValueKey string) *lagrangeGenerator {
 }
 
 func (lag *lagrangeGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result mpcprotocol.MpcResultInterface) error {
-	log.Info("lagrangeGenerator.initialize begin")
 	mpcsyslog.Info("lagrangeGenerator.initialize begin")
 
 	value, err := result.GetValue(lag.preValueKey)
@@ -30,13 +28,11 @@ func (lag *lagrangeGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result m
 
 	lag.seed = value[0]
 
-	log.Info("lagrangeGenerator.initialize succeed")
 	mpcsyslog.Info("lagrangeGenerator.initialize succeed")
 	return nil
 }
 
 func (lag *lagrangeGenerator) calculateResult() error {
-	log.Info("lagrangeGenerator.calculateResult begin")
 	mpcsyslog.Info("lagrangeGenerator.calculateResult begin")
 
 	f := []big.Int{}
@@ -48,7 +44,6 @@ func (lag *lagrangeGenerator) calculateResult() error {
 
 	lag.result = mpccrypto.Lagrange(f, seed)
 
-	log.Info("lagrangeGenerator.calculateResult succeed")
 	mpcsyslog.Info("lagrangeGenerator.calculateResult succeed")
 	return nil
 }

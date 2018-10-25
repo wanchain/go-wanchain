@@ -2,7 +2,6 @@ package step
 
 import (
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
@@ -15,7 +14,6 @@ type TXSignJR_JZ_Step struct {
 }
 
 func CreateTXSignJR_JZ_Step(degree int, peers *[]mpcprotocol.PeerInfo, signNum int) *TXSignJR_JZ_Step {
-	log.Info("CreateTXSignJR_JZ_Step begin", "degree", degree, "signNum", signNum, "peerNum", len(*peers))
 	mpcsyslog.Info("CreateTXSignJR_JZ_Step, degree:%d, signNum:%d, peerNum:%d", degree, signNum, len(*peers))
 
 	mpc := &TXSignJR_JZ_Step{*CreateBaseMpcStep(peers, 4*signNum), signNum}
@@ -30,7 +28,7 @@ func CreateTXSignJR_JZ_Step(degree int, peers *[]mpcprotocol.PeerInfo, signNum i
 }
 
 func (jrjz *TXSignJR_JZ_Step) CreateMessage() []mpcprotocol.StepMessage {
-	log.Info("TXSignJR_JZ_Step.CreateMessage begin")
+	mpcsyslog.Info("TXSignJR_JZ_Step.CreateMessage begin")
 
 	message := make([]mpcprotocol.StepMessage, len(*jrjz.peers))
 
@@ -55,15 +53,13 @@ func (jrjz *TXSignJR_JZ_Step) CreateMessage() []mpcprotocol.StepMessage {
 
 
 func (jrjz *TXSignJR_JZ_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
-	log.Info("TXSignJR_JZ_Step.HandleMessage", "PeerID", msg.PeerID, "DataLen:", len(msg.Data))
+	mpcsyslog.Info("TXSignJR_JZ_Step.HandleMessage, PeerID:%s, DataLen:%d", msg.PeerID.String(), len(msg.Data))
 	seed := jrjz.getPeerSeed(msg.PeerID)
 	if seed == 0 {
-		log.Error("TXSignJR_JZ_Step Not Find:", "peerID", msg.PeerID)
 		mpcsyslog.Err("TXSignJR_JZ_Step.HandleMessage, get seed fail. peer:%s", msg.PeerID.String())
 	}
 
 	if len(msg.Data) != jrjz.signNum*4 {
-		log.Error("TXSignJR_JZ_Step HandleMessage, received data len doesn't match requirement", "dataLen", len(msg.Data))
 		mpcsyslog.Err("TXSignJR_JZ_Step HandleMessage, received data len doesn't match requirement, dataLen:%d", len(msg.Data))
 		return false
 	}
@@ -75,7 +71,6 @@ func (jrjz *TXSignJR_JZ_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 		c := jrjz.messages[4*i + 3].(*RandomPolynomialValue)
 		_, exist := a.message[seed]
 		if exist {
-			log.Warn("TXSignJR_JZ_Step.HandleMessage, repeat resp", "peer", msg.PeerID.String())
 			mpcsyslog.Warning("TXSignJR_JZ_Step.HandleMessage, repeat resp. peer:%s", msg.PeerID.String())
 			return false
 		}
@@ -93,7 +88,6 @@ func (jrjz *TXSignJR_JZ_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 func (jrjz *TXSignJR_JZ_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
 	err := jrjz.BaseMpcStep.FinishStep()
 	if err != nil {
-		log.Error("TXSignJR_JZ_Step.BaseMpcStep.FinishStep fail", "err", err)
 		mpcsyslog.Err("TXSignJR_JZ_Step.BaseMpcStep.FinishStep fail, err:%s", err.Error())
 		return err
 	}
@@ -119,7 +113,6 @@ func (jrjz *TXSignJR_JZ_Step) FinishStep(result mpcprotocol.MpcResultInterface, 
 		err = result.SetValue(mpcprotocol.MpcSignARSeed + iStr, ar)
 	}
 
-	log.Info("TXSignJR_JZ_Step.FinishStep succeed")
 	mpcsyslog.Info("TXSignJR_JZ_Step.FinishStep succeed")
 	return nil
 }

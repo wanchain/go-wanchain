@@ -1,7 +1,6 @@
 package step
 
 import (
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
@@ -32,22 +31,18 @@ func (step *BaseStep) InitMessageLoop(msger mpcprotocol.GetMessageInterface) err
 		step.finish <- nil
 	} else {
 		go func() {
-			log.Debug("InitMessageLoop begin")
 			mpcsyslog.Info("InitMessageLoop begin")
 
 			for {
 				err := step.HandleMessage(msger)
 				if err != nil {
 					if err != mpcprotocol.ErrQuit {
-						log.Error("InitMessageLoop fail", "get message err", err)
 						mpcsyslog.Err("InitMessageLoop fail, get message err, err:%s", err.Error())
 					}
 
 					break
 				}
 			}
-
-			log.Debug("InitMessageLoop end")
 		}()
 	}
 
@@ -63,14 +58,12 @@ func (step *BaseStep) FinishStep() error {
 	select {
 	case err := <-step.finish:
 		if err != nil {
-			log.Error("BaseStep.FinishStep, get a step finish error", "err", err.Error())
 			mpcsyslog.Err("BaseStep.FinishStep, get a step finish error. err:%s", err.Error())
 		}
 
 		step.msgChan <- nil
 		return err
 	case <-time.After(mpcprotocol.MPCTimeOut):
-		log.Error("BaseStep.FinishStep, wait step finish timeout")
 		mpcsyslog.Err("BaseStep.FinishStep, wait step finish timeout")
 		step.msgChan <- nil
 		return mpcprotocol.ErrTimeOut
@@ -86,7 +79,6 @@ func (step *BaseStep) HandleMessage(msger mpcprotocol.GetMessageInterface) error
 	select {
 	case msg = <-step.msgChan:
 		if msg == nil {
-			log.Info("HandleMessage. BaseStep get a quit msg")
 			mpcsyslog.Info("BaseStep get a quit msg")
 			return mpcprotocol.ErrQuit
 		}

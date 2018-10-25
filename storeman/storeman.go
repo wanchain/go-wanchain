@@ -13,7 +13,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -73,19 +72,16 @@ func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 		packet, err := rw.ReadMsg()
 		if err != nil {
 			mpcsyslog.Err("runMessageLoop, peer:%s, err:%s", p.Peer.ID().String(), err.Error())
-			log.Error("Storeman message loop", "peer", p.Peer.ID().String(), "err", err)
 			return err
 		}
 
 		mpcsyslog.Info("runMessageLoop, received a msg, peer:%s, packet size:%d", p.Peer.ID().String(), packet.Size)
 		if packet.Size > sm.MaxMessageSize() {
 			mpcsyslog.Warning("runMessageLoop, oversized message received, peer:%s, packet size:%d", p.Peer.ID().String(), packet.Size)
-			log.Warn("oversized message received", "peer", p.Peer.ID())
 		} else {
 			err = sm.mpcDistributor.GetMessage(p.Peer.ID(), rw, &packet)
 			if err != nil {
 				mpcsyslog.Err("runMessageLoop, distributor handle msg fail, err:%s", err.Error())
-				log.Error("Storeman message loop", "peer", p.Peer.ID(), "err", err)
 			}
 		}
 
@@ -111,7 +107,6 @@ func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
 }
 
 func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (common.Address, error) {
-	log.Info("CreateMpcAccount begin", "accType", accType)
 	mpcsyslog.Info("CreateMpcAccount begin, accType:%s", accType)
 
 	if !mpcprotocol.CheckAccountType(accType) {
@@ -138,7 +133,6 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 
 
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
-	log.Info("Call SignMpcTransaction", "txInfo", tx.String())
 	mpcsyslog.Info("SignMpcTransaction begin, txInfo:%s", tx.String())
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
@@ -158,7 +152,6 @@ func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.Se
 
 func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTxArgs) ([]hexutil.Bytes, error) {
 	mpcsyslog.Info("SignMpcBtcTransaction begin, txInfo:%s", args.String())
-	log.Info("SignMpcBtcTransaction begin", "txInfo", args.String())
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
 		return nil, mpcprotocol.ErrTooLessStoreman
@@ -180,7 +173,6 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	}
 
 	for i := 0; i < len(signeds); i++ {
-		log.Info("SignMpcBtcTransaction end", "signed", common.ToHex(signeds[i]))
 		mpcsyslog.Info("SignMpcBtcTransaction end, signed:%s", common.ToHex(signeds[i]))
 	}
 
@@ -196,7 +188,6 @@ func (sa *StoremanAPI) AddValidMpcTx(ctx context.Context, tx mpcprotocol.SendTxA
 
 
 func (sa *StoremanAPI) AddValidMpcBtcTx(ctx context.Context, args btc.MsgTxArgs) error {
-	log.Info("AddValidMpcBtcTx", "txInfo", args.String())
 	mpcsyslog.Info("AddValidMpcBtcTx, txInfo:%s", args.String())
 	return validator.AddValidMpcBtcTx(&args)
 }
@@ -221,7 +212,6 @@ func (sm *Storeman) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting the background data propagation thread
 // of the Whisper protocol.
 func (sm *Storeman) Start(server *p2p.Server) error {
-	log.Info("storeman start...", "self", server.Self())
 	sm.mpcDistributor.Self = server.Self()
 	sm.mpcDistributor.StoreManGroup = make([]discover.NodeID, len(server.StoremanNodes))
 	sm.storemanPeers = make(map[discover.NodeID]bool)
@@ -247,7 +237,6 @@ func (sm *Storeman) SendToPeer(peerID *discover.NodeID, msgcode uint64, data int
 		return p2p.Send(peer.ws, msgcode, data)
 	} else {
 		mpcsyslog.Err("peer not find. peer:%s", peerID.String())
-		log.Error("peer not find", "peerID", peerID)
 	}
 	return nil
 }
@@ -284,7 +273,6 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	// Run the peer handshake and state updates
 	if err := storemanPeer.handshake(); err != nil {
 		mpcsyslog.Err("storemanPeer.handshake failed. peerID:%s. err:%s", peer.ID().String(), err.Error())
-		log.Error("storemanPeer.handshake failed", "err", err)
 		return err
 	}
 
@@ -307,7 +295,6 @@ func New(cfg *Config, accountManager *accounts.Manager, aKID, secretKey, region 
 	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(dataPath, 0700); err != nil {
 			mpcsyslog.Err("make Stroreman path fail. err:%s", err.Error())
-			log.Error("make Stroreman path fail", "error", err)
 		}
 	}
 

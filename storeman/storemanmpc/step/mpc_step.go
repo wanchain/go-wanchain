@@ -3,7 +3,6 @@ package step
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 type MpcMessageGenerator interface {
@@ -24,7 +23,6 @@ func (mpcStep *BaseMpcStep) InitStep(result mpcprotocol.MpcResultInterface) erro
 	for _, message := range mpcStep.messages {
 		err := message.initialize(mpcStep.peers, result)
 		if err != nil {
-			log.Error("BaseMpcStep, init msg fail", "err", err.Error())
 			mpcsyslog.Err("BaseMpcStep, init msg fail. err:%s", err.Error())
 			return err
 		}
@@ -42,7 +40,6 @@ func (mpcStep *BaseMpcStep) FinishStep() error {
 	for _, message := range mpcStep.messages {
 		err := message.calculateResult()
 		if err != nil {
-			log.Error("BaseMpcStep, calculate msg result fail", "err", err.Error())
 			mpcsyslog.Err("BaseMpcStep, calculate msg result fail. err:%s", err.Error())
 			return err
 		}

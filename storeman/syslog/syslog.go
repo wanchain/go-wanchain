@@ -41,65 +41,81 @@ func StartSyslog(net, svr, level, tag string) error {
 }
 
 func Debug(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Debug(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Debug(fmt.Sprintf(format, a...))
+	syslogger.Debug(logStr)
 }
 
 func Info(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Info(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Info(fmt.Sprintf(format, a...))
+	syslogger.Info(logStr)
 }
 
 func Notice(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Info(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Notice(fmt.Sprintf(format, a...))
+	syslogger.Notice(logStr)
 }
 
 func Warning(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Warn(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Warning(fmt.Sprintf(format, a...))
+	syslogger.Warning(logStr)
 }
 
 func Err(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Error(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Err(fmt.Sprintf(format, a...))
+	syslogger.Err(logStr)
 }
 
 func Crit(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Warn(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Crit(fmt.Sprintf(format, a...))
+	syslogger.Crit(logStr)
 }
 
 func Alert(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Warn(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Alert(fmt.Sprintf(format, a...))
+	syslogger.Alert(logStr)
 }
 
 func Emerg(format string, a ...interface{}) {
+	logStr := fmt.Sprintf(format, a...)
+	log.Warn(logStr)
 	if syslogger == nil {
 		return
 	}
 
-	syslogger.Emerg(fmt.Sprintf(format, a...))
+	syslogger.Emerg(logStr)
 }

@@ -4,7 +4,6 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 //send create LockAccount from leader
@@ -20,9 +19,9 @@ func requestCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, pre
 
 //get message from leader and create Context
 func acknowledgeCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
-	log.Info("acknowledgeCreateLockAccountMpc begin.")
+	mpcsyslog.Info("acknowledgeCreateLockAccountMpc begin.")
 	for _, preSetValuebyteData := range preSetValue {
-		log.Info("acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
+		mpcsyslog.Info("acknowledgeCreateLockAccountMpc, byteValue:%s", string(preSetValuebyteData.ByteValue[:]))
 	}
 
 	findMap := make(map[uint64]bool)

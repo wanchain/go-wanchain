@@ -7,7 +7,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
+	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"math/big"
 )
 
@@ -110,7 +110,6 @@ func TransSignature(R *big.Int, S *big.Int, V *big.Int) ([]byte, error) {
 		V.SetInt64(v)
 	}
 
-	log.Debug("trans signature", "S", S.String())
 	sig := make([]byte, 65)
 	copy(sig[:], math.PaddedBigBytes(R, 32))
 	copy(sig[32:], math.PaddedBigBytes(S, 32))
@@ -119,15 +118,15 @@ func TransSignature(R *big.Int, S *big.Int, V *big.Int) ([]byte, error) {
 }
 
 func SenderEcrecover(sighash, sig []byte) (common.Address, error) {
-	log.Info("SenderEcrecover", "sigHash", common.ToHex(sighash), "sig", common.ToHex(sig))
+	mpcsyslog.Info("SenderEcrecover, sigHash:%s, sig:%s", common.ToHex(sighash), common.ToHex(sig))
 
 	pub, err := crypto.Ecrecover(sighash, sig)
 	if err != nil {
-		log.Error("SenderEcrecover, crypto Ecrecover fail", "err", err)
+		mpcsyslog.Err("SenderEcrecover, crypto Ecrecover fail, err:%s", err.Error())
 		return common.Address{}, err
 	}
 	if len(pub) == 0 || pub[0] != 4 {
-		log.Error("SenderEcrecover, pub's value isn't zero in first byte")
+		mpcsyslog.Err("SenderEcrecover, pub's value isn't zero in first byte")
 		return common.Address{}, errors.New("invalid public key")
 	}
 	var addr common.Address

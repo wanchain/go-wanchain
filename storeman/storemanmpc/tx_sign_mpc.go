@@ -4,7 +4,6 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/storeman/btc"
 )
@@ -30,7 +29,7 @@ func acknowledgeTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValu
 }
 
 func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
-	log.Info("generateTxSignMpc begin")
+	mpcsyslog.Info("generateTxSignMpc begin")
 
 	signNum, err := getSignNumFromTxInfo(mpc)
 	if err != nil {
@@ -56,7 +55,6 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 	signNum := 1
 	chainType, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcChainType)
 	if err != nil {
-		log.Error("getSignNumFromTxInfo, get chainType fail.", "err", err)
 		mpcsyslog.Err("getSignNumFromTxInfo, get chainType fail. err:%s", err.Error())
 		return 0, err
 	}
@@ -64,7 +62,6 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 	if string(chainType) == "BTC" {
 		btcTxData, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcTransaction)
 		if err != nil {
-			log.Error("getSignNumFromTxInfo, get tx rlp data fail.", "err", err)
 			mpcsyslog.Err("getSignNumFromTxInfo, get tx rlp date fail. err:%s", err.Error())
 			return 0, err
 		}
@@ -72,7 +69,6 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 		var args btc.MsgTxArgs
 		err = rlp.DecodeBytes(btcTxData, &args)
 		if err != nil {
-			log.Error("getSignNumFromTxInfo, decode tx rlp data fail.", "err", err)
 			mpcsyslog.Err("getSignNumFromTxInfo, decode tx rlp data fail. err:%s", err.Error())
 			return 0, err
 		}
@@ -80,7 +76,6 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 		signNum = len(args.TxIn)
 	}
 
-	log.Info("getSignNumFromTxInfo, succeed", "signNum", signNum)
 	mpcsyslog.Info("getSignNumFromTxInfo, succeed. signNum:%d", signNum)
 	return signNum, nil
 }

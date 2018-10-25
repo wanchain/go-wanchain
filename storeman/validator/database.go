@@ -5,7 +5,6 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/wanchain/go-wanchain/log"
 	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
 )
 
@@ -72,10 +71,8 @@ func (db *storemanDB) Close() {
 	err := db.db.Close()
 	if err == nil {
 		mpcsyslog.Info("Storeman database closed")
-		log.Info("Storeman database closed")
 	} else {
 		mpcsyslog.Err("Failed to close database. err:%s", err.Error())
-		log.Error("Failed to close database", "err", err)
 	}
 
 	dbInstance = nil
