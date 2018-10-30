@@ -140,7 +140,7 @@ func TestHandleMessage(t *testing.T) {
 	}
 
 	bSuc = step.HandleMessage(&msg1)
-	if !bSuc {
+	if bSuc {
 		t.Error("step repeat HandleMessage should fail")
 	}
 
