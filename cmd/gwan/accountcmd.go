@@ -30,6 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/kms"
 	"golang.org/x/crypto/ssh/terminal"
+	"encoding/json"
 )
 
 var (
@@ -190,6 +191,21 @@ The account will be encrypted by aws kms, and ciphertext will be saved into new 
 Decrypt an existing account.
 
 The account will be decrypted by aws kms, and plaintext will be saved into new file named as "<original-name>-plain"
+`,
+			},
+			{
+				Name:      "trystmpswd",
+				Usage:     "try storeman keystore account password",
+				Action:    utils.MigrateFlags(accountTryStmPswd),
+				ArgsUsage: "<address> <jsonFile>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
+    gwan account trystmpswd <address> <jsonFile>
+
+try storeman keystore account password from json file.
 `,
 			},
 			{
@@ -450,6 +466,52 @@ func accountDecrypt(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func accountTryStmPswd(ctx *cli.Context) error {
+	args := ctx.Args()
+	if len(args) != 2 {
+		utils.Fatalf("invalid input number, useage : gwan account trystmpswd <address> <jsonFile>")
+	}
+
+	fmt.Println("begin read storeman keystore file...")
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	exceptAddr := common.HexToAddress(args[0])
+	a := accounts.Account{Address:exceptAddr}
+	fa, err := ks.Find(a)
+	if err != nil {
+		utils.Fatalf("storeman keystore file doesn't exist")
+	}
+
+	fmt.Println("find keystore file : ", fa.URL.Path)
+	keyjson, err := ioutil.ReadFile(fa.URL.Path)
+	if err != nil {
+		utils.Fatalf("read keystore file fail. err:%s", err.Error())
+	}
+
+	fmt.Println("begin read json file : ", args[1])
+	b, err := ioutil.ReadFile(args[1])
+	if err != nil {
+		utils.Fatalf("open json file fail. err:%s", err.Error())
+	}
+
+	var pswds []string
+	err = json.Unmarshal(b, &pswds)
+	if err != nil {
+		utils.Fatalf("unmarshal json file fail. err:%s", err.Error())
+	}
+
+	fmt.Println("begin try password...")
+	for _, pswd := range pswds {
+		_, err = keystore.DecryptKey(keyjson, pswd)
+		if err == nil {
+			fmt.Println("the password of the " + args[0] + " is:" + pswd)
+			return nil
+		}
+	}
+
+	return errors.New("have not matched password!")
 }
 
 func importWallet(ctx *cli.Context) error {
