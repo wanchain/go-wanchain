@@ -40,6 +40,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/event"
+	"io/ioutil"
 )
 
 var (
@@ -536,6 +537,28 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
+
+func (ks *KeyStore) UpdateStoreman(a accounts.Account, passphrase, newPassphrase string) error {
+	fa, err := ks.Find(a)
+	if err != nil {
+		return errors.New("storeman keystore file doesn't exist")
+	}
+
+	fmt.Println("find keystore file : ", fa.URL.Path)
+	keyjson, err := ioutil.ReadFile(fa.URL.Path)
+	if err != nil {
+		return err
+	}
+
+	key, err := DecryptKey(keyjson, passphrase)
+	if err != nil {
+		return err
+	}
+
+	key.Address = a.Address
+	return ks.storage.StoreKey(fa.URL.Path, key, newPassphrase)
+}
+
 
 // ImportPreSaleKey decrypts the given Ethereum presale wallet and stores
 // a key file in the key directory. The key file is encrypted with the same passphrase.

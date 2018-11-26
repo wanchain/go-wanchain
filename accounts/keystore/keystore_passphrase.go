@@ -249,6 +249,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		keyBytes, keyBytes2, keyId []byte
 		err                        error
 		waddressStr                *string
+		exten                      *string
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
@@ -278,6 +279,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		}
 
 		waddressStr = &k.WAddress
+		exten = &k.Exten
 	}
 
 	key, err := crypto.ToECDSA(keyBytes)
@@ -304,6 +306,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		PrivateKey:  key,
 		PrivateKey2: key2,
 		WAddress:    waddress,
+		Exten:		 *exten,
 	}, nil
 }
 

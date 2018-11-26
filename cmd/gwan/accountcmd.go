@@ -160,8 +160,37 @@ changing your password is only possible interactively.
 `,
 			},
 			{
+				Name:      "updatestm",
+				Usage:     "Update an existing storeman account",
+				Action:    utils.MigrateFlags(accountUpdateStoreman),
+				ArgsUsage: "<address>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+					utils.LightKDFFlag,
+				},
+				Description: `
+    gwan account updatestm <address>
+
+Update an existing storeman account.
+
+The account is saved in the newest version in encrypted format, you are prompted
+for a passphrase to unlock the account and another to save the updated file.
+
+This same command can therefore be used to migrate an account of a deprecated
+format to the newest format or change the password for an account.
+
+For non-interactive use the passphrase can be specified with the --password flag:
+
+    gwan account updatestm [options] <address>
+
+Since only one password can be given, only format update can be performed,
+changing your password is only possible interactively.
+`,
+			},
+			{
 				Name:      "encrypt",
-				Usage:     "Encrypt an existing account",
+				Usage:     "Encrypt an existing account with aws kms",
 				Action:    utils.MigrateFlags(accountEncrypt),
 				ArgsUsage: "<address>",
 				Flags: []cli.Flag{
@@ -374,6 +403,36 @@ func accountUpdate(ctx *cli.Context) error {
 	}
 	return nil
 }
+
+
+func accountUpdateStoreman(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		utils.Fatalf("No accounts specified to update")
+	}
+
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+
+	for _, addr := range ctx.Args() {
+		account, err := utils.MakeAddress(ks, addr)
+		if err != nil {
+			utils.Fatalf("Could not make account from address: %v", err)
+		}
+
+		prompt := fmt.Sprintf("Please input old password to unlocking account %s", addr)
+		oldPassword := getPassPhrase(prompt, false, 0, nil)
+
+		prompt = "Please give a new password. Do not forget this password."
+		newPassword := getPassPhrase(prompt, true, 0, nil)
+
+		if err := ks.UpdateStoreman(account, oldPassword, newPassword); err != nil {
+			utils.Fatalf("Could not update the storeman account: %v", err)
+		}
+	}
+
+	return nil
+}
+
 
 var awsKMSCiphertextFileExt = "-cipher"
 var awsKMSPlaintextFileExt = "-plain"
