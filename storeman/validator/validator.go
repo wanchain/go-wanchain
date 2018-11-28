@@ -32,8 +32,9 @@ func init() {
 	}
 }
 
-func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLeaderHashBytes []byte) bool {
-	mpcsyslog.Info("ValidateTx, leaderTxLeaderHashBytes:%s, leaderTxRawData:%s", common.ToHex(leaderTxLeaderHashBytes), common.ToHex(leaderTxRawData))
+func ValidateTx(signer mpccrypto.MPCTxSigner, from common.Address, chainType string, chainId *big.Int, leaderTxRawData []byte, leaderTxLeaderHashBytes []byte) bool {
+	mpcsyslog.Info("ValidateTx, from:%s, chainType:%s, chainId:%s, leaderTxLeaderHashBytes:%s, leaderTxRawData:%s",
+		from.String(), chainType, chainId.String(), common.ToHex(leaderTxLeaderHashBytes), common.ToHex(leaderTxRawData))
 
 	var leaderTx types.Transaction
 	err := rlp.DecodeBytes(leaderTxRawData, &leaderTx)
@@ -51,11 +52,7 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, leaderTxRawData []byte, leaderTxLe
 		return true
 	}
 
-	keysBytes := make([]byte, 0)
-	keysBytes = append(keysBytes, leaderTx.Value().Bytes()...)
-	keysBytes = append(keysBytes, leaderTx.Data()...)
-
-	key := crypto.Keccak256(keysBytes)
+	key := GetKeyFromTx(&from, leaderTx.To(), leaderTx.Value(), leaderTx.Data(), &chainType, chainId)
 	mpcsyslog.Info("mpc ValidateTx. key:%s", common.ToHex(key))
 
 	followerDB, err := GetDB()
@@ -204,6 +201,18 @@ func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []
 	return keyWithoutTxIn, keyWithTxIn
 }
 
+func GetKeyFromTx(from *common.Address, to *common.Address, value *big.Int, data []byte, chainType *string, chainId *big.Int) []byte {
+	key := make([]byte, 0)
+	key = append(key, from.Bytes()...)
+	key = append(key, to.Bytes()...)
+	key = append(key, value.Bytes()...)
+	key = append(key, data...)
+	key = append(key, []byte(*chainType)...)
+	key = append(key, chainId.Bytes()...)
+
+	return crypto.Keccak256(key)
+}
+
 func IsNoticeTransaction(payload []byte) (bool, error) {
 	mpcsyslog.Info("IsNoticeTransaction, payload:%s", common.ToHex(payload))
 	if len(payload) < 4 {
@@ -241,9 +250,7 @@ func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
 		return err
 	}
 
-	key = append(key, tx.Value.ToInt().Bytes()...)
-	key = append(key, tx.Data...)
-	key = crypto.Keccak256(key)
+	key = GetKeyFromTx(&tx.From, tx.To, (*big.Int)(tx.Value), tx.Data, &tx.ChainType, (*big.Int)(tx.ChainID))
 
 	val, err := json.Marshal(&tx)
 	if err != nil {

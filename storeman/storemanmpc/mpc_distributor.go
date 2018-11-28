@@ -522,7 +522,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		chainId := mpcMessage.Data[3]
 
 		mpcsyslog.Info(
-			"createMpcContext", "chainType:%s, txData:%s, signType:%s, txHash:%s, address:%s, chainId:%s",
+			"createMpcContext, chainType:%s, txData:%s, signType:%s, txHash:%s, address:%s, chainId:%s",
 			string(chainType),
 			common.ToHex(txBytesData),
 			string(txSignType),
@@ -536,7 +536,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 			return err
 		}
 
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, mpcMessage.BytesData[0]})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)})
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
 
@@ -550,7 +550,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 				return err
 			}
 
-			verifyResult := validator.ValidateTx(signer, txBytesData, txHash.Bytes())
+			verifyResult := validator.ValidateTx(signer, address, chainType, &chainId, txBytesData, txHash.Bytes())
 			if !verifyResult {
 				mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcMessage.ContextID,
 					StepID: 0,
@@ -620,7 +620,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 			return mpcprotocol.ErrInvalidStmAccType
 		}
 
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcStmAccType, nil, mpcMessage.BytesData[0]})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcStmAccType, nil, []byte(accType)})
 	}
 
 	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)
