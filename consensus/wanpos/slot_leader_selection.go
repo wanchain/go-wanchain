@@ -3,6 +3,8 @@ package wanpos
 import (
 	"crypto/ecdsa"
 	Rand "crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -34,11 +36,14 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey) ([]
 		return nil, err
 	}
 
+	fmt.Println("input pubkey: ", hex.EncodeToString(crypto.FromECDSAPub(publicKey)), "buflen: ", len(crypto.FromECDSAPub(publicKey)))
 	//commitment = PublicKey || alpha * PublicKey
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("generate m: ", hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), "buflen: ", len(crypto.FromECDSAPub(publicKey)))
 
 	buffer := make([]byte, 0)
 	for i := 0; i < len(commitment); i++ {
