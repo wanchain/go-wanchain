@@ -3,9 +3,10 @@
 package vm
 
 import (
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
-	"math/big"
 )
 
 // Precompiled contracts address or
@@ -31,7 +32,7 @@ var (
 	otaBalancePercentdot001WStorageAddr = common.HexToAddress(WanStampdot001)
 	otaBalancePercentdot002WStorageAddr = common.HexToAddress(WanStampdot002)
 	otaBalancePercentdot005WStorageAddr = common.HexToAddress(WanStampdot005)
-	
+
 	otaBalancePercentdot003WStorageAddr = common.HexToAddress(WanStampdot003)
 	otaBalancePercentdot006WStorageAddr = common.HexToAddress(WanStampdot006)
 	otaBalancePercentdot009WStorageAddr = common.HexToAddress(WanStampdot009)
@@ -39,19 +40,23 @@ var (
 	otaBalancePercentdot03WStorageAddr = common.HexToAddress(WanStampdot03)
 	otaBalancePercentdot06WStorageAddr = common.HexToAddress(WanStampdot06)
 	otaBalancePercentdot09WStorageAddr = common.HexToAddress(WanStampdot09)
-	otaBalancePercentdot2WStorageAddr = common.HexToAddress(WanStampdot2)
-	otaBalancePercentdot5WStorageAddr = common.HexToAddress(WanStampdot5)
+	otaBalancePercentdot2WStorageAddr  = common.HexToAddress(WanStampdot2)
+	otaBalancePercentdot5WStorageAddr  = common.HexToAddress(WanStampdot5)
 
-	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
-	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)
-	otaBalance50WStorageAddr       = common.HexToAddress(Wancoin50)
-	otaBalance100WStorageAddr      = common.HexToAddress(Wancoin100)
+	otaBalance10WStorageAddr  = common.HexToAddress(Wancoin10)
+	otaBalance20WStorageAddr  = common.HexToAddress(Wancoin20)
+	otaBalance50WStorageAddr  = common.HexToAddress(Wancoin50)
+	otaBalance100WStorageAddr = common.HexToAddress(Wancoin100)
 
-	otaBalance200WStorageAddr       = common.HexToAddress(Wancoin200)
-	otaBalance500WStorageAddr       = common.HexToAddress(Wancoin500)
-	otaBalance1000WStorageAddr      = common.HexToAddress(Wancoin1000)
-	otaBalance5000WStorageAddr      = common.HexToAddress(Wancoin5000)
-	otaBalance50000WStorageAddr     = common.HexToAddress(Wancoin50000)
+	otaBalance200WStorageAddr   = common.HexToAddress(Wancoin200)
+	otaBalance500WStorageAddr   = common.HexToAddress(Wancoin500)
+	otaBalance1000WStorageAddr  = common.HexToAddress(Wancoin1000)
+	otaBalance5000WStorageAddr  = common.HexToAddress(Wancoin5000)
+	otaBalance50000WStorageAddr = common.HexToAddress(Wancoin50000)
+
+	//pos
+	wanPosSlotSelectStage1PrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
+	wanPosSlotSelectStage2PrecompileAddr = common.BytesToAddress(big.NewInt(601).Bytes())
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -89,4 +94,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 	wanCoinPrecompileAddr:  &wanCoinSC{},
 	wanStampPrecompileAddr: &wanchainStampSC{},
+
+	//pos
+	wanPosSlotSelectStage1PrecompileAddr: &wanSlotLeaderCommitment{},
 }

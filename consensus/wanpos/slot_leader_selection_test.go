@@ -45,6 +45,9 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	if payload == nil {
 		t.Fail()
 	}
+
+	fmt.Println("payload len:", len(payload), " data: ", hex.EncodeToString(payload))
+
 	alpha, err := slot.GetAlpha(epochID)
 	if alpha == nil || err != nil {
 		t.Fail()

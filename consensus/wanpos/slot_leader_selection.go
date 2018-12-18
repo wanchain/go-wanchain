@@ -3,6 +3,7 @@ package wanpos
 import (
 	"crypto/ecdsa"
 	Rand "crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -66,7 +67,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("alpha:", alpha)
+	fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
 
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {
