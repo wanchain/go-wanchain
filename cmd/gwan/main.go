@@ -208,6 +208,10 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
+
+	ctx.GlobalSet("txpool.nolocals","true")
+	ctx.GlobalSet("txpool.pricelimit","180000000000")
+
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
