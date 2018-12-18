@@ -26,6 +26,10 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+
+	fmt.Println("priv len:", len(crypto.FromECDSA(privKey)))
+	fmt.Println("pk len:", len(crypto.FromECDSAPub(&privKey.PublicKey)))
+
 	payload, err := slot.GenerateCommitment(&privKey.PublicKey)
 	if err != nil {
 		t.Fail()
