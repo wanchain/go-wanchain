@@ -1,10 +1,13 @@
 package wanpos
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -12,10 +15,6 @@ import (
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
 	slot := GetSlotLeaderSelection()
 	if slot == nil {
-		t.Fail()
-	}
-
-	if slot.Alpha != nil {
 		t.Fail()
 	}
 }
@@ -40,17 +39,17 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	if payload == nil {
 		t.Fail()
 	}
-
-	if slot.Alpha == nil {
+	alpha, err := slot.GetAlpha(epochID)
+	if alpha == nil || err != nil {
 		t.Fail()
 	}
 
-	pk := payload[:65]
-	m := payload[65:]
+	pk := payload[:CompressedPubKeyLen]
+	m := payload[CompressedPubKeyLen:]
 
 	fmt.Println("payload 0: ", hex.EncodeToString(pk))
 	fmt.Println("payload 1: ", hex.EncodeToString(m))
-	fmt.Println("Alpha: ", GetSlotLeaderSelection().Alpha)
+	fmt.Println("Alpha: ", alpha)
 }
 
 func TestGenerateCommitmentFailed(t *testing.T) {
@@ -85,4 +84,35 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+
+	privKey, err = crypto.GenerateKey()
+	privKey2, _ := crypto.GenerateKey()
+
+	privKey.X = privKey2.X
+	_, err = slot.GenerateCommitment(&privKey.PublicKey, epochID)
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestPublicKeyCompress(t *testing.T) {
+	privKey, _ := crypto.GenerateKey()
+
+	fmt.Println("Is on curve: ", crypto.S256().IsOnCurve(privKey.X, privKey.Y))
+
+	fmt.Println("public key:", hex.EncodeToString(crypto.FromECDSAPub(&privKey.PublicKey)))
+
+	pk := btcec.PublicKey(privKey.PublicKey)
+
+	fmt.Println("public key uncompress:", hex.EncodeToString(pk.SerializeUncompressed()), "len: ", len(pk.SerializeUncompressed()))
+
+	fmt.Println("public key compress:", hex.EncodeToString(pk.SerializeCompressed()), "len: ", len(pk.SerializeCompressed()))
+
+	keyCompress := pk.SerializeCompressed()
+
+	key, _ := btcec.ParsePubKey(keyCompress, btcec.S256())
+
+	pKey := ecdsa.PublicKey(*key)
+
+	fmt.Println("public key:", hex.EncodeToString(crypto.FromECDSAPub(&pKey)))
 }

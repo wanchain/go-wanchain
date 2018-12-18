@@ -3,21 +3,24 @@ package wanpos
 import (
 	"crypto/ecdsa"
 	Rand "crypto/rand"
-	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"math/big"
 	"os"
+
+	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/pos/uleaderselection"
 )
 
+//CompressedPubKeyLen means a compressed public key byte len.
+const CompressedPubKeyLen = 33
+
 //SlotLeaderSelection use to select unique slot leader
 type SlotLeaderSelection struct {
-	Alpha *big.Int //Local alpha
-	db    *ethdb.LDBDatabase
+	db *ethdb.LDBDatabase
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -48,8 +51,12 @@ func (s *SlotLeaderSelection) DbInit() {
 //Returns the commitment buffer []byte which is publicKey and alpha * publicKey
 //payload should be send with tx.
 func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epochID *big.Int) ([]byte, error) {
-	if publicKey == nil || epochID == nil {
+	if publicKey == nil || epochID == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errors.New("Invalid input parameters")
+	}
+
+	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {
+		return nil, errors.New("Public key point is not on S256 curve")
 	}
 
 	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)
@@ -62,25 +69,36 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 		return nil, err
 	}
 
-	buffer := make([]byte, 130)
-	for i := 0; i < len(commitment); i++ {
-		pk := commitment[i]
-		buffer = append(buffer, crypto.FromECDSAPub(pk)...)
-	}
+	pk := btcec.PublicKey(*commitment[0])
+	mi := btcec.PublicKey(*commitment[1])
 
-	s.Alpha = alpha
+	pkCompress := pk.SerializeCompressed()
+	miCompress := mi.SerializeCompressed()
+
+	buffer := make([]byte, len(pkCompress)+len(miCompress))
+	copy(buffer, pkCompress)
+	copy(buffer[len(pkCompress):], miCompress)
 
 	s.dbPut(epochID, "alpha", buffer)
 
 	return buffer, nil
 }
 
+//GetAlpha get alpha of epochID
+func (s *SlotLeaderSelection) GetAlpha(epochID *big.Int) (*big.Int, error) {
+	buf, err := s.dbGet(epochID, "alpha")
+	if err != nil {
+		return nil, err
+	}
+
+	var alpha = new(big.Int).SetBytes(buf)
+	return alpha, nil
+}
+
 func (s *SlotLeaderSelection) dbPut(epochID *big.Int, key string, value []byte) error {
 
-	keyBuf, err := hex.DecodeString(key)
-	if err != nil {
-		return err
-	}
+	keyBuf := []byte(key)
+
 	epochBuf := epochID.Bytes()
 
 	newKey := make([]byte, len(keyBuf)+len(epochBuf))
@@ -93,10 +111,9 @@ func (s *SlotLeaderSelection) dbPut(epochID *big.Int, key string, value []byte) 
 }
 
 func (s *SlotLeaderSelection) dbGet(epochID *big.Int, key string) ([]byte, error) {
-	keyBuf, err := hex.DecodeString(key)
-	if err != nil {
-		return nil, err
-	}
+
+	keyBuf := []byte(key)
+
 	epochBuf := epochID.Bytes()
 
 	newKey := make([]byte, len(keyBuf)+len(epochBuf))
