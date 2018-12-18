@@ -4,9 +4,12 @@ import (
 	"crypto/ecdsa"
 	Rand "crypto/rand"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
+
+	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/btcsuite/btcd/btcec"
 
@@ -63,6 +66,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("alpha:", alpha)
 
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {
@@ -74,14 +78,13 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
+	epochIDBuf := epochID.Bytes()
 
-	buffer := make([]byte, len(pkCompress)+len(miCompress))
-	copy(buffer, pkCompress)
-	copy(buffer[len(pkCompress):], miCompress)
+	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, pkCompress, miCompress})
 
-	s.dbPut(epochID, "alpha", buffer)
+	s.dbPut(epochID, "alpha", alpha.Bytes())
 
-	return buffer, nil
+	return buffer, err
 }
 
 //GetAlpha get alpha of epochID
@@ -95,31 +98,27 @@ func (s *SlotLeaderSelection) GetAlpha(epochID *big.Int) (*big.Int, error) {
 	return alpha, nil
 }
 
-func (s *SlotLeaderSelection) dbPut(epochID *big.Int, key string, value []byte) error {
+func (s *SlotLeaderSelection) dbPut(epochID *big.Int, key string, value []byte) ([]byte, error) {
 
-	keyBuf := []byte(key)
-
-	epochBuf := epochID.Bytes()
-
-	newKey := make([]byte, len(keyBuf)+len(epochBuf))
-
-	copy(newKey, keyBuf)
-	copy(newKey[len(keyBuf):], epochBuf)
+	newKey, err := rlp.EncodeToBytes([][]byte{
+		epochID.Bytes(),
+		[]byte(key),
+	})
 
 	s.db.Put(newKey, value)
-	return nil
+	return newKey, err
 }
 
 func (s *SlotLeaderSelection) dbGet(epochID *big.Int, key string) ([]byte, error) {
 
-	keyBuf := []byte(key)
+	newKey, err := rlp.EncodeToBytes([][]byte{
+		epochID.Bytes(),
+		[]byte(key),
+	})
 
-	epochBuf := epochID.Bytes()
-
-	newKey := make([]byte, len(keyBuf)+len(epochBuf))
-
-	copy(newKey, keyBuf)
-	copy(newKey[len(keyBuf):], epochBuf)
+	if err != nil {
+		return nil, err
+	}
 
 	return s.db.Get(newKey)
 }

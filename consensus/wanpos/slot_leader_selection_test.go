@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/rlp"
+
 	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -29,8 +31,12 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 
 	fmt.Println("priv len:", len(crypto.FromECDSA(privKey)))
 	fmt.Println("pk len:", len(crypto.FromECDSAPub(&privKey.PublicKey)))
+	fmt.Println("pk: ", hex.EncodeToString(crypto.FromECDSAPub(&privKey.PublicKey)))
 
-	epochID := new(big.Int).SetInt64(1)
+	pkCompress := btcec.PublicKey(privKey.PublicKey)
+	fmt.Println("compressed pk: :", hex.EncodeToString(pkCompress.SerializeCompressed()), "len: ", len(pkCompress.SerializeCompressed()))
+
+	epochID := new(big.Int).SetInt64(8192)
 	payload, err := slot.GenerateCommitment(&privKey.PublicKey, epochID)
 	if err != nil {
 		t.Fail()
@@ -44,11 +50,16 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 		t.Fail()
 	}
 
-	pk := payload[:CompressedPubKeyLen]
-	m := payload[CompressedPubKeyLen:]
+	var output [][]byte
+	rlp.DecodeBytes(payload, &output)
 
-	fmt.Println("payload 0: ", hex.EncodeToString(pk))
-	fmt.Println("payload 1: ", hex.EncodeToString(m))
+	if hex.EncodeToString(pkCompress.SerializeCompressed()) != hex.EncodeToString(output[1]) {
+		t.Fail()
+	}
+
+	fmt.Println("epochID: ", hex.EncodeToString(output[0]))
+	fmt.Println("payload 0: ", hex.EncodeToString(output[1]))
+	fmt.Println("payload 1: ", hex.EncodeToString(output[2]))
 	fmt.Println("Alpha: ", alpha)
 }
 
@@ -115,4 +126,34 @@ func TestPublicKeyCompress(t *testing.T) {
 	pKey := ecdsa.PublicKey(*key)
 
 	fmt.Println("public key:", hex.EncodeToString(crypto.FromECDSAPub(&pKey)))
+}
+
+func TestRlpEncodeAndDecode(t *testing.T) {
+
+	privKey, _ := crypto.GenerateKey()
+	pk := btcec.PublicKey(privKey.PublicKey)
+	keyCompress := pk.SerializeCompressed()
+
+	var test = [][]byte{
+		new(big.Int).SetInt64(1).Bytes(),
+		keyCompress,
+		keyCompress,
+	}
+
+	fmt.Println("before encode:", test)
+
+	buf, err := rlp.EncodeToBytes(test)
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	fmt.Println("encode buf: ", hex.EncodeToString(buf))
+
+	fmt.Println("encode len: ", len(buf))
+
+	var output [][]byte
+	rlp.DecodeBytes(buf, &output)
+
+	fmt.Println("after decode:", output)
 }
