@@ -3,6 +3,8 @@ package wanpos
 import (
 	"crypto/ecdsa"
 	Rand "crypto/rand"
+	"encoding/hex"
+	"errors"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -22,7 +24,7 @@ var slotLeaderSelection *SlotLeaderSelection
 
 func init() {
 	slotLeaderSelection = &SlotLeaderSelection{db: nil}
-	slotLeaderSelection.Init()
+	slotLeaderSelection.DbInit()
 }
 
 //GetSlotLeaderSelection get the SlotLeaderSelection's object
@@ -30,8 +32,8 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 	return slotLeaderSelection
 }
 
-//Init use to init leveldb in this object, user should not use this. It is automate called in init().
-func (s *SlotLeaderSelection) Init() {
+//DbInit use to init leveldb in this object, user should not use this. It is automate called in init().
+func (s *SlotLeaderSelection) DbInit() {
 	dirname, err := ioutil.TempDir(os.TempDir(), "wanpos_tmpdb_")
 	if err != nil {
 		panic("failed to create wanpos_tmpdb file: " + err.Error())
@@ -45,7 +47,11 @@ func (s *SlotLeaderSelection) Init() {
 //GenerateCommitment generate a commitment and send it by tx message
 //Returns the commitment buffer []byte which is publicKey and alpha * publicKey
 //payload should be send with tx.
-func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey) ([]byte, error) {
+func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epochID *big.Int) ([]byte, error) {
+	if publicKey == nil || epochID == nil {
+		return nil, errors.New("Invalid input parameters")
+	}
+
 	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)
 	if err != nil {
 		return nil, err
@@ -64,5 +70,39 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey) ([]
 
 	s.Alpha = alpha
 
+	s.dbPut(epochID, "alpha", buffer)
+
 	return buffer, nil
+}
+
+func (s *SlotLeaderSelection) dbPut(epochID *big.Int, key string, value []byte) error {
+
+	keyBuf, err := hex.DecodeString(key)
+	if err != nil {
+		return err
+	}
+	epochBuf := epochID.Bytes()
+
+	newKey := make([]byte, len(keyBuf)+len(epochBuf))
+
+	copy(newKey, keyBuf)
+	copy(newKey[len(keyBuf):], epochBuf)
+
+	s.db.Put(newKey, value)
+	return nil
+}
+
+func (s *SlotLeaderSelection) dbGet(epochID *big.Int, key string) ([]byte, error) {
+	keyBuf, err := hex.DecodeString(key)
+	if err != nil {
+		return nil, err
+	}
+	epochBuf := epochID.Bytes()
+
+	newKey := make([]byte, len(keyBuf)+len(epochBuf))
+
+	copy(newKey, keyBuf)
+	copy(newKey[len(keyBuf):], epochBuf)
+
+	return s.db.Get(newKey)
 }
