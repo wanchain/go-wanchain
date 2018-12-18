@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"path"
 
 	"github.com/wanchain/go-wanchain/rlp"
 
@@ -31,7 +32,7 @@ var slotLeaderSelection *SlotLeaderSelection
 
 func init() {
 	slotLeaderSelection = &SlotLeaderSelection{db: nil}
-	slotLeaderSelection.DbInit()
+	slotLeaderSelection.DbInit("")
 }
 
 //GetSlotLeaderSelection get the SlotLeaderSelection's object
@@ -40,11 +41,22 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 }
 
 //DbInit use to init leveldb in this object, user should not use this. It is automate called in init().
-func (s *SlotLeaderSelection) DbInit() {
-	dirname, err := ioutil.TempDir(os.TempDir(), "wanpos_tmpdb_")
-	if err != nil {
-		panic("failed to create wanpos_tmpdb file: " + err.Error())
+func (s *SlotLeaderSelection) DbInit(dbPath string) {
+	var dirname string
+	var err error
+	if dbPath == "" {
+		dirname, err = ioutil.TempDir(os.TempDir(), "wanpos_tmpdb_")
+		if err != nil {
+			panic("failed to create wanpos_tmpdb file: " + err.Error())
+		}
+	} else {
+		dirname = path.Join(dbPath, "wanposdb")
 	}
+
+	if s.db != nil {
+		s.db.Close()
+	}
+
 	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 0)
 	if err != nil {
 		panic("failed to create wanpos_tmpdb database: " + err.Error())
