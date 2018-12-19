@@ -21,8 +21,8 @@ import (
 const CompressedPubKeyLen = 33
 
 const (
-	// EpochGenesisTime is the pos start time such as: 2018-12-12 00:00:00
-	EpochGenesisTime = 1544544000
+	// EpochGenesisTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
+	EpochGenesisTime = uint64(1544544000)
 
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 10
@@ -31,7 +31,7 @@ const (
 	SlotCount = 180
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 20
+	SlotTime = 10
 
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = int(SlotCount * 0.4)
@@ -101,14 +101,19 @@ func (s *SlotLeaderSelection) Loop() {
 		if epochID > s.workingEpochID {
 			s.setWorkStage(epochID, slotLeaderSelectionStage1)
 		}
+
 	default:
 	}
+	slotID := s.getSlotID()
+	fmt.Println("slotID: ", slotID)
 }
 
 //GenerateCommitment generate a commitment and send it by tx message
 //Returns the commitment buffer []byte which is publicKey and alpha * publicKey
 //payload should be send with tx.
-func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epochID uint64) ([]byte, error) {
+func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
+	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
+
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errors.New("Invalid input parameters")
 	}
@@ -134,17 +139,18 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
 	epochIDBuf := big.NewInt(int64(epochID)).Bytes()
+	selfIndexBuf := Uint64ToBytes(selfIndexInEpochLeader)
 
-	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, pkCompress, miCompress})
+	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, selfIndexBuf, pkCompress, miCompress})
 
-	GetDb().Put(epochID, "alpha", alpha.Bytes())
+	GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
 	return buffer, err
 }
 
 //GetAlpha get alpha of epochID
-func (s *SlotLeaderSelection) GetAlpha(epochID uint64) (*big.Int, error) {
-	buf, err := GetDb().Get(epochID, "alpha")
+func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
+	buf, err := GetDb().GetWithIndex(epochID, selfIndex, "alpha")
 	if err != nil {
 		return nil, err
 	}
@@ -160,8 +166,8 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 
 //getEpochID get epochID by local time
 func (s *SlotLeaderSelection) getEpochID() uint64 {
-	epochTimespan := int64(SlotTime * SlotCount)
-	timeUnix := time.Now().Unix()
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
 
 	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
 	return epochID
@@ -169,17 +175,40 @@ func (s *SlotLeaderSelection) getEpochID() uint64 {
 
 //getSlotID get current slot by local time
 func (s *SlotLeaderSelection) getSlotID() uint64 {
-	epochTimespan := int64(SlotTime * SlotCount)
-	timeUnix := time.Now().Unix()
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
 
-	epochIndex := int64((timeUnix - EpochGenesisTime) / epochTimespan)
+	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
 
-	epochStartTime := epochIndex * epochTimespan
+	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
 
 	timeInEpoch := timeUnix - epochStartTime
 
 	slotID := uint64(timeInEpoch / SlotTime)
 	return slotID
+}
+
+// GetEpochSlotID get current epochID and slotID in this epoch
+// returns epochID, slotID, error
+func GetEpochSlotID() (uint64, uint64, error) {
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
+
+	if EpochGenesisTime > timeUnix {
+		return 0, 0, errors.New("Epoch genesis time is not arrive")
+	}
+
+	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+
+	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+
+	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
+
+	timeInEpoch := timeUnix - epochStartTime
+
+	slotID := uint64(timeInEpoch / SlotTime)
+
+	return epochID, slotID, nil
 }
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
@@ -209,6 +238,11 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 	return err
 }
 
+func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
+	currentEpochID, _ := s.getWorkingEpochID()
+	s.setWorkStage(currentEpochID, workStage)
+}
+
 //PkEqual only can use in same curve. return whether the two points equal
 func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 	if pk1 == nil || pk2 == nil {
@@ -223,17 +257,22 @@ func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 }
 
 func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) error {
-	// selfPublicKey, _ := s.getLocalPublicKey()
+	selfPublicKey, _ := s.getLocalPublicKey()
 
-	// for i := 0; i < len(epochLeaders); i++ {
-	// 	if PkEqual(selfPublicKey, epochLeaders[i]) {
-	// 		workingEpochID, err := s.getWorkingEpochID()
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		//data, err := s.GenerateCommitment(selfPublicKey, workingEpochID)
-	// 	}
-	// }
+	for i := 0; i < len(epochLeaders); i++ {
+		if PkEqual(selfPublicKey, epochLeaders[i]) {
+			workingEpochID, err := s.getWorkingEpochID()
+			if err != nil {
+				return err
+			}
+			data, err := s.GenerateCommitment(selfPublicKey, workingEpochID, uint64(i))
+			if err != nil {
+				return err
+			}
+
+			s.sendTx(data)
+		}
+	}
 
 	return nil
 }
@@ -254,7 +293,8 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 }
 
 func (s *SlotLeaderSelection) sendTx(data []byte) {
-
+	//test
+	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
 }
 
 // Uint64ToBytes use a big.Int to transfer uint64 to bytes
