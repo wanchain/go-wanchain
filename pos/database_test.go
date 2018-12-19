@@ -14,14 +14,14 @@ func TestWanposDbSuccess(t *testing.T) {
 	//Put
 	for i := 0; i < 2000; i++ {
 		alphaI := big.NewInt(int64(i)).Bytes()
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 		GetDb().Put(epochID, "alpha", alphaI)
 	}
 
 	//Get and verify
 	for i := 0; i < 2000; i++ {
 		alphaI := big.NewInt(int64(i)).Bytes()
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 		ret, err := GetDb().Get(epochID, "alpha")
 		if err != nil {
 			fmt.Println(err.Error())
@@ -36,20 +36,20 @@ func TestWanposDbSuccess(t *testing.T) {
 	//Test for database put/get with epochID and index
 	//Put
 	for i := 0; i < 2000; i++ {
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 		for index := 0; index < 100; index++ {
 			alphaI := big.NewInt(int64(i + index)).Bytes()
-			GetDb().PutWithIndex(epochID, big.NewInt(int64(index)), "alpha", alphaI)
+			GetDb().PutWithIndex(epochID, uint64(index), "alpha", alphaI)
 		}
 	}
 
 	//Get and verify
 	for i := 0; i < 2000; i++ {
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 
 		for index := 0; index < 100; index++ {
 			alphaI := big.NewInt(int64(i + index)).Bytes()
-			ret, err := GetDb().GetWithIndex(epochID, big.NewInt(int64(index)), "alpha")
+			ret, err := GetDb().GetWithIndex(epochID, uint64(index), "alpha")
 			if err != nil {
 				fmt.Println(err.Error())
 				t.Fail()
@@ -69,7 +69,7 @@ func TestWanposDbLoad(t *testing.T) {
 	//Get and verify
 	for i := 0; i < 2000; i++ {
 		alphaI := big.NewInt(int64(i)).Bytes()
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 		ret, err := GetDb().Get(epochID, "alpha")
 		if err != nil {
 			fmt.Println(err.Error())
@@ -85,10 +85,10 @@ func TestWanposDbLoad(t *testing.T) {
 
 	//Get and verify
 	for i := 0; i < 2000; i++ {
-		epochID := big.NewInt(int64(100000000 + i))
+		epochID := uint64(100000000 + i)
 		for index := 0; index < 100; index++ {
 			alphaI := big.NewInt(int64(i + index)).Bytes()
-			ret, err := GetDb().GetWithIndex(epochID, big.NewInt(int64(index)), "alpha")
+			ret, err := GetDb().GetWithIndex(epochID, uint64(index), "alpha")
 			if err != nil {
 				fmt.Println(err.Error())
 				t.Fail()
@@ -105,11 +105,11 @@ func TestWanposDbFail(t *testing.T) {
 
 	alpha := big.NewInt(1)
 
-	epochID := big.NewInt(2000)
+	epochID := uint64(2000)
 
 	GetDb().Put(epochID, "alpha", alpha.Bytes())
 
-	epochID2 := big.NewInt(100000000 + 99999992001)
+	epochID2 := uint64(100000000 + 99999992001)
 
 	alphaGet, err := GetDb().Get(epochID2, "alpha")
 

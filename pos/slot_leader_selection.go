@@ -21,8 +21,8 @@ import (
 const CompressedPubKeyLen = 33
 
 const (
-	// EpochGenesisTime is the pos start time such as: 2018-12-12 00:00:00
-	EpochGenesisTime = 1544544000
+	// EpochGenesisTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
+	EpochGenesisTime = uint64(1544544000)
 
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 10
@@ -31,7 +31,7 @@ const (
 	SlotCount = 180
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 20
+	SlotTime = 10
 
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = int(SlotCount * 0.4)
@@ -49,7 +49,7 @@ const (
 
 //SlotLeaderSelection use to select unique slot leader
 type SlotLeaderSelection struct {
-	workingEpochID *big.Int
+	workingEpochID uint64
 	workStage      int
 }
 
@@ -64,11 +64,57 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 	return slotLeaderSelection
 }
 
+//Loop check work every 10 second. Called by backend loop
+//It's all slotLeaderSelection's main workflow loop
+//It's not loop at all, it is loop called by backend
+func (s *SlotLeaderSelection) Loop() {
+	epochID := s.getEpochID()
+	s.log("Now epchoID: " + Uint64ToString(epochID))
+
+	workStage, err := s.getWorkStage(epochID)
+
+	if err != nil {
+		if err.Error() == "leveldb: not found" {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+			workStage = slotLeaderSelectionStage1
+		} else {
+			s.log("getWorkStage error: " + err.Error())
+		}
+	}
+
+	switch workStage {
+	case slotLeaderSelectionStage1:
+		epochLeaders := s.getEpochLeaders(epochID)
+		if epochLeaders != nil {
+			s.setWorkingEpochID(epochID)
+			err := s.startStage1Work(epochLeaders)
+			if err != nil {
+				s.log(err.Error())
+			} else {
+				s.setWorkStage(epochID, slotLeaderSelectionStage2)
+			}
+		}
+
+	case slotLeaderSelectionStage2:
+		//If New epoch start
+		s.workingEpochID, err = s.getWorkingEpochID()
+		if epochID > s.workingEpochID {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
+
+	default:
+	}
+	slotID := s.getSlotID()
+	fmt.Println("slotID: ", slotID)
+}
+
 //GenerateCommitment generate a commitment and send it by tx message
 //Returns the commitment buffer []byte which is publicKey and alpha * publicKey
 //payload should be send with tx.
-func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epochID *big.Int) ([]byte, error) {
-	if publicKey == nil || epochID == nil || publicKey.X == nil || publicKey.Y == nil {
+func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
+	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
+
+	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errors.New("Invalid input parameters")
 	}
 
@@ -92,64 +138,25 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey, epo
 
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
-	epochIDBuf := epochID.Bytes()
+	epochIDBuf := big.NewInt(int64(epochID)).Bytes()
+	selfIndexBuf := Uint64ToBytes(selfIndexInEpochLeader)
 
-	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, pkCompress, miCompress})
+	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, selfIndexBuf, pkCompress, miCompress})
 
-	GetDb().Put(epochID, "alpha", alpha.Bytes())
+	GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
 	return buffer, err
 }
 
 //GetAlpha get alpha of epochID
-func (s *SlotLeaderSelection) GetAlpha(epochID *big.Int) (*big.Int, error) {
-	buf, err := GetDb().Get(epochID, "alpha")
+func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
+	buf, err := GetDb().GetWithIndex(epochID, selfIndex, "alpha")
 	if err != nil {
 		return nil, err
 	}
 
-	var alpha = new(big.Int).SetBytes(buf)
+	var alpha = big.NewInt(0).SetBytes(buf)
 	return alpha, nil
-}
-
-//Loop check work every 10 second. Called by backend loop
-func (s *SlotLeaderSelection) Loop() {
-	epochID := s.getEpochID()
-	s.log("Now epchoID: " + epochID.String())
-
-	workStage, err := s.getWorkStage(epochID)
-
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-			workStage = slotLeaderSelectionStage1
-		} else {
-			s.log("getWorkStage error: " + err.Error())
-		}
-	}
-
-	s.workingEpochID, err = s.getWorkingEpochID()
-
-	switch workStage {
-	case slotLeaderSelectionStage1:
-		epochLeaders := s.getEpochLeaders(epochID)
-		if epochLeaders != nil {
-			err := s.startStage1Work(epochLeaders)
-			if err != nil {
-				s.log(err.Error())
-			} else {
-				s.setWorkStage(epochID, slotLeaderSelectionStage2)
-				s.setWorkingEpochID(epochID)
-			}
-		}
-
-	case slotLeaderSelectionStage2:
-		//If New epoch start
-		if s.workingEpochID.Cmp(epochID) == -1 {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
-	default:
-	}
 }
 
 //getLocalPublicKey get local public key from memory keystore
@@ -158,22 +165,22 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 }
 
 //getEpochID get epochID by local time
-func (s *SlotLeaderSelection) getEpochID() *big.Int {
-	epochTimespan := int64(SlotTime * SlotCount)
-	timeUnix := time.Now().Unix()
+func (s *SlotLeaderSelection) getEpochID() uint64 {
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
 
-	epochID := big.NewInt((timeUnix - EpochGenesisTime) / epochTimespan)
+	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
 	return epochID
 }
 
 //getSlotID get current slot by local time
 func (s *SlotLeaderSelection) getSlotID() uint64 {
-	epochTimespan := int64(SlotTime * SlotCount)
-	timeUnix := time.Now().Unix()
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
 
-	epochIndex := int64((timeUnix - EpochGenesisTime) / epochTimespan)
+	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
 
-	epochStartTime := epochIndex * epochTimespan
+	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
 
 	timeInEpoch := timeUnix - epochStartTime
 
@@ -181,8 +188,31 @@ func (s *SlotLeaderSelection) getSlotID() uint64 {
 	return slotID
 }
 
+// GetEpochSlotID get current epochID and slotID in this epoch
+// returns epochID, slotID, error
+func GetEpochSlotID() (uint64, uint64, error) {
+	epochTimespan := uint64(SlotTime * SlotCount)
+	timeUnix := uint64(time.Now().Unix())
+
+	if EpochGenesisTime > timeUnix {
+		return 0, 0, errors.New("Epoch genesis time is not arrive")
+	}
+
+	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+
+	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+
+	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
+
+	timeInEpoch := timeUnix - epochStartTime
+
+	slotID := uint64(timeInEpoch / SlotTime)
+
+	return epochID, slotID, nil
+}
+
 //getEpochLeaders get epochLeaders of epochID in StateDB
-func (s *SlotLeaderSelection) getEpochLeaders(epochID *big.Int) []*ecdsa.PublicKey {
+func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) []*ecdsa.PublicKey {
 
 	//generate test publicKey
 	epochLeaders := make([]*ecdsa.PublicKey, EpochLeaderCount)
@@ -195,20 +225,55 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID *big.Int) []*ecdsa.PublicK
 }
 
 //getWorkStage get work stage of epochID from levelDB
-func (s *SlotLeaderSelection) getWorkStage(epochID *big.Int) (int, error) {
+func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := GetDb().Get(epochID, "slotLeaderWorkStage")
-	workStageBig := big.NewInt(0).SetBytes(ret)
-	return int(workStageBig.Int64()), err
+	workStageUint64 := BytesToUint64(ret)
+	return int(workStageUint64), err
 }
 
 //saveWorkStage save the work stage of epochID in levelDB
-func (s *SlotLeaderSelection) setWorkStage(epochID *big.Int, workStage int) error {
+func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error {
 	workStageBig := big.NewInt(int64(workStage))
 	_, err := GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
 	return err
 }
 
+func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
+	currentEpochID, _ := s.getWorkingEpochID()
+	s.setWorkStage(currentEpochID, workStage)
+}
+
+//PkEqual only can use in same curve. return whether the two points equal
+func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
+	if pk1 == nil || pk2 == nil {
+		return false
+	}
+
+	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
+		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
+		return true
+	}
+	return false
+}
+
 func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) error {
+	selfPublicKey, _ := s.getLocalPublicKey()
+
+	for i := 0; i < len(epochLeaders); i++ {
+		if PkEqual(selfPublicKey, epochLeaders[i]) {
+			workingEpochID, err := s.getWorkingEpochID()
+			if err != nil {
+				return err
+			}
+			data, err := s.GenerateCommitment(selfPublicKey, workingEpochID, uint64(i))
+			if err != nil {
+				return err
+			}
+
+			s.sendTx(data)
+		}
+	}
+
 	return nil
 }
 
@@ -216,13 +281,35 @@ func (s *SlotLeaderSelection) log(info string) {
 	fmt.Println(info)
 }
 
-func (s *SlotLeaderSelection) getWorkingEpochID() (*big.Int, error) {
-	ret, err := GetDb().Get(big.NewInt(0), "slotLeaderCurrentSlotID")
-	retBig := big.NewInt(0).SetBytes(ret)
-	return retBig, err
+func (s *SlotLeaderSelection) getWorkingEpochID() (uint64, error) {
+	ret, err := GetDb().Get(0, "slotLeaderCurrentSlotID")
+	retUint64 := BytesToUint64(ret)
+	return retUint64, err
 }
 
-func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID *big.Int) error {
-	_, err := GetDb().Put(big.NewInt(0), "slotLeaderCurrentSlotID", workingEpochID.Bytes())
+func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
+	_, err := GetDb().Put(0, "slotLeaderCurrentSlotID", Uint64ToBytes(workingEpochID))
 	return err
+}
+
+func (s *SlotLeaderSelection) sendTx(data []byte) {
+	//test
+	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
+}
+
+// Uint64ToBytes use a big.Int to transfer uint64 to bytes
+// Must use big.Int to reverse
+func Uint64ToBytes(input uint64) []byte {
+	return big.NewInt(0).SetUint64(input).Bytes()
+}
+
+// BytesToUint64 use a big.Int to transfer uint64 to bytes
+// Must input a big.Int bytes
+func BytesToUint64(input []byte) uint64 {
+	return big.NewInt(0).SetBytes(input).Uint64()
+}
+
+// Uint64ToString can change uint64 to string through a big.Int
+func Uint64ToString(input uint64) string {
+	return big.NewInt(0).SetUint64(input).String()
 }
