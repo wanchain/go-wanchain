@@ -25,6 +25,9 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
+	wanCscPrecompileAddr = common.BytesToAddress([]byte{210})
+
+
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
@@ -98,4 +101,6 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	//pos
 	wanPosSlotSelectStage1PrecompileAddr: &wanSlotLeaderCommitment{},
 	slsStgTwoPrecompileAddr: 	  &slsStgTwoSC{},
+	
+	wanCscPrecompileAddr: 	&pos_staking{},
 }
