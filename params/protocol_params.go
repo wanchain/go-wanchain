@@ -72,6 +72,9 @@ const (
 
 	RequiredGasPerMixPub uint64 = 4000 // ring signature mix difficulty gas
 	GetOTAMixSetMaxSize  uint64 = 20   // Max number of mix ota set size from once getting
+
+	//SlsStgOnePerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
+	SlsStgTwoPerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
 )
 
 var (

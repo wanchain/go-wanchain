@@ -41,3 +41,4 @@ DOCKER/**
 data_pluto/*
 data_testnet/*
 
+.vscode/
