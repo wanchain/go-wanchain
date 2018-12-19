@@ -167,8 +167,18 @@ func (s *SlotLeaderSelection) getEpochID() *big.Int {
 }
 
 //getSlotID get current slot by local time
-func (s *SlotLeaderSelection) getSlotID() int {
-	return 0
+func (s *SlotLeaderSelection) getSlotID() uint64 {
+	epochTimespan := int64(SlotTime * SlotCount)
+	timeUnix := time.Now().Unix()
+
+	epochIndex := int64((timeUnix - EpochGenesisTime) / epochTimespan)
+
+	epochStartTime := epochIndex * epochTimespan
+
+	timeInEpoch := timeUnix - epochStartTime
+
+	slotID := uint64(timeInEpoch / SlotTime)
+	return slotID
 }
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
