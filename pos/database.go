@@ -2,7 +2,6 @@ package pos
 
 import (
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path"
 
@@ -51,11 +50,11 @@ func (s *Db) DbInit(dbPath string) {
 }
 
 //PutWithIndex use to set a key-value store with a given epochID and Index
-func (s *Db) PutWithIndex(epochID *big.Int, index *big.Int, key string, value []byte) ([]byte, error) {
+func (s *Db) PutWithIndex(epochID uint64, index uint64, key string, value []byte) ([]byte, error) {
 
 	newKey, err := rlp.EncodeToBytes([][]byte{
-		epochID.Bytes(),
-		index.Bytes(),
+		Uint64ToBytes(epochID),
+		Uint64ToBytes(index),
 		[]byte(key),
 	})
 
@@ -64,11 +63,11 @@ func (s *Db) PutWithIndex(epochID *big.Int, index *big.Int, key string, value []
 }
 
 //GetWithIndex use to get a key-value store with a given epochID and Index
-func (s *Db) GetWithIndex(epochID *big.Int, index *big.Int, key string) ([]byte, error) {
+func (s *Db) GetWithIndex(epochID uint64, index uint64, key string) ([]byte, error) {
 
 	newKey, err := rlp.EncodeToBytes([][]byte{
-		epochID.Bytes(),
-		index.Bytes(),
+		Uint64ToBytes(epochID),
+		Uint64ToBytes(index),
 		[]byte(key),
 	})
 
@@ -80,10 +79,10 @@ func (s *Db) GetWithIndex(epochID *big.Int, index *big.Int, key string) ([]byte,
 }
 
 //Put use to set a key-value store with a given epochID
-func (s *Db) Put(epochID *big.Int, key string, value []byte) ([]byte, error) {
+func (s *Db) Put(epochID uint64, key string, value []byte) ([]byte, error) {
 
 	newKey, err := rlp.EncodeToBytes([][]byte{
-		epochID.Bytes(),
+		Uint64ToBytes(epochID),
 		[]byte(key),
 	})
 
@@ -92,10 +91,10 @@ func (s *Db) Put(epochID *big.Int, key string, value []byte) ([]byte, error) {
 }
 
 //Get use to get a key-value store with a given epochID
-func (s *Db) Get(epochID *big.Int, key string) ([]byte, error) {
+func (s *Db) Get(epochID uint64, key string) ([]byte, error) {
 
 	newKey, err := rlp.EncodeToBytes([][]byte{
-		epochID.Bytes(),
+		Uint64ToBytes(epochID),
 		[]byte(key),
 	})
 

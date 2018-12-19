@@ -38,7 +38,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	pkCompress := btcec.PublicKey(privKey.PublicKey)
 	fmt.Println("compressed pk: :", hex.EncodeToString(pkCompress.SerializeCompressed()), "len: ", len(pkCompress.SerializeCompressed()))
 
-	epochID := new(big.Int).SetInt64(8192)
+	epochID := uint64(8192)
 	payload, err := slot.GenerateCommitment(&privKey.PublicKey, epochID)
 	if err != nil {
 		t.Fail()
@@ -76,17 +76,17 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	epochID := new(big.Int).SetInt64(1)
+	epochID := uint64(1)
 
 	_, err = slot.GenerateCommitment(nil, epochID)
 	if err == nil {
 		t.Fail()
 	}
 
-	_, err = slot.GenerateCommitment(&privKey.PublicKey, nil)
-	if err == nil {
-		t.Fail()
-	}
+	// _, err = slot.GenerateCommitment(&privKey.PublicKey, 0)
+	// if err == nil {
+	// 	t.Fail()
+	// }
 
 	privKey.PublicKey.X = nil
 	privKey.PublicKey.Y = nil
