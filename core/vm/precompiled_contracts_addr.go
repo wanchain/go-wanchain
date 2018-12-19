@@ -56,7 +56,7 @@ var (
 
 	//pos
 	wanPosSlotSelectStage1PrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
-	wanPosSlotSelectStage2PrecompileAddr = common.BytesToAddress(big.NewInt(601).Bytes())
+	slsStgTwoPrecompileAddr 	= common.BytesToAddress(big.NewInt(601).Bytes())
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -97,4 +97,5 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 	//pos
 	wanPosSlotSelectStage1PrecompileAddr: &wanSlotLeaderCommitment{},
+	slsStgTwoPrecompileAddr: 	  &slsStgTwoSC{},
 }

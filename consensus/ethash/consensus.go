@@ -760,6 +760,20 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 			return err
 		}
 
+		if header.Number.Uint64() == posBootstrapBlockNum {
+			ppowWindowLen := (len(snap.UsedSigners)-1) / 2
+			slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
+			if slotheader.Coinbase != header.Coinbase {
+				return errors.New("invalid leader")
+			}
+			
+			// TODO: delay a time to match a pos epoc start
+		}
+
+		if header.Number.Uint64() > posBootstrapBlockNum{			
+			// 
+		}
+
 		err = snap.isLegal4Sign(header.Coinbase)
 		if err != nil {
 			return err
