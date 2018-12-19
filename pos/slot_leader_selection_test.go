@@ -1,4 +1,4 @@
-package wanpos
+package pos
 
 import (
 	"crypto/ecdsa"
@@ -15,6 +15,7 @@ import (
 )
 
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
+	GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 	if slot == nil {
 		t.Fail()
@@ -22,6 +23,7 @@ func TestSlotLeaderSelectionGetInstance(t *testing.T) {
 }
 
 func TestGenerateCommitmentSuccess(t *testing.T) {
+	GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
 	privKey, err := crypto.GenerateKey()
@@ -67,6 +69,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 }
 
 func TestGenerateCommitmentFailed(t *testing.T) {
+	GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
 	privKey, err := crypto.GenerateKey()
@@ -109,6 +112,10 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	}
 }
 
+func TestLoop(t *testing.T) {
+	GetDb().DbInit("test")
+	GetSlotLeaderSelection().Loop()
+}
 func TestPublicKeyCompress(t *testing.T) {
 	privKey, _ := crypto.GenerateKey()
 

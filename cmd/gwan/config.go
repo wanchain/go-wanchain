@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 )
 
@@ -136,6 +137,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	}
 
 	utils.SetShhConfig(ctx, stack, &cfg.Shh)
+
+	//Init wanpos private db
+	pos.GetDb().DbInit(cfg.Node.DataDir)
 
 	return stack, cfg
 }
