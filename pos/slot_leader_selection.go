@@ -161,7 +161,12 @@ func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.I
 
 //getLocalPublicKey get local public key from memory keystore
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
-	return nil, nil
+
+	// test
+	ret, err := GetDb().Get(0, "testSelfPK")
+	pk := crypto.ToECDSAPub(ret)
+
+	return pk, err
 }
 
 //getEpochID get epochID by local time
@@ -218,8 +223,11 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) []*ecdsa.PublicKey
 	epochLeaders := make([]*ecdsa.PublicKey, EpochLeaderCount)
 	for i := 0; i < EpochLeaderCount; i++ {
 		key, _ := crypto.GenerateKey()
-		epochLeaders = append(epochLeaders, &key.PublicKey)
+		epochLeaders[i] = &key.PublicKey
 	}
+
+	//test
+	GetDb().Put(0, "testSelfPK", crypto.FromECDSAPub(epochLeaders[3]))
 
 	return epochLeaders
 }
