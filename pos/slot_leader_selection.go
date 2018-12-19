@@ -1,6 +1,7 @@
 package pos
 
 import (
+	"context"
 	"crypto/ecdsa"
 	Rand "crypto/rand"
 	"encoding/hex"
@@ -9,7 +10,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/btcsuite/btcd/btcec"
 
@@ -51,6 +55,7 @@ const (
 type SlotLeaderSelection struct {
 	workingEpochID uint64
 	workStage      int
+	rc             *rpc.Client
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -64,12 +69,16 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 	return slotLeaderSelection
 }
 
+//--------------Workflow functions-------------------------------------------------------------
+
 //Loop check work every 10 second. Called by backend loop
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop() {
-	epochID := s.getEpochID()
-	s.log("Now epchoID: " + Uint64ToString(epochID))
+func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
+	s.rc = rc
+
+	epochID, slotID, err := GetEpochSlotID()
+	s.log("Now epchoID:" + Uint64ToString(epochID) + " slotID:" + Uint64ToString(slotID))
 
 	workStage, err := s.getWorkStage(epochID)
 
@@ -104,8 +113,32 @@ func (s *SlotLeaderSelection) Loop() {
 
 	default:
 	}
-	slotID := s.getSlotID()
-	fmt.Println("slotID: ", slotID)
+
+}
+
+// startStage1Work start the stage 1 work and send tx
+func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) error {
+	selfPublicKey, _ := s.getLocalPublicKey()
+
+	for i := 0; i < len(epochLeaders); i++ {
+		if PkEqual(selfPublicKey, epochLeaders[i]) {
+			workingEpochID, err := s.getWorkingEpochID()
+			if err != nil {
+				return err
+			}
+			data, err := s.GenerateCommitment(selfPublicKey, workingEpochID, uint64(i))
+			if err != nil {
+				return err
+			}
+
+			err = s.sendTx(data)
+			if err != nil {
+				s.log(err.Error())
+			}
+		}
+	}
+
+	return nil
 }
 
 //GenerateCommitment generate a commitment and send it by tx message
@@ -159,6 +192,8 @@ func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.I
 	return alpha, nil
 }
 
+//---------------Information get/set functions--------------------------------------------
+
 //getLocalPublicKey get local public key from memory keystore
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 
@@ -169,31 +204,7 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	return pk, err
 }
 
-//getEpochID get epochID by local time
-func (s *SlotLeaderSelection) getEpochID() uint64 {
-	epochTimespan := uint64(SlotTime * SlotCount)
-	timeUnix := uint64(time.Now().Unix())
-
-	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
-	return epochID
-}
-
-//getSlotID get current slot by local time
-func (s *SlotLeaderSelection) getSlotID() uint64 {
-	epochTimespan := uint64(SlotTime * SlotCount)
-	timeUnix := uint64(time.Now().Unix())
-
-	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
-
-	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
-
-	timeInEpoch := timeUnix - epochStartTime
-
-	slotID := uint64(timeInEpoch / SlotTime)
-	return slotID
-}
-
-// GetEpochSlotID get current epochID and slotID in this epoch
+// GetEpochSlotID get current epochID and slotID in this epoch by local time
 // returns epochID, slotID, error
 func GetEpochSlotID() (uint64, uint64, error) {
 	epochTimespan := uint64(SlotTime * SlotCount)
@@ -219,14 +230,14 @@ func GetEpochSlotID() (uint64, uint64, error) {
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) []*ecdsa.PublicKey {
 
-	//generate test publicKey
+	//test: generate test publicKey
 	epochLeaders := make([]*ecdsa.PublicKey, EpochLeaderCount)
 	for i := 0; i < EpochLeaderCount; i++ {
 		key, _ := crypto.GenerateKey()
 		epochLeaders[i] = &key.PublicKey
 	}
 
-	//test
+	//test:
 	GetDb().Put(0, "testSelfPK", crypto.FromECDSAPub(epochLeaders[3]))
 
 	return epochLeaders
@@ -251,40 +262,6 @@ func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
 	s.setWorkStage(currentEpochID, workStage)
 }
 
-//PkEqual only can use in same curve. return whether the two points equal
-func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
-	if pk1 == nil || pk2 == nil {
-		return false
-	}
-
-	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
-		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
-		return true
-	}
-	return false
-}
-
-func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) error {
-	selfPublicKey, _ := s.getLocalPublicKey()
-
-	for i := 0; i < len(epochLeaders); i++ {
-		if PkEqual(selfPublicKey, epochLeaders[i]) {
-			workingEpochID, err := s.getWorkingEpochID()
-			if err != nil {
-				return err
-			}
-			data, err := s.GenerateCommitment(selfPublicKey, workingEpochID, uint64(i))
-			if err != nil {
-				return err
-			}
-
-			s.sendTx(data)
-		}
-	}
-
-	return nil
-}
-
 func (s *SlotLeaderSelection) log(info string) {
 	fmt.Println(info)
 }
@@ -300,9 +277,60 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 	return err
 }
 
-func (s *SlotLeaderSelection) sendTx(data []byte) {
+//--------------Transacton create / send --------------------------------------------
+
+func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	//test
 	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
+
+	if s.rc == nil {
+		return errors.New("rc is not ready")
+	}
+
+	ctx := context.Background()
+	rc := s.rc
+
+	fmt.Println("time")
+	var to = common.HexToAddress("0x0102030405060708090a0102030405060708090a")
+	amount := new(big.Int)
+	amount.SetString("100", 10) // 1000 tokens
+
+	//type SendTxArgs struct {
+	//	From     common.Address  `json:"from"`
+	//	To       *common.Address `json:"to"`
+	//	Gas      *hexutil.Big    `json:"gas"`
+	//	GasPrice *hexutil.Big    `json:"gasPrice"`
+	//	Value    *hexutil.Big    `json:"value"`
+	//	Data     hexutil.Bytes   `json:"data"`
+	//	Nonce    *hexutil.Uint64 `json:"nonce"`
+	//}
+	arg := map[string]interface{}{}
+	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	arg["to"] = &to
+	arg["value"] = (*hexutil.Big)(amount)
+	arg["txType"] = 1
+	var txHash common.Hash
+	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
+	if nil != callErr {
+		fmt.Println(callErr)
+	}
+	fmt.Println(txHash)
+	return nil
+}
+
+//-------------common functions---------------------------------------
+
+//PkEqual only can use in same curve. return whether the two points equal
+func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
+	if pk1 == nil || pk2 == nil {
+		return false
+	}
+
+	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
+		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
+		return true
+	}
+	return false
 }
 
 // Uint64ToBytes use a big.Int to transfer uint64 to bytes
@@ -321,3 +349,5 @@ func BytesToUint64(input []byte) uint64 {
 func Uint64ToString(input uint64) string {
 	return big.NewInt(0).SetUint64(input).String()
 }
+
+//-------------------------------------------------------------------

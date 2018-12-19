@@ -17,17 +17,17 @@ import (
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
 	GetDb().DbInit("test")
-	GetSlotLeaderSelection().Loop()
-	GetSlotLeaderSelection().Loop()
+	GetSlotLeaderSelection().Loop(nil)
+	GetSlotLeaderSelection().Loop(nil)
 
 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
 
-	GetSlotLeaderSelection().Loop()
-	GetSlotLeaderSelection().Loop()
+	GetSlotLeaderSelection().Loop(nil)
+	GetSlotLeaderSelection().Loop(nil)
 
 	GetSlotLeaderSelection().setWorkingEpochID(1)
 
-	GetSlotLeaderSelection().Loop()
+	GetSlotLeaderSelection().Loop(nil)
 
 }
 
