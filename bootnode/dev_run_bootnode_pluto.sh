@@ -7,8 +7,12 @@
 #      \_/\_/_/   \_\_| \_|\____|_| |_|\__,_|_|_| |_|____/ \___| \_/  
 #                                                                     
 
+echo "run gwan in pluto bootnode testnet"
+mkdir -p ~/.wanchain/pluto/keystore
+mkdir -p ~/.wanchain/pluto/gwan
+dir=$(dirname $0)
+cp ${dir}/nodekey ~/.wanchain/pluto/gwan/
+cp ${dir}/UTC* ~/.wanchain/pluto/keystore
+echo -n 'wanglu' > /tmp/pw.txt
+build/bin/gwan --pluto --ipcpath ~/.wanchain/gwan.ipc --nodiscover --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1
 
-echo "run geth in pluto bootnode testnet"
-echo -n ${COINBASEPW} > /tmp/pw.txt
-geth --datadir=./data --pluto --nodiscover --unlock "0xe8ffc3d0c02c0bfc39b139fa49e2c5475f000000" --password /tmp/pw.txt \
---nodekey nodekey.key --mine --minerthreads=1
