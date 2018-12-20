@@ -5,7 +5,7 @@ type DKG struct {
 }
 
 type SIG struct {
-	
+	//*********
 }
 
 func SetDKGData(epochId uint64, proposerId uint, data *DKG) error {
@@ -13,9 +13,9 @@ func SetDKGData(epochId uint64, proposerId uint, data *DKG) error {
 	return nil
 }
 
-func GetDKGData(epochId uint64, proposerId uint) *DKG {
+func GetDKGData(epochId uint64, proposerId uint) (*DKG, error) {
 	// ***********
-	return nil
+	return nil, nil
 }
 
 func SetSIGData(epochId uint64, proposerId uint, data * SIG) error {
@@ -24,5 +24,6 @@ func SetSIGData(epochId uint64, proposerId uint, data * SIG) error {
 }
 
 func GetSIGData(epochId uint64, proposerId uint) (*SIG, error)  {
-
+	// ***********
+	return nil, nil
 }
