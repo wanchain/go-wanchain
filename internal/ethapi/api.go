@@ -366,7 +366,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, pa
 		return common.Address{}, nil
 	}
 
-	sk2, err := bn256.ToBn256(r1)
+	sk2, err := bn256.ToBn256(r2)
 	if err != nil {
 		return common.Address{}, nil
 	}
