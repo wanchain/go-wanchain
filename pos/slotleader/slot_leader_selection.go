@@ -2,6 +2,7 @@ package slotleader
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	Rand "crypto/rand"
 	"encoding/hex"
@@ -397,7 +398,7 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 		}
 	}else{
 		preEpochID := epochID -1
-		preEpochLeaders, err = GetDb().Get(preEpochID,EpochLeaders)
+		preEpochLeaders, err = posdb.GetDb().Get(preEpochID,EpochLeaders)
 		if err != nil {
 			preEpochLeaders, err = s.getEpochLeadersFromPreSc(wanCscPrecompileAddr,preEpochID,EpochLeaders)
 			if err != nil {
@@ -416,7 +417,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	// 1. get SMA[pre]
 	piecesPtr := make([]*ecdsa.PublicKey,0)
 	// pieces: alpha[1]*G, alpha[2]*G, .....
-	pieces, err := GetDb().Get(epochID-1,SecurityMsg)
+	pieces, err := posdb.GetDb().Get(epochID-1,SecurityMsg)
 	if err != nil {
 		return err
 	}
@@ -426,13 +427,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 	}
 	// 2. get random
-	rb ,err := GetDb().Get(epochID-1,RandFromProposer)
+	rb ,err := posdb.GetDb().Get(epochID-1,RandFromProposer)
 	if err != nil {
 		return err
 	}
 	// 3. get epochLeaders
 	epochLeadersPtr := make([]*ecdsa.PublicKey,0)
-	epochLeaders, err := GetDb().Get(epochID-1,EpochLeaders)
+	epochLeaders, err := posdb.GetDb().Get(epochID-1,EpochLeaders)
 	if err != nil {
 		return err
 	}
@@ -449,7 +450,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	}
 	// 6. insert slot address to local DB
 	for index, val := range slotLeadersPtr {
-		_, err = GetDb().PutWithIndex(epochID,uint64(index),SlotLeader,crypto.FromECDSAPub(val))
+		_, err = posdb.GetDb().PutWithIndex(epochID,uint64(index),SlotLeader,crypto.FromECDSAPub(val))
 		if err != nil {
 			return err
 		}
@@ -472,7 +473,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64,PrivateKey *ecd
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
 	}
-	_, err = GetDb().Put(epochID,SecurityMsg,smasBytes.Bytes())
+	_, err = posdb.GetDb().Put(epochID,SecurityMsg,smasBytes.Bytes())
 	if err != nil {
 		return err
 	}
