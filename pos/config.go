@@ -1,6 +1,6 @@
 package pos
 
-import "wanpos/cloudflare"
+import "github.com/wanchain/pos/cloudflare"
 
 type Config struct {
 	PolymDegree uint
