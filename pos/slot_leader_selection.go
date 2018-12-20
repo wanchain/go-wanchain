@@ -174,14 +174,29 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
-	epochIDBuf := big.NewInt(int64(epochID)).Bytes()
+	epochIDBuf := big.NewInt(0).SetUint64(epochID).Bytes()
 	selfIndexBuf := Uint64ToBytes(selfIndexInEpochLeader)
 
-	buffer, err := rlp.EncodeToBytes([][]byte{epochIDBuf, selfIndexBuf, pkCompress, miCompress})
+	buffer, err := s.RlpPackCompressedPK(epochIDBuf, selfIndexBuf, pkCompress, miCompress)
 
 	GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
 	return buffer, err
+}
+
+// RlpPackCompressedPK pack infomations into rlp []byte
+func (s *SlotLeaderSelection) RlpPackCompressedPK(epochIDBuf []byte, selfIndexBuf []byte, pkCompress []byte, miCompress []byte) ([]byte, error) {
+	return rlp.EncodeToBytes([][]byte{epochIDBuf, selfIndexBuf, pkCompress, miCompress})
+}
+
+func (s *SlotLeaderSelection) RlpUnpackCompressedPK(buf []byte) (epochIDBuf []byte, selfIndexBuf []byte, pkCompress []byte, miCompress []byte, err error) {
+	var output [][]byte
+	err = rlp.DecodeBytes(buf, &output)
+	epochIDBuf = output[0]
+	selfIndexBuf = output[1]
+	pkCompress = output[2]
+	miCompress = output[3]
+	return
 }
 
 //GetAlpha get alpha of epochID

@@ -1,28 +1,53 @@
 package vm
 
 import (
+	"strings"
+
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/core/types"
-	"strings"
 )
 
 var (
-	slotLeaderSCDef = `
-	[{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}],"name": "buyCoinNote","outputs": [{"name": "OtaAddr","type":"string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","inputs": [{"name":"RingSignedData","type": "string"},{"name": "Value","type": "uint256"}],"name": "refundCoin","outputs": [{"name": "RingSignedData","type": "string"},{"name": "Value","type": "uint256"}]},{"constant": false,"type": "function","stateMutability": "nonpayable","inputs": [],"name": "getCoins","outputs": [{"name":"Value","type": "uint256"}]}]`
-
-	slotLeaderAbi, errSlotLeaderSCInit  = abi.JSON(strings.NewReader(slotLeaderSCDef))
-	stgOneIdArr, stgTwoIdArr 			[4]byte
+	slotLeaderSCDef = `[
+		{
+			"constant": false,
+			"type": "function",
+			"inputs": [
+				{
+					"name": "data",
+					"type": "string"
+				}
+			],
+			"name": "slotLeaderStage1MiSave",
+			"outputs": [
+				{
+					"name": "data",
+					"type": "string"
+				}
+			]
+		}
+	]`
+	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
+	stgOneIdArr, stgTwoIdArr           [4]byte
 
 	//StampValueSet   = make(map[string]string, 5)
 	//WanCoinValueSet = make(map[string]string, 10)
 )
+
 func init() {
 	if errSlotLeaderSCInit != nil {
 		panic("err in slot leader sc initialize ")
 	}
-}
-type slotLeaderSC struct {
 
+	s := pos.GetSlotLeaderSelection()
+	stgOneIdArr, _ = s.GetStage1FunctionID()
+}
+
+type slotLeaderSC struct {
 }
 
 func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
@@ -42,17 +67,44 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	copy(methodId[:], in[:4])
 
 	if methodId == stgOneIdArr {
-		return c.handleStgOne(in[4:], contract, evm)
-	}else if methodId == stgTwoIdArr {
+		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
+	} else if methodId == stgTwoIdArr {
 		return c.handleStgTwo(in[4:], contract, evm)
 	}
 	return nil, errMethodId
 }
 
 func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	s := pos.GetSlotLeaderSelection()
+	data, err := s.UnpackStage1Data(in)
+	if err != nil {
+		return nil, err
+	}
+
+	epochID, selfIndex, pk, mi, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+
+	hashEpochID := crypto.Keccak256Hash(epochID)
+
+	// StateDB useage
+	// Level 1 : epochID's Hash  -> common.Address
+	// Level 2 : string joined Hash -> common.hash
+	// Level 3 : data -> byte[]
+
+	var level1 common.Address
+	var level2 common.Hash
+
+	level1 = common.BytesToAddress(hashEpochID.Bytes())
+
+	keyValue := make([]byte, 0)
+	keyValue = append(keyValue, stgOneIdArr[0], stgOneIdArr[1], stgOneIdArr[2], stgOneIdArr[3])
+	keyValue = append(keyValue, selfIndex...)
+
+	level2 = crypto.Keccak256Hash(keyValue)
+
+	evm.StateDB.SetStateByteArray(level1, level2, data)
+
 	return nil, nil
 }
-
 
 func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return nil, nil
