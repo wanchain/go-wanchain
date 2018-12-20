@@ -1,11 +1,12 @@
 package vm
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -43,7 +44,7 @@ func init() {
 		panic("err in slot leader sc initialize ")
 	}
 
-	s := pos.GetSlotLeaderSelection()
+	s := slotleader.GetSlotLeaderSelection()
 	stgOneIdArr, _ = s.GetStage1FunctionID()
 }
 
@@ -75,7 +76,10 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 }
 
 func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	s := pos.GetSlotLeaderSelection()
+	if evm == nil {
+		return nil, errors.New("state db is not ready")
+	}
+	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage1Data(in)
 	if err != nil {
 		return nil, err

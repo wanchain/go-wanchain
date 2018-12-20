@@ -1,4 +1,4 @@
-package pos
+package posdb
 
 import (
 	"encoding/hex"

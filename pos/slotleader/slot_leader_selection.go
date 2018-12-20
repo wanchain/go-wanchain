@@ -1,4 +1,4 @@
-package pos
+package slotleader
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -81,7 +82,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
 	s.rc = rc
 
 	epochID, slotID, err := GetEpochSlotID()
-	s.log("Now epchoID:" + Uint64ToString(epochID) + " slotID:" + Uint64ToString(slotID))
+	s.log("Now epchoID:" + posdb.Uint64ToString(epochID) + " slotID:" + posdb.Uint64ToString(slotID))
 
 	workStage, err := s.getWorkStage(epochID)
 
@@ -124,7 +125,7 @@ func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) e
 	selfPublicKey, _ := s.getLocalPublicKey()
 
 	for i := 0; i < len(epochLeaders); i++ {
-		if PkEqual(selfPublicKey, epochLeaders[i]) {
+		if posdb.PkEqual(selfPublicKey, epochLeaders[i]) {
 			workingEpochID, err := s.getWorkingEpochID()
 			if err != nil {
 				return err
@@ -175,11 +176,11 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
 	epochIDBuf := big.NewInt(0).SetUint64(epochID).Bytes()
-	selfIndexBuf := Uint64ToBytes(selfIndexInEpochLeader)
+	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
 
 	buffer, err := s.RlpPackCompressedPK(epochIDBuf, selfIndexBuf, pkCompress, miCompress)
 
-	GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
+	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
 	return buffer, err
 }
@@ -201,7 +202,7 @@ func (s *SlotLeaderSelection) RlpUnpackCompressedPK(buf []byte) (epochIDBuf []by
 
 //GetAlpha get alpha of epochID
 func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
-	buf, err := GetDb().GetWithIndex(epochID, selfIndex, "alpha")
+	buf, err := posdb.GetDb().GetWithIndex(epochID, selfIndex, "alpha")
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +293,7 @@ func (s *SlotLeaderSelection) GetFuncIDFromPayload(payload []byte) ([4]byte, err
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 
 	// test
-	ret, err := GetDb().Get(0, "testSelfPK")
+	ret, err := posdb.GetDb().Get(0, "testSelfPK")
 	pk := crypto.ToECDSAPub(ret)
 
 	return pk, err
@@ -332,22 +333,22 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) []*ecdsa.PublicKey
 	}
 
 	//test:
-	GetDb().Put(0, "testSelfPK", crypto.FromECDSAPub(epochLeaders[3]))
+	posdb.GetDb().Put(0, "testSelfPK", crypto.FromECDSAPub(epochLeaders[3]))
 
 	return epochLeaders
 }
 
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
-	ret, err := GetDb().Get(epochID, "slotLeaderWorkStage")
-	workStageUint64 := BytesToUint64(ret)
+	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
+	workStageUint64 := posdb.BytesToUint64(ret)
 	return int(workStageUint64), err
 }
 
 //saveWorkStage save the work stage of epochID in levelDB
 func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error {
 	workStageBig := big.NewInt(int64(workStage))
-	_, err := GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
+	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
 	return err
 }
 
@@ -361,13 +362,13 @@ func (s *SlotLeaderSelection) log(info string) {
 }
 
 func (s *SlotLeaderSelection) getWorkingEpochID() (uint64, error) {
-	ret, err := GetDb().Get(0, "slotLeaderCurrentSlotID")
-	retUint64 := BytesToUint64(ret)
+	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
+	retUint64 := posdb.BytesToUint64(ret)
 	return retUint64, err
 }
 
 func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
-	_, err := GetDb().Put(0, "slotLeaderCurrentSlotID", Uint64ToBytes(workingEpochID))
+	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", posdb.Uint64ToBytes(workingEpochID))
 	return err
 }
 
@@ -419,37 +420,3 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	fmt.Println(txHash)
 	return nil
 }
-
-//-------------common functions---------------------------------------
-
-//PkEqual only can use in same curve. return whether the two points equal
-func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
-	if pk1 == nil || pk2 == nil {
-		return false
-	}
-
-	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
-		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
-		return true
-	}
-	return false
-}
-
-// Uint64ToBytes use a big.Int to transfer uint64 to bytes
-// Must use big.Int to reverse
-func Uint64ToBytes(input uint64) []byte {
-	return big.NewInt(0).SetUint64(input).Bytes()
-}
-
-// BytesToUint64 use a big.Int to transfer uint64 to bytes
-// Must input a big.Int bytes
-func BytesToUint64(input []byte) uint64 {
-	return big.NewInt(0).SetBytes(input).Uint64()
-}
-
-// Uint64ToString can change uint64 to string through a big.Int
-func Uint64ToString(input uint64) string {
-	return big.NewInt(0).SetUint64(input).String()
-}
-
-//-------------------------------------------------------------------

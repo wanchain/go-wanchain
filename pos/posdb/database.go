@@ -1,7 +1,10 @@
-package pos
+package posdb
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 
@@ -109,3 +112,37 @@ func (s *Db) Get(epochID uint64, key string) ([]byte, error) {
 func (s *Db) DbClose() {
 	s.db.Close()
 }
+
+//-------------common functions---------------------------------------
+
+//PkEqual only can use in same curve. return whether the two points equal
+func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
+	if pk1 == nil || pk2 == nil {
+		return false
+	}
+
+	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
+		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
+		return true
+	}
+	return false
+}
+
+// Uint64ToBytes use a big.Int to transfer uint64 to bytes
+// Must use big.Int to reverse
+func Uint64ToBytes(input uint64) []byte {
+	return big.NewInt(0).SetUint64(input).Bytes()
+}
+
+// BytesToUint64 use a big.Int to transfer uint64 to bytes
+// Must input a big.Int bytes
+func BytesToUint64(input []byte) uint64 {
+	return big.NewInt(0).SetBytes(input).Uint64()
+}
+
+// Uint64ToString can change uint64 to string through a big.Int
+func Uint64ToString(input uint64) string {
+	return big.NewInt(0).SetUint64(input).String()
+}
+
+//-------------------------------------------------------------------

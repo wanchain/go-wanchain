@@ -1,15 +1,14 @@
 package vm
 
 import (
-	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/consensus/wanpos"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 
 func TestWanSlotLeaderCommitment(t *testing.T) {
-	contract := &wanSlotLeaderCommitment{}
+	contract := &slotLeaderSC{}
 
 	contract.RequiredGas(nil)
 
@@ -20,10 +19,18 @@ func TestWanSlotLeaderCommitment(t *testing.T) {
 		t.Fail()
 	}
 
-	slot := wanpos.GetSlotLeaderSelection()
-	epochID := new(big.Int).SetInt64(4096)
+	slot := slotleader.GetSlotLeaderSelection()
+	epochID := uint64(4096)
 
-	payload, err := slot.GenerateCommitment(&privKey.PublicKey, epochID)
+	payload, err := slot.GenerateCommitment(&privKey.PublicKey, epochID, 0)
+	if err != nil {
+		t.Fail()
+	}
 
-	contract.Run(payload, nil, nil)
+	data, err := slot.PackStage1Data(payload)
+	if err != nil {
+		t.Fail()
+	}
+
+	contract.Run(data, nil, nil)
 }

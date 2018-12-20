@@ -1,4 +1,4 @@
-package pos
+package slotleader
 
 import (
 	"crypto/ecdsa"
@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -16,7 +17,7 @@ import (
 
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
-	GetDb().DbInit("test")
+	posdb.GetDb().DbInit("test")
 	GetSlotLeaderSelection().Loop(nil)
 	GetSlotLeaderSelection().Loop(nil)
 
@@ -41,7 +42,7 @@ func TestGetEpochSlotID(t *testing.T) {
 }
 
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
-	GetDb().DbInit("test")
+	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 	if slot == nil {
 		t.Fail()
@@ -49,7 +50,7 @@ func TestSlotLeaderSelectionGetInstance(t *testing.T) {
 }
 
 func TestGenerateCommitmentSuccess(t *testing.T) {
-	GetDb().DbInit("test")
+	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
 	privKey, err := crypto.GenerateKey()
@@ -97,7 +98,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 }
 
 func TestGenerateCommitmentFailed(t *testing.T) {
-	GetDb().DbInit("test")
+	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
 	privKey, err := crypto.GenerateKey()
