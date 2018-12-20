@@ -184,8 +184,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 	epochIDBuf := big.NewInt(0).SetUint64(epochID).Bytes()
 	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
 
-	log.Debug("epochID:" + string(epochID))
-	log.Debug("epochIDBuf: " + hex.EncodeToString(epochIDBuf))
+	log.Debug("epochIDBuf(hex): " + hex.EncodeToString(epochIDBuf))
 	log.Debug("selfIndexBuf: " + hex.EncodeToString(selfIndexBuf))
 	log.Debug("pkCompress: " + hex.EncodeToString(pkCompress))
 	log.Debug("miCompress: " + hex.EncodeToString(miCompress))

@@ -139,6 +139,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	} else {
 		log.Debug("Data save to StateDb and verified failed")
+		return nil, errors.New("Data save to StateDb and verified failed")
 	}
 
 	functrace.Exit()
