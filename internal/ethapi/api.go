@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"math/big"
 	"strings"
 	"time"
@@ -329,12 +330,15 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, password string) (common.Address, error) {
 	if strings.HasPrefix(privkey0, "0x") {
 		privkey0 = privkey0[2:]
 	}
 	if strings.HasPrefix(privkey1, "0x") {
 		privkey1 = privkey1[2:]
+	}
+	if strings.HasPrefix(privkey2, "0x") {
+		privkey2 = privkey2[2:]
 	}
 
 	r0, err := hex.DecodeString(privkey0)
@@ -343,6 +347,11 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password str
 	}
 
 	r1, err := hex.DecodeString(privkey1)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	r2, err := hex.DecodeString(privkey2)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -357,7 +366,12 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password str
 		return common.Address{}, nil
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, password)
+	sk2, err := bn256.ToBn256(r1)
+	if err != nil {
+		return common.Address{}, nil
+	}
+
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, sk2, password)
 	return acc.Address, err
 }
 

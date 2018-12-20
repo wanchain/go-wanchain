@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"io"
 	"io/ioutil"
 	"os"
@@ -54,12 +55,15 @@ type Key struct {
 	PrivateKey2 *ecdsa.PrivateKey
 	// compact wanchain address format
 	WAddress common.WAddress
+
+	PrivateKey3 *bn256.PrivateKeyBn256
 }
 
 // Used to import and export raw keypair
 type keyPair struct {
 	D  string `json:"privateKey"`
 	D1 string `json:"privateKey1"`
+	D2 string `json:"privateKey2"`
 }
 
 type keyStore interface {
@@ -67,6 +71,8 @@ type keyStore interface {
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
 	// Loads an encrypted keyfile from disk
 	GetEncryptedKey(addr common.Address, filename string) (*Key, error)
+	//
+	//GetKeyBn256(addr common.Address, filename string, auth string) (*Key, error)
 	// Writes and encrypts the key
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -84,6 +90,7 @@ type encryptedKeyJSONV3 struct {
 	Address  string     `json:"address"`
 	Crypto   cryptoJSON `json:"crypto"`
 	Crypto2  cryptoJSON `json:"crypto2"`
+	Crypto3  cryptoJSON `json:"crypto3"`
 	Id       string     `json:"id"`
 	Version  int        `json:"version"`
 	WAddress string     `json:"waddress"`
@@ -145,13 +152,14 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
-func newKeyFromECDSA(sk1, sk2 *ecdsa.PrivateKey) *Key {
+func newKeyFromECDSA(sk1, sk2 *ecdsa.PrivateKey, sk3 *bn256.PrivateKeyBn256) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:          id,
 		Address:     crypto.PubkeyToAddress(sk1.PublicKey),
 		PrivateKey:  sk1,
 		PrivateKey2: sk2,
+		PrivateKey3: sk3,
 	}
 
 	updateWaddress(key)
@@ -195,7 +203,12 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
-	key := newKeyFromECDSA(sk1, sk2)
+
+	sk3, err := bn256.GenerateBn256()
+	if err != nil {
+		panic("key generation: bn256.GenerateBn256 failed: " + err.Error())
+	}
+	key := newKeyFromECDSA(sk1, sk2, sk3)
 	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
 		return NewKeyForDirectICAP(rand)
 	}
@@ -212,7 +225,11 @@ func newKey(rand io.Reader) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
+
+	// TODO: ask zhongzhong which random method should choose
+	privateKeyBn256, err := bn256.GenerateBn256()
+
+	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2, privateKeyBn256), nil
 }
 
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
@@ -336,42 +353,50 @@ func WaddrToUncompressedRawBytes(waddr []byte) ([]byte, error) {
 }
 
 // LoadECDSAPair loads a secp256k1 private key pair from the given file
-func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, error) {
+func LoadECDSAPair(file string) (*ecdsa.PrivateKey, *ecdsa.PrivateKey, *bn256.PrivateKeyBn256,error) {
 	// read the given file including private key pair
 	kp := keyPair{}
 
 	raw, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	err = json.Unmarshal(raw, &kp)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Decode the key pair
 	d, err := hex.DecodeString(kp.D)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+
 	d1, err := hex.DecodeString(kp.D1)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	d2, err := hex.DecodeString(kp.D2)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// Generate ecdsa private keys
 	sk, err := crypto.ToECDSA(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	sk1, err := crypto.ToECDSA(d1)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return sk, sk1, err
+	sk2, err := bn256.ToBn256(d2)
+
+	return sk, sk1, sk2, err
 }
 
 // ExportECDSAPair returns an ecdsa-private-key pair
