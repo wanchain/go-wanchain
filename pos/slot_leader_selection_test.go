@@ -191,3 +191,29 @@ func TestRlpEncodeAndDecode(t *testing.T) {
 
 	fmt.Println("after decode:", output)
 }
+
+func TestAbiPack(t *testing.T) {
+
+	s := GetSlotLeaderSelection()
+
+	data := []byte("Each winter, npm, Inc. circulates a survey of software developers and npm users to solicit your ")
+
+	payload, err := s.PackStage1Data(data)
+	if err != nil {
+		t.Fail()
+	}
+	id1, _ := s.GetStage1FunctionID()
+	id2, _ := s.GetFuncIDFromPayload(payload)
+	if id1 != id2 {
+		t.Fail()
+	}
+
+	unpack, err := s.UnpackStage1Data(payload)
+	if err != nil {
+		t.Fail()
+	}
+
+	if hex.EncodeToString(unpack) != hex.EncodeToString(data) {
+		t.Fail()
+	}
+}

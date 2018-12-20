@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts/abi"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -192,6 +195,82 @@ func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.I
 	return alpha, nil
 }
 
+// GetStage1Abi can get a abi instance of slot leader selection stage1
+func (s *SlotLeaderSelection) GetStage1Abi() (abi.ABI, error) {
+	slotDefinition :=
+		`[
+			{
+				"constant": false,
+				"type": "function",
+				"inputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				],
+				"name": "slotLeaderStage1MiSave",
+				"outputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				]
+			}
+		]`
+	return abi.JSON(strings.NewReader(slotDefinition))
+}
+
+// PackStage1Data can pack stage1 data into abi []byte for tx payload
+func (s *SlotLeaderSelection) PackStage1Data(input []byte) ([]byte, error) {
+	abi, err := s.GetStage1Abi()
+	if err != nil {
+		return nil, err
+	}
+	data := hex.EncodeToString(input)
+	return abi.Pack("slotLeaderStage1MiSave", data)
+}
+
+// UnpackStage1Data use to unpack payload
+// NOTE: Must Use payload[:] for input
+func (s *SlotLeaderSelection) UnpackStage1Data(input []byte) ([]byte, error) {
+	abi, err := s.GetStage1Abi()
+	if err != nil {
+		return nil, err
+	}
+	var data string
+	err = abi.Unpack(&data, "slotLeaderStage1MiSave", input[4:])
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(data)
+}
+
+// GetStage1FunctionID get function id of slot select stage1 from abi
+func (s *SlotLeaderSelection) GetStage1FunctionID() ([4]byte, error) {
+	var slotStage1ID [4]byte
+
+	abi, err := s.GetStage1Abi()
+	if err != nil {
+		return slotStage1ID, err
+	}
+
+	copy(slotStage1ID[:], abi.Methods["slotLeaderStage1MiSave"].Id())
+
+	return slotStage1ID, nil
+}
+
+// GetFuncIDFromPayload get function id from payload data
+func (s *SlotLeaderSelection) GetFuncIDFromPayload(payload []byte) ([4]byte, error) {
+	var methodID [4]byte
+	if len(payload) < 4 {
+		return methodID, errors.New("input is too short")
+	}
+
+	copy(methodID[:], payload[:4])
+
+	return methodID, nil
+}
+
 //---------------Information get/set functions--------------------------------------------
 
 //getLocalPublicKey get local public key from memory keystore
@@ -290,10 +369,10 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	ctx := context.Background()
 	rc := s.rc
 
-	fmt.Println("time")
-	var to = common.HexToAddress("0x0102030405060708090a0102030405060708090a")
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+	var to = slotLeaderPrecompileAddr
 	amount := new(big.Int)
-	amount.SetString("100", 10) // 1000 tokens
+	amount.SetString("100", 10) // 100 tokens
 
 	//type SendTxArgs struct {
 	//	From     common.Address  `json:"from"`
@@ -309,6 +388,14 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(amount)
 	arg["txType"] = 1
+	//Set payload infomation--------------
+
+	payload, err := s.PackStage1Data(data)
+	if err != nil {
+		return err
+	}
+	arg["data"] = payload
+
 	var txHash common.Hash
 	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
 	if nil != callErr {
