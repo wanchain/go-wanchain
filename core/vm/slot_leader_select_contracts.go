@@ -81,7 +81,10 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	epochID, selfIndex, pk, mi, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	epochID, selfIndex, _, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	if err != nil {
+		return nil, err
+	}
 
 	hashEpochID := crypto.Keccak256Hash(epochID)
 
