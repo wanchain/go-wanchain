@@ -1,5 +1,7 @@
 package pos
 
+import "github.com/wanchain/pos/cloudflare"
+
 type Config struct {
 	PolymDegree uint
 	K uint
@@ -13,5 +15,15 @@ func Cfg() *Config {
 }
 
 
+
+
+///>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>test>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+	return nil
+}
+
+
+///<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<test<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
