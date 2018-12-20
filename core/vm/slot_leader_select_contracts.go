@@ -1,11 +1,15 @@
 package vm
 
 import (
+	"encoding/hex"
 	"errors"
 	"strings"
 
+	"github.com/wanchain/go-wanchain/functrace"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
@@ -60,6 +64,9 @@ func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
 }
 
 func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	functrace.Enter()
+	log.Debug("slotLeaderSC run is called")
+
 	if len(in) < 4 {
 		return nil, errParameters
 	}
@@ -72,10 +79,14 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	} else if methodId == stgTwoIdArr {
 		return c.handleStgTwo(in[4:], contract, evm)
 	}
+
+	functrace.Exit()
 	return nil, errMethodId
 }
 
 func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	functrace.Enter()
+	log.Debug("slotLeaderSC handleStgOne is called")
 	if evm == nil {
 		return nil, errors.New("state db is not ready")
 	}
@@ -85,7 +96,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	epochID, selfIndex, _, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	epochID, selfIndex, pkSelf, miGen, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +121,27 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	evm.StateDB.SetStateByteArray(level1, level2, data)
 
+	// Read and Verify
+	readBuf := evm.StateDB.GetStateByteArray(level1, level2)
+
+	epID, index, pk, pkMi, err := s.RlpUnpackCompressedPK(readBuf)
+
+	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
+		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
+		hex.EncodeToString(pk) == hex.EncodeToString(pkSelf) &&
+		hex.EncodeToString(pkMi) == hex.EncodeToString(miGen) &&
+		err == nil {
+		log.Debug("Data save to StateDb and verified success")
+		log.Debug("epID:" + hex.EncodeToString(epID))
+		log.Debug("index:" + hex.EncodeToString(index))
+		log.Debug("pk:" + hex.EncodeToString(pk))
+		log.Debug("pkMi:" + hex.EncodeToString(pkMi))
+
+	} else {
+		log.Debug("Data save to StateDb and verified failed")
+	}
+
+	functrace.Exit()
 	return nil, nil
 }
 

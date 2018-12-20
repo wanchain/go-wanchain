@@ -41,7 +41,7 @@ const (
 	SlotCount = 180
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
+	SlotTime = 1
 
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = int(SlotCount * 0.4)
@@ -81,7 +81,7 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
 func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
-	functrace.Enter()
+	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 
 	epochID, slotID, err := GetEpochSlotID()
@@ -125,6 +125,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
 
 // startStage1Work start the stage 1 work and send tx
 func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) error {
+	functrace.Enter("startStage1Work")
 	selfPublicKey, _ := s.getLocalPublicKey()
 
 	for i := 0; i < len(epochLeaders); i++ {
@@ -141,10 +142,12 @@ func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) e
 			err = s.sendTx(data)
 			if err != nil {
 				s.log(err.Error())
+				return err
 			}
 		}
 	}
 
+	functrace.Exit()
 	return nil
 }
 
@@ -180,6 +183,12 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 	miCompress := mi.SerializeCompressed()
 	epochIDBuf := big.NewInt(0).SetUint64(epochID).Bytes()
 	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
+
+	log.Debug("epochID:" + string(epochID))
+	log.Debug("epochIDBuf: " + hex.EncodeToString(epochIDBuf))
+	log.Debug("selfIndexBuf: " + hex.EncodeToString(selfIndexBuf))
+	log.Debug("pkCompress: " + hex.EncodeToString(pkCompress))
+	log.Debug("miCompress: " + hex.EncodeToString(miCompress))
 
 	buffer, err := s.RlpPackCompressedPK(epochIDBuf, selfIndexBuf, pkCompress, miCompress)
 
@@ -414,13 +423,21 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	if err != nil {
 		return err
 	}
-	arg["data"] = payload
+
+	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
+
+	arg["data"] = hexutil.Bytes(payload)
+
+	log.Debug("finish to write data of payload")
 
 	var txHash common.Hash
 	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
 	if nil != callErr {
 		fmt.Println(callErr)
+		log.Error("tx send failed")
+		return errors.New("tx send failed")
 	}
 	fmt.Println(txHash)
+	log.Debug("tx send success")
 	return nil
 }
