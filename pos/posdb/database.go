@@ -7,8 +7,10 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -62,6 +64,9 @@ func (s *Db) PutWithIndex(epochID uint64, index uint64, key string, value []byte
 	})
 
 	s.db.Put(newKey, value)
+
+	s.saveKey(newKey)
+
 	return newKey, err
 }
 
@@ -90,6 +95,9 @@ func (s *Db) Put(epochID uint64, key string, value []byte) ([]byte, error) {
 	})
 
 	s.db.Put(newKey, value)
+
+	s.saveKey(newKey)
+
 	return newKey, err
 }
 
@@ -108,9 +116,89 @@ func (s *Db) Get(epochID uint64, key string) ([]byte, error) {
 	return s.db.Get(newKey)
 }
 
+func (s *Db) saveKey(key []byte) error {
+	keyCount := s.getKeyCount()
+	keyCount++
+
+	keyName := "key_" + Uint64ToString(keyCount)
+
+	_, err := s.putNoCount(0, keyName, key)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.putNoCount(0, "keyCount", Uint64ToBytes(keyCount))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Db) getKeyCount() uint64 {
+	ret, err := s.Get(0, "keyCount")
+	if err != nil {
+		log.Error(err.Error())
+		return 0
+	}
+	return BytesToUint64(ret)
+}
+
+func (s *Db) getAllKeys() [][]byte {
+	keyCount := s.getKeyCount()
+
+	keys := make([][]byte, 0)
+	var i uint64
+	for i = 0; i < keyCount; i++ {
+		keyName := "key_" + Uint64ToString(i+1)
+		ret, err := s.Get(0, keyName)
+		if err != nil {
+			log.Warn(err.Error())
+			continue
+		}
+
+		keys = append(keys, ret)
+	}
+
+	return keys
+}
+
+func (s *Db) putNoCount(epochID uint64, key string, value []byte) ([]byte, error) {
+
+	newKey, err := rlp.EncodeToBytes([][]byte{
+		Uint64ToBytes(epochID),
+		[]byte(key),
+	})
+
+	s.db.Put(newKey, value)
+	return newKey, err
+}
+
 //DbClose use to close db file
 func (s *Db) DbClose() {
 	s.db.Close()
+}
+
+// GetStorageByteArray : cb is callback function. cb return true indicating like to continue, return false indicating stop
+func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
+	searchKey := hex.EncodeToString(Uint64ToBytes(epochID))
+
+	keys := GetDb().getAllKeys()
+
+	arrays := make([][]byte, 0)
+
+	for i := 0; i < len(keys); i++ {
+		if strings.Index(hex.EncodeToString(keys[i]), searchKey) == 0 {
+			ret, err := s.db.Get(keys[i])
+			if err != nil {
+				log.Warn(err.Error())
+				continue
+			}
+			arrays = append(arrays, ret)
+		}
+	}
+
+	return arrays
 }
 
 //-------------common functions---------------------------------------

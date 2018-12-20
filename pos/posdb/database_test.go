@@ -121,3 +121,20 @@ func TestWanposDbFail(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestGetStorageByteArray(t *testing.T) {
+	GetDb().DbInit("test")
+
+	keyCount := GetDb().getKeyCount()
+	fmt.Println("key count:", keyCount)
+
+	keys := GetDb().getAllKeys()
+	fmt.Println("keys: ", keys)
+
+	values := GetDb().GetStorageByteArray(0)
+	fmt.Println("values: ", values)
+
+	for i := 0; i < len(values); i++ {
+		fmt.Println(hex.EncodeToString(values[i]))
+	}
+}
