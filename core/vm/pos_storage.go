@@ -141,6 +141,88 @@ func createStakerProbabilityArray(statedb StateDB,listAddr common.Address) (Prop
 	return ps,nil,nil
 }
 
+
+//samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
+func epochLeaderSelection(r []byte, nr int, ps ProposerSorter) ([]*ecdsa.PublicKey, error) {
+	if r == nil || nr <= 0 || len(ps) == 0 {
+		return nil, ErrInvalidRandomProposerSelection
+	}
+
+	//the last one is total properties
+	tp := ps[len(ps) -1].probabilities
+
+	var Byte0 = []byte{byte(0)}
+	var buffer bytes.Buffer
+	buffer.Write(Byte0)
+	buffer.Write(r)
+	r0 := buffer.Bytes()       //r0 = 0||r
+	cr := crypto.Keccak256(r0) //cr = hash(r0)
+
+	randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
+
+	for i := 0; i < nr; i++ {
+
+		crBig := new(big.Int).SetBytes(cr)
+		crBig.Mod(crBig, tp) //cr_big = cr mod tp
+
+		//select pki whose probability bigger than cr_big left
+		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) == 1 })
+
+		if idx == len(ps) {
+			idx = len(ps) -1
+		}
+
+		randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx + 1].pubSec256)
+
+		cr = crypto.Keccak256(cr)
+	}
+
+	return randomProposerPublicKeys, nil
+}
+
+//*bn256.G1
+//samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
+func randomProposerSelection (r []byte, nr int, ps ProposerSorter) ([]*bn256.G1, error) {
+	if r == nil || nr <= 0 || len(ps) == 0 {
+		return nil, ErrInvalidEpochProposerSelection
+	}
+
+	//the last one is total properties
+	tp := ps[len(ps) -1].probabilities
+
+	EpochLeaderBn256G1s := make([]*bn256.G1, 0)       //store the selected publickeys
+
+
+	var Byte1 = []byte{byte(1)}
+	var buffer bytes.Buffer
+	buffer.Write(Byte1)
+	buffer.Write(r)
+	r1 := buffer.Bytes()       //r1 = 1||r
+	cr := crypto.Keccak256(r1) //cr = hash(r1)
+
+
+	for i := 0; i < nr; i++ {
+
+		crBig := new(big.Int).SetBytes(cr)
+		crBig.Mod(crBig, tp) //cr_big = cr mod tp
+
+		//select pki whose probability bigger than cr_big left
+		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) == 1 })
+
+		if idx == len(ps) {
+			idx = len(ps) -1
+		}
+
+		EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
+
+		cr = crypto.Keccak256(cr)
+	}
+
+	return EpochLeaderBn256G1s,nil
+}
+
+
+
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func  getEpochLeaders(epochID uint64) []*ecdsa.PublicKey {
 	return nil
@@ -157,6 +239,8 @@ var (
 	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
 	ErrInvalidRandomProposerSelection      = errors.New("Invalid Random Proposer Selection")                  //Invalid Random Proposer Selection
+	ErrInvalidEpochProposerSelection      = errors.New("Invalid Epoch Proposer Selection")                  //Invalid Random Proposer Selection
+
 	ErrInvalidProbabilityfloat2big         = errors.New("Invalid Transform Probability From Float To Bigint") //Invalid Transform Probability From Float To Bigint
 	ErrInvalidGenerateCommitment           = errors.New("Invalid Commitment Generation")                      //Invalid Commitment Generation
 	ErrInvalidArrayPieceGeneration         = errors.New("Invalid ArrayPiece Generation")                      //Invalid ArrayPiece Generation
@@ -195,7 +279,7 @@ func ProbabilityFloat2big(Probabilities []*float64) ([]*big.Int, error) {
 }
 
 //samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
-func RandomProposerSelection(r []byte, nr int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
+func RandomProposerSelection_(r []byte, nr int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
 	if r == nil || nr <= 0 || len(PublicKeys) == 0 || len(Probabilities) == 0 || len(PublicKeys) != len(Probabilities) {
 		return nil, ErrInvalidRandomProposerSelection
 	}
@@ -251,7 +335,7 @@ func RandomProposerSelection(r []byte, nr int, PublicKeys []*ecdsa.PublicKey, Pr
 }
 
 //samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func EpochLeaderSelection(r []byte, ne int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
+func EpochLeaderSelection_(r []byte, ne int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
 	if r == nil || ne <= 0 || len(PublicKeys) == 0 || len(Probabilities) == 0 || len(PublicKeys) != len(Probabilities) {
 		return nil, ErrInvalidRandomProposerSelection
 	}
