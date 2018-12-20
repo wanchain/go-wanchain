@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/functrace"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -79,6 +81,7 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
 func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
+	functrace.Enter()
 	s.rc = rc
 
 	epochID, slotID, err := GetEpochSlotID()
@@ -117,7 +120,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client) {
 
 	default:
 	}
-
+	functrace.Exit()
 }
 
 // startStage1Work start the stage 1 work and send tx
@@ -358,6 +361,7 @@ func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
 }
 
 func (s *SlotLeaderSelection) log(info string) {
+	log.Debug(info)
 	fmt.Println(info)
 }
 

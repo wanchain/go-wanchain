@@ -1,10 +1,13 @@
 package pos
 
-import "github.com/wanchain/go-wanchain/core/vm"
+import (
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+)
 
 func RBLoop() error {
 	// get epoch id, slot id
-	epochId, slotId, err := GetEpochSlotID()
+	epochId, slotId, err := slotleader.GetEpochSlotID()
 	if err != nil {
 		return err
 	}
@@ -23,7 +26,6 @@ func RBLoop() error {
 		// do 8K
 
 	}
-
 
 	return nil
 }
