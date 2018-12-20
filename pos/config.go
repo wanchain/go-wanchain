@@ -10,7 +10,7 @@ type Config struct {
 	PosStartTime int64
 }
 
-var DefaultConfig Config = Config{1,10,1}
+var DefaultConfig Config = Config{1,10,1,0,0}
 
 func Cfg() *Config {
 	return &DefaultConfig;

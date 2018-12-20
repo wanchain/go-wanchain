@@ -5,7 +5,7 @@ import (
 	"time"
 	//"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/node"
-	"github.com/wanchain/gw_forpull/pos/slotleader"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 func BackendTimerLoop(stack *node.Node) {
 	time.Sleep(10*time.Second)
