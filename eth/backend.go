@@ -48,7 +48,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	//"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos"
 )
 
 type LesServer interface {
@@ -174,7 +174,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		gpoParams.Default = config.GasPrice
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-	//go pos.BackendTimerLoop()
+	go pos.BackendTimerLoop(eth.ApiBackend)
 	return eth, nil
 }
 

@@ -3,23 +3,29 @@ package pos
 import (
 	"fmt"
 	"time"
-	//"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/node"
+	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/internal/ethapi"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
-func BackendTimerLoop(stack *node.Node) {
+func BackendTimerLoop(b ethapi.Backend) {
 	time.Sleep(10*time.Second)
-	rc, errA := stack.Attach();
-	if errA != nil {
-		fmt.Println("err:", errA)
-		panic(errA)
+
+	url := node.DefaultIPCEndpoint("gwan")
+	rc, err := rpc.Dial(url)
+	if err != nil {
+		fmt.Println("err:", err)
+		panic(err)
 	}
 	for {
 		select {
 			case <- time.After(10*time.Second):
 				fmt.Println("time")
-				// acm := stack.AccountManager()
-				//acm.Find(accountxxx)
+				acm := b.AccountManager()
+				account := accounts.Account{}
+				ks,err := acm.Find(account)
+				fmt.Println(ks,err)
 
 				//Add for slot leader selection
 				slotleader.GetSlotLeaderSelection().Loop(rc)
