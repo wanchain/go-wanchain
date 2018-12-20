@@ -28,22 +28,18 @@ var (
 
 		epochId  uint64
 		//this just for test
-		posStartTime = time.Now().Unix()
-
-		stakersInfoAddr   = common.BytesToAddress(big.NewInt(400).Bytes())
+		posStartTime int64
+		epochInterval uint64
 	)
 
-const (
-		 epochInterval = 60
-	  )
 
-type stakerInfo struct {
-	pubSec256 		    []byte  	//staker’s ethereum public key
-	pubBn256 		    []byte  	//staker’s bn256 public key
+type StakerInfo struct {
+	PubSec256 		    []byte  	//staker’s ethereum public key
+	PubBn256 		    []byte  	//staker’s bn256 public key
 
-	amount      	*big.Int		    //staking wan value
-	lockPeriod	 	int64			//lock time which is input by user
-	stakingTime		int64			//the user’s staking time
+	Amount      	*big.Int		    //staking wan value
+	LockPeriod	 	uint64			//lock time which is input by user
+	StakingTime		int64			//the user’s staking time
 }
 
 func init() {
@@ -54,20 +50,11 @@ func init() {
 
 	copy(stakeInId[:], 	cscAbi.Methods["stakeIn"].Id())
 	copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
+
+	//posStartTime = pos.Cfg().PosStartTime
+	//epochInterval = pos.Cfg().EpochInterval
 }
 
-//this is test time
-func scsTiming()  {
-	//timer,
-	ticker := time.NewTicker(epochInterval * time.Second)
-	for {
-		time := <-ticker.C
-
-		epochId = uint64(time.Unix() - posStartTime)/epochInterval
-
-		fmt.Println("timer====>",time.String())
-	}
-}
 
 func getEpochIdAddress(pepochId int64) common.Address {
 	msg := fmt.Sprintf("wanchainepochid:%v", pepochId)
@@ -114,14 +101,14 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		return nil,errStakeInPubLen
 	}
 
-	 lkperiod := (info.lockPeriod.Int64()/epochInterval)*epochInterval
+	lkperiod := (info.lockPeriod.Uint64()/epochInterval)*epochInterval
 	//create staker's information
-	staker := &stakerInfo{
-							pubSec256:common.FromHex(ss[0]),
-							pubBn256:common.FromHex(ss[1]),
-							amount:	contract.value,
-							lockPeriod:lkperiod,
-							stakingTime: time.Now().Unix(),
+	staker := &StakerInfo{
+							PubSec256:common.FromHex(ss[0]),
+							PubBn256:common.FromHex(ss[1]),
+							Amount:	contract.value,
+							LockPeriod:lkperiod,
+							StakingTime: time.Now().Unix(),
 						}
 
 
@@ -129,7 +116,7 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	pukHash := common.BytesToHash(common.FromHex(ss[0]))
 
 	//store stake info
-	res := StoreInfo(evm.StateDB,stakersInfoAddr,pukHash,infoArray)
+	res := StoreInfo(evm.StateDB,StakersInfoAddr,pukHash,infoArray)
 
 	if res != nil {
 		return nil,res
@@ -152,18 +139,18 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 
 	pukHash := common.BytesToHash(common.FromHex(info.pub))
 
-	infoArray,err := GetInfo(evm.StateDB,stakersInfoAddr,pukHash)
+	infoArray,err := GetInfo(evm.StateDB,StakersInfoAddr,pukHash)
 
-	var staker stakerInfo
+	var staker StakerInfo
 	error := json.Unmarshal(infoArray,&staker)
 	if error != nil {
 		return nil, error
 	}
 
 
-	if  (staker.stakingTime + staker.lockPeriod) > time.Now().Unix() {
-		evm.StateDB.AddBalance(contract.CallerAddress, staker.amount)
-		evm.StateDB.SubBalance(wanCscPrecompileAddr,staker.amount)
+	if  (staker.StakingTime + int64(staker.LockPeriod)) > time.Now().Unix() {
+		evm.StateDB.AddBalance(contract.CallerAddress, staker.Amount)
+		evm.StateDB.SubBalance(wanCscPrecompileAddr,staker.Amount)
 	}
 
 	return nil,nil

@@ -6,6 +6,8 @@ type Config struct {
 	PolymDegree uint
 	K uint
 	MinRBProposerCnt uint
+	EpochInterval uint64
+	PosStartTime int64
 }
 
 var DefaultConfig Config = Config{1,10,1}

@@ -26,6 +26,7 @@ var (
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
 	wanCscPrecompileAddr = common.BytesToAddress([]byte{210})
+	StakersInfoAddr   = common.BytesToAddress(big.NewInt(400).Bytes())
 
 
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
