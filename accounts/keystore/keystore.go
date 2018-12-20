@@ -26,7 +26,6 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -34,6 +33,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -405,6 +406,11 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
+// GetDecryptedKey can use to get local node PK
+func (ks *KeyStore) GetDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
+	return ks.getDecryptedKey(a, auth)
+}
+
 // getEncryptedKey loads an encrypted keyfile from the disk
 func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
 	a, err := ks.Find(a)
@@ -489,7 +495,7 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 // }
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
-func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, priv3 * bn256.PrivateKeyBn256, passphrase string) (accounts.Account, error) {
+func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, priv3 *bn256.PrivateKeyBn256, passphrase string) (accounts.Account, error) {
 	key := newKeyFromECDSA(priv1, priv2, priv3)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
