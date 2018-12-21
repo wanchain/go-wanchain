@@ -406,11 +406,6 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
-// GetDecryptedKey can use to get local node PK
-func (ks *KeyStore) GetDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
-	return ks.getDecryptedKey(a, auth)
-}
-
 // getEncryptedKey loads an encrypted keyfile from the disk
 func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
 	a, err := ks.Find(a)
