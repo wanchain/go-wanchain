@@ -138,7 +138,7 @@ func (s *Db) saveKey(key []byte) error {
 func (s *Db) getKeyCount() uint64 {
 	ret, err := s.Get(0, "keyCount")
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn("Do not have keyCount value:" + err.Error())
 		return 0
 	}
 	return BytesToUint64(ret)

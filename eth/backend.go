@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -48,9 +49,11 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+
 	//"github.com/wanchain/go-wanchain/pos"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 
 type LesServer interface {
@@ -179,8 +182,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	go eth.BackendTimerLoop()
 	return eth, nil
 }
-func (s *Ethereum)BackendTimerLoop() {
-	time.Sleep(10*time.Second)
+
+// BackendTimerLoop is the time main loop for pos
+func (s *Ethereum) BackendTimerLoop() {
+	time.Sleep(10 * time.Second)
 	eb, errb := s.Etherbase()
 	if errb != nil {
 		panic(errb)
@@ -191,6 +196,17 @@ func (s *Ethereum)BackendTimerLoop() {
 	}
 	fmt.Println(wallet)
 
+	//Get unlocked key from wallet--------
+	type getKey interface {
+		GetUnlockedKey(address common.Address) (*keystore.Key, error)
+	}
+	key, err := wallet.(getKey).GetUnlockedKey(eb)
+	if key == nil || err != nil {
+		panic(err)
+	}
+	log.Debug("Get unlocked key success address:", eb.Hex())
+	//------------------------------------
+
 	url := node.DefaultIPCEndpoint("gwan")
 	rc, err := rpc.Dial(url)
 	if err != nil {
@@ -199,12 +215,11 @@ func (s *Ethereum)BackendTimerLoop() {
 	}
 	for {
 		select {
-		case <- time.After(10*time.Second):
+		case <-time.After(10 * time.Second):
 			fmt.Println("time")
 
 			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(rc)
-
+			slotleader.GetSlotLeaderSelection().Loop(rc, key)
 
 		}
 	}

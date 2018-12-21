@@ -18,6 +18,7 @@
 package keystore
 
 import (
+	"errors"
 	"math/big"
 
 	ethereum "github.com/wanchain/go-wanchain"
@@ -164,4 +165,13 @@ func (w *keystoreWallet) GetWanAddress(account accounts.Account) (common.WAddres
 	}
 	// Account seems valid, request the keystore to retrieve
 	return w.keystore.GetWanAddress(account)
+}
+
+func (w *keystoreWallet) GetUnlockedKey(address common.Address) (*Key, error) {
+	value, ok := w.keystore.unlocked[address]
+	if !ok {
+		return nil, errors.New("can not found a unlock key of: " + address.Hex())
+	}
+
+	return value.Key, nil
 }
