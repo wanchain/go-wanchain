@@ -97,7 +97,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	epochID, selfIndex, pkSelf, miGen, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	epochID, selfIndex, pkSelf, miGen, err := s.RlpUnpackWithCompressedPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	// Read and Verify
 	readBuf := evm.StateDB.GetStateByteArray(level1, level2)
 
-	epID, index, pk, pkMi, err := s.RlpUnpackCompressedPK(readBuf)
+	epID, index, pk, pkMi, err := s.RlpUnpackWithCompressedPK(readBuf)
 
 	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
 		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
@@ -164,7 +164,7 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	if err != nil {
 		return err
 	}
-	_, _, pkSelf, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	_, _, pkSelf, _, err := s.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return err
 	}
