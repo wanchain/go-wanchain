@@ -204,7 +204,7 @@ func (s *Ethereum) BackendTimerLoop() {
 	if key == nil || err != nil {
 		panic(err)
 	}
-	log.Debug("Get unlocked key success address:", eb.Hex())
+	log.Debug("Get unlocked key success address:" + eb.Hex())
 	//------------------------------------
 
 	url := node.DefaultIPCEndpoint("gwan")
