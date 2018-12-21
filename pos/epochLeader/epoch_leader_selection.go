@@ -46,11 +46,9 @@ type Epocher struct {
 
 func NewEpocher(apiBackend 	ethapi.Backend) *Epocher {
 
-	rbdb := &posdb.Db{ nil}
-	rbdb.DbInit("rblocaldb")
+	rbdb := posdb.NewDb("rblocaldb")
 
-	epdb := &posdb.Db{ nil}
-	epdb.DbInit("eplocaldb")
+	epdb :=posdb.NewDb("eplocaldb")
 
 	return &Epocher{rbdb,epdb,apiBackend}
 }
@@ -171,9 +169,9 @@ func  (e *Epocher) createStakerProbabilityArray(statedb vm.StateDB) (ProposerSor
 
 
 //samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
-func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epochId uint64) ([]*ecdsa.PublicKey, error) {
+func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epochId uint64) (error) {
 	if r == nil || nr <= 0 || len(ps) == 0 {
-		return nil, ErrInvalidRandomProposerSelection
+		return ErrInvalidRandomProposerSelection
 	}
 
 	//the last one is total properties
@@ -186,7 +184,7 @@ func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epoc
 	r0 := buffer.Bytes()       //r0 = 0||r
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
-	randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
+	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
 
 	for i := 0; i < nr; i++ {
 
@@ -207,21 +205,18 @@ func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epoc
 	}
 
 
-	return randomProposerPublicKeys, nil
+	return nil
 }
 
 //*bn256.G1
 //samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func  (e *Epocher) randomProposerSelection (r []byte, nr int, ps ProposerSorter,epochId uint64) ([]*bn256.G1, error) {
+func  (e *Epocher) randomProposerSelection (r []byte, nr int, ps ProposerSorter,epochId uint64) (error) {
 	if r == nil || nr <= 0 || len(ps) == 0 {
-		return nil, ErrInvalidEpochProposerSelection
+		return ErrInvalidEpochProposerSelection
 	}
 
 	//the last one is total properties
 	tp := ps[len(ps) -1].probabilities
-
-	EpochLeaderBn256G1s := make([]*bn256.G1, 0)       //store the selected publickeys
-
 
 	var Byte1 = []byte{byte(1)}
 	var buffer bytes.Buffer
@@ -249,17 +244,33 @@ func  (e *Epocher) randomProposerSelection (r []byte, nr int, ps ProposerSorter,
 		cr = crypto.Keccak256(cr)
 	}
 
-	return EpochLeaderBn256G1s,nil
-}
-
-
-//getEpochLeaders get epochLeaders of epochID in StateDB
-func  (e *Epocher) GetEpochLeaders(epochID uint64) []*ecdsa.PublicKey {
-
 	return nil
 }
 
-func  (e *Epocher) GetRBProposerGroup(epochId uint64) []bn256.G1 {
+
+//get epochLeaders of epochID in localdb
+func  (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte{
+
+	ksarray := e.epochLeadersDb.GetStorageByteArray(epochID)
+	return ksarray
+
+}
+
+//get rbLeaders of epochID in localdb
+func  (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
+	ksarray := e.rbLeadersDb.GetStorageByteArray(epochID)
+	g1ksArray := make([]bn256.G1, 0)
+
+	for _,ks :=range ksarray {
+		
+		gb := new(bn256.G1)
+		_, err := gb.Unmarshal(ks)
+		if err != nil {
+			return nil
+		}
+
+		g1ksArray = append(g1ksArray,*gb)
+	}
 
 	return nil
 }

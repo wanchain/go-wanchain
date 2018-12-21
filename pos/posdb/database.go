@@ -19,6 +19,12 @@ type Db struct {
 	db *ethdb.LDBDatabase
 }
 
+func NewDb(dbPath string) *Db {
+	dbInst := &Db{db: nil}
+	dbInst.DbInit(dbPath)
+	return dbInst
+}
+
 var dbInstance *Db
 
 func init() {
