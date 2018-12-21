@@ -390,39 +390,15 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 	return err
 }
 
-func (s *SlotLeaderSelection) getEpochLeadersGenesis() ([]byte, error) {
-	return nil, nil
-}
-func (s *SlotLeaderSelection) getEpochLeadersFromPreSc(scAddr common.Address, epochID uint64, key string) ([]byte, error) {
-	return nil, nil
-}
 func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 	// clear Array
 	s.epochLeadersArray = make([]string, 0)
 	// clear map
-	s.epochLeadersMap = make(map[string][]uint64)
-	// genesis epochID = 0
-	var preEpochLeaders []byte
-	var err error
-	if epochID == 0 {
-		preEpochLeaders, err = s.getEpochLeadersGenesis()
-		if err != nil {
-			return err
-		}
-	} else {
-		preEpochID := epochID - 1
-		preEpochLeaders, err = posdb.GetDb().Get(preEpochID, EpochLeaders)
-		if err != nil {
-			preEpochLeaders, err = s.getEpochLeadersFromPreSc(wanCscPrecompileAddr, preEpochID, EpochLeaders)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	countEpoch := len(preEpochLeaders) / LengthPublicKeyBytes
-	for i := 0; i < countEpoch; i++ {
-		s.epochLeadersArray[i] = string(preEpochLeaders[i*LengthPublicKeyBytes : LengthPublicKeyBytes])
-		s.epochLeadersMap[s.epochLeadersArray[i]] = append(s.epochLeadersMap[s.epochLeadersArray[i]], uint64(i))
+	s.epochLeadersMap = make(map[string] []uint64)
+	// build Array and map
+	for index, value := range s.getEpochLeaders(epochID) {
+		s.epochLeadersArray[index] = string(value)
+		s.epochLeadersMap[string(value)] = append(s.epochLeadersMap[string(value)],uint64(index))
 	}
 	return nil
 }
@@ -434,9 +410,14 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return err
 	}
-	piecesCount := len(pieces) / LengthPublicKeyBytes
+	piecesCount := len(pieces)/LengthPublicKeyBytes
+	var pubKeyByte []byte
 	for i := 0; i < piecesCount; i++ {
-		pubKeyByte := pieces[i*LengthPublicKeyBytes : LengthPublicKeyBytes]
+		if i< piecesCount-2 {
+			pubKeyByte = pieces[i*LengthPublicKeyBytes:(i+1)*LengthPublicKeyBytes]
+		}else{
+			pubKeyByte = pieces[i*LengthPublicKeyBytes:]
+		}
 		piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 	}
 	// 2. get random
@@ -445,15 +426,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return err
 	}
 	// 3. get epochLeaders
-	epochLeadersPtr := make([]*ecdsa.PublicKey, 0)
-	epochLeaders, err := posdb.GetDb().Get(epochID-1, EpochLeaders)
-	if err != nil {
-		return err
-	}
-	epochLeadersCount := len(epochLeaders) / LengthPublicKeyBytes
-	for i := 0; i < epochLeadersCount; i++ {
-		pubKeyByte := epochLeaders[i*LengthPublicKeyBytes : LengthPublicKeyBytes]
-		epochLeadersPtr = append(epochLeadersPtr, crypto.ToECDSAPub(pubKeyByte))
+	epochLeadersPtr := make([]*ecdsa.PublicKey,0)
+	for _,epochLeaderPub := range s.epochLeadersArray {
+		epochLeadersPtr = append(epochLeadersPtr, crypto.ToECDSAPub([]byte(epochLeaderPub)))
 	}
 	// 5. return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
