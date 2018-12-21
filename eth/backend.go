@@ -48,7 +48,9 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/pos"
+	//"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"time"
 )
 
 type LesServer interface {
@@ -174,10 +176,40 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		gpoParams.Default = config.GasPrice
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-	go pos.BackendTimerLoop(eth.ApiBackend)
+	go eth.BackendTimerLoop()
 	return eth, nil
 }
+func (s *Ethereum)BackendTimerLoop() {
+	time.Sleep(10*time.Second)
+	eb, errb := s.Etherbase()
+	if errb != nil {
+		panic(errb)
+	}
+	wallet, errf := s.accountManager.Find(accounts.Account{Address: eb})
+	if wallet == nil || errf != nil {
+		panic(errf)
+	}
+	fmt.Println(wallet)
 
+	url := node.DefaultIPCEndpoint("gwan")
+	rc, err := rpc.Dial(url)
+	if err != nil {
+		fmt.Println("err:", err)
+		panic(err)
+	}
+	for {
+		select {
+		case <- time.After(10*time.Second):
+			fmt.Println("time")
+
+			//Add for slot leader selection
+			slotleader.GetSlotLeaderSelection().Loop(rc)
+
+
+		}
+	}
+	return
+}
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata
