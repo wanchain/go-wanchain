@@ -77,7 +77,7 @@ type SlotLeaderSelection struct {
 	workStage         int
 	rc                *rpc.Client
 	epochLeadersArray []string            // len(pki)=65
-	epochLeadersMap   map[string][]uint64 //
+	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki
 	key               *keystore.Key
 }
 
@@ -85,7 +85,8 @@ var slotLeaderSelection *SlotLeaderSelection
 
 func init() {
 	slotLeaderSelection = &SlotLeaderSelection{}
-	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
+	slotLeaderSelection.epochLeadersMap 	= make(map[string][]uint64)
+	slotLeaderSelection.epochLeadersArray 	= make([]string, 0)
 }
 
 //GetSlotLeaderSelection get the SlotLeaderSelection's object
@@ -166,6 +167,39 @@ func (s *SlotLeaderSelection) startStage1Work(epochLeaders []*ecdsa.PublicKey) e
 		}
 	}
 
+	functrace.Exit()
+	return nil
+}
+
+
+// startStage2Work start the stage 2 work and send tx
+func (s *SlotLeaderSelection) startStage2Work() error {
+
+
+	functrace.Enter("startStage2Work")
+	s.getWorkingEpochID()
+	selfPublicKey, _ 	:= s.getLocalPublicKey()
+	selfPublicKeyIndex 	:= make([]uint64,0)
+	var inEpochLeaders bool
+	selfPublicKeyIndex, inEpochLeaders = s.epochLeadersMap[string(crypto.FromECDSAPub(selfPublicKey))]
+	if inEpochLeaders {
+		for i:=0; i< len(selfPublicKeyIndex); i++ {
+			workingEpochID, err := s.getWorkingEpochID()
+			if err != nil {
+				return err
+			}
+
+			data, err := s.buildStage2TxPayload(workingEpochID, uint64(i))
+			if err != nil {
+				return err
+			}
+
+			err = s.sendStage2Tx(data)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	functrace.Exit()
 	return nil
 }
@@ -276,6 +310,15 @@ func (s *SlotLeaderSelection) PackStage1Data(input []byte) ([]byte, error) {
 	data := hex.EncodeToString(input)
 	return abi.Pack("slotLeaderStage1MiSave", data)
 }
+// PackStage1Data can pack stage1 data into abi []byte for tx payload
+func (s *SlotLeaderSelection) PackStage2Data(input []byte) ([]byte, error) {
+	abi, err := s.GetStage1Abi()
+	if err != nil {
+		return nil, err
+	}
+	data := hex.EncodeToString(input)
+	return abi.Pack("slotLeaderStage1MiSave", data)
+}
 
 // UnpackStage1Data use to unpack payload
 // NOTE: Must Use payload[:] for input
@@ -339,6 +382,10 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	return &s.key.PrivateKey.PublicKey, nil
 }
 
+func (s *SlotLeaderSelection) getLocalPrivateKey() (*ecdsa.PrivateKey, error){
+	return s.key.PrivateKey,nil
+}
+
 // GetEpochSlotID get current epochID and slotID in this epoch by local time
 // returns epochID, slotID, error
 func GetEpochSlotID() (uint64, uint64, error) {
@@ -363,7 +410,7 @@ func GetEpochSlotID() (uint64, uint64, error) {
 }
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
-func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) []*ecdsa.PublicKey {
+func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 
 	//test: generate test publicKey
 	epochLeaders := make([]*ecdsa.PublicKey, EpochLeaderCount)
@@ -454,10 +501,17 @@ func (s *SlotLeaderSelection) inEpochLeadersOrNotByPk(pkBytes []byte) bool {
 	return ok
 }
 
+// TODO
+// create security pieces
+// 1. receive all stag1 tx
+// 2. receive all stag2 tx
+// 3. verify stg1 tx and stag2
+// 4. build security pieces.
 func (s *SlotLeaderSelection) generateSecurityPieces(epochID uint64, PrivateKey *ecdsa.PrivateKey,
 	ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
 	return nil, nil
 }
+// create security message SMA and insert into localDB
 func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey,
 	ArrayPiece []*ecdsa.PublicKey) error {
 	smasPtr := make([]*ecdsa.PublicKey, 0)
@@ -476,6 +530,42 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	return nil
 }
+
+// stage2 tx payload 1(alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
+// stage2 tx payload 2 proof pai[i]
+// []*ecdsa : payload1 []*big.Int payload2
+func (s *SlotLeaderSelection) generateArrayPiece(epochID uint64, selfIndex uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+	// get alpha
+	alpha,err := s.GetAlpha(epochID,selfIndex)
+	if err !=nil {
+		return nil, nil, err
+	}
+
+	publicKeys := make([]*ecdsa.PublicKey,0)
+	for _,value := range s.epochLeadersArray {
+		publicKeys = append(publicKeys,crypto.ToECDSAPub([]byte(value)))
+	}
+
+	_,ArrayPiece,proof,err := uleaderselection.GenerateArrayPiece(publicKeys,alpha)
+	return ArrayPiece, proof,err
+}
+func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64,selfIndex uint64)([]byte,error){
+	alphaPki, proof, err := s.generateArrayPiece(epochID,selfIndex)
+	if err != nil {
+		return nil, err
+	}
+	var dataBuffer bytes.Buffer
+	//ToDo need add sender's pk
+	for _,value :=range alphaPki{
+		dataBuffer.Write(crypto.FromECDSAPub(value))
+	}
+
+	for _, valueProof := range proof{
+		dataBuffer.Write(valueProof.Bytes())
+	}
+	return dataBuffer.Bytes(),nil
+}
+
 func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
 	currentEpochID, _ := s.getWorkingEpochID()
 	s.setWorkStage(currentEpochID, workStage)
@@ -511,9 +601,10 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	rc := s.rc
 
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
 	var to = slotLeaderPrecompileAddr
-	amount := new(big.Int)
-	amount.SetString("100", 10) // 100 tokens
+	amount := new(big.Int).SetInt64(0)
+	//amount.SetString("100", 10) // 100 tokens
 
 	//type SendTxArgs struct {
 	//	From     common.Address  `json:"from"`
@@ -532,6 +623,61 @@ func (s *SlotLeaderSelection) sendTx(data []byte) error {
 	//Set payload infomation--------------
 
 	payload, err := s.PackStage1Data(data)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
+
+	arg["data"] = hexutil.Bytes(payload)
+
+	log.Debug("finish to write data of payload")
+
+	var txHash common.Hash
+	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
+	if nil != callErr {
+		fmt.Println(callErr)
+		log.Error("tx send failed")
+		return errors.New("tx send failed")
+	}
+	fmt.Println(txHash)
+	log.Debug("tx send success")
+	return nil
+}
+func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
+	//test
+	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
+
+	if s.rc == nil {
+		return errors.New("rc is not ready")
+	}
+
+	ctx := context.Background()
+	rc := s.rc
+
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
+	var to = slotLeaderPrecompileAddr
+	amount := new(big.Int).SetInt64(0)
+	//amount.SetString("100", 10) // 100 tokens
+
+	//type SendTxArgs struct {
+	//	From     common.Address  `json:"from"`
+	//	To       *common.Address `json:"to"`
+	//	Gas      *hexutil.Big    `json:"gas"`
+	//	GasPrice *hexutil.Big    `json:"gasPrice"`
+	//	Value    *hexutil.Big    `json:"value"`
+	//	Data     hexutil.Bytes   `json:"data"`
+	//	Nonce    *hexutil.Uint64 `json:"nonce"`
+	//}
+	arg := map[string]interface{}{}
+	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	arg["to"] = &to
+	arg["value"] = (*hexutil.Big)(amount)
+	arg["txType"] = 1
+	//Set payload infomation--------------
+
+	payload, err := s.PackStage2Data(data)
 	if err != nil {
 		return err
 	}
