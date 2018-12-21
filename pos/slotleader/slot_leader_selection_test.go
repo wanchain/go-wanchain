@@ -18,17 +18,17 @@ import (
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
 	posdb.GetDb().DbInit("test")
-	GetSlotLeaderSelection().Loop(nil)
-	GetSlotLeaderSelection().Loop(nil)
+	GetSlotLeaderSelection().Loop(nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil)
 
 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
 
-	GetSlotLeaderSelection().Loop(nil)
-	GetSlotLeaderSelection().Loop(nil)
+	GetSlotLeaderSelection().Loop(nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil)
 
 	GetSlotLeaderSelection().setWorkingEpochID(1)
 
-	GetSlotLeaderSelection().Loop(nil)
+	GetSlotLeaderSelection().Loop(nil, nil)
 
 }
 

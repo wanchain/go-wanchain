@@ -159,7 +159,7 @@ func (s *SlotLeaderSelection) startStage1Work(epochLeaders [][]byte) error {
 				return err
 			}
 
-			err = s.sendTx(data)
+			err = s.sendStage1Tx(data)
 			if err != nil {
 				s.log(err.Error())
 				return err
@@ -253,13 +253,26 @@ func (s *SlotLeaderSelection) RlpPackCompressedPK(epochIDBuf []byte, selfIndexBu
 }
 
 // RlpUnpackCompressedPK can unpack from packed data get 4 params
-func (s *SlotLeaderSelection) RlpUnpackCompressedPK(buf []byte) (epochIDBuf []byte, selfIndexBuf []byte, pkCompress []byte, miCompress []byte, err error) {
+func (s *SlotLeaderSelection) RlpUnpackWithCompressedPK(buf []byte) (epochIDBuf []byte, selfIndexBuf []byte, pkCompress []byte, miCompress []byte, err error) {
 	var output [][]byte
 	err = rlp.DecodeBytes(buf, &output)
 	epochIDBuf = output[0]
 	selfIndexBuf = output[1]
 	pkCompress = output[2]
 	miCompress = output[3]
+	return
+}
+
+// RlpUnpackCompressedPK can unpack from packed data get 4 params and uncompress the pk
+func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDBuf []byte, selfIndexBuf []byte, pkUncompress []byte, miUncompress []byte, err error) {
+	var output [][]byte
+	err = rlp.DecodeBytes(buf, &output)
+	epochIDBuf = output[0]
+	selfIndexBuf = output[1]
+	pk, err := btcec.ParsePubKey(output[2], btcec.S256())
+	pkUncompress = pk.SerializeUncompressed()
+	mi, err := btcec.ParsePubKey(output[2], btcec.S256())
+	miUncompress = mi.SerializeUncompressed()
 	return
 }
 
@@ -418,11 +431,9 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 		epochLeaders[i] = crypto.FromECDSAPub(&key.PublicKey)
 	}
 	selfPk, err := s.getLocalPublicKey()
-	if err != nil {
-		log.Error("error to get local pk")
-		return nil
+	if err == nil {
+		epochLeaders[EpochLeaderCount-1] = crypto.FromECDSAPub(selfPk)
 	}
-	epochLeaders[EpochLeaderCount-1] = crypto.FromECDSAPub(selfPk)
 
 	return epochLeaders
 }
@@ -594,7 +605,7 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 
 //--------------Transacton create / send --------------------------------------------
 
-func (s *SlotLeaderSelection) sendTx(data []byte) error {
+func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	//test
 	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
 
