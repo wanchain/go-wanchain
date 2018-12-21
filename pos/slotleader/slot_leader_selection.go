@@ -445,6 +445,15 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	}
 	return nil
 }
+
+func (s *SlotLeaderSelection) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte) bool {
+	return (pkIndex < uint64(len(s.epochLeadersArray))) && (string(pkBytes) == s.epochLeadersArray[pkIndex])
+}
+func (s *SlotLeaderSelection) inEpochLeadersOrNotByPk(pkBytes []byte) bool {
+	_,ok := s.epochLeadersMap[string(pkBytes)]
+	return ok
+}
+
 func (s *SlotLeaderSelection) generateSecurityPieces(epochID uint64, PrivateKey *ecdsa.PrivateKey,
 	ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
 	return nil, nil

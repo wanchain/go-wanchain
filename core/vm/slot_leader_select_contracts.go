@@ -41,6 +41,9 @@ var (
 
 	//StampValueSet   = make(map[string]string, 5)
 	//WanCoinValueSet = make(map[string]string, 10)
+	errIllegalSender  = errors.New("sender is not in epoch leaders ")
+
+
 )
 
 func init() {
@@ -151,9 +154,24 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 }
 
 func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	//TODO
+	// 0. verify pk and whether in Epoch group list.
 	// 1. get transaction data
 	// 2. parse data to get the Pie[i] and A[i]
 	// 3. verify A[i]
 	// 4. verify Pie[i]
+	// 5. epochID verify
+	s := slotleader.GetSlotLeaderSelection()
+	data, err := s.UnpackStage1Data(tx.Data())
+	if err != nil {
+		return err
+	}
+	_, selfIndex, pkSelf, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	if err != nil {
+		return err
+	}
+	if !s.inEpochLeadersOrNotByPk(selfIndex,pkSelf) {
+		return errIllegalSender
+	}
 	return nil
 }
