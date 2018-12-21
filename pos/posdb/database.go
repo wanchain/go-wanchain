@@ -144,7 +144,7 @@ func (s *Db) saveKey(key []byte) error {
 func (s *Db) getKeyCount() uint64 {
 	ret, err := s.Get(0, "keyCount")
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn("Do not have keyCount value:" + err.Error())
 		return 0
 	}
 	return BytesToUint64(ret)
@@ -153,7 +153,7 @@ func (s *Db) getKeyCount() uint64 {
 func (s *Db) getAllKeys() [][]byte {
 	keyCount := s.getKeyCount()
 
-	keys := make([][]byte, 0)
+	keys := make([][]byte, keyCount)
 	var i uint64
 	for i = 0; i < keyCount; i++ {
 		keyName := "key_" + Uint64ToString(i+1)
@@ -163,7 +163,7 @@ func (s *Db) getAllKeys() [][]byte {
 			continue
 		}
 
-		keys = append(keys, ret)
+		keys[i] = ret
 	}
 
 	return keys
