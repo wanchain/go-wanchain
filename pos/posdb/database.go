@@ -11,7 +11,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/rlp"
 )
 
 //Db is the wanpos leveldb class
@@ -60,80 +59,58 @@ func (s *Db) DbInit(dbPath string) {
 	}
 }
 
-//PutWithIndex use to set a key-value store with a given epochID and Index
-func (s *Db) PutWithIndex(epochID uint64, index uint64, key string, value []byte) ([]byte, error) {
+func (s *Db) put(epochID uint64, index uint64, key string, value []byte, saveKey bool) ([]byte, error) {
+	newKey := s.getUniqueKeyBytes(epochID, index, key)
 
-	newKey, err := rlp.EncodeToBytes([][]byte{
-		Uint64ToBytes(epochID),
-		Uint64ToBytes(index),
-		[]byte(key),
-	})
-
-	s.db.Put(newKey, value)
-
-	s.saveKey(newKey)
-
-	return newKey, err
-}
-
-//GetWithIndex use to get a key-value store with a given epochID and Index
-func (s *Db) GetWithIndex(epochID uint64, index uint64, key string) ([]byte, error) {
-
-	newKey, err := rlp.EncodeToBytes([][]byte{
-		Uint64ToBytes(epochID),
-		Uint64ToBytes(index),
-		[]byte(key),
-	})
-
+	has, err := s.db.Has(newKey)
 	if err != nil {
 		return nil, err
 	}
 
+	if has {
+		saveKey = false
+	}
+
+	s.db.Put(newKey, value)
+	if saveKey {
+		err = s.saveKey(newKey, epochID)
+	}
+	return newKey, err
+}
+
+//PutWithIndex use to set a key-value store with a given epochID and Index
+func (s *Db) PutWithIndex(epochID uint64, index uint64, key string, value []byte) ([]byte, error) {
+	return s.put(epochID, index, key, value, true)
+}
+
+//GetWithIndex use to get a key-value store with a given epochID and Index
+func (s *Db) GetWithIndex(epochID uint64, index uint64, key string) ([]byte, error) {
+	newKey := s.getUniqueKeyBytes(epochID, index, key)
 	return s.db.Get(newKey)
 }
 
 //Put use to set a key-value store with a given epochID
 func (s *Db) Put(epochID uint64, key string, value []byte) ([]byte, error) {
-
-	newKey, err := rlp.EncodeToBytes([][]byte{
-		Uint64ToBytes(epochID),
-		[]byte(key),
-	})
-
-	s.db.Put(newKey, value)
-
-	s.saveKey(newKey)
-
-	return newKey, err
+	return s.PutWithIndex(epochID, 0, key, value)
 }
 
 //Get use to get a key-value store with a given epochID
 func (s *Db) Get(epochID uint64, key string) ([]byte, error) {
-
-	newKey, err := rlp.EncodeToBytes([][]byte{
-		Uint64ToBytes(epochID),
-		[]byte(key),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return s.db.Get(newKey)
+	return s.GetWithIndex(epochID, 0, key)
 }
 
-func (s *Db) saveKey(key []byte) error {
-	keyCount := s.getKeyCount()
-	keyCount++
+func (s *Db) saveKey(key []byte, epochID uint64) error {
+	keyCount := s.getKeyCount(epochID)
 
-	keyName := "key_" + Uint64ToString(keyCount)
+	keyName := s.getKeyName(epochID, keyCount)
 
 	_, err := s.putNoCount(0, keyName, key)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.putNoCount(0, "keyCount", Uint64ToBytes(keyCount))
+	keyCount++
+	_, err = s.putNoCount(0, s.getKeyCountName(epochID), Uint64ToBytes(keyCount))
 	if err != nil {
 		return err
 	}
@@ -141,43 +118,43 @@ func (s *Db) saveKey(key []byte) error {
 	return nil
 }
 
-func (s *Db) getKeyCount() uint64 {
-	ret, err := s.Get(0, "keyCount")
+func (s *Db) getKeyCount(epochID uint64) uint64 {
+	ret, err := s.Get(0, s.getKeyCountName(epochID))
 	if err != nil {
-		log.Warn("Do not have keyCount value:" + err.Error())
 		return 0
 	}
 	return BytesToUint64(ret)
 }
 
-func (s *Db) getAllKeys() [][]byte {
-	keyCount := s.getKeyCount()
+func (s *Db) getAllKeys(epochID uint64) []string {
+	keyCount := s.getKeyCount(epochID)
 
-	keys := make([][]byte, keyCount)
+	keys := make([]string, keyCount)
 	var i uint64
 	for i = 0; i < keyCount; i++ {
-		keyName := "key_" + Uint64ToString(i+1)
+		keyName := s.getKeyName(epochID, i)
 		ret, err := s.Get(0, keyName)
 		if err != nil {
 			log.Warn(err.Error())
 			continue
 		}
 
-		keys[i] = ret
+		keys[i] = string(ret)
 	}
 
 	return keys
 }
 
+func (s *Db) getKeyName(epochID uint64, keyIndex uint64) string {
+	return "key_" + Uint64ToString(epochID) + "_" + Uint64ToString(keyIndex)
+}
+
+func (s *Db) getKeyCountName(epochID uint64) string {
+	return "keyCount_" + Uint64ToString(epochID)
+}
+
 func (s *Db) putNoCount(epochID uint64, key string, value []byte) ([]byte, error) {
-
-	newKey, err := rlp.EncodeToBytes([][]byte{
-		Uint64ToBytes(epochID),
-		[]byte(key),
-	})
-
-	s.db.Put(newKey, value)
-	return newKey, err
+	return s.put(epochID, 0, key, value, false)
 }
 
 //DbClose use to close db file
@@ -187,15 +164,17 @@ func (s *Db) DbClose() {
 
 // GetStorageByteArray : cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
-	searchKey := hex.EncodeToString(Uint64ToBytes(epochID))
+	searchKey := s.getUniqueKey(epochID, 0, "")
 
-	keys := GetDb().getAllKeys()
+	searchKey = strings.Split(searchKey, "_")[0]
+
+	keys := GetDb().getAllKeys(epochID)
 
 	arrays := make([][]byte, 0)
 
 	for i := 0; i < len(keys); i++ {
-		if strings.Index(hex.EncodeToString(keys[i]), searchKey) == 0 {
-			ret, err := s.db.Get(keys[i])
+		if strings.Index(keys[i], searchKey) == 0 {
+			ret, err := s.db.Get([]byte(keys[i]))
 			if err != nil {
 				log.Warn(err.Error())
 				continue
@@ -205,6 +184,15 @@ func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
 	}
 
 	return arrays
+}
+
+func (s *Db) getUniqueKey(epochID uint64, index uint64, key string) string {
+	uskey := Uint64ToString(epochID) + "_" + Uint64ToString(index) + "_" + key
+	return uskey
+}
+
+func (s *Db) getUniqueKeyBytes(epochID uint64, index uint64, key string) []byte {
+	return []byte(s.getUniqueKey(epochID, index, key))
 }
 
 //-------------common functions---------------------------------------
@@ -236,7 +224,11 @@ func BytesToUint64(input []byte) uint64 {
 
 // Uint64ToString can change uint64 to string through a big.Int
 func Uint64ToString(input uint64) string {
-	return big.NewInt(0).SetUint64(input).String()
+	str := big.NewInt(0).SetUint64(input).String()
+	if len(str) == 0 {
+		str = "00"
+	}
+	return str
 }
 
 //-------------------------------------------------------------------

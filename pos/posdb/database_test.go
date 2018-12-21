@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
+
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 func TestWanposDbSuccess(t *testing.T) {
@@ -12,12 +15,18 @@ func TestWanposDbSuccess(t *testing.T) {
 
 	//Test for database put/get with epochID
 	//Put
+
+	t1 := time.Now()
 	for i := 0; i < 2000; i++ {
 		alphaI := big.NewInt(int64(i)).Bytes()
 		epochID := uint64(100000000 + i)
 		GetDb().Put(epochID, "alpha", alphaI)
 	}
 
+	t2 := time.Since(t1)
+	fmt.Println("Put:", t2)
+
+	t1 = time.Now()
 	//Get and verify
 	for i := 0; i < 2000; i++ {
 		alphaI := big.NewInt(int64(i)).Bytes()
@@ -32,6 +41,9 @@ func TestWanposDbSuccess(t *testing.T) {
 			t.Fail()
 		}
 	}
+
+	t2 = time.Since(t1)
+	fmt.Println("Get:", t2)
 
 	//Test for database put/get with epochID and index
 	//Put
@@ -125,16 +137,25 @@ func TestWanposDbFail(t *testing.T) {
 func TestGetStorageByteArray(t *testing.T) {
 	GetDb().DbInit("test")
 
-	keyCount := GetDb().getKeyCount()
-	fmt.Println("key count:", keyCount)
+	keys := make([][]byte, 0)
 
-	keys := GetDb().getAllKeys()
-	fmt.Println("keys: ", keys)
+	for i := 0; i < 100; i++ {
+		for m := 0; m < 200; m++ {
+			key, _ := crypto.GenerateKey()
+			GetDb().PutWithIndex(uint64(i), uint64(m), "", crypto.FromECDSAPub(&key.PublicKey))
+			keys = append(keys, crypto.FromECDSAPub(&key.PublicKey))
+		}
+	}
 
-	values := GetDb().GetStorageByteArray(0)
-	fmt.Println("values: ", values)
+	fmt.Println("keys count:", len(keys))
 
-	for i := 0; i < len(values); i++ {
-		fmt.Println(hex.EncodeToString(values[i]))
+	for i := 0; i < 100; i++ {
+		values := GetDb().GetStorageByteArray(uint64(i))
+		fmt.Println("values count: ", len(values))
+		for m := 0; m < len(values); m++ {
+			if hex.EncodeToString(values[m]) != hex.EncodeToString(keys[i*200+m]) {
+				t.Fail()
+			}
+		}
 	}
 }

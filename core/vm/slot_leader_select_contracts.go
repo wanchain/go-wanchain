@@ -41,9 +41,7 @@ var (
 
 	//StampValueSet   = make(map[string]string, 5)
 	//WanCoinValueSet = make(map[string]string, 10)
-	errIllegalSender  = errors.New("sender is not in epoch leaders ")
-
-
+	errIllegalSender = errors.New("sender is not in epoch leaders ")
 )
 
 func init() {
@@ -166,11 +164,11 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	if err != nil {
 		return err
 	}
-	_, selfIndex, pkSelf, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
+	_, _, pkSelf, _, err := s.RlpUnpackCompressedPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return err
 	}
-	if !s.inEpochLeadersOrNotByPk(selfIndex,pkSelf) {
+	if !s.InEpochLeadersOrNotByPk(pkSelf) {
 		return errIllegalSender
 	}
 	return nil
