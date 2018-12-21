@@ -333,7 +333,7 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 		return pk, err
 	}
 
-	log.Debug("get public key success pk: ", hex.EncodeToString(crypto.FromECDSAPub(&s.key.PrivateKey.PublicKey)))
+	log.Debug("get public key success pk: " + hex.EncodeToString(crypto.FromECDSAPub(&s.key.PrivateKey.PublicKey)))
 
 	functrace.Exit()
 	return &s.key.PrivateKey.PublicKey, nil
