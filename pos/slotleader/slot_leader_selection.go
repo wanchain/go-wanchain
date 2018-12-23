@@ -29,6 +29,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 //CompressedPubKeyLen means a compressed public key byte len.
@@ -568,6 +569,9 @@ func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(pkBytes []byte) bool {
 	_, ok := s.epochLeadersMap[string(pkBytes)]
 	return ok
 }
+func (s *SlotLeaderSelection) getStateDb()(stateDb *vm.StateDB, err error){
+	return nil,nil
+}
 
 // TODO
 // create security pieces
@@ -575,17 +579,70 @@ func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(pkBytes []byte) bool {
 // 2. receive all stag2 tx
 // 3. verify stg1 tx and stag2
 // 4. build security pieces.
-func (s *SlotLeaderSelection) generateSecurityPieces(epochID uint64, PrivateKey *ecdsa.PrivateKey,
-	ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
-	return nil, nil
+func (s *SlotLeaderSelection) generateSecurityPieces(epochID uint64) (pieces []*ecdsa.PublicKey, err error) {
+
+	selfPk,err := s.getLocalPublicKey()
+	if err != nil {
+		return nil,err
+	}
+
+	indexs,exist := s.epochLeadersMap[string(crypto.FromECDSAPub(selfPk))]
+	if exist == false {
+		return nil , errors.New("not in epoch leaders")
+	}
+
+	selfPkRecievedPicesMap := make(map[uint64] []string,0)
+	for _,selfIndex := range indexs {
+			for i:=0;i<len(s.epochLeadersArray); i++ {
+				alphaPkis, err := s.getStage2TxAlphaPki(epochID,uint64(i))
+				if err != nil {
+					return nil,err
+				}
+				selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], alphaPkis[selfIndex])
+			}
+	}
+	piece := make([]*ecdsa.PublicKey,0)
+	for _, value := range selfPkRecievedPicesMap{
+		for _,oneItem := range value {
+			piece = append(piece,crypto.ToECDSAPub([]byte(oneItem)))
+		}
+
+		break
+	}
+	// the value in selfPkRecievedPicesMap should be same,so we can return the first one.
+	return piece, nil
+}
+
+func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, err error) {
+
+	stateDb, err := s.getStateDb()
+
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
+	var keyBuf  bytes.Buffer
+	keyBuf.Write([]byte(strconv.FormatUint(epochID,10)))
+	keyBuf.Write([]byte(strconv.FormatUint(selfIndex,10)))
+	keyBuf.Write([]byte("slotLeaderStag2"))
+	keyHash := 	crypto.Keccak256Hash(keyBuf.Bytes())
+
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr,keyHash)
+	data1, err := s.UnpackStage2Data(data)
+	//epochIDBuf,selfIndexBuf,_,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)
+	_,_,_,alphaPki,_,err := s.RlpUnpackStage2Data(data1)
+	if err != nil {
+		return nil, err
+	}
+	return alphaPki, nil
 }
 
 // create security message SMA and insert into localDB
-func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey,
-	ArrayPiece []*ecdsa.PublicKey) error {
+func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
+	ArrayPiece ,err := s.generateSecurityPieces(epochID)
+	if err != nil {
+		return err
+	}
 	smasPtr := make([]*ecdsa.PublicKey, 0)
 	var smasBytes bytes.Buffer
-	var err error
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
@@ -753,7 +810,6 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 
 	ctx := context.Background()
 	rc := s.rc
-
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var to = slotLeaderPrecompileAddr
