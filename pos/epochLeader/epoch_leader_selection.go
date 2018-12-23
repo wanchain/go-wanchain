@@ -11,7 +11,7 @@ import (
 	"sort"
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 	"math"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posdb"
