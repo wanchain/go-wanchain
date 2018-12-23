@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -276,6 +277,22 @@ func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDB
 	return
 }
 
+func (s *SlotLeaderSelection) RlpUnpackStage2Data(buf []byte) (epochIDBuf string, selfIndexBuf string, pk string, alphaPki []string, proof []string,err error) {
+	var strAll string
+	var strResult []string
+	err 			= rlp.DecodeBytes(buf, &strAll)
+	strResult 		= strings.Split(strAll,"+")
+
+	epochIDBuf 		= strResult[0]
+	selfIndexBuf 	= strResult[1]
+	pk 				= strResult[2]
+
+	alphaPki 		= strings.Split(strResult[3],"-")
+	proof 			= strings.Split(strResult[4],"-")
+
+	return
+}
+
 //GetAlpha get alpha of epochID
 func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
 	buf, err := posdb.GetDb().GetWithIndex(epochID, selfIndex, "alpha")
@@ -308,6 +325,23 @@ func (s *SlotLeaderSelection) GetStage1Abi() (abi.ABI, error) {
 					}
 				]
 			}
+			{
+				"constant": false,
+				"type": "function",
+				"inputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				],
+				"name": "slotLeaderStage2InfoSave",
+				"outputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				]
+			}
 		]`
 	return abi.JSON(strings.NewReader(slotDefinition))
 }
@@ -323,13 +357,32 @@ func (s *SlotLeaderSelection) PackStage1Data(input []byte) ([]byte, error) {
 }
 
 // PackStage1Data can pack stage1 data into abi []byte for tx payload
-func (s *SlotLeaderSelection) PackStage2Data(input []byte) ([]byte, error) {
+func (s *SlotLeaderSelection) PackStage2Data(input string) ([]byte, error) {
+
+	inputBytes, err := rlp.EncodeToBytes(input)
+
+	if err != nil {
+		return nil, err
+	}
 	abi, err := s.GetStage1Abi()
 	if err != nil {
 		return nil, err
 	}
-	data := hex.EncodeToString(input)
-	return abi.Pack("slotLeaderStage1MiSave", data)
+	data := hex.EncodeToString(inputBytes)
+	return abi.Pack("slotLeaderStage2InfoSave", data)
+}
+
+func (s *SlotLeaderSelection) UnpackStage2Data(input []byte) ([]byte, error) {
+	abi, err := s.GetStage1Abi()
+	if err != nil {
+		return nil, err
+	}
+	var data string
+	err = abi.Unpack(&data, "slotLeaderStage2InfoSave", input)
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(data)
 }
 
 // UnpackStage1Data use to unpack payload
@@ -565,21 +618,51 @@ func (s *SlotLeaderSelection) generateArrayPiece(epochID uint64, selfIndex uint6
 	_, ArrayPiece, proof, err := uleaderselection.GenerateArrayPiece(publicKeys, alpha)
 	return ArrayPiece, proof, err
 }
-func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, error) {
+func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
+	var epochIDStr, selfIndexStr, selfPKStr,alphaPkiStr, proofStr , payLoadStr string
+
+	epochIDStr 		= strconv.FormatUint(epochID,10)
+	selfIndexStr 	= strconv.FormatUint(selfIndex,10)
+
+	selfPk, err     := s.getLocalPublicKey()
+	if err != nil {
+		return "", err
+	}
+	selfPKStr 		= string(crypto.FromECDSAPub(selfPk))
+
+
 	alphaPki, proof, err := s.generateArrayPiece(epochID, selfIndex)
 	if err != nil {
-		return nil, err
-	}
-	var dataBuffer bytes.Buffer
-	//ToDo need add sender's pk
-	for _, value := range alphaPki {
-		dataBuffer.Write(crypto.FromECDSAPub(value))
+		return "", err
 	}
 
-	for _, valueProof := range proof {
-		dataBuffer.Write(valueProof.Bytes())
+	var alphaBuffer bytes.Buffer
+	for index, value := range alphaPki {
+		if index < len(alphaPki)-1 {
+			alphaBuffer.Write(crypto.FromECDSAPub(value))
+			alphaBuffer.Write([]byte("-"))
+		}else{
+			alphaBuffer.Write(crypto.FromECDSAPub(value))
+		}
+
+
 	}
-	return dataBuffer.Bytes(), nil
+	alphaPkiStr = string(alphaBuffer.Bytes())
+
+	var proofBuffer bytes.Buffer
+	for index, valueProof := range proof {
+		if index < len(proof) -1 {
+			proofBuffer.Write(valueProof.Bytes())
+			proofBuffer.Write([]byte("-"))
+		}else{
+			proofBuffer.Write(valueProof.Bytes())
+		}
+
+	}
+	proofStr = string(proofBuffer.Bytes())
+
+	payLoadStr = strings.Join([]string{epochIDStr,selfIndexStr,selfPKStr,alphaPkiStr,proofStr},"+")
+	return payLoadStr, nil
 }
 
 func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
@@ -660,9 +743,9 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	log.Debug("tx send success")
 	return nil
 }
-func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
+func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	//test
-	fmt.Println("Simulator send tx:", hex.EncodeToString(data))
+	fmt.Println("Simulator send tx:", data)
 
 	if s.rc == nil {
 		return errors.New("rc is not ready")
@@ -674,22 +757,10 @@ func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var to = slotLeaderPrecompileAddr
-	amount := new(big.Int).SetInt64(0)
-	//amount.SetString("100", 10) // 100 tokens
-
-	//type SendTxArgs struct {
-	//	From     common.Address  `json:"from"`
-	//	To       *common.Address `json:"to"`
-	//	Gas      *hexutil.Big    `json:"gas"`
-	//	GasPrice *hexutil.Big    `json:"gasPrice"`
-	//	Value    *hexutil.Big    `json:"value"`
-	//	Data     hexutil.Bytes   `json:"data"`
-	//	Nonce    *hexutil.Uint64 `json:"nonce"`
-	//}
 	arg := map[string]interface{}{}
 	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	arg["to"] = &to
-	arg["value"] = (*hexutil.Big)(amount)
+	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	arg["txType"] = 1
 	//Set payload infomation--------------
 
@@ -699,11 +770,8 @@ func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
 	}
 
 	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
-
 	arg["data"] = hexutil.Bytes(payload)
-
 	log.Debug("finish to write data of payload")
-
 	var txHash common.Hash
 	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
 	if nil != callErr {

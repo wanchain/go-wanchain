@@ -1,8 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strings"
 
 	"github.com/wanchain/go-wanchain/functrace"
@@ -18,29 +20,43 @@ import (
 
 var (
 	slotLeaderSCDef = `[
-		{
-			"constant": false,
-			"type": "function",
-			"inputs": [
-				{
-					"name": "data",
-					"type": "string"
-				}
-			],
-			"name": "slotLeaderStage1MiSave",
-			"outputs": [
-				{
-					"name": "data",
-					"type": "string"
-				}
-			]
-		}
-	]`
+			{
+				"constant": false,
+				"type": "function",
+				"inputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				],
+				"name": "slotLeaderStage1MiSave",
+				"outputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				]
+			}
+			{
+				"constant": false,
+				"type": "function",
+				"inputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				],
+				"name": "slotLeaderStage2InfoSave",
+				"outputs": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				]
+			}
+		]`
 	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
-
-	//StampValueSet   = make(map[string]string, 5)
-	//WanCoinValueSet = make(map[string]string, 10)
 	errIllegalSender = errors.New("sender is not in epoch leaders ")
 )
 
@@ -51,16 +67,13 @@ func init() {
 
 	s := slotleader.GetSlotLeaderSelection()
 	stgOneIdArr, _ = s.GetStage1FunctionID()
+	copy(stgTwoIdArr[:], slotLeaderAbi.Methods["slotLeaderStage2InfoSave"].Id())
 }
 
 type slotLeaderSC struct {
 }
 
 func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
-
-	// A_i=α_i*PKi i = {1,2,....n}. size = sizeof(ecdsa.PublicKey)*N
-	// π_i							size = sizeof(uint64)x2 w[0]=e w[1]=z
-	//return params.SlsStgTwoPerByteGas * uint64(len(input))
 	return 0
 }
 
@@ -148,6 +161,35 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 }
 
 func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	functrace.Enter()
+	log.Debug("slotLeaderSC handleStgTwo is called")
+	if evm == nil {
+		return nil, errors.New("state db is not ready")
+	}
+
+	s := slotleader.GetSlotLeaderSelection()
+	data, err := s.UnpackStage2Data(in)
+	if err != nil {
+		return nil,err
+	}
+	//epochIDBuf,selfIndexBuf,_,alphaPki,proof,err := s.RlpUnpackStage2Data(data)
+	epochIDBuf,selfIndexBuf,_,_,_,err := s.RlpUnpackStage2Data(data)
+	if err != nil {
+		return nil, err
+	}
+	// address : sc slotLeaderPrecompileAddr
+	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
+	var keyBuf  bytes.Buffer
+	keyBuf.Write([]byte(epochIDBuf))
+	keyBuf.Write([]byte(selfIndexBuf))
+	keyBuf.Write([]byte("slotLeaderStag2"))
+	keyHash := 	crypto.Keccak256Hash(keyBuf.Bytes())
+
+	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
+
+	functrace.Exit()
 	return nil, nil
 }
 
@@ -159,6 +201,19 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	// 3. verify A[i]
 	// 4. verify Pie[i]
 	// 5. epochID verify
+	var methodId [4]byte
+	copy(methodId[:], tx.Data()[:4])
+
+	if methodId == stgOneIdArr {
+		return c.ValidTxStg1(stateDB,signer,tx)
+	} else if methodId == stgTwoIdArr {
+		return c.ValidTxStg2(stateDB,signer,tx)
+	}
+	return nil
+}
+
+
+func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage1Data(tx.Data())
 	if err != nil {
@@ -169,6 +224,23 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 		return err
 	}
 	if !s.InEpochLeadersOrNotByPk(pkSelf) {
+		return errIllegalSender
+	}
+	return nil
+}
+
+func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	s := slotleader.GetSlotLeaderSelection()
+	data, err := s.UnpackStage2Data(tx.Data())
+	if err != nil {
+		return err
+	}
+	_,_,pk,_,_,err := s.RlpUnpackStage2Data(data)
+	if err != nil {
+		return err
+	}
+
+	if !s.InEpochLeadersOrNotByPk([]byte(pk)) {
 		return errIllegalSender
 	}
 	return nil
