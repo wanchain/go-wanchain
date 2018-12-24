@@ -36,7 +36,7 @@ var (
 						"type": "string"
 					}
 				]
-			}
+			},
 			{
 				"constant": false,
 				"type": "function",
@@ -62,7 +62,7 @@ var (
 
 func init() {
 	if errSlotLeaderSCInit != nil {
-		panic("err in slot leader sc initialize ")
+		panic("err in slot leader sc initialize :" + errSlotLeaderSCInit.Error())
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
