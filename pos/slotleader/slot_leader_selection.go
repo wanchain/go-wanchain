@@ -29,7 +29,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/pos/uleaderselection"
-	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 //CompressedPubKeyLen means a compressed public key byte len.
@@ -278,18 +277,18 @@ func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDB
 	return
 }
 
-func (s *SlotLeaderSelection) RlpUnpackStage2Data(buf []byte) (epochIDBuf string, selfIndexBuf string, pk string, alphaPki []string, proof []string,err error) {
+func (s *SlotLeaderSelection) RlpUnpackStage2Data(buf []byte) (epochIDBuf string, selfIndexBuf string, pk string, alphaPki []string, proof []string, err error) {
 	var strAll string
 	var strResult []string
-	err 			= rlp.DecodeBytes(buf, &strAll)
-	strResult 		= strings.Split(strAll,"+")
+	err = rlp.DecodeBytes(buf, &strAll)
+	strResult = strings.Split(strAll, "+")
 
-	epochIDBuf 		= strResult[0]
-	selfIndexBuf 	= strResult[1]
-	pk 				= strResult[2]
+	epochIDBuf = strResult[0]
+	selfIndexBuf = strResult[1]
+	pk = strResult[2]
 
-	alphaPki 		= strings.Split(strResult[3],"-")
-	proof 			= strings.Split(strResult[4],"-")
+	alphaPki = strings.Split(strResult[3], "-")
+	proof = strings.Split(strResult[4], "-")
 
 	return
 }
@@ -569,8 +568,8 @@ func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(pkBytes []byte) bool {
 	_, ok := s.epochLeadersMap[string(pkBytes)]
 	return ok
 }
-func (s *SlotLeaderSelection) getStateDb()(stateDb *vm.StateDB, err error){
-	return nil,nil
+func (s *SlotLeaderSelection) getStateDb() (stateDb StateDB, err error) {
+	return nil, nil
 }
 
 // TODO
@@ -581,30 +580,30 @@ func (s *SlotLeaderSelection) getStateDb()(stateDb *vm.StateDB, err error){
 // 4. build security pieces.
 func (s *SlotLeaderSelection) generateSecurityPieces(epochID uint64) (pieces []*ecdsa.PublicKey, err error) {
 
-	selfPk,err := s.getLocalPublicKey()
+	selfPk, err := s.getLocalPublicKey()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	indexs,exist := s.epochLeadersMap[string(crypto.FromECDSAPub(selfPk))]
+	indexs, exist := s.epochLeadersMap[string(crypto.FromECDSAPub(selfPk))]
 	if exist == false {
-		return nil , errors.New("not in epoch leaders")
+		return nil, errors.New("not in epoch leaders")
 	}
 
-	selfPkRecievedPicesMap := make(map[uint64] []string,0)
-	for _,selfIndex := range indexs {
-			for i:=0;i<len(s.epochLeadersArray); i++ {
-				alphaPkis, err := s.getStage2TxAlphaPki(epochID,uint64(i))
-				if err != nil {
-					return nil,err
-				}
-				selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], alphaPkis[selfIndex])
+	selfPkRecievedPicesMap := make(map[uint64][]string, 0)
+	for _, selfIndex := range indexs {
+		for i := 0; i < len(s.epochLeadersArray); i++ {
+			alphaPkis, err := s.getStage2TxAlphaPki(epochID, uint64(i))
+			if err != nil {
+				return nil, err
 			}
+			selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], alphaPkis[selfIndex])
+		}
 	}
-	piece := make([]*ecdsa.PublicKey,0)
-	for _, value := range selfPkRecievedPicesMap{
-		for _,oneItem := range value {
-			piece = append(piece,crypto.ToECDSAPub([]byte(oneItem)))
+	piece := make([]*ecdsa.PublicKey, 0)
+	for _, value := range selfPkRecievedPicesMap {
+		for _, oneItem := range value {
+			piece = append(piece, crypto.ToECDSAPub([]byte(oneItem)))
 		}
 
 		break
@@ -619,16 +618,16 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
-	var keyBuf  bytes.Buffer
-	keyBuf.Write([]byte(strconv.FormatUint(epochID,10)))
-	keyBuf.Write([]byte(strconv.FormatUint(selfIndex,10)))
+	var keyBuf bytes.Buffer
+	keyBuf.Write([]byte(strconv.FormatUint(epochID, 10)))
+	keyBuf.Write([]byte(strconv.FormatUint(selfIndex, 10)))
 	keyBuf.Write([]byte("slotLeaderStag2"))
-	keyHash := 	crypto.Keccak256Hash(keyBuf.Bytes())
+	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
-	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr,keyHash)
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	data1, err := s.UnpackStage2Data(data)
 	//epochIDBuf,selfIndexBuf,_,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)
-	_,_,_,alphaPki,_,err := s.RlpUnpackStage2Data(data1)
+	_, _, _, alphaPki, _, err := s.RlpUnpackStage2Data(data1)
 	if err != nil {
 		return nil, err
 	}
@@ -637,7 +636,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 // create security message SMA and insert into localDB
 func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
-	ArrayPiece ,err := s.generateSecurityPieces(epochID)
+	ArrayPiece, err := s.generateSecurityPieces(epochID)
 	if err != nil {
 		return err
 	}
@@ -676,17 +675,16 @@ func (s *SlotLeaderSelection) generateArrayPiece(epochID uint64, selfIndex uint6
 	return ArrayPiece, proof, err
 }
 func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
-	var epochIDStr, selfIndexStr, selfPKStr,alphaPkiStr, proofStr , payLoadStr string
+	var epochIDStr, selfIndexStr, selfPKStr, alphaPkiStr, proofStr, payLoadStr string
 
-	epochIDStr 		= strconv.FormatUint(epochID,10)
-	selfIndexStr 	= strconv.FormatUint(selfIndex,10)
+	epochIDStr = strconv.FormatUint(epochID, 10)
+	selfIndexStr = strconv.FormatUint(selfIndex, 10)
 
-	selfPk, err     := s.getLocalPublicKey()
+	selfPk, err := s.getLocalPublicKey()
 	if err != nil {
 		return "", err
 	}
-	selfPKStr 		= string(crypto.FromECDSAPub(selfPk))
-
+	selfPKStr = string(crypto.FromECDSAPub(selfPk))
 
 	alphaPki, proof, err := s.generateArrayPiece(epochID, selfIndex)
 	if err != nil {
@@ -698,27 +696,26 @@ func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uin
 		if index < len(alphaPki)-1 {
 			alphaBuffer.Write(crypto.FromECDSAPub(value))
 			alphaBuffer.Write([]byte("-"))
-		}else{
+		} else {
 			alphaBuffer.Write(crypto.FromECDSAPub(value))
 		}
-
 
 	}
 	alphaPkiStr = string(alphaBuffer.Bytes())
 
 	var proofBuffer bytes.Buffer
 	for index, valueProof := range proof {
-		if index < len(proof) -1 {
+		if index < len(proof)-1 {
 			proofBuffer.Write(valueProof.Bytes())
 			proofBuffer.Write([]byte("-"))
-		}else{
+		} else {
 			proofBuffer.Write(valueProof.Bytes())
 		}
 
 	}
 	proofStr = string(proofBuffer.Bytes())
 
-	payLoadStr = strings.Join([]string{epochIDStr,selfIndexStr,selfPKStr,alphaPkiStr,proofStr},"+")
+	payLoadStr = strings.Join([]string{epochIDStr, selfIndexStr, selfPKStr, alphaPkiStr, proofStr}, "+")
 	return payLoadStr, nil
 }
 
