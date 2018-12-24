@@ -336,7 +336,7 @@ func (s *SlotLeaderSelection) GetStage1Abi() (abi.ABI, error) {
 						"type": "string"
 					}
 				]
-			}
+			},
 			{
 				"constant": false,
 				"type": "function",
@@ -784,9 +784,15 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if readBuf == nil {
+		return nil, nil, errors.New("getStg1StateDbInfo: Found not data of key")
+	}
 
 	//pk and mi is 65 bytes length
 	epID, idxID, pk, mi, err := s.RlpUnpackAndWithUncompressPK(readBuf)
+	if err != nil {
+		return nil, nil, errors.New("getStg1StateDbInfo: RlpUnpackAndWithUncompressPK error")
+	}
 
 	if hex.EncodeToString(epID) == posdb.Uint64ToString(epochID) &&
 		hex.EncodeToString(idxID) == posdb.Uint64ToString(index) &&
@@ -834,6 +840,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 
 	payload, err := s.PackStage1Data(data)
 	if err != nil {
+		log.Debug("PackStage1Data err:" + err.Error())
 		return err
 	}
 
