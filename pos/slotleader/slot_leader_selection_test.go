@@ -218,3 +218,23 @@ func TestAbiPack(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// TestByteToString is test for bytes compare with string() convert
+func TestByteToString(t *testing.T) {
+	testBytes := make([]byte, 0)
+	for i := 0; i < 255; i++ {
+		testBytes = append(testBytes, byte(i))
+	}
+	fmt.Println("bytes: ", testBytes)
+	fmt.Println("string: ", string(testBytes))
+	fmt.Println("string len:", len(string(testBytes)))
+
+	testBytes2 := make([]byte, 0)
+	for i := 0; i < 255; i++ {
+		testBytes2 = append(testBytes2, byte(i))
+	}
+
+	if string(testBytes) != string(testBytes2) {
+		t.Fail()
+	}
+}

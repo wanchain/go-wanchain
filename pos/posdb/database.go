@@ -86,7 +86,12 @@ func (s *Db) PutWithIndex(epochID uint64, index uint64, key string, value []byte
 //GetWithIndex use to get a key-value store with a given epochID and Index
 func (s *Db) GetWithIndex(epochID uint64, index uint64, key string) ([]byte, error) {
 	newKey := s.getUniqueKeyBytes(epochID, index, key)
-	return s.db.Get(newKey)
+
+	ret, err := s.db.Get(newKey)
+	if err != nil {
+		//debug.PrintStack()
+	}
+	return ret, err
 }
 
 //Put use to set a key-value store with a given epochID

@@ -49,7 +49,7 @@ const (
 	SlotTime = 1
 
 	// SlotStage1 is 40% of slot count
-	SlotStage1 = int(SlotCount * 0.4)
+	SlotStage1 = uint64(SlotCount * 0.4)
 	// SlotStage2 is 80% of slot count
 	SlotStage2       = int(SlotCount * 0.8)
 	EpochLeaders     = "epochLeaders"
@@ -130,6 +130,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key) {
 
 	switch workStage {
 	case slotLeaderSelectionStage1:
+		log.Debug("Enter slotLeaderSelectionStage1")
 		s.buildEpochLeaderGroup(epochID)
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
@@ -140,10 +141,21 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key) {
 		}
 
 	case slotLeaderSelectionStage2:
+		log.Debug("Enter slotLeaderSelectionStage2")
+
 		//If New epoch start
 		s.workingEpochID, err = s.getWorkingEpochID()
 		if epochID > s.workingEpochID {
 			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
+
+		if slotID < SlotStage1 {
+			break
+		}
+
+		err := s.startStage2Work()
+		if err != nil {
+			s.log(err.Error())
 		}
 
 	default:
@@ -200,7 +212,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 				return err
 			}
 
-			data, err := s.buildStage2TxPayload(workingEpochID, uint64(i))
+			data, err := s.buildStage2TxPayload(workingEpochID, uint64(selfPublicKeyIndex[i]))
 			if err != nil {
 				return err
 			}
@@ -220,7 +232,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 //payload should be send with tx.
 func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
-
+	functrace.Enter()
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errors.New("Invalid input parameters")
 	}
@@ -257,6 +269,9 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
+	log.Debug(fmt.Sprintf("put alpha epochID:%d, selfIndex:%d, alpha:%s", epochID, selfIndexInEpochLeader, alpha.String()))
+
+	functrace.Exit()
 	return buffer, err
 }
 
@@ -506,6 +521,9 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
+	if err != nil {
+		return 0, err
+	}
 	workStageUint64 := posdb.BytesToUint64(ret)
 	return int(workStageUint64), err
 }
@@ -686,6 +704,8 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 // stage2 tx payload 2 proof pai[i]
 // []*ecdsa : payload1 []*big.Int payload2
 func (s *SlotLeaderSelection) generateArrayPiece(epochID uint64, selfIndex uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+	functrace.Enter()
+	log.Debug(fmt.Sprintf("epochID:%d, selfID:%d", epochID, selfIndex))
 	// get alpha
 	alpha, err := s.GetAlpha(epochID, selfIndex)
 	if err != nil {
@@ -698,6 +718,7 @@ func (s *SlotLeaderSelection) generateArrayPiece(epochID uint64, selfIndex uint6
 	}
 
 	_, ArrayPiece, proof, err := uleaderselection.GenerateArrayPiece(publicKeys, alpha)
+	functrace.Exit()
 	return ArrayPiece, proof, err
 }
 func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
