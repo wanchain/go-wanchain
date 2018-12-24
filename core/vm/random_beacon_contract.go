@@ -95,10 +95,17 @@ func UIntToByteSlice(num uint64) []byte {
 type RbDKGTxPayload struct {
 	EpochId uint64
 	ProposerId uint32
-	Enshare []bn256.G1
-	Commit []bn256.G2
+	Enshare []*bn256.G1
+	Commit []*bn256.G2
 	Proof []wanpos.DLEQproof
 }
+
+type RbSIGTxPayload struct {
+	EpochId uint64
+	ProposerId uint32
+	Gsigshare *bn256.G1
+}
+
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	functrace.Enter("dkg")
 	var payloadHex string
@@ -144,31 +151,61 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	pubkey := GetProposerPubkey(dkgParam.ProposerId)
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
-		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], *pubkey, *hbase, dkgParam.Enshare[j], dkgParam.Commit[j]) {
+		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], *pubkey, *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
 			return nil, errors.New("dkg verify dleq error")
 		}
 	}
 	temp := make([]bn256.G2, nr)
 	// 5. Reed-Solomon code verification
 	for j := 0; j < nr; j++ {
-		temp[j] = dkgParam.Commit[j]
+		temp[j] = *dkgParam.Commit[j]
 	}
 	if !wanpos.RScodeVerify(temp, x, thres - 1) {
 		return nil, errors.New("rscode check error")
 	}
 
 	// save epochId*2^64 + proposerId
-	keyBytes := make([]byte, 16)
-	keyBytes = append(UIntToByteSlice(dkgParam.EpochId), UIntToByteSlice(uint64(dkgParam.ProposerId)) ...)
-	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
+	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
-	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, hash, payloadBytes)
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
 	// TODO: add an dkg event
 	// add event
 
 	return nil, nil
 }
 
+func GetRBKeyHash(funId []byte, epochId uint64, proposerId uint32) (*common.Hash) {
+	keyBytes := make([]byte, 20)
+	keyBytes = append(keyBytes, funId ...)
+	keyBytes = append(keyBytes, UIntToByteSlice(epochId) ...)
+	keyBytes = append(keyBytes, UIntToByteSlice(uint64(proposerId)) ...)
+	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
+	return &hash
+}
+
+func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload) {
+	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
+	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	var dkgParam RbDKGTxPayload
+	err := rlp.DecodeBytes(payloadBytes, &dkgParam)
+	if err != nil {
+		return nil
+	}
+
+	return &dkgParam
+}
+
+func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload) {
+	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
+	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	var sigParam RbSIGTxPayload
+	err := rlp.DecodeBytes(payloadBytes, &sigParam)
+	if err != nil {
+		return nil
+	}
+
+	return &sigParam
+}
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var payloadHex string
 	err := rbscAbi.Unpack(&payloadHex, "sigshare", payload)
@@ -178,11 +215,6 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	payloadBytes := common.FromHex(payloadHex)
 
-	type RbSIGTxPayload struct {
-		EpochId uint64
-		ProposerId uint32
-		Gsigshare *bn256.G1
-	}
 	var sigshareParam RbSIGTxPayload
 	err = rlp.DecodeBytes(payloadBytes, &sigshareParam)
 	if err != nil {
@@ -210,13 +242,13 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	}
 	nr := len(cj0)
 	var gpkshare bn256.G2
-	gpkshare.Add(&gpkshare, &cj0[sigshareParam.ProposerId])
+	gpkshare.Add(&gpkshare, cj0[sigshareParam.ProposerId])
 	for i := 1; i < nr; i++ {
 		cji, err := c.getCji(evm, sigshareParam.EpochId, 0)
 		if err != nil {
 			return nil, errors.New(" can't get cji ")
 		}
-		gpkshare.Add(&gpkshare, &cji[sigshareParam.ProposerId])
+		gpkshare.Add(&gpkshare, cji[sigshareParam.ProposerId])
 	}
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
@@ -225,10 +257,16 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	if pair1.String() != pair2.String() {
 		return nil, errors.New(" unequal sigi")
 	}
+
+	// save
+	hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
+	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
+	// TODO: add an dkg event
 	return nil, nil
 }
 
-func (c *RandomBeaconContract) getCji(evm *EVM, sloterId uint64, proposerId uint32) ([]bn256.G2, error) {
+func (c *RandomBeaconContract) getCji(evm *EVM, sloterId uint64, proposerId uint32) ([]*bn256.G2, error) {
 	keyBytes := make([]byte, 16)
 	keyBytes = append(UIntToByteSlice(sloterId), UIntToByteSlice(uint64(proposerId)) ...)
 	hash := common.BytesToHash(crypto.Keccak256(keyBytes))

@@ -1,9 +1,6 @@
 package vm
 
 import (
-	"errors"
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"strings"
 	"testing"
 )
 
@@ -12,30 +9,17 @@ func TestRBDkg(t *testing.T) {
 
 }
 
-type genRParam struct {
-	EpochId uint32
-}
-
-type sigshareParam struct {
-	EpochId uint32
-	Gsigs 	[]uint32
-}
-
-type dkgParam struct {
-	EpochId uint32
-	Pks []uint32
-	EnSs []uint32
-	Cs []uint32
-	Proofs []uint32
-}
-
-var (
-	ErrUnknown          = errors.New("unknown error")
-)
 
 func TestPackDate(t *testing.T) {
+
 }
 
 func TestUnpackData(t *testing.T) {
+
+}
+func TestUtil(t *testing.T) {
+	arr := [5]int{1, 2, 3, 4, 5}
+	slice1 := arr[1:4]
+	println(slice1)
 
 }
