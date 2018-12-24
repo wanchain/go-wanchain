@@ -80,6 +80,15 @@ type SlotLeaderSelection struct {
 	epochLeadersArray []string            // len(pki)=65
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki
 	key               *keystore.Key
+
+	//ToDo begin
+	epochLeadersPtrArray [EpochLeaderCount]*ecdsa.PublicKey
+	validEpochLeadersIndex [EpochLeaderCount]bool 	// true: can be used to slot leader false: can not be used to slot leader
+
+	stageOneMi			 [EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi	 [EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof		 [EpochLeaderCount]*big.Int
+	//ToDo end
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -504,16 +513,29 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
 	return err
 }
-
-func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
+func (s *SlotLeaderSelection) clearData(){
 	// clear Array
 	s.epochLeadersArray = make([]string, 0)
 	// clear map
 	s.epochLeadersMap = make(map[string][]uint64)
+
+	for i:=0; i< EpochLeaderCount; i++ {
+		s.epochLeadersPtrArray[i] 	= nil
+		s.validEpochLeadersIndex[i] = true
+		s.stageOneMi[i]				= nil
+		s.stageTwoAlphaPKi[i] 		= nil
+		s.stageTwoProof[i] 			= nil
+	}
+}
+func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
+	s.clearData()
 	// build Array and map
 	for index, value := range s.getEpochLeaders(epochID) {
-		s.epochLeadersArray[index] = string(value)
+		//s.epochLeadersArray[index] = string(value)
+		s.epochLeadersArray = append(s.epochLeadersArray,string(value))
 		s.epochLeadersMap[string(value)] = append(s.epochLeadersMap[string(value)], uint64(index))
+
+		s.epochLeadersPtrArray[index] = crypto.ToECDSAPub(value)
 	}
 	return nil
 }
