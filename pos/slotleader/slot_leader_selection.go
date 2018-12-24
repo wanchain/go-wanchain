@@ -81,13 +81,13 @@ type SlotLeaderSelection struct {
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki
 	key               *keystore.Key
 
-	slotLeadersPtrArray 	[SlotCount]*ecdsa.PublicKey
-	epochLeadersPtrArray 	[EpochLeaderCount]*ecdsa.PublicKey
-	validEpochLeadersIndex 	[EpochLeaderCount]bool 	// true: can be used to slot leader false: can not be used to slot leader
+	slotLeadersPtrArray    [SlotCount]*ecdsa.PublicKey
+	epochLeadersPtrArray   [EpochLeaderCount]*ecdsa.PublicKey
+	validEpochLeadersIndex [EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
 
-	stageOneMi			 	[EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKi	 	[EpochLeaderCount][EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProof		 	[EpochLeaderCount][EpochLeaderCount]*big.Int
+	stageOneMi       [EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi [EpochLeaderCount][EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof    [EpochLeaderCount][EpochLeaderCount]*big.Int
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -542,15 +542,15 @@ func (s *SlotLeaderSelection) clearData() {
 		s.epochLeadersPtrArray[i] = nil
 		s.validEpochLeadersIndex[i] = true
 
-		s.stageOneMi[i]				= nil
+		s.stageOneMi[i] = nil
 
-		for j:=0; j<EpochLeaderCount; j++{
-			s.stageTwoAlphaPKi[i][j] 		= nil
-			s.stageTwoProof[i][j] 			= nil
+		for j := 0; j < EpochLeaderCount; j++ {
+			s.stageTwoAlphaPKi[i][j] = nil
+			s.stageTwoProof[i][j] = nil
 		}
 	}
 
-	for i:=0; i<SlotCount; i++ {
+	for i := 0; i < SlotCount; i++ {
 		s.slotLeadersPtrArray[i] = nil
 
 	}
@@ -569,21 +569,21 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 	return nil
 }
 
-func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64)(slotLeaders []*ecdsa.PublicKey, err error){
+func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecdsa.PublicKey, err error) {
 	if len(s.slotLeadersPtrArray) != SlotCount {
 		return nil, errors.New("slot leaders group data is not integrated")
 	}
-	return s.slotLeadersPtrArray[:],nil
+	return s.slotLeadersPtrArray[:], nil
 }
 
-func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64)(slotLeader *ecdsa.PublicKey, err error){
+func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	if len(s.slotLeadersPtrArray) != SlotCount {
 		return nil, errors.New("slot leaders group data is not integrated")
 	}
 	if slotID >= SlotCount {
 		return nil, errors.New("slot id index out of range")
 	}
-	return s.slotLeadersPtrArray[slotID],nil
+	return s.slotLeadersPtrArray[slotID], nil
 }
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
@@ -643,15 +643,16 @@ func (s *SlotLeaderSelection) getStateDb() (stateDb StateDB, err error) {
 	return nil, nil
 }
 
-func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error){
+func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error) {
 	// MI == AlphaiPki
-	if !uleaderselection.PublicKeyEqual(s.stageOneMi[index], s.stageTwoAlphaPKi[index][index]){
+	if !uleaderselection.PublicKeyEqual(s.stageOneMi[index], s.stageTwoAlphaPKi[index][index]) {
 		return false, nil
-	}else{
+	} else {
 		// verify proof[index]
-		return uleaderselection.VerifyDleqProof(s.epochLeadersPtrArray[:],s.stageTwoAlphaPKi[index][:],s.stageTwoProof[index][:]),nil
+		return uleaderselection.VerifyDleqProof(s.epochLeadersPtrArray[:], s.stageTwoAlphaPKi[index][:], s.stageTwoProof[index][:]), nil
 	}
 }
+
 // create alpha1*pki,alpha1*PKi,alphaN*PKi,...
 // used to create security message.
 func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecdsa.PublicKey, err error) {
@@ -681,7 +682,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	return piece, nil
 }
 
-func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, proofs []string,err error) {
+func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, proofs []string, err error) {
 
 	stateDb, err := s.getStateDb()
 
@@ -698,30 +699,30 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	//epochIDBuf,selfIndexBuf,pki,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)
 	_, _, _, alphaPki, proof, err := s.RlpUnpackStage2Data(data1)
 	if err != nil {
-		return nil,nil, err
+		return nil, nil, err
 	}
-	return alphaPki,proof, nil
+	return alphaPki, proof, nil
 }
 
-func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error){
-	for i:=0; i< EpochLeaderCount; i++ {
-		_, mi,_ := s.getStg1StateDbInfo(epochID,uint64(i))
+func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
+	for i := 0; i < EpochLeaderCount; i++ {
+		_, mi, _ := s.getStg1StateDbInfo(epochID, uint64(i))
 		if len(mi) == 0 {
 			s.validEpochLeadersIndex[i] = false
-		}else{
+		} else {
 			s.stageOneMi[i] = crypto.ToECDSAPub(mi)
 		}
 
-		alphaPkis,proofs,_ := s.getStage2TxAlphaPki(epochID,uint64(i))
-		if (len(alphaPkis) !=  EpochLeaderCount) || (len(proofs) != EpochLeaderCount) {
+		alphaPkis, proofs, _ := s.getStage2TxAlphaPki(epochID, uint64(i))
+		if (len(alphaPkis) != EpochLeaderCount) || (len(proofs) != EpochLeaderCount) {
 			s.validEpochLeadersIndex[i] = false
-		}else{
+		} else {
 
-			for j:=0; j<EpochLeaderCount; j++ {
+			for j := 0; j < EpochLeaderCount; j++ {
 				s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub([]byte(alphaPkis[j]))
 			}
 
-			for j:=0; j<EpochLeaderCount; j++ {
+			for j := 0; j < EpochLeaderCount; j++ {
 				proof, err := strconv.ParseInt(proofs[j], 10, 64)
 				if err != nil {
 					return err
@@ -733,6 +734,7 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error){
 	}
 	return nil
 }
+
 // create security message SMA and insert into localDB
 func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
 	// collect data
@@ -741,7 +743,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return errors.New("collect stage data error!")
 	}
 	// verify security pieces
-	for i := 0; i< EpochLeaderCount; i++ {
+	for i := 0; i < EpochLeaderCount; i++ {
 		valid, _ := s.verifySecurityPiece(uint64(i))
 		if !valid {
 			s.validEpochLeadersIndex[i] = false
@@ -768,6 +770,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	return nil
 }
+
 // used for stage2 payload
 // stage2 tx payload 1(alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
 // stage2 tx payload 2 proof pai[i]
