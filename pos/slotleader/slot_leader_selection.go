@@ -740,6 +740,37 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 	return err
 }
 
+// getStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
+func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (pk []byte, mi []byte, err error) {
+	stateDb, err := s.getStateDb()
+	if err != nil {
+		return nil, nil, err
+	}
+	// address : sc slotLeaderPrecompileAddr
+	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
+	var keyBuf bytes.Buffer
+	keyBuf.Write(posdb.Uint64ToBytes(epochID))
+	keyBuf.Write(posdb.Uint64ToBytes(index))
+	keyBuf.Write([]byte("slotLeaderStag1"))
+	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
+
+	// Read and Verify
+	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+
+	//pk and mi is 65 bytes length
+	epID, idxID, pk, mi, err := s.RlpUnpackAndWithUncompressPK(readBuf)
+
+	if hex.EncodeToString(epID) == posdb.Uint64ToString(epochID) &&
+		hex.EncodeToString(idxID) == posdb.Uint64ToString(index) &&
+		err == nil {
+		return
+	}
+
+	return nil, nil, errors.New("Stg1 data get from StateDb verified failed")
+}
+
 //--------------Transacton create / send --------------------------------------------
 
 func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {

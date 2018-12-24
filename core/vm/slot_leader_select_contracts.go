@@ -57,7 +57,7 @@ var (
 		]`
 	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
-	errIllegalSender = errors.New("sender is not in epoch leaders ")
+	errIllegalSender                   = errors.New("sender is not in epoch leaders ")
 )
 
 func init() {
@@ -115,28 +115,20 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	hashEpochID := crypto.Keccak256Hash(epochID)
+	// address : sc slotLeaderPrecompileAddr
+	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
-	// StateDB useage
-	// Level 1 : epochID's Hash  -> common.Address
-	// Level 2 : string joined Hash -> common.hash
-	// Level 3 : data -> byte[]
+	var keyBuf bytes.Buffer
+	keyBuf.Write(epochID)
+	keyBuf.Write(selfIndex)
+	keyBuf.Write([]byte("slotLeaderStag1"))
+	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
-	var level1 common.Address
-	var level2 common.Hash
-
-	level1 = common.BytesToAddress(hashEpochID.Bytes())
-
-	keyValue := make([]byte, 0)
-	keyValue = append(keyValue, stgOneIdArr[0], stgOneIdArr[1], stgOneIdArr[2], stgOneIdArr[3])
-	keyValue = append(keyValue, selfIndex...)
-
-	level2 = crypto.Keccak256Hash(keyValue)
-
-	evm.StateDB.SetStateByteArray(level1, level2, data)
+	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
 
 	// Read and Verify
-	readBuf := evm.StateDB.GetStateByteArray(level1, level2)
+	readBuf := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 
 	epID, index, pk, pkMi, err := s.RlpUnpackWithCompressedPK(readBuf)
 
@@ -170,10 +162,10 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage2Data(in)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	//epochIDBuf,selfIndexBuf,_,alphaPki,proof,err := s.RlpUnpackStage2Data(data)
-	epochIDBuf,selfIndexBuf,_,_,_,err := s.RlpUnpackStage2Data(data)
+	epochIDBuf, selfIndexBuf, _, _, _, err := s.RlpUnpackStage2Data(data)
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +173,11 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
-	var keyBuf  bytes.Buffer
+	var keyBuf bytes.Buffer
 	keyBuf.Write([]byte(epochIDBuf))
 	keyBuf.Write([]byte(selfIndexBuf))
 	keyBuf.Write([]byte("slotLeaderStag2"))
-	keyHash := 	crypto.Keccak256Hash(keyBuf.Bytes())
+	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
 
@@ -205,13 +197,12 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	copy(methodId[:], tx.Data()[:4])
 
 	if methodId == stgOneIdArr {
-		return c.ValidTxStg1(stateDB,signer,tx)
+		return c.ValidTxStg1(stateDB, signer, tx)
 	} else if methodId == stgTwoIdArr {
-		return c.ValidTxStg2(stateDB,signer,tx)
+		return c.ValidTxStg2(stateDB, signer, tx)
 	}
 	return nil
 }
-
 
 func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
@@ -235,7 +226,7 @@ func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *typ
 	if err != nil {
 		return err
 	}
-	_,_,pk,_,_,err := s.RlpUnpackStage2Data(data)
+	_, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
 	if err != nil {
 		return err
 	}
