@@ -170,17 +170,15 @@ func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
 
 	keys := GetDb().getAllKeys(epochID)
 
-	arrays := make([][]byte, 0)
+	arrays := make([][]byte, len(keys))
 
 	for i := 0; i < len(keys); i++ {
-		if strings.Index(keys[i], searchKey) == 0 {
-			ret, err := s.db.Get([]byte(keys[i]))
-			if err != nil {
-				log.Warn(err.Error())
-				continue
-			}
-			arrays = append(arrays, ret)
+		ret, err := s.db.Get([]byte(keys[i]))
+		if err != nil {
+			log.Warn(err.Error())
+			continue
 		}
+		arrays[i] = ret
 	}
 
 	return arrays
