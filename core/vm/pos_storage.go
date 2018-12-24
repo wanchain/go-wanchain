@@ -35,5 +35,12 @@ func GetInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash) ([]byt
 		return nil, errors.New("not get data")
 	}
 
+
 	return info, nil
 }
+
+//store information to the list
+func UpdateInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash, info []byte) error {
+	return StoreInfo(statedb,listAddr,pubHash,info)
+}
+

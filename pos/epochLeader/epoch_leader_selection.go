@@ -11,7 +11,7 @@ import (
 	"sort"
 	"bytes"
 	"errors"
-	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -262,7 +262,7 @@ func  (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 	g1ksArray := make([]bn256.G1, 0)
 
 	for _,ks :=range ksarray {
-		
+
 		gb := new(bn256.G1)
 		_, err := gb.Unmarshal(ks)
 		if err != nil {

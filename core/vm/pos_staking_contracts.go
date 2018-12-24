@@ -1,21 +1,22 @@
 package vm
 
 import (
-	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"strings"
 	"math/big"
-	"errors"
 	"time"
 	"fmt"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/common"
 	"encoding/json"
+	"github.com/wanchain/go-wanchain/core/types"
+	"errors"
 )
 
 var (
-		cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"pk","type":"string"},{"name":"lockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"pk","type":"string"},{"name":"lockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"pk","type":"string"}],"name":"stakeOut","outputs":[{"name":"pk","type":"string"}]}]`
-		cscAbi, errCscInit  = abi.JSON(strings.NewReader(coinSCDefinition))
+		//cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"Pub","type":"string"}],"name":"stakeOut","outputs":[{"name":"Pub","type":"string"}]}]`
+		cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}],"name":"stakeOut","outputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}]}]`
+
+		cscAbi, errCscInit  = abi.JSON(strings.NewReader(cscDefinition))
 
 		stakeInId  [4]byte
 		stakeOutId [4]byte
@@ -29,6 +30,7 @@ var (
 		epochId  uint64
 		//this just for test
 		posStartTime int64
+
 		epochInterval uint64
 	)
 
@@ -38,7 +40,7 @@ type StakerInfo struct {
 	PubBn256 		    []byte  	//staker’s bn256 public key
 
 	Amount      	*big.Int		    //staking wan value
-	LockPeriod	 	uint64			//lock time which is input by user
+	LockTime	 	uint64			//lock time which is input by user
 	StakingTime		int64			//the user’s staking time
 }
 
@@ -53,12 +55,8 @@ func init() {
 
 	//posStartTime = pos.Cfg().PosStartTime
 	//epochInterval = pos.Cfg().EpochInterval
-}
-
-
-func getEpochIdAddress(pepochId int64) common.Address {
-	msg := fmt.Sprintf("wanchainepochid:%v", pepochId)
-	return common.BytesToAddress(crypto.Keccak256([]byte(msg)))
+	posStartTime = time.Now().Unix()
+	epochInterval = 3600
 }
 
 
@@ -69,6 +67,10 @@ func (p *pos_staking) RequiredGas(input []byte) uint64 {
 }
 
 func (p *pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(input) < 4 {
+		return nil,errors.New("parameter is wrong")
+	}
 
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
@@ -85,39 +87,43 @@ func (p *pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, e
 
 func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	var info struct {
-		pubs 		    string  		//staker’s original public key + bn256 pairing public key
-		lockPeriod	 	*big.Int		//lock time which is input by user
+	fmt.Println(""+ common.ToHex(payload))
+
+	var Info struct {
+		Pubs 		    string  		//staker’s original public key + bn256 pairing public key
+		LockTime	 	*big.Int		//lock time which is input by user
 	}
 
-	err := cscAbi.Unpack(&info, "stakeIn", payload)
+	err := cscAbi.Unpack(&Info, "stakeIn", payload)
 	if err != nil {
 		return nil, errStakeInAbiParse
 	}
 
 	//get public keys
-	ss := strings.Split(info.pubs, "+")
-	if len(ss) < 2 {
-		return nil,errStakeInPubLen
-	}
 
-	lkperiod := (info.lockPeriod.Uint64()/epochInterval)*epochInterval
+	ss := strings.Split(strings.ToLower(Info.Pubs), "0x")
+	fmt.Println("pk1=" + ss[1])
+	fmt.Println("pk2=" + ss[2])
+
+	lt := big.NewInt(0).Div(Info.LockTime,ether).Uint64()
+
+	lkperiod := (lt/epochInterval)*epochInterval
 	//create staker's information
 	staker := &StakerInfo{
-							PubSec256:common.FromHex(ss[0]),
-							PubBn256:common.FromHex(ss[1]),
+							PubSec256:common.FromHex(ss[1]),
+							PubBn256:common.FromHex(ss[2]),
 							Amount:	contract.value,
-							LockPeriod:lkperiod,
+							LockTime:lkperiod,
 							StakingTime: time.Now().Unix(),
 						}
 
 
 	infoArray,err := json.Marshal(staker)
-	pukHash := common.BytesToHash(common.FromHex(ss[0]))
+	pukHash := common.BytesToHash(common.FromHex(ss[1]))
+
 
 	//store stake info
 	res := StoreInfo(evm.StateDB,StakersInfoAddr,pukHash,infoArray)
-
 	if res != nil {
 		return nil,res
 	}
@@ -128,17 +134,19 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 
 func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	var info struct {
-		pub 		    string  		//staker’s original public key
+	fmt.Println(""+ common.ToHex(payload))
+
+	var Info struct {
+		Pub 		    string  		//staker’s original public key
+		Value	 		*big.Int
 	}
 
-	err := cscAbi.Unpack(&info, "stakeOut", payload)
+	err := cscAbi.Unpack(&Info, "stakeOut", payload)
 	if err != nil {
 		return nil, errStakeInAbiParse
 	}
 
-	pukHash := common.BytesToHash(common.FromHex(info.pub))
-
+	pukHash := common.BytesToHash(common.FromHex(Info.Pub))
 	infoArray,err := GetInfo(evm.StateDB,StakersInfoAddr,pukHash)
 
 	var staker StakerInfo
@@ -147,10 +155,36 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 		return nil, error
 	}
 
+	if staker.PubSec256 == nil {
+		return nil,errors.New("staker has unregistered already")
+	}
 
-	if  (staker.StakingTime + int64(staker.LockPeriod)) > time.Now().Unix() {
+
+	//store staker info to nil
+	nilValue := &StakerInfo{
+		PubSec256:nil,
+		PubBn256:nil,
+		Amount:	big.NewInt(0),
+		LockTime:0,
+		StakingTime: 0,
+	}
+
+	infoArray,err = json.Marshal(nilValue)
+	if err != nil {
+		return nil,err
+	}
+
+	pukHash = common.BytesToHash(staker.PubSec256)
+	err = UpdateInfo(evm.StateDB,StakersInfoAddr,pukHash,infoArray)
+	if err != nil {
+		return nil,err
+	}
+
+	if  (staker.StakingTime + int64(staker.LockTime)) > time.Now().Unix() {
 		evm.StateDB.AddBalance(contract.CallerAddress, staker.Amount)
 		evm.StateDB.SubBalance(wanCscPrecompileAddr,staker.Amount)
+	} else {
+		return nil,errors.New("lockTIme did not reach")
 	}
 
 	return nil,nil
