@@ -1,23 +1,24 @@
-package pos
+package randombeacon
 
 import (
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/pos/cloudflare"
 	"errors"
 	"math/big"
-	"github.com/wanchain/go-wanchain/crypto"
+	"strings"
 	"crypto/rand"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/pos/wanpos_crypto"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/log"
-	"strings"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos"
 )
 
 const (
@@ -29,13 +30,23 @@ const (
 )
 
 
-var maxUint64 uint64 = uint64(-1)
-//var maxUint32 uint32 = uint32(-1)
-var slot4kEndId uint64 = uint64(4*Cfg().K - 1)
-var slot4kConfirmId uint64 = uint64((4+1)*Cfg().K - 1)
-var slot8kEndId uint64 = uint64(8*Cfg().K - 1)
-var slot8kConfirmId uint64 = uint64((8+1)*Cfg().K - 1)
+var (
+	maxUint64 = uint64(1<<64 - 1)
+	slot4kEndId = uint64(4*pos.Cfg().K - 1)
+	slot4kConfirmId = uint64((4+1)*pos.Cfg().K - 1)
+	slot8kEndId = uint64(8*pos.Cfg().K - 1)
+	slot8kConfirmId = uint64((8+1)*pos.Cfg().K - 1)
+)
 
+type RbDKGDataCollector struct {
+	data *vm.RbDKGTxPayload
+	pk *bn256.G1
+}
+
+type RbSIGDataCollector struct {
+	data *vm.RbSIGTxPayload
+	pk *bn256.G1
+}
 
 type RandomBeacon struct {
 	epochStage int
@@ -63,7 +74,7 @@ func (rb *RandomBeacon) Init() {
 }
 
 
-func (rb *RandomBeacon) RBLoop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher) error {
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher) error {
 	if statedb == nil || key == nil || epocher == nil {
 		return errors.New("invalid random beacon loop param")
 	}
@@ -73,8 +84,8 @@ func (rb *RandomBeacon) RBLoop(statedb vm.StateDB, key *keystore.Key, epocher * 
 	rb.epocher = epocher
 
 	// set local proposer info
-	Cfg().SelfPuK = key.PrivateKey3.PublicKeyBn256.G1
-	Cfg().SelfPrK = key.PrivateKey3.D
+	pos.Cfg().SelfPuK = key.PrivateKey3.PublicKeyBn256.G1
+	pos.Cfg().SelfPrK = key.PrivateKey3.D
 
 	// get epoch id, slot id
 	epochId, slotId, err := slotleader.GetEpochSlotID()
@@ -178,7 +189,7 @@ func (rb *RandomBeacon) GetMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	selfPk := Cfg().SelfPuK
+	selfPk := pos.Cfg().SelfPuK
 	if selfPk == nil {
 		return nil
 	}
@@ -211,7 +222,7 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 		return errors.New("can't find random beacon proposer group")
 	}
 
-	thres := Cfg().PolymDegree+1
+	thres := pos.Cfg().PolymDegree+1
 	//pubkey := Cfg().SelfPuK
 	//prikey := Cfg().SelfPrK
 
@@ -227,32 +238,31 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 		return err
 	}
 
-	var sshare [nr] big.Int
-
+	sshare := make([]big.Int, nr, nr)
 	poly := wanpos.RandPoly(int(thres-1), *s)	// fi(x), set si as its constant term
 	for i := 0; i < nr; i++ {
-		sshare[i] = wanpos.EvaluatePoly(poly, &x[i]) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+		sshare[i] = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 	}
 
 	// Encrypt the secret share, i.e. mutiply with the receiver's public key
-	var enshare [nr] *bn256.G1
+	enshare := make([]*bn256.G1, nr, nr)
 	for i := 0; i < nr; i++ { // enshare[j] = sshare[j]*Pub[j], it is a point on ECC
 		enshare[i] = new(bn256.G1).ScalarMult(&pks[i], &sshare[i])
 	}
 
 	// Make commitment for the secret share, i.e. mutiply with the generator of G2
-	var commit [nr] *bn256.G2
+	commit := make([]*bn256.G2, nr, nr)
 	for i := 0; i < nr; i++ { // commit[j] = sshare[j] * G2
 		commit[i] = new(bn256.G2).ScalarBaseMult(&sshare[i])
 	}
 
 	// generate DLEQ proof
-	var proof [nr] wanpos.DLEQproof
+	proof := make([]wanpos.DLEQproof, nr, nr)
 	for i := 0; i < nr; i++ { // proof = (a1, a2, z)
 		proof[i] = wanpos.DLEQ(pks[i], *wanpos.Hbase, &sshare[i])
 	}
 
-	txPayload := RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
+	txPayload := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
 	return rb.SendDKG(&txPayload)
 }
 
@@ -276,16 +286,16 @@ func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 
 	//thres := Cfg().PolymDegree+1
 	//pubkey := Cfg().SelfPuK
-	prikey := Cfg().SelfPrK
+	prikey := pos.Cfg().SelfPrK
 	datas := make([]RbDKGDataCollector, 0)
 	for id, pk := range pks {
 		data, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
 		if err == nil && data != nil {
-			datas = append(datas, RbDKGDataCollector{nil, &pk})
+			datas = append(datas, RbDKGDataCollector{data, &pk})
 		}
 	}
 
-	if uint(len(datas)) < Cfg().MinRBProposerCnt {
+	if uint(len(datas)) < pos.Cfg().MinRBProposerCnt {
 		return errors.New("insufficient proposer")
 	}
 
@@ -309,7 +319,7 @@ func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return rb.SendSIG(&RbSIGTxPayload{epochId, proposerId, gsigshare})
+	return rb.SendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
 func (rb *RandomBeacon) ComputeRandoms(bgEpochId uint64, endEpochId uint64) error {
@@ -348,16 +358,16 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	for id, pk := range pks {
 		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
 		if err == nil && dkgData != nil {
-			dkgDatas = append(dkgDatas, RbDKGDataCollector{nil, &pk})
+			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pk})
 		}
 
 		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
 		if err == nil && sigData != nil {
-			sigDatas = append(sigDatas, RbSIGDataCollector{nil, &pk})
+			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pk})
 		}
 	}
 
-	if uint(len(sigDatas)) < Cfg().MinRBProposerCnt {
+	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
 		return errors.New("insufficient proposer")
 	}
 
@@ -369,7 +379,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	// Compute the Output of Random Beacon
-	gsig := wanpos.LagrangeSig(gsigshare, x)
+	gsig := wanpos.LagrangeSig(gsigshare, x, int(pos.Cfg().PolymDegree))
 	random := crypto.Keccak256(gsig.Marshal())
 
 	// Verification Logic for the Output of Random Beacon
@@ -382,7 +392,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		}
 	}
 
-	gPub := wanpos.LagrangePub(c, x)
+	gPub := wanpos.LagrangePub(c, x, int(pos.Cfg().PolymDegree))
 
 	// mG
 	mBuf, err := GetRBM(epochId)
@@ -403,7 +413,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	return SetRandom(epochId, new(big.Int).SetBytes(random))
 }
 
-func (rb *RandomBeacon) SendDKG(payloadObj *RbDKGTxPayload) error {
+func (rb *RandomBeacon) SendDKG(payloadObj *vm.RbDKGTxPayload) error {
 	payload, err := GetRBDKGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -413,7 +423,7 @@ func (rb *RandomBeacon) SendDKG(payloadObj *RbDKGTxPayload) error {
 	return rb.DoSendRBTx(payload)
 }
 
-func (rb *RandomBeacon) SendSIG(payloadObj *RbSIGTxPayload) error {
+func (rb *RandomBeacon) SendSIG(payloadObj *vm.RbSIGTxPayload) error {
 	payload, err := GetRBSIGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -428,10 +438,11 @@ func (rb *RandomBeacon) DoSendRBTx(payload []byte) error {
 	arg["from"] = rb.GetTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1000000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
-	_, err := sendTx(arg)
+	_, err := pos.SendTx(arg)
 	return err
 }
 
@@ -440,7 +451,7 @@ func (rb *RandomBeacon) GetTxFrom() common.Address {
 }
 
 
-func GetRBDKGTxPayloadBytes(payload * RbDKGTxPayload) ([]byte, error) {
+func GetRBDKGTxPayloadBytes(payload * vm.RbDKGTxPayload) ([]byte, error) {
 	if payload == nil {
 		return nil, errors.New("invalid DKG payload object")
 	}
@@ -460,7 +471,7 @@ func GetRBDKGTxPayloadBytes(payload * RbDKGTxPayload) ([]byte, error) {
 
 }
 
-func GetRBSIGTxPayloadBytes(payload *RbSIGTxPayload) ([]byte, error) {
+func GetRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	if payload == nil {
 		return nil, errors.New("invalid DKG payload object")
 	}

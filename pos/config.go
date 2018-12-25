@@ -3,7 +3,6 @@ package pos
 import (
 	"github.com/wanchain/pos/cloudflare"
 	"math/big"
-	"github.com/wanchain/go-wanchain/common"
 )
 
 type Config struct {
