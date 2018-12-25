@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/core/state"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/functrace"
@@ -34,6 +35,7 @@ import (
 //CompressedPubKeyLen means a compressed public key byte len.
 const CompressedPubKeyLen = 33
 const LengthPublicKeyBytes = 65
+
 var (
 	EpochBaseTime = uint64(0)
 )
@@ -83,6 +85,7 @@ type SlotLeaderSelection struct {
 	epochLeadersArray []string            // len(pki)=65
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki
 	key               *keystore.Key
+	stateDb           *state.StateDB
 
 	slotLeadersPtrArray    [SlotCount]*ecdsa.PublicKey
 	epochLeadersPtrArray   [EpochLeaderCount]*ecdsa.PublicKey
@@ -111,10 +114,11 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 //Loop check work every 10 second. Called by backend loop
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key) {
+func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key) {
 	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 	s.key = key
+	s.stateDb = stateDb
 
 	epochID, slotID, err := GetEpochSlotID()
 	s.log("Now epchoID:" + posdb.Uint64ToString(epochID) + " slotID:" + posdb.Uint64ToString(slotID))
@@ -519,6 +523,7 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 
 	return epochLeaders
 }
+
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
@@ -642,8 +647,11 @@ func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(pkBytes []byte) bool {
 	_, ok := s.epochLeadersMap[string(pkBytes)]
 	return ok
 }
-func (s *SlotLeaderSelection) getStateDb() (stateDb StateDB, err error) {
-	return nil, nil
+func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
+	if s.stateDb == nil {
+		return nil, errors.New("Do not have stateDb instance now")
+	}
+	return s.stateDb, nil
 }
 
 func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error) {
