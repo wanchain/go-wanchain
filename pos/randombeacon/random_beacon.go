@@ -184,7 +184,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * ep
 }
 
 func (rb *RandomBeacon) GetMyRBProposerId(epochId uint64) []uint32 {
-	pks := rb.epocher.GetRBProposerGroup(epochId)
+	pks := rb.epocher.GetRBProposerGroup(epochId + 1)
 	if len(pks) == 0 {
 		return nil
 	}
@@ -216,7 +216,7 @@ func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32, epocher * e
 }
 
 func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
-	pks := rb.epocher.GetRBProposerGroup(epochId)
+	pks := rb.epocher.GetRBProposerGroup(epochId + 1)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
@@ -278,7 +278,7 @@ func (rb *RandomBeacon) DoSIGs(epochId uint64, proposerIds []uint32) error {
 }
 
 func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
-	pks := rb.epocher.GetRBProposerGroup(epochId)
+	pks := rb.epocher.GetRBProposerGroup(epochId + 1)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
@@ -345,7 +345,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		return nil
 	}
 
-	pks := rb.epocher.GetRBProposerGroup(epochId)
+	pks := rb.epocher.GetRBProposerGroup(epochId + 1)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
