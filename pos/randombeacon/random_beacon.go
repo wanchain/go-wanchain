@@ -31,10 +31,10 @@ const (
 
 
 var (
-	maxUint64 = uint64(1<<64 - 1)
-	slot4kEndId = uint64(4*pos.Cfg().K - 1)
+	maxUint64 		= uint64(1<<64 - 1)
+	slot4kEndId 	= uint64(4*pos.Cfg().K - 1)
 	slot4kConfirmId = uint64((4+1)*pos.Cfg().K - 1)
-	slot8kEndId = uint64(8*pos.Cfg().K - 1)
+	slot8kEndId 	= uint64(8*pos.Cfg().K - 1)
 	slot8kConfirmId = uint64((8+1)*pos.Cfg().K - 1)
 )
 
@@ -310,7 +310,7 @@ func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 
 	// Signing Stage
 	// In this stage, each random proposer computes its signature share and sends it on chain.
-	mBuf, err := GetRBM(epochId)
+	mBuf, err := GetRBM(epochId + 1)
 	if err != nil {
 		return err
 	}
@@ -335,7 +335,7 @@ func (rb *RandomBeacon) ComputeRandoms(bgEpochId uint64, endEpochId uint64) erro
 }
 
 func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
-	randomInt, err := GetRandom(epochId)
+	randomInt, err := vm.GetRandom(epochId+1)
 	if epochId == 0 && err != nil {
 		return errors.New("invalid genesis epoch random")
 	}
@@ -395,7 +395,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	gPub := wanpos.LagrangePub(c, x, int(pos.Cfg().PolymDegree))
 
 	// mG
-	mBuf, err := GetRBM(epochId)
+	mBuf, err := GetRBM(epochId + 1)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		return errors.New("Final Pairing Check Failed")
 	}
 
-	return SetRandom(epochId, new(big.Int).SetBytes(random))
+	return SetRandom(epochId+1, new(big.Int).SetBytes(random))
 }
 
 func (rb *RandomBeacon) SendDKG(payloadObj *vm.RbDKGTxPayload) error {
@@ -493,8 +493,12 @@ func GetRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 
 func GetRBM(epochId uint64) ([]byte, error) {
+	if epochId < 1 {
+		return nil, errors.New("epoch id too low")
+	}
+
 	epochIdBigInt := big.NewInt(int64(epochId))
-	preRandom, err := GetRandom(epochId - 1)
+	preRandom, err := vm.GetRandom(epochId-1)
 	if err != nil {
 		return nil, err
 	}
@@ -505,28 +509,9 @@ func GetRBM(epochId uint64) ([]byte, error) {
 }
 
 
-var RANDOMBEACON_DB_KEY = "PosRandomBeacon"
-
-
-func GetRandom(epochId uint64) (*big.Int, error) {
-	bt, err := posdb.GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
-	if err != nil {
-		if epochId == 0 {
-			return GetGenesisRandon(), nil
-		}
-
-		return nil, err
-	}
-
-	return new(big.Int).SetBytes(bt), nil
-}
-
 func SetRandom(epochId uint64, random *big.Int) error {
-	_, err := posdb.GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
+	_, err := posdb.GetDb().Put(epochId, vm.RANDOMBEACON_DB_KEY, random.Bytes())
 	return err
 }
 
-func GetGenesisRandon() *big.Int {
-	return big.NewInt(1)
-}
 
