@@ -173,7 +173,7 @@ func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
 
 	searchKey = strings.Split(searchKey, "_")[0]
 
-	keys := GetDb().getAllKeys(epochID)
+	keys := s.getAllKeys(epochID)
 
 	arrays := make([][]byte, len(keys))
 
