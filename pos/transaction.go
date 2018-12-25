@@ -17,7 +17,7 @@ import (
 //  Data     hexutil.Bytes   `json:"data"`
 //  Nonce    *hexutil.Uint64 `json:"nonce"`
 //}
-func sendTx(tx map[string]interface{}) (common.Hash, error) {
+func SendTx(tx map[string]interface{}) (common.Hash, error) {
 	rc, err := rpc.Dial("http://localhost:8545")
 	if err != nil {
 		return common.Hash{}, err
