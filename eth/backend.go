@@ -56,6 +56,9 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
+	
+	"math/rand"
+	"strconv"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 
@@ -226,14 +229,47 @@ func (s *Ethereum) BackendTimerLoop() {
 		fmt.Println("err:", err)
 		panic(err)
 	}
-	epocher := epochLeader.NewEpocher(s.ApiBackend)
-	fmt.Println(epocher)
+
+
+	epoch := epochLeader.NewEpocher(s.ApiBackend)
+
 	for {
 		stateDb, _, err := s.ApiBackend.StateAndHeaderByNumber(context.Background(), -1)
 		if err != nil {
 			fmt.Println(err)
 		}
 		select {
+		
+		case <- vm.FakeCh:
+				select {
+				case <-time.After(60 * time.Second):
+					fmt.Println("epoch loop time")
+					//select{
+
+					////case <- vm.FakeCh:
+					fmt.Println("time")
+					Nr := 10 //num of random proposers
+					Ne := 10 //num of epoch leaders, limited <= 256 now
+
+					rand.Seed(999999999999999)
+					rb := big.NewInt(int64(rand.Uint64())).Bytes()
+					epchoid := uint64(0)
+
+					epoch.SelectLeaders(rb, Nr, Ne, rpc.LatestBlockNumber, epchoid)
+
+					epl := epoch.GetEpochLeaders(0)
+					for idx,item := range  epl {
+						fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
+					}
+
+					rbl := epoch.GetRBProposerGroup(0)
+					for idx,item := range  rbl {
+						fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
+					}
+					fmt.Println(rbl)
+
+				}
+				
 		case <-time.After(6 * time.Second):
 			fmt.Println("time")
 			//Add for slot leader selection

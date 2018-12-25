@@ -80,7 +80,7 @@ func (p *pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, e
 	}
 
 	var methodId [4]byte
-	copy(methodId[:], input[:4])
+    copy(methodId[:], input[:4])
 
 	if methodId == stakeInId {
 		return p.stakeIn(input[4:], contract, evm)
@@ -216,22 +216,27 @@ func runFake(statedb StateDB) error {
 	Ns                         := 100 //num of publickey samples
 	secpubs := fakeGenSecPublicKeys(Ns)
 	g1pubs := fakeGenG1PublicKeys(Ns)
+	mrand.Seed(100000)
 
 	for i:=0;i<Ns;i++ {
+
 		staker := &StakerInfo{
 			PubSec256:secpubs[i],
 			PubBn256:g1pubs[i],
 			Amount:	big.NewInt(0).Mul(big.NewInt(int64(mrand.Float32()*1000)),ether),
-			LockTime:uint64(mrand.Float32()*10)*3600,
+			LockTime:uint64(mrand.Float32()*100)*3600,
 			StakingTime: time.Now().Unix(),
 		}
 
 		infoArray,_ := json.Marshal(staker)
 		pukHash := common.BytesToHash(staker.PubSec256)
 
-		fmt.Println("generate fake date %d",i)
-
 		StoreInfo(statedb,StakersInfoAddr,pukHash,infoArray)
+
+		infoArray,_= GetInfo(statedb,StakersInfoAddr,pukHash)
+
+		fmt.Println("generate fake date ",infoArray)
+
 	}
 
 	FakeCh <- 1

@@ -16,6 +16,7 @@ func StoreInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash, info
 	}
 
 	statedb.SetStateByteArray(listAddr,pubHash, info)
+
 	return nil
 }
 

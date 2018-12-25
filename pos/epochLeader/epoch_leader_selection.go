@@ -18,6 +18,9 @@ import (
 	"github.com/wanchain/go-wanchain/internal/ethapi"
 	"context"
 	"github.com/wanchain/go-wanchain/rpc"
+	"fmt"
+	"github.com/wanchain/go-wanchain/core/state"
+	"strconv"
 )
 
 var (
@@ -59,6 +62,7 @@ func (e *Epocher) SelectLeaders(r []byte,ne int,nr int,blockNr rpc.BlockNumber,e
 	if state == nil || err != nil {
 		return  err
 	}
+
 
 	pa,err := e.createStakerProbabilityArray(state)
 	if pa == nil || err != nil {
@@ -127,7 +131,7 @@ func  (e *Epocher) generateProblility(pstaker *vm.StakerInfo) (*Proposer,error) 
 
 }
 
-func  (e *Epocher) createStakerProbabilityArray(statedb vm.StateDB) (ProposerSorter,error) {
+func  (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (ProposerSorter,error) {
 
 	if statedb == nil {
 		return nil,vm.ErrUnknown
@@ -138,6 +142,7 @@ func  (e *Epocher) createStakerProbabilityArray(statedb vm.StateDB) (ProposerSor
 
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
+		//fmt.Println("for each get data",value)
 		staker := vm.StakerInfo{}
 		err :=json.Unmarshal(value,&staker)
 		if(err != nil) {
@@ -154,15 +159,28 @@ func  (e *Epocher) createStakerProbabilityArray(statedb vm.StateDB) (ProposerSor
 		return true
 	})
 
-	sort.Sort(ps)
+	sort.Sort(ProposerSorter(ps))
 
-	for idx, item := range ps {
+	for idx, _ := range ps {
+		if (idx == 0) {
+			continue
+		}
+		fmt.Println("probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
+	}
+
+	fmt.Println("------------------------------------------------------------------------------------------")
+	for idx, _ := range ps {
 		if (idx == 0) {
 			continue
 		}
 
-		ps[idx].probabilities = big.NewInt(0).Add(item.probabilities,ps[idx-1].probabilities)
+		ps[idx].probabilities = big.NewInt(0).Add(ps[idx].probabilities, ps[idx-1].probabilities)
+
+		fmt.Println("after sum probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
 	}
+
+
+
 
 	return ps,nil
 }
@@ -177,6 +195,8 @@ func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epoc
 	//the last one is total properties
 	tp := ps[len(ps) -1].probabilities
 
+	fmt.Println("tp=" + common.ToHex(tp.Bytes()))
+
 	var Byte0 = []byte{byte(0)}
 	var buffer bytes.Buffer
 	buffer.Write(Byte0)
@@ -189,17 +209,19 @@ func  (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter,epoc
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
-		crBig.Mod(crBig, tp) //cr_big = cr mod tp
+		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
 
+		fmt.Println("epoch leader mod tp=" + common.ToHex(crBig.Bytes()))
 		//select pki whose probability bigger than cr_big left
-		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) == 1 })
+		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
 		if idx == len(ps) {
 			idx = len(ps) -1
 		}
 
+		fmt.Println("select probility" + strconv.Itoa(idx) + " " +common.ToHex(ps[idx].probabilities.Bytes()))
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx + 1].pubSec256)
-		e.rbLeadersDb.PutWithIndex(epochId,uint64(i),"",crypto.FromECDSAPub(ps[idx + 1].pubSec256))
+		e.epochLeadersDb.PutWithIndex(epochId,uint64(i),"",crypto.FromECDSAPub(ps[idx].pubSec256))
 
 		cr = crypto.Keccak256(cr)
 	}
@@ -229,16 +251,18 @@ func  (e *Epocher) randomProposerSelection (r []byte, nr int, ps ProposerSorter,
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
-		crBig.Mod(crBig, tp) //cr_big = cr mod tp
+		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
+
+		fmt.Println("mod tp=" + common.ToHex(crBig.Bytes()))
 
 		//select pki whose probability bigger than cr_big left
-		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) == 1 })
+		idx := sort.Search(len(ps),func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
 		if idx == len(ps) {
 			idx = len(ps) -1
 		}
 
-		e.rbLeadersDb.PutWithIndex(epochId,uint64(i),"",ps[idx + 1].pubBn256.Marshal())
+		e.rbLeadersDb.PutWithIndex(epochId,uint64(i),"",ps[idx].pubBn256.Marshal())
 		//EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
 
 		cr = crypto.Keccak256(cr)
@@ -252,12 +276,14 @@ func  (e *Epocher) randomProposerSelection (r []byte, nr int, ps ProposerSorter,
 func  (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte{
 
 	ksarray := e.epochLeadersDb.GetStorageByteArray(epochID)
+
 	return ksarray
 
 }
 
 //get rbLeaders of epochID in localdb
 func  (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
+
 	ksarray := e.rbLeadersDb.GetStorageByteArray(epochID)
 	g1ksArray := make([]bn256.G1, 0)
 
@@ -272,5 +298,5 @@ func  (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 		g1ksArray = append(g1ksArray,*gb)
 	}
 
-	return nil
+	return g1ksArray
 }
