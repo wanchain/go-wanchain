@@ -3,6 +3,7 @@ package vm
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -119,6 +120,7 @@ func GetRandom(epochId uint64) (*big.Int, error) {
 
 	return new(big.Int).SetBytes(bt), nil
 }
+
 func GetRBM(epochId uint64) ([]byte, error) {
 	epochIdBigInt := big.NewInt(int64(epochId))
 	preRandom, err := GetRandom(epochId - 1)
@@ -139,21 +141,13 @@ func GetRBAddress() (common.Address) {
 	return randomBeaconPrecompileAddr
 }
 
+// TODO: not implement
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 	return nil
 }
 
-func GetProposerPubkey(proposerId uint32) *bn256.G1 {
-
-	return nil
-}
-
-func (c *RandomBeaconContract) isValidEpoch(epochId uint64) (bool) {
-	return true
-}
-
-func (c *RandomBeaconContract) isInRandomGroup(proposerId uint32) (bool) {
-	return true
+func GetProposerPubkey(pks *[]bn256.G1, proposerId uint32) (*bn256.G1) {
+	return &(*pks)[proposerId]
 }
 
 func UIntToByteSlice(num uint64) []byte {
@@ -176,11 +170,27 @@ type RbSIGTxPayload struct {
 	Gsigshare *bn256.G1
 }
 
+// TODO: evm.EpochId evm.SlotId, Cfg.K---dkg:0 ~ 4k -1, sig: 5k ~ 8k -1
+func (c *RandomBeaconContract) isValidEpoch(epochId uint64) (bool) {
+	//Cfg
+	// evm
+	return true
+}
+
+func (c *RandomBeaconContract) isInRandomGroup(pks *[]bn256.G1, proposerId uint32) (bool) {
+	if len(*pks) <= int(proposerId) {
+		return false
+	}
+	return true
+}
+
 func buildError(err string, epochId uint64, proposerId uint32) (error) {
-	return errors.New(err + ". epochId " + strconv.FormatUint(epochId, 10) + ", proposerId " + strconv.FormatUint(uint64(proposerId), 10))
+	return errors.New(fmt.Sprintf("%v epochId = %v, proposerId = %v ", err, epochId, proposerId))
+	//return errors.New(err + ". epochId " + strconv.FormatUint(epochId, 10) + ", proposerId " + strconv.FormatUint(uint64(proposerId), 10))
 }
 
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// TODO: next line is just for test, and will be removed later
 	functrace.Enter("dkg")
 	var payloadHex string
 	err := rbscAbi.Unpack(&payloadHex, "dkg", payload)
@@ -203,7 +213,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 		return nil, errors.New(" error epochId " + strconv.FormatUint(dkgParam.EpochId, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(dkgParam.ProposerId) {
+	if !c.isInRandomGroup(&pks, dkgParam.ProposerId) {
 		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(dkgParam.ProposerId), 10))
 	}
 
@@ -222,7 +232,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	}
 
 	// get send public Key
-	pubkey := GetProposerPubkey(dkgParam.ProposerId)
+	pubkey := GetProposerPubkey(&pks, dkgParam.ProposerId)
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
 		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], *pubkey, *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
@@ -263,19 +273,20 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
 
+	pks := GetRBProposerGroup(sigshareParam.EpochId)
 	// TODO: check
 	// 1. EpochId: weather in a wrong time
 	if !c.isValidEpoch(sigshareParam.EpochId) {
 		return nil, errors.New(" error epochId " + strconv.FormatUint(sigshareParam.EpochId, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(sigshareParam.ProposerId) {
+	if !c.isInRandomGroup(&pks, sigshareParam.ProposerId) {
 		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(sigshareParam.ProposerId), 10))
 	}
 	// TODO: check weather dkg stage has been finished
 
 	// 3. Verification
-	M, err := GetRBM(sigshareParam.EpochId)
+	M, err := GetRBM(sigshareParam.EpochId + 1)
 	if err != nil {
 		return nil, buildError("getRBM error", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}
