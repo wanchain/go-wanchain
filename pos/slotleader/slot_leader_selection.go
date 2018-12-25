@@ -130,6 +130,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key) {
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		log.Debug("Enter slotLeaderSelectionStage1")
+		s.generateSlotLeadsGroup(epochID)
 		s.buildEpochLeaderGroup(epochID)
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
@@ -971,6 +972,8 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(200000))
+
 	arg["txType"] = 1
 	//Set payload infomation--------------
 
@@ -986,7 +989,7 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
 	if nil != callErr {
 		fmt.Println(callErr)
-		log.Error("tx send failed")
+		log.Error("tx send failed:" + callErr.Error())
 		return errors.New("tx send failed")
 	}
 	fmt.Println(txHash)
