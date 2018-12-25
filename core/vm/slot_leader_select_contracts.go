@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -180,6 +181,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
+	log.Debug(fmt.Sprintf("handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(data)))
 
 	functrace.Exit()
 	return nil, nil
@@ -221,18 +223,18 @@ func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *typ
 }
 
 func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage2Data(tx.Data())
-	if err != nil {
-		return err
-	}
-	_, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
-	if err != nil {
-		return err
-	}
+	// s := slotleader.GetSlotLeaderSelection()
+	// data, err := s.UnpackStage2Data(tx.Data())
+	// if err != nil {
+	// 	return err
+	// }
+	// _, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if !s.InEpochLeadersOrNotByPk([]byte(pk)) {
-		return errIllegalSender
-	}
+	// if !s.InEpochLeadersOrNotByPk([]byte(pk)) {
+	// 	return errIllegalSender
+	// }
 	return nil
 }
