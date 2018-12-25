@@ -53,7 +53,7 @@ func NewEpocher(apiBackend 	ethapi.Backend) *Epocher {
 	return &Epocher{rbdb,epdb,apiBackend}
 }
 
-func (e *Epocher) SelectLeaders(r []byte,nr int, blockNr rpc.BlockNumber,epochId uint64 ) error {
+func (e *Epocher) SelectLeaders(r []byte,ne int,nr int,blockNr rpc.BlockNumber,epochId uint64 ) error {
 
 	state, _, err := e.apiBackend.StateAndHeaderByNumber(context.Background(), blockNr)
 	if state == nil || err != nil {
@@ -65,7 +65,7 @@ func (e *Epocher) SelectLeaders(r []byte,nr int, blockNr rpc.BlockNumber,epochId
 		return  err
 	}
 
-	e.epochLeaderSelection(r,nr,pa,epochId)
+	e.epochLeaderSelection(r,ne,pa,epochId)
 
 	e.randomProposerSelection(r,nr,pa,epochId)
 

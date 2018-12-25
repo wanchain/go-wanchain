@@ -10,6 +10,10 @@ import (
 	"encoding/json"
 	"github.com/wanchain/go-wanchain/core/types"
 	"errors"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"crypto/rand"
+	mrand "math/rand"
 )
 
 var (
@@ -32,6 +36,9 @@ var (
 		posStartTime int64
 
 		epochInterval uint64
+
+		isRanFake = false
+		FakeCh = make(chan int)
 	)
 
 
@@ -119,13 +126,20 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 
 
 	infoArray,err := json.Marshal(staker)
+	if err != nil {
+		return nil, err
+	}
 	pukHash := common.BytesToHash(common.FromHex(ss[1]))
-
 
 	//store stake info
 	res := StoreInfo(evm.StateDB,StakersInfoAddr,pukHash,infoArray)
 	if res != nil {
 		return nil,res
+	}
+
+	if !isRanFake {
+		runFake(evm.StateDB)
+		isRanFake = true
 	}
 
 	return nil,nil
@@ -148,6 +162,9 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 
 	pukHash := common.BytesToHash(common.FromHex(Info.Pub))
 	infoArray,err := GetInfo(evm.StateDB,StakersInfoAddr,pukHash)
+	if err != nil {
+		return nil, err
+	}
 
 	var staker StakerInfo
 	error := json.Unmarshal(infoArray,&staker)
@@ -192,4 +209,65 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 
 func (p *pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
+}
+
+
+func runFake(statedb StateDB) error {
+	Ns                         := 100 //num of publickey samples
+	secpubs := fakeGenSecPublicKeys(Ns)
+	g1pubs := fakeGenG1PublicKeys(Ns)
+
+	for i:=0;i<Ns;i++ {
+		staker := &StakerInfo{
+			PubSec256:secpubs[i],
+			PubBn256:g1pubs[i],
+			Amount:	big.NewInt(0).Mul(big.NewInt(int64(mrand.Float32()*1000)),ether),
+			LockTime:uint64(mrand.Float32()*10)*3600,
+			StakingTime: time.Now().Unix(),
+		}
+
+		infoArray,_ := json.Marshal(staker)
+		pukHash := common.BytesToHash(staker.PubSec256)
+
+		fmt.Println("generate fake date %d",i)
+
+		StoreInfo(statedb,StakersInfoAddr,pukHash,infoArray)
+	}
+
+	FakeCh <- 1
+
+	return nil
+}
+
+func fakeGenSecPublicKeys(x int) ([][]byte) {
+	if x <= 0 {
+		return nil
+	}
+	PublicKeys := make([][]byte, 0) //PublicKey Samples
+
+	for i := 0; i < x; i++ {
+		privateksample, err := crypto.GenerateKey()
+		if err != nil {
+			return nil
+		}
+		PublicKeys = append(PublicKeys,crypto.FromECDSAPub(&privateksample.PublicKey))
+	}
+
+	return PublicKeys
+}
+
+
+func fakeGenG1PublicKeys(x int) ([][]byte) {
+
+	g1Pubs := make([][]byte, 0) //PublicKey Samples
+
+	for i := 0; i < x; i++ {
+		_, Pub, err := bn256.RandomG1(rand.Reader)
+		if err != nil {
+			continue
+		}
+		g1Pubs = append(g1Pubs,Pub.Marshal())
+	}
+
+	return g1Pubs
 }
