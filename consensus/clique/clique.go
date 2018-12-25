@@ -31,6 +31,8 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
 	//"github.com/wanchain/go-wanchain/consensus/misc"
+	//"encoding/hex"
+	"fmt"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -38,11 +40,9 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"fmt"
-	"encoding/hex"
 )
 
 const (
@@ -592,7 +592,9 @@ func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
 	c.signer = signer
 	c.signFn = signFn
 }
+
 const LocalPublicKey = "123"
+
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
@@ -620,21 +622,22 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	if _, authorized := snap.Signers[signer]; !authorized {
 		return nil, errUnauthorized
 	}
-		// check if our trun
-	loopCheck:
+	// check if our trun
+loopCheck:
 	for {
 		epochId, slotId, err := slotleader.GetEpochSlotID()
 		if err != nil {
 			fmt.Println(err)
 			return nil, nil
 		}
-		leader, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId,slotId)
-		fmt.Println(err)
-		if hex.EncodeToString(crypto.FromECDSAPub(leader)) !=  LocalPublicKey{
+		leader, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+		fmt.Println(err, leader)
+		// if hex.EncodeToString(crypto.FromECDSAPub(leader)) == LocalPublicKey {
+		if false {
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime*time.Second):
+			case <-time.After(slotleader.SlotTime * time.Second):
 				fmt.Println("not our trun")
 				continue
 			}
@@ -642,7 +645,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime*time.Second/2):
+			case <-time.After(slotleader.SlotTime * time.Second / 2):
 				fmt.Println(" our trun")
 				break loopCheck
 			}
