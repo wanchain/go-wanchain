@@ -37,10 +37,16 @@ func (g GenesisAccount) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GenesisAccount) UnmarshalJSON(input []byte) error {
+	type GenesisAccountStack struct {
+		Amount    *math.HexOrDecimal256       `json:"amount"`
+		S256pk    hexutil.Bytes               `json:"s256pk"`
+		Bn256pk   hexutil.Bytes               `json:"bn256pk"`
+	}
 	type GenesisAccount struct {
 		Code       hexutil.Bytes               `json:"code,omitempty"`
 		Storage    map[storageJSON]storageJSON `json:"storage,omitempty"`
 		Balance    *math.HexOrDecimal256       `json:"balance" gencodec:"required"`
+		Stack      GenesisAccountStack         `json:"stack,omitempty"`
 		Nonce      *math.HexOrDecimal64        `json:"nonce,omitempty"`
 		PrivateKey hexutil.Bytes               `json:"secretKey,omitempty"`
 	}
@@ -61,6 +67,10 @@ func (g *GenesisAccount) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'balance' for GenesisAccount")
 	}
 	g.Balance = (*big.Int)(dec.Balance)
+	g.Stack.Amount = (*big.Int)(dec.Stack.Amount)
+	g.Stack.Bn256pk = dec.Stack.Bn256pk
+	g.Stack.S256pk = dec.Stack.S256pk
+
 	if dec.Nonce != nil {
 		g.Nonce = uint64(*dec.Nonce)
 	}

@@ -49,11 +49,10 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-
 	//"github.com/wanchain/go-wanchain/pos"
-	"time"
-
 	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"time"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 type LesServer interface {
@@ -91,6 +90,9 @@ type Ethereum struct {
 
 	miner     *miner.Miner
 	gasPrice  *big.Int
+	key 		*keystore.Key
+	// Pos options
+	EtherBasePubkey		[]byte
 	etherbase common.Address
 
 	networkId     uint64
@@ -179,33 +181,39 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		gpoParams.Default = config.GasPrice
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-	go eth.BackendTimerLoop()
+	if eth.chainConfig.Pluto != nil {
+		eb, errb := eth.Etherbase()
+		if errb != nil {
+			panic(errb)
+		}
+		wallet, errf := eth.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || errf != nil {
+			panic(errf)
+		}
+		fmt.Println(wallet)
+		//Get unlocked key from wallet--------
+		type getKey interface {
+			GetUnlockedKey(address common.Address) (*keystore.Key, error)
+		}
+		key, err := wallet.(getKey).GetUnlockedKey(eb)
+		if key == nil || err != nil {
+			panic(err)
+		}
+		log.Debug("Get unlocked key success address:" + eb.Hex())
+		eth.key = key
+		//------------------------------------
+		go eth.BackendTimerLoop()
+	}
 	return eth, nil
 }
-
-// BackendTimerLoop is the time main loop for pos
-func (s *Ethereum) BackendTimerLoop() {
-	time.Sleep(10 * time.Second)
-	eb, errb := s.Etherbase()
-	if errb != nil {
-		panic(errb)
+func (s *Ethereum)BackendTimerLoop() {
+	h := s.blockchain.GetHeaderByNumber(1)
+	fmt.Println(h)
+	if nil == h {
+		slotleader.EpochBaseTime = uint64(time.Now().Unix())
+	} else {
+		slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
 	}
-	wallet, errf := s.accountManager.Find(accounts.Account{Address: eb})
-	if wallet == nil || errf != nil {
-		panic(errf)
-	}
-	fmt.Println(wallet)
-
-	//Get unlocked key from wallet--------
-	type getKey interface {
-		GetUnlockedKey(address common.Address) (*keystore.Key, error)
-	}
-	key, err := wallet.(getKey).GetUnlockedKey(eb)
-	if key == nil || err != nil {
-		panic(err)
-	}
-	log.Debug("Get unlocked key success address:" + eb.Hex())
-	//------------------------------------
 
 	url := node.DefaultIPCEndpoint("gwan")
 	rc, err := rpc.Dial(url)
@@ -213,13 +221,14 @@ func (s *Ethereum) BackendTimerLoop() {
 		fmt.Println("err:", err)
 		panic(err)
 	}
+	epocher := epochLeader.NewEpocher(s.ApiBackend)
+	fmt.Println(epocher)
 	for {
 		select {
-		case <-time.After(10 * time.Second):
+		case <- time.After(6*time.Second):
 			fmt.Println("time")
-
 			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(rc, key)
+			slotleader.GetSlotLeaderSelection().Loop(rc, s.key)
 
 		}
 	}
