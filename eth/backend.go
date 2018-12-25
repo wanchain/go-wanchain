@@ -53,6 +53,8 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"time"
+	"github.com/wanchain/go-wanchain/pos/randombeacon"
+	"context"
 )
 
 type LesServer interface {
@@ -225,12 +227,16 @@ func (s *Ethereum) BackendTimerLoop() {
 	epocher := epochLeader.NewEpocher(s.ApiBackend)
 	fmt.Println(epocher)
 	for {
+		stateDb,_, err := s.ApiBackend.StateAndHeaderByNumber(context.Background(), -1)
+		if err != nil {
+			fmt.Println(err)
+		}
 		select {
 		case <-time.After(6 * time.Second):
 			fmt.Println("time")
 			//Add for slot leader selection
 			slotleader.GetSlotLeaderSelection().Loop(rc, s.key)
-
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, s.key, epocher)
 		}
 	}
 	return
