@@ -56,7 +56,7 @@ const (
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = uint64(SlotCount * 0.4)
 	// SlotStage2 is 80% of slot count
-	SlotStage2       = int(SlotCount * 0.8)
+	SlotStage2       = uint64(SlotCount * 0.8)
 	EpochLeaders     = "epochLeaders"
 	SecurityMsg      = "securityMsg"
 	RandFromProposer = "randFromProposer"
@@ -70,6 +70,11 @@ const (
 
 	//Slot leader selection stage1 finish
 	slotLeaderSelectionStage2 = iota + 1 //2
+
+	slotLeaderSelectionStage3 = iota + 1 //2
+
+	slotLeaderSelectionStageFinished = iota + 1 //2
+
 )
 
 var (
@@ -86,6 +91,7 @@ type SlotLeaderSelection struct {
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki
 	key               *keystore.Key
 	stateDb           *state.StateDB
+	epochInstance     interface{}
 
 	slotLeadersPtrArray    [SlotCount]*ecdsa.PublicKey
 	epochLeadersPtrArray   [EpochLeaderCount]*ecdsa.PublicKey
@@ -114,11 +120,12 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 //Loop check work every 10 second. Called by backend loop
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key) {
+func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
 	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 	s.key = key
 	s.stateDb = stateDb
+	s.epochInstance = epochInstance
 
 	epochID, slotID, err := GetEpochSlotID()
 	s.log("Now epchoID:" + posdb.Uint64ToString(epochID) + " slotID:" + posdb.Uint64ToString(slotID))
@@ -134,11 +141,13 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		}
 	}
 
+	s.buildEpochLeaderGroup(epochID)
+
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		log.Debug("Enter slotLeaderSelectionStage1")
 		s.generateSlotLeadsGroup(epochID)
-		s.buildEpochLeaderGroup(epochID)
+
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
 		if err != nil {
@@ -163,8 +172,37 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		err := s.startStage2Work()
 		if err != nil {
 			s.log(err.Error())
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		}
 
+	case slotLeaderSelectionStage3:
+		log.Debug("Enter slotLeaderSelectionStage3")
+
+		//If New epoch start
+		s.workingEpochID, err = s.getWorkingEpochID()
+		if epochID > s.workingEpochID {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
+
+		if slotID < SlotStage2 {
+			break
+		}
+
+		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
+		if err != nil {
+			s.log(err.Error())
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+		}
+	case slotLeaderSelectionStageFinished:
+		log.Debug("Enter slotLeaderSelectionStageFinished")
+
+		//If New epoch start
+		s.workingEpochID, err = s.getWorkingEpochID()
+		if epochID > s.workingEpochID {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
 	default:
 	}
 	functrace.Exit()
@@ -311,6 +349,10 @@ func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDB
 }
 
 func (s *SlotLeaderSelection) RlpUnpackStage2Data(buf []byte) (epochIDBuf string, selfIndexBuf string, pk string, alphaPki []string, proof []string, err error) {
+	if buf == nil {
+		return "", "", "", nil, nil, errors.New("RlpUnpackStage2Data Input buf is nil")
+	}
+
 	var strAll string
 	var strResult []string
 	err = rlp.DecodeBytes(buf, &strAll)
@@ -509,19 +551,31 @@ func GetEpochSlotID() (uint64, uint64, error) {
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
+	test := true
+	if test {
+		//test: generate test publicKey
+		epochLeaders := make([][]byte, EpochLeaderCount)
+		for i := 0; i < EpochLeaderCount; i++ {
+			key, _ := crypto.GenerateKey()
+			epochLeaders[i] = crypto.FromECDSAPub(&key.PublicKey)
+		}
+		selfPk, err := s.getLocalPublicKey()
+		if err == nil {
+			epochLeaders[EpochLeaderCount-1] = crypto.FromECDSAPub(selfPk)
+		}
+		return epochLeaders
+	} else {
+		type epoch interface {
+			GetEpochLeaders(epochID uint64) [][]byte
+		}
 
-	//test: generate test publicKey
-	epochLeaders := make([][]byte, EpochLeaderCount)
-	for i := 0; i < EpochLeaderCount; i++ {
-		key, _ := crypto.GenerateKey()
-		epochLeaders[i] = crypto.FromECDSAPub(&key.PublicKey)
-	}
-	selfPk, err := s.getLocalPublicKey()
-	if err == nil {
-		epochLeaders[EpochLeaderCount-1] = crypto.FromECDSAPub(selfPk)
-	}
+		epochLeaders := s.epochInstance.(epoch).GetEpochLeaders(epochID)
 
-	return epochLeaders
+		if epochLeaders != nil {
+			log.Debug(fmt.Sprintf("getEpochLeaders called return len(epochLeaders):%d", len(epochLeaders)))
+		}
+		return epochLeaders
+	}
 }
 
 //getWorkStage get work stage of epochID from levelDB
@@ -706,6 +760,9 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if data == nil {
+		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+	}
 	data1, err := s.UnpackStage2Data(data)
 	//epochIDBuf,selfIndexBuf,pki,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)
 	_, _, _, alphaPki, proof, err := s.RlpUnpackStage2Data(data1)
@@ -724,7 +781,11 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			s.stageOneMi[i] = crypto.ToECDSAPub(mi)
 		}
 
-		alphaPkis, proofs, _ := s.getStage2TxAlphaPki(epochID, uint64(i))
+		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID, uint64(i))
+		if err != nil {
+			continue
+		}
+
 		if (len(alphaPkis) != EpochLeaderCount) || (len(proofs) != EpochLeaderCount) {
 			s.validEpochLeadersIndex[i] = false
 		} else {

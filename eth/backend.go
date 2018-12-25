@@ -56,9 +56,10 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
-	
+
 	"math/rand"
 	"strconv"
+
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 
@@ -230,7 +231,6 @@ func (s *Ethereum) BackendTimerLoop() {
 		panic(err)
 	}
 
-
 	epoch := epochLeader.NewEpocher(s.ApiBackend)
 
 	for {
@@ -239,42 +239,42 @@ func (s *Ethereum) BackendTimerLoop() {
 			fmt.Println(err)
 		}
 		select {
-		
-		case <- vm.FakeCh:
-				select {
-				case <-time.After(60 * time.Second):
-					fmt.Println("epoch loop time")
-					//select{
 
-					////case <- vm.FakeCh:
-					fmt.Println("time")
-					Nr := 10 //num of random proposers
-					Ne := 10 //num of epoch leaders, limited <= 256 now
+		case <-vm.FakeCh:
+			select {
+			case <-time.After(60 * time.Second):
+				fmt.Println("epoch loop time")
+				//select{
 
-					rand.Seed(999999999999999)
-					rb := big.NewInt(int64(rand.Uint64())).Bytes()
-					epchoid := uint64(0)
+				////case <- vm.FakeCh:
+				fmt.Println("time")
+				Nr := 10 //num of random proposers
+				Ne := 10 //num of epoch leaders, limited <= 256 now
 
-					epoch.SelectLeaders(rb, Nr, Ne, rpc.LatestBlockNumber, epchoid)
+				rand.Seed(999999999999999)
+				rb := big.NewInt(int64(rand.Uint64())).Bytes()
+				epchoid := uint64(0)
 
-					epl := epoch.GetEpochLeaders(0)
-					for idx,item := range  epl {
-						fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
-					}
+				epoch.SelectLeaders(rb, Nr, Ne, rpc.LatestBlockNumber, epchoid)
 
-					rbl := epoch.GetRBProposerGroup(0)
-					for idx,item := range  rbl {
-						fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
-					}
-					fmt.Println(rbl)
-
+				epl := epoch.GetEpochLeaders(0)
+				for idx, item := range epl {
+					fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
 				}
-				
+
+				rbl := epoch.GetRBProposerGroup(0)
+				for idx, item := range rbl {
+					fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
+				}
+				fmt.Println(rbl)
+
+			}
+
 		case <-time.After(6 * time.Second):
 			fmt.Println("time")
 			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, s.key)
-			randombeacon.GetRandonBeaconInst().Loop(stateDb, s.key, epocher)
+			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, s.key, epoch)
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, s.key, epoch)
 		}
 	}
 	return
