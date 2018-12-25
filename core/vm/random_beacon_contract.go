@@ -206,6 +206,15 @@ func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, err
 
 	return &sigParam, nil
 }
+
+func GetRBAbiDefinition() (string) {
+	return rbscDefinition
+}
+
+func GetRBAddress() (common.Address) {
+	return randomBeaconPrecompileAddr
+}
+
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var payloadHex string
 	err := rbscAbi.Unpack(&payloadHex, "sigshare", payload)
