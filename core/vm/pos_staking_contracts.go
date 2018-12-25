@@ -11,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"errors"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 	"crypto/rand"
 	mrand "math/rand"
 )

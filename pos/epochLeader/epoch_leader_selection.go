@@ -11,7 +11,7 @@ import (
 	"sort"
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 	"math"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -105,7 +105,7 @@ const Accuracy float64 = 1024.0 //accuracy to magnificate
 func  (e *Epocher) generateProblility(pstaker *vm.StakerInfo) (*Proposer,error) {
 
 	amount := big.NewInt(0).Div(pstaker.Amount,big.NewInt(params.Wan)).Int64()
-	lockTime := pstaker.LockPeriod
+	lockTime := pstaker.LockTime
 	leftTimePercent := (float64(int64(lockTime) - (time.Now().Unix() - pstaker.StakingTime))/float64(lockTime))
 	pb := float64(amount)*float64(lockTime)*math.Exp(-leftTimePercent)*Accuracy
 
