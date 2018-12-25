@@ -9,16 +9,15 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"crypto/rand"
 	"github.com/wanchain/pos/wanpos_crypto"
-	"fmt"
-	"encoding/hex"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/log"
 	"strings"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/rlp"
-	"strconv"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 const (
@@ -41,6 +40,20 @@ var slot8kConfirmId uint64 = uint64((8+1)*Cfg().K - 1)
 type RandomBeacon struct {
 	epochStage int
 	epochId uint64
+
+	statedb vm.StateDB
+	key *keystore.Key
+	epocher * epochLeader.Epocher
+}
+
+var randomBeacon RandomBeacon
+
+func init() {
+	randomBeacon.Init()
+}
+
+func GetRandonBeaconInst() *RandomBeacon {
+	return &randomBeacon
 }
 
 
@@ -50,7 +63,19 @@ func (rb *RandomBeacon) Init() {
 }
 
 
-func (rb *RandomBeacon) RBLoop() error {
+func (rb *RandomBeacon) RBLoop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher) error {
+	if statedb == nil || key == nil || epocher == nil {
+		return errors.New("invalid random beacon loop param")
+	}
+
+	rb.statedb = statedb
+	rb.key = key
+	rb.epocher = epocher
+
+	// set local proposer info
+	Cfg().SelfPuK = key.PrivateKey3.PublicKeyBn256.G1
+	Cfg().SelfPrK = key.PrivateKey3.D
+
 	// get epoch id, slot id
 	epochId, slotId, err := slotleader.GetEpochSlotID()
 	if err != nil {
@@ -62,7 +87,7 @@ func (rb *RandomBeacon) RBLoop() error {
 	}
 
 	if rb.epochId == maxUint64 {
-		err := ComputeRandom(0, epochId)
+		err := rb.ComputeRandoms(0, epochId)
 		if err != nil {
 			return err
 		}
@@ -73,7 +98,7 @@ func (rb *RandomBeacon) RBLoop() error {
 
 	if rb.epochId < epochId {
 		if !(rb.epochId == epochId-1 && rb.epochStage == EPOCH_TAIL) {
-			err := ComputeRandom(rb.epochId, epochId)
+			err := rb.ComputeRandoms(rb.epochId, epochId)
 			if err != nil {
 				return err
 			}
@@ -84,15 +109,15 @@ func (rb *RandomBeacon) RBLoop() error {
 	}
 
 	// rb.epochId == epochId
-	proposerIds := GetRBProposerId(epochId)
-	if len(proposerIds) == 0 {
+	myProposerIds := rb.GetMyRBProposerId(epochId)
+	if len(myProposerIds) == 0 {
 		// not belong to RB proposer group
 		// wait 8K point to compute random
 		if rb.epochStage == EPOCH_TAIL {
 			// computed random already
 			return nil
 		} else if slotId >= slot8kConfirmId {
-			err := ComputeRandom(epochId, epochId+1)
+			err := rb.ComputeRandoms(epochId, epochId+1)
 			if err != nil {
 				return err
 			}
@@ -105,33 +130,32 @@ func (rb *RandomBeacon) RBLoop() error {
 		for {
 			if rb.epochStage == EPOCH_DKG {
 				if slotId < slot4kEndId {
-					err := DoDKGs(epochId, proposerIds)
+					err := rb.DoDKGs(epochId, myProposerIds, epocher)
 					if err != nil {
 						return err
 					}
-
-					rb.epochStage = EPOCH_SIG
-				} else {
-					rb.epochStage = EPOCH_SIG
 				}
+
+				rb.epochStage = EPOCH_SIG
+
 			} else if rb.epochStage == EPOCH_SIG {
 				if slotId < slot4kConfirmId {
 					break
-				} else if rb.epochId < slot8kEndId {
-					err := DoSIGs(epochId, proposerIds)
+				} else if slotId < slot8kEndId {
+					err := rb.DoSIGs(epochId, myProposerIds)
 					if err != nil {
 						return err
 					}
 
-					rb.epochStage = EPOCH_CMP
-				} else {
-					rb.epochStage = EPOCH_CMP
 				}
+
+				rb.epochStage = EPOCH_CMP
+
 			} else if rb.epochStage == EPOCH_CMP {
 				if slotId < slot8kConfirmId {
 					break
 				} else {
-					err := ComputeRandom(epochId, epochId+1)
+					err := rb.ComputeRandoms(epochId, epochId+1)
 					if err != nil {
 						return err
 					}
@@ -148,8 +172,8 @@ func (rb *RandomBeacon) RBLoop() error {
 	return nil
 }
 
-func GetRBProposerId(epochId uint64) []uint32 {
-	pks := GetRBProposerGroup(epochId)
+func (rb *RandomBeacon) GetMyRBProposerId(epochId uint64) []uint32 {
+	pks := rb.epocher.GetRBProposerGroup(epochId)
 	if len(pks) == 0 {
 		return nil
 	}
@@ -169,9 +193,9 @@ func GetRBProposerId(epochId uint64) []uint32 {
 	return ids
 }
 
-func DoDKGs(epochId uint64, proposerIds []uint32) error {
+func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32, epocher * epochLeader.Epocher) error {
 	for _, id := range proposerIds {
-		err := DoDKG(epochId, id)
+		err := rb.DoDKG(epochId, id)
 		if err != nil {
 			return err
 		}
@@ -180,8 +204,8 @@ func DoDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func DoDKG(epochId uint64, proposerId uint32) error {
-	pks := GetRBProposerGroup(epochId)
+func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
+	pks := rb.epocher.GetRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
@@ -229,12 +253,12 @@ func DoDKG(epochId uint64, proposerId uint32) error {
 	}
 
 	txPayload := RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
-	return SendDKG(&txPayload)
+	return rb.SendDKG(&txPayload)
 }
 
-func DoSIGs(epochId uint64, proposerIds []uint32) error {
+func (rb *RandomBeacon) DoSIGs(epochId uint64, proposerIds []uint32) error {
 	for _, id := range proposerIds {
-		err := DoSIG(epochId, id)
+		err := rb.DoSIG(epochId, id)
 		if err != nil {
 			return err
 		}
@@ -243,8 +267,8 @@ func DoSIGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func DoSIG(epochId uint64, proposerId uint32) error {
-	pks := GetRBProposerGroup(epochId)
+func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
+	pks := rb.epocher.GetRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
@@ -255,7 +279,7 @@ func DoSIG(epochId uint64, proposerId uint32) error {
 	prikey := Cfg().SelfPrK
 	datas := make([]RbDKGDataCollector, 0)
 	for id, pk := range pks {
-		data, err := vm.GetDKGData(epochId, uint(id))
+		data, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
 		if err == nil && data != nil {
 			datas = append(datas, RbDKGDataCollector{nil, &pk})
 		}
@@ -285,12 +309,12 @@ func DoSIG(epochId uint64, proposerId uint32) error {
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return SendSIG(&RbSIGTxPayload{epochId, proposerId, gsigshare})
+	return rb.SendSIG(&RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
-func ComputeRandom(bgEpochId uint64, endEpochId uint64) error {
+func (rb *RandomBeacon) ComputeRandoms(bgEpochId uint64, endEpochId uint64) error {
 	for i := bgEpochId; i < endEpochId; i++ {
-		err := DoComputeRandom(i)
+		err := rb.DoComputeRandom(i)
 		if err != nil {
 			return err
 		}
@@ -300,14 +324,18 @@ func ComputeRandom(bgEpochId uint64, endEpochId uint64) error {
 	return nil
 }
 
-func DoComputeRandom(epochId uint64) error {
+func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	randomInt, err := GetRandom(epochId)
+	if epochId == 0 && err != nil {
+		return errors.New("invalid genesis epoch random")
+	}
+
 	if err == nil && randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
 		// exist already
 		return nil
 	}
 
-	pks := GetRBProposerGroup(epochId)
+	pks := rb.epocher.GetRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
 		return errors.New("can't find random beacon proposer group")
@@ -318,12 +346,12 @@ func DoComputeRandom(epochId uint64) error {
 	dkgDatas := make([]RbDKGDataCollector, 0)
 	sigDatas := make([]RbSIGDataCollector, 0)
 	for id, pk := range pks {
-		dkgData, err := vm.GetDKGData(epochId, uint(id))
+		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
 		if err == nil && dkgData != nil {
 			dkgDatas = append(dkgDatas, RbDKGDataCollector{nil, &pk})
 		}
 
-		sigData, err := vm.GetSIGData(epochId, uint(id))
+		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
 		if err == nil && sigData != nil {
 			sigDatas = append(sigDatas, RbSIGDataCollector{nil, &pk})
 		}
@@ -375,102 +403,41 @@ func DoComputeRandom(epochId uint64) error {
 	return SetRandom(epochId, new(big.Int).SetBytes(random))
 }
 
-func SendDKG(payloadObj *RbDKGTxPayload) error {
+func (rb *RandomBeacon) SendDKG(payloadObj *RbDKGTxPayload) error {
 	payload, err := GetRBDKGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
-	return SoSendRBTx(payload)
+	return rb.DoSendRBTx(payload)
 }
 
-
-func SendSIG(payloadObj *RbSIGTxPayload) error {
+func (rb *RandomBeacon) SendSIG(payloadObj *RbSIGTxPayload) error {
 	payload, err := GetRBSIGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
-	return SoSendRBTx(payload)
+	return rb.DoSendRBTx(payload)
 }
 
-func SoSendRBTx(payload []byte) error {
+func (rb *RandomBeacon) DoSendRBTx(payload []byte) error {
 	arg := map[string]interface{}{}
-	arg["from"] = GetTxFrom()
-	arg["to"] = GetRBPrecompileAddr()
+	arg["from"] = rb.GetTxFrom()
+	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
-	return sendTx(arg)
-}
-
-
-var RANDOMBEACON_DB_KEY = "PosRandomBeacon"
-
-func GetRandom(epochId uint64) (*big.Int, error) {
-	bt, err := posdb.GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
-	if err != nil {
-		return nil, err
-	}
-
-	return new(big.Int).SetBytes(bt), nil
-}
-
-func SetRandom(epochId uint64, random *big.Int) error {
-	_, err := posdb.GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
+	_, err := sendTx(arg)
 	return err
 }
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>test>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-var rbAbiStr =
-`[
-  {
-	"constant": false,
-	"inputs": [
-	  {
-		"name": "info",
-		"type": "string"
-	  }
-	],
-	"name": "dkg",
-	"outputs": [],
-	"payable": false,
-	"type": "function",
-	"stateMutability": "nonpayable"
-  },
-  {
-	"constant": false,
-	"inputs": [
-	  {
-		"name": "info",
-		"type": "string"
-	  }
-	],
-	"name": "sigshare",
-	"outputs": [],
-	"payable": false,
-	"type": "function",
-	"stateMutability": "nonpayable"
-  },
-  {
-	"constant": false,
-	"inputs": [
-	  {
-		"name": "info",
-		"type": "string"
-	  }
-	],
-	"name": "genR",
-	"outputs": [],
-	"payable": false,
-	"type": "function",
-	"stateMutability": "nonpayable"
-  }
-]`
+func (rb *RandomBeacon) GetTxFrom() common.Address {
+	return rb.key.Address
+}
 
 
 func GetRBDKGTxPayloadBytes(payload * RbDKGTxPayload) ([]byte, error) {
@@ -484,7 +451,7 @@ func GetRBDKGTxPayloadBytes(payload * RbDKGTxPayload) ([]byte, error) {
 	}
 
 	payloadStr := common.Bytes2Hex(payloadBytes)
-	rbAbi, err := abi.JSON(strings.NewReader(rbAbiStr))
+	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
 	if err != nil {
 		return nil, err
 	}
@@ -498,15 +465,13 @@ func GetRBSIGTxPayloadBytes(payload *RbSIGTxPayload) ([]byte, error) {
 		return nil, errors.New("invalid DKG payload object")
 	}
 
-
-
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
 		return nil, err
 	}
 
 	payloadStr := common.Bytes2Hex(payloadBytes)
-	rbAbi, err := abi.JSON(strings.NewReader(rbAbiStr))
+	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
 	if err != nil {
 		return nil, err
 	}
@@ -528,10 +493,29 @@ func GetRBM(epochId uint64) ([]byte, error) {
 	return crypto.Keccak256(buf), nil
 }
 
-func Set()  {
-	
+
+var RANDOMBEACON_DB_KEY = "PosRandomBeacon"
+
+
+func GetRandom(epochId uint64) (*big.Int, error) {
+	bt, err := posdb.GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
+	if err != nil {
+		if epochId == 0 {
+			return GetGenesisRandon(), nil
+		}
+
+		return nil, err
+	}
+
+	return new(big.Int).SetBytes(bt), nil
 }
 
-//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<test<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+func SetRandom(epochId uint64, random *big.Int) error {
+	_, err := posdb.GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
+	return err
+}
 
+func GetGenesisRandon() *big.Int {
+	return big.NewInt(1)
+}
 
