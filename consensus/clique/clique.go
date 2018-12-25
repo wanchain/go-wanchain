@@ -42,6 +42,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"fmt"
+	"encoding/hex"
 )
 
 const (
@@ -627,8 +628,9 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 			fmt.Println(err)
 			return nil, nil
 		}
-		leader := slotleader.GetSlotLeaderSelection().GetSlotLeaders(epochId,slotId)
-		if leader !=  LocalPublicKey{
+		leader, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId,slotId)
+		fmt.Println(err)
+		if hex.EncodeToString(crypto.FromECDSAPub(leader)) !=  LocalPublicKey{
 			select {
 			case <-stop:
 				return nil, nil

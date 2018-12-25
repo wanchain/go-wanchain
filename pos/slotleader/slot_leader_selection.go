@@ -518,9 +518,6 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 
 	return epochLeaders
 }
-func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64, slotID uint64) string {
-	return "123"
-}
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
