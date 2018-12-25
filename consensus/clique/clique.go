@@ -40,6 +40,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"fmt"
 )
 
 const (
@@ -589,7 +591,7 @@ func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
 	c.signer = signer
 	c.signFn = signFn
 }
-
+const LocalPublicKey = "123"
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
@@ -617,6 +619,34 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	if _, authorized := snap.Signers[signer]; !authorized {
 		return nil, errUnauthorized
 	}
+		// check if our trun
+	loopCheck:
+	for {
+		epochId, slotId, err := slotleader.GetEpochSlotID()
+		if err != nil {
+			fmt.Println(err)
+			return nil, nil
+		}
+		leader := slotleader.GetSlotLeaderSelection().GetSlotLeaders(epochId,slotId)
+		if leader !=  LocalPublicKey{
+			select {
+			case <-stop:
+				return nil, nil
+			case <-time.After(slotleader.SlotTime*time.Second):
+				fmt.Println("not our trun")
+				continue
+			}
+		} else {
+			select {
+			case <-stop:
+				return nil, nil
+			case <-time.After(slotleader.SlotTime*time.Second/2):
+				fmt.Println(" our trun")
+				break loopCheck
+			}
+		}
+	}
+
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
 		if recent == signer {

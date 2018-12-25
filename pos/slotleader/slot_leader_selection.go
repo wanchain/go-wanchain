@@ -34,6 +34,9 @@ import (
 //CompressedPubKeyLen means a compressed public key byte len.
 const CompressedPubKeyLen = 33
 const LengthPublicKeyBytes = 65
+var (
+	EpochBaseTime = uint64(0)
+)
 
 const (
 	// EpochGenesisTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
@@ -43,10 +46,10 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-	SlotCount = 180
+	SlotCount = 100
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 1
+	SlotTime = 10
 
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = uint64(SlotCount * 0.4)
@@ -487,11 +490,11 @@ func GetEpochSlotID() (uint64, uint64, error) {
 		return 0, 0, errors.New("Epoch genesis time is not arrive")
 	}
 
-	epochID := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+	epochID := uint64((timeUnix - EpochBaseTime) / epochTimespan)
 
-	epochIndex := uint64((timeUnix - EpochGenesisTime) / epochTimespan)
+	epochIndex := uint64((timeUnix - EpochBaseTime) / epochTimespan)
 
-	epochStartTime := epochIndex*epochTimespan + EpochGenesisTime
+	epochStartTime := epochIndex*epochTimespan + EpochBaseTime
 
 	timeInEpoch := timeUnix - epochStartTime
 
@@ -516,7 +519,9 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 
 	return epochLeaders
 }
-
+func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64, slotID uint64) string {
+	return "123"
+}
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")

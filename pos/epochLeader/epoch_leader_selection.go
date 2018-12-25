@@ -11,7 +11,7 @@ import (
 	"sort"
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 	"math"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -53,7 +53,7 @@ func NewEpocher(apiBackend 	ethapi.Backend) *Epocher {
 	return &Epocher{rbdb,epdb,apiBackend}
 }
 
-func (e *Epocher) SelectLeaders(r []byte,nr int, blockNr rpc.BlockNumber,epochId uint64 ) error {
+func (e *Epocher) SelectLeaders(r []byte,ne int,nr int,blockNr rpc.BlockNumber,epochId uint64 ) error {
 
 	state, _, err := e.apiBackend.StateAndHeaderByNumber(context.Background(), blockNr)
 	if state == nil || err != nil {
@@ -65,7 +65,7 @@ func (e *Epocher) SelectLeaders(r []byte,nr int, blockNr rpc.BlockNumber,epochId
 		return  err
 	}
 
-	e.epochLeaderSelection(r,nr,pa,epochId)
+	e.epochLeaderSelection(r,ne,pa,epochId)
 
 	e.randomProposerSelection(r,nr,pa,epochId)
 
@@ -105,7 +105,7 @@ const Accuracy float64 = 1024.0 //accuracy to magnificate
 func  (e *Epocher) generateProblility(pstaker *vm.StakerInfo) (*Proposer,error) {
 
 	amount := big.NewInt(0).Div(pstaker.Amount,big.NewInt(params.Wan)).Int64()
-	lockTime := pstaker.LockPeriod
+	lockTime := pstaker.LockTime
 	leftTimePercent := (float64(int64(lockTime) - (time.Now().Unix() - pstaker.StakingTime))/float64(lockTime))
 	pb := float64(amount)*float64(lockTime)*math.Exp(-leftTimePercent)*Accuracy
 

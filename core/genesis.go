@@ -78,11 +78,17 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type GenesisAccountStack struct {
+	Amount    *big.Int                    `json:"amount"`
+	S256pk    []byte                      `json:"s256pk"`
+	Bn256pk   []byte                      `json:"bn256pk"`
+}
 // GenesisAccount is an account in the state of the genesis block.
 type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
+	Stack      GenesisAccountStack         `json:"stack,omitempty"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }

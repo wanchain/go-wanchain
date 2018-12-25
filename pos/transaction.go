@@ -17,15 +17,14 @@ import (
 //  Data     hexutil.Bytes   `json:"data"`
 //  Nonce    *hexutil.Uint64 `json:"nonce"`
 //}
-
-func sendTx(tx map[string]interface{}) error {
+func sendTx(tx map[string]interface{}) (common.Hash, error) {
 	rc, err := rpc.Dial("http://localhost:8545")
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 
 	if rc == nil {
-		return errors.New("rc is not ready")
+		return common.Hash{}, errors.New("rc is not ready")
 	}
 
 	ctx := context.Background()
@@ -33,10 +32,10 @@ func sendTx(tx map[string]interface{}) error {
 	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
 	if nil != callErr {
 		log.Error("tx send failed")
-		return errors.New("tx send failed")
+		return common.Hash{}, errors.New("tx send failed")
 	}
 
 	log.Debug("tx send success")
-	return nil
+	return txHash, nil
 }
 

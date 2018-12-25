@@ -105,8 +105,8 @@ var (
 		ByzantiumBlock: big.NewInt(0),
 
 		Pluto: &PlutoConfig{
-			Period: 6,
-			Epoch:  6000,
+			Period: 10,
+			Epoch:  100,
 		},
 	}
 
