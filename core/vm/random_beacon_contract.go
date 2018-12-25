@@ -183,28 +183,28 @@ func GetRBKeyHash(funId []byte, epochId uint64, proposerId uint32) (*common.Hash
 	return &hash
 }
 
-func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload) {
+func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, error) {
 	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &dkgParam)
 	if err != nil {
-		return nil
+		return nil, errors.New("load dkg error")
 	}
 
-	return &dkgParam
+	return &dkgParam, nil
 }
 
-func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload) {
+func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	var sigParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &sigParam)
 	if err != nil {
-		return nil
+		return nil, errors.New("load sig error")
 	}
 
-	return &sigParam
+	return &sigParam, nil
 }
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var payloadHex string
