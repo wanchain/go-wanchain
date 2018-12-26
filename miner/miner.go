@@ -40,6 +40,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
+	"math/big"
+	"math/rand"
+	"strconv"
 )
 
 // Backend wraps all methods required for mining.
@@ -83,7 +86,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 }
 
 func (self *Miner) BackendTimerLoop(s Backend) {
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 	eb, errb := s.Etherbase()
 	if errb != nil {
 		panic(errb)
@@ -116,18 +119,61 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		fmt.Println("err:", err)
 		panic(err)
 	}
+
 	epocher := epochLeader.NewEpocher()
+
 	fmt.Println(epocher)
+
+	epochTimer := time.NewTicker(20 * time.Second)
+	slotTimer := time.NewTicker(6 * time.Second)
+
 	for {
+
+
+
 		stateDb, err := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
-		var lastEpochBlockNumber uint64 = 1
+
+		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
+
 		stateDbEpoch, err := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
+
 		fmt.Println(stateDbEpoch)
 		if err != nil {
 			fmt.Println(err)
 		}
+
 		select {
-		case <-time.After(6 * time.Second):
+
+			case <- epochTimer.C:
+
+				fmt.Println("epoch loop time")
+
+				Nr := 10 //num of random proposers
+				Ne := 10 //num of epoch leaders, limited <= 256 now
+
+				rand.Seed(999999999999999)
+				rb := big.NewInt(int64(rand.Uint64())).Bytes()
+
+				epchoid,_,err := slotleader.GetEpochSlotID()
+				if err != nil {
+					continue
+				}
+
+				epocher.SelectLeaders(rb, Nr, Ne,stateDbEpoch, epchoid)
+
+				epl := epocher.GetEpochLeaders(epchoid)
+				for idx,item := range  epl {
+					fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
+				}
+
+				rbl := epocher.GetRBProposerGroup(epchoid)
+				for idx,item := range  rbl {
+					fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
+				}
+
+				fmt.Println(rbl)
+
+		case <- slotTimer.C:
 			fmt.Println("time")
 			//Add for slot leader selection
 			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher)

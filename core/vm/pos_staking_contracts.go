@@ -137,7 +137,7 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		return nil,res
 	}
 
-	if !isRanFake {
+	if isRanFake {
 		runFake(evm.StateDB)
 		isRanFake = true
 	}
