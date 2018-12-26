@@ -31,6 +31,7 @@ var (
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
 	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
+
 )
 
 type RandomBeaconContract struct {
@@ -122,8 +123,8 @@ func GetRandom(epochId uint64) (*big.Int, error) {
 }
 
 func GetRBM(epochId uint64) ([]byte, error) {
-	epochIdBigInt := big.NewInt(int64(epochId))
-	preRandom, err := GetRandom(epochId - 1)
+	epochIdBigInt := big.NewInt(int64(epochId + 1))
+	preRandom, err := GetRandom(epochId)
 	if err != nil {
 		return nil, err
 	}
@@ -141,9 +142,23 @@ func GetRBAddress() (common.Address) {
 	return randomBeaconPrecompileAddr
 }
 
-// TODO: not implement
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	return nil
+	db, b := posdb.GetDbByName("rblocaldb")
+	if !b {
+		return nil
+	}
+	pks := db.GetStorageByteArray(epochId)
+	length := len(pks)
+	if length == 0 {
+		return nil
+	}
+	g1s := make([]bn256.G1, length, length)
+
+	for i := 0; i < length; i++ {
+		g1s[i] = *new(bn256.G1)
+		g1s[i].Unmarshal(pks[i])
+	}
+	return g1s
 }
 
 func GetProposerPubkey(pks *[]bn256.G1, proposerId uint32) (*bn256.G1) {
@@ -286,7 +301,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	// TODO: check weather dkg stage has been finished
 
 	// 3. Verification
-	M, err := GetRBM(sigshareParam.EpochId + 1)
+	M, err := GetRBM(sigshareParam.EpochId)
 	if err != nil {
 		return nil, buildError("getRBM error", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}

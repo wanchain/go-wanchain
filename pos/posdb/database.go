@@ -17,10 +17,14 @@ import (
 type Db struct {
 	db *ethdb.LDBDatabase
 }
+var (
+	dbInstMap = make(map[string]*Db)
+)
 
 func NewDb(dbPath string) *Db {
 	dbInst := &Db{db: nil}
 	dbInst.DbInit(dbPath)
+	dbInstMap[dbPath] = dbInst
 	return dbInst
 }
 
@@ -34,6 +38,10 @@ func init() {
 //GetDb can get a Db instance to use
 func GetDb() *Db {
 	return dbInstance
+}
+
+func GetDbByName(name string) (*Db, bool) {
+	return dbInstMap[name]
 }
 
 //DbInit use to init leveldb in this object, user should not use this. It is automate called in init().
