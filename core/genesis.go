@@ -23,19 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
-	"strings"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
+	"math/big"
+	"strings"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -78,7 +78,7 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type GenesisAccountStack struct {
+type GenesisAccountStaking struct {
 	Amount    *big.Int                    `json:"amount"`
 	S256pk    []byte                      `json:"s256pk"`
 	Bn256pk   []byte                      `json:"bn256pk"`
@@ -88,7 +88,7 @@ type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
-	Stack      GenesisAccountStack         `json:"stack,omitempty"`
+	Staking    GenesisAccountStaking      `json:"staking,omitempty"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
@@ -245,6 +245,23 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
 		statedb.SetNonce(addr, account.Nonce)
+		if account.Staking.S256pk != nil {
+			staker := &vm.StakerInfo{
+				PubSec256:account.Staking.S256pk,
+				PubBn256:account.Staking.Bn256pk,
+				Amount:	account.Staking.Amount,
+				LockTime:3600,
+				StakingTime: int64(g.Timestamp),
+			}
+
+
+			infoArray,err := json.Marshal(staker)
+			if err != nil {
+				panic(err)
+			}
+			pukHash := common.BytesToHash(account.Staking.S256pk)
+			statedb.SetStateByteArray(vm.StakersInfoAddr, pukHash, infoArray)
+		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
 		}
