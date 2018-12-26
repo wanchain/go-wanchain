@@ -35,6 +35,8 @@ import (
 	//"encoding/hex"
 	"fmt"
 
+	"encoding/hex"
+
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -45,7 +47,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"encoding/hex"
 )
 
 const (
@@ -635,7 +636,7 @@ loopCheck:
 		}
 		leader, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 		leaderPk := hex.EncodeToString(crypto.FromECDSAPub(leader))
-		fmt.Println(err, leaderPk)
+		fmt.Println("err:", err, "leaderPK:", leaderPk)
 		// if hex.EncodeToString(crypto.FromECDSAPub(leader)) == LocalPublicKey {
 		if false {
 			select {

@@ -505,20 +505,9 @@ func (s *SlotLeaderSelection) GetFuncIDFromPayload(payload []byte) ([4]byte, err
 
 //getLocalPublicKey get local public key from memory keystore
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
-	functrace.Enter()
 	if s.key == nil {
-		// test
-		ret, err := posdb.GetDb().Get(0, "testSelfPK")
-		pk := crypto.ToECDSAPub(ret)
-
-		log.Warn("do not found unlock address use a test address:", hex.EncodeToString(crypto.FromECDSAPub(pk)))
-		functrace.Exit()
-		return pk, err
+		panic("getLocalPublicKey error, do not found unlock address")
 	}
-
-	log.Debug("get public key success pk: " + hex.EncodeToString(crypto.FromECDSAPub(&s.key.PrivateKey.PublicKey)))
-
-	functrace.Exit()
 	return &s.key.PrivateKey.PublicKey, nil
 }
 
@@ -551,7 +540,7 @@ func GetEpochSlotID() (uint64, uint64, error) {
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
-	test := true
+	test := false
 	if test {
 		//test: generate test publicKey
 		epochLeaders := make([][]byte, EpochLeaderCount)
@@ -618,6 +607,7 @@ func (s *SlotLeaderSelection) clearData() {
 	}
 }
 func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
+	functrace.Enter()
 	s.clearData()
 	// build Array and map
 	for index, value := range s.getEpochLeaders(epochID) {
@@ -959,8 +949,8 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 		return nil, nil, errors.New("getStg1StateDbInfo: RlpUnpackAndWithUncompressPK error")
 	}
 
-	if hex.EncodeToString(epID) == posdb.Uint64ToString(epochID) &&
-		hex.EncodeToString(idxID) == posdb.Uint64ToString(index) &&
+	if hex.EncodeToString(epID) == hex.EncodeToString(big.NewInt(0).SetUint64(epochID).Bytes()) &&
+		hex.EncodeToString(idxID) == hex.EncodeToString(big.NewInt(0).SetUint64(index).Bytes()) &&
 		err == nil {
 		return
 	}

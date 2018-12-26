@@ -23,6 +23,10 @@ import (
 
 	"time"
 
+	"math/big"
+	"math/rand"
+	"strconv"
+
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -40,9 +44,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"math/big"
-	"math/rand"
-	"strconv"
 )
 
 // Backend wraps all methods required for mining.
@@ -129,8 +130,6 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 	for {
 
-
-
 		stateDb, err := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 
 		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
@@ -142,39 +141,41 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			fmt.Println(err)
 		}
 
+		Nr := 10 //num of random proposers
+		Ne := 10 //num of epoch leaders, limited <= 256 now
+
+		rand.Seed(999999999999999)
+		rb := big.NewInt(int64(rand.Uint64())).Bytes()
+
+		epchoid, _, err := slotleader.GetEpochSlotID()
+		if err != nil {
+			continue
+		}
+
 		select {
 
-			case <- epochTimer.C:
+		case <-epochTimer.C:
 
-				fmt.Println("epoch loop time")
+			fmt.Println("epoch loop time")
 
-				Nr := 10 //num of random proposers
-				Ne := 10 //num of epoch leaders, limited <= 256 now
+			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epchoid)
 
-				rand.Seed(999999999999999)
-				rb := big.NewInt(int64(rand.Uint64())).Bytes()
+			epl := epocher.GetEpochLeaders(epchoid)
+			for idx, item := range epl {
+				fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
+			}
 
-				epchoid,_,err := slotleader.GetEpochSlotID()
-				if err != nil {
-					continue
-				}
+			rbl := epocher.GetRBProposerGroup(epchoid)
+			for idx, item := range rbl {
+				fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
+			}
 
-				epocher.SelectLeaders(rb, Nr, Ne,stateDbEpoch, epchoid)
+			fmt.Println(rbl)
 
-				epl := epocher.GetEpochLeaders(epchoid)
-				for idx,item := range  epl {
-					fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
-				}
-
-				rbl := epocher.GetRBProposerGroup(epchoid)
-				for idx,item := range  rbl {
-					fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
-				}
-
-				fmt.Println(rbl)
-
-		case <- slotTimer.C:
+		case <-slotTimer.C:
 			fmt.Println("time")
+			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epchoid)
+
 			//Add for slot leader selection
 			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher)
 			//epocher.SelectLeaders()

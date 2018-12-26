@@ -18,17 +18,17 @@ import (
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
 	posdb.GetDb().DbInit("test")
-	GetSlotLeaderSelection().Loop(nil, nil)
-	GetSlotLeaderSelection().Loop(nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, nil)
 
 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
 
-	GetSlotLeaderSelection().Loop(nil, nil)
-	GetSlotLeaderSelection().Loop(nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, nil)
 
 	GetSlotLeaderSelection().setWorkingEpochID(1)
 
-	GetSlotLeaderSelection().Loop(nil, nil)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, nil)
 
 }
 
@@ -237,4 +237,23 @@ func TestByteToString(t *testing.T) {
 	if string(testBytes) != string(testBytes2) {
 		t.Fail()
 	}
+}
+
+func TestCompare(t *testing.T) {
+	epID := []byte{84}
+	epochID := uint64(84)
+	idxID := []byte{1}
+	index := uint64(1)
+
+	fmt.Println(hex.EncodeToString(epID))
+	fmt.Println(hex.EncodeToString(idxID))
+	fmt.Println(hex.EncodeToString(big.NewInt(0).SetUint64(epochID).Bytes()))
+	fmt.Println(hex.EncodeToString(big.NewInt(0).SetUint64(index).Bytes()))
+
+	if hex.EncodeToString(epID) == hex.EncodeToString(big.NewInt(0).SetUint64(epochID).Bytes()) &&
+		hex.EncodeToString(idxID) == hex.EncodeToString(big.NewInt(0).SetUint64(index).Bytes()) {
+		return
+	}
+
+	t.Fail()
 }
