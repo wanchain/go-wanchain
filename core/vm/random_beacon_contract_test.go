@@ -204,7 +204,7 @@ func show(v interface{}) {
 
 func TestRBDkg(t *testing.T) {
 	var dkgParam RbDKGTxPayload
-	dkgParam.EpochId = 1
+	dkgParam.EpochId = 0
 	dkgParam.ProposerId = 2
 	dkgParam.Commit = commitA[2]
 	dkgParam.Enshare = enshareA[2]
