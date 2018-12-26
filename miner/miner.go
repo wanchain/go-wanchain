@@ -29,9 +29,16 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/node"
+	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/go-wanchain/params"
+	"time"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/randombeacon"
 )
 
 // Backend wraps all methods required for mining.
@@ -40,6 +47,8 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
+	Etherbase() (common.Address,  error)
+	EthApiBackend() interface{}
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -67,8 +76,66 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
-
+	if config.Pluto != nil {
+		go miner.BackendTimerLoop(eth)
+	}
 	return miner
+}
+
+func (self *Miner) BackendTimerLoop(s Backend) {
+	time.Sleep(10 * time.Second)
+	eb, errb := s.Etherbase()
+	if errb != nil {
+		panic(errb)
+	}
+	wallet, errf := s.AccountManager().Find(accounts.Account{Address: eb})
+	if wallet == nil || errf != nil {
+		panic(errf)
+	}
+	fmt.Println(wallet)
+	//Get unlocked key from wallet--------
+	type getKey interface {
+		GetUnlockedKey(address common.Address) (*keystore.Key, error)
+	}
+	key, err := wallet.(getKey).GetUnlockedKey(eb)
+	if key == nil || err != nil {
+		panic(err)
+	}
+	log.Debug("Get unlocked key success address:" + eb.Hex())
+	//------------------------------------
+	h := s.BlockChain().GetHeaderByNumber(1)
+	fmt.Println(h)
+	if nil == h {
+		slotleader.EpochBaseTime = uint64(time.Now().Unix())
+	} else {
+		slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
+	}
+	url := node.DefaultIPCEndpoint("gwan")
+	rc, err := rpc.Dial(url)
+	if err != nil {
+		fmt.Println("err:", err)
+		panic(err)
+	}
+	epocher := epochLeader.NewEpocher()
+	fmt.Println(epocher)
+	for {
+		stateDb, err := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
+		var lastEpochBlockNumber uint64 = 1
+		stateDbEpoch, err := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
+		fmt.Println(stateDbEpoch)
+		if err != nil {
+			fmt.Println(err)
+		}
+		select {
+		case <-time.After(6 * time.Second):
+			fmt.Println("time")
+			//Add for slot leader selection
+			slotleader.GetSlotLeaderSelection().Loop(rc, key)
+			//epocher.SelectLeaders()
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher)
+		}
+	}
+	return
 }
 
 // update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.

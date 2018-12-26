@@ -7,6 +7,7 @@ import (
 	"time"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
 	"encoding/json"
 	"sort"
 	"bytes"
@@ -44,27 +45,20 @@ type Epocher struct {
 	rbLeadersDb  	*posdb.Db
 	epochLeadersDb  *posdb.Db
 
-	apiBackend 	ethapi.Backend
 }
 
-func NewEpocher(apiBackend 	ethapi.Backend) *Epocher {
+func NewEpocher() *Epocher {
 
 	rbdb := posdb.NewDb("rblocaldb")
 
 	epdb :=posdb.NewDb("eplocaldb")
 
-	return &Epocher{rbdb,epdb,apiBackend}
+	return &Epocher{rbdb,epdb}
 }
 
-func (e *Epocher) SelectLeaders(r []byte,ne int,nr int,blockNr rpc.BlockNumber,epochId uint64 ) error {
+func (e *Epocher) SelectLeaders(r []byte,ne int,nr int, statedb *state.StateDB,epochId uint64 ) error {
 
-	state, _, err := e.apiBackend.StateAndHeaderByNumber(context.Background(), blockNr)
-	if state == nil || err != nil {
-		return  err
-	}
-
-
-	pa,err := e.createStakerProbabilityArray(state)
+	pa,err := e.createStakerProbabilityArray(statedb)
 	if pa == nil || err != nil {
 		return  err
 	}

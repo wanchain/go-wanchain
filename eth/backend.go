@@ -26,7 +26,6 @@ import (
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -50,17 +49,6 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 
-	//"github.com/wanchain/go-wanchain/pos"
-	"context"
-	"time"
-
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
-
-	"math/rand"
-	"strconv"
-
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 )
 
 type LesServer interface {
@@ -98,9 +86,9 @@ type Ethereum struct {
 
 	miner    *miner.Miner
 	gasPrice *big.Int
-	key      *keystore.Key
+//	Key      *keystore.Key
 	// Pos options
-	EtherBasePubkey []byte
+//	EtherBasePubkey []byte
 	etherbase       common.Address
 
 	networkId     uint64
@@ -189,96 +177,64 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		gpoParams.Default = config.GasPrice
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-	if eth.chainConfig.Pluto != nil {
-		go eth.BackendTimerLoop()
-	}
+	//if eth.chainConfig.Pluto != nil {
+	//	//go eth.BackendTimerLoop()
+	//}
 	return eth, nil
 }
-func (s *Ethereum) BackendTimerLoop() {
-	time.Sleep(10 * time.Second)
-	eb, errb := s.Etherbase()
-	if errb != nil {
-		panic(errb)
-	}
-	wallet, errf := s.accountManager.Find(accounts.Account{Address: eb})
-	if wallet == nil || errf != nil {
-		panic(errf)
-	}
-	fmt.Println(wallet)
-	//Get unlocked key from wallet--------
-	type getKey interface {
-		GetUnlockedKey(address common.Address) (*keystore.Key, error)
-	}
-	key, err := wallet.(getKey).GetUnlockedKey(eb)
-	if key == nil || err != nil {
-		panic(err)
-	}
-	log.Debug("Get unlocked key success address:" + eb.Hex())
-	s.key = key
-	//------------------------------------
-	h := s.blockchain.GetHeaderByNumber(1)
-	fmt.Println(h)
-	if nil == h {
-		slotleader.EpochBaseTime = uint64(time.Now().Unix())
-	} else {
-		slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
-	}
-
-	url := node.DefaultIPCEndpoint("gwan")
-	rc, err := rpc.Dial(url)
-	if err != nil {
-		fmt.Println("err:", err)
-		panic(err)
-	}
-
-	epoch := epochLeader.NewEpocher(s.ApiBackend)
-
-	for {
-		stateDb, _, err := s.ApiBackend.StateAndHeaderByNumber(context.Background(), -1)
-		if err != nil {
-			fmt.Println(err)
-		}
-		select {
-
-		case <-vm.FakeCh:
-			select {
-			case <-time.After(60 * time.Second):
-				fmt.Println("epoch loop time")
-				//select{
-
-				////case <- vm.FakeCh:
-				fmt.Println("time")
-				Nr := 10 //num of random proposers
-				Ne := 10 //num of epoch leaders, limited <= 256 now
-
-				rand.Seed(999999999999999)
-				rb := big.NewInt(int64(rand.Uint64())).Bytes()
-				epchoid := uint64(0)
-
-				epoch.SelectLeaders(rb, Nr, Ne, rpc.LatestBlockNumber, epchoid)
-
-				epl := epoch.GetEpochLeaders(0)
-				for idx, item := range epl {
-					fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
-				}
-
-				rbl := epoch.GetRBProposerGroup(0)
-				for idx, item := range rbl {
-					fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
-				}
-				fmt.Println(rbl)
-
-			}
-
-		case <-time.After(6 * time.Second):
-			fmt.Println("time")
-			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, s.key, epoch)
-			randombeacon.GetRandonBeaconInst().Loop(stateDb, s.key, epoch)
-		}
-	}
-	return
-}
+//func (s *Ethereum) BackendTimerLoop() {
+//	time.Sleep(10 * time.Second)
+//	eb, errb := s.Etherbase()
+//	if errb != nil {
+//		panic(errb)
+//	}
+//	wallet, errf := s.accountManager.Find(accounts.Account{Address: eb})
+//	if wallet == nil || errf != nil {
+//		panic(errf)
+//	}
+//	fmt.Println(wallet)
+//	//Get unlocked key from wallet--------
+//	type getKey interface {
+//		GetUnlockedKey(address common.Address) (*keystore.Key, error)
+//	}
+//	key, err := wallet.(getKey).GetUnlockedKey(eb)
+//	if key == nil || err != nil {
+//		panic(err)
+//	}
+//	log.Debug("Get unlocked key success address:" + eb.Hex())
+//	s.Key = key
+//	//------------------------------------
+//	h := s.blockchain.GetHeaderByNumber(1)
+//	fmt.Println(h)
+//	if nil == h {
+//		slotleader.EpochBaseTime = uint64(time.Now().Unix())
+//	} else {
+//		slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
+//	}
+//
+//	url := node.DefaultIPCEndpoint("gwan")
+//	rc, err := rpc.Dial(url)
+//	if err != nil {
+//		fmt.Println("err:", err)
+//		panic(err)
+//	}
+//	epocher := epochLeader.NewEpocher()
+//	fmt.Println(epocher)
+//	for {
+//		stateDb,_, err := s.ApiBackend.StateAndHeaderByNumber(context.Background(), -1)
+//		if err != nil {
+//			fmt.Println(err)
+//		}
+//		select {
+//		case <-time.After(6 * time.Second):
+//			fmt.Println("time")
+//			//Add for slot leader selection
+//			slotleader.GetSlotLeaderSelection().Loop(rc, s.Key)
+//			randombeacon.GetRandonBeaconInst().Loop(stateDb, s.Key, epocher)
+//		}
+//	}
+//	return
+//}
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata
