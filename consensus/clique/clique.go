@@ -30,9 +30,11 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
+
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	//"encoding/hex"
 	"fmt"
+
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -272,53 +274,53 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if header.Number == nil {
 		return errUnknownBlock
 	}
-	number := header.Number.Uint64()
+	//number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
-	checkpoint := (number % c.config.Epoch) == 0
-	if checkpoint && header.Coinbase != (common.Address{}) {
-		return errInvalidCheckpointBeneficiary
-	}
+	// checkpoint := (number % c.config.Epoch) == 0
+	// if checkpoint && header.Coinbase != (common.Address{}) {
+	// 	return errInvalidCheckpointBeneficiary
+	// }
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
-	if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidVote
-	}
-	if checkpoint && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidCheckpointVote
-	}
+	// if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
+	// 	return errInvalidVote
+	// }
+	// if checkpoint && !bytes.Equal(header.Nonce[:], nonceDropVote) {
+	// 	return errInvalidCheckpointVote
+	// }
 	// Check that the extra-data contains both the vanity and signature
-	if len(header.Extra) < extraVanity {
-		return errMissingVanity
-	}
-	if len(header.Extra) < extraVanity+extraSeal {
-		return errMissingSignature
-	}
+	// if len(header.Extra) < extraVanity {
+	// 	return errMissingVanity
+	// }
+	// if len(header.Extra) < extraVanity+extraSeal {
+	// 	return errMissingSignature
+	// }
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - extraVanity - extraSeal
-	if !checkpoint && signersBytes != 0 {
-		return errExtraSigners
-	}
-	if checkpoint && signersBytes%common.AddressLength != 0 {
-		return errInvalidCheckpointSigners
-	}
+	// signersBytes := len(header.Extra) - extraVanity - extraSeal
+	// if !checkpoint && signersBytes != 0 {
+	// 	return errExtraSigners
+	// }
+	// if checkpoint && signersBytes%common.AddressLength != 0 {
+	// 	return errInvalidCheckpointSigners
+	// }
 	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != (common.Hash{}) {
-		return errInvalidMixDigest
-	}
+	// if header.MixDigest != (common.Hash{}) {
+	// 	return errInvalidMixDigest
+	// }
 	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if number > 0 {
-		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
-			return errInvalidDifficulty
-		}
-	}
+	// if number > 0 {
+	// 	if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
+	// 		return errInvalidDifficulty
+	// 	}
+	// }
 	// If all checks passed, validate any special fields for hard forks
 	//if err := misc.VerifyForkHashes(chain.Config(), header, false); err != nil {
 	//	return err
@@ -347,25 +349,25 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
-		return ErrInvalidTimestamp
-	}
+	// if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
+	// 	return ErrInvalidTimestamp
+	// }
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
+	// snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	// if err != nil {
+	// 	return err
+	// }
 	// If the block is a checkpoint block, verify the signer list
-	if number%c.config.Epoch == 0 {
-		signers := make([]byte, len(snap.Signers)*common.AddressLength)
-		for i, signer := range snap.signers() {
-			copy(signers[i*common.AddressLength:], signer[:])
-		}
-		extraSuffix := len(header.Extra) - extraSeal
-		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
-			return errInvalidCheckpointSigners
-		}
-	}
+	// if number%c.config.Epoch == 0 {
+	// 	signers := make([]byte, len(snap.Signers)*common.AddressLength)
+	// 	for i, signer := range snap.signers() {
+	// 		copy(signers[i*common.AddressLength:], signer[:])
+	// 	}
+	// 	extraSuffix := len(header.Extra) - extraSeal
+	// 	if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
+	// 		return errInvalidCheckpointSigners
+	// 	}
+	// }
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
 }
@@ -473,35 +475,35 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return errUnknownBlock
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
+	// snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures)
-	if err != nil {
-		return err
-	}
-	if _, ok := snap.Signers[signer]; !ok {
-		return errUnauthorized
-	}
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only fail if the current block doesn't shift it out
-			if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-				return errUnauthorized
-			}
-		}
-	}
+	// signer, err := ecrecover(header, c.signatures)
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, ok := snap.Signers[signer]; !ok {
+	// 	return errUnauthorized
+	// }
+	// for seen, recent := range snap.Recents {
+	// 	if recent == signer {
+	// 		// Signer is among recents, only fail if the current block doesn't shift it out
+	// 		if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
+	// 			return errUnauthorized
+	// 		}
+	// 	}
+	// }
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	inturn := snap.inturn(header.Number.Uint64(), signer)
-	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-		return errInvalidDifficulty
-	}
-	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-		return errInvalidDifficulty
-	}
+	// inturn := snap.inturn(header.Number.Uint64(), signer)
+	// if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
+	// 	return errInvalidDifficulty
+	// }
+	// if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+	// 	return errInvalidDifficulty
+	// }
 	return nil
 }
 
