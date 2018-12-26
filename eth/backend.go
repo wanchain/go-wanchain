@@ -18,8 +18,10 @@
 package eth
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/crypto"
 	"math/big"
 	"runtime"
 	"sync"
@@ -215,6 +217,13 @@ func (s *Ethereum) BackendTimerLoop() {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	s.key = key
+	log.Debug("key1:" + hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+	if key.PrivateKey2 != nil {
+		log.Debug("key2:" + hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+	}
+	if key.PrivateKey3 != nil {
+		log.Debug("key3:" + hex.EncodeToString(key.PrivateKey3.G1.Marshal()))
+	}
 	//------------------------------------
 	h := s.blockchain.GetHeaderByNumber(1)
 	fmt.Println(h)
