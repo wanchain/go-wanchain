@@ -143,8 +143,8 @@ func GetRBAddress() (common.Address) {
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	db, b := posdb.GetDbByName("rblocaldb")
-	if !b {
+	db := posdb.GetDbByName("rblocaldb")
+	if db == nil {
 		return nil
 	}
 	pks := db.GetStorageByteArray(epochId)

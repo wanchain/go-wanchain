@@ -40,7 +40,7 @@ func GetDb() *Db {
 	return dbInstance
 }
 
-func GetDbByName(name string) (*Db, bool) {
+func GetDbByName(name string) (*Db) {
 	return dbInstMap[name]
 }
 
