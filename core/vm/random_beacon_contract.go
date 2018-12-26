@@ -338,10 +338,8 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 }
 
 func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
-	keyBytes := make([]byte, 16)
-	keyBytes = append(UIntToByteSlice(epochId), UIntToByteSlice(uint64(proposerId)) ...)
-	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
-	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, hash)
+	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
+	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
