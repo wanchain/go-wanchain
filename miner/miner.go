@@ -21,7 +21,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"time"
+
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core"
@@ -29,16 +32,14 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/node"
-	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/go-wanchain/params"
-	"time"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 // Backend wraps all methods required for mining.
@@ -47,7 +48,7 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
-	Etherbase() (common.Address,  error)
+	Etherbase() (common.Address, error)
 	EthApiBackend() interface{}
 }
 
@@ -130,7 +131,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		case <-time.After(6 * time.Second):
 			fmt.Println("time")
 			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(rc, key)
+			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher)
 			//epocher.SelectLeaders()
 			randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher)
 		}
