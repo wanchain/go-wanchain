@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	rbscDefinition = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[],"payable":false,"type":"function","stateMutability":"nonpayable"}]`
+	rbscDefinition = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[{"name":"Info","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[{"name":"Info","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
 	rbscAbi, errRbscInit = abi.JSON(strings.NewReader(rbscDefinition))
 
 	dkgId [4]byte

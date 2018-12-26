@@ -215,6 +215,14 @@ func TestRBDkg(t *testing.T) {
 	rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
 	payload, _ := rbAbi.Pack("dkg", payloadStr)
 
+	var strtest = "abcdefghi"
+	strPayload, _ := rbAbi.Pack("dkg", strtest)
+	var str string
+	rbAbi.Unpack(&str, "dkg", strPayload[4:])
+	if strtest != str {
+		println("string pack unpack error")
+	}
+
 	contract := &RandomBeaconContract{}
 
 	contract.Run(payload, nil, evm)
