@@ -17,6 +17,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
@@ -97,7 +98,7 @@ func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, err
 }
 
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
-	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
+	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	var sigParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &sigParam)
@@ -151,6 +152,14 @@ func getRBProposerGroup(epochId uint64) []bn256.G1 {
 	pks := db.GetStorageByteArray(epochId)
 	length := len(pks)
 	if length == 0 {
+		// >>>>>>>>>>>>>>>>>>>>>. test
+		g1s := make([]bn256.G1, 4)
+		g1s[0] = *pos.Cfg().SelfPuK
+		g1s[1] = *pos.Cfg().SelfPuK
+		g1s[2] = *pos.Cfg().SelfPuK
+		g1s[3] = *pos.Cfg().SelfPuK
+		return g1s
+		// <<<<<<<<<<<<<<<<<<<<<
 		return nil
 	}
 	g1s := make([]bn256.G1, length, length)
@@ -159,6 +168,7 @@ func getRBProposerGroup(epochId uint64) []bn256.G1 {
 		g1s[i] = *new(bn256.G1)
 		g1s[i].Unmarshal(pks[i])
 	}
+
 	return g1s
 }
 
@@ -316,7 +326,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	var gpkshare bn256.G2
 	gpkshare.Add(&gpkshare, cj0[sigshareParam.ProposerId])
 	for i := 1; i < nr; i++ {
-		cji, err := c.getCji(evm, sigshareParam.EpochId, 0)
+		cji, err := c.getCji(evm, sigshareParam.EpochId, uint32(i))
 		if err != nil {
 			return nil, buildError(" can't get cji ", sigshareParam.EpochId, sigshareParam.ProposerId)
 		}
@@ -326,6 +336,8 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	mG := new(bn256.G1).ScalarBaseMult(m)
 	pair1 := bn256.Pair(sigshareParam.Gsigshare, hbase)
 	pair2 := bn256.Pair(mG, &gpkshare)
+	log.Info("sigshare", "pair1", pair1.String())
+	log.Info("sigshare", "pair2", pair2.String())
 	if pair1.String() != pair2.String() {
 		return nil, buildError(" unequal sigi", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}
@@ -339,13 +351,21 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 }
 
 func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
-	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
+	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
 	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if dkgBytes == nil {
+		log.Error("getCji, dkgBytes is nil")
+	} else {
+		log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
+	}
 
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
 	if err != nil {
+		log.Error("rlp decode dkg fail", "err", err)
 		return nil, buildError("error in sigshare, decode dkg rlp error", epochId, proposerId)
 	}
+
+	log.Info("getCji success")
 	return dkgParam.Commit, nil
 }
