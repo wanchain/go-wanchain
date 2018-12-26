@@ -79,16 +79,17 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 }
 
 type GenesisAccountStaking struct {
-	Amount    *big.Int                    `json:"amount"`
-	S256pk    []byte                      `json:"s256pk"`
-	Bn256pk   []byte                      `json:"bn256pk"`
+	Amount  *big.Int `json:"amount"`
+	S256pk  []byte   `json:"s256pk"`
+	Bn256pk []byte   `json:"bn256pk"`
 }
+
 // GenesisAccount is an account in the state of the genesis block.
 type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
-	Staking    GenesisAccountStaking      `json:"staking,omitempty"`
+	Staking    GenesisAccountStaking       `json:"staking,omitempty"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
@@ -247,15 +248,14 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		statedb.SetNonce(addr, account.Nonce)
 		if account.Staking.S256pk != nil {
 			staker := &vm.StakerInfo{
-				PubSec256:account.Staking.S256pk,
-				PubBn256:account.Staking.Bn256pk,
-				Amount:	account.Staking.Amount,
-				LockTime:3600,
+				PubSec256:   account.Staking.S256pk,
+				PubBn256:    account.Staking.Bn256pk,
+				Amount:      account.Staking.Amount,
+				LockTime:    36000000,
 				StakingTime: int64(g.Timestamp),
 			}
 
-
-			infoArray,err := json.Marshal(staker)
+			infoArray, err := json.Marshal(staker)
 			if err != nil {
 				panic(err)
 			}
