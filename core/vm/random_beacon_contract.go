@@ -9,6 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/functrace"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
@@ -142,7 +143,7 @@ func GetRBAddress() (common.Address) {
 	return randomBeaconPrecompileAddr
 }
 
-func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+func getRBProposerGroup(epochId uint64) []bn256.G1 {
 	db := posdb.GetDbByName("rblocaldb")
 	if db == nil {
 		return nil
@@ -221,7 +222,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
 	
-	pks := GetRBProposerGroup(dkgParam.EpochId)
+	pks := getRBProposerGroup(dkgParam.EpochId)
 	// TODO: check
 	// 1. EpochId: weather in a wrong time
 	if !c.isValidEpoch(dkgParam.EpochId) {
@@ -235,7 +236,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	// 3. Enshare, Commit, Proof has the same size
 	// check same size
 	nr := len(dkgParam.Proof)
-	thres := nr / 2
+	thres := pos.Cfg().PolymDegree + 1
 	if nr != len(dkgParam.Enshare) || nr != len(dkgParam. Commit) {
 		return nil, buildError("error in dkg params have different length", dkgParam.EpochId, dkgParam.ProposerId)
 	}
@@ -259,7 +260,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	for j := 0; j < nr; j++ {
 		temp[j] = *dkgParam.Commit[j]
 	}
-	if !wanpos.RScodeVerify(temp, x, thres - 1) {
+	if !wanpos.RScodeVerify(temp, x, int(thres - 1)) {
 		return nil, buildError("rscode check error", dkgParam.EpochId, dkgParam.ProposerId)
 	}
 
@@ -288,7 +289,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
 
-	pks := GetRBProposerGroup(sigshareParam.EpochId)
+	pks := getRBProposerGroup(sigshareParam.EpochId)
 	// TODO: check
 	// 1. EpochId: weather in a wrong time
 	if !c.isValidEpoch(sigshareParam.EpochId) {
