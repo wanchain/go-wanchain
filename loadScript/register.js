@@ -12,7 +12,7 @@ function Bytes2HexString (b) {
 }
 
 personal.unlockAccount(eth.accounts[0],"wanglu",99999);
-personal.unlockAccount(eth.accounts[1],"wanglu",99999);
+//personal.unlockAccount(eth.accounts[1],"wanglu",99999);
 
 var tranValue = 10
 
@@ -33,7 +33,7 @@ var lockTime = web3.toWin(3600)
 
 var payload = coinContract.stakeIn.getData(datapks,lockTime)
 
-var tx = eth.sendTransaction({from:eth.accounts[1], to:cscContractAddr, value:web3.toWin(tranValue), data:payload, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+var tx = eth.sendTransaction({from:eth.accounts[0], to:cscContractAddr, value:web3.toWin(tranValue), data:payload, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
 
 console.log("tx=" + tx)
 
