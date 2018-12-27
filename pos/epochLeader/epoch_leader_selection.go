@@ -147,7 +147,9 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (Proposer
 			return false
 		}
 
-		ps = append(ps, *pitem)
+		if staker.Amount.Cmp(Big0) > 0 {
+			ps = append(ps, *pitem)
+		}
 
 		return true
 	})
