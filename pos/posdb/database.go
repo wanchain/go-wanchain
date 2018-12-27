@@ -17,6 +17,7 @@ import (
 type Db struct {
 	db *ethdb.LDBDatabase
 }
+
 var (
 	dbInstMap = make(map[string]*Db)
 )
@@ -40,7 +41,7 @@ func GetDb() *Db {
 	return dbInstance
 }
 
-func GetDbByName(name string) (*Db) {
+func GetDbByName(name string) *Db {
 	return dbInstMap[name]
 }
 
@@ -61,9 +62,15 @@ func (s *Db) DbInit(dbPath string) {
 		s.db.Close()
 	}
 
+	inst, ok := dbInstMap[dbPath]
+
+	if ok {
+		inst.DbClose()
+	}
+
 	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 0)
 	if err != nil {
-		panic("failed to create wanpos_tmpdb database: " + err.Error())
+		panic("failed to create wanpos_tmpdb database: " + dbPath + "_" + err.Error())
 	}
 }
 
