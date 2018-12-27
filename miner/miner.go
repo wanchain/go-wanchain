@@ -41,7 +41,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
 )
 
 // Backend wraps all methods required for mining.
@@ -82,6 +81,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 }
 
 var backendTimerLoopStarted bool
+
 func (self *Miner) BackendTimerLoop(s Backend) {
 	if backendTimerLoopStarted {
 		log.Info("BackendTimerLoop already started")
@@ -178,7 +178,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
+		//randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
 
 		time.Sleep(slotleader.SlotTime * time.Second)
 	}
