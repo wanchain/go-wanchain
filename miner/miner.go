@@ -80,7 +80,14 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	return miner
 }
 
+var backendTimerLoopStarted bool
 func (self *Miner) BackendTimerLoop(s Backend) {
+	if backendTimerLoopStarted {
+		log.Info("BackendTimerLoop already started")
+		return
+	}
+
+	backendTimerLoopStarted = true
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
