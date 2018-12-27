@@ -5,14 +5,15 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"strconv"
+	"testing"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math/big"
-	"testing"
 )
-
 
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
@@ -242,7 +243,6 @@ func TestByteToString(t *testing.T) {
 	}
 }
 
-
 func TestCompare(t *testing.T) {
 	epID := []byte{84}
 	epochID := uint64(84)
@@ -276,31 +276,31 @@ func TestWholeFlow(t *testing.T) {
 	}
 
 	var epochLeadersBuffer bytes.Buffer
-	for _,value := range PrivateKeys {
+	for _, value := range PrivateKeys {
 		epochLeadersBuffer.Write(crypto.FromECDSAPub(&value.PublicKey))
 	}
 	// insert EpochLeader groups in local db, and the epoch ID = 0(means epoch 0 used this group, this group is genesis group)
-	posdb.GetDb().Put(uint64(0),EpochLeaders,epochLeadersBuffer.Bytes())
+	posdb.GetDb().Put(uint64(0), EpochLeaders, epochLeadersBuffer.Bytes())
 
-	bytesGeted,err := posdb.GetDb().Get(uint64(0),EpochLeaders)
-	if err!=nil {
+	bytesGeted, err := posdb.GetDb().Get(uint64(0), EpochLeaders)
+	if err != nil {
 		fmt.Println(err.Error())
 		t.Fail()
 	}
 
 	fmt.Println("Created by test  epochLeadersBuffer %%%%%%%%%%%%%%%")
-	fmt.Printf("%v\n\n",epochLeadersBuffer.Bytes())
+	fmt.Printf("%v\n\n", epochLeadersBuffer.Bytes())
 
 	fmt.Println("Read from local DB epochLeadersBuffer%%%%%%%%%%%%%%%")
-	fmt.Printf("%v\n\n",bytesGeted)
+	fmt.Printf("%v\n\n", bytesGeted)
 
 	// 1.2 input genesis Security Message set security msg equals epochLeaders.
-	posdb.GetDb().Put(uint64(0),SecurityMsg,epochLeadersBuffer.Bytes())
+	posdb.GetDb().Put(uint64(0), SecurityMsg, epochLeadersBuffer.Bytes())
 
 	// 1.3 get random by call GetRandom.
 
-	var selfPublicKey	 	*ecdsa.PublicKey
-	var selfPrivateKey 		*ecdsa.PrivateKey
+	var selfPublicKey *ecdsa.PublicKey
+	var selfPrivateKey *ecdsa.PrivateKey
 	selfPublicKey = &(PrivateKeys[0].PublicKey)
 	selfPrivateKey = PrivateKeys[0]
 
@@ -318,72 +318,91 @@ func TestWholeFlow(t *testing.T) {
 
 	s.dumpData()
 
-	fmt.Printf("Local private len = %d key: %v\n",len(crypto.FromECDSA(selfPrivateKey)),hex.EncodeToString(crypto.FromECDSA(selfPrivateKey)))
-	fmt.Printf("Local public len =%d key: %v\n", len(crypto.FromECDSAPub(selfPublicKey)),hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
+	fmt.Printf("Local private len = %d key: %v\n", len(crypto.FromECDSA(selfPrivateKey)), hex.EncodeToString(crypto.FromECDSA(selfPrivateKey)))
+	fmt.Printf("Local public len =%d key: %v\n", len(crypto.FromECDSAPub(selfPublicKey)), hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
 
 	// scan the generated
-	for index, value := range s.epochLeadersPtrArray{
-		fmt.Printf("\tindex := %d, %v\t\n",index,hex.EncodeToString(crypto.FromECDSAPub(value)))
+	for index, value := range s.epochLeadersPtrArray {
+		fmt.Printf("\tindex := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 
 	fmt.Println("\t===================Generated slot leaders========================================")
 	// scan the generated
-	for index, value := range s.slotLeadersPtrArray{
+	for index, value := range s.slotLeadersPtrArray {
 		fmt.Printf("\tslotindex := %d, indexInEpoch=%d, %v\t\n",
 			index,
 			s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(value))][0],
 			hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	// 2. read slot index from db
-	//fmt.Println("\t===================Read slot leaders from local db========================================")
-	//for i:=0; i<SlotCount; i++ {
-	//	oneSlotBytes,err:=posdb.GetDb().GetWithIndex(uint64(epochID+1),uint64(i),SlotLeader)
-	//	if err != nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
-	//		epochID+1,
-	//		i,
-	//		hex.EncodeToString(oneSlotBytes))
-	//}
+	fmt.Println("\t===================Read slot leaders from local db========================================")
+	for i := 0; i < SlotCount; i++ {
+		oneSlotBytes, err := posdb.GetDb().GetWithIndex(uint64(epochID+1), uint64(i), SlotLeader)
+		if err != nil {
+			fmt.Println(err.Error())
+			t.Fail()
+		}
 
-	// 6. simulate all epochleders and send tx1
-	// tx1 transaction sent and tx1 value is inserted into local DB
-
-	//for index,value := range s.epochLeadersPtrArray {
-	//	//epochLeadersBuffer.Write(crypto.FromECDSAPub(&value.PublicKey))
-	//	data, err := s.GenerateCommitment(value,epochID,uint64(index))
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	err = s.sendStage1Tx(data)
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//}
+		fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
+			epochID+1,
+			i,
+			hex.EncodeToString(oneSlotBytes))
+	}
 
 	// 7. simulate all epochleders and send tx2
-	//for index,_:= range s.epochLeadersPtrArray {
-	//
-	//	data, err := s.buildStage2TxPayload(epochID, uint64(index))
-	//	fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
-	//
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	//err = s.sendStage2Tx(data)
-	//	//if err!= nil {
-	//	//	fmt.Println(err.Error())
-	//	//	t.Fail()
-	//	//}
-	//}
+	for index, _ := range s.epochLeadersPtrArray {
+		// encode
+
+		data, err := s.buildStage2TxPayload(epochID, uint64(index))
+		fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			t.Fail()
+		}
+		payload, err := s.PackStage2Data(data)
+		if err != nil {
+			t.Fail()
+		}
+
+		fmt.Printf("\nAfter PackStage2Data %v\n", payload)
+		// decode
+
+		unpackedData, err := s.UnpackStage2Data(payload[4:])
+		fmt.Printf("\n unpackedData= %v\n", (unpackedData))
+
+		epochIDBuf, selfIndexBuf, pki, alphaPki, proof, err := s.RlpUnpackStage2Data(unpackedData)
+
+		epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+		epochID, err := strconv.ParseInt(string(epochIDBufDec), 10, 64)
+
+		fmt.Printf("\n epochIDBufDec= %v\n", (epochID))
+
+		selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
+		selfIndex, err := strconv.ParseInt(string(selfIndexBufDec), 10, 64)
+		fmt.Printf("\n selfIndexBufDec= %v\n", (selfIndex))
+
+		pkiDec, err := hex.DecodeString(pki)
+		fmt.Printf("\n pkiDec= %v\n", (pkiDec))
+
+		for _, value := range alphaPki {
+			alphaPkiDec, err := hex.DecodeString(value)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Printf("\n alphaPki= %v\n", (alphaPkiDec))
+		}
+
+		for _, value := range proof {
+			proofDec, err := hex.DecodeString(value)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Printf("\n proof= %v\n", (proofDec))
+		}
+
+		break
+	}
 
 	// 8. collect all trans
 
