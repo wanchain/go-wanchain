@@ -361,9 +361,11 @@ func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint3
 	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if dkgBytes == nil {
 		log.Error("getCji, dkgBytes is nil")
-	} else {
-		log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
 	}
+
+	//else {
+	//	log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
+	//}
 
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(dkgBytes, &dkgParam)

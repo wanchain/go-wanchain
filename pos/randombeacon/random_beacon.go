@@ -296,7 +296,7 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	}
 
 	txPayload := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
-	log.Info("do dkg", "txPayload", txPayload)
+	//log.Info("do dkg", "txPayload", txPayload)
 	return rb.SendDKG(&txPayload)
 }
 
@@ -466,7 +466,7 @@ func (rb *RandomBeacon) SendDKG(payloadObj *vm.RbDKGTxPayload) error {
 		return err
 	}
 
-	log.Info("send dkg", "payload", common.Bytes2Hex(payload))
+	//log.Info("send dkg", "payload", common.Bytes2Hex(payload))
 	return rb.DoSendRBTx(payload)
 }
 
@@ -476,7 +476,7 @@ func (rb *RandomBeacon) SendSIG(payloadObj *vm.RbSIGTxPayload) error {
 		return err
 	}
 
-	log.Info("send sig tx", "payload", common.Bytes2Hex(payload))
+	//log.Info("send sig tx", "payload", common.Bytes2Hex(payload))
 	return rb.DoSendRBTx(payload)
 }
 
@@ -529,7 +529,7 @@ func GetRBDKGTxPayloadBytes(payload * vm.RbDKGTxPayload) ([]byte, error) {
 	}
 
 	payloadStr := common.Bytes2Hex(payloadBytes)
-	log.Info("dkg payload hex string", "playload", payloadStr)
+	//log.Info("dkg payload hex string", "playload", payloadStr)
 	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
 	if err != nil {
 		log.Error("create abi instance fail", "err", err)
@@ -543,7 +543,7 @@ func GetRBDKGTxPayloadBytes(payload * vm.RbDKGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
+	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	return ret, nil
 }
 
@@ -559,14 +559,14 @@ func GetRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	}
 
 	payloadStr := common.Bytes2Hex(payloadBytes)
-	log.Info("rlp encode sig payload", "payload", payloadStr)
+	//log.Info("rlp encode sig payload", "payload", payloadStr)
 	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
 	if err != nil {
 		return nil, err
 	}
 
 	ret, err := rbAbi.Pack("sigshare", payloadStr)
-	log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
+	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	if err != nil {
 		log.Error("abi pack payload", "err", err)
 		return nil, err
