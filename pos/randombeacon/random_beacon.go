@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 const (
@@ -55,9 +56,12 @@ type RandomBeacon struct {
 	statedb vm.StateDB
 	key *keystore.Key
 	epocher * epochLeader.Epocher
+	rpcClient *rpc.Client
 }
 
-var randomBeacon RandomBeacon
+var (
+	randomBeacon RandomBeacon
+)
 
 func init() {
 	randomBeacon.Init()
@@ -71,11 +75,13 @@ func GetRandonBeaconInst() *RandomBeacon {
 func (rb *RandomBeacon) Init() {
 	rb.epochStage = EPOCH_DKG
 	rb.epochId = maxUint64
+	rb.rpcClient = nil
 }
 
 
-func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher) error {
-	if statedb == nil || key == nil || epocher == nil {
+
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher, rc *rpc.Client) error {
+	if statedb == nil || key == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
 	}
@@ -84,6 +90,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * ep
 	rb.statedb = statedb
 	rb.key = key
 	rb.epocher = epocher
+	rb.rpcClient = rc
 
 	// set local proposer info
 	pos.Cfg().SelfPuK = new(bn256.G1)
@@ -477,7 +484,7 @@ func (rb *RandomBeacon) DoSendRBTx(payload []byte) error {
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
-	_, err := pos.SendTx(arg)
+	_, err := pos.SendTx(rb.rpcClient, arg)
 	return err
 }
 

@@ -175,8 +175,22 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var keyBuf bytes.Buffer
-	keyBuf.Write([]byte(epochIDBuf))
-	keyBuf.Write([]byte(selfIndexBuf))
+	//keyBuf.Write([]byte(epochIDBuf))
+	//keyBuf.Write([]byte(selfIndexBuf))
+
+	epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+	if err != nil {
+		return nil, err
+	}
+	keyBuf.Write(epochIDBufDec)
+
+	selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
+	if err != nil {
+		return nil, err
+	}
+	keyBuf.Write(selfIndexBufDec)
+
+
 	keyBuf.Write([]byte("slotLeaderStag2"))
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
@@ -224,18 +238,22 @@ func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *typ
 }
 
 func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// s := slotleader.GetSlotLeaderSelection()
-	// data, err := s.UnpackStage2Data(tx.Data())
-	// if err != nil {
-	// 	return err
-	// }
-	// _, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
-	// if err != nil {
-	// 	return err
-	// }
+	s := slotleader.GetSlotLeaderSelection()
+	data, err := s.UnpackStage2Data(tx.Data())
+	if err != nil {
+		return err
+	}
+	_, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
+	if err != nil {
+		return err
+	}
 
-	// if !s.InEpochLeadersOrNotByPk([]byte(pk)) {
-	// 	return errIllegalSender
-	// }
+	pkiDec, err := hex.DecodeString(pk)
+	if err != nil {
+		return err
+	}
+	if !s.InEpochLeadersOrNotByPk(pkiDec) {
+		return errIllegalSender
+	}
 	return nil
 }
