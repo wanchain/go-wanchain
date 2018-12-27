@@ -145,31 +145,32 @@ func GetRBAddress() (common.Address) {
 }
 
 func getRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := posdb.GetDbByName("rblocaldb")
-	if db == nil {
-		return nil
-	}
-	pks := db.GetStorageByteArray(epochId)
-	length := len(pks)
-	if length == 0 {
-		// >>>>>>>>>>>>>>>>>>>>>. test
-		g1s := make([]bn256.G1, 4)
-		g1s[0] = *pos.Cfg().SelfPuK
-		g1s[1] = *pos.Cfg().SelfPuK
-		g1s[2] = *pos.Cfg().SelfPuK
-		g1s[3] = *pos.Cfg().SelfPuK
-		return g1s
-		// <<<<<<<<<<<<<<<<<<<<<
-		return nil
-	}
-	g1s := make([]bn256.G1, length, length)
-
-	for i := 0; i < length; i++ {
-		g1s[i] = *new(bn256.G1)
-		g1s[i].Unmarshal(pks[i])
-	}
-
+	// >>>>>>>>>>>>>>>>>>>>>. test
+	g1s := make([]bn256.G1, 4)
+	g1s[0] = *pos.Cfg().SelfPuK
+	g1s[1] = *pos.Cfg().SelfPuK
+	g1s[2] = *pos.Cfg().SelfPuK
+	g1s[3] = *pos.Cfg().SelfPuK
 	return g1s
+	// <<<<<<<<<<<<<<<<<<<<<
+
+	//db := posdb.GetDbByName("rblocaldb")
+	//if db == nil {
+	//	return nil
+	//}
+	//pks := db.GetStorageByteArray(epochId)
+	//length := len(pks)
+	//if length == 0 {
+	//	return nil
+	//}
+	//g1s := make([]bn256.G1, length, length)
+	//
+	//for i := 0; i < length; i++ {
+	//	g1s[i] = *new(bn256.G1)
+	//	g1s[i].Unmarshal(pks[i])
+	//}
+	//
+	//return g1s
 }
 
 func GetProposerPubkey(pks *[]bn256.G1, proposerId uint32) (*bn256.G1) {

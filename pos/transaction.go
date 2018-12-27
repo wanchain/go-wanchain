@@ -17,14 +17,8 @@ import (
 //  Data     hexutil.Bytes   `json:"data"`
 //  Nonce    *hexutil.Uint64 `json:"nonce"`
 //}
-func SendTx(tx map[string]interface{}) (common.Hash, error) {
+func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 	log.Info("begin send pos tx")
-	rc, err := rpc.Dial("http://localhost:8545")
-	if err != nil {
-		log.Error("connect rpc fail", "err", err)
-		return common.Hash{}, err
-	}
-
 	if rc == nil {
 		log.Error("connect rpc fail, rc is nil")
 		return common.Hash{}, errors.New("rc is not ready")
@@ -32,7 +26,7 @@ func SendTx(tx map[string]interface{}) (common.Hash, error) {
 
 	ctx := context.Background()
 	var txHash common.Hash
-	err = rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
+	err := rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
 	if nil != err {
 		log.Error("send pos tx fail", "err", err)
 		return common.Hash{}, err

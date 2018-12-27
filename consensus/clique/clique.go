@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -213,6 +215,8 @@ type Clique struct {
 	signer common.Address // Ethereum address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
+
+	key *keystore.Key // Unlocked key
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
@@ -589,15 +593,14 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
+func (c *Clique) Authorize(signer common.Address, signFn SignerFn, key *keystore.Key) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.signer = signer
 	c.signFn = signFn
+	c.key = key
 }
-
-const LocalPublicKey = "123"
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
@@ -615,17 +618,17 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	}
 	// Don't hold the signer fields for the entire sealing procedure
 	c.lock.RLock()
-	signer, signFn := c.signer, c.signFn
+	signer, signFn, key := c.signer, c.signFn, c.key
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
-	if _, authorized := snap.Signers[signer]; !authorized {
-		return nil, errUnauthorized
-	}
+	// snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if _, authorized := snap.Signers[signer]; !authorized {
+	// 	return nil, errUnauthorized
+	// }
 	// check if our trun
 loopCheck:
 	for {
@@ -634,25 +637,39 @@ loopCheck:
 			fmt.Println(err)
 			return nil, nil
 		}
-		leader, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-		leaderPk := hex.EncodeToString(crypto.FromECDSAPub(leader))
-		fmt.Println("err:", err, "leaderPK:", leaderPk)
-		// if hex.EncodeToString(crypto.FromECDSAPub(leader)) == LocalPublicKey {
-		if false {
-			select {
-			case <-stop:
-				return nil, nil
-			case <-time.After(slotleader.SlotTime * time.Second):
-				fmt.Println("not our trun")
+
+		var leader string
+		localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
+		if epochId != 0 {
+			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+			if err != nil || leaderPub == nil {
+				time.Sleep(time.Second)
 				continue
 			}
+			leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+
+			fmt.Println("err:", err, "leaderPK:", leader)
+
 		} else {
+			//genesis block miner publicKey
+			leader = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+		}
+
+		if leader == localPublicKey {
 			select {
 			case <-stop:
 				return nil, nil
 			case <-time.After(slotleader.SlotTime * time.Second / 2):
 				fmt.Println(" our trun")
 				break loopCheck
+			}
+		} else {
+			select {
+			case <-stop:
+				return nil, nil
+			case <-time.After(slotleader.SlotTime * time.Second):
+				fmt.Println("not our trun")
+				continue
 			}
 		}
 	}

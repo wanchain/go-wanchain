@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -31,6 +31,7 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
@@ -38,10 +39,8 @@ import (
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // Backend wraps all methods required for mining.
@@ -78,14 +77,11 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
-	if config.Pluto != nil {
-		go miner.BackendTimerLoop(eth)
-	}
 	return miner
 }
 
 func (self *Miner) BackendTimerLoop(s Backend) {
-	time.Sleep(30 * time.Second)
+	// get wallet
 	eb, errb := s.Etherbase()
 	if errb != nil {
 		panic(errb)
@@ -94,8 +90,6 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	if wallet == nil || errf != nil {
 		panic(errf)
 	}
-	fmt.Println(wallet)
-	//Get unlocked key from wallet--------
 	type getKey interface {
 		GetUnlockedKey(address common.Address) (*keystore.Key, error)
 	}
@@ -104,14 +98,8 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 //		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
-	//------------------------------------
-	h := s.BlockChain().GetHeaderByNumber(1)
-	fmt.Println(h)
-	if nil == h {
-		slotleader.EpochBaseTime = uint64(time.Now().Unix())
-	} else {
-		slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
-	}
+
+	// get rpcClient
 	url := node.DefaultIPCEndpoint("gwan")
 	rc, err := rpc.Dial(url)
 	if err != nil {
@@ -119,78 +107,71 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		panic(err)
 	}
 
+	// get epocher
 	epocher := epochLeader.NewEpocher()
 
-	fmt.Println(epocher)
-
-	epochTimer := time.NewTicker(20 * time.Second)
-	slotTimer := time.NewTicker(6 * time.Second)
+	//epochTimer := time.NewTicker(20 * time.Second)
+	//slotTimer := time.NewTicker(6 * time.Second)
 
 	for {
 
-		stateDb, err := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
+		// wait until block1
+		h := s.BlockChain().GetHeaderByNumber(1)
+		fmt.Println(h)
+		if nil == h {
+			time.Sleep(slotleader.SlotTime * time.Second)
+			continue
+		} else {
+			slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
+		}
 
 		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
-
-		stateDbEpoch, err := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
-
-		fmt.Println(stateDbEpoch)
-		if err != nil {
-			fmt.Println(err)
+		stateDbEpoch, err1 := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
+		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
+		if err1 != nil || err2 != nil {
+			fmt.Println(err1, err2)
+			time.Sleep(slotleader.SlotTime * time.Second)
+			continue
 		}
 
 		Nr := 10 //num of random proposers
 		Ne := 10 //num of epoch leaders, limited <= 256 now
 
+		epochid, slotid, err := slotleader.GetEpochSlotID()
+		fmt.Println("epochid, slotid: ", epochid, slotid)
+		if err != nil {
+			fmt.Println("haven't block 1 base")
+			continue
+		}
 
-		select {
-
-		case <-epochTimer.C:
-
-			epochID, _, err := slotleader.GetEpochSlotID()
-			if err != nil {
-				continue
-			}
-
-			rb,err := vm.GetRandom(epochID)
+		// only the begin of epocher
+		if slotid == 0 {
+			fmt.Println("epocher begin")
+			rb, err := vm.GetRandom(epochid)
 			if err != nil {
 				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
-
-			fmt.Println("epoch loop time")
-			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
-
-			epl := epocher.GetEpochLeaders(epochID)
+			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
+			epl := epocher.GetEpochLeaders(epochid)
 			for idx, item := range epl {
 				fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
 			}
-
-			rbl := epocher.GetRBProposerGroup(epochID)
+			rbl := epocher.GetRBProposerGroup(epochid)
 			for idx, item := range rbl {
 				fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
 			}
-
 			fmt.Println(rbl)
-
-		case <-slotTimer.C:
-			fmt.Println("time")
-			epochID, slotID, err := slotleader.GetEpochSlotID()
-			if err != nil {
-				continue
-			}
-
-			rb,err := vm.GetRandom(epochID)
-			if err != nil {
-				rb = s.BlockChain().CurrentBlock().Difficulty()
-			}
-
-			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
-
-			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochID, slotID)
-			//epocher.SelectLeaders()
-			randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher)
 		}
+
+		// every slot
+		fmt.Println("Every slot run:")
+		//epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochid)
+		//Add for slot leader selection
+		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
+		//epocher.SelectLeaders()
+		//randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
+
+		time.Sleep(slotleader.SlotTime * time.Second)
 	}
 	return
 }
@@ -241,6 +222,9 @@ func (self *Miner) Start(coinbase common.Address) {
 	log.Info("Starting mining operation")
 	self.worker.start()
 	self.worker.commitNewWork()
+	if self.worker.config.Pluto != nil {
+		go self.BackendTimerLoop(self.eth)
+	}
 }
 
 func (self *Miner) Stop() {

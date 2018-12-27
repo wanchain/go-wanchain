@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"math/big"
 	"runtime"
 	"sync"
@@ -336,7 +337,16 @@ func (s *Ethereum) StartMining(local bool) error {
 			log.Error("Etherbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
-		clique.Authorize(eb, wallet.SignHash)
+		//------------Get local unlock publicKey
+		type getKey interface {
+			GetUnlockedKey(address common.Address) (*keystore.Key, error)
+		}
+		key, err := wallet.(getKey).GetUnlockedKey(eb)
+		if key == nil || err != nil {
+			panic(err)
+		}
+		//------------
+		clique.Authorize(eb, wallet.SignHash, key)
 	}
 
 	if ethash, ok := s.engine.(*ethash.Ethash); ok {
