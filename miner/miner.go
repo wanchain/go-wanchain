@@ -143,20 +143,19 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		Ne := 10 //num of epoch leaders, limited <= 256 now
 
 
-		epochID, slotID, err := slotleader.GetEpochSlotID()
-		if err != nil {
-			continue
-		}
-
-		rb,err := vm.GetRandom(epochID)
-		if err != nil {
-			continue
-		}
-
-
 		select {
 
 		case <-epochTimer.C:
+
+			epochID, _, err := slotleader.GetEpochSlotID()
+			if err != nil {
+				continue
+			}
+
+			rb,err := vm.GetRandom(epochID)
+			if err != nil {
+				continue
+			}
 
 			fmt.Println("epoch loop time")
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
@@ -175,6 +174,16 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		case <-slotTimer.C:
 			fmt.Println("time")
+			epochID, slotID, err := slotleader.GetEpochSlotID()
+			if err != nil {
+				continue
+			}
+
+			rb,err := vm.GetRandom(epochID)
+			if err != nil {
+				continue
+			}
+
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
 
 			//Add for slot leader selection
