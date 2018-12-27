@@ -77,10 +77,10 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 }
 
 func GetRBKeyHash(funId []byte, epochId uint64, proposerId uint32) (*common.Hash) {
-	keyBytes := make([]byte, 20)
-	keyBytes = append(keyBytes, funId ...)
-	keyBytes = append(keyBytes, UIntToByteSlice(epochId) ...)
-	keyBytes = append(keyBytes, UIntToByteSlice(uint64(proposerId)) ...)
+	keyBytes := make([]byte, 16)
+	copy(keyBytes, funId)
+	copy(keyBytes[4:], UIntToByteSlice(epochId))
+	copy(keyBytes[12:], UInt32ToByteSlice(proposerId))
 	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
 	return &hash
 }
@@ -180,6 +180,11 @@ func GetProposerPubkey(pks *[]bn256.G1, proposerId uint32) (*bn256.G1) {
 func UIntToByteSlice(num uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, num)
+	return b
+}
+func UInt32ToByteSlice(num uint32) []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, num)
 	return b
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
+	"io"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -219,15 +220,20 @@ func TestRBDkg(t *testing.T) {
 	strPayload, _ := rbAbi.Pack("dkg", strtest)
 	var str string
 	rbAbi.Unpack(&str, "dkg", strPayload[4:])
+	var str1 string
+	rbAbi.UnpackInput(&str1, "dkg", strPayload[4:])
 	if strtest != str {
 		println("string pack unpack error")
 	}
+	if str1 != str {
+		println("string pack unpack Input error")
+	}
 
 	contract := &RandomBeaconContract{}
+	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
 
 	contract.Run(payload, nil, evm)
 
-	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
 	payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 
 	if len(payloadBytes) != len(payloadBytes2) {
@@ -241,4 +247,14 @@ func TestUtil(t *testing.T) {
 	slice1 := arr[1:4]
 	println(slice1)
 
+	var randr = rand.Reader
+	data := make([]byte, 4)
+	data1 := make([]byte, 4)
+	if randr == rand.Reader {
+		println("same rand")
+	}
+	io.ReadFull(randr, data)
+	io.ReadFull(rand.Reader, data1)
+	io.ReadFull(randr, data)
+	io.ReadFull(rand.Reader, data1)
 }
