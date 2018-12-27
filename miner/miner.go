@@ -155,7 +155,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			fmt.Println("epocher begin")
 			rb,err := vm.GetRandom(epochid)
 			if err != nil {
-				continue
+				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
 			epl := epocher.GetEpochLeaders(epochid)
