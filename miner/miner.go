@@ -175,7 +175,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher)
+		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
 
 		time.Sleep(slotleader.SlotTime * time.Second);
 	}
