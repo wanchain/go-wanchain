@@ -48,10 +48,10 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-	SlotCount = 12
+	SlotCount = 10
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
+	SlotTime = 6
 
 	StageTwoProofCount = 2
 
