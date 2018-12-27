@@ -723,6 +723,7 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, err error) {
 	// 1. get SMA[pre]
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
+<<<<<<< Updated upstream
 	if epochID == uint64(0) {
 		//genesis SMA
 		for _, value := range s.epochLeadersPtrArray {
@@ -731,6 +732,31 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		}
 		return piecesPtr, nil
 	} else {
+=======
+	if epochID == uint64(0){
+			//genesis SMA
+		smaGenesis := []string{"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
+			"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
+				"0466eea24039a99afba154d4c64ee7a8cf120a54d979ed55f793ce6cc2fc3635a5b79c4de545cb1ed493521a1ce6da95770a71d207121b01d26df88f6ee86d0b22",
+				"04d8e72df643e3af9bd3e2f92eb5a8d5b24ac9833c1ccb5607f13f9b33649bf10c8e9a671e1c886e453333684f6ac01b008d1629f93a85a4f216a13b5f1862a8c1",
+				"04a9f7bf968fee493b51b045827488a35731f2d7af063b51d31a42ab43b51468e36678dbbcf77410345d0540cbe65e348af242251b0f2ab10580ea5bca91839305",
+				"04461b6877fc12569520a994505fbd60d8c58ef3b7fd3984efc0a2494bbc8f68f4364da4013495f9b29128553b874d6442cbac51fc51cfed39851867737ab4a02e",
+				"04ab3825a803d2bf43335c5cd211de170e06c8a359aafbb49136e1b8a61e7a7f42a8b9cc30c0ad8f501e76a2750d676444f578b432d2d35ff24e858049e3eea14c",
+				"049e4c0f311b5e3593d9ee09720abd62c23002a7b40da13d2483c85936d560f384ff7e85bcf0332ec53f2be84273e341dfdd4ad63f4f1e219ea7ab2b28b0dd8621",
+				"0400994bbd33ad79912478e26bd92331468da9b69d9ac2ef1c80f4597acf463552d341508b1adb40e4b69d76361bd80230f9fdee2414db8bbdfdcb83e23e1d6ff7",
+				"0444f09890a83ba77cbee7d432be95c850780362bc6f1e8f0198dabf1164a67a3d084e10ae3e1caf29f2638945c73867e456edddfc5c6fd5cb0e7e7c7558be003d",
+				"04b274ff6d60c8d2a752887dd79ddd42d11bd363eee3e98ae3781872a2716cd8fdf7c24e8a910fe16633862a0e256b43552eac03f5fe2971d76d0a66bb43927af8"}
+			for index, _ := range s.epochLeadersPtrArray{
+				smaGenesisByte,err := hex.DecodeString(smaGenesis[index])
+				if err != nil{
+					return nil, err
+				}
+				piecesPtr = append(piecesPtr, crypto.ToECDSAPub(smaGenesisByte))
+			}
+			return piecesPtr,nil
+
+	}else{
+>>>>>>> Stashed changes
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
 		fmt.Printf("getSMAPieces: get from db, pieces is = %v\n", pieces)
@@ -777,8 +803,19 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	//fmt.Printf("===========================before GenerateSlotLeaderSeq\n")
 	//s.dumpData()
 	epochLeadersPtrArray := s.epochLeadersPtrArray
-	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
-	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	for i := 0; i < 10; i++ {
+		ret := crypto.S256().IsOnCurve(s.epochLeadersPtrArray[i].X, s.epochLeadersPtrArray[i].Y)
+		if !ret {
+			log.Error("not")
+		}
+		ret = crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
+		if !ret {
+			log.Error("not")
+		}
+	}
+
+	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
 
 	//fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()

@@ -6,8 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"math/big"
+	"strconv"
 	"testing"
+	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 
@@ -328,55 +332,77 @@ func TestWholeFlow(t *testing.T) {
 			hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	// 2. read slot index from db
-	//fmt.Println("\t===================Read slot leaders from local db========================================")
-	//for i:=0; i<SlotCount; i++ {
-	//	oneSlotBytes,err:=posdb.GetDb().GetWithIndex(uint64(epochID+1),uint64(i),SlotLeader)
-	//	if err != nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
-	//		epochID+1,
-	//		i,
-	//		hex.EncodeToString(oneSlotBytes))
-	//}
+	fmt.Println("\t===================Read slot leaders from local db========================================")
+	for i:=0; i<SlotCount; i++ {
+		oneSlotBytes,err:=posdb.GetDb().GetWithIndex(uint64(epochID+1),uint64(i),SlotLeader)
+		if err != nil {
+			fmt.Println(err.Error())
+			t.Fail()
+		}
 
-	// 6. simulate all epochleders and send tx1
-	// tx1 transaction sent and tx1 value is inserted into local DB
-
-	//for index,value := range s.epochLeadersPtrArray {
-	//	//epochLeadersBuffer.Write(crypto.FromECDSAPub(&value.PublicKey))
-	//	data, err := s.GenerateCommitment(value,epochID,uint64(index))
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	err = s.sendStage1Tx(data)
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//}
+		fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
+			epochID+1,
+			i,
+			hex.EncodeToString(oneSlotBytes))
+	}
 
 	// 7. simulate all epochleders and send tx2
-	//for index,_:= range s.epochLeadersPtrArray {
-	//
-	//	data, err := s.buildStage2TxPayload(epochID, uint64(index))
-	//	fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
-	//
-	//	if err!= nil {
-	//		fmt.Println(err.Error())
-	//		t.Fail()
-	//	}
-	//
-	//	//err = s.sendStage2Tx(data)
-	//	//if err!= nil {
-	//	//	fmt.Println(err.Error())
-	//	//	t.Fail()
-	//	//}
-	//}
+	for index,_:= range s.epochLeadersPtrArray {
+		// encode
+
+		data, err := s.buildStage2TxPayload(epochID, uint64(index))
+		fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
+
+		if err!= nil {
+			fmt.Println(err.Error())
+			t.Fail()
+		}
+		payload, err := s.PackStage2Data(data)
+		if err != nil {
+			t.Fail()
+		}
+
+		fmt.Printf("\nAfter PackStage2Data %v\n", payload)
+		// decode
+
+		unpackedData, err := s.UnpackStage2Data(payload[4:])
+		fmt.Printf("\n unpackedData= %v\n",(unpackedData))
+
+		epochIDBuf,selfIndexBuf,pki,alphaPki,proof,err := s.RlpUnpackStage2Data(unpackedData)
+
+		epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+		epochID, err := strconv.ParseInt(string(epochIDBufDec), 10, 64)
+
+		fmt.Printf("\n epochIDBufDec= %v\n",(epochID))
+
+
+		selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
+		selfIndex, err := strconv.ParseInt(string(selfIndexBufDec), 10, 64)
+		fmt.Printf("\n selfIndexBufDec= %v\n",(selfIndex))
+
+
+
+		pkiDec, err := hex.DecodeString(pki)
+		fmt.Printf("\n pkiDec= %v\n",(pkiDec))
+
+		for _, value := range alphaPki {
+			alphaPkiDec, err := hex.DecodeString(value)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Printf("\n alphaPki= %v\n",(alphaPkiDec))
+		}
+
+		for _, value := range proof {
+			proofDec, err := hex.DecodeString(value)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Printf("\n proof= %v\n",(proofDec))
+		}
+
+		break
+	}
 
 	// 8. collect all trans
 
