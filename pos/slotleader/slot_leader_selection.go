@@ -151,6 +151,8 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		log.Debug("Enter slotLeaderSelectionStage1")
 		//s.generateSlotLeadsGroup(epochID)
 
+		s.buildEpochLeaderGroup(epochID)
+
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
 		if err != nil {
