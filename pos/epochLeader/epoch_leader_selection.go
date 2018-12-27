@@ -58,9 +58,15 @@ func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB
 		return err
 	}
 
-	e.epochLeaderSelection(r, ne, pa, epochId)
+	epl := e.GetEpochLeaders(epochId)
+	if len(epl) != ne {
+		e.epochLeaderSelection(r, ne, pa, epochId)
+	}
 
-	e.randomProposerSelection(r, nr, pa, epochId)
+	rbl := e.GetRBProposerGroup(epochId)
+	if len(rbl) != nr {
+		e.randomProposerSelection(r, nr, pa, epochId)
+	}
 
 	return nil
 
