@@ -101,7 +101,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	}
 	key, err := wallet.(getKey).GetUnlockedKey(eb)
 	if key == nil || err != nil {
-		panic(err)
+//		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	//------------------------------------
