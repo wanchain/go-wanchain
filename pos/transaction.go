@@ -18,24 +18,27 @@ import (
 //  Nonce    *hexutil.Uint64 `json:"nonce"`
 //}
 func SendTx(tx map[string]interface{}) (common.Hash, error) {
+	log.Info("begin send pos tx")
 	rc, err := rpc.Dial("http://localhost:8545")
 	if err != nil {
+		log.Error("connect rpc fail", "err", err)
 		return common.Hash{}, err
 	}
 
 	if rc == nil {
+		log.Error("connect rpc fail, rc is nil")
 		return common.Hash{}, errors.New("rc is not ready")
 	}
 
 	ctx := context.Background()
 	var txHash common.Hash
-	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
-	if nil != callErr {
-		log.Error("tx send failed")
-		return common.Hash{}, errors.New("tx send failed")
+	err = rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
+	if nil != err {
+		log.Error("send pos tx fail", "err", err)
+		return common.Hash{}, err
 	}
 
-	log.Debug("tx send success")
+	log.Info("send pos tx success", "txHash", txHash)
 	return txHash, nil
 }
 

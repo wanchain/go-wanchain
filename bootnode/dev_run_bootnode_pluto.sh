@@ -14,6 +14,6 @@ dir=$(dirname $0)
 # cp ${dir}/nodekey ~/.wanchain/pluto/gwan/
 cp ${dir}/UTC* ~/.wanchain/pluto/keystore
 echo -n 'wanglu' > /tmp/pw.txt
-#rm -rf ~/.wanchain/pluto/gwan/chaindata
-build/bin/gwan --pluto --ipcpath ~/.wanchain/gwan.ipc --nodiscover --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 $@
+# rm -rf ~/.wanchain/pluto/gwan/chaindata
+build/bin/gwan --pluto --ipcpath ~/.wanchain/gwan.ipc --nodiscover --etherbase  "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"  --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 $@
 
