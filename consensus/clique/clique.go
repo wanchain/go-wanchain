@@ -20,13 +20,14 @@ package clique
 import (
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -215,7 +216,7 @@ type Clique struct {
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 
-	key    *keystore.Key  // Unlocked key
+	key *keystore.Key // Unlocked key
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
@@ -621,13 +622,13 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
-	if _, authorized := snap.Signers[signer]; !authorized {
-		return nil, errUnauthorized
-	}
+	// snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if _, authorized := snap.Signers[signer]; !authorized {
+	// 	return nil, errUnauthorized
+	// }
 	// check if our trun
 loopCheck:
 	for {
