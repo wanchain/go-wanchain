@@ -119,8 +119,8 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		fmt.Println(h)
 		if nil == h {
-			time.Sleep(slotleader.SlotTime * time.Second)
-			continue
+			//time.Sleep(slotleader.SlotTime * time.Second)
+			//continue
 		} else {
 			slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
 		}
