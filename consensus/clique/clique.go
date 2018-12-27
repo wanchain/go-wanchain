@@ -617,9 +617,10 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errWaitTransactions
 	}
 	// Don't hold the signer fields for the entire sealing procedure
-	c.lock.RLock()
-	signer, signFn, key := c.signer, c.signFn, c.key
-	c.lock.RUnlock()
+	//c.lock.RLock()
+	//signer, signFn, key := c.signer, c.signFn, c.key
+	//c.lock.RUnlock()
+	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 
 	// Bail out if we're unauthorized to sign a block
 	// snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
@@ -639,7 +640,6 @@ loopCheck:
 		}
 
 		var leader string
-		localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
 		if epochId != 0 {
 			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 			if err != nil || leaderPub == nil {
@@ -702,11 +702,12 @@ loopCheck:
 	//case <-time.After(delay):
 	//}
 	// Sign all the things!
-	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
-	if err != nil {
-		return nil, err
-	}
-	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	//sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
+	//if err != nil {
+	//	return nil, err
+	//}
+	// copy(header.Extra[len(header.Extra)-extraSeal:], sighash) hex.DecodeString(localPublicKey)
+	copy(header.Extra[len(header.Extra)-extraSeal:], localPublicKey)
 
 	return block.WithSeal(header), nil
 }
