@@ -708,7 +708,11 @@ loopCheck:
 	//	return nil, err
 	//}
 	// copy(header.Extra[len(header.Extra)-extraSeal:], sighash) hex.DecodeString(localPublicKey)
-	copy(header.Extra[len(header.Extra)-extraSeal:], localPublicKey)
+	ppk, err := hex.DecodeString(localPublicKey)
+	if err != nil {
+		fmt.Println(err)
+	}
+	copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
 
 	return block.WithSeal(header), nil
 }
