@@ -131,7 +131,7 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 	s.epochInstance = epochInstance
 
 	//epochID, slotID, err := GetEpochSlotID()
-	s.log("Now epchoID:" + posdb.Uint64ToString(epochID) + " slotID:" + posdb.Uint64ToString(slotID))
+	log.Debug("Now epchoID and slotID:", "epochID", posdb.Uint64ToString(epochID), "slotID", posdb.Uint64ToString(slotID))
 
 	workStage, err := s.getWorkStage(epochID)
 
@@ -833,7 +833,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
-		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
 	data1, err := s.UnpackStage2Data(data)
 	//epochIDBuf,selfIndexBuf,pki,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)

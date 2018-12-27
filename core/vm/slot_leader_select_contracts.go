@@ -138,7 +138,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		hex.EncodeToString(pk) == hex.EncodeToString(pkSelf) &&
 		hex.EncodeToString(pkMi) == hex.EncodeToString(miGen) &&
 		err == nil {
-		log.Debug("Data save to StateDb and verified success")
+		log.Debug("--------------------------------------------------handleStgOne Data save to StateDb and verified success")
 		log.Debug("epID:" + hex.EncodeToString(epID))
 		log.Debug("index:" + hex.EncodeToString(index))
 		log.Debug("pk:" + hex.EncodeToString(pk))
@@ -181,7 +181,8 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
-	log.Debug(fmt.Sprintf("handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(data)))
+	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(data)))
+	log.Debug("handleStgTwo save", "epochID", epochIDBuf, "selfIndex", selfIndexBuf)
 
 	functrace.Exit()
 	return nil, nil
