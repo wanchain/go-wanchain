@@ -149,7 +149,7 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		log.Debug("Enter slotLeaderSelectionStage1")
-		s.generateSlotLeadsGroup(epochID)
+		//s.generateSlotLeadsGroup(epochID)
 
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
