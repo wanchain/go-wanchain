@@ -660,7 +660,7 @@ loopCheck:
 			case <-stop:
 				return nil, nil
 			case <-time.After(slotleader.SlotTime * time.Second / 2):
-				fmt.Println(" our trun")
+				fmt.Println(" #################################################################our trun")
 				break loopCheck
 			}
 		} else {
