@@ -22,9 +22,6 @@ import (
 	"sync/atomic"
 
 	"time"
-
-	"math/big"
-	"math/rand"
 	"strconv"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -44,6 +41,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // Backend wraps all methods required for mining.
@@ -144,9 +142,16 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		Nr := 10 //num of random proposers
 		Ne := 10 //num of epoch leaders, limited <= 256 now
 
-		rand.Seed(999999999999999)
-		rb := big.NewInt(int64(rand.Uint64())).Bytes()
 
+		epochID, slotID, err := slotleader.GetEpochSlotID()
+		if err != nil {
+			continue
+		}
+
+		rb,err := vm.GetRandom(epochID)
+		if err != nil {
+			continue
+		}
 
 
 		select {
@@ -154,13 +159,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		case <-epochTimer.C:
 
 			fmt.Println("epoch loop time")
-
-			epochID, _, err := slotleader.GetEpochSlotID()
-			if err != nil {
-				continue
-			}
-
-			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochID)
+			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
 
 			epl := epocher.GetEpochLeaders(epochID)
 			for idx, item := range epl {
@@ -176,13 +175,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		case <-slotTimer.C:
 			fmt.Println("time")
-
-			epochID, slotID, err := slotleader.GetEpochSlotID()
-			if err != nil {
-				continue
-			}
-
-			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochID)
+			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
 
 			//Add for slot leader selection
 			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochID, slotID)
