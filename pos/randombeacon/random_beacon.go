@@ -86,8 +86,12 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * ep
 	rb.epocher = epocher
 
 	// set local proposer info
-	pos.Cfg().SelfPuK = key.PrivateKey3.PublicKeyBn256.G1
-	pos.Cfg().SelfPrK = key.PrivateKey3.D
+	pos.Cfg().SelfPuK = new(bn256.G1)
+	pos.Cfg().SelfPrK = new(big.Int)
+	pos.Cfg().SelfPuK.Set(key.PrivateKey3.PublicKeyBn256.G1)
+	pos.Cfg().SelfPrK.Set(key.PrivateKey3.D)
+
+	log.Info("set miner account", "puk", pos.Cfg().SelfPuK, "prk", pos.Cfg().SelfPrK)
 
 	// get epoch id, slot id
 	epochId, slotId, err := slotleader.GetEpochSlotID()
@@ -206,8 +210,10 @@ func (rb *RandomBeacon) GetMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
+	log.Info("get my rb proposer id", "selfPk", selfPk)
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
+		log.Info("get my rb proposer id", "pk", pk)
 		if pk.String() == selfPk.String() {
 			ids = append(ids, uint32(i))
 		}
@@ -480,19 +486,21 @@ func (rb *RandomBeacon) GetTxFrom() common.Address {
 }
 
 func (rb *RandomBeacon)GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	pks := rb.epocher.GetRBProposerGroup(epochId)
-
 	// >>>>>>>>>>>>>>>>>>>>>>>>>test
-	if len(pks) == 0 {
-		pks = make([]bn256.G1, 4)
-		pks[0] = *pos.Cfg().SelfPuK
-		pks[1] = *pos.Cfg().SelfPuK
-		pks[2] = *pos.Cfg().SelfPuK
-		pks[3] = *pos.Cfg().SelfPuK
-	}
+	pks := make([]bn256.G1, 4)
+	pks[0] = *pos.Cfg().SelfPuK
+	pks[1] = *pos.Cfg().SelfPuK
+	pks[2] = *pos.Cfg().SelfPuK
+	pks[3] = *pos.Cfg().SelfPuK
+
+	log.Info("get rb proposer group", "proposer", pks)
+	return pks
 	// <<<<<<<<<<<<<<<<<<<<<<<<<test
 
-	return pks
+	//pks := rb.epocher.GetRBProposerGroup(epochId)
+	//
+	//log.Info("get rb proposer group", "proposer", pks)
+	//return pks
 }
 
 
