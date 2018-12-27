@@ -176,12 +176,12 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 
 		s.buildEpochLeaderGroup(epochID)
 
-		err := s.startStage2Work()
-		if err != nil {
-			s.log(err.Error())
-		} else {
-			s.setWorkStage(epochID, slotLeaderSelectionStage3)
-		}
+		// err := s.startStage2Work()
+		// if err != nil {
+		// 	s.log(err.Error())
+		// } else {
+		// 	s.setWorkStage(epochID, slotLeaderSelectionStage3)
+		// }
 
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
