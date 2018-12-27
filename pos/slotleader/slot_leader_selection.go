@@ -1066,7 +1066,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	//	Nonce    *hexutil.Uint64 `json:"nonce"`
 	//}
 	arg := map[string]interface{}{}
-	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	arg["from"] = s.key.Address
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(amount)
 	arg["txType"] = 1
@@ -1109,10 +1109,10 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 
 	var to = slotLeaderPrecompileAddr
 	arg := map[string]interface{}{}
-	arg["from"] = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	arg["from"] = s.key.Address
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(200000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(4710000))
 
 	arg["txType"] = 1
 	//Set payload infomation--------------
