@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
 	"testing"
 )
@@ -213,6 +216,10 @@ func TestAbiPack(t *testing.T) {
 	if hex.EncodeToString(unpack) != hex.EncodeToString(data) {
 		t.Fail()
 	}
+}
+
+func TestAbiPack2(t *testing.T) {
+
 }
 
 // TestByteToString is test for bytes compare with string() convert
