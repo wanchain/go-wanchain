@@ -154,7 +154,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 			rb,err := vm.GetRandom(epochID)
 			if err != nil {
-				continue
+				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
 
 			fmt.Println("epoch loop time")
@@ -181,7 +181,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 			rb,err := vm.GetRandom(epochID)
 			if err != nil {
-				continue
+				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
 
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochID)
