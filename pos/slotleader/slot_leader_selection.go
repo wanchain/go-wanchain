@@ -48,11 +48,7 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-<<<<<<< Updated upstream
-	SlotCount = 30
-=======
 	SlotCount = 12
->>>>>>> Stashed changes
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10

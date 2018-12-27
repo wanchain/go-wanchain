@@ -151,23 +151,22 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 
 func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	pub,err := p.stakeOutParseAndValid(evm.StateDB,payload)
-	pukHash := common.BytesToHash(pub)
-
-	infoArray,err := GetInfo(evm.StateDB,StakersInfoAddr,pukHash)
+	staker,pubHash,err := p.stakeOutParseAndValid(evm.StateDB,payload)
 	if err != nil {
-		return nil, err
+		return nil,err
 	}
 
-	var staker StakerInfo
-	error := json.Unmarshal(infoArray,&staker)
-	if error != nil {
-		return nil, error
-	}
+	//if the time already go beyong staker's staking time, staker can stake out
+	if  ( time.Now().Unix() > staker.StakingTime + int64(staker.LockTime))  {
 
-	if  (staker.StakingTime + int64(staker.LockTime)) > time.Now().Unix() {
-		evm.StateDB.AddBalance(contract.CallerAddress, staker.Amount)
-		evm.StateDB.SubBalance(wanCscPrecompileAddr,staker.Amount)
+		scBal := evm.StateDB.GetBalance(WanCscPrecompileAddr)
+		if scBal.Cmp(staker.Amount) >= 0 {
+			evm.StateDB.AddBalance(contract.CallerAddress, staker.Amount)
+			evm.StateDB.SubBalance(WanCscPrecompileAddr, staker.Amount)
+		} else {
+			return nil,errors.New("whole stakes is not enough to pay")
+		}
+
 	} else {
 		return nil,errors.New("lockTIme did not reach")
 	}
@@ -181,13 +180,13 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 		StakingTime: 0,
 	}
 
-	infoArray,err = json.Marshal(nilValue)
+	nilArray,err := json.Marshal(nilValue)
 	if err != nil {
 		return nil,err
 	}
 
 
-	err = UpdateInfo(evm.StateDB,StakersInfoAddr,pukHash,infoArray)
+	err = UpdateInfo(evm.StateDB,StakersInfoAddr,pubHash,nilArray)
 	if err != nil {
 		return nil,err
 	}
@@ -208,12 +207,12 @@ func (p *pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 	if methodId == stakeInId {
 		secpub,_,_ := p.stakeInParseAndValid(input[4:])
 		if secpub == nil {
-			return errors.New("stakein parameter format is not correct")
+			return errors.New("stakein verify failed")
 		}
 	} else if methodId == stakeOutId {
-		_,err := p.stakeOutParseAndValid(stateDB,input[4:])
+		_,_,err := p.stakeOutParseAndValid(stateDB,input[4:])
 		if err != nil {
-			return errors.New("stakeout parameter format is not correct")
+			return errors.New("stakeout verify failed")
 		}
 	}
 
@@ -254,7 +253,7 @@ func (p *pos_staking) stakeInParseAndValid(payload []byte)(secPk []byte,bn256Pk 
 	return secPk,bn256Pk,lkt
 }
 
-func (p *pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (pub []byte,err error) {
+func (p *pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (str *StakerInfo,pubHash common.Hash,err error) {
 
 	fmt.Println(""+ common.ToHex(payload))
 
@@ -265,28 +264,28 @@ func (p *pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (pu
 
 	err = cscAbi.Unpack(&Info, "stakeOut", payload)
 	if err != nil {
-		return nil, errStakeInAbiParse
+		return nil,common.Hash{}, errStakeInAbiParse
 	}
 
-	pub = common.FromHex(Info.Pub)
+	pub := common.FromHex(Info.Pub)
 
-	pukHash := common.BytesToHash(pub)
-	infoArray,err := GetInfo(stateDB,StakersInfoAddr,pukHash)
+	pubHash = common.BytesToHash(pub)
+	infoArray,err := GetInfo(stateDB,StakersInfoAddr,pubHash)
 	if err != nil {
-		return nil, err
+		return nil,common.Hash{}, err
 	}
 
 	var staker StakerInfo
 	error := json.Unmarshal(infoArray,&staker)
 	if error != nil {
-		return nil, error
+		return nil, common.Hash{},error
 	}
 
 	if staker.PubSec256 == nil {
-		return nil,errors.New("staker has unregistered already")
+		return nil,common.Hash{},errors.New("staker has unregistered already")
 	}
 
-	return pub,nil
+	return &staker,pubHash,nil
 }
 
 

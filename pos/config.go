@@ -15,7 +15,15 @@ type Config struct {
 	SelfPrK *big.Int
 }
 
-var DefaultConfig Config = Config{1,1,1, 0, 0, new(bn256.G1).ScalarBaseMult(big.NewInt(1)), big.NewInt(1)}
+var DefaultConfig = Config {
+	1,
+	1,
+	1,
+	0,
+	0,
+	new(bn256.G1).ScalarBaseMult(big.NewInt(1)),
+	big.NewInt(1),
+}
 
 func Cfg() *Config {
 	return &DefaultConfig;

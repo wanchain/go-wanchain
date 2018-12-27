@@ -25,7 +25,7 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
-	wanCscPrecompileAddr = common.BytesToAddress([]byte{210})
+	WanCscPrecompileAddr = common.BytesToAddress([]byte{210})
 	StakersInfoAddr   = common.BytesToAddress(big.NewInt(400).Bytes())
 
 
@@ -101,7 +101,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	wanStampPrecompileAddr: &wanchainStampSC{},
 
 	//pos
-	wanCscPrecompileAddr: 	&pos_staking{},
+	WanCscPrecompileAddr: 	&pos_staking{},
 	slotLeaderPrecompileAddr: 	  &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }
