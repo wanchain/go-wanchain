@@ -240,6 +240,10 @@ func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
+func (rb *RandomBeacon) getPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
+	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
+}
+
 func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
 
@@ -257,7 +261,7 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	// Fix the evaluation point: Hash(Pub[1]), Hash(Pub[2]), ..., Hash(Pub[Nr])
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(crypto.Keccak256(pks[i].Marshal()))
+		x[i].SetBytes(rb.getPolynomialX(&pks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -408,12 +412,13 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	x := make([]big.Int, len(sigDatas))
 	for i, data := range sigDatas {
 		gsigshare[i] = *data.data.Gsigshare
-		x[i].SetBytes(crypto.Keccak256(data.pk.Marshal()))
+		x[i].SetBytes(rb.getPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon
 	gsig := wanpos.LagrangeSig(gsigshare, x, int(pos.Cfg().PolymDegree))
 	random := crypto.Keccak256(gsig.Marshal())
+	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
 
 	// Verification Logic for the Output of Random Beacon
 	// Computation of group public key
@@ -569,23 +574,6 @@ func GetRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
-
-
-//func GetRBM(epochId uint64) ([]byte, error) {
-//	if epochId < 1 {
-//		return nil, errors.New("epoch id too low")
-//	}
-//
-//	epochIdBigInt := big.NewInt(int64(epochId))
-//	preRandom, err := vm.GetRandom(epochId-1)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	buf := epochIdBigInt.Bytes()
-//	buf = append(buf, preRandom.Bytes()...)
-//	return crypto.Keccak256(buf), nil
-//}
 
 
 func SetRandom(epochId uint64, random *big.Int) error {
