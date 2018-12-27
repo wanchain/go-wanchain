@@ -660,7 +660,7 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime * time.Second / 2):
+			case <-time.After(slotleader.SlotTime * time.Second ): // TODO when generate new block
 				fmt.Println(" #################################################################our trun")
 				break loopCheck
 			}
