@@ -123,14 +123,14 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 //Loop check work every 10 second. Called by backend loop
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
+func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
 	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 	s.key = key
 	s.stateDb = stateDb
 	s.epochInstance = epochInstance
 
-	epochID, slotID, err := GetEpochSlotID()
+	//epochID, slotID, err := GetEpochSlotID()
 	s.log("Now epchoID:" + posdb.Uint64ToString(epochID) + " slotID:" + posdb.Uint64ToString(slotID))
 
 	workStage, err := s.getWorkStage(epochID)
@@ -144,7 +144,6 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		}
 	}
 
-	s.buildEpochLeaderGroup(epochID)
 
 	switch workStage {
 	case slotLeaderSelectionStage1:
@@ -171,6 +170,8 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		if slotID < SlotStage1 {
 			break
 		}
+
+		s.buildEpochLeaderGroup(epochID)
 
 		err := s.startStage2Work()
 		if err != nil {
@@ -548,7 +549,7 @@ func GetEpochSlotID() (uint64, uint64, error) {
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
-	test := true
+	test := false
 	if test {
 		//test: generate test publicKey
 		epochLeaderAllBytes, err := posdb.GetDb().Get(epochID,EpochLeaders)
@@ -598,7 +599,7 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 	return err
 }
 func (s *SlotLeaderSelection) clearData() {
-	s.testOrNot	  = true
+	s.testOrNot	  = false
 	s.slotCreated = false
 	// clear Array
 	s.epochLeadersArray = make([]string, 0)
