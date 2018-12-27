@@ -147,10 +147,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		rand.Seed(999999999999999)
 		rb := big.NewInt(int64(rand.Uint64())).Bytes()
 
-		epchoid, _, err := slotleader.GetEpochSlotID()
-		if err != nil {
-			continue
-		}
+
 
 		select {
 
@@ -158,14 +155,19 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 			fmt.Println("epoch loop time")
 
-			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epchoid)
+			epochID, _, err := slotleader.GetEpochSlotID()
+			if err != nil {
+				continue
+			}
 
-			epl := epocher.GetEpochLeaders(epchoid)
+			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochID)
+
+			epl := epocher.GetEpochLeaders(epochID)
 			for idx, item := range epl {
 				fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
 			}
 
-			rbl := epocher.GetRBProposerGroup(epchoid)
+			rbl := epocher.GetRBProposerGroup(epochID)
 			for idx, item := range rbl {
 				fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
 			}
@@ -174,10 +176,16 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		case <-slotTimer.C:
 			fmt.Println("time")
-			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epchoid)
+
+			epochID, slotID, err := slotleader.GetEpochSlotID()
+			if err != nil {
+				continue
+			}
+
+			epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochID)
 
 			//Add for slot leader selection
-			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher)
+			slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochID, slotID)
 			//epocher.SelectLeaders()
 			randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher)
 		}
