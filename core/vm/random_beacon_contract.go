@@ -170,6 +170,14 @@ func getRBProposerGroup(epochId uint64) []bn256.G1 {
 		g1s[i].Unmarshal(pks[i])
 	}
 
+	// >>>>>>>>>>>>>>>>>>>>>. test
+	if len(g1s) > 8 {
+		g1s = g1s[:8]
+	}
+
+	g1s = append(g1s, *pos.Cfg().SelfPuK)
+	g1s = append(g1s, *pos.Cfg().SelfPuK)
+	// <<<<<<<<<<<<<<<<<<<<<
 	return g1s
 }
 
