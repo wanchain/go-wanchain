@@ -57,7 +57,7 @@ func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) b
 func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
 var (
-	rbepochId = uint64(1)
+	rbepochId = uint64(0)
 	rbdb = make(map[common.Hash][]byte)
 	rbgroupdb = make(map[uint64][]bn256.G1)
 	rbranddb = make(map[uint64]*big.Int)
@@ -103,6 +103,10 @@ var (
 	evm = NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	rbcontract = &RandomBeaconContract{}
+
+	pubs, pris, hpubs = generateKeyPairs()
+	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
 )
 
 // pubs,pris,hashPubs
@@ -181,6 +185,35 @@ func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [
 	return s, sshare, enshare, commit, proof
 }
 
+func prepareSig(Prikey []big.Int, enshare [][]*bn256.G1) ([]*bn256.G1)  {
+	gskshare := make([]bn256.G1, nr)
+
+	for i := 0; i < nr; i++ {
+
+		gskshare[i].ScalarBaseMult(big.NewInt(int64(0))) //set zero
+
+		skinver := new(big.Int).ModInverse(&Prikey[i], bn256.Order) // sk^-1
+
+		for j := 0; j < nr; j++ {
+			temp := new(bn256.G1).ScalarMult(enshare[j][i], skinver)
+			gskshare[i].Add(&gskshare[i], temp) // gskshare[i] = (sk^-1)*(enshare[1][i]+...+enshare[Nr][i])
+		}
+	}
+
+	M, err := getRBMVar(rbepochId)
+	if err != nil {
+		fmt.Println("get rbm error id:%u", rbepochId)
+	}
+	m := new(big.Int).SetBytes(M)
+
+	// Compute signature share
+	gsigshare := make([]*bn256.G1, nr)
+	for i := 0; i < nr; i++ { // signature share = M * secret key share
+		gsigshare[i] = new(bn256.G1).ScalarMult(&gskshare[i], m)
+	}
+	return gsigshare
+}
+
 func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
 	return rbgroupdb[epochId]
 }
@@ -218,9 +251,6 @@ func show(v interface{}) {
 }
 
 func TestRBDkg(t *testing.T) {
-	pubs, pris, hpubs := generateKeyPairs()
-	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
-	_, _, enshareA, commitA, proofA := prepareDkg(pubs, pris, hpubs)
 
 	rbgroupdb[rbepochId] = pubs
 
@@ -239,7 +269,10 @@ func TestRBDkg(t *testing.T) {
 
 		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
 
-		rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, nil, evm)
+		if err != nil {
+			t.Error(err)
+		}
 
 		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 
@@ -251,8 +284,29 @@ func TestRBDkg(t *testing.T) {
 }
 
 func TestRBSig(t *testing.T)  {
+	TestRBDkg(t)
+	gsigshareA := prepareSig(pris, enshareA)
 	for i := 0; i < nr; i++ {
+		var sigshareParam RbSIGTxPayload
+		sigshareParam.EpochId = rbepochId
+		sigshareParam.ProposerId = uint32(i)
+		sigshareParam.Gsigshare = gsigshareA[i]
 
+		payloadBytes, _ := rlp.EncodeToBytes(sigshareParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
+		payload, _ := rbAbi.Pack("sigshare", payloadStr)
+		hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
+
+		_, err := rbcontract.Run(payload, nil, evm)
+		if err != nil {
+			t.Error(err)
+		}
+		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+
+		if !bytes.Equal(payloadBytes, payloadBytes2) {
+			println("error")
+		}
 	}
 }
 
