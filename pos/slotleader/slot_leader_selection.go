@@ -808,8 +808,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
-	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
 
 	//fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
