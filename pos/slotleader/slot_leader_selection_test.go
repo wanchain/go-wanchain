@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -260,6 +261,28 @@ func TestCompare(t *testing.T) {
 	}
 
 	t.Fail()
+}
+
+func TestPackUnpack2(t *testing.T) {
+
+	s := GetSlotLeaderSelection()
+	data := "33+32+04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70+04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27+e7365b9c4e4ab8d4475ed34410cb4d9f48c618f543c2ba11b321187d0ff4e780-3d2312ab25c14c33f033f885bc8c7e0c601de7e96ba7ec110ba08c0f806d3a2e"
+
+	payload, err := s.PackStage2Data(data)
+	if err != nil {
+		t.Fail()
+	}
+
+	txdata := hexutil.Bytes(payload)
+	fmt.Printf("\nAfter PackStage2Data %v\n", txdata)
+	// decode
+
+	unpackedData, err := s.UnpackStage2Data(txdata[4:])
+
+	if err != nil {
+		t.Fail()
+	}
+
 }
 
 func TestWholeFlow(t *testing.T) {

@@ -149,9 +149,9 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		log.Debug("Enter slotLeaderSelectionStage1")
-		//s.generateSlotLeadsGroup(epochID)
+		s.generateSlotLeadsGroup(epochID)
 
-		s.buildEpochLeaderGroup(epochID)
+		//s.buildEpochLeaderGroup(epochID)
 
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
@@ -176,12 +176,12 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 
 		s.buildEpochLeaderGroup(epochID)
 
-		// err := s.startStage2Work()
-		// if err != nil {
-		// 	s.log(err.Error())
-		// } else {
-		// 	s.setWorkStage(epochID, slotLeaderSelectionStage3)
-		// }
+		err := s.startStage2Work()
+		if err != nil {
+			s.log(err.Error())
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
+		}
 
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
@@ -560,8 +560,8 @@ func GetEpochSlotID() (uint64, uint64, error) {
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
-	test := false
-	if test {
+	//test := true
+	if s.testOrNot {
 		//test: generate test publicKey
 		epochLeaderAllBytes, err := posdb.GetDb().Get(epochID, EpochLeaders)
 		if err != nil {
@@ -585,6 +585,9 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 		}
 
 		epochLeaders := s.epochInstance.(epoch).GetEpochLeaders(epochID)
+		//for i := 0; i<len(epochLeaders); i++  {
+		//	log.Debug(fmt.Sprintf("%s\n", hex.EncodeToString(epochLeaders[i])))
+		//}
 
 		if epochLeaders != nil {
 			log.Debug(fmt.Sprintf("getEpochLeaders called return len(epochLeaders):%d", len(epochLeaders)))
@@ -650,8 +653,19 @@ func (s *SlotLeaderSelection) dumpData() {
 	fmt.Printf("\t\t\ts.stageTwoAlphaPKi= %v\n\n", s.stageTwoAlphaPKi)
 	fmt.Printf("\t\t\ts.stageTwoProof= %v\n\n", s.stageTwoProof)
 	fmt.Printf("\t\t\ts.slotLeadersPtrArray= %v\n\n", s.slotLeadersPtrArray)
+	fmt.Printf("\t\t\ts.epochLeadersPtrArray= %v\n\n", s.epochLeadersPtrArray)
 	for index, value := range s.epochLeadersPtrArray {
-		fmt.Printf("\tindex := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		fmt.Printf("\tepochLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
+	}
+	for index, value := range s.epochLeadersPtrArray {
+		fmt.Printf("\tepochLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+
+	for index, value := range s.slotLeadersPtrArray {
+		fmt.Printf("\tslotLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	for index, value := range s.slotLeadersPtrArray {
+		fmt.Printf("\tslotLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
 	}
 	fmt.Printf("~~~~~~~~~~~dumpData end~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 }
@@ -660,8 +674,10 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 	functrace.Enter()
 	s.clearData()
 	// build Array and map
-
-	for index, value := range s.getEpochLeaders(epochID) {
+	data := s.getEpochLeaders(epochID)
+	fmt.Printf("Data from jqg: %v", data)
+	//for index, value := range s.getEpochLeaders(epochID) {
+	for index, value := range data {
 		//fmt.Printf("\n:::::buildEpochLeaderGroup\n")
 		//fmt.Printf("\n:::::value is %v\n",value)
 		//fmt.Printf("\n:::::hex.EncodeToString(value) is %v\n",hex.EncodeToString(value))
@@ -728,7 +744,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 	if epochID == uint64(0) {
 		//genesis SMA
 		smaGenesis := []string{"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
-			"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
+			"04461b6877fc12569520a994505fbd60d8c58ef3b7fd3984efc0a2494bbc8f68f4364da4013495f9b29128553b874d6442cbac51fc51cfed39851867737ab4a02e",
 			"0466eea24039a99afba154d4c64ee7a8cf120a54d979ed55f793ce6cc2fc3635a5b79c4de545cb1ed493521a1ce6da95770a71d207121b01d26df88f6ee86d0b22",
 			"04d8e72df643e3af9bd3e2f92eb5a8d5b24ac9833c1ccb5607f13f9b33649bf10c8e9a671e1c886e453333684f6ac01b008d1629f93a85a4f216a13b5f1862a8c1",
 			"04a9f7bf968fee493b51b045827488a35731f2d7af063b51d31a42ab43b51468e36678dbbcf77410345d0540cbe65e348af242251b0f2ab10580ea5bca91839305",
@@ -738,12 +754,14 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			"0400994bbd33ad79912478e26bd92331468da9b69d9ac2ef1c80f4597acf463552d341508b1adb40e4b69d76361bd80230f9fdee2414db8bbdfdcb83e23e1d6ff7",
 			"0444f09890a83ba77cbee7d432be95c850780362bc6f1e8f0198dabf1164a67a3d084e10ae3e1caf29f2638945c73867e456edddfc5c6fd5cb0e7e7c7558be003d",
 			"04b274ff6d60c8d2a752887dd79ddd42d11bd363eee3e98ae3781872a2716cd8fdf7c24e8a910fe16633862a0e256b43552eac03f5fe2971d76d0a66bb43927af8"}
-		for index, _ := range s.epochLeadersPtrArray {
-			smaGenesisByte, err := hex.DecodeString(smaGenesis[index])
+		//genesis SMA
+		//for i:=0;i<EpochLeaderCount;i++ {
+		for i := 0; i < EpochLeaderCount; i++ {
+			sma0Bytes, err := hex.DecodeString(smaGenesis[i])
 			if err != nil {
 				return nil, err
 			}
-			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(smaGenesisByte))
+			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(sma0Bytes))
 		}
 		return piecesPtr, nil
 
@@ -795,7 +813,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	//s.dumpData()
 	epochLeadersPtrArray := s.epochLeadersPtrArray
 	for i := 0; i < 10; i++ {
-		ret := crypto.S256().IsOnCurve(s.epochLeadersPtrArray[i].X, s.epochLeadersPtrArray[i].Y)
+		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
 			log.Error("not")
 		}
@@ -805,15 +823,18 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
-	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
+	//slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(s.epochLeadersPtrArray[:], epochLeadersPtrArray[:], random.Bytes(), SlotCount)
 
-	//fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
-	//s.dumpData()
+	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
+	s.dumpData()
 
 	if err != nil {
 		return err
 	}
+
+	log.Debug(fmt.Sprintf("===================================\n\n\n\n GenerateSlotLeaderSeq success \n\n\n\n=============================="))
+
 	// 6. insert slot address to local DB
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID+1), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
@@ -824,6 +845,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 	s.slotCreated = true
+	s.dumpData()
 	return nil
 }
 

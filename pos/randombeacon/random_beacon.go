@@ -240,10 +240,6 @@ func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func (rb *RandomBeacon) getPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
-	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
-}
-
 func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
 
@@ -258,10 +254,10 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	//pubkey := Cfg().SelfPuK
 	//prikey := Cfg().SelfPrK
 
-	// Fix the evaluation point: Hash(Pub[1]), Hash(Pub[2]), ..., Hash(Pub[Nr])
+	// Fix the evaluation point: Hash(Pub[1]+1), Hash(Pub[2]+2), ..., Hash(Pub[Nr]+Nr)
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(rb.getPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -404,15 +400,31 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-		log.Error("insufficient proposer")
-		return errors.New("insufficient proposer")
+		log.Error("compute random fail, insufficient proposer", "epochId", epochId)
+		// return errors.New("insufficient proposer")
+
+		randomInt, err := vm.GetRandom(epochId)
+		if err != nil {
+			log.Error("get random fail", "epochId", epochId, "err", err)
+			return err
+		}
+
+		newRandom := crypto.Keccak256(randomInt.Bytes())
+		err = SetRandom(epochId+1, new(big.Int).SetBytes(newRandom))
+		if err != nil {
+			log.Error("set random fail", "err", err)
+		} else {
+			log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(newRandom))
+		}
+
+		return err
 	}
 
 	gsigshare := make([]bn256.G1, len(sigDatas))
 	x := make([]big.Int, len(sigDatas))
 	for i, data := range sigDatas {
 		gsigshare[i] = *data.data.Gsigshare
-		x[i].SetBytes(rb.getPolynomialX(data.pk, data.data.ProposerId))
+		x[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon
@@ -485,10 +497,11 @@ func (rb *RandomBeacon) DoSendRBTx(payload []byte) error {
 	arg["from"] = rb.GetTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1000000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(2000000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
+	log.Info("do send rb tx", "payload len", len(payload))
 	_, err := pos.SendTx(rb.rpcClient, arg)
 	return err
 }
@@ -499,20 +512,19 @@ func (rb *RandomBeacon) GetTxFrom() common.Address {
 
 func (rb *RandomBeacon)GetRBProposerGroup(epochId uint64) []bn256.G1 {
 	// >>>>>>>>>>>>>>>>>>>>>>>>>test
-	pks := make([]bn256.G1, 4)
-	pks[0] = *pos.Cfg().SelfPuK
-	pks[1] = *pos.Cfg().SelfPuK
-	pks[2] = *pos.Cfg().SelfPuK
-	pks[3] = *pos.Cfg().SelfPuK
-
-	log.Info("get rb proposer group", "proposer", pks)
-	return pks
-	// <<<<<<<<<<<<<<<<<<<<<<<<<test
-
-	//pks := rb.epocher.GetRBProposerGroup(epochId)
+	//pks := make([]bn256.G1, 4)
+	//pks[0] = *pos.Cfg().SelfPuK
+	//pks[1] = *pos.Cfg().SelfPuK
+	//pks[2] = *pos.Cfg().SelfPuK
+	//pks[3] = *pos.Cfg().SelfPuK
 	//
 	//log.Info("get rb proposer group", "proposer", pks)
 	//return pks
+	// <<<<<<<<<<<<<<<<<<<<<<<<<test
+
+	pks := rb.epocher.GetRBProposerGroup(epochId)
+	log.Info("get rb proposer group", "proposer", pks)
+	return pks
 }
 
 
