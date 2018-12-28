@@ -65,6 +65,7 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
+	timerStop	chan interface{}
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
@@ -74,21 +75,15 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		engine:   engine,
 		worker:   newWorker(config, engine, common.Address{}, eth, mux),
 		canStart: 1,
+		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
 	return miner
 }
 
-var backendTimerLoopStarted bool
 
 func (self *Miner) BackendTimerLoop(s Backend) {
-	if backendTimerLoopStarted {
-		log.Info("BackendTimerLoop already started")
-		return
-	}
-
-	backendTimerLoopStarted = true
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
@@ -179,8 +174,12 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
 		//randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
-
-		time.Sleep(slotleader.SlotTime * time.Second)
+		select {
+		case <-self.timerStop:
+			return
+		case <-time.After(slotleader.SlotTime * time.Second):
+			continue
+		}
 	}
 	return
 }
@@ -240,6 +239,7 @@ func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
+	self.timerStop <- nil
 }
 
 func (self *Miner) Register(agent Agent) {
