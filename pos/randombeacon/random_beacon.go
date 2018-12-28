@@ -520,29 +520,8 @@ func (rb *RandomBeacon) GetTxFrom() common.Address {
 }
 
 func (rb *RandomBeacon)GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	// >>>>>>>>>>>>>>>>>>>>>>>>>test
-	//pks := make([]bn256.G1, 4)
-	//pks[0] = *pos.Cfg().SelfPuK
-	//pks[1] = *pos.Cfg().SelfPuK
-	//pks[2] = *pos.Cfg().SelfPuK
-	//pks[3] = *pos.Cfg().SelfPuK
-	//
-	//log.Info("get rb proposer group", "proposer", pks)
-	//return pks
-	// <<<<<<<<<<<<<<<<<<<<<<<<<test
-
 	pks := rb.epocher.GetRBProposerGroup(epochId)
 	log.Info("get rb proposer group", "proposer", pks)
-
-	// >>>>>>>>>>>>>>>>>>>>>>>>>test
-	if len(pks) > 8 {
-		pks = pks[:8]
-	}
-
-	pks = append(pks, *pos.Cfg().SelfPuK)
-	pks = append(pks, *pos.Cfg().SelfPuK)
-	// <<<<<<<<<<<<<<<<<<<<<<<<<test
-
 	return pks
 }
 
