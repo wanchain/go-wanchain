@@ -18,7 +18,7 @@ type Config struct {
 
 var DefaultConfig = Config {
 	1,
-	1,
+	2,
 	2,
 	0,
 	0,

@@ -736,8 +736,8 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 
 // from random proposer
 func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error) {
-	ret = big.NewInt(0).SetUint64(uint64(13456789092))
-	return ret, nil
+	//ret = big.NewInt(0).SetUint64(uint64(13456789092))
+	//return ret, nil
 
 	//randomByte,err := posdb.GetDb().Get(epochID, vm.RANDOMBEACON_DB_KEY)
 	//if err != nil {
@@ -745,6 +745,12 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 	//}
 	//ret = big.NewInt(0).SetBytes(randomByte)
 	//return ret, nil
+	r, err := posdb.GetRandom(epochID)
+	if err != nil{
+		r = big.NewInt(0).SetUint64(uint64(1983645))
+		return r,err
+	}
+	return r,nil
 }
 
 // from random proposer
@@ -791,7 +797,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			} else {
 				pubKeyByte = pieces[i*LengthPublicKeyBytes:]
 			}
-			fmt.Printf("getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", hex.EncodeToString(pubKeyByte))
+			fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID,hex.EncodeToString(pubKeyByte))
 			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 		}
 		return piecesPtr, nil
@@ -812,7 +818,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return errors.New("get random message error!")
 	}
-
+	fmt.Printf("\nRandom got is %v\n",hex.EncodeToString(random.Bytes()))
 	// 5. return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	fmt.Printf("len(piecesPtr)=%v\n", len(piecesPtr))
@@ -904,7 +910,9 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	selfPkRecievedPicesMap := make(map[uint64][]*ecdsa.PublicKey, 0)
 	for _, selfIndex := range indexs {
 		for i := 0; i < len(s.epochLeadersArray); i++ {
-			selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
+			if s.stageTwoAlphaPKi[i][selfIndex] != nil {
+				selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
+			}
 		}
 	}
 	piece := make([]*ecdsa.PublicKey, 0)
@@ -1032,6 +1040,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
+		fmt.Printf("\n&&&&&&&&&&&&&epochID+1 = %d set security message is %v\n", epochID+1,hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID + 1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
@@ -1238,7 +1247,7 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	arg["from"] = s.key.Address
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(4710000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
 
 	arg["txType"] = 1
 	//Set payload infomation--------------

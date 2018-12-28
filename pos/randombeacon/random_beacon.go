@@ -371,7 +371,7 @@ func (rb *RandomBeacon) ComputeRandoms(bgEpochId uint64, endEpochId uint64) erro
 
 func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	log.Info("RB do compute random", "epochId", epochId)
-	randomInt, err := vm.GetRandom(epochId+1)
+	randomInt, err := posdb.GetRandom(epochId+1)
 	if err == nil && randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
 		// exist already
 		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
@@ -404,14 +404,14 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
 		// return errors.New("insufficient proposer")
 
-		randomInt, err := vm.GetRandom(epochId)
+		randomInt, err := posdb.GetRandom(epochId)
 		if err != nil {
 			log.Error("get random fail", "epochId", epochId, "err", err)
 			return err
 		}
 
 		newRandom := crypto.Keccak256(randomInt.Bytes())
-		err = SetRandom(epochId+1, new(big.Int).SetBytes(newRandom))
+		err = posdb.SetRandom(epochId+1, new(big.Int).SetBytes(newRandom))
 		if err != nil {
 			log.Error("set random fail", "err", err)
 		} else {
@@ -469,7 +469,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		return errors.New("Final Pairing Check Failed")
 	}
 
-	err = SetRandom(epochId+1, new(big.Int).SetBytes(random))
+	err = posdb.SetRandom(epochId+1, new(big.Int).SetBytes(random))
 	if err != nil {
 		log.Error("set random fail", "err", err)
 	} else {
@@ -604,12 +604,6 @@ func GetRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	}
 
 	return ret, nil
-}
-
-
-func SetRandom(epochId uint64, random *big.Int) error {
-	_, err := posdb.GetDb().Put(epochId, vm.RANDOMBEACON_DB_KEY, random.Bytes())
-	return err
 }
 
 

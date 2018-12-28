@@ -19,6 +19,8 @@ package miner
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"sync/atomic"
 
 	"strconv"
@@ -31,7 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
@@ -151,7 +152,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		// only the begin of epocher
 		if slotid == 0 {
 			fmt.Println("epocher begin")
-			rb, err := vm.GetRandom(epochid)
+			rb, err := posdb.GetRandom(epochid)
 			if err != nil {
 				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
@@ -173,7 +174,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		//randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
+		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
 		select {
 		case <-self.timerStop:
 			return

@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
@@ -11,10 +12,10 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
-	"io"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -56,29 +57,19 @@ func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) b
 func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
 var (
-	dbMockRetVal        *big.Int
-	balanceAddr = "0x0000000000000000000000001000000000000000"
-	accountAddr = "0x03b854fc72fb01a0e36ee918b085ff52280d1842eeb282b389a1fb3d3752ed7aed"
+	rbepochId = uint64(1)
+	rbdb = make(map[common.Hash][]byte)
+	rbgroupdb = make(map[uint64][]bn256.G1)
+	rbranddb = make(map[uint64]*big.Int)
 )
 
 func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
-
-	if !bytes.Equal(addr.Bytes(), otaImageStorageAddr.Bytes()) {
-
-		if bytes.Equal(common.FromHex(balanceAddr), addr.Bytes()) {
-			return common.FromHex(accountAddr)
-		} else if  dbMockRetVal!=nil {
-			return dbMockRetVal.Bytes()
-		} else {
-			return nil
-		}
-
-	} else {
-		return nil
-	}
+	return rbdb[hs]
 }
 
-func (CTStateDB) SetStateByteArray(common.Address, common.Hash, []byte) {}
+func (CTStateDB) SetStateByteArray(addr common.Address, hs common.Hash, data []byte) {
+	rbdb[hs] = data
+}
 
 type dummyCtRef struct {
 	calledForEach bool
@@ -104,16 +95,14 @@ type dummyCtDB struct {
 
 var (
 	nr = 10
-	thres = nr / 2
+	thres = pos.Cfg().PolymDegree + 1
 
 	db, _      = ethdb.NewMemDatabase()
 	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	ref = &dummyCtRef{}
 	evm = NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
-	pubs, pris, hpubs = generateKeyPairs()
-	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
-	sA, sshareA, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	rbcontract = &RandomBeaconContract{}
 )
 
 // pubs,pris,hashPubs
@@ -131,7 +120,7 @@ func generateKeyPairs() ([]bn256.G1, []big.Int, []big.Int) {
 	}
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(crypto.Keccak256(Pubkey[i].Marshal()))
+		x[i].SetBytes(GetPolynomialX(&Pubkey[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -156,9 +145,9 @@ func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [
 
 	for i := 0; i < nr; i++ {
 		sshare[i] = make([]big.Int, nr, nr)
-		poly[i] = wanpos.RandPoly(thres-1, *s[i])	// fi(x), set si as its constant term
+		poly[i] = wanpos.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
 		for j := 0; j < nr; j++ {
-			sshare[i][j] = wanpos.EvaluatePoly(poly[i], &x[j], thres-1) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			sshare[i][j] = wanpos.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
 	}
 
@@ -192,8 +181,33 @@ func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [
 	return s, sshare, enshare, commit, proof
 }
 
+func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
+	return rbgroupdb[epochId]
+}
+
+
+func getRBMMock(epochId uint64) ([]byte, error) {
+	nextEpochId := big.NewInt(int64(epochId + 1))
+	preRandom := rbranddb[epochId]
+	if preRandom == nil {
+		return nil, errors.New("getRBMMock")
+	}
+
+	//buf := make([]byte, len(nextEpochId.Bytes()) + len(preRandom.Bytes()))
+	buf := nextEpochId.Bytes()
+	buf = append(buf, preRandom.Bytes()...)
+	rt := crypto.Keccak256(buf)
+
+	rbranddb[epochId + 1] = new(big.Int).SetBytes(rt)
+
+	return rt, nil
+}
+
 // test cases runs in testMain
 func TestMain(m *testing.M) {
+	rbranddb[0] = big.NewInt(1)
+	getRBProposerGroupVar = getRBProposerGroupMock
+	getRBMVar = getRBMMock
 	println("rb test begin")
 	m.Run()
 	println("rb test end")
@@ -204,18 +218,50 @@ func show(v interface{}) {
 }
 
 func TestRBDkg(t *testing.T) {
-	var dkgParam RbDKGTxPayload
-	dkgParam.EpochId = 0
-	dkgParam.ProposerId = 2
-	dkgParam.Commit = commitA[2]
-	dkgParam.Enshare = enshareA[2]
-	dkgParam.Proof = proofA[2]
+	pubs, pris, hpubs := generateKeyPairs()
+	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
+	_, _, enshareA, commitA, proofA := prepareDkg(pubs, pris, hpubs)
 
-	payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
-	payloadStr := common.Bytes2Hex(payloadBytes)
+	rbgroupdb[rbepochId] = pubs
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKGTxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
+		payload, _ := rbAbi.Pack("dkg", payloadStr)
+
+		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
+
+		rbcontract.Run(payload, nil, evm)
+
+		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+
+		if !bytes.Equal(payloadBytes, payloadBytes2) {
+			println("error")
+		}
+	}
+	//contract.Run(data, nil, nil)
+}
+
+func TestRBSig(t *testing.T)  {
+	for i := 0; i < nr; i++ {
+
+	}
+}
+
+func TestUtil(t *testing.T) {
+	arr := [5]int{1, 2, 3, 4, 5}
+	slice1 := arr[1:4]
+	println(slice1)
+
 	rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
-	payload, _ := rbAbi.Pack("dkg", payloadStr)
-
 	var strtest = "abcdefghi"
 	strPayload, _ := rbAbi.Pack("dkg", strtest)
 	var str string
@@ -228,33 +274,4 @@ func TestRBDkg(t *testing.T) {
 	if str1 != str {
 		println("string pack unpack Input error")
 	}
-
-	contract := &RandomBeaconContract{}
-	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
-
-	contract.Run(payload, nil, evm)
-
-	payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-
-	if len(payloadBytes) != len(payloadBytes2) {
-		println("error")
-	}
-	//contract.Run(data, nil, nil)
-}
-
-func TestUtil(t *testing.T) {
-	arr := [5]int{1, 2, 3, 4, 5}
-	slice1 := arr[1:4]
-	println(slice1)
-
-	var randr = rand.Reader
-	data := make([]byte, 4)
-	data1 := make([]byte, 4)
-	if randr == rand.Reader {
-		println("same rand")
-	}
-	io.ReadFull(randr, data)
-	io.ReadFull(rand.Reader, data1)
-	io.ReadFull(randr, data)
-	io.ReadFull(rand.Reader, data1)
 }
