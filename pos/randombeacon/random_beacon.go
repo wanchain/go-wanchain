@@ -217,11 +217,10 @@ func (rb *RandomBeacon) GetMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	log.Info("get my rb proposer id", "selfPk", selfPk)
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
-		log.Info("get my rb proposer id", "pk", pk)
 		if pk.String() == selfPk.String() {
+		//if true || pk.String() != "" {
 			ids = append(ids, uint32(i))
 		}
 	}
@@ -240,10 +239,6 @@ func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func (rb *RandomBeacon) getPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
-	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
-}
-
 func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
 
@@ -254,14 +249,14 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 		return errors.New("can't find random beacon proposer group")
 	}
 
-	thres := pos.Cfg().PolymDegree+1
+	//thres := pos.Cfg().PolymDegree+1
 	//pubkey := Cfg().SelfPuK
 	//prikey := Cfg().SelfPrK
 
 	// Fix the evaluation point: Hash(Pub[1]+1), Hash(Pub[2]+2), ..., Hash(Pub[Nr]+Nr)
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(rb.getPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -272,7 +267,7 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	}
 
 	sshare := make([]big.Int, nr, nr)
-	poly := wanpos.RandPoly(int(thres-1), *s)	// fi(x), set si as its constant term
+	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s)	// fi(x), set si as its constant term
 	for i := 0; i < nr; i++ {
 		sshare[i] = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 	}
@@ -312,11 +307,8 @@ func (rb *RandomBeacon) DoSIGs(epochId uint64, proposerIds []uint32) error {
 }
 
 func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
+	log.Info("do sig begin", "epochId", epochId, "proposerId", proposerId)
 	pks := rb.GetRBProposerGroup(epochId)
-	nr := len(pks)
-	if nr == 0 {
-		return errors.New("can't find random beacon proposer group")
-	}
 
 	//thres := Cfg().PolymDegree+1
 	//pubkey := Cfg().SelfPuK
@@ -329,7 +321,9 @@ func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 		}
 	}
 
-	if uint(len(datas)) < pos.Cfg().MinRBProposerCnt {
+	dkgCount := len(datas)
+	log.Info("collecte dkg", "count", dkgCount)
+	if uint(dkgCount) < pos.Cfg().MinRBProposerCnt {
 		return errors.New("insufficient proposer")
 	}
 
@@ -337,7 +331,8 @@ func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 	// Random proposers get information from the blockchain and compute its group secret share.
 	gskshare := new(bn256.G1).ScalarBaseMult(big.NewInt(int64(0))) //set zero
 	skinver := new(big.Int).ModInverse(prikey, bn256.Order) // sk^-1
-	for i := 0; i < nr; i++ {
+	for i := 0; i < dkgCount; i++ {
+		log.Info("compute gskshare", "i", i, "enshare len", len(datas[i].data.Enshare))
 		temp := new(bn256.G1).ScalarMult(datas[i].data.Enshare[proposerId], skinver)
 		gskshare.Add(gskshare, temp) // gskshare[i] = (sk^-1)*(enshare[1][i]+...+enshare[Nr][i])
 	}
@@ -428,7 +423,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	x := make([]big.Int, len(sigDatas))
 	for i, data := range sigDatas {
 		gsigshare[i] = *data.data.Gsigshare
-		x[i].SetBytes(rb.getPolynomialX(data.pk, data.data.ProposerId))
+		x[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon
