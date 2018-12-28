@@ -242,6 +242,9 @@ func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 // Uint64ToBytes use a big.Int to transfer uint64 to bytes
 // Must use big.Int to reverse
 func Uint64ToBytes(input uint64) []byte {
+	// if input == 0 {
+	// 	return []byte{0}
+	// }
 	return big.NewInt(0).SetUint64(input).Bytes()
 }
 
@@ -258,6 +261,15 @@ func Uint64ToString(input uint64) string {
 		str = "00"
 	}
 	return str
+}
+
+// Uint64StringToByte can change uint64  string to bytes through a big.Int
+func Uint64StringToByte(input string) []byte {
+	num, ok := big.NewInt(0).SetString(input, 10)
+	if !ok {
+		return []byte{0}
+	}
+	return num.Bytes()
 }
 
 //-------------------------------------------------------------------

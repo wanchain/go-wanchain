@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -48,7 +47,7 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-	SlotCount = 10
+	SlotCount = 100
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 6
@@ -174,7 +173,7 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 			break
 		}
 
-		s.buildEpochLeaderGroup(epochID)
+		//s.buildEpochLeaderGroup(epochID)
 
 		err := s.startStage2Work()
 		if err != nil {
@@ -596,6 +595,17 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	}
 }
 
+func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
+	bufs := s.getEpochLeaders(epochID)
+
+	pks := make([]*ecdsa.PublicKey, len(bufs))
+	for i := 0; i < len(bufs); i++ {
+		pks[i] = crypto.ToECDSAPub(bufs[i])
+	}
+
+	return pks
+}
+
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
@@ -811,8 +821,12 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	fmt.Printf("SlotCount= %d\n", SlotCount)
 	//fmt.Printf("===========================before GenerateSlotLeaderSeq\n")
 	//s.dumpData()
-	epochLeadersPtrArray := s.epochLeadersPtrArray
-	for i := 0; i < 10; i++ {
+	//epochLeadersPtrArray := s.epochLeadersPtrArray
+	epochLeadersPtrArray := s.getEpochLeadersPK(epochID - 1)
+	if len(epochLeadersPtrArray) != EpochLeaderCount {
+		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochID-1))
+	}
+	for i := 0; i < EpochLeaderCount; i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
 			log.Error("not")
@@ -837,7 +851,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	// 6. insert slot address to local DB
 	for index, val := range slotLeadersPtr {
-		_, err = posdb.GetDb().PutWithIndex(uint64(epochID+1), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
+		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
 		//s.epochLeadersPtrArray[index] = val
 		s.slotLeadersPtrArray[index] = val
 		if err != nil {
@@ -909,15 +923,13 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var keyBuf bytes.Buffer
-	epochIDBuf := strconv.FormatUint(epochID, 10)
-	epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+	epochIDBufDec := posdb.Uint64ToBytes(epochID)
 	if err != nil {
 		return nil, nil, err
 	}
 	keyBuf.Write(epochIDBufDec)
 
-	selfIndexStr := strconv.FormatUint(selfIndex, 10)
-	selfIndexBufDec, err := hex.DecodeString(selfIndexStr)
+	selfIndexBufDec := posdb.Uint64ToBytes(selfIndex)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -926,13 +938,15 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	keyBuf.Write([]byte("slotLeaderStag2"))
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
+	log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
 		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
-	data1, err := s.UnpackStage2Data(data)
+	//data1, err := s.UnpackStage2Data(data)
 	//epochIDBuf,selfIndexBuf,pki,alphaPki,proof,err := s.RlpUnpackStage2Data(data1)
-	_, _, _, alphaPki, proof, err := s.RlpUnpackStage2Data(data1)
+	_, _, _, alphaPki, proof, err := s.RlpUnpackStage2Data(data)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -967,11 +981,15 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			}
 
 			for j := 0; j < StageTwoProofCount; j++ {
-				proof, err := strconv.ParseInt(proofs[j], 10, 64)
-				if err != nil {
-					return err
+				//proof, err := strconv.ParseInt(proofs[j], 10, 64)
+				//if err != nil {
+				//	return err
+				//}
+				var err bool
+				s.stageTwoProof[i][j], err = big.NewInt(0).SetString(proofs[j], 16)
+				if !err {
+					return errors.New("proofs error")
 				}
-				s.stageTwoProof[i][j] = big.NewInt(0).SetInt64(proof)
 			}
 		}
 
@@ -1035,17 +1053,15 @@ func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) 
 	return ArrayPiece, proof, err
 }
 func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
-	var epochIDStr, selfIndexStr, selfPKHexStr, payLoadStr string
+	var selfPKHexStr, payLoadStr string
 	var alphaPkiHexStr, proofHexStr []string
 
 	alphaPkiHexStr = make([]string, 0)
 	proofHexStr = make([]string, 0)
 
-	epochIDStr = strconv.FormatUint(epochID, 10)
-	epochIDHexStr := hex.EncodeToString([]byte(epochIDStr))
+	epochIDHexStr := posdb.Uint64ToString(epochID)
 
-	selfIndexStr = strconv.FormatUint(selfIndex, 10)
-	selfIndexHexStr := hex.EncodeToString([]byte(selfIndexStr))
+	selfIndexHexStr := posdb.Uint64ToString(selfIndex)
 
 	var selfPk *ecdsa.PublicKey
 	var err error

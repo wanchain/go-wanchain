@@ -244,6 +244,14 @@ func TestByteToString(t *testing.T) {
 	}
 }
 
+func TestNumToString(t *testing.T) {
+	value, err := hex.DecodeString("0")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(value)
+}
+
 func TestCompare(t *testing.T) {
 	epID := []byte{84}
 	epochID := uint64(84)
@@ -282,6 +290,8 @@ func TestPackUnpack2(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+
+	fmt.Println(unpackedData)
 
 }
 

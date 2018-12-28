@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/wanchain/go-wanchain/pos/posdb"
+
 	"github.com/wanchain/go-wanchain/functrace"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -178,16 +180,21 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	//keyBuf.Write([]byte(epochIDBuf))
 	//keyBuf.Write([]byte(selfIndexBuf))
 
-	epochIDBufDec, err := hex.DecodeString(epochIDBuf)
-	if err != nil {
-		return nil, err
-	}
+	// epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
+
 	keyBuf.Write(epochIDBufDec)
 
-	selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
-	if err != nil {
-		return nil, err
-	}
+	// selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	selfIndexBufDec := posdb.Uint64StringToByte(selfIndexBuf)
+
 	keyBuf.Write(selfIndexBufDec)
 
 	keyBuf.Write([]byte("slotLeaderStag2"))
