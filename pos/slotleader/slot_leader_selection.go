@@ -319,7 +319,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
-	log.Debug(fmt.Sprintf("put alpha epochID:%d, selfIndex:%d, alpha:%s", epochID, selfIndexInEpochLeader, alpha.String()))
+	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
 
 	functrace.Exit()
 	return buffer, err
@@ -349,7 +349,7 @@ func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDB
 	selfIndexBuf = output[1]
 	pk, err := btcec.ParsePubKey(output[2], btcec.S256())
 	pkUncompress = pk.SerializeUncompressed()
-	mi, err := btcec.ParsePubKey(output[2], btcec.S256())
+	mi, err := btcec.ParsePubKey(output[3], btcec.S256())
 	miUncompress = mi.SerializeUncompressed()
 	return
 }
