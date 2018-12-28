@@ -149,9 +149,9 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		log.Debug("Enter slotLeaderSelectionStage1")
-		//s.generateSlotLeadsGroup(epochID)
+		s.generateSlotLeadsGroup(epochID)
 
-		s.buildEpochLeaderGroup(epochID)
+		//s.buildEpochLeaderGroup(epochID)
 
 		s.setWorkingEpochID(epochID)
 		err := s.startStage1Work()
@@ -176,12 +176,12 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 
 		s.buildEpochLeaderGroup(epochID)
 
-		// err := s.startStage2Work()
-		// if err != nil {
-		// 	s.log(err.Error())
-		// } else {
-		// 	s.setWorkStage(epochID, slotLeaderSelectionStage3)
-		// }
+		err := s.startStage2Work()
+		if err != nil {
+			s.log(err.Error())
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
+		}
 
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
@@ -585,6 +585,9 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 		}
 
 		epochLeaders := s.epochInstance.(epoch).GetEpochLeaders(epochID)
+		//for i := 0; i<len(epochLeaders); i++  {
+		//	log.Debug(fmt.Sprintf("%s\n", hex.EncodeToString(epochLeaders[i])))
+		//}
 
 		if epochLeaders != nil {
 			log.Debug(fmt.Sprintf("getEpochLeaders called return len(epochLeaders):%d", len(epochLeaders)))
@@ -728,7 +731,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 	if epochID == uint64(0) {
 		//genesis SMA
 		smaGenesis := []string{"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
-			"0491bcdcc06d2ba82a90877228268e4f7f1235ebbfc696a19ffb85590f30df9d3fa50ec030759a89b8bdab3aa3a844283a18c6567cd5451aab5c1df866b81a0c1c",
+			"04461b6877fc12569520a994505fbd60d8c58ef3b7fd3984efc0a2494bbc8f68f4364da4013495f9b29128553b874d6442cbac51fc51cfed39851867737ab4a02e",
 			"0466eea24039a99afba154d4c64ee7a8cf120a54d979ed55f793ce6cc2fc3635a5b79c4de545cb1ed493521a1ce6da95770a71d207121b01d26df88f6ee86d0b22",
 			"04d8e72df643e3af9bd3e2f92eb5a8d5b24ac9833c1ccb5607f13f9b33649bf10c8e9a671e1c886e453333684f6ac01b008d1629f93a85a4f216a13b5f1862a8c1",
 			"04a9f7bf968fee493b51b045827488a35731f2d7af063b51d31a42ab43b51468e36678dbbcf77410345d0540cbe65e348af242251b0f2ab10580ea5bca91839305",
@@ -795,7 +798,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	//s.dumpData()
 	epochLeadersPtrArray := s.epochLeadersPtrArray
 	for i := 0; i < 10; i++ {
-		ret := crypto.S256().IsOnCurve(s.epochLeadersPtrArray[i].X, s.epochLeadersPtrArray[i].Y)
+		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
 			log.Error("not")
 		}
@@ -814,6 +817,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debug(fmt.Sprintf("===================================\n\n\n\n GenerateSlotLeaderSeq success \n\n\n\n=============================="))
+
 	// 6. insert slot address to local DB
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID+1), uint64(index), SlotLeader, crypto.FromECDSAPub(val))

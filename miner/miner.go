@@ -126,7 +126,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
-		fmt.Println(h)
+		//fmt.Println(h)
 		if nil == h {
 			//time.Sleep(slotleader.SlotTime * time.Second)
 			//continue

@@ -190,7 +190,6 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	}
 	keyBuf.Write(selfIndexBufDec)
 
-
 	keyBuf.Write([]byte("slotLeaderStag2"))
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
@@ -239,7 +238,7 @@ func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *typ
 
 func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage2Data(tx.Data())
+	data, err := s.UnpackStage2Data(tx.Data()[4:])
 	if err != nil {
 		return err
 	}
