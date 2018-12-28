@@ -269,6 +269,11 @@ func Uint64StringToByte(input string) []byte {
 	if !ok {
 		return []byte{0}
 	}
+
+	if len(num.Bytes()) == 0 {
+		return []byte{0}
+	}
+
 	return num.Bytes()
 }
 
