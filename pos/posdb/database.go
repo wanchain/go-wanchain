@@ -25,12 +25,11 @@ var (
 
 func NewDb(fileName string) *Db {
 	dbInst := &Db{db: nil}
-	nameIdx := strings.LastIndex(fileName, string(os.PathSeparator))
 
-	dbPath := pos.Cfg().Dbpath + string(os.PathSeparator) + fileName[nameIdx+1:]
+	dbInst.DbInit(fileName)
 
-	dbInst.DbInit(dbPath)
-	dbInstMap[dbPath] = dbInst
+	dbInstMap[fileName] = dbInst
+
 	return dbInst
 }
 
@@ -60,7 +59,14 @@ func (s *Db) DbInit(dbPath string) {
 			panic("failed to create wanpos_tmpdb file: " + err.Error())
 		}
 	} else {
-		dirname = path.Join(dbPath, "wanposdb")
+		nameIdx := strings.LastIndex(dbPath, string(os.PathSeparator))
+		if nameIdx < 0 {
+			dirname = path.Join(pos.Cfg().Dbpath, "gwan")
+			dirname = path.Join(dirname, dbPath)
+		} else {
+			dbPath = path.Join(dbPath, "gwan")
+			dirname = path.Join(dbPath, "wanposdb")
+		}
 	}
 
 	if s.db != nil {
