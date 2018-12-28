@@ -47,7 +47,7 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-	SlotCount = 100
+	SlotCount = 30
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 6
@@ -778,7 +778,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 	} else {
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
-		fmt.Printf("getSMAPieces: get from db, pieces is = %v\n", pieces)
+		fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
 		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
 		if err != nil {
 			return nil, err
@@ -826,7 +826,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if len(epochLeadersPtrArray) != EpochLeaderCount {
 		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochID-1))
 	}
-	for i := 0; i < EpochLeaderCount; i++ {
+	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
 			log.Error("not")
@@ -1019,6 +1019,13 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	smasPtr := make([]*ecdsa.PublicKey, 0)
 	var smasBytes bytes.Buffer
+	ArrayPieceClean := make([]*ecdsa.PublicKey, 0)
+	for i := 0; i < len(ArrayPiece); i++ {
+		if ArrayPiece[i] != nil {
+			ArrayPieceClean = append(ArrayPieceClean, ArrayPiece[i])
+		}
+	}
+	ArrayPiece = ArrayPieceClean
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
@@ -1026,10 +1033,13 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
 	}
-	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
+	_, err = posdb.GetDb().Put(uint64(epochID + 1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
 		return err
 	}
+
+	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID + 1, SecurityMsg, smasBytes.String()))
+
 	return nil
 }
 
