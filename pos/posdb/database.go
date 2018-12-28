@@ -11,6 +11,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos"
 )
 
 //Db is the wanpos leveldb class
@@ -22,8 +23,12 @@ var (
 	dbInstMap = make(map[string]*Db)
 )
 
-func NewDb(dbPath string) *Db {
+func NewDb(fileName string) *Db {
 	dbInst := &Db{db: nil}
+	nameIdx := strings.LastIndex(fileName, string(os.PathSeparator))
+
+	dbPath := pos.Cfg().Dbpath + string(os.PathSeparator) + fileName[nameIdx+1:]
+
 	dbInst.DbInit(dbPath)
 	dbInstMap[dbPath] = dbInst
 	return dbInst

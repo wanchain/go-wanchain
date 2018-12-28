@@ -13,6 +13,7 @@ type Config struct {
 	PosStartTime int64
 	SelfPuK *bn256.G1
 	SelfPrK *big.Int
+	Dbpath string
 }
 
 var DefaultConfig = Config {
@@ -23,6 +24,7 @@ var DefaultConfig = Config {
 	0,
 	new(bn256.G1).ScalarBaseMult(big.NewInt(1)),
 	big.NewInt(1),
+	"",
 }
 
 func Cfg() *Config {
