@@ -159,3 +159,10 @@ func TestGetStorageByteArray(t *testing.T) {
 		}
 	}
 }
+
+func TestUintToBytes(t *testing.T) {
+	buf := Uint64ToBytes(0)
+
+	fmt.Println(len(buf))
+	fmt.Println(buf)
+}
