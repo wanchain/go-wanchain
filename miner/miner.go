@@ -131,7 +131,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			//time.Sleep(slotleader.SlotTime * time.Second)
 			//continue
 		} else {
-			slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime/2
+			slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime
 		}
 
 		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
