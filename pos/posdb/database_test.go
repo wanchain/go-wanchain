@@ -165,4 +165,7 @@ func TestUintToBytes(t *testing.T) {
 
 	fmt.Println(len(buf))
 	fmt.Println(buf)
+
+	str := hex.EncodeToString(buf)
+	fmt.Println(str)
 }

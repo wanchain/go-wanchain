@@ -307,7 +307,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 	pkCompress := pk.SerializeCompressed()
 	miCompress := mi.SerializeCompressed()
-	epochIDBuf := big.NewInt(0).SetUint64(epochID).Bytes()
+	epochIDBuf := posdb.Uint64ToBytes(epochID)
 	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
 
 	log.Debug("epochIDBuf(hex): " + hex.EncodeToString(epochIDBuf))
@@ -1144,8 +1144,8 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 		return nil, nil, errors.New("getStg1StateDbInfo: RlpUnpackAndWithUncompressPK error")
 	}
 
-	if hex.EncodeToString(epID) == hex.EncodeToString(big.NewInt(0).SetUint64(epochID).Bytes()) &&
-		hex.EncodeToString(idxID) == hex.EncodeToString(big.NewInt(0).SetUint64(index).Bytes()) &&
+	if hex.EncodeToString(epID) == hex.EncodeToString(posdb.Uint64ToBytes(epochID)) &&
+		hex.EncodeToString(idxID) == hex.EncodeToString(posdb.Uint64ToBytes(index)) &&
 		err == nil {
 		return
 	}
