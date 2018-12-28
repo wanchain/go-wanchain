@@ -319,7 +319,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
-	log.Debug(fmt.Sprintf("put alpha epochID:%d, selfIndex:%d, alpha:%s", epochID, selfIndexInEpochLeader, alpha.String()))
+	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
 
 	functrace.Exit()
 	return buffer, err
