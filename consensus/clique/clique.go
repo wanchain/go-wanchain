@@ -550,7 +550,8 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 		c.lock.RUnlock()
 	}
 	// Set the correct difficulty
-	header.Difficulty = CalcDifficulty(snap, c.signer)
+	// header.Difficulty = CalcDifficulty(snap, c.signer)
+	header.Difficulty = big.NewInt(1)
 
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
@@ -573,9 +574,18 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
-	if header.Time.Int64() < time.Now().Unix() {
-		header.Time = big.NewInt(time.Now().Unix())
+	//header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
+	//if header.Time.Int64() < time.Now().Unix() {
+	//	header.Time = big.NewInt(time.Now().Unix())
+	//}
+	if(slotleader.EpochBaseTime == 0) {
+		cur := time.Now().Unix()
+		hcur := cur - (cur%slotleader.SlotTime) + slotleader.SlotTime
+		header.Time = big.NewInt(hcur)
+	} else {
+		curEpochId,curSlotId, err:=  slotleader.GetEpochSlotID()
+		fmt.Println(err)
+		header.Time = big.NewInt(int64(slotleader.EpochBaseTime + (curEpochId*slotleader.SlotCount + curSlotId +1)*slotleader.SlotTime))
 	}
 	return nil
 }
@@ -632,6 +642,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	// 	return nil, errUnauthorized
 	// }
 	// check if our trun
+	epochSlotId := uint64(1)
 loopCheck:
 	for {
 		epochId, slotId, err := slotleader.GetEpochSlotID()
@@ -639,6 +650,7 @@ loopCheck:
 			fmt.Println(err)
 			return nil, nil
 		}
+		fmt.Println("Clique Seal: epochId:", epochId, "slotId:", slotId)
 
 		var leader string
 		if epochId != 0 {
@@ -660,8 +672,15 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime * time.Second ): // TODO when generate new block
+			case <-time.After(slotleader.SlotTime/2 * time.Second ): // TODO when generate new block
 				fmt.Println(" #################################################################our trun")
+				epochId, slotId, err := slotleader.GetEpochSlotID()
+				if err != nil {
+					fmt.Println(err)
+					return nil, nil
+				}
+				epochSlotId += slotId<< 8;
+				epochSlotId += epochId << 32
 				break loopCheck
 			}
 		} else {
@@ -713,6 +732,7 @@ loopCheck:
 		fmt.Println(err)
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
+	header.Difficulty.SetUint64(epochSlotId)
 
 	return block.WithSeal(header), nil
 }

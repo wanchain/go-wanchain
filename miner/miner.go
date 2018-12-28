@@ -119,16 +119,17 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	//slotTimer := time.NewTicker(6 * time.Second)
 
 	for {
-
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
 		//fmt.Println(h)
 		if nil == h {
-			//time.Sleep(slotleader.SlotTime * time.Second)
-			//continue
+			time.Sleep(slotleader.SlotTime * time.Second)
+			continue
 		} else {
-			slotleader.EpochBaseTime = h.Time.Uint64() - slotleader.SlotTime
+			slotleader.EpochBaseTime = h.Time.Uint64()
 		}
+
+		slotleader.CalEpochSlotID()
 
 		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
 		stateDbEpoch, err1 := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
@@ -175,10 +176,13 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
 		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
+		cur := uint64(time.Now().Unix())
+		sleepTime := slotleader.SlotTime -(cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
+		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:
 			return
-		case <-time.After(slotleader.SlotTime * time.Second):
+		case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 			continue
 		}
 	}
@@ -240,7 +244,9 @@ func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
-	self.timerStop <- nil
+	if self.worker.config.Pluto != nil {
+		self.timerStop <- nil
+	}
 }
 
 func (self *Miner) Register(agent Agent) {

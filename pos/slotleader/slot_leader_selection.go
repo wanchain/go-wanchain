@@ -531,29 +531,47 @@ func (s *SlotLeaderSelection) getLocalPrivateKey() (*ecdsa.PrivateKey, error) {
 
 // GetEpochSlotID get current epochID and slotID in this epoch by local time
 // returns epochID, slotID, error
+//func GetEpochSlotID() (uint64, uint64, error) {
+//	if EpochBaseTime == 0 {
+//		return 0, 0, nil
+//	}
+//
+//	epochTimespan := uint64(SlotTime * SlotCount)
+//	timeUnix := uint64(time.Now().Unix())
+//
+//	if EpochGenesisTime > timeUnix {
+//		return 0, 0, errors.New("Epoch genesis time is not arrive")
+//	}
+//
+//	epochID := uint64((timeUnix - EpochBaseTime) / epochTimespan)
+//
+//	epochIndex := uint64((timeUnix - EpochBaseTime) / epochTimespan)
+//
+//	epochStartTime := epochIndex*epochTimespan + EpochBaseTime
+//
+//	timeInEpoch := timeUnix - epochStartTime
+//
+//	slotID := uint64(timeInEpoch / SlotTime)
+//
+//	return epochID, slotID, nil
+//}
+var (
+	curEpochId = uint64(0)
+	curSlotId = uint64(0)
+
+)
 func GetEpochSlotID() (uint64, uint64, error) {
+	return curEpochId, curSlotId, nil
+}
+func CalEpochSlotID() {
 	if EpochBaseTime == 0 {
-		return 0, 0, nil
+		return
 	}
-
-	epochTimespan := uint64(SlotTime * SlotCount)
 	timeUnix := uint64(time.Now().Unix())
-
-	if EpochGenesisTime > timeUnix {
-		return 0, 0, errors.New("Epoch genesis time is not arrive")
-	}
-
-	epochID := uint64((timeUnix - EpochBaseTime) / epochTimespan)
-
-	epochIndex := uint64((timeUnix - EpochBaseTime) / epochTimespan)
-
-	epochStartTime := epochIndex*epochTimespan + EpochBaseTime
-
-	timeInEpoch := timeUnix - epochStartTime
-
-	slotID := uint64(timeInEpoch / SlotTime)
-
-	return epochID, slotID, nil
+	epochTimespan := uint64(SlotTime * SlotCount)
+	curEpochId = uint64((timeUnix - EpochBaseTime) / epochTimespan)
+	curSlotId = uint64((timeUnix - EpochBaseTime)/SlotTime % SlotCount)
+	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
 //getEpochLeaders get epochLeaders of epochID in StateDB
