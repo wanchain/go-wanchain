@@ -309,6 +309,10 @@ func (rb *RandomBeacon) DoSIGs(epochId uint64, proposerIds []uint32) error {
 func (rb *RandomBeacon) DoSIG(epochId uint64, proposerId uint32) error {
 	log.Info("do sig begin", "epochId", epochId, "proposerId", proposerId)
 	pks := rb.GetRBProposerGroup(epochId)
+	if len(pks) == 0 {
+		log.Error("can't find random beacon proposer group")
+		return errors.New("can't find random beacon proposer group")
+	}
 
 	//thres := Cfg().PolymDegree+1
 	//pubkey := Cfg().SelfPuK
@@ -375,10 +379,8 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	pks := rb.GetRBProposerGroup(epochId)
-	nr := len(pks)
-	log.Info("get RB proposer group", "pks len", nr)
-	if nr == 0 {
-		log.Error("get RB proposer group fail", "err", err)
+	if len(pks) == 0 {
+		log.Error("can't find random beacon proposer group")
 		return errors.New("can't find random beacon proposer group")
 	}
 
@@ -399,7 +401,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-		log.Error("compute random fail, insufficient proposer", "epochId", epochId)
+		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
 		// return errors.New("insufficient proposer")
 
 		randomInt, err := vm.GetRandom(epochId)
@@ -420,20 +422,21 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	gsigshare := make([]bn256.G1, len(sigDatas))
-	x := make([]big.Int, len(sigDatas))
+	xSig := make([]big.Int, len(sigDatas))
 	for i, data := range sigDatas {
 		gsigshare[i] = *data.data.Gsigshare
-		x[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
+		xSig[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon
-	gsig := wanpos.LagrangeSig(gsigshare, x, int(pos.Cfg().PolymDegree))
+	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
 	random := crypto.Keccak256(gsig.Marshal())
 	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
 
 	// Verification Logic for the Output of Random Beacon
 	// Computation of group public key
-	c := make([]bn256.G2, len(dkgDatas))
+	nr := len(pks)
+	c := make([]bn256.G2, nr)
 	for i := 0; i < nr; i++ {
 		c[i].ScalarBaseMult(big.NewInt(int64(0)))
 		for j := 0; j < len(dkgDatas); j++ {
@@ -441,7 +444,12 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		}
 	}
 
-	gPub := wanpos.LagrangePub(c, x, int(pos.Cfg().PolymDegree))
+	xAll := make([]big.Int, nr)
+	for i := 0; i < nr; i++ {
+		xAll[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		xAll[i].Mod(&xAll[i], bn256.Order)
+	}
+	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
 
 	// mG
 	mBuf, err := vm.GetRBM(epochId)
@@ -456,6 +464,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	// Verify using pairing
 	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
 	pair2 := bn256.Pair(mG, &gPub)
+	log.Info("verify random", "pair1", pair1.String(), "pair2", pair2.String())
 	if pair1.String() != pair2.String() {
 		return errors.New("Final Pairing Check Failed")
 	}
@@ -482,6 +491,7 @@ func (rb *RandomBeacon) SendDKG(payloadObj *vm.RbDKGTxPayload) error {
 }
 
 func (rb *RandomBeacon) SendSIG(payloadObj *vm.RbSIGTxPayload) error {
+	log.Info("begin send sig")
 	payload, err := GetRBSIGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -496,7 +506,7 @@ func (rb *RandomBeacon) DoSendRBTx(payload []byte) error {
 	arg["from"] = rb.GetTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(2000000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
@@ -523,6 +533,16 @@ func (rb *RandomBeacon)GetRBProposerGroup(epochId uint64) []bn256.G1 {
 
 	pks := rb.epocher.GetRBProposerGroup(epochId)
 	log.Info("get rb proposer group", "proposer", pks)
+
+	// >>>>>>>>>>>>>>>>>>>>>>>>>test
+	if len(pks) > 8 {
+		pks = pks[:8]
+	}
+
+	pks = append(pks, *pos.Cfg().SelfPuK)
+	pks = append(pks, *pos.Cfg().SelfPuK)
+	// <<<<<<<<<<<<<<<<<<<<<<<<<test
+
 	return pks
 }
 
