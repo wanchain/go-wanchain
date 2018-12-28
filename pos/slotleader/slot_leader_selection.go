@@ -1231,7 +1231,7 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	arg["from"] = s.key.Address
 	arg["to"] = &to
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(4710000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
 
 	arg["txType"] = 1
 	//Set payload infomation--------------
