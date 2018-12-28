@@ -240,10 +240,6 @@ func (rb *RandomBeacon) DoDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func (rb *RandomBeacon) getPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
-	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
-}
-
 func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
 
@@ -261,7 +257,7 @@ func (rb *RandomBeacon) DoDKG(epochId uint64, proposerId uint32) error {
 	// Fix the evaluation point: Hash(Pub[1]+1), Hash(Pub[2]+2), ..., Hash(Pub[Nr]+Nr)
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(rb.getPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -428,7 +424,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	x := make([]big.Int, len(sigDatas))
 	for i, data := range sigDatas {
 		gsigshare[i] = *data.data.Gsigshare
-		x[i].SetBytes(rb.getPolynomialX(data.pk, data.data.ProposerId))
+		x[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon

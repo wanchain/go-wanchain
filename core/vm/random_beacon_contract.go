@@ -221,6 +221,10 @@ func buildError(err string, epochId uint64, proposerId uint32) (error) {
 	//return errors.New(err + ". epochId " + strconv.FormatUint(epochId, 10) + ", proposerId " + strconv.FormatUint(uint64(proposerId), 10))
 }
 
+func GetPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
+	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
+}
+
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	// TODO: next line is just for test, and will be removed later
 	functrace.Enter("dkg")
@@ -259,15 +263,14 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(crypto.Keccak256(pks[i].Marshal()))
+		x[i].SetBytes(GetPolynomialX(&pks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
-	// get send public Key
-	pubkey := GetProposerPubkey(&pks, dkgParam.ProposerId)
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
-		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], *pubkey, *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
+		// get send public Key
+		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], pks[j], *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
 			return nil, buildError("dkg verify dleq error", dkgParam.EpochId, dkgParam.ProposerId)
 		}
 	}

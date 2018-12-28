@@ -18,7 +18,7 @@ type Config struct {
 var DefaultConfig = Config {
 	1,
 	1,
-	1,
+	2,
 	0,
 	0,
 	new(bn256.G1).ScalarBaseMult(big.NewInt(1)),
