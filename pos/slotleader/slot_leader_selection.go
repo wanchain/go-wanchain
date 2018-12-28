@@ -47,10 +47,10 @@ const (
 	EpochLeaderCount = 10
 
 	// SlotCount is slot count in an epoch
-	SlotCount = 100
+	SlotCount = 30
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 20
+	SlotTime = 6
 
 	StageTwoProofCount = 2
 
@@ -736,8 +736,8 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 
 // from random proposer
 func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error) {
-	ret = big.NewInt(0).SetUint64(uint64(13456789092))
-	return ret, nil
+	//ret = big.NewInt(0).SetUint64(uint64(13456789092))
+	//return ret, nil
 
 	//randomByte,err := posdb.GetDb().Get(epochID, vm.RANDOMBEACON_DB_KEY)
 	//if err != nil {
@@ -745,6 +745,12 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 	//}
 	//ret = big.NewInt(0).SetBytes(randomByte)
 	//return ret, nil
+	r, err := posdb.GetRandom(epochID)
+	if err != nil{
+		r = big.NewInt(0).SetUint64(uint64(1983645))
+		return r,err
+	}
+	return r,nil
 }
 
 // from random proposer
@@ -812,7 +818,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return errors.New("get random message error!")
 	}
-
+	fmt.Printf("\nRandom got is %v\n",hex.EncodeToString(random.Bytes()))
 	// 5. return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	fmt.Printf("len(piecesPtr)=%v\n", len(piecesPtr))
