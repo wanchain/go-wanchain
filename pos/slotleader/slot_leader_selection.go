@@ -50,7 +50,7 @@ const (
 	SlotCount = 100
 
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 6
+	SlotTime = 20
 
 	StageTwoProofCount = 2
 
@@ -349,7 +349,7 @@ func (s *SlotLeaderSelection) RlpUnpackAndWithUncompressPK(buf []byte) (epochIDB
 	selfIndexBuf = output[1]
 	pk, err := btcec.ParsePubKey(output[2], btcec.S256())
 	pkUncompress = pk.SerializeUncompressed()
-	mi, err := btcec.ParsePubKey(output[2], btcec.S256())
+	mi, err := btcec.ParsePubKey(output[3], btcec.S256())
 	miUncompress = mi.SerializeUncompressed()
 	return
 }
@@ -791,7 +791,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			} else {
 				pubKeyByte = pieces[i*LengthPublicKeyBytes:]
 			}
-			fmt.Printf("getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", hex.EncodeToString(pubKeyByte))
+			fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID,hex.EncodeToString(pubKeyByte))
 			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 		}
 		return piecesPtr, nil
@@ -904,7 +904,9 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	selfPkRecievedPicesMap := make(map[uint64][]*ecdsa.PublicKey, 0)
 	for _, selfIndex := range indexs {
 		for i := 0; i < len(s.epochLeadersArray); i++ {
-			selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
+			if s.stageTwoAlphaPKi[i][selfIndex] != nil {
+				selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
+			}
 		}
 	}
 	piece := make([]*ecdsa.PublicKey, 0)
@@ -1025,6 +1027,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
+		fmt.Printf("\n&&&&&&&&&&&&&epochID+1 = %d set security message is %v\n", epochID+1,hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
