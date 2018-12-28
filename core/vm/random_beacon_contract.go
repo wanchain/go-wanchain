@@ -327,26 +327,24 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	}
 	m := new(big.Int).SetBytes(M)
 
-	cj0, err := c.getCji(evm, sigshareParam.EpochId, 0)
-	if err != nil {
-		return nil, buildError(" can't get cj0 ", sigshareParam.EpochId, sigshareParam.ProposerId)
-	}
-	nr := len(cj0)
 	var gpkshare bn256.G2
-	gpkshare.Add(&gpkshare, cj0[sigshareParam.ProposerId])
-	for i := 1; i < nr; i++ {
-		cji, err := c.getCji(evm, sigshareParam.EpochId, uint32(i))
-		if err != nil {
-			return nil, buildError(" can't get cji ", sigshareParam.EpochId, sigshareParam.ProposerId)
+
+	j := uint(0)
+	for i :=0; i < len(pks); i++ {
+		ci, _ := c.getCji(evm, sigshareParam.EpochId, uint32(i))
+		if ci == nil {
+			continue
 		}
-		gpkshare.Add(&gpkshare, cji[sigshareParam.ProposerId])
+		j++
+		gpkshare.Add(&gpkshare, ci[sigshareParam.ProposerId])
+	}
+	if j < pos.Cfg().MinRBProposerCnt {
+		return nil, buildError(" insufficient proposer ", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
 	pair1 := bn256.Pair(sigshareParam.Gsigshare, hbase)
 	pair2 := bn256.Pair(mG, &gpkshare)
-	log.Info("sigshare", "pair1", pair1.String())
-	log.Info("sigshare", "pair2", pair2.String())
 	if pair1.String() != pair2.String() {
 		return nil, buildError(" unequal sigi", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}
