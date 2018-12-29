@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	rbscDefinition = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[{"name":"Info","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[{"name":"Info","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
+	rbscDefinition = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"epochId","type":"uint256"},{"name":"r","type":"uint256"}],"name":"genR","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
 	rbscAbi, errRbscInit = abi.JSON(strings.NewReader(rbscDefinition))
 
 	dkgId [4]byte
@@ -31,8 +31,6 @@ var (
 	//gbase = new(bn256.G1).ScalarBaseMult(big.NewInt(int64(1)))
 	// Generator of G2
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
-
-
 )
 
 type RandomBeaconContract struct {
@@ -66,6 +64,8 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 		return c.dkg(input[4:], contract, evm)
 	} else if methodId == sigshareId {
 		return c.sigshare(input[4:], contract, evm)
+	} else if methodId == genRId {
+		return c.genR(input[4:], contract, evm)
 	}
 
 	return nil, nil
@@ -82,6 +82,24 @@ func GetRBKeyHash(funId []byte, epochId uint64, proposerId uint32) (*common.Hash
 	copy(keyBytes[12:], UInt32ToByteSlice(proposerId))
 	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
 	return &hash
+}
+
+func GetRBRKeyHash(epochId uint64) (*common.Hash) {
+	keyBytes := make([]byte, 12)
+	copy(keyBytes, genRId[:])
+	copy(keyBytes[4:], UIntToByteSlice(epogchId))
+	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
+	return &hash
+}
+
+func GetR(db StateDB, epochId uint64) (*big.Int) {
+	hash := GetRBRKeyHash(epochId)
+	rBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if rBytes != nil {
+		r := big.NewInt(0).SetBytes(rBytes)
+		return r
+	}
+	return nil
 }
 
 func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, error) {
@@ -200,11 +218,33 @@ func GetPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
 	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
 }
 
+func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
+	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
+	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if dkgBytes == nil {
+		log.Error("getCji, dkgBytes is nil")
+	}
+
+	//else {
+	//	log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
+	//}
+
+	var dkgParam RbDKGTxPayload
+	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
+	if err != nil {
+		log.Error("rlp decode dkg fail", "err", err)
+		return nil, buildError("error in sigshare, decode dkg rlp error", epochId, proposerId)
+	}
+
+	log.Info("getCji success")
+	return dkgParam.Commit, nil
+}
+
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	// TODO: next line is just for test, and will be removed later
 	functrace.Enter("dkg")
 	var payloadHex string
-	err := rbscAbi.Unpack(&payloadHex, "dkg", payload)
+	err := rbscAbi.UnpackInput(&payloadHex, "dkg", payload)
 	if err != nil {
 		return nil, errors.New("error in dkg abi parse ")
 	}
@@ -272,7 +312,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var payloadHex string
-	err := rbscAbi.Unpack(&payloadHex, "sigshare", payload)
+	err := rbscAbi.UnpackInput(&payloadHex, "sigshare", payload)
 	if err != nil {
 		return nil, errors.New("error in sigshare abi parse")
 	}
@@ -336,24 +376,21 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	return nil, nil
 }
 
-func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
-	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
-	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-	if dkgBytes == nil {
-		log.Error("getCji, dkgBytes is nil")
-	}
-
-	//else {
-	//	log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
-	//}
-
-	var dkgParam RbDKGTxPayload
-	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
+func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	var (
+		epochId = big.NewInt(0)
+		r = big.NewInt(0)
+	)
+	out := []interface{}{&epochId, &r}
+	err := rbscAbi.UnpackInput(&out, "genR", payload)
 	if err != nil {
-		log.Error("rlp decode dkg fail", "err", err)
-		return nil, buildError("error in sigshare, decode dkg rlp error", epochId, proposerId)
+		return nil, errors.New("error in genR abi parse")
 	}
 
-	log.Info("getCji success")
-	return dkgParam.Commit, nil
+	// save
+	hash := GetRBRKeyHash(epochId.Uint64())
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, r.Bytes())
+	log.Info("contract do genR end", "epochId=", epochId.Uint64())
+
+	return nil, nil
 }

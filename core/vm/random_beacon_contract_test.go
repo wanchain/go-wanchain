@@ -322,10 +322,42 @@ func TestUtil(t *testing.T) {
 	rbAbi.Unpack(&str, "dkg", strPayload[4:])
 	var str1 string
 	rbAbi.UnpackInput(&str1, "dkg", strPayload[4:])
-	if strtest != str {
+	if str != strtest {
 		println("string pack unpack error")
 	}
-	if str1 != str {
+	if str1 != strtest {
 		println("string pack unpack Input error")
+	}
+}
+
+func TestGetR(t *testing.T) {
+	rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
+	strPayload, err := rbAbi.Pack("genR", big.NewInt(1), big.NewInt(2))
+	if err != nil {
+		t.Error(err.Error())
+	}
+	var (
+		epochId = big.NewInt(0)
+		r = big.NewInt(0)
+	)
+	out := []interface{}{&epochId, &r}
+	err = rbscAbi.UnpackInput(&out, "genR", strPayload[4:])
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if epochId.Cmp(big.NewInt(1)) != 0 {
+		t.Error("ttt", epochId.String())
+	}
+	if r.Cmp(big.NewInt(2)) != 0 {
+		t.Error("ttt2", r.String())
+	}
+
+	_, err = rbcontract.Run(strPayload, nil, evm)
+	if err != nil {
+		t.Error(err)
+	}
+	r1 := GetR(evm.StateDB, epochId.Uint64())
+	if r.Cmp(r1) != 0 {
+		t.Error("GetR wrong")
 	}
 }
