@@ -184,6 +184,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			//	rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochid)))
 			//}
 
+			if rb == nil {
+				rb = big.NewInt(1)
+			}
+
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
 
 			epl := epocher.GetEpochLeaders(epochid)
