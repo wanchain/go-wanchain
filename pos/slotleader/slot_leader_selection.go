@@ -557,9 +557,9 @@ func (s *SlotLeaderSelection) getLocalPrivateKey() (*ecdsa.PrivateKey, error) {
 //}
 var (
 	curEpochId = uint64(0)
-	curSlotId = uint64(0)
-
+	curSlotId  = uint64(0)
 )
+
 func GetEpochSlotID() (uint64, uint64, error) {
 	return curEpochId, curSlotId, nil
 }
@@ -570,7 +570,7 @@ func CalEpochSlotID() {
 	timeUnix := uint64(time.Now().Unix())
 	epochTimespan := uint64(SlotTime * SlotCount)
 	curEpochId = uint64((timeUnix - EpochBaseTime) / epochTimespan)
-	curSlotId = uint64((timeUnix - EpochBaseTime)/SlotTime % SlotCount)
+	curSlotId = uint64((timeUnix - EpochBaseTime) / SlotTime % SlotCount)
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
@@ -764,11 +764,11 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 	//ret = big.NewInt(0).SetBytes(randomByte)
 	//return ret, nil
 	r, err := posdb.GetRandom(epochID)
-	if err != nil{
+	if err != nil {
 		r = big.NewInt(0).SetUint64(uint64(1983645))
-		return r,err
+		return r, err
 	}
-	return r,nil
+	return r, nil
 }
 
 // from random proposer
@@ -815,7 +815,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			} else {
 				pubKeyByte = pieces[i*LengthPublicKeyBytes:]
 			}
-			fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID,hex.EncodeToString(pubKeyByte))
+			fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID, hex.EncodeToString(pubKeyByte))
 			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 		}
 		return piecesPtr, nil
@@ -836,7 +836,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return errors.New("get random message error!")
 	}
-	fmt.Printf("\nRandom got is %v\n",hex.EncodeToString(random.Bytes()))
+	fmt.Printf("\nRandom got is %v\n", hex.EncodeToString(random.Bytes()))
 	// 5. return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	fmt.Printf("len(piecesPtr)=%v\n", len(piecesPtr))
@@ -906,7 +906,12 @@ func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err
 	if !uleaderselection.PublicKeyEqual(s.stageOneMi[index], s.stageTwoAlphaPKi[index][index]) {
 		return false, nil
 	} else {
+		log.Debug(fmt.Sprintf("VerifyDleqProof: len(pk):%d, len(alphaPK):%d, len(stageTwoProof):%d", len(s.epochLeadersPtrArray[:]), len(s.stageTwoAlphaPKi[index][:]), len(s.stageTwoProof[index][:])))
+		log.Debug(fmt.Sprintln("VerifyDleqProof: pk:", s.epochLeadersPtrArray[:], " , alphaPK:", s.stageTwoAlphaPKi[index][:], ", stageTwoProof:", s.stageTwoProof[index][:]))
 		// verify proof[index]
+		if s.epochLeadersPtrArray[0] == nil {
+			return false, errors.New("Epoch leaders are not ready")
+		}
 		return uleaderselection.VerifyDleqProof(s.epochLeadersPtrArray[:], s.stageTwoAlphaPKi[index][:], s.stageTwoProof[index][:]), nil
 	}
 }
@@ -1058,14 +1063,14 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
-		fmt.Printf("\n&&&&&&&&&&&&&epochID+1 = %d set security message is %v\n", epochID+1,hex.EncodeToString(crypto.FromECDSAPub(value)))
+		fmt.Printf("\n&&&&&&&&&&&&&epochID+1 = %d set security message is %v\n", epochID+1, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
-	_, err = posdb.GetDb().Put(uint64(epochID + 1), SecurityMsg, smasBytes.Bytes())
+	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
 		return err
 	}
 
-	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID + 1, SecurityMsg, smasBytes.String()))
+	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID+1, SecurityMsg, smasBytes.String()))
 
 	return nil
 }
