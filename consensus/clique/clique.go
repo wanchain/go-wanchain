@@ -20,7 +20,6 @@ package clique
 import (
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -28,7 +27,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -338,9 +337,9 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	epochidSlotid := header.Difficulty.Uint64();
 	epochId := epochidSlotid >> 32
 	fmt.Println("verifyheader epochid: ", epochId)
-	if epochId != 0 {
-		randombeacon.GetRandonBeaconInst().DoComputeRandom(epochId-1)
-	}
+	//if epochId != 0 {
+	//	randombeacon.GetRandonBeaconInst().DoComputeRandom(epochId-1)
+	//}
 
 	return c.verifyCascadingFields(chain, header, parents)
 }
