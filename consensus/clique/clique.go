@@ -673,7 +673,7 @@ loopCheck:
 			case <-stop:
 				return nil, nil
 			case <-time.After(slotleader.SlotTime / 2 * time.Second): // TODO when generate new block
-				fmt.Println(" #################################################################our trun, number:", number, "epochID:", epochId, "slotId:", slotId)
+				fmt.Println(" #################################################################our turn, number:", number, "epochID:", epochId, "slotId:", slotId)
 				epochId, slotId, err := slotleader.GetEpochSlotID()
 				if err != nil {
 					fmt.Println(err)
@@ -688,7 +688,7 @@ loopCheck:
 			case <-stop:
 				return nil, nil
 			case <-time.After(slotleader.SlotTime * time.Second):
-				fmt.Println("not our trun")
+				fmt.Println("not our turn")
 				continue
 			}
 		}
