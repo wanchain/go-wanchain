@@ -362,7 +362,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) error {
 	log.Info("RB compute randoms", "beEpochId", bgEpochId, "endEpochId", endEpochId)
 	for i := bgEpochId; i < endEpochId; i++ {
-		err := rb.doComputeRandom(i)
+		err := rb.DoComputeRandom(i)
 		if err != nil {
 			log.Error("do compute random fail", "err", err)
 			return err
@@ -373,7 +373,7 @@ func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) erro
 	return nil
 }
 
-func (rb *RandomBeacon) doComputeRandom(epochId uint64) error {
+func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	log.Info("RB do compute random", "epochId", epochId)
 	randomInt, err := posdb.GetRandom(epochId+1)
 	if err == nil && randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
