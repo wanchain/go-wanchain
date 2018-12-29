@@ -3,12 +3,13 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"strings"
+
+	bn256 "github.com/wanchain/pos/cloudflare"
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
@@ -23,7 +24,7 @@ type Db struct {
 var (
 	dbInstMap           = make(map[string]*Db)
 	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
-	selecter SelectLead
+	selecter            SelectLead
 )
 
 func NewDb(fileName string) *Db {
@@ -319,8 +320,12 @@ func StringToUint64(input string) uint64 {
 type SelectLead interface {
 	SelectLeadersLoop(epochId uint64) error
 }
+
 func SetEpocherInst(sor SelectLead) {
 	selecter = sor
+}
+func GetEpocherInst() SelectLead {
+	return selecter
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {

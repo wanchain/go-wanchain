@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -175,14 +174,15 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 			var rb *big.Int
 
-			if epochid > 0 {
-				rb = vm.GetR(stateDb, epochid-1)
-			}
-
-			if epochid == 0 || err != nil {
-				//rb = s.BlockChain().CurrentBlock().Difficulty()
-				rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochid)))
-			}
+			rb = vm.GetR(stateDb, epochid)
+			//if epochid > 0 {
+			//	rb = vm.GetR(stateDb, epochid-1)
+			//}
+			//
+			//if epochid == 0 || err != nil {
+			//	//rb = s.BlockChain().CurrentBlock().Difficulty()
+			//	rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochid)))
+			//}
 
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
 
