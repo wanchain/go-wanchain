@@ -83,12 +83,33 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
-	posInit(eth)
+	miner.posInit(eth)
 	go miner.update()
 	return miner
 }
 
-func posInit(s Backend) {
+func (self *Miner)posInit(s Backend) {
+time.Sleep(10*time.Second)
+	log.Info("BackendTimerLoop is running!!!!!!")
+	// get wallet
+	eb, errb := s.Etherbase()
+	if errb != nil {
+		panic(errb)
+	}
+	wallet, errf := s.AccountManager().Find(accounts.Account{Address: eb})
+	if wallet == nil || errf != nil {
+		panic(errf)
+	}
+	type getKey interface {
+		GetUnlockedKey(address common.Address) (*keystore.Key, error)
+	}
+	key, err := wallet.(getKey).GetUnlockedKey(eb)
+	if key == nil || err != nil {
+		panic(err)
+	}
+	log.Debug("Get unlocked key success address:" + eb.Hex())
+
+
 	fmt.Println("posInit begin")
 	rb, err := posdb.GetRandom(0)
 	if err != nil {
@@ -98,7 +119,7 @@ func posInit(s Backend) {
 	Ne := 10 //num of epoch leaders, limited <= 256 now
 	stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
 	epocher := epochLeader.NewEpocher(s.BlockChain())
-	randombeacon.GetRandonBeaconInst().Init(epocher)
+	randombeacon.GetRandonBeaconInst().Init(epocher, key)
 	eerr := epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, 0)
 	fmt.Println("posInit: ", eerr)
 }
@@ -207,7 +228,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
+		randombeacon.GetRandonBeaconInst().Loop(stateDb,  epocher, rc)
 		cur := uint64(time.Now().Unix())
 		sleepTime := slotleader.SlotTime - (cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
