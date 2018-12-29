@@ -46,6 +46,9 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 10
 
+	// RandomProperCount is count of pk in random leader group which is select by stake
+	RandomProperCount = 10
+
 	// SlotCount is slot count in an epoch
 	SlotCount = 30
 
@@ -890,10 +893,40 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 func (s *SlotLeaderSelection) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte) bool {
 	return (pkIndex < uint64(len(s.epochLeadersArray))) && (hex.EncodeToString(pkBytes) == s.epochLeadersArray[pkIndex])
 }
-func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(pkBytes []byte) bool {
-	_, ok := s.epochLeadersMap[hex.EncodeToString(pkBytes)]
+
+// InEpochLeadersOrNotByPk can verify the tx sender
+func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte, GetR func(epochID uint64) *big.Int) bool {
+	ok := false
+	epochLeaders := s.getEpochLeaders(epochID)
+	if len(epochLeaders) != EpochLeaderCount {
+		var rb *big.Int
+		var err error
+
+		if epochID > 0 {
+			rb = GetR(epochID - 1)
+		}
+
+		if epochID == 0 || err != nil {
+			rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochID)))
+		}
+
+		type epoch interface {
+			SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochID uint64) error
+		}
+		s.epochInstance.(epoch).SelectLeaders(rb.Bytes(), RandomProperCount, EpochLeaderCount, s.stateDb, epochID)
+
+		epochLeaders = s.getEpochLeaders(epochID)
+	}
+
+	for i := 0; i < len(epochLeaders); i++ {
+		if hex.EncodeToString(pkBytes) == hex.EncodeToString(epochLeaders[i]) {
+			ok = true
+			break
+		}
+	}
 	return ok
 }
+
 func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
 	if s.stateDb == nil {
 		return nil, errors.New("Do not have stateDb instance now")

@@ -74,6 +74,7 @@ func init() {
 }
 
 type slotLeaderSC struct {
+	stateDb *StateDB
 }
 
 func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
@@ -220,36 +221,36 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	copy(methodId[:], tx.Data()[:4])
 
 	if methodId == stgOneIdArr {
-		return c.ValidTxStg1(stateDB, signer, tx)
+		return c.ValidTxStg1(&stateDB, signer, tx)
 	} else if methodId == stgTwoIdArr {
-		return c.ValidTxStg2(stateDB, signer, tx)
+		return c.ValidTxStg2(&stateDB, signer, tx)
 	}
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) ValidTxStg1(stateDB *StateDB, signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage1Data(tx.Data())
 	if err != nil {
 		return err
 	}
-	_, _, pkSelf, _, err := s.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
+	epochIDBuf, _, pkSelf, _, err := s.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return err
 	}
-	if !s.InEpochLeadersOrNotByPk(pkSelf) {
+	if !s.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf, c.getR) {
 		return errIllegalSender
 	}
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) ValidTxStg2(stateDB *StateDB, signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage2Data(tx.Data()[4:])
 	if err != nil {
 		return err
 	}
-	_, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
+	epochIDString, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
 	if err != nil {
 		return err
 	}
@@ -258,8 +259,13 @@ func (c *slotLeaderSC) ValidTxStg2(stateDB StateDB, signer types.Signer, tx *typ
 	if err != nil {
 		return err
 	}
-	if !s.InEpochLeadersOrNotByPk(pkiDec) {
+	c.stateDb = stateDB
+	if !s.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec, c.getR) {
 		return errIllegalSender
 	}
 	return nil
+}
+
+func (c *slotLeaderSC) getR(epochID uint64) *big.Int {
+	return GetR(*c.stateDb, epochID)
 }

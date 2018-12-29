@@ -20,7 +20,7 @@ type Db struct {
 }
 
 var (
-	dbInstMap = make(map[string]*Db)
+	dbInstMap           = make(map[string]*Db)
 	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
 )
 
@@ -298,6 +298,15 @@ func Uint64StringToByte(input string) []byte {
 	}
 
 	return num.Bytes()
+}
+
+// StringToUint64 can change string to uint64 through a big.Int
+func StringToUint64(input string) uint64 {
+	num, ok := big.NewInt(0).SetString(input, 10)
+	if !ok {
+		return 0
+	}
+	return num.Uint64()
 }
 
 //-------------------------------------------------------------------

@@ -19,12 +19,16 @@ package miner
 
 import (
 	"fmt"
+	"sync/atomic"
+
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
-	"sync/atomic"
 
 	"strconv"
 	"time"
+
+	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -33,6 +37,7 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
@@ -42,7 +47,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"math/big"
 )
 
 // Backend wraps all methods required for mining.
@@ -67,16 +71,16 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
-	timerStop	chan interface{}
+	timerStop   chan interface{}
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
-		eth:      eth,
-		mux:      mux,
-		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
-		canStart: 1,
+		eth:       eth,
+		mux:       mux,
+		engine:    engine,
+		worker:    newWorker(config, engine, common.Address{}, eth, mux),
+		canStart:  1,
 		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
@@ -172,11 +176,12 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			var rb *big.Int
 
 			if epochid > 0 {
-				rb, err = posdb.GetRandom(epochid - 1)
+				rb = vm.GetR(stateDb, epochid-1)
 			}
 
 			if epochid == 0 || err != nil {
-				rb = s.BlockChain().CurrentBlock().Difficulty()
+				//rb = s.BlockChain().CurrentBlock().Difficulty()
+				rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochid)))
 			}
 
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
@@ -199,7 +204,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//epocher.SelectLeaders()
 		randombeacon.GetRandonBeaconInst().Loop(stateDb, key, epocher, rc)
 		cur := uint64(time.Now().Unix())
-		sleepTime := slotleader.SlotTime -(cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
+		sleepTime := slotleader.SlotTime - (cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:
