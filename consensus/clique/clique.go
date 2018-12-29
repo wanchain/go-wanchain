@@ -578,14 +578,14 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
-	if(slotleader.EpochBaseTime == 0) {
+	if slotleader.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
-		hcur := cur - (cur%slotleader.SlotTime) + slotleader.SlotTime
+		hcur := cur - (cur % slotleader.SlotTime) + slotleader.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		curEpochId,curSlotId, err:=  slotleader.GetEpochSlotID()
+		curEpochId, curSlotId, err := slotleader.GetEpochSlotID()
 		fmt.Println(err)
-		header.Time = big.NewInt(int64(slotleader.EpochBaseTime + (curEpochId*slotleader.SlotCount + curSlotId +1)*slotleader.SlotTime))
+		header.Time = big.NewInt(int64(slotleader.EpochBaseTime + (curEpochId*slotleader.SlotCount+curSlotId+1)*slotleader.SlotTime))
 	}
 	return nil
 }
@@ -672,14 +672,14 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime/2 * time.Second ): // TODO when generate new block
-				fmt.Println(" #################################################################our trun")
+			case <-time.After(slotleader.SlotTime / 2 * time.Second): // TODO when generate new block
+				fmt.Println(" #################################################################our trun, number:", number, "epochID:", epochId, "slotId:", slotId)
 				epochId, slotId, err := slotleader.GetEpochSlotID()
 				if err != nil {
 					fmt.Println(err)
 					return nil, nil
 				}
-				epochSlotId += slotId<< 8;
+				epochSlotId += slotId << 8
 				epochSlotId += epochId << 32
 				break loopCheck
 			}
