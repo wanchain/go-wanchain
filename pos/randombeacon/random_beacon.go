@@ -64,7 +64,7 @@ var (
 )
 
 func init() {
-	randomBeacon.Init(nil)
+	randomBeacon.Init(nil, nil)
 }
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -72,33 +72,32 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 
-func (rb *RandomBeacon) Init(epocher * epochLeader.Epocher) {
+func (rb *RandomBeacon) Init(epocher * epochLeader.Epocher, key *keystore.Key) {
 	rb.epochStage = EPOCH_DKG
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
 
 	rb.epocher = epocher
+
+	if key != nil {
+		rb.key = key
+		pos.Cfg().SelfPuK = new(bn256.G1).Set(key.PrivateKey3.PublicKeyBn256.G1)
+		pos.Cfg().SelfPrK = new(big.Int).Set(key.PrivateKey3.D)
+	}
 }
 
 
 
-func (rb *RandomBeacon) Loop(statedb vm.StateDB, key *keystore.Key, epocher * epochLeader.Epocher, rc *rpc.Client) error {
-	if statedb == nil || key == nil || epocher == nil || rc == nil {
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher * epochLeader.Epocher, rc *rpc.Client) error {
+	if statedb == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
 	}
 
-	log.Info("RB Loop begin", "statedb", statedb, "key", key, "epocher", epocher)
+	log.Info("RB Loop begin", "statedb", statedb, "epocher", epocher)
 	rb.statedb = statedb
-	rb.key = key
 	rb.epocher = epocher
 	rb.rpcClient = rc
-
-	// set local proposer info
-	pos.Cfg().SelfPuK = new(bn256.G1)
-	pos.Cfg().SelfPrK = new(big.Int)
-	pos.Cfg().SelfPuK.Set(key.PrivateKey3.PublicKeyBn256.G1)
-	pos.Cfg().SelfPrK.Set(key.PrivateKey3.D)
 
 	log.Info("set miner account", "puk", pos.Cfg().SelfPuK, "prk", pos.Cfg().SelfPrK)
 
