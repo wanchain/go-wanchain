@@ -74,7 +74,6 @@ func init() {
 }
 
 type slotLeaderSC struct {
-	stateDb *StateDB
 }
 
 func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
@@ -238,7 +237,7 @@ func (c *slotLeaderSC) ValidTxStg1(stateDB *StateDB, signer types.Signer, tx *ty
 	if err != nil {
 		return err
 	}
-	if !s.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf, c.getR) {
+	if !s.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
 		return errIllegalSender
 	}
 	return nil
@@ -259,13 +258,8 @@ func (c *slotLeaderSC) ValidTxStg2(stateDB *StateDB, signer types.Signer, tx *ty
 	if err != nil {
 		return err
 	}
-	c.stateDb = stateDB
-	if !s.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec, c.getR) {
+	if !s.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
 		return errIllegalSender
 	}
 	return nil
-}
-
-func (c *slotLeaderSC) getR(epochID uint64) *big.Int {
-	return GetR(*c.stateDb, epochID)
 }

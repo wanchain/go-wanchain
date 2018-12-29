@@ -895,7 +895,7 @@ func (s *SlotLeaderSelection) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte
 }
 
 // InEpochLeadersOrNotByPk can verify the tx sender
-func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte, GetR func(epochID uint64) *big.Int) bool {
+func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
 	ok := false
 	epochLeaders := s.getEpochLeaders(epochID)
 	if len(epochLeaders) != EpochLeaderCount {
