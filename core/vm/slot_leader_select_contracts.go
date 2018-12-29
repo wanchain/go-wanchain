@@ -220,14 +220,14 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	copy(methodId[:], tx.Data()[:4])
 
 	if methodId == stgOneIdArr {
-		return c.ValidTxStg1(&stateDB, signer, tx)
+		return c.ValidTxStg1(signer, tx)
 	} else if methodId == stgTwoIdArr {
-		return c.ValidTxStg2(&stateDB, signer, tx)
+		return c.ValidTxStg2(signer, tx)
 	}
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg1(stateDB *StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage1Data(tx.Data())
 	if err != nil {
@@ -243,7 +243,7 @@ func (c *slotLeaderSC) ValidTxStg1(stateDB *StateDB, signer types.Signer, tx *ty
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg2(stateDB *StateDB, signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
 	s := slotleader.GetSlotLeaderSelection()
 	data, err := s.UnpackStage2Data(tx.Data()[4:])
 	if err != nil {
