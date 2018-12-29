@@ -89,7 +89,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 }
 
 func (self *Miner)posInit(s Backend) {
-time.Sleep(10*time.Second)
+time.Sleep(20*time.Second)
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
