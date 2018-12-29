@@ -16,10 +16,10 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
-	//"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 const (
@@ -550,7 +550,8 @@ func (rb *RandomBeacon) getTxFrom() common.Address {
 }
 
 func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
-	pks := rb.epocher.GetRBProposerGroup(epochId)
+	//pks := rb.epocher.GetRBProposerGroup(epochId)
+	pks := posdb.GetRBProposerGroup(epochId)
 	log.Info("get rb proposer group", "proposer", pks)
 	return pks
 }
