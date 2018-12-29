@@ -67,7 +67,10 @@ func init() {
 }
 
 
-type pos_staking  struct{}
+type pos_staking  struct{
+
+}
+
 
 func (p *pos_staking) RequiredGas(input []byte) uint64 {
 	return 0

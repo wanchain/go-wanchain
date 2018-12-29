@@ -98,7 +98,7 @@ func posInit(s Backend) {
 	Nr := 10 //num of random proposers
 	Ne := 10 //num of epoch leaders, limited <= 256 now
 	stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
-	epocher := epochLeader.NewEpocher()
+	epocher := epochLeader.NewEpocher(s.BlockChain())
 	randombeacon.GetRandonBeaconInst().Init(epocher)
 	eerr := epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, 0)
 	fmt.Println("posInit: ", eerr)
@@ -132,7 +132,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	}
 
 	// get epocher
-	epocher := epochLeader.NewEpocher()
+	epocher := epochLeader.NewEpocher(s.BlockChain())
 
 	//epochTimer := time.NewTicker(20 * time.Second)
 	//slotTimer := time.NewTicker(6 * time.Second)
@@ -185,6 +185,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			}
 
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
+
 			epl := epocher.GetEpochLeaders(epochid)
 			for idx, item := range epl {
 				fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))

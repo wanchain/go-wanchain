@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/core"
 )
 
 var (
@@ -40,16 +41,40 @@ var (
 type Epocher struct {
 	rbLeadersDb    *posdb.Db
 	epochLeadersDb *posdb.Db
+	blkChain	   *core.BlockChain
+
 }
 
-func NewEpocher() *Epocher {
+func NewEpocher(blc *core.BlockChain) *Epocher {
 
 	rbdb := posdb.NewDb("rblocaldb")
 
 	epdb := posdb.NewDb("eplocaldb")
 
-	return &Epocher{rbdb, epdb}
+	return &Epocher{rbdb, epdb,blc}
 }
+
+
+func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
+
+	Nr := 10 //num of random proposers
+	Ne := 10 //num of epoch leaders, limited <= 256 now
+
+	targetBlkNum := e.blkChain.CurrentBlock().NumberU64() - 1
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	if( err != nil){
+		return err
+	}
+
+	r := vm.GetR(stateDb,epochId).Bytes()
+	err = e.SelectLeaders(r,Ne,Nr,stateDb,epochId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 
 func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
