@@ -223,14 +223,6 @@ func GetPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
 func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
 	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
 	dkgBytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-	if len(dkgBytes) == 0 {
-		log.Error("getCji, dkgBytes is nil")
-	}
-
-	//else {
-	//	log.Info("getCji", "dkgBytes", common.Bytes2Hex(dkgBytes))
-	//}
-
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
 	if err != nil {
