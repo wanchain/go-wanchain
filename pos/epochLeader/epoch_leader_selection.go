@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	bn256 "github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/go-wanchain/core"
 )
 
 var (
@@ -41,8 +41,7 @@ var (
 type Epocher struct {
 	rbLeadersDb    *posdb.Db
 	epochLeadersDb *posdb.Db
-	blkChain	   *core.BlockChain
-
+	blkChain       *core.BlockChain
 }
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
@@ -51,13 +50,12 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 
 	epdb := posdb.NewDb("eplocaldb")
 
-	inst :=  &Epocher{rbdb, epdb, blc}
+	inst := &Epocher{rbdb, epdb, blc}
 
 	posdb.SetEpocherInst(inst)
 
 	return inst
 }
-
 
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
@@ -66,19 +64,21 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.blkChain.CurrentBlock().NumberU64() - 1
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
-	if( err != nil){
+	if err != nil {
 		return err
 	}
 
-	r := vm.GetR(stateDb,epochId).Bytes()
-	err = e.SelectLeaders(r,Ne,Nr,stateDb,epochId)
+	r := vm.GetR(stateDb, epochId).Bytes()
+	if r == nil {
+		r = big.NewInt(1).Bytes()
+	}
+	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-
 
 func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
