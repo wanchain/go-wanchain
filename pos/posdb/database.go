@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	bn256 "github.com/wanchain/pos/cloudflare"
 
@@ -324,7 +325,16 @@ type SelectLead interface {
 func SetEpocherInst(sor SelectLead) {
 	selecter = sor
 }
+
 func GetEpocherInst() SelectLead {
+	for {
+		if selecter != nil {
+			return selecter
+		}
+
+		log.Debug("Wait for selector init...")
+		time.Sleep(time.Second)
+	}
 	return selecter
 }
 
