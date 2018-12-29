@@ -80,11 +80,25 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	posInit(eth)
 	go miner.update()
 	return miner
 }
 
-
+func posInit(s Backend) {
+	fmt.Println("posInit begin")
+	rb, err := posdb.GetRandom(0)
+	if err != nil {
+		panic(err)
+	}
+	Nr := 10 //num of random proposers
+	Ne := 10 //num of epoch leaders, limited <= 256 now
+	stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
+	epocher := epochLeader.NewEpocher()
+	randombeacon.GetRandonBeaconInst().Init(epocher)
+	eerr := epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, 0)
+	fmt.Println("posInit: ", eerr)
+}
 func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
