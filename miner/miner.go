@@ -42,6 +42,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
+	"math/big"
 )
 
 // Backend wraps all methods required for mining.
@@ -153,10 +154,17 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		// only the begin of epocher
 		if slotid == 0 {
 			fmt.Println("epocher begin")
-			rb, err := posdb.GetRandom(epochid)
-			if err != nil {
+
+			var rb *big.Int
+
+			if epochid > 0 {
+				rb, err = posdb.GetRandom(epochid - 1)
+			}
+
+			if epochid == 0 || err != nil {
 				rb = s.BlockChain().CurrentBlock().Difficulty()
 			}
+
 			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
 			epl := epocher.GetEpochLeaders(epochid)
 			for idx, item := range epl {
