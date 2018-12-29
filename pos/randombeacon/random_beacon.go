@@ -64,7 +64,7 @@ var (
 )
 
 func init() {
-	randomBeacon.init()
+	randomBeacon.Init(nil)
 }
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -72,10 +72,12 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 
-func (rb *RandomBeacon) init() {
+func (rb *RandomBeacon) Init(epocher * epochLeader.Epocher) {
 	rb.epochStage = EPOCH_DKG
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
+
+	rb.epocher = epocher
 }
 
 
