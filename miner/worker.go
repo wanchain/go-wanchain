@@ -255,6 +255,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			posInit(self.eth)
 			self.commitNewWork()
 
 		// Handle ChainSideEvent

@@ -93,14 +93,14 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 }
 
 func GetR(db StateDB, epochId uint64) *big.Int {
-	hash := GetRBRKeyHash(epochId)
-	rBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-	if len(rBytes) == 0 {
-		r := big.NewInt(0).SetBytes(rBytes)
-		return r
-	}
 	if epochId == 0 {
 		return big.NewInt(1)
+	}
+	hash := GetRBRKeyHash(epochId)
+	rBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if len(rBytes) != 0 {
+		r := big.NewInt(0).SetBytes(rBytes)
+		return r
 	}
 	return nil
 }
