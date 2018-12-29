@@ -899,21 +899,7 @@ func (s *SlotLeaderSelection) InEpochLeadersOrNotByPk(epochID uint64, pkBytes []
 	ok := false
 	epochLeaders := s.getEpochLeaders(epochID)
 	if len(epochLeaders) != EpochLeaderCount {
-		var rb *big.Int
-		var err error
-
-		if epochID > 0 {
-			rb = GetR(epochID - 1)
-		}
-
-		if epochID == 0 || err != nil {
-			rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochID)))
-		}
-
-		type epoch interface {
-			SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochID uint64) error
-		}
-		s.epochInstance.(epoch).SelectLeaders(rb.Bytes(), RandomProperCount, EpochLeaderCount, s.stateDb, epochID)
+		posdb.GetEpocherInst().SelectLeadersLoop(epochID)
 
 		epochLeaders = s.getEpochLeaders(epochID)
 	}
