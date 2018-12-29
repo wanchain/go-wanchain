@@ -604,7 +604,13 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 			GetEpochLeaders(epochID uint64) [][]byte
 		}
 
-		epochLeaders := posdb.GetEpocherInst().(epoch).GetEpochLeaders(epochID)
+		selector := posdb.GetEpocherInst()
+
+		if selector == nil {
+			return nil
+		}
+
+		epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
 		//for i := 0; i<len(epochLeaders); i++  {
 		//	log.Debug(fmt.Sprintf("%s\n", hex.EncodeToString(epochLeaders[i])))
 		//}
