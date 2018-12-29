@@ -16,7 +16,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/pos/posdb"
+	//"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -377,8 +377,8 @@ func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) erro
 
 func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	log.Info("RB do compute random", "epochId", epochId)
-	randomInt, err := posdb.GetRandom(epochId+1)
-	if err == nil && randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
+	randomInt := vm.GetR(rb.statedb, epochId+1)
+	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
 		// exist already
 		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
 		return nil
@@ -410,14 +410,14 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
 		// return errors.New("insufficient proposer")
 
-		randomInt, err := posdb.GetRandom(epochId)
-		if err != nil {
-			log.Error("get random fail", "epochId", epochId, "err", err)
-			return err
+		randomInt := vm.GetR(rb.statedb, epochId)
+		if randomInt != nil {
+			log.Error("get random fail", "epochId", epochId)
+			return errors.New("get random fail")
 		}
 
 		newRandom := crypto.Keccak256(randomInt.Bytes())
-		err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
+		err := rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
 		if err != nil {
 			log.Error("set random fail", "err", err)
 		} else {
@@ -491,10 +491,10 @@ func (rb *RandomBeacon) saveRandom(epochId uint64, random *big.Int) error {
 		return errors.New("invalid random")
 	}
 
-	err := posdb.SetRandom(epochId, random)
-	if err != nil {
-		return err
-	}
+	//err := posdb.SetRandom(epochId, random)
+	//if err != nil {
+	//	return err
+	//}
 
 	return rb.sendRandom(epochId, random)
 }
