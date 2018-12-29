@@ -3,6 +3,7 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -22,9 +23,15 @@ type Db struct {
 var (
 	dbInstMap           = make(map[string]*Db)
 	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
+	selecter SelectLead
 )
 
 func NewDb(fileName string) *Db {
+	db := GetDbByName(fileName)
+	if db != nil {
+		return db
+	}
+
 	dbInst := &Db{db: nil}
 
 	dbInst.DbInit(fileName)
@@ -307,6 +314,41 @@ func StringToUint64(input string) uint64 {
 		return 0
 	}
 	return num.Uint64()
+}
+
+type SelectLead interface {
+	SelectLeadersLoop(epochId uint64) error
+}
+func SetEpocherInst(sor SelectLead) {
+	selecter = sor
+}
+
+func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+	db := NewDb("rblocaldb")
+	if db == nil {
+		log.Error("GetRBProposerGroup create db error")
+		return nil
+	}
+
+	pks := db.GetStorageByteArray(epochId)
+	length := len(pks)
+	if length == 0 {
+
+		selecter.SelectLeadersLoop(epochId)
+		pks = db.GetStorageByteArray(epochId)
+		if len(pks) == 0 {
+			log.Error("GetRBProposerGroup get pks error")
+			return nil
+		}
+	}
+	g1s := make([]bn256.G1, length, length)
+
+	for i := 0; i < length; i++ {
+		g1s[i] = *new(bn256.G1)
+		g1s[i].Unmarshal(pks[i])
+	}
+
+	return g1s
 }
 
 //-------------------------------------------------------------------

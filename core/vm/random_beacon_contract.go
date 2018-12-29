@@ -87,7 +87,7 @@ func GetRBKeyHash(funId []byte, epochId uint64, proposerId uint32) (*common.Hash
 func GetRBRKeyHash(epochId uint64) (*common.Hash) {
 	keyBytes := make([]byte, 12)
 	copy(keyBytes, genRId[:])
-	copy(keyBytes[4:], UIntToByteSlice(epogchId))
+	copy(keyBytes[4:], UIntToByteSlice(epochId))
 	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
 	return &hash
 }
@@ -99,8 +99,12 @@ func GetR(db StateDB, epochId uint64) (*big.Int) {
 		r := big.NewInt(0).SetBytes(rBytes)
 		return r
 	}
+	if epochId == 0 {
+		return big.NewInt(1)
+	}
 	return nil
 }
+
 
 func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, error) {
 	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
@@ -167,7 +171,7 @@ func getRBProposerGroup(epochId uint64) []bn256.G1 {
 }
 
 
-var getRBProposerGroupVar func (epochId uint64) []bn256.G1 = getRBProposerGroup
+var getRBProposerGroupVar func (epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
 var getRBMVar func (epochId uint64) ([]byte, error) = GetRBM
 
 func UIntToByteSlice(num uint64) []byte {

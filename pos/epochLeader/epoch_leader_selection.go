@@ -51,7 +51,11 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 
 	epdb := posdb.NewDb("eplocaldb")
 
-	return &Epocher{rbdb, epdb,blc}
+	inst :=  &Epocher{rbdb, epdb, blc}
+
+	posdb.SetEpocherInst(inst)
+
+	return inst
 }
 
 
