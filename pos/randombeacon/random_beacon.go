@@ -417,7 +417,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		}
 
 		newRandom := crypto.Keccak256(randomInt.Bytes())
-		err = posdb.SetRandom(epochId+1, new(big.Int).SetBytes(newRandom))
+		err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
 		if err != nil {
 			log.Error("set random fail", "err", err)
 		} else {
@@ -475,7 +475,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		return errors.New("Final Pairing Check Failed")
 	}
 
-	err = posdb.SetRandom(epochId+1, new(big.Int).SetBytes(random))
+	err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(random))
 	if err != nil {
 		log.Error("set random fail", "err", err)
 	} else {
@@ -483,6 +483,20 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	}
 
 	return err
+}
+
+func (rb *RandomBeacon) saveRandom(epochId uint64, random *big.Int) error {
+	if random == nil {
+		log.Error("invalid random")
+		return errors.New("invalid random")
+	}
+
+	err := posdb.SetRandom(epochId, random)
+	if err != nil {
+		return err
+	}
+
+	return rb.sendRandom(epochId, random)
 }
 
 func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload) error {
@@ -504,6 +518,16 @@ func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
 	}
 
 	//log.Info("send sig tx", "payload", common.Bytes2Hex(payload))
+	return rb.doSendRBTx(payload)
+}
+
+func (rb *RandomBeacon) sendRandom(epochId uint64, random *big.Int) error {
+	log.Info("begin send random")
+	payload, err := getGenRTxPayloadBytes(epochId, random)
+	if err != nil {
+		return err
+	}
+
 	return rb.doSendRBTx(payload)
 }
 
@@ -575,14 +599,32 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	}
 
 	payloadStr := common.Bytes2Hex(payloadBytes)
-	//log.Info("rlp encode sig payload", "payload", payloadStr)
 	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
 	if err != nil {
 		return nil, err
 	}
 
 	ret, err := rbAbi.Pack("sigshare", payloadStr)
-	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
+	if err != nil {
+		log.Error("abi pack payload", "err", err)
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+func getGenRTxPayloadBytes(epochId uint64, random *big.Int) ([]byte, error) {
+	log.Info("get GenR tx payload begin")
+	if random == nil {
+		return nil, errors.New("invalid random")
+	}
+
+	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
+	if err != nil {
+		return nil, err
+	}
+
+	ret, err := rbAbi.Pack("genR", big.NewInt(int64(epochId)), random)
 	if err != nil {
 		log.Error("abi pack payload", "err", err)
 		return nil, err
