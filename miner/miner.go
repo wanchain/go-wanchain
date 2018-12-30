@@ -85,12 +85,17 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
-	go miner.posInit(eth)
+	//go miner.posInit(eth)
 	return miner
 }
 
-func (self *Miner) posInit(s Backend) {
-	time.Sleep(10 * time.Second)
+var posInited = 0
+
+func posInit(s Backend) {
+	if posInited != 0 {
+		return
+	}
+	posInited = 1
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
