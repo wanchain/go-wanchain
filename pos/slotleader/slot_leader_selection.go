@@ -475,15 +475,15 @@ func (s *SlotLeaderSelection) dumpData() {
 	// fmt.Printf("\t\t\ts.stageTwoProof= %v\n\n", s.stageTwoProof)
 	// fmt.Printf("\t\t\ts.slotLeadersPtrArray= %v\n\n", s.slotLeadersPtrArray)
 	// fmt.Printf("\t\t\ts.epochLeadersPtrArray= %v\n\n", s.epochLeadersPtrArray)
-	for index, value := range s.epochLeadersPtrArray {
-		fmt.Printf("\tepochLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
-	}
+	// for index, value := range s.epochLeadersPtrArray {
+	// 	fmt.Printf("\tepochLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
+	// }
 	for index, value := range s.epochLeadersPtrArray {
 		fmt.Printf("\tepochLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
-	// for index, value := range s.slotLeadersPtrArray {
-	// 	fmt.Printf("\tslotLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
-	// }
+	for index, value := range s.slotLeadersPtrArray {
+		fmt.Printf("\tslotLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
 	// for index, value := range s.slotLeadersPtrArray {
 	// 	fmt.Printf("\tslotLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
 	// }
