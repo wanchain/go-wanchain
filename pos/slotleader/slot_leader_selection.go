@@ -154,9 +154,9 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 			s.setWorkStage(epochID, slotLeaderSelectionStage1)
 		}
 
-		if slotID < SlotStage1 {
-			break
-		}
+		// if slotID < SlotStage1 {
+		// 	break
+		// }
 
 		//s.buildEpochLeaderGroup(epochID)
 
@@ -647,7 +647,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
-	s.dumpData()
+	//s.dumpData()
 
 	if err != nil {
 		return err
@@ -848,7 +848,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return err
 	}
 
-	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID+1, SecurityMsg, smasBytes.String()))
+	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID+1, SecurityMsg, hex.EncodeToString(smasBytes.Bytes())))
 
 	return nil
 }
@@ -1028,7 +1028,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 }
 func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	//test
-	fmt.Println("Simulator send tx:", data)
+	fmt.Println("Ready send tx:", data)
 
 	if s.rc == nil {
 		return errors.New("rc is not ready")
@@ -1053,7 +1053,7 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 		return err
 	}
 
-	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
+	log.Debug(fmt.Sprintf("ready to write data of payload len: %d", len(payload)))
 	arg["data"] = hexutil.Bytes(payload)
 	log.Debug("finish to write data of payload")
 	var txHash common.Hash
