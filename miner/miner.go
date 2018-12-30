@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -88,8 +89,8 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	return miner
 }
 
-func (self *Miner)posInit(s Backend) {
-time.Sleep(10*time.Second)
+func (self *Miner) posInit(s Backend) {
+	time.Sleep(10 * time.Second)
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
@@ -108,7 +109,6 @@ time.Sleep(10*time.Second)
 		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
-
 
 	fmt.Println("posInit begin")
 	rb, err := posdb.GetRandom(0)
@@ -162,10 +162,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		//fmt.Println(h)
 		if nil == h {
-			time.Sleep(slotleader.SlotTime * time.Second)
+			time.Sleep(posconfig.SlotTime * time.Second)
 			continue
 		} else {
-			slotleader.EpochBaseTime = h.Time.Uint64()
+			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
 
 		slotleader.CalEpochSlotID()
@@ -175,7 +175,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err1 != nil || err2 != nil {
 			fmt.Println(err1, err2)
-			time.Sleep(slotleader.SlotTime * time.Second)
+			time.Sleep(posconfig.SlotTime * time.Second)
 			continue
 		}
 
@@ -228,9 +228,9 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb,  epocher, rc)
+		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
 		cur := uint64(time.Now().Unix())
-		sleepTime := slotleader.SlotTime - (cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
+		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:
