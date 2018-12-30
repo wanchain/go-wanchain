@@ -1,61 +1,61 @@
 package randombeacon
 
 import (
+	"crypto/rand"
 	"errors"
 	"math/big"
 	"strings"
-	"crypto/rand"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/pos/wanpos_crypto"
+
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/rpc"
+	bn256 "github.com/wanchain/pos/cloudflare"
+	wanpos "github.com/wanchain/pos/wanpos_crypto"
 )
 
 const (
-	_ int = iota
-	EPOCH_DKG		// 4K
-	EPOCH_SIG		// 8K
-	EPOCH_CMP		// compute random
+	_         int = iota
+	EPOCH_DKG     // 4K
+	EPOCH_SIG     // 8K
+	EPOCH_CMP     // compute random
 	EPOCH_TAIL
 )
 
-
 var (
-	maxUint64 		= uint64(1<<64 - 1)
-	slot4kEndId 	= uint64(4*pos.Cfg().K - 1)
+	maxUint64       = uint64(1<<64 - 1)
+	slot4kEndId     = uint64(4*pos.Cfg().K - 1)
 	slot4kConfirmId = uint64((4+1)*pos.Cfg().K - 1)
-	slot8kEndId 	= uint64(8*pos.Cfg().K - 1)
+	slot8kEndId     = uint64(8*pos.Cfg().K - 1)
 	slot8kConfirmId = uint64((8+1)*pos.Cfg().K - 1)
 )
 
 type RbDKGDataCollector struct {
 	data *vm.RbDKGTxPayload
-	pk *bn256.G1
+	pk   *bn256.G1
 }
 
 type RbSIGDataCollector struct {
 	data *vm.RbSIGTxPayload
-	pk *bn256.G1
+	pk   *bn256.G1
 }
 
 type RandomBeacon struct {
 	epochStage int
-	epochId uint64
+	epochId    uint64
 
-	statedb vm.StateDB
-	key *keystore.Key
-	epocher * epochLeader.Epocher
+	statedb   vm.StateDB
+	key       *keystore.Key
+	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
 }
 
@@ -71,8 +71,7 @@ func GetRandonBeaconInst() *RandomBeacon {
 	return &randomBeacon
 }
 
-
-func (rb *RandomBeacon) Init(epocher * epochLeader.Epocher, key *keystore.Key) {
+func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
 	rb.epochStage = EPOCH_DKG
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
@@ -86,9 +85,7 @@ func (rb *RandomBeacon) Init(epocher * epochLeader.Epocher, key *keystore.Key) {
 	}
 }
 
-
-
-func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher * epochLeader.Epocher, rc *rpc.Client) error {
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client) error {
 	if statedb == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
@@ -221,7 +218,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
 		if pk.String() == selfPk.String() {
-		//if true || pk.String() != "" {
+			//if true || pk.String() != "" {
 			ids = append(ids, uint32(i))
 		}
 	}
@@ -268,7 +265,7 @@ func (rb *RandomBeacon) doDKG(epochId uint64, proposerId uint32) error {
 	}
 
 	sshare := make([]big.Int, nr, nr)
-	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s)	// fi(x), set si as its constant term
+	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s) // fi(x), set si as its constant term
 	for i := 0; i < nr; i++ {
 		sshare[i] = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 	}
@@ -405,6 +402,8 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 		if err == nil && sigData != nil {
 			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pk})
 		}
+
+		log.Debug("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
 	}
 
 	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
@@ -557,8 +556,7 @@ func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 	return pks
 }
 
-
-func getRBDKGTxPayloadBytes(payload * vm.RbDKGTxPayload) ([]byte, error) {
+func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload) ([]byte, error) {
 	if payload == nil {
 		log.Error("get dkg tx payload fail, invalid DKG payload object")
 		return nil, errors.New("invalid DKG payload object")
@@ -577,7 +575,6 @@ func getRBDKGTxPayloadBytes(payload * vm.RbDKGTxPayload) ([]byte, error) {
 		log.Error("create abi instance fail", "err", err)
 		return nil, err
 	}
-
 
 	ret, err := rbAbi.Pack("dkg", &payloadStr)
 	if err != nil {
@@ -634,5 +631,3 @@ func getGenRTxPayloadBytes(epochId uint64, random *big.Int) ([]byte, error) {
 
 	return ret, nil
 }
-
-

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -167,10 +167,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		//fmt.Println(h)
 		if nil == h {
-			time.Sleep(posconfig.SlotTime * time.Second)
+			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		} else {
-			posconfig.EpochBaseTime = h.Time.Uint64()
+			pos.EpochBaseTime = h.Time.Uint64()
 		}
 
 		slotleader.CalEpochSlotID()
@@ -180,7 +180,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err1 != nil || err2 != nil {
 			fmt.Println(err1, err2)
-			time.Sleep(posconfig.SlotTime * time.Second)
+			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		}
 
@@ -235,7 +235,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//epocher.SelectLeaders()
 		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
 		cur := uint64(time.Now().Unix())
-		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
+		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:

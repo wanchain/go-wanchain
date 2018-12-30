@@ -2,7 +2,6 @@ package slotleader
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	Rand "crypto/rand"
 	"encoding/hex"
@@ -15,10 +14,10 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 
@@ -40,9 +39,9 @@ const (
 	StageTwoProofCount = 2
 
 	// SlotStage1 is 40% of slot count
-	SlotStage1 = uint64(posconfig.SlotCount * 4 / 10)
+	SlotStage1 = uint64(pos.SlotCount * 4 / 10)
 	// SlotStage2 is 80% of slot count
-	SlotStage2       = uint64(posconfig.SlotCount * 8 / 10)
+	SlotStage2       = uint64(pos.SlotCount * 8 / 10)
 	EpochLeaders     = "epochLeaders"
 	SecurityMsg      = "securityMsg"
 	RandFromProposer = "randFromProposer"
@@ -79,13 +78,13 @@ type SlotLeaderSelection struct {
 	stateDb           *state.StateDB
 	epochInstance     interface{}
 
-	slotLeadersPtrArray    [posconfig.SlotCount]*ecdsa.PublicKey
-	epochLeadersPtrArray   [posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	validEpochLeadersIndex [posconfig.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
+	slotLeadersPtrArray    [pos.SlotCount]*ecdsa.PublicKey
+	epochLeadersPtrArray   [pos.EpochLeaderCount]*ecdsa.PublicKey
+	validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
 
-	stageOneMi       [posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKi [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProof    [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	stageOneMi       [pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof    [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	slotCreated      bool
 }
 
@@ -312,7 +311,7 @@ func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
 
 //GetAlpha get alpha of epochID
 func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
-	if posconfig.SelfTestMode {
+	if pos.SelfTestMode {
 		ret := big.NewInt(123)
 		return ret, nil
 	}
@@ -352,13 +351,13 @@ func GetEpochSlotID() (uint64, uint64, error) {
 	return curEpochId, curSlotId, nil
 }
 func CalEpochSlotID() {
-	if posconfig.EpochBaseTime == 0 {
+	if pos.EpochBaseTime == 0 {
 		return
 	}
 	timeUnix := uint64(time.Now().Unix())
-	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
-	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimespan)
-	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
+	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
+	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
@@ -366,7 +365,7 @@ func CalEpochSlotID() {
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
 	//test := true
-	if posconfig.SelfTestMode {
+	if pos.SelfTestMode {
 		//test: generate test publicKey
 		epochLeaderAllBytes, err := posdb.GetDb().Get(epochID, EpochLeaders)
 		if err != nil {
@@ -441,13 +440,13 @@ func (s *SlotLeaderSelection) clearData() {
 	// clear map
 	s.epochLeadersMap = make(map[string][]uint64)
 
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArray[i] = nil
 		s.validEpochLeadersIndex[i] = true
 
 		s.stageOneMi[i] = nil
 
-		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+		for j := 0; j < pos.EpochLeaderCount; j++ {
 			s.stageTwoAlphaPKi[i][j] = nil
 		}
 		for k := 0; k < StageTwoProofCount; k++ {
@@ -455,7 +454,7 @@ func (s *SlotLeaderSelection) clearData() {
 		}
 	}
 
-	for i := 0; i < posconfig.SlotCount; i++ {
+	for i := 0; i < pos.SlotCount; i++ {
 		s.slotLeadersPtrArray[i] = nil
 
 	}
@@ -517,13 +516,13 @@ func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecd
 		//return nil, errors.New("slot leaders group not ready")
 		log.Debug("slot leaders group not ready use a fake one")
 		fakeSlotLeaders := make([]*ecdsa.PublicKey, 0)
-		for i := 0; i < posconfig.SlotCount; i++ {
+		for i := 0; i < pos.SlotCount; i++ {
 			fakeSlotLeaders = append(fakeSlotLeaders, s.epochLeadersPtrArray[i%10])
 		}
 		return fakeSlotLeaders, nil
 	}
 
-	if len(s.slotLeadersPtrArray) != posconfig.SlotCount {
+	if len(s.slotLeadersPtrArray) != pos.SlotCount {
 		return nil, errors.New("slot leaders group data is not integrated")
 	}
 	return s.slotLeadersPtrArray[:], nil
@@ -535,10 +534,10 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 		log.Debug("slot leaders group not ready use a fake one")
 		return s.epochLeadersPtrArray[slotID%10], nil
 	}
-	if len(s.slotLeadersPtrArray) != posconfig.SlotCount {
+	if len(s.slotLeadersPtrArray) != pos.SlotCount {
 		return nil, errors.New("slot leaders group data is not integrated")
 	}
-	if slotID >= posconfig.SlotCount {
+	if slotID >= pos.SlotCount {
 		return nil, errors.New("slot id index out of range")
 	}
 	return s.slotLeadersPtrArray[slotID], nil
@@ -568,7 +567,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			"0444f09890a83ba77cbee7d432be95c850780362bc6f1e8f0198dabf1164a67a3d084e10ae3e1caf29f2638945c73867e456edddfc5c6fd5cb0e7e7c7558be003d",
 			"04b274ff6d60c8d2a752887dd79ddd42d11bd363eee3e98ae3781872a2716cd8fdf7c24e8a910fe16633862a0e256b43552eac03f5fe2971d76d0a66bb43927af8"}
 		//genesis SMA
-		for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		for i := 0; i < pos.EpochLeaderCount; i++ {
 			sma0Bytes, err := hex.DecodeString(smaGenesis[i])
 			if err != nil {
 				return nil, err
@@ -621,7 +620,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	fmt.Printf("len(piecesPtr)=%v\n", len(piecesPtr))
 	fmt.Printf("len(epochLeadersPtrArray)=%v\n", len(s.epochLeadersPtrArray))
 	fmt.Printf("len(random.Bytes)=%v\n", len(random.Bytes()))
-	fmt.Printf("SlotCount= %d\n", posconfig.SlotCount)
+	fmt.Printf("SlotCount= %d\n", pos.SlotCount)
 	//fmt.Printf("===========================before GenerateSlotLeaderSeq\n")
 	//s.dumpData()
 	//epochLeadersPtrArray := s.epochLeadersPtrArray
@@ -630,7 +629,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 	epochLeadersPtrArray := s.getEpochLeadersPK(epochID - 1)
-	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
 		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochID-1))
 	}
 	for i := 0; i < len(piecesPtr); i++ {
@@ -644,7 +643,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount)
+	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
@@ -763,7 +762,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 }
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 		_, mi, _ := s.getStg1StateDbInfo(epochID, uint64(i))
 		if len(mi) == 0 {
 			s.validEpochLeadersIndex[i] = false
@@ -776,11 +775,11 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			continue
 		}
 
-		if (len(alphaPkis) != posconfig.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
+		if (len(alphaPkis) != pos.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
 			s.validEpochLeadersIndex[i] = false
 		} else {
 
-			for j := 0; j < posconfig.EpochLeaderCount; j++ {
+			for j := 0; j < pos.EpochLeaderCount; j++ {
 				//s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub([]byte(alphaPkis[j]))
 				alphaPkiDecodeBytes, err := hex.DecodeString(alphaPkis[j])
 				if err != nil {
@@ -814,7 +813,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return errors.New("collect stage data error!")
 	}
 	// verify security pieces
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 		valid, _ := s.verifySecurityPiece(uint64(i))
 		if !valid {
 			s.validEpochLeadersIndex[i] = false
@@ -885,7 +884,7 @@ func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uin
 
 	var selfPk *ecdsa.PublicKey
 	var err error
-	if posconfig.SelfTestMode {
+	if pos.SelfTestMode {
 		selfPk = s.epochLeadersPtrArray[selfIndex]
 	} else {
 		selfPk, err = s.getLocalPublicKey()
@@ -978,53 +977,23 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 		return errors.New("rc is not ready")
 	}
 
-	ctx := context.Background()
-	rc := s.rc
-
-	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
-
-	var to = slotLeaderPrecompileAddr
-	amount := new(big.Int).SetInt64(0)
-	//amount.SetString("100", 10) // 100 tokens
-
-	//type SendTxArgs struct {
-	//	From     common.Address  `json:"from"`
-	//	To       *common.Address `json:"to"`
-	//	Gas      *hexutil.Big    `json:"gas"`
-	//	GasPrice *hexutil.Big    `json:"gasPrice"`
-	//	Value    *hexutil.Big    `json:"value"`
-	//	Data     hexutil.Bytes   `json:"data"`
-	//	Nonce    *hexutil.Uint64 `json:"nonce"`
-	//}
-	arg := map[string]interface{}{}
-	arg["from"] = s.key.Address
-	arg["to"] = &to
-	arg["value"] = (*hexutil.Big)(amount)
-	arg["txType"] = 1
 	//Set payload infomation--------------
-
-	payload, err := slottools.PackStage1Data(data, vm.SlotLeaderSCDef)
+	payload, err := slottools.PackStage1Data(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		log.Debug("PackStage1Data err:" + err.Error())
 		return err
 	}
 
-	log.Debug("ready to write data of payload: " + "0x" + hexutil.Encode(payload))
-
+	arg := map[string]interface{}{}
+	arg["from"] = s.key.Address
+	arg["to"] = vm.GetSlotLeaderSCAddress()
+	arg["value"] = (*hexutil.Big)(big.NewInt(0))
+	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
+	log.Debug("Write data of payload", "length", len(payload))
 
-	log.Debug("finish to write data of payload")
-
-	var txHash common.Hash
-	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
-	if nil != callErr {
-		fmt.Println(callErr)
-		log.Error("tx send failed")
-		return errors.New("tx send failed")
-	}
-	fmt.Println(txHash)
-	log.Debug("tx send success")
-	return nil
+	_, err = pos.SendTx(s.rc, arg)
+	return err
 }
 func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	//test
@@ -1034,36 +1003,21 @@ func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 		return errors.New("rc is not ready")
 	}
 
-	ctx := context.Background()
-	rc := s.rc
-	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
-
-	var to = slotLeaderPrecompileAddr
-	arg := map[string]interface{}{}
-	arg["from"] = s.key.Address
-	arg["to"] = &to
-	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
-
-	arg["txType"] = 1
 	//Set payload infomation--------------
-
-	payload, err := slottools.PackStage2Data(data, vm.SlotLeaderSCDef)
+	payload, err := slottools.PackStage2Data(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		return err
 	}
 
-	log.Debug(fmt.Sprintf("ready to write data of payload len: %d", len(payload)))
+	arg := map[string]interface{}{}
+	arg["from"] = s.key.Address
+	arg["to"] = vm.GetSlotLeaderSCAddress()
+	arg["value"] = (*hexutil.Big)(big.NewInt(0))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
+	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
-	log.Debug("finish to write data of payload")
-	var txHash common.Hash
-	callErr := rc.CallContext(ctx, &txHash, "eth_sendTransaction", arg)
-	if nil != callErr {
-		fmt.Println(callErr)
-		log.Error("tx send failed:" + callErr.Error())
-		return errors.New("tx send failed")
-	}
-	fmt.Println(txHash)
-	log.Debug("tx send success")
-	return nil
+	log.Debug("Write data of payload", "length", len(payload))
+
+	_, err = pos.SendTx(s.rc, arg)
+	return err
 }

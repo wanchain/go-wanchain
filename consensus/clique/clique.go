@@ -46,7 +46,7 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -587,14 +587,14 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
-	if posconfig.EpochBaseTime == 0 {
+	if pos.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
-		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
+		hcur := cur - (cur % pos.SlotTime) + pos.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
 		curEpochId, curSlotId, err := slotleader.GetEpochSlotID()
 		fmt.Println(err)
-		header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId+1)*posconfig.SlotTime))
+		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId+1)*pos.SlotTime))
 	}
 	return nil
 }
@@ -681,7 +681,7 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(posconfig.SlotTime / 2 * time.Second): // TODO when generate new block
+			case <-time.After(pos.SlotTime / 2 * time.Second): // TODO when generate new block
 				fmt.Println(" #################################################################our turn, number:", number, "epochID:", epochId, "slotId:", slotId)
 				epochId, slotId, err := slotleader.GetEpochSlotID()
 				if err != nil {
@@ -696,7 +696,7 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(posconfig.SlotTime * time.Second):
+			case <-time.After(pos.SlotTime * time.Second):
 				fmt.Println("not our turn")
 				continue
 			}

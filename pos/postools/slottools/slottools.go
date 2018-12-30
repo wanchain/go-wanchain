@@ -7,7 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 )
@@ -146,7 +146,7 @@ func GetFuncIDFromPayload(payload []byte) ([4]byte, error) {
 func InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
 	ok := false
 	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
-	if len(epochLeaders) != posconfig.EpochLeaderCount {
+	if len(epochLeaders) != pos.EpochLeaderCount {
 		posdb.GetEpocherInst().SelectLeadersLoop(epochID)
 
 		epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(epochID)

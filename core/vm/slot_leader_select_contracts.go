@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	SlotLeaderSCDef = `[
+	slotLeaderSCDef = `[
 			{
 				"constant": false,
 				"type": "function",
@@ -58,7 +58,7 @@ var (
 				]
 			}
 		]`
-	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(SlotLeaderSCDef))
+	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
 	errIllegalSender                   = errors.New("sender is not in epoch leaders ")
 )
@@ -68,7 +68,7 @@ func init() {
 		panic("err in slot leader sc initialize :" + errSlotLeaderSCInit.Error())
 	}
 
-	stgOneIdArr, _ = slottools.GetStage1FunctionID(SlotLeaderSCDef)
+	stgOneIdArr, _ = slottools.GetStage1FunctionID(slotLeaderSCDef)
 	copy(stgTwoIdArr[:], slotLeaderAbi.Methods["slotLeaderStage2InfoSave"].Id())
 }
 
@@ -106,7 +106,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	if evm == nil {
 		return nil, errors.New("state db is not ready")
 	}
-	data, err := slottools.UnpackStage1Data(in, SlotLeaderSCDef)
+	data, err := slottools.UnpackStage1Data(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, errors.New("state db is not ready")
 	}
 
-	data, err := slottools.UnpackStage2Data(in, SlotLeaderSCDef)
+	data, err := slottools.UnpackStage2Data(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 }
 
 func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) error {
-	data, err := slottools.UnpackStage1Data(tx.Data(), SlotLeaderSCDef)
+	data, err := slottools.UnpackStage1Data(tx.Data(), slotLeaderSCDef)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) e
 }
 
 func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
-	data, err := slottools.UnpackStage2Data(tx.Data()[4:], SlotLeaderSCDef)
+	data, err := slottools.UnpackStage2Data(tx.Data()[4:], slotLeaderSCDef)
 	if err != nil {
 		return err
 	}
@@ -257,4 +257,12 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 		return errIllegalSender
 	}
 	return nil
+}
+
+func GetSlotLeaderSCAddress() common.Address {
+	return slotLeaderPrecompileAddr
+}
+
+func GetSlotLeaderScAbiString() string {
+	return slotLeaderSCDef
 }
