@@ -361,3 +361,5 @@ func TestGetR(t *testing.T) {
 		t.Error("GetR wrong")
 	}
 }
+
+//func TestGetRBM()
