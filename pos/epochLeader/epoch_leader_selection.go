@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
@@ -19,10 +18,15 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/pos"
 )
 
 var (
+	safeK								   = uint64(1)
+	Nr 									   = 10 //num of random proposers
+	Ne 									   = 10 //num of epoch leaders, limited <= 256 now
+
 	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
 	ErrInvalidRandomProposerSelection      = errors.New("Invalid Random Proposer Selection")                  //Invalid Random Proposer Selection
@@ -57,15 +61,20 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	return inst
 }
 
+func (e *Epocher) getTargetBlkNumber() uint64 {
+	targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
+	if(targetBlkNum >= safeK) {
+		return (targetBlkNum - safeK)
+	} else {
+		return 0
+	}
+
+
+}
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
-	Nr := 10 //num of random proposers
-	Ne := 10 //num of epoch leaders, limited <= 256 now
+	targetBlkNum := e.getTargetBlkNumber()
 
-	targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
-	if(targetBlkNum >= 1) {
-		targetBlkNum -= 1
-	}
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
 		return err
@@ -86,7 +95,9 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
-	pa, err := e.createStakerProbabilityArray(statedb)
+	fmt.Println("\n\nselect randoms",epochId,common.ToHex(r))
+
+	pa, err := e.createStakerProbabilityArray(statedb,epochId)
 	if pa == nil || err != nil {
 		return err
 	}
@@ -134,11 +145,23 @@ func (s ProposerSorter) Swap(i, j int) {
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) generateProblility(pstaker *vm.StakerInfo) (*Proposer, error) {
+func (e *Epocher) generateProblility(pstaker *vm.StakerInfo,epochId uint64,blkTime uint64) (*Proposer, error) {
 
 	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan)).Int64()
 	lockTime := pstaker.LockTime
-	leftTimePercent := (float64(int64(lockTime)-(time.Now().Unix()-pstaker.StakingTime)) / float64(lockTime))
+
+	var leftTimePercent float64
+	if epochId == 0 {
+
+		leftTimePercent = 1
+
+	} else {
+
+		alignTime := int64(blkTime/(pos.SlotTime*pos.SlotCount))*(pos.SlotTime*pos.SlotCount)//align time to one epoch time
+
+		leftTimePercent = (float64(int64(lockTime)-(alignTime-pstaker.StakingTime)) / float64(lockTime))
+	}
+
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
 
 	gb := new(bn256.G1)
@@ -157,7 +180,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo) (*Proposer, error) 
 
 }
 
-func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (ProposerSorter, error) {
+func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB,epochId uint64) (ProposerSorter, error) {
 
 	if statedb == nil {
 		return nil, vm.ErrUnknown
@@ -166,6 +189,11 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (Proposer
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
+	blkNumber := e.getTargetBlkNumber()
+
+	blk := e.blkChain.GetBlockByNumber(blkNumber)
+
+	blkTime := blk.Header().Time.Uint64()
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
 		//fmt.Println("for each get data",value)
@@ -175,7 +203,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (Proposer
 			return false
 		}
 
-		pitem, err := e.generateProblility(&staker)
+		pitem, err := e.generateProblility(&staker,epochId,blkTime)
 		if err != nil {
 			return false
 		}
@@ -229,13 +257,13 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
-
+	fmt.Println("\n\n\n")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
 
-		fmt.Println("epoch leader mod tp=" + common.ToHex(crBig.Bytes()))
+		//fmt.Println("epoch leader mod tp=" + common.ToHex(crBig.Bytes()))
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
@@ -243,12 +271,14 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 			idx = len(ps) - 1
 		}
 
-		fmt.Println("select probility" + strconv.Itoa(idx) + " " + common.ToHex(ps[idx].probabilities.Bytes()))
+		fmt.Println("select epoch leader epochid,idx,pubs",epochId,i,common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx + 1].pubSec256)
 		e.epochLeadersDb.PutWithIndex(epochId, uint64(i), "", crypto.FromECDSAPub(ps[idx].pubSec256))
 
 		cr = crypto.Keccak256(cr)
 	}
+
+	fmt.Println("\n\n\n")
 
 	return nil
 }
@@ -270,12 +300,13 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	r1 := buffer.Bytes()       //r1 = 1||r
 	cr := crypto.Keccak256(r1) //cr = hash(r1)
 
+	fmt.Println("\n\n\n")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
 
-		fmt.Println("mod tp=" + common.ToHex(crBig.Bytes()))
+		//fmt.Println("mod tp=" + common.ToHex(crBig.Bytes()))
 
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
@@ -284,11 +315,15 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 			idx = len(ps) - 1
 		}
 
+		fmt.Println("select random leader epochid,idx,pubs",epochId,i,common.ToHex(ps[idx].pubBn256.Marshal()))
+
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
 		//EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
 
 		cr = crypto.Keccak256(cr)
 	}
+
+	fmt.Println("\n\n\n")
 
 	return nil
 }
