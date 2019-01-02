@@ -15,7 +15,6 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 //Db is the wanpos leveldb class
@@ -47,9 +46,9 @@ func NewDb(fileName string) *Db {
 var dbInstance *Db
 
 func init() {
-	dbInstance = posdb.NewDb("pos")
-	posdb.NewDb("rblocaldb")
-	posdb.NewDb("eplocaldb")
+	dbInstance = NewDb("pos")
+	NewDb("rblocaldb")
+	NewDb("eplocaldb")
 }
 
 //GetDb can get a Db instance to use
