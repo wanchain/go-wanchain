@@ -45,7 +45,7 @@ const (
 	SlotStage2       = uint64(pos.SlotCount * 8 / 10)
 	EpochLeaders     = "epochLeaders"
 	SecurityMsg      = "securityMsg"
-	CR				 = "cr"
+	CR               = "cr"
 	RandFromProposer = "randFromProposer"
 	RandomSeqs       = "randomSeqs"
 	SlotLeader       = "slotLeader"
@@ -81,7 +81,7 @@ type SlotLeaderSelection struct {
 	epochInstance     interface{}
 
 	slotLeadersPtrArray    [pos.SlotCount]*ecdsa.PublicKey
-	slotLeadersIndex	   [pos.SlotCount]uint64
+	slotLeadersIndex       [pos.SlotCount]uint64
 	epochLeadersPtrArray   [pos.EpochLeaderCount]*ecdsa.PublicKey
 	validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
 
@@ -554,6 +554,10 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 // from random proposer
 func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error) {
 	rb := vm.GetR(s.stateDb, epochID)
+	if rb == nil {
+		log.Error("vm.GetR return nil, use a default value")
+		rb = big.NewInt(1)
+	}
 	return rb, nil
 }
 
@@ -658,7 +662,7 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 			}
 		}
 
-		return cr,nil
+		return cr, nil
 	} else {
 		crsBytes, err := posdb.GetDb().Get(epochID, CR)
 		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(crsBytes))
@@ -726,7 +730,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	}
 
 	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
-	slotLeadersPtr,crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
+	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
@@ -752,12 +756,12 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		crBuf.Write(cr.Bytes())
 	}
 
-	_, err = posdb.GetDb().Put(uint64(epochID+1),CR,crBuf.Bytes())
+	_, err = posdb.GetDb().Put(uint64(epochID+1), CR, crBuf.Bytes())
 	if err != nil {
 		return err
 	}
 
-	for index, value := range slotLeadersIndex{
+	for index, value := range slotLeadersIndex {
 
 		s.slotLeadersIndex[index] = value
 	}
@@ -951,52 +955,52 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 
 	return nil
 }
+
 //ProofMes = [PK, Gt, skGt] []*PublicKey
 //Proof = [e,z] []*big.Int
-func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey,epochID uint64, slotID uint64)([]*ecdsa.PublicKey, []*big.Int, error){
+func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 	//1. SMA PRE
-	smaPiecesPtr,err:= s.getSMAPieces(epochID)
+	smaPiecesPtr, err := s.getSMAPieces(epochID)
 	if err != nil {
 		log.Error(err.Error())
-		return nil,nil, err
+		return nil, nil, err
 	}
 	//2. epochLeader PRE
-	epochLeadersPtrPre := s.getEpochLeadersPK(epochID-1)
+	epochLeadersPtrPre := s.getEpochLeadersPK(epochID - 1)
 	//3. RB PRE
-	rbPtr,err := s.getRandom(epochID-1)
-	if err!=nil {
-		log.Error(err.Error())
-		return nil,nil, err
-	}
-
-	rbBytes := rbPtr.Bytes()
-	//4. CR PRE
-	crsPtr,err :=s.getCRs(epochID)
+	rbPtr, err := s.getRandom(epochID - 1)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, nil, err
 	}
 
-	profMeg,proof,err := uleaderselection.GenerateSlotLeaderProof(PrivateKey,smaPiecesPtr,epochLeadersPtrPre,rbBytes[:],crsPtr[:],int(slotID))
+	rbBytes := rbPtr.Bytes()
+	//4. CR PRE
+	crsPtr, err := s.getCRs(epochID)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
+	}
 
-	return profMeg,proof,err
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(PrivateKey, smaPiecesPtr, epochLeadersPtrPre, rbBytes[:], crsPtr[:], int(slotID))
+
+	return profMeg, proof, err
 }
 
 func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 
-	epochLeadersPtrPre := s.getEpochLeadersPK(epochID-1)
+	epochLeadersPtrPre := s.getEpochLeadersPK(epochID - 1)
 	//3. RB PRE
-	rbPtr,err := s.getRandom(epochID-1)
-	if err!=nil {
+	rbPtr, err := s.getRandom(epochID - 1)
+	if err != nil {
 		log.Error(err.Error())
 		return false
 	}
 
 	rbBytes := rbPtr.Bytes()
 
-	return uleaderselection.VerifySlotLeaderProof(Proof[:],ProofMeg[:],epochLeadersPtrPre[:],rbBytes[:])
+	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
-
 
 // used for stage2 payload
 // stage2 tx payload 1(alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
