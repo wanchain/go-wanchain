@@ -49,6 +49,9 @@ type RbSIGDataCollector struct {
 	pk   *bn256.G1
 }
 
+
+type GetRBProposerGroupFunc func (epochId uint64) []bn256.G1
+
 type RandomBeacon struct {
 	epochStage int
 	epochId    uint64
@@ -57,6 +60,9 @@ type RandomBeacon struct {
 	key       *keystore.Key
 	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
+
+	// based function
+	getRBProposerGroupF GetRBProposerGroupFunc
 }
 
 var (
@@ -78,6 +84,10 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
 
 	rb.epocher = epocher
 
+	// function
+	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
+
+	// config
 	if key != nil {
 		rb.key = key
 		pos.Cfg().SelfPuK = new(bn256.G1).Set(key.PrivateKey3.PublicKeyBn256.G1)
@@ -218,7 +228,6 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
 		if pk.String() == selfPk.String() {
-			//if true || pk.String() != "" {
 			ids = append(ids, uint32(i))
 		}
 	}
@@ -239,17 +248,21 @@ func (rb *RandomBeacon) doDKGs(epochId uint64, proposerIds []uint32) error {
 
 func (rb *RandomBeacon) doDKG(epochId uint64, proposerId uint32) error {
 	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
+	txPayload, err := rb.generateDKG(epochId, proposerId)
+	if err != nil {
+		return err
+	}
 
+	return rb.sendDKG(txPayload)
+}
+
+func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDKGTxPayload, error) {
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
 		log.Error("can't find random beacon proposer group")
-		return errors.New("can't find random beacon proposer group")
+		return nil, errors.New("can't find random beacon proposer group")
 	}
-
-	//thres := pos.Cfg().PolymDegree+1
-	//pubkey := Cfg().SelfPuK
-	//prikey := Cfg().SelfPrK
 
 	// Fix the evaluation point: Hash(Pub[1]+1), Hash(Pub[2]+2), ..., Hash(Pub[Nr]+Nr)
 	x := make([]big.Int, nr)
@@ -261,36 +274,40 @@ func (rb *RandomBeacon) doDKG(epochId uint64, proposerId uint32) error {
 	s, err := rand.Int(rand.Reader, bn256.Order)
 	if err != nil {
 		log.Error("get rand fail", "err", err)
-		return err
+		return nil, err
 	}
 
 	sshare := make([]big.Int, nr, nr)
-	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s) // fi(x), set si as its constant term
+	// fi(x), set si as its constant term
+	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s)
 	for i := 0; i < nr; i++ {
-		sshare[i] = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+		// share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+		sshare[i] = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree))
 	}
 
 	// Encrypt the secret share, i.e. mutiply with the receiver's public key
 	enshare := make([]*bn256.G1, nr, nr)
-	for i := 0; i < nr; i++ { // enshare[j] = sshare[j]*Pub[j], it is a point on ECC
+	for i := 0; i < nr; i++ {
+		// enshare[j] = sshare[j]*Pub[j], it is a point on ECC
 		enshare[i] = new(bn256.G1).ScalarMult(&pks[i], &sshare[i])
 	}
 
 	// Make commitment for the secret share, i.e. mutiply with the generator of G2
 	commit := make([]*bn256.G2, nr, nr)
-	for i := 0; i < nr; i++ { // commit[j] = sshare[j] * G2
+	for i := 0; i < nr; i++ {
+		// commit[j] = sshare[j] * G2
 		commit[i] = new(bn256.G2).ScalarBaseMult(&sshare[i])
 	}
 
 	// generate DLEQ proof
 	proof := make([]wanpos.DLEQproof, nr, nr)
-	for i := 0; i < nr; i++ { // proof = (a1, a2, z)
+	for i := 0; i < nr; i++ {
+		// proof = (a1, a2, z)
 		proof[i] = wanpos.DLEQ(pks[i], *wanpos.Hbase, &sshare[i])
 	}
 
 	txPayload := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
-	//log.Info("do dkg", "txPayload", txPayload)
-	return rb.sendDKG(&txPayload)
+	return &txPayload, nil
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
@@ -347,7 +364,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 	// Signing Stage
 	// In this stage, each random proposer computes its signature share and sends it on chain.
-	mBuf, err := vm.GetRBM(epochId)
+	mBuf, err := vm.GetRBM(rb.statedb, epochId)
 	if err != nil {
 		return err
 	}
@@ -458,7 +475,7 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
 
 	// mG
-	mBuf, err := vm.GetRBM(epochId)
+	mBuf, err := vm.GetRBM(rb.statedb, epochId)
 	if err != nil {
 		log.Error("get M fail", "err", err)
 		return err
@@ -550,8 +567,7 @@ func (rb *RandomBeacon) getTxFrom() common.Address {
 }
 
 func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
-	//pks := rb.epocher.GetRBProposerGroup(epochId)
-	pks := posdb.GetRBProposerGroup(epochId)
+	pks := rb.getRBProposerGroupF(epochId)
 	log.Info("get rb proposer group", "proposer", pks)
 	return pks
 }

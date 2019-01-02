@@ -176,7 +176,7 @@ func getRBProposerGroup(epochId uint64) []bn256.G1 {
 }
 
 var getRBProposerGroupVar func(epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
-var getRBMVar func(epochId uint64) ([]byte, error) = GetRBM
+var getRBMVar func(db StateDB, epochId uint64) ([]byte, error) = GetRBM
 
 func UIntToByteSlice(num uint64) []byte {
 	b := make([]byte, 8)
@@ -340,7 +340,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	// TODO: check weather dkg stage has been finished
 
 	// 3. Verification
-	M, err := getRBMVar(sigshareParam.EpochId)
+	M, err := getRBMVar(evm.StateDB, sigshareParam.EpochId)
 	if err != nil {
 		return nil, buildError("getRBM error", sigshareParam.EpochId, sigshareParam.ProposerId)
 	}
