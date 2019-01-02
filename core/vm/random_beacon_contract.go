@@ -106,8 +106,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 		r := big.NewInt(0).SetBytes(rBytes)
 		return r
 	}
-	//return nil
-	return big.NewInt(1)
+	return nil
 }
 
 func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, error) {
