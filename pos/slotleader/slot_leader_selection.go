@@ -834,6 +834,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		}
 	}
 	ArrayPiece = ArrayPieceClean
+	fmt.Println("len(ArrayPiece):", len(ArrayPiece))
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
@@ -988,6 +989,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	arg["from"] = s.key.Address
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(100000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 	log.Debug("Write data of payload", "length", len(payload))
