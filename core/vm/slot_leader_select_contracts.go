@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 
 	"github.com/wanchain/go-wanchain/functrace"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -68,8 +68,7 @@ func init() {
 		panic("err in slot leader sc initialize :" + errSlotLeaderSCInit.Error())
 	}
 
-	s := slotleader.GetSlotLeaderSelection()
-	stgOneIdArr, _ = s.GetStage1FunctionID()
+	stgOneIdArr, _ = slottools.GetStage1FunctionID(slotLeaderSCDef)
 	copy(stgTwoIdArr[:], slotLeaderAbi.Methods["slotLeaderStage2InfoSave"].Id())
 }
 
@@ -107,13 +106,12 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	if evm == nil {
 		return nil, errors.New("state db is not ready")
 	}
-	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage1Data(in)
+	data, err := slottools.UnpackStage1Data(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
 
-	epochID, selfIndex, pkSelf, miGen, err := s.RlpUnpackWithCompressedPK(data) // use this function to unpack rlp []byte
+	epochID, selfIndex, pkSelf, miGen, err := slottools.RlpUnpackWithCompressedPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +131,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	// Read and Verify
 	readBuf := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 
-	epID, index, pk, pkMi, err := s.RlpUnpackWithCompressedPK(readBuf)
+	epID, index, pk, pkMi, err := slottools.RlpUnpackWithCompressedPK(readBuf)
 
 	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
 		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
@@ -162,13 +160,12 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, errors.New("state db is not ready")
 	}
 
-	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage2Data(in)
+	data, err := slottools.UnpackStage2Data(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
-	//epochIDBuf,selfIndexBuf,_,alphaPki,proof,err := s.RlpUnpackStage2Data(data)
-	epochIDBuf, selfIndexBuf, _, _, _, err := s.RlpUnpackStage2Data(data)
+
+	epochIDBuf, selfIndexBuf, _, _, _, err := slottools.RlpUnpackStage2Data(data)
 	if err != nil {
 		return nil, err
 	}
@@ -228,28 +225,26 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 }
 
 func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) error {
-	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage1Data(tx.Data())
+	data, err := slottools.UnpackStage1Data(tx.Data(), slotLeaderSCDef)
 	if err != nil {
 		return err
 	}
-	epochIDBuf, _, pkSelf, _, err := s.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
+	epochIDBuf, _, pkSelf, _, err := slottools.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
 	if err != nil {
 		return err
 	}
-	if !s.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
+	if !slottools.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
 		return errIllegalSender
 	}
 	return nil
 }
 
 func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
-	s := slotleader.GetSlotLeaderSelection()
-	data, err := s.UnpackStage2Data(tx.Data()[4:])
+	data, err := slottools.UnpackStage2Data(tx.Data()[4:], slotLeaderSCDef)
 	if err != nil {
 		return err
 	}
-	epochIDString, _, pk, _, _, err := s.RlpUnpackStage2Data(data)
+	epochIDString, _, pk, _, _, err := slottools.RlpUnpackStage2Data(data)
 	if err != nil {
 		return err
 	}
@@ -258,8 +253,16 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 	if err != nil {
 		return err
 	}
-	if !s.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
+	if !slottools.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
 		return errIllegalSender
 	}
 	return nil
+}
+
+func GetSlotLeaderSCAddress() common.Address {
+	return slotLeaderPrecompileAddr
+}
+
+func GetSlotLeaderScAbiString() string {
+	return slotLeaderSCDef
 }

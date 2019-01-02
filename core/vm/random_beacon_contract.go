@@ -60,12 +60,16 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
+	log.Debug("RandomBeaconContract is called", "inputLen", len(input), "methodId", methodId, "dkgId", dkgId, "sigshareId", sigshareId, "genRId", genRId)
+
 	if methodId == dkgId {
 		return c.dkg(input[4:], contract, evm)
 	} else if methodId == sigshareId {
 		return c.sigshare(input[4:], contract, evm)
 	} else if methodId == genRId {
 		return c.genR(input[4:], contract, evm)
+	} else {
+		log.Error("No match id found")
 	}
 
 	return nil, nil
@@ -108,6 +112,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 
 func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, error) {
 	hash := GetRBKeyHash(dkgId[:], epochId, proposerId)
+	log.Debug("vm.GetDkg", "len(dkgId)", len(dkgId), "epochID", epochId, "proposerId", proposerId, "hash", hash.Hex())
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &dkgParam)
@@ -120,6 +125,7 @@ func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, err
 
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
+	log.Debug("vm.GetSig", "len(sigshareId)", len(sigshareId), "epochID", epochId, "proposerId", proposerId, "hash", hash.Hex())
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	var sigParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &sigParam)
@@ -296,6 +302,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 	// save epochId*2^64 + proposerId
 	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
+	log.Debug("vm.dkg", "len(dkgId)", len(dkgId), "epochID", dkgParam.EpochId, "proposerId", dkgParam.ProposerId, "hash", hash.Hex())
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
 	// TODO: add an dkg event
@@ -364,6 +371,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	// save
 	hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
+	log.Debug("vm.sigshare", "len(sigshareId)", len(sigshareId), "epochID", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId, "hash", hash.Hex())
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
 	// TODO: add an dkg event

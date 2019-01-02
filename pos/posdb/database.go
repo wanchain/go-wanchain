@@ -320,6 +320,7 @@ func StringToUint64(input string) uint64 {
 
 type SelectLead interface {
 	SelectLeadersLoop(epochId uint64) error
+	GetEpochLeaders(epochID uint64) [][]byte
 }
 
 func SetEpocherInst(sor SelectLead) {

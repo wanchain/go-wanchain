@@ -12,7 +12,9 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -300,7 +302,7 @@ func TestWholeFlow(t *testing.T) {
 	// 1. build N PK for epoch leader and insert into DB
 	// 1.1 input genesis epoch leader group
 	PrivateKeys := make([]*ecdsa.PrivateKey, 0)
-	for i := 0; i < EpochLeaderCount; i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 		privateksample, err := crypto.GenerateKey()
 		if err != nil {
 			t.Fatal(err)
@@ -369,7 +371,7 @@ func TestWholeFlow(t *testing.T) {
 	}
 	// 2. read slot index from db
 	fmt.Println("\t===================Read slot leaders from local db========================================")
-	for i := 0; i < SlotCount; i++ {
+	for i := 0; i < pos.SlotCount; i++ {
 		oneSlotBytes, err := posdb.GetDb().GetWithIndex(uint64(epochID+1), uint64(i), SlotLeader)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -404,7 +406,7 @@ func TestWholeFlow(t *testing.T) {
 		unpackedData, err := s.UnpackStage2Data(payload[4:])
 		fmt.Printf("\n unpackedData= %v\n", (unpackedData))
 
-		epochIDBuf, selfIndexBuf, pki, alphaPki, proof, err := s.RlpUnpackStage2Data(unpackedData)
+		epochIDBuf, selfIndexBuf, pki, alphaPki, proof, err := slottools.RlpUnpackStage2Data(unpackedData)
 
 		epochIDBufDec, err := hex.DecodeString(epochIDBuf)
 		epochID, err := strconv.ParseInt(string(epochIDBufDec), 10, 64)

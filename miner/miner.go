@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -87,9 +88,11 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	//go miner.posInit(eth)
 	return miner
 }
+
 var posInited = 0
+
 func posInit(s Backend) {
-	if(posInited != 0) {
+	if posInited != 0 {
 		return
 	}
 	posInited = 1
@@ -111,7 +114,6 @@ func posInit(s Backend) {
 		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
-
 
 	fmt.Println("posInit begin")
 	rb, err := posdb.GetRandom(0)
@@ -165,10 +167,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		//fmt.Println(h)
 		if nil == h {
-			time.Sleep(slotleader.SlotTime * time.Second)
+			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		} else {
-			slotleader.EpochBaseTime = h.Time.Uint64()
+			pos.EpochBaseTime = h.Time.Uint64()
 		}
 
 		slotleader.CalEpochSlotID()
@@ -178,7 +180,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err1 != nil || err2 != nil {
 			fmt.Println(err1, err2)
-			time.Sleep(slotleader.SlotTime * time.Second)
+			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		}
 
@@ -231,9 +233,9 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb,  epocher, rc)
+		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
 		cur := uint64(time.Now().Unix())
-		sleepTime := slotleader.SlotTime - (cur - slotleader.EpochBaseTime - (epochid*slotleader.SlotCount+slotid)*slotleader.SlotTime)
+		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:

@@ -27,7 +27,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -46,6 +46,7 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -334,7 +335,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	//}
 	// All basic checks passed, verify cascading fields
 	// caculate leader
-	epochidSlotid := header.Difficulty.Uint64();
+	epochidSlotid := header.Difficulty.Uint64()
 	epochId := epochidSlotid >> 32
 	fmt.Println("verifyheader epochid: ", epochId)
 	//if epochId != 0 {
@@ -586,14 +587,14 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
-	if slotleader.EpochBaseTime == 0 {
+	if pos.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
-		hcur := cur - (cur % slotleader.SlotTime) + slotleader.SlotTime
+		hcur := cur - (cur % pos.SlotTime) + pos.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
 		curEpochId, curSlotId, err := slotleader.GetEpochSlotID()
 		fmt.Println(err)
-		header.Time = big.NewInt(int64(slotleader.EpochBaseTime + (curEpochId*slotleader.SlotCount+curSlotId+1)*slotleader.SlotTime))
+		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId+1)*pos.SlotTime))
 	}
 	return nil
 }
@@ -680,7 +681,7 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime / 2 * time.Second): // TODO when generate new block
+			case <-time.After(pos.SlotTime / 2 * time.Second): // TODO when generate new block
 				fmt.Println(" #################################################################our turn, number:", number, "epochID:", epochId, "slotId:", slotId)
 				epochId, slotId, err := slotleader.GetEpochSlotID()
 				if err != nil {
@@ -695,7 +696,7 @@ loopCheck:
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(slotleader.SlotTime * time.Second):
+			case <-time.After(pos.SlotTime * time.Second):
 				fmt.Println("not our turn")
 				continue
 			}

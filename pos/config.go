@@ -1,22 +1,41 @@
 package pos
 
 import (
-	"github.com/wanchain/pos/cloudflare"
 	"math/big"
+
+	bn256 "github.com/wanchain/pos/cloudflare"
+)
+
+var (
+	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
+	EpochBaseTime = uint64(0)
+)
+
+const (
+	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
+	EpochLeaderCount = 10
+	// RandomProperCount is count of pk in random leader group which is select by stake
+	RandomProperCount = 10
+	// SlotCount is slot count in an epoch
+	SlotCount = 30
+	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
+	SlotTime = 6
+	// SelfTestMode config whether it is in a simlate tese mode
+	SelfTestMode = false
 )
 
 type Config struct {
-	PolymDegree uint
-	K uint
+	PolymDegree      uint
+	K                uint
 	MinRBProposerCnt uint
-	EpochInterval uint64
-	PosStartTime int64
-	SelfPuK *bn256.G1
-	SelfPrK *big.Int
-	Dbpath string
+	EpochInterval    uint64
+	PosStartTime     int64
+	SelfPuK          *bn256.G1
+	SelfPrK          *big.Int
+	Dbpath           string
 }
 
-var DefaultConfig = Config {
+var DefaultConfig = Config{
 	1,
 	2,
 	2,
@@ -28,7 +47,5 @@ var DefaultConfig = Config {
 }
 
 func Cfg() *Config {
-	return &DefaultConfig;
+	return &DefaultConfig
 }
-
-
