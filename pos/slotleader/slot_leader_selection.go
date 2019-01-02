@@ -81,6 +81,7 @@ type SlotLeaderSelection struct {
 	epochInstance     interface{}
 
 	slotLeadersPtrArray    [pos.SlotCount]*ecdsa.PublicKey
+	slotLeadersIndex	   [pos.SlotCount]uint64
 	epochLeadersPtrArray   [pos.EpochLeaderCount]*ecdsa.PublicKey
 	validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
 
@@ -460,6 +461,11 @@ func (s *SlotLeaderSelection) clearData() {
 		s.slotLeadersPtrArray[i] = nil
 
 	}
+
+	for i := 0; i < pos.SlotCount; i++ {
+		s.slotLeadersIndex[i] = 0
+
+	}
 }
 
 func (s *SlotLeaderSelection) dumpData() {
@@ -719,7 +725,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
+	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
+	slotLeadersPtr,crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
@@ -748,6 +755,11 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	_, err = posdb.GetDb().Put(uint64(epochID+1),CR,crBuf.Bytes())
 	if err != nil {
 		return err
+	}
+
+	for index, value := range slotLeadersIndex{
+
+		s.slotLeadersIndex[index] = value
 	}
 
 	s.slotCreated = true
