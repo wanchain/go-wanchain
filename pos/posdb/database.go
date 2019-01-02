@@ -46,6 +46,11 @@ func NewDb(fileName string) *Db {
 var dbInstance *Db
 
 func init() {
+	dbInstance = NewDb("")
+}
+
+// DbInitAll init all db files
+func DbInitAll(pathname string) {
 	dbInstance = NewDb("pos")
 	NewDb("rblocaldb")
 	NewDb("eplocaldb")
