@@ -341,6 +341,7 @@ func GetEpocherInst() SelectLead {
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+	GetEpocherInst()
 	db := NewDb("rblocaldb")
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
