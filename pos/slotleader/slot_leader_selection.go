@@ -834,6 +834,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		}
 	}
 	ArrayPiece = ArrayPieceClean
+	fmt.Println("len(ArrayPiece):", len(ArrayPiece))
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
