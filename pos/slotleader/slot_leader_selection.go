@@ -34,6 +34,7 @@ import (
 //CompressedPubKeyLen means a compressed public key byte len.
 const CompressedPubKeyLen = 33
 const LengthPublicKeyBytes = 65
+const LengthCR = 32
 
 const (
 	StageTwoProofCount = 2
@@ -44,6 +45,7 @@ const (
 	SlotStage2       = uint64(pos.SlotCount * 8 / 10)
 	EpochLeaders     = "epochLeaders"
 	SecurityMsg      = "securityMsg"
+	CR				 = "cr"
 	RandFromProposer = "randFromProposer"
 	RandomSeqs       = "randomSeqs"
 	SlotLeader       = "slotLeader"
@@ -598,6 +600,80 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		return piecesPtr, nil
 	}
 }
+func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error) {
+	// 1. get SMA[pre]
+	crsPtr := make([]*big.Int, 0)
+	if epochID == uint64(0) {
+		SMA, err := s.getSMAPieces(epochID)
+		if err != nil {
+			return nil, err
+		}
+		//calculate the cr sequence
+		cr := make([]*big.Int, 0)
+		na := len(SMA)
+		//cr[0] = hash(alpha1*G+alpha2*G+...+alphan*G)
+		sumpub := new(ecdsa.PublicKey)
+		sumpub.Curve = crypto.S256()
+		sumpub.X = new(big.Int).Set(SMA[0].X)
+		sumpub.Y = new(big.Int).Set(SMA[0].Y)
+		for i := 1; i < na; i++ {
+			sumpub.X, sumpub.Y = crypto.S256().Add(sumpub.X, sumpub.Y, SMA[i].X, SMA[i].Y)
+		}
+		cr0 := new(big.Int).SetBytes(crypto.Keccak256(crypto.FromECDSAPub(sumpub)))
+		cr = append(cr, cr0)
+		//cr[i] = hash(bi-1,0*alpha1*G+bi-1,1*alpha2*G+...+bi-1,n-1*alphan*G)
+		//cr[i-1]=bi-1,0||bi-1,1||...||bi-1,n-1
+		for i := 1; i < pos.SlotCount; i++ {
+			temp := new(ecdsa.PublicKey)
+			temp.Curve = crypto.S256()
+			que := 0
+			for j := 0; j < na; j++ {
+				if cr[i-1].Bit(j) == 1 {
+					if que == 1 {
+						temp.X, temp.Y = crypto.S256().Add(temp.X, temp.Y, SMA[j].X, SMA[j].Y)
+					} else if que == 0 {
+						temp.X = new(big.Int).Set(SMA[j].X)
+						temp.Y = new(big.Int).Set(SMA[j].Y)
+						que = 1
+					}
+
+				}
+			}
+			if temp.X == nil { //if bi-1,x are all 0, set cr[i] = hash(RB)
+				rb, err := s.getRandom(epochID)
+				if err != nil {
+					return nil, err
+				}
+				cri := new(big.Int).SetBytes(crypto.Keccak256(rb.Bytes()))
+				cr = append(cr, cri)
+			} else {
+				cri := new(big.Int).SetBytes(crypto.Keccak256(crypto.FromECDSAPub(temp)))
+				cr = append(cr, cri)
+			}
+		}
+
+		return cr,nil
+	} else {
+		crsBytes, err := posdb.GetDb().Get(epochID, CR)
+		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(crsBytes))
+		if err != nil {
+			return nil, err
+		}
+		crCounts := len(crsBytes) / LengthCR
+		var cr []byte
+		for i := 0; i < crCounts; i++ {
+			if i < crCounts-1 {
+				cr = crsBytes[i*LengthCR : (i+1)*LengthCR]
+			} else {
+				cr = crsBytes[i*LengthCR:]
+			}
+			fmt.Printf("epchoID=%d,getCRS: one hex.EncodeToString(cr) is = %v\n\n", epochID, hex.EncodeToString(cr))
+			crsPtr = append(crsPtr, big.NewInt(0).SetBytes(cr))
+		}
+		return crsPtr, nil
+	}
+	return nil, nil
+}
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	err := s.buildEpochLeaderGroup(epochID)
@@ -643,7 +719,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
+	slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
@@ -663,6 +739,17 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return err
 		}
 	}
+	// insert CRS to local DB
+	var crBuf bytes.Buffer
+	for _, cr := range crs {
+		crBuf.Write(cr.Bytes())
+	}
+
+	_, err = posdb.GetDb().Put(uint64(epochID+1),CR,crBuf.Bytes())
+	if err != nil {
+		return err
+	}
+
 	s.slotCreated = true
 	s.dumpData()
 	return nil
@@ -852,6 +939,52 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 
 	return nil
 }
+//ProofMes = [PK, Gt, skGt] []*PublicKey
+//Proof = [e,z] []*big.Int
+func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey,epochID uint64, slotID uint64)([]*ecdsa.PublicKey, []*big.Int, error){
+	//1. SMA PRE
+	smaPiecesPtr,err:= s.getSMAPieces(epochID)
+	if err != nil {
+		log.Error(err.Error())
+		return nil,nil, err
+	}
+	//2. epochLeader PRE
+	epochLeadersPtrPre := s.getEpochLeadersPK(epochID-1)
+	//3. RB PRE
+	rbPtr,err := s.getRandom(epochID-1)
+	if err!=nil {
+		log.Error(err.Error())
+		return nil,nil, err
+	}
+
+	rbBytes := rbPtr.Bytes()
+	//4. CR PRE
+	crsPtr,err :=s.getCRs(epochID)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
+	}
+
+	profMeg,proof,err := uleaderselection.GenerateSlotLeaderProof(PrivateKey,smaPiecesPtr,epochLeadersPtrPre,rbBytes[:],crsPtr[:],int(slotID))
+
+	return profMeg,proof,err
+}
+
+func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+
+	epochLeadersPtrPre := s.getEpochLeadersPK(epochID-1)
+	//3. RB PRE
+	rbPtr,err := s.getRandom(epochID-1)
+	if err!=nil {
+		log.Error(err.Error())
+		return false
+	}
+
+	rbBytes := rbPtr.Bytes()
+
+	return uleaderselection.VerifySlotLeaderProof(Proof[:],ProofMeg[:],epochLeadersPtrPre[:],rbBytes[:])
+}
+
 
 // used for stage2 payload
 // stage2 tx payload 1(alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
