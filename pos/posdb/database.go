@@ -55,6 +55,7 @@ func init() {
 
 // DbInitAll init all db files
 func DbInitAll(pathname string) {
+	pos.Cfg().Dbpath = pathname
 	dbInstance = NewDb("pos")
 	NewDb("rblocaldb")
 	NewDb("eplocaldb")
@@ -296,7 +297,7 @@ func BytesToUint64(input []byte) uint64 {
 	return big.NewInt(0).SetBytes(input).Uint64()
 }
 
-// Uint64ToString can change uint64 to string through a big.Int
+// Uint64ToString can change uint64 to string through a big.Int, output is a 10 base number
 func Uint64ToString(input uint64) string {
 	str := big.NewInt(0).SetUint64(input).String()
 	if len(str) == 0 {
@@ -319,10 +320,11 @@ func Uint64StringToByte(input string) []byte {
 	return num.Bytes()
 }
 
-// StringToUint64 can change string to uint64 through a big.Int
+// StringToUint64 can change string to uint64 through a big.Int, Input must be a 10 base number
 func StringToUint64(input string) uint64 {
 	num, ok := big.NewInt(0).SetString(input, 10)
 	if !ok {
+		log.Error("StringToUint64 only support 10 base number string", "input", input)
 		return 0
 	}
 	return num.Uint64()
