@@ -200,7 +200,7 @@ func prepareSig(Prikey []big.Int, enshare [][]*bn256.G1) ([]*bn256.G1)  {
 		}
 	}
 
-	M, err := getRBMVar(rbepochId)
+	M, err := getRBMVar(statedb, rbepochId)
 	if err != nil {
 		fmt.Println("get rbm error id:%u", rbepochId)
 	}
@@ -219,7 +219,7 @@ func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
 }
 
 
-func getRBMMock(epochId uint64) ([]byte, error) {
+func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
 	nextEpochId := big.NewInt(int64(epochId + 1))
 	preRandom := rbranddb[epochId]
 	if preRandom == nil {
@@ -318,13 +318,8 @@ func TestUtil(t *testing.T) {
 	rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
 	var strtest = "abcdefghi"
 	strPayload, _ := rbAbi.Pack("dkg", strtest)
-	var str string
-	rbAbi.Unpack(&str, "dkg", strPayload[4:])
 	var str1 string
 	rbAbi.UnpackInput(&str1, "dkg", strPayload[4:])
-	if str != strtest {
-		println("string pack unpack error")
-	}
 	if str1 != strtest {
 		println("string pack unpack Input error")
 	}

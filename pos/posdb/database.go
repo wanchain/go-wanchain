@@ -22,10 +22,10 @@ type Db struct {
 }
 
 var (
-	dbInstMap           = make(map[string]*Db)
+	dbInstMap = make(map[string]*Db)
 	//RANDOMBEACON_DB_KEY = "PosRandomBeacon"
-	selecter            SelectLead
-	mu                  sync.RWMutex
+	selecter SelectLead
+	mu       sync.RWMutex
 )
 
 func NewDb(fileName string) *Db {
@@ -304,7 +304,7 @@ func Uint64ToString(input uint64) string {
 	return str
 }
 
-// Uint64StringToByte can change uint64  string to bytes through a big.Int
+// Uint64StringToByte can change uint64  string to bytes through a big.Int, Input must be a 10 base number
 func Uint64StringToByte(input string) []byte {
 	num, ok := big.NewInt(0).SetString(input, 10)
 	if !ok {

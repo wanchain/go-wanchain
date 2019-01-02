@@ -2,6 +2,7 @@ package posdb
 
 import (
 	"encoding/hex"
+	"os"
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -11,6 +12,11 @@ func TestUint64Convert(t *testing.T) {
 	value := uint64(0)
 	buf := Uint64ToBytes(value)
 	if len(buf) != 1 || buf[0] != 0 {
+		t.Fail()
+	}
+
+	buf = Uint64ToBytes(uint64(0x12345678))
+	if buf[0] != 0x12 || buf[1] != 0x34 || buf[2] != 0x45 || buf[3] != 0x78 {
 		t.Fail()
 	}
 
@@ -51,6 +57,7 @@ func TestUint64Convert(t *testing.T) {
 }
 
 func TestDbInitAll(t *testing.T) {
+	os.RemoveAll("/tmp/gwan")
 	DbInitAll("/tmp")
 	db := NewDb("pos")
 	if db == nil {
@@ -72,6 +79,9 @@ func TestDbInitAll(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		key, _ := crypto.GenerateKey()
 		keys[i] = crypto.FromECDSAPub(&key.PublicKey)
+		if !PkEqual(&key.PublicKey, &key.PublicKey) {
+			t.Fail()
+		}
 	}
 
 	allQuit := make(chan struct{}, 3)
