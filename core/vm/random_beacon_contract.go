@@ -232,7 +232,7 @@ func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint3
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(dkgBytes, &dkgParam)
 	if err != nil {
-		log.Error("rlp decode dkg fail", "err", err)
+		log.Debug("rlp decode dkg fail", "err", err)
 		return nil, buildError("error in sigshare, decode dkg rlp error", epochId, proposerId)
 	}
 
