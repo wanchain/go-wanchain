@@ -3,13 +3,15 @@ package pos
 import (
 	"math/big"
 
-	bn256 "github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/go-wanchain/node"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
 	EpochBaseTime = uint64(0)
+	// SelfTestMode config whether it is in a simlate tese mode
+	SelfTestMode = false
 )
 
 const (
@@ -21,8 +23,6 @@ const (
 	SlotCount = 30
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 6
-	// SelfTestMode config whether it is in a simlate tese mode
-	SelfTestMode = false
 )
 
 type Config struct {
@@ -34,7 +34,7 @@ type Config struct {
 	SelfPuK          *bn256.G1
 	SelfPrK          *big.Int
 	Dbpath           string
-	NodeCfg			 *node.Config
+	NodeCfg          *node.Config
 }
 
 var DefaultConfig = Config{

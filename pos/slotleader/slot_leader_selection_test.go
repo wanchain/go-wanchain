@@ -1,18 +1,19 @@
 package slotleader
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strconv"
 	"testing"
+
+	"github.com/wanchain/go-wanchain/pos"
+
+	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -20,6 +21,7 @@ import (
 
 // TestLoop use to test main loop
 func TestLoop(t *testing.T) {
+	pos.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
 	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
 	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
@@ -197,22 +199,19 @@ func TestRlpEncodeAndDecode(t *testing.T) {
 }
 
 func TestAbiPack(t *testing.T) {
-
-	s := GetSlotLeaderSelection()
-
 	data := []byte("Each winter, npm, Inc. circulates a survey of software developers and npm users to solicit your ")
 
-	payload, err := s.PackStage1Data(data)
+	payload, err := slottools.PackStage1Data(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		t.Fail()
 	}
-	id1, _ := s.GetStage1FunctionID()
-	id2, _ := s.GetFuncIDFromPayload(payload)
+	id1, _ := slottools.GetStage1FunctionID(vm.GetSlotLeaderScAbiString())
+	id2, _ := slottools.GetFuncIDFromPayload(payload)
 	if id1 != id2 {
 		t.Fail()
 	}
 
-	unpack, err := s.UnpackStage1Data(payload)
+	unpack, err := slottools.UnpackStage1Data(payload, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		t.Fail()
 	}
@@ -275,10 +274,9 @@ func TestCompare(t *testing.T) {
 
 func TestPackUnpack2(t *testing.T) {
 
-	s := GetSlotLeaderSelection()
 	data := "33+32+04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70+04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04fd33b766f4c8af328b19a0970cb02561c239fdc1ac0eb79e0c3c8252cb2dc37eb5b82ab183fda1b33e40b3d12c8964f3b0b540b6714a74f0e0e93d67a36267ba-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27-04d3d1092872a5c1bd40ea394b50ac469c1d0f6a986a0c32736ae35c148b7dd958cb69a2dc03c480b0e836116d579dabd32f7841f2973b949e24f314077adcac27+e7365b9c4e4ab8d4475ed34410cb4d9f48c618f543c2ba11b321187d0ff4e780-3d2312ab25c14c33f033f885bc8c7e0c601de7e96ba7ec110ba08c0f806d3a2e"
 
-	payload, err := s.PackStage2Data(data)
+	payload, err := slottools.PackStage2Data(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		t.Fail()
 	}
@@ -287,7 +285,7 @@ func TestPackUnpack2(t *testing.T) {
 	fmt.Printf("\nAfter PackStage2Data %v\n", txdata)
 	// decode
 
-	unpackedData, err := s.UnpackStage2Data(txdata[4:])
+	unpackedData, err := slottools.UnpackStage2Data(txdata[4:], vm.GetSlotLeaderScAbiString())
 
 	if err != nil {
 		t.Fail()
@@ -297,166 +295,168 @@ func TestPackUnpack2(t *testing.T) {
 
 }
 
-func TestWholeFlow(t *testing.T) {
-	fmt.Println("\n=============whole flow==============================================")
-	// 1. build N PK for epoch leader and insert into DB
-	// 1.1 input genesis epoch leader group
-	PrivateKeys := make([]*ecdsa.PrivateKey, 0)
-	for i := 0; i < pos.EpochLeaderCount; i++ {
-		privateksample, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
-		PrivateKeys = append(PrivateKeys, privateksample)
-	}
+// func TestWholeFlow(t *testing.T) {
+// 	pos.SelfTestMode = true
 
-	var epochLeadersBuffer bytes.Buffer
-	for _, value := range PrivateKeys {
-		epochLeadersBuffer.Write(crypto.FromECDSAPub(&value.PublicKey))
-	}
-	// insert EpochLeader groups in local db, and the epoch ID = 0(means epoch 0 used this group, this group is genesis group)
-	posdb.GetDb().Put(uint64(0), EpochLeaders, epochLeadersBuffer.Bytes())
+// 	fmt.Println("\n=============whole flow==============================================")
+// 	// 1. build N PK for epoch leader and insert into DB
+// 	// 1.1 input genesis epoch leader group
+// 	PrivateKeys := make([]*ecdsa.PrivateKey, 0)
+// 	for i := 0; i < pos.EpochLeaderCount; i++ {
+// 		privateksample, err := crypto.GenerateKey()
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		PrivateKeys = append(PrivateKeys, privateksample)
+// 	}
 
-	bytesGeted, err := posdb.GetDb().Get(uint64(0), EpochLeaders)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.Fail()
-	}
+// 	var epochLeadersBuffer bytes.Buffer
+// 	for _, value := range PrivateKeys {
+// 		epochLeadersBuffer.Write(crypto.FromECDSAPub(&value.PublicKey))
+// 	}
+// 	// insert EpochLeader groups in local db, and the epoch ID = 0(means epoch 0 used this group, this group is genesis group)
+// 	posdb.GetDb().Put(uint64(0), EpochLeaders, epochLeadersBuffer.Bytes())
 
-	fmt.Println("Created by test  epochLeadersBuffer %%%%%%%%%%%%%%%")
-	fmt.Printf("%v\n\n", epochLeadersBuffer.Bytes())
+// 	bytesGeted, err := posdb.GetDb().Get(uint64(0), EpochLeaders)
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 		t.Fail()
+// 	}
 
-	fmt.Println("Read from local DB epochLeadersBuffer%%%%%%%%%%%%%%%")
-	fmt.Printf("%v\n\n", bytesGeted)
+// 	fmt.Println("Created by test  epochLeadersBuffer %%%%%%%%%%%%%%%")
+// 	fmt.Printf("%v\n\n", epochLeadersBuffer.Bytes())
 
-	// 1.2 input genesis Security Message set security msg equals epochLeaders.
-	posdb.GetDb().Put(uint64(0), SecurityMsg, epochLeadersBuffer.Bytes())
+// 	fmt.Println("Read from local DB epochLeadersBuffer%%%%%%%%%%%%%%%")
+// 	fmt.Printf("%v\n\n", bytesGeted)
 
-	// 1.3 get random by call GetRandom.
+// 	// 1.2 input genesis Security Message set security msg equals epochLeaders.
+// 	posdb.GetDb().Put(uint64(0), SecurityMsg, epochLeadersBuffer.Bytes())
 
-	var selfPublicKey *ecdsa.PublicKey
-	var selfPrivateKey *ecdsa.PrivateKey
-	selfPublicKey = &(PrivateKeys[0].PublicKey)
-	selfPrivateKey = PrivateKeys[0]
+// 	// 1.3 get random by call GetRandom.
 
-	s := GetSlotLeaderSelection()
+// 	var selfPublicKey *ecdsa.PublicKey
+// 	var selfPrivateKey *ecdsa.PrivateKey
+// 	selfPublicKey = &(PrivateKeys[0].PublicKey)
+// 	selfPrivateKey = PrivateKeys[0]
 
-	s.dumpData()
+// 	s := GetSlotLeaderSelection()
 
-	var epochID uint64
-	epochID = uint64(0)
-	err = s.generateSlotLeadsGroup(epochID)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.Fail()
-	}
+// 	s.dumpData()
 
-	s.dumpData()
+// 	var epochID uint64
+// 	epochID = uint64(0)
+// 	err = s.generateSlotLeadsGroup(epochID)
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 		t.Fail()
+// 	}
 
-	fmt.Printf("Local private len = %d key: %v\n", len(crypto.FromECDSA(selfPrivateKey)), hex.EncodeToString(crypto.FromECDSA(selfPrivateKey)))
-	fmt.Printf("Local public len =%d key: %v\n", len(crypto.FromECDSAPub(selfPublicKey)), hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
+// 	s.dumpData()
 
-	// scan the generated
-	for index, value := range s.epochLeadersPtrArray {
-		fmt.Printf("\tindex := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
-	}
+// 	fmt.Printf("Local private len = %d key: %v\n", len(crypto.FromECDSA(selfPrivateKey)), hex.EncodeToString(crypto.FromECDSA(selfPrivateKey)))
+// 	fmt.Printf("Local public len =%d key: %v\n", len(crypto.FromECDSAPub(selfPublicKey)), hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
 
-	fmt.Println("\t===================Generated slot leaders========================================")
-	// scan the generated
-	for index, value := range s.slotLeadersPtrArray {
-		fmt.Printf("\tslotindex := %d, indexInEpoch=%d, %v\t\n",
-			index,
-			s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(value))][0],
-			hex.EncodeToString(crypto.FromECDSAPub(value)))
-	}
-	// 2. read slot index from db
-	fmt.Println("\t===================Read slot leaders from local db========================================")
-	for i := 0; i < pos.SlotCount; i++ {
-		oneSlotBytes, err := posdb.GetDb().GetWithIndex(uint64(epochID+1), uint64(i), SlotLeader)
-		if err != nil {
-			fmt.Println(err.Error())
-			t.Fail()
-		}
+// 	// scan the generated
+// 	for index, value := range s.epochLeadersPtrArray {
+// 		fmt.Printf("\tindex := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
+// 	}
 
-		fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
-			epochID+1,
-			i,
-			hex.EncodeToString(oneSlotBytes))
-	}
+// 	fmt.Println("\t===================Generated slot leaders========================================")
+// 	// scan the generated
+// 	for index, value := range s.slotLeadersPtrArray {
+// 		fmt.Printf("\tslotindex := %d, indexInEpoch=%d, %v\t\n",
+// 			index,
+// 			s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(value))][0],
+// 			hex.EncodeToString(crypto.FromECDSAPub(value)))
+// 	}
+// 	// 2. read slot index from db
+// 	fmt.Println("\t===================Read slot leaders from local db========================================")
+// 	for i := 0; i < pos.SlotCount; i++ {
+// 		oneSlotBytes, err := posdb.GetDb().GetWithIndex(uint64(epochID+1), uint64(i), SlotLeader)
+// 		if err != nil {
+// 			fmt.Println(err.Error())
+// 			t.Fail()
+// 		}
 
-	// 7. simulate all epochleders and send tx2
-	for index, _ := range s.epochLeadersPtrArray {
-		// encode
+// 		fmt.Printf("\tEpochID:=%d slotID:=%d,slotLeader:=%v\n",
+// 			epochID+1,
+// 			i,
+// 			hex.EncodeToString(oneSlotBytes))
+// 	}
 
-		data, err := s.buildStage2TxPayload(epochID, uint64(index))
-		fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
+// 	// 7. simulate all epochleders and send tx2
+// 	for index, _ := range s.epochLeadersPtrArray {
+// 		// encode
 
-		if err != nil {
-			fmt.Println(err.Error())
-			t.Fail()
-		}
-		payload, err := s.PackStage2Data(data)
-		if err != nil {
-			t.Fail()
-		}
+// 		data, err := s.buildStage2TxPayload(epochID, uint64(index))
+// 		fmt.Printf("\ndata from buildStag32TxPayload is %v\n", data)
 
-		fmt.Printf("\nAfter PackStage2Data %v\n", payload)
-		// decode
+// 		if err != nil {
+// 			fmt.Println(err.Error())
+// 			t.Fail()
+// 		}
+// 		payload, err := slottools.PackStage2Data(data, vm.GetSlotLeaderScAbiString())
+// 		if err != nil {
+// 			t.Fail()
+// 		}
 
-		unpackedData, err := s.UnpackStage2Data(payload[4:])
-		fmt.Printf("\n unpackedData= %v\n", (unpackedData))
+// 		fmt.Printf("\nAfter PackStage2Data %v\n", payload)
+// 		// decode
 
-		epochIDBuf, selfIndexBuf, pki, alphaPki, proof, err := slottools.RlpUnpackStage2Data(unpackedData)
+// 		unpackedData, err := slottools.UnpackStage2Data(payload[4:], vm.GetSlotLeaderScAbiString())
+// 		fmt.Printf("\n unpackedData= %v\n", (unpackedData))
 
-		epochIDBufDec, err := hex.DecodeString(epochIDBuf)
-		epochID, err := strconv.ParseInt(string(epochIDBufDec), 10, 64)
+// 		epochIDBuf, selfIndexBuf, pki, alphaPki, proof, err := slottools.RlpUnpackStage2Data(unpackedData)
 
-		fmt.Printf("\n epochIDBufDec= %v\n", (epochID))
+// 		epochIDBufDec, err := hex.DecodeString(epochIDBuf)
+// 		epochID, err := strconv.ParseInt(string(epochIDBufDec), 10, 64)
 
-		selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
-		selfIndex, err := strconv.ParseInt(string(selfIndexBufDec), 10, 64)
-		fmt.Printf("\n selfIndexBufDec= %v\n", (selfIndex))
+// 		fmt.Printf("\n epochIDBufDec= %v\n", (epochID))
 
-		pkiDec, err := hex.DecodeString(pki)
-		fmt.Printf("\n pkiDec= %v\n", (pkiDec))
+// 		selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
+// 		selfIndex, err := strconv.ParseInt(string(selfIndexBufDec), 10, 64)
+// 		fmt.Printf("\n selfIndexBufDec= %v\n", (selfIndex))
 
-		for _, value := range alphaPki {
-			alphaPkiDec, err := hex.DecodeString(value)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			fmt.Printf("\n alphaPki= %v\n", (alphaPkiDec))
-		}
+// 		pkiDec, err := hex.DecodeString(pki)
+// 		fmt.Printf("\n pkiDec= %v\n", (pkiDec))
 
-		for _, value := range proof {
-			proofDec, err := hex.DecodeString(value)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			fmt.Printf("\n proof= %v\n", (proofDec))
-		}
+// 		for _, value := range alphaPki {
+// 			alphaPkiDec, err := hex.DecodeString(value)
+// 			if err != nil {
+// 				fmt.Println(err.Error())
+// 			}
+// 			fmt.Printf("\n alphaPki= %v\n", (alphaPkiDec))
+// 		}
 
-		break
-	}
+// 		for _, value := range proof {
+// 			proofDec, err := hex.DecodeString(value)
+// 			if err != nil {
+// 				fmt.Println(err.Error())
+// 			}
+// 			fmt.Printf("\n proof= %v\n", (proofDec))
+// 		}
 
-	// 8. collect all trans
+// 		break
+// 	}
 
-	// 9. generate SMA
-	// 10. insert SMA into DB
-	//testBytes := make([]byte, 0)
-	//for i := 0; i < 255; i++ {
-	//	testBytes = append(testBytes, byte(i))
-	//}
-	//fmt.Println("bytes: ", testBytes)
-	//fmt.Println("string: ", string(testBytes))
-	//fmt.Println("string len:", len(string(testBytes)))
-	//
-	//testBytes2 := make([]byte, 0)
-	//for i := 0; i < 255; i++ {
-	//	testBytes2 = append(testBytes2, byte(i))
-	//}
-	//
-	//if string(testBytes) != string(testBytes2) {
-	//	t.Fail()
-	//}
-}
+// 	// 8. collect all trans
+
+// 	// 9. generate SMA
+// 	// 10. insert SMA into DB
+// 	//testBytes := make([]byte, 0)
+// 	//for i := 0; i < 255; i++ {
+// 	//	testBytes = append(testBytes, byte(i))
+// 	//}
+// 	//fmt.Println("bytes: ", testBytes)
+// 	//fmt.Println("string: ", string(testBytes))
+// 	//fmt.Println("string len:", len(string(testBytes)))
+// 	//
+// 	//testBytes2 := make([]byte, 0)
+// 	//for i := 0; i < 255; i++ {
+// 	//	testBytes2 = append(testBytes2, byte(i))
+// 	//}
+// 	//
+// 	//if string(testBytes) != string(testBytes2) {
+// 	//	t.Fail()
+// 	//}
+// }
