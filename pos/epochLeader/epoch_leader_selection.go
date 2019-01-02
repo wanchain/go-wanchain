@@ -75,6 +75,7 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 	if r == nil {
 		r = big.NewInt(1).Bytes()
 	}
+
 	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
 	if err != nil {
 		return err

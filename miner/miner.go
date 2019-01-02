@@ -28,8 +28,6 @@ import (
 	"strconv"
 	"time"
 
-	"math/big"
-
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -37,7 +35,6 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
@@ -175,17 +172,14 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		slotleader.CalEpochSlotID()
 
-		var lastEpochBlockNumber uint64 = s.BlockChain().CurrentBlock().NumberU64()
-		stateDbEpoch, err1 := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(lastEpochBlockNumber).Root())
+
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
-		if err1 != nil || err2 != nil {
-			fmt.Println(err1, err2)
+		if err2 != nil {
+			fmt.Println(err2)
 			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		}
 
-		Nr := 10 //num of random proposers
-		Ne := 10 //num of epoch leaders, limited <= 256 now
 
 		epochid, slotid, err := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid: ", epochid, slotid)
@@ -198,23 +192,8 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		if slotid == 0 {
 			fmt.Println("epocher begin")
 
-			var rb *big.Int
 
-			rb = vm.GetR(stateDb, epochid)
-			//if epochid > 0 {
-			//	rb = vm.GetR(stateDb, epochid-1)
-			//}
-			//
-			//if epochid == 0 || err != nil {
-			//	//rb = s.BlockChain().CurrentBlock().Difficulty()
-			//	rb.SetBytes(crypto.Keccak256(posdb.Uint64ToBytes(epochid)))
-			//}
-
-			if rb == nil {
-				rb = big.NewInt(1)
-			}
-
-			epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, epochid)
+			epocher.SelectLeadersLoop(epochid)
 
 			epl := epocher.GetEpochLeaders(epochid)
 			for idx, item := range epl {
