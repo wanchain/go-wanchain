@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/node"
 )
 
 var (
@@ -33,6 +34,7 @@ type Config struct {
 	SelfPuK          *bn256.G1
 	SelfPrK          *big.Int
 	Dbpath           string
+	NodeCfg			 *node.Config
 }
 
 var DefaultConfig = Config{
@@ -44,6 +46,7 @@ var DefaultConfig = Config{
 	new(bn256.G1).ScalarBaseMult(big.NewInt(1)),
 	big.NewInt(1),
 	"",
+	nil,
 }
 
 func Cfg() *Config {

@@ -38,7 +38,6 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
@@ -151,7 +150,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 
 	// get rpcClient
-	url := node.DefaultIPCEndpoint("gwan")
+	url :=  pos.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
 	if err != nil {
 		fmt.Println("err:", err)
