@@ -319,7 +319,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		if err == nil && data != nil {
 			datas = append(datas, RbDKGDataCollector{data, &pk})
 		} else {
-			log.Error("vm.GetDkg failed", err)
+			log.Warn("vm.GetDkg failed", "err", err)
 		}
 	}
 
