@@ -135,11 +135,11 @@ func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, err
 	return &sigParam, nil
 }
 
-func GetRBM(epochId uint64) ([]byte, error) {
+func GetRBM(db StateDB, epochId uint64) ([]byte, error) {
 	epochIdBigInt := big.NewInt(int64(epochId + 1))
-	preRandom, err := posdb.GetRandom(epochId)
-	if err != nil {
-		return nil, err
+	preRandom := GetR(db, epochId)
+	if preRandom == nil {
+		return nil, errors.New("Get RBM error")
 	}
 
 	buf := epochIdBigInt.Bytes()
