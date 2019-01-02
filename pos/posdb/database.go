@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	bn256 "github.com/wanchain/pos/cloudflare"
@@ -26,9 +27,12 @@ var (
 	dbInstMap           = make(map[string]*Db)
 	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
 	selecter            SelectLead
+	mu                  sync.RWMutex
 )
 
 func NewDb(fileName string) *Db {
+	mu.Lock()
+	defer mu.Unlock()
 	db := GetDbByName(fileName)
 	if db != nil {
 		return db
