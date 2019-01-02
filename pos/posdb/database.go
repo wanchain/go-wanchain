@@ -3,15 +3,13 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"strings"
 	"sync"
-	"time"
-
-	bn256 "github.com/wanchain/pos/cloudflare"
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
@@ -340,13 +338,9 @@ func SetEpocherInst(sor SelectLead) {
 }
 
 func GetEpocherInst() SelectLead {
-	for {
-		if selecter != nil {
-			return selecter
-		}
-
-		log.Debug("Wait for selector init...")
-		time.Sleep(time.Second)
+	// TODO: can't be nil
+	if selecter == nil {
+		panic("GetEpocherInst")
 	}
 	return selecter
 }
@@ -369,6 +363,7 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 			log.Error("GetRBProposerGroup get pks error")
 			return nil
 		}
+		length = len(pks)
 	}
 	g1s := make([]bn256.G1, length, length)
 

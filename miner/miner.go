@@ -79,46 +79,14 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	posInit(eth, nil)
 	go miner.update()
-	//go miner.posInit(eth)
 	return miner
 }
 
-var posInited = 0
 
-func posInit(s Backend) {
-	if posInited != 0 {
-		return
-	}
-	posInited = 1
+func posInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	log.Info("BackendTimerLoop is running!!!!!!")
-	// get wallet
-	eb, errb := s.Etherbase()
-	if errb != nil {
-		panic(errb)
-	}
-	wallet, errf := s.AccountManager().Find(accounts.Account{Address: eb})
-	if wallet == nil || errf != nil {
-		panic(errf)
-	}
-	type getKey interface {
-		GetUnlockedKey(address common.Address) (*keystore.Key, error)
-	}
-	key, err := wallet.(getKey).GetUnlockedKey(eb)
-	if key == nil || err != nil {
-		panic(err)
-	}
-	log.Debug("Get unlocked key success address:" + eb.Hex())
-
-	fmt.Println("posInit begin")
-
-	//rb, err := posdb.GetRandom(0)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//Nr := 10 //num of random proposers
-	//Ne := 10 //num of epoch leaders, limited <= 256 now
-	//stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
 
 	epocher := epochLeader.NewEpocher(s.BlockChain())
 
@@ -127,7 +95,7 @@ func posInit(s Backend) {
 	eerr := epocher.SelectLeadersLoop(0)
 
 	fmt.Println("posInit: ", eerr)
-
+	return epocher
 }
 func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Info("BackendTimerLoop is running!!!!!!")
@@ -148,7 +116,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
-
+	epocher := posInit(s, key)
 	// get rpcClient
 	url :=  pos.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
@@ -158,7 +126,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	}
 
 	// get epocher
-	epocher := epochLeader.NewEpocher(s.BlockChain())
+	//epocher := epochLeader.NewEpocher(s.BlockChain())
 
 	//epochTimer := time.NewTicker(20 * time.Second)
 	//slotTimer := time.NewTicker(6 * time.Second)
