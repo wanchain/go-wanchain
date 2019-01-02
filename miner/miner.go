@@ -22,7 +22,6 @@ import (
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/pos"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
 	"strconv"
@@ -113,17 +112,23 @@ func posInit(s Backend) {
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 
 	fmt.Println("posInit begin")
-	rb, err := posdb.GetRandom(0)
-	if err != nil {
-		panic(err)
-	}
-	Nr := 10 //num of random proposers
-	Ne := 10 //num of epoch leaders, limited <= 256 now
-	stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
+
+	//rb, err := posdb.GetRandom(0)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//Nr := 10 //num of random proposers
+	//Ne := 10 //num of epoch leaders, limited <= 256 now
+	//stateDbEpoch, _ := s.BlockChain().StateAt(s.BlockChain().GetBlockByNumber(0).Root())
+
 	epocher := epochLeader.NewEpocher(s.BlockChain())
+
 	randombeacon.GetRandonBeaconInst().Init(epocher, key)
-	eerr := epocher.SelectLeaders(rb.Bytes(), Nr, Ne, stateDbEpoch, 0)
+
+	eerr := epocher.SelectLeadersLoop(0)
+
 	fmt.Println("posInit: ", eerr)
+
 }
 func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Info("BackendTimerLoop is running!!!!!!")
