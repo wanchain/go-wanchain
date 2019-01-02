@@ -362,4 +362,6 @@ func TestGetR(t *testing.T) {
 	}
 }
 
-//func TestGetRBM()
+func TestGetRBM(t *testing.T) {
+
+}
