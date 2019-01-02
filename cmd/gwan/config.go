@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos"
 
 	//"github.com/wanchain/go-wanchain/pos"
 
