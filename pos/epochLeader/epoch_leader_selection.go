@@ -62,7 +62,10 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 	Nr := 10 //num of random proposers
 	Ne := 10 //num of epoch leaders, limited <= 256 now
 
-	targetBlkNum := e.blkChain.CurrentBlock().NumberU64() - 1
+	targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
+	if(targetBlkNum >= 1) {
+		targetBlkNum -= 1
+	}
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
 		return err
