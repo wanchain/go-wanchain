@@ -25,7 +25,7 @@ type Db struct {
 
 var (
 	dbInstMap           = make(map[string]*Db)
-	RANDOMBEACON_DB_KEY = "PosRandomBeacon"
+	//RANDOMBEACON_DB_KEY = "PosRandomBeacon"
 	selecter            SelectLead
 	mu                  sync.RWMutex
 )
@@ -70,27 +70,27 @@ func GetDbByName(name string) *Db {
 	return dbInstMap[name]
 }
 
-func GetGenesisRandon() *big.Int {
-	return big.NewInt(1)
-}
-
-func GetRandom(epochId uint64) (*big.Int, error) {
-	bt, err := GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
-	if err != nil {
-		if epochId == 0 {
-			return GetGenesisRandon(), nil
-		}
-
-		return nil, err
-	}
-
-	return new(big.Int).SetBytes(bt), nil
-}
-
-func SetRandom(epochId uint64, random *big.Int) error {
-	_, err := GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
-	return err
-}
+//func GetGenesisRandon() *big.Int {
+//	return big.NewInt(1)
+//}
+//
+//func GetRandom(epochId uint64) (*big.Int, error) {
+//	bt, err := GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
+//	if err != nil {
+//		if epochId == 0 {
+//			return GetGenesisRandon(), nil
+//		}
+//
+//		return nil, err
+//	}
+//
+//	return new(big.Int).SetBytes(bt), nil
+//}
+//
+//func SetRandom(epochId uint64, random *big.Int) error {
+//	_, err := GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
+//	return err
+//}
 
 //DbInit use to init leveldb in this object, user should not use this. It is automate called in init().
 func (s *Db) DbInit(dbPath string) {
