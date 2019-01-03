@@ -790,6 +790,7 @@ loopCheck:
 	header.Extra = extra
 
 	copy(header.Extra[:len(buf)], buf)
+	header.Difficulty.SetUint64(epochSlotId)
 
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
@@ -799,7 +800,6 @@ loopCheck:
 
 	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(buf))
 
-	header.Difficulty.SetUint64(epochSlotId)
 
 	return block.WithSeal(header), nil
 }
