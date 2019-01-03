@@ -295,6 +295,38 @@ func TestPackUnpack2(t *testing.T) {
 
 }
 
+func TestProof(t *testing.T) {
+
+	type Test struct {
+		Proof    [][]byte
+		ProofMeg [][]byte
+	}
+
+	key1, _ := crypto.GenerateKey()
+	key2, _ := crypto.GenerateKey()
+
+	a := &Test{Proof: [][]byte{big.NewInt(999).Bytes(), big.NewInt(111).Bytes()}, ProofMeg: [][]byte{crypto.FromECDSAPub(&key1.PublicKey), crypto.FromECDSAPub(&key2.PublicKey)}}
+
+	fmt.Println(a)
+
+	buf, err := rlp.EncodeToBytes(a)
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Println(hex.EncodeToString(buf))
+
+	var b Test
+
+	err = rlp.DecodeBytes(buf, &b)
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Println(b)
+
+}
+
 // func TestWholeFlow(t *testing.T) {
 // 	pos.SelfTestMode = true
 

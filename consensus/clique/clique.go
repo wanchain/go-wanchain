@@ -191,11 +191,11 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	// Recover the public key and the Ethereum address
-	// pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	pubkey := signature
+	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	if err != nil {
+		return common.Address{}, err
+	}
+	// pubkey := signature
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
@@ -490,6 +490,32 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if number == 0 {
 		return errUnknownBlock
 	}
+
+	epochID := header.Difficulty.Uint64() >> 32
+	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+
+	s := slotleader.GetSlotLeaderSelection()
+
+	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+
+	pk := proofMeg[0]
+
+	signer, err := ecrecover(header, c.signatures)
+	if err != nil {
+		return err
+	}
+
+	if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
+		log.Warn("Pk signer verify failed in verifySeal", "number", number,
+			"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+		return errUnauthorized
+	}
+
+	if !s.VerifySlotProof(epochID, proof, proofMeg) {
+		log.Warn("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+		return errUnauthorized
+	}
+
 	// Retrieve the snapshot needed to verify this header and cache it
 	// snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
 	// if err != nil {
@@ -501,6 +527,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	// if err != nil {
 	// 	return err
 	// }
+
 	// if _, ok := snap.Signers[signer]; !ok {
 	// 	return errUnauthorized
 	// }
@@ -637,9 +664,9 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errWaitTransactions
 	}
 	// Don't hold the signer fields for the entire sealing procedure
-	//c.lock.RLock()
-	//signer, signFn, key := c.signer, c.signFn, c.key
-	//c.lock.RUnlock()
+	c.lock.RLock()
+	signer, signFn, key := c.signer, c.signFn, c.key
+	c.lock.RUnlock()
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 
 	// Bail out if we're unauthorized to sign a block
@@ -652,6 +679,8 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	// }
 	// check if our trun
 	epochSlotId := uint64(1)
+	var epochIDPack uint64
+	var slotIDPack uint64
 loopCheck:
 	for {
 		epochId, slotId, err := slotleader.GetEpochSlotID()
@@ -674,7 +703,7 @@ loopCheck:
 
 		} else {
 			//genesis block miner publicKey
-			leader = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+			leader = pos.GenesisPK
 		}
 
 		if leader == localPublicKey {
@@ -690,6 +719,9 @@ loopCheck:
 				}
 				epochSlotId += slotId << 8
 				epochSlotId += epochId << 32
+
+				epochIDPack = epochId
+				slotIDPack = slotId
 				break loopCheck
 			}
 		} else {
@@ -731,16 +763,38 @@ loopCheck:
 	//case <-time.After(delay):
 	//}
 	// Sign all the things!
-	//sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
-	//if err != nil {
-	//	return nil, err
-	//}
-	// copy(header.Extra[len(header.Extra)-extraSeal:], sighash) hex.DecodeString(localPublicKey)
-	ppk, err := hex.DecodeString(localPublicKey)
+	// sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+
+	// ppk, err := hex.DecodeString(localPublicKey)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
+
+	s := slotleader.GetSlotLeaderSelection()
+	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
-		fmt.Println(err)
+		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
+		return nil, nil
 	}
-	copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
+
+	extra := make([]byte, len(buf)+extraSeal)
+	header.Extra = extra
+
+	copy(header.Extra[:len(buf)], buf)
+
+	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+
+	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(buf))
+
 	header.Difficulty.SetUint64(epochSlotId)
 
 	return block.WithSeal(header), nil

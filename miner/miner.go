@@ -84,7 +84,6 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	return miner
 }
 
-
 func posInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	log.Info("BackendTimerLoop is running!!!!!!")
 
@@ -94,9 +93,13 @@ func posInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 
 	eerr := epocher.SelectLeadersLoop(0)
 
+	slotleader.GetSlotLeaderSelection().Init(s.BlockChain(), nil, key, epocher)
+
 	fmt.Println("posInit: ", eerr)
 	return epocher
 }
+
+// BackendTimerLoop is pos main time loop
 func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Info("BackendTimerLoop is running!!!!!!")
 	// get wallet
@@ -118,7 +121,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	epocher := posInit(s, key)
 	// get rpcClient
-	url :=  pos.Cfg().NodeCfg.IPCEndpoint()
+	url := pos.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -144,14 +147,12 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		slotleader.CalEpochSlotID()
 
-
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err2 != nil {
 			fmt.Println(err2)
 			time.Sleep(pos.SlotTime * time.Second)
 			continue
 		}
-
 
 		epochid, slotid, err := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid: ", epochid, slotid)
@@ -163,7 +164,6 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		// only the begin of epocher
 		if slotid == 0 {
 			fmt.Println("epocher begin")
-
 
 			epocher.SelectLeadersLoop(epochid)
 

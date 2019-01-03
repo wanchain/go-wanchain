@@ -3,7 +3,6 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -11,6 +10,9 @@ import (
 	"strings"
 	"sync"
 
+	bn256 "github.com/wanchain/pos/cloudflare"
+
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
@@ -326,6 +328,42 @@ func StringToUint64(input string) uint64 {
 		return 0
 	}
 	return num.Uint64()
+}
+
+// BigIntArrayToByteArray can change []*big.Int to [][]byte
+func BigIntArrayToByteArray(input []*big.Int) [][]byte {
+	ret := make([][]byte, len(input))
+	for i := 0; i < len(input); i++ {
+		ret[i] = input[i].Bytes()
+	}
+	return ret
+}
+
+// ByteArrayToBigIntArray can change [][]byte to big.Int
+func ByteArrayToBigIntArray(input [][]byte) []*big.Int {
+	ret := make([]*big.Int, len(input))
+	for i := 0; i < len(input); i++ {
+		ret[i] = big.NewInt(0).SetBytes(input[i])
+	}
+	return ret
+}
+
+// PkArrayToByteArray can change []*ecdsa.PublicKey to [][]byte
+func PkArrayToByteArray(input []*ecdsa.PublicKey) [][]byte {
+	ret := make([][]byte, len(input))
+	for i := 0; i < len(input); i++ {
+		ret[i] = crypto.FromECDSAPub(input[i])
+	}
+	return ret
+}
+
+// ByteArrayToPkArray can change [][]byte to []*ecdsa.PublicKey
+func ByteArrayToPkArray(input [][]byte) []*ecdsa.PublicKey {
+	ret := make([]*ecdsa.PublicKey, len(input))
+	for i := 0; i < len(input); i++ {
+		ret[i] = crypto.ToECDSAPub(input[i])
+	}
+	return ret
 }
 
 type SelectLead interface {
