@@ -409,18 +409,18 @@ func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	// collect DKG data
 	dkgDatas := make([]RbDKGDataCollector, 0)
 	sigDatas := make([]RbSIGDataCollector, 0)
-	for id, pk := range pks {
+	for id, _ := range pks {
 		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
 		if err == nil && dkgData != nil {
-			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pk})
+			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pks[id]})
 		}
 
 		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
 		if err == nil && sigData != nil {
-			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pk})
+			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
 		}
 
-		log.Debug("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
+		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
 	}
 
 	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
