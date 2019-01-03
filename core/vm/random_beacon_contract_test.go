@@ -269,6 +269,7 @@ func TestRBDkg(t *testing.T) {
 
 		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
 
+
 		_, err := rbcontract.Run(payload, nil, evm)
 		if err != nil {
 			t.Error(err)
@@ -281,6 +282,40 @@ func TestRBDkg(t *testing.T) {
 		}
 	}
 	//contract.Run(data, nil, nil)
+}
+
+func TestGetDkg(t *testing.T) {
+	rbgroupdb[rbepochId] = pubs
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKGTxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
+		payload, _ := rbAbi.Pack("dkg", payloadStr)
+
+		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
+
+		_, err := rbcontract.Run(payload, nil, evm)
+		if err != nil {
+			t.Error(err)
+		}
+
+		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+
+		if !bytes.Equal(payloadBytes, payloadBytes2) {
+			println("error")
+		}
+
+		dkgParam2, err := GetDkg(evm.StateDB, rbepochId, uint32(i))
+		println (dkgParam2)
+	}
 }
 
 func TestRBSig(t *testing.T)  {
@@ -307,6 +342,36 @@ func TestRBSig(t *testing.T)  {
 		if !bytes.Equal(payloadBytes, payloadBytes2) {
 			println("error")
 		}
+	}
+}
+
+func TestGetSig(t *testing.T) {
+	TestRBDkg(t)
+	gsigshareA := prepareSig(pris, enshareA)
+	for i := 0; i < nr; i++ {
+		var sigshareParam RbSIGTxPayload
+		sigshareParam.EpochId = rbepochId
+		sigshareParam.ProposerId = uint32(i)
+		sigshareParam.Gsigshare = gsigshareA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(sigshareParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
+		payload, _ := rbAbi.Pack("sigshare", payloadStr)
+		hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
+
+		_, err := rbcontract.Run(payload, nil, evm)
+		if err != nil {
+			t.Error(err)
+		}
+		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+
+		if !bytes.Equal(payloadBytes, payloadBytes2) {
+			println("error")
+		}
+
+		sigshareParam2, err := GetSig(evm.StateDB, rbepochId, uint32(i))
+		println (sigshareParam2)
 	}
 }
 
