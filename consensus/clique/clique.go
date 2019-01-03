@@ -802,6 +802,7 @@ loopCheck:
 	header.Extra = extra
 
 	copy(header.Extra[:len(buf)], buf)
+	header.Difficulty.SetUint64(epochSlotId)
 
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
@@ -814,7 +815,6 @@ loopCheck:
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
 
 	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
-
 
 	err = c.verifySeal(nil, header, nil)
 	if err != nil {
