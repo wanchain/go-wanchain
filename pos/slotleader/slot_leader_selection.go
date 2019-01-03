@@ -154,7 +154,7 @@ func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *
 		log.Debug("Enter slotLeaderSelectionStage1")
 		err := s.generateSlotLeadsGroup(epochID)
 		if err != nil {
-			log.Error(err.Error())
+			log.Debug(err.Error())
 		}
 		//s.buildEpochLeaderGroup(epochID)
 
@@ -847,7 +847,8 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 
 	indexs, exist := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPk))]
 	if exist == false {
-		return nil, errors.New("not in epoch leaders")
+		log.Debug(fmt.Sprintf("%v not in epoch leaders", hex.EncodeToString(crypto.FromECDSAPub(selfPk))))
+		return nil, nil
 	}
 
 	selfPkRecievedPicesMap := make(map[uint64][]*ecdsa.PublicKey, 0)

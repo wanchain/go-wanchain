@@ -103,7 +103,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 	hash := GetRBRKeyHash(epochId)
 	rBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if len(rBytes) != 0 {
-		r := big.NewInt(0).SetBytes(rBytes)
+		r := new(big.Int).SetBytes(rBytes)
 		return r
 	}
 	return nil
@@ -116,7 +116,7 @@ func GetDkg(db StateDB, epochId uint64, proposerId uint32) (*RbDKGTxPayload, err
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &dkgParam)
 	if err != nil {
-		return nil, buildError("load dkg error", dkgParam.EpochId, dkgParam.ProposerId)
+		return nil, buildError("load dkg error", epochId, proposerId)
 	}
 
 	return &dkgParam, nil

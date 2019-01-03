@@ -422,6 +422,123 @@ func TestGetR(t *testing.T) {
 	}
 }
 
-func TestGetRBM(t *testing.T) {
+func TestGenerateR(t *testing.T) {
+	pubs, pris, hpubs = generateKeyPairs()
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	TestGetSig(t)
 
+	// calc r by input data
+	// check whether equal
+	gsigshareA := prepareSig(pris, enshareA)
+	gsigshareInput := make([]bn256.G1, nr)
+	for i := 0; i < nr; i++ { // signature share = M * secret key share
+		gsigshareInput[i] = *gsigshareA[i]
+	}
+	gsigInput := wanpos.LagrangeSig(gsigshareInput, hpubs, int(pos.Cfg().PolymDegree))
+	randomInput := crypto.Keccak256(gsigInput.Marshal())
+
+	//////////////////////////////////////////////////////////
+	// calc r by on chain data
+
+	type RbDKGDataCollector struct {
+		data *RbDKGTxPayload
+		pk   *bn256.G1
+	}
+
+	type RbSIGDataCollector struct {
+		data *RbSIGTxPayload
+		pk   *bn256.G1
+	}
+
+	dkgDatas := make([]RbDKGDataCollector, 0)
+	sigDatas := make([]RbSIGDataCollector, 0)
+	for id, _ := range pubs {
+		dkgData, err := GetDkg(evm.StateDB, rbepochId, uint32(id))
+		if err == nil && dkgData != nil {
+			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pubs[id]})
+		} else {
+			t.Fatal("TestGetR2 get dkg err", id)
+		}
+
+		sigData, err := GetSig(evm.StateDB, epochId, uint32(id))
+		if err == nil && sigData != nil {
+			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pubs[id]})
+		} else {
+			t.Fatal("TestGetR2 get sig err", id)
+		}
+	}
+
+	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
+		t.Fatal("sigDatas < MinRBProposerCnt")
+	}
+
+	gsigshare := make([]bn256.G1, len(sigDatas))
+	xSig := make([]big.Int, len(sigDatas))
+	for i, data := range sigDatas {
+		gsigshare[i] = *data.data.Gsigshare
+		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
+	}
+
+	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
+	random := crypto.Keccak256(gsig.Marshal())
+
+	nr := len(pubs)
+	c := make([]bn256.G2, nr)
+	for i := 0; i < nr; i++ {
+		c[i].ScalarBaseMult(big.NewInt(int64(0)))
+		for j := 0; j < len(dkgDatas); j++ {
+			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
+		}
+	}
+
+	xAll := make([]big.Int, nr)
+	for i := 0; i < nr; i++ {
+		xAll[i].SetBytes(GetPolynomialX(&pubs[i], uint32(i)))
+		xAll[i].Mod(&xAll[i], bn256.Order)
+	}
+	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
+
+	// mG
+	mBuf, err := GetRBM(statedb, epochId)
+	if err != nil {
+		t.Fatal("get M fail", "err", err)
+	}
+
+	m := new(big.Int).SetBytes(mBuf)
+	mG := new(bn256.G1).ScalarBaseMult(m)
+
+	// Verify using pairing
+	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
+	pair2 := bn256.Pair(mG, &gPub)
+	if pair1.String() != pair2.String() {
+		t.Fatal("Final Pairing Check Failed")
+	}
+
+	r0 := new(big.Int).SetBytes(random)
+	strPayload, err := rbscAbi.Pack("genR", big.NewInt(int64(epochId + 1)), r0)
+	if err != nil {
+		t.Fatal("pack failed")
+	}
+
+	_, err = rbcontract.Run(strPayload, nil, evm)
+	if err != nil {
+		t.Error(err)
+	}
+	r1 := GetR(evm.StateDB, uint64(epochId + 1))
+	if r0.Cmp(r1) != 0 {
+		t.Error("GetR wrong")
+	}
+
+	r2 := new(big.Int).SetBytes(randomInput)
+	if r2.Cmp(r0) != 0 {
+		t.Error("generate r failed")
+	}
+}
+
+func TestGetRBM(t *testing.T) {
+	TestRBDkg(t)
+
+}
+
+func TestGetCji(t *testing.T) {
 }
