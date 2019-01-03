@@ -498,22 +498,26 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
-	pk := proofMeg[0]
-
-	signer, err := ecrecover(header, c.signatures)
 	if err != nil {
-		return err
-	}
+		log.Error(err.Error())
+	} else {
+		pk := proofMeg[0]
 
-	if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
-		log.Warn("Pk signer verify failed in verifySeal", "number", number,
-			"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
-		return errUnauthorized
-	}
+		signer, err := ecrecover(header, c.signatures)
+		if err != nil {
+			log.Error(err.Error())
+		}
 
-	if !s.VerifySlotProof(epochID, proof, proofMeg) {
-		log.Warn("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-		return errUnauthorized
+		if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
+			log.Warn("Pk signer verify failed in verifySeal", "number", number,
+				"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+			//return errUnauthorized
+		}
+
+		if !s.VerifySlotProof(epochID, proof, proofMeg) {
+			log.Warn("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+			//return errUnauthorized
+		}
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
@@ -779,7 +783,7 @@ loopCheck:
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
 		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
-		return nil, nil
+		//return nil, nil
 	}
 
 	extra := make([]byte, len(buf)+extraSeal)
