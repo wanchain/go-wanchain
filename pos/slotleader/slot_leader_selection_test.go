@@ -327,6 +327,11 @@ func TestProof(t *testing.T) {
 
 }
 
+func TestCopy(t *testing.T) {
+	buf := make([]byte, 100)
+	fmt.Println(len(buf))
+}
+
 // func TestWholeFlow(t *testing.T) {
 // 	pos.SelfTestMode = true
 

@@ -3,14 +3,13 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"strings"
 	"sync"
-
-	bn256 "github.com/wanchain/pos/cloudflare"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"

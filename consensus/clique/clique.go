@@ -169,7 +169,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
+		header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
 	})
@@ -190,14 +190,22 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	}
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
+	log.Debug("signature", "hex", hex.EncodeToString(signature))
+
+	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
+
 	// Recover the public key and the Ethereum address
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
 	}
+
+	log.Debug("pubkey in ecrecover", "pk", hex.EncodeToString(pubkey))
 	// pubkey := signature
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	log.Debug("signer in ecrecover", "signer", signer.Hex())
 
 	sigcache.Add(hash, signer)
 	return signer, nil
@@ -499,8 +507,10 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 	if err != nil {
-		log.Error(err.Error())
+		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
 	} else {
+		log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
+
 		pk := proofMeg[0]
 
 		signer, err := ecrecover(header, c.signatures)
@@ -509,13 +519,13 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		}
 
 		if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
-			log.Warn("Pk signer verify failed in verifySeal", "number", number,
+			log.Error("Pk signer verify failed in verifySeal", "number", number,
 				"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 			//return errUnauthorized
 		}
 
 		if !s.VerifySlotProof(epochID, proof, proofMeg) {
-			log.Warn("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+			log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
 			//return errUnauthorized
 		}
 	}
@@ -779,6 +789,8 @@ loopCheck:
 	// }
 	// copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
 
+	header.Difficulty.SetUint64(epochSlotId)
+
 	s := slotleader.GetSlotLeaderSelection()
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
@@ -797,9 +809,17 @@ loopCheck:
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 
-	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(buf))
+	log.Debug("signature", "hex", hex.EncodeToString(sighash))
 
-	header.Difficulty.SetUint64(epochSlotId)
+	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
+
+	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+
+
+	err = c.verifySeal(nil, header, nil)
+	if err != nil {
+		log.Error("Verify error", "error", err.Error())
+	}
 
 	return block.WithSeal(header), nil
 }
