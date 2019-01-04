@@ -726,11 +726,11 @@ loopCheck:
 				return nil, nil
 			case <-time.After(pos.SlotTime / 2 * time.Second): // TODO when generate new block
 				fmt.Println(" #################################################################our turn, number:", number, "epochID:", epochId, "slotId:", slotId)
-				epochId, slotId, err := slotleader.GetEpochSlotID()
-				if err != nil {
-					fmt.Println(err)
-					return nil, nil
-				}
+				//epochId, slotId, err := slotleader.GetEpochSlotID()
+				//if err != nil {
+				//	fmt.Println(err)
+				//	return nil, nil
+				//}
 				epochSlotId += slotId << 8
 				epochSlotId += epochId << 32
 
