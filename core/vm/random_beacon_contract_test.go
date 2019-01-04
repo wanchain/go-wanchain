@@ -479,7 +479,13 @@ func TestGenerateR(t *testing.T) {
 		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
+	for i:= 0; i < nr - int(pos.Cfg().PolymDegree) - 1; i++ {
+		gsig8 := wanpos.LagrangeSig(gsigshare[i:], xSig[i:], int(pos.Cfg().PolymDegree))
+		fmt.Println("sig",i,":", gsig8.String())
+	}
+
 	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
+	fmt.Println("sig:", gsig.String())
 	random := crypto.Keccak256(gsig.Marshal())
 
 	nr := len(pubs)
@@ -535,10 +541,44 @@ func TestGenerateR(t *testing.T) {
 	}
 }
 
+func TestAutoGenerateR(t *testing.T) {
+	pubs, pris, hpubs = generateKeyPairs()
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	TestGetSig(t)
+
+	// calc r by input data
+	// check whether equal
+	gsigshareA := prepareSig(pris, enshareA)
+	gsigshareInput := make([]bn256.G1, nr)
+	for i := 0; i < nr; i++ { // signature share = M * secret key share
+		gsigshareInput[i] = *gsigshareA[i]
+	}
+	gsigInput := wanpos.LagrangeSig(gsigshareInput, hpubs, int(pos.Cfg().PolymDegree))
+	randomInput := crypto.Keccak256(gsigInput.Marshal())
+
+
+	r1 := GetR(evm.StateDB, uint64(epochId + 1))
+	r2 := new(big.Int).SetBytes(randomInput)
+	if r2.Cmp(r1) != 0 {
+		t.Error("generate r failed")
+	}
+}
+
 func TestGetRBM(t *testing.T) {
 	TestRBDkg(t)
 
 }
 
 func TestGetCji(t *testing.T) {
+}
+
+func TestKeyHash(t *testing.T) {
+	// hash epochId 0 proposerId 0  ====? hash epochId 0
+	h1 := GetRBRKeyHash(0)
+	h2 := GetRBKeyHash(genRId[:], 0, 0)
+
+	if *h1 == *h2 {
+		t.Error("key wrong")
+	}
+
 }

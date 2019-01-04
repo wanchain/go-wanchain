@@ -97,6 +97,20 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 }
 
 func GetR(db StateDB, epochId uint64) *big.Int {
+	r := GetStateR(db, epochId)
+	if r == nil {
+		for i := uint64(1); r == nil; i++ {
+			r = GetStateR(db, epochId - i)
+		}
+		bytes := r.Bytes()
+		bytes = append(bytes, UIntToByteSlice(epochId) ...)
+		random := crypto.Keccak256(bytes)
+		r = new(big.Int).SetBytes(random)
+	}
+	return r
+}
+// get r in statedb
+func GetStateR(db StateDB, epochId uint64) *big.Int {
 	if epochId == 0 {
 		return big.NewInt(1)
 	}
@@ -373,11 +387,24 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	log.Debug("vm.sigshare", "len(sigshareId)", len(sigshareId), "epochID", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId, "hash", hash.Hex())
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
+
+	/////////////////
+	// calc r if not exist
+	r, err := computeRandom(evm.StateDB, epochId)
+	if r != nil && err == nil {
+		hashR := GetRBRKeyHash(sigshareParam.EpochId + 1)
+		evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
+		log.Info("generate r", )
+	}
+
 	// TODO: add an dkg event
 	log.Info("contract do sig end", "epochId", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId)
+
+
 	return nil, nil
 }
 
+// TODO: delete
 func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var (
 		epochId = big.NewInt(0)
@@ -411,11 +438,11 @@ type RbSIGDataCollector struct {
 // compute random[epochid+1] by data of epoch[epochid]
 func computeRandom(statedb StateDB, epochId uint64) (*big.Int, error) {
 	log.Info("do compute random", "epochId", epochId)
-	randomInt := GetR(statedb, epochId+1)
+	randomInt := GetStateR(statedb, epochId+1)
 	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
 		// exist already
 		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
-		return randomInt, nil
+		return randomInt, errors.New("random exist already")
 	}
 
 	pks := getRBProposerGroupVar(epochId)
