@@ -619,6 +619,9 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 	} else {
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
+		if err != nil {
+			log.Error("getSMAPieces error", "epochID", epochID, "SecurityMsg", SecurityMsg)
+		}
 		fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
 		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
 		if err != nil {
@@ -696,6 +699,7 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 			crBuf.Write(c.Bytes())
 		}
 
+		log.Debug("*********************getCRs Put CR **********************", "epochIDPut", 1)
 		_, err = posdb.GetDb().Put(uint64(1), CR, crBuf.Bytes())
 		if err != nil {
 			return nil, err
@@ -769,6 +773,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
+	fmt.Printf("*******GenerateSlotLeaderSeqAndIndex rb:%s\n", hex.EncodeToString(random.Bytes()))
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
@@ -798,6 +803,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debug("*********************generateSlotLeadsGroup Put CR **********************", "epochIDPut", epochID+1)
 
 	for index, value := range slotLeadersIndex {
 
@@ -1024,14 +1031,11 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 
 	//3. RB PRE
 	var rbPtr *big.Int
-	if epochID == 0 {
-		rbPtr = big.NewInt(1)
-	} else {
-		rbPtr, err = s.getRandom(epochID - 1)
-		if err != nil {
-			log.Error(err.Error())
-			return nil, nil, err
-		}
+
+	rbPtr, err = s.getRandom(epochID)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
 	}
 
 	rbBytes := rbPtr.Bytes()
@@ -1066,7 +1070,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, 
 	}
 
 	//3. RB PRE
-	rbPtr, err := s.getRandom(epochID - 1)
+	rbPtr, err := s.getRandom(epochID)
 	if err != nil {
 		log.Error(err.Error())
 		return false
