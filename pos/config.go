@@ -16,7 +16,7 @@ var (
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCount = 10
+	EpochLeaderCount = 30
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 10
 	// SlotCount is slot count in an epoch

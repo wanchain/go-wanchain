@@ -25,8 +25,8 @@ import (
 
 var (
 	safeK = uint64(1)
-	Nr    = 10 //num of random proposers
-	Ne    = 10 //num of epoch leaders, limited <= 256 now
+	Nr    = pos.RandomProperCount //num of random proposers
+	Ne    = pos.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
 
 	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)

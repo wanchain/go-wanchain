@@ -331,6 +331,7 @@ func TestCRSave(t *testing.T) {
 	cr := make([]*big.Int, 100)
 	for i := 0; i < 100; i++ {
 		key, _ := crypto.GenerateKey()
+		fmt.Println(hex.EncodeToString(crypto.FromECDSAPub(&key.PublicKey)))
 		cr[i] = key.D
 	}
 

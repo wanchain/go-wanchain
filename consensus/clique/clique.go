@@ -504,29 +504,33 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	s := slotleader.GetSlotLeaderSelection()
 
-	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
-
-	if err != nil {
-		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+	if len(header.Extra) == extraSeal {
+		log.Warn("Header extra info length is too short")
 	} else {
-		log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
+		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
-		pk := proofMeg[0]
-
-		signer, err := ecrecover(header, c.signatures)
 		if err != nil {
-			log.Error(err.Error())
-		}
+			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+		} else {
+			log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 
-		if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
-			log.Error("Pk signer verify failed in verifySeal", "number", number,
-				"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
-			//return errUnauthorized
-		}
+			pk := proofMeg[0]
 
-		if !s.VerifySlotProof(epochID, proof, proofMeg) {
-			log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-			//return errUnauthorized
+			signer, err := ecrecover(header, c.signatures)
+			if err != nil {
+				log.Error(err.Error())
+			}
+
+			if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
+				log.Error("Pk signer verify failed in verifySeal", "number", number,
+					"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+				//return errUnauthorized
+			}
+
+			// if !s.VerifySlotProof(epochID, proof, proofMeg) {
+			// 	log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+			// 	//return errUnauthorized
+			// }
 		}
 	}
 
