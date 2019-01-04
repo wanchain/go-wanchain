@@ -84,7 +84,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	return miner
 }
 
-func posInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
+func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	log.Info("BackendTimerLoop is running!!!!!!")
 
 	epocher := epochLeader.NewEpocher(s.BlockChain())
@@ -119,7 +119,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
-	epocher := posInit(s, key)
+	epocher := PosInit(s, key)
 	// get rpcClient
 	url := pos.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
