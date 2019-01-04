@@ -1010,7 +1010,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 
 	//2. epochLeader PRE
 	var epochLeadersPtrPre []*ecdsa.PublicKey
-	if epochID == 0 || epochID == 1 {
+	if epochID == 0 {
 		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
 		for i := 0; i < pos.EpochLeaderCount; i++ {
 			buf, err := hex.DecodeString(pos.GenesisPK)
@@ -1050,7 +1050,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, 
 
 	var epochLeadersPtrPre []*ecdsa.PublicKey
 
-	if epochID == 0 || epochID == 1 {
+	if epochID == 0 {
 		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
 		for i := 0; i < pos.EpochLeaderCount; i++ {
 			buf, err := hex.DecodeString(pos.GenesisPK)
