@@ -583,7 +583,7 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 	s.updateStateDB()
 	rb := vm.GetR(s.stateDb, epochID)
 	if rb == nil {
-		log.Error("vm.GetR return nil, use a default value")
+		log.Error("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = big.NewInt(1)
 	}
 	return rb, nil
@@ -699,7 +699,7 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 			return nil, err
 		}
 
-		log.Debug("*********************getCRs Put CR **********************", "epochIDPut", 1)
+		log.Debug("*********************getCRs Put CR **********************", "epochIDPut", 0)
 		_, err = posdb.GetDb().Put(uint64(0), CR, crBuf)
 		if err != nil {
 			return nil, err
@@ -767,7 +767,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
-	fmt.Printf("*******GenerateSlotLeaderSeqAndIndex rb:%s\n", hex.EncodeToString(random.Bytes()))
+	fmt.Printf("*******GenerateSlotLeaderSeqAndIndex rb:%s, epochID:%d\n", hex.EncodeToString(random.Bytes()), epochID)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
 	//s.dumpData()
