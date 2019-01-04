@@ -725,11 +725,23 @@ loopCheck:
 		}
 
 		if leader == localPublicKey {
+			cur := uint64(time.Now().Unix())
+			sleepTime :=uint64(0)
+			sealTime :=uint64(0)
+			if pos.EpochBaseTime == 0 {
+				sealTime = header.Time.Uint64()+ pos.SlotTime/2
+			} else {
+				sealTime = pos.EpochBaseTime+ pos.SlotTime/2 + (epochId*pos.SlotCount+slotId+1)*pos.SlotTime
+			}
+			if cur <  sealTime{
+				sleepTime = sealTime - cur
+			}
+			fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
+				"sleepTime:", sleepTime, "header.Time:", header.Time.Uint64())
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(pos.SlotTime / 2 * time.Second): // TODO when generate new block
-				fmt.Println(" #################################################################our turn, number:", number, "epochID:", epochId, "slotId:", slotId)
+			case <-time.After(time.Duration(sleepTime) * time.Second): // TODO when generate new block
 				//epochId, slotId, err := slotleader.GetEpochSlotID()
 				//if err != nil {
 				//	fmt.Println(err)

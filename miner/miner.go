@@ -79,7 +79,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
-	posInit(eth, nil)
+	//posInit(eth, nil)
 	go miner.update()
 	return miner
 }
