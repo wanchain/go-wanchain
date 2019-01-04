@@ -799,7 +799,10 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return err
 	}
 
-	log.Debug("*********************generateSlotLeadsGroup Put CR **********************", "epochIDPut", epochID+1)
+	log.Debug("*********************generateSlotLeadsGroup Put CR **********************", "epochIDPut", epochID)
+	for i := 0; i < len(crs); i++ {
+		log.Debug("cr value", "epochID", epochID, "crIndex", i, "crValue", hex.EncodeToString(crs[i].Bytes()))
+	}
 
 	for index, value := range slotLeadersIndex {
 
@@ -896,6 +899,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
+		log.Debug("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
 
