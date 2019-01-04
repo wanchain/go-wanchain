@@ -43,9 +43,9 @@ const (
 	StageTwoProofCount = 2
 
 	// SlotStage1 is 40% of slot count
-	SlotStage1 = uint64(pos.SlotCount * 4 / pos.EpochLeaderCount)
+	SlotStage1 = uint64(pos.SlotCount * 4 / 10)
 	// SlotStage2 is 80% of slot count
-	SlotStage2       = uint64(pos.SlotCount * 8 / pos.EpochLeaderCount)
+	SlotStage2       = uint64(pos.SlotCount * 8 / 10)
 	EpochLeaders     = "epochLeaders"
 	SecurityMsg      = "securityMsg"
 	CR               = "cr"
