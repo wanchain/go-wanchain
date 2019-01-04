@@ -390,6 +390,7 @@ func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) erro
 	return nil
 }
 
+// todo: should create new random while error occur??
 func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
 	log.Info("RB do compute random", "epochId", epochId)
 	randomInt := vm.GetR(rb.statedb, epochId+1)

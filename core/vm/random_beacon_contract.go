@@ -396,3 +396,103 @@ func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM
 
 	return nil, nil
 }
+
+
+type RbDKGDataCollector struct {
+	data *RbDKGTxPayload
+	pk   *bn256.G1
+}
+
+type RbSIGDataCollector struct {
+	data *RbSIGTxPayload
+	pk   *bn256.G1
+}
+
+// compute random[epochid+1] by data of epoch[epochid]
+func computeRandom(statedb StateDB, epochId uint64) (*big.Int, error) {
+	log.Info("do compute random", "epochId", epochId)
+	randomInt := GetR(statedb, epochId+1)
+	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
+		// exist already
+		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
+		return randomInt, nil
+	}
+
+	pks := getRBProposerGroupVar(epochId)
+	if len(pks) == 0 {
+		log.Error("can't find random beacon proposer group")
+		return nil, errors.New("can't find random beacon proposer group")
+	}
+
+	// collact DKG SIG
+	dkgDatas := make([]RbDKGDataCollector, 0)
+	sigDatas := make([]RbSIGDataCollector, 0)
+	for id, _ := range pks {
+		dkgData, err := GetDkg(statedb, epochId, uint32(id))
+		if err == nil && dkgData != nil {
+			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pks[id]})
+		}
+
+		sigData, err := GetSig(statedb, epochId, uint32(id))
+		if err == nil && sigData != nil {
+			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
+		}
+	}
+
+	log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
+	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
+		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+		return nil, errors.New("insufficient proposer")
+	}
+
+	gsigshare := make([]bn256.G1, len(sigDatas))
+	xSig := make([]big.Int, len(sigDatas))
+	for i, data := range sigDatas {
+		gsigshare[i] = *data.data.Gsigshare
+		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
+	}
+
+	// Compute the Output of Random Beacon
+	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
+	random := crypto.Keccak256(gsig.Marshal())
+	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
+
+	// Verification Logic for the Output of Random Beacon
+	// Computation of group public key
+	nr := len(pks)
+	c := make([]bn256.G2, nr)
+	for i := 0; i < nr; i++ {
+		c[i].ScalarBaseMult(big.NewInt(int64(0)))
+		for j := 0; j < len(dkgDatas); j++ {
+			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
+		}
+	}
+
+	xAll := make([]big.Int, nr)
+	for i := 0; i < nr; i++ {
+		xAll[i].SetBytes(GetPolynomialX(&pks[i], uint32(i)))
+		xAll[i].Mod(&xAll[i], bn256.Order)
+	}
+	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
+
+	// mG
+	mBuf, err := GetRBM(statedb, epochId)
+	if err != nil {
+		log.Error("get m fail", "err", err)
+		return nil, err
+	}
+
+	m := new(big.Int).SetBytes(mBuf)
+	mG := new(bn256.G1).ScalarBaseMult(m)
+
+	// Verify using pairing
+	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
+	pair2 := bn256.Pair(mG, &gPub)
+	log.Info("verify random", "pair1", pair1.String(), "pair2", pair2.String())
+	if pair1.String() != pair2.String() {
+		return nil, errors.New("final pairing check failed")
+	}
+
+	log.Info("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
+	return big.NewInt(0).SetBytes(random), nil
+}
