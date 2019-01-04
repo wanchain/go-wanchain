@@ -390,7 +390,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	/////////////////
 	// calc r if not exist
-	r, err := computeRandom(evm.StateDB, epochId)
+	r, err := computeRandom(evm.StateDB, sigshareParam.EpochId)
 	if r != nil && err == nil {
 		hashR := GetRBRKeyHash(sigshareParam.EpochId + 1)
 		evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
