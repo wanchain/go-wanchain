@@ -124,23 +124,23 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	log.Info("rb", "epochId", rb.epochId)
 	if rb.epochId == maxUint64 {
 		log.Info("rb epochId is original")
-		err := rb.computeRandoms(0, epochId)
-		if err != nil {
-			log.Error("compute randoms fail", "err", err)
-			return err
-		}
+		//err := rb.computeRandoms(0, epochId)
+		//if err != nil {
+		//	log.Error("compute randoms fail", "err", err)
+		//	return err
+		//}
 
 		rb.epochId = epochId
 		rb.epochStage = EPOCH_DKG
 	}
 
 	if rb.epochId < epochId {
-		if !(rb.epochId == epochId-1 && rb.epochStage == EPOCH_TAIL) {
-			err := rb.computeRandoms(rb.epochId, epochId)
-			if err != nil {
-				return err
-			}
-		}
+		//if !(rb.epochId == epochId-1 && rb.epochStage == EPOCH_TAIL) {
+		//	err := rb.computeRandoms(rb.epochId, epochId)
+		//	if err != nil {
+		//		return err
+		//	}
+		//}
 
 		rb.epochId = epochId
 		rb.epochStage = EPOCH_DKG
@@ -157,10 +157,10 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 			// computed random already
 			return nil
 		} else if slotId >= slot8kConfirmId {
-			err := rb.computeRandoms(epochId, epochId+1)
-			if err != nil {
-				return err
-			}
+			//err := rb.computeRandoms(epochId, epochId+1)
+			//if err != nil {
+			//	return err
+			//}
 
 			rb.epochStage = EPOCH_TAIL
 			return nil
@@ -197,10 +197,10 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 				if slotId < slot8kConfirmId {
 					break
 				} else {
-					err := rb.computeRandoms(epochId, epochId+1)
-					if err != nil {
-						return err
-					}
+					//err := rb.computeRandoms(epochId, epochId+1)
+					//if err != nil {
+					//	return err
+					//}
 
 					rb.epochStage = EPOCH_TAIL
 				}
@@ -376,19 +376,19 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	return rb.sendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
-func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) error {
-	log.Info("RB compute randoms", "beEpochId", bgEpochId, "endEpochId", endEpochId)
-	for i := bgEpochId; i < endEpochId; i++ {
-		err := rb.DoComputeRandom(i)
-		if err != nil {
-			log.Error("do compute random fail", "err", err)
-			return err
-		}
-
-	}
-
-	return nil
-}
+//func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) error {
+//	log.Info("RB compute randoms", "beEpochId", bgEpochId, "endEpochId", endEpochId)
+//	for i := bgEpochId; i < endEpochId; i++ {
+//		err := rb.DoComputeRandom(i)
+//		if err != nil {
+//			log.Error("do compute random fail", "err", err)
+//			return err
+//		}
+//
+//	}
+//
+//	return nil
+//}
 
 // todo: should create new random while error occur??
 func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {

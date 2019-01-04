@@ -503,7 +503,7 @@ func computeRandom(statedb StateDB, epochId uint64) (*big.Int, error) {
 	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
 
 	// mG
-	mBuf, err := GetRBM(statedb, epochId)
+	mBuf, err := getRBMVar(statedb, epochId)
 	if err != nil {
 		log.Error("get m fail", "err", err)
 		return nil, err
