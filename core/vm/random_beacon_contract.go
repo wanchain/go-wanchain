@@ -112,7 +112,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 // get r in statedb
 func GetStateR(db StateDB, epochId uint64) *big.Int {
 	if epochId == 0 {
-		return big.NewInt(1)
+		return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 	hash := GetRBRKeyHash(epochId)
 	rBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)

@@ -582,3 +582,10 @@ func TestKeyHash(t *testing.T) {
 	}
 
 }
+
+func TestFuncGetR(t *testing.T) {
+	r := GetR(evm.StateDB, 10)
+	if r == nil {
+		t.Fatal("GetR failed")
+	}
+}
