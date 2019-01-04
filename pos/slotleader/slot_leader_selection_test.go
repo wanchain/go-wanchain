@@ -327,9 +327,32 @@ func TestProof(t *testing.T) {
 
 }
 
-func TestCopy(t *testing.T) {
-	buf := make([]byte, 100)
-	fmt.Println(len(buf))
+func TestCRSave(t *testing.T) {
+	cr := make([]*big.Int, 100)
+	for i := 0; i < 100; i++ {
+		key, _ := crypto.GenerateKey()
+		cr[i] = key.D
+	}
+
+	buf, err := rlp.EncodeToBytes(cr)
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Println("buf len:", len(buf))
+
+	var crOut []*big.Int
+	err = rlp.DecodeBytes(buf, &crOut)
+	if err != nil {
+		t.Fail()
+	}
+
+	for i := 0; i < 100; i++ {
+		if cr[i].String() != crOut[i].String() {
+			t.Fail()
+		}
+	}
+
 }
 
 // func TestWholeFlow(t *testing.T) {

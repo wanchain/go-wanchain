@@ -643,7 +643,6 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 }
 func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error) {
 	// 1. get SMA[pre]
-	crsPtr := make([]*big.Int, 0)
 	if epochID == uint64(0) {
 		SMA, err := s.getSMAPieces(epochID)
 		if err != nil {
@@ -694,13 +693,14 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 		}
 
 		// insert CRS to local DB
-		var crBuf bytes.Buffer
-		for _, c := range cr {
-			crBuf.Write(c.Bytes())
+		crBuf, err := rlp.EncodeToBytes(cr)
+		if err != nil {
+			log.Error("getCRs rlp.EncodeToBytes error", "error", err.Error())
+			return nil, err
 		}
 
 		log.Debug("*********************getCRs Put CR **********************", "epochIDPut", 1)
-		_, err = posdb.GetDb().Put(uint64(1), CR, crBuf.Bytes())
+		_, err = posdb.GetDb().Put(uint64(0), CR, crBuf)
 		if err != nil {
 			return nil, err
 		}
@@ -711,20 +711,14 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 		if err != nil {
 			return nil, err
 		}
-		crCounts := len(crsBytes) / LengthCR
-		var cr []byte
-		for i := 0; i < crCounts; i++ {
-			if i < crCounts-1 {
-				cr = crsBytes[i*LengthCR : (i+1)*LengthCR]
-			} else {
-				cr = crsBytes[i*LengthCR:]
-			}
-			fmt.Printf("epchoID=%d,getCRS: one hex.EncodeToString(cr) is = %v\n\n", epochID, hex.EncodeToString(cr))
-			crsPtr = append(crsPtr, big.NewInt(0).SetBytes(cr))
+		var crsPtr []*big.Int
+		err = rlp.DecodeBytes(crsBytes, &crsPtr)
+		if err != nil {
+			log.Error("getCRs rlp.DecodeBytes error", "error", err.Error())
+			return nil, err
 		}
 		return crsPtr, nil
 	}
-	return nil, nil
 }
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
@@ -794,12 +788,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 	// insert CRS to local DB
-	var crBuf bytes.Buffer
-	for _, cr := range crs {
-		crBuf.Write(cr.Bytes())
+	crBuf, err := rlp.EncodeToBytes(crs)
+	if err != nil {
+		log.Error("generateSlotLeadsGroup rlp.EncodeToBytes error", "error", err.Error())
+		return err
 	}
 
-	_, err = posdb.GetDb().Put(uint64(epochID+1), CR, crBuf.Bytes())
+	_, err = posdb.GetDb().Put(uint64(epochID), CR, crBuf)
 	if err != nil {
 		return err
 	}
