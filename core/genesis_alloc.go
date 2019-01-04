@@ -26,7 +26,7 @@ const rinkebyAllocData = "\xf9\x03\xb7\u0080\x01\xc2\x01\x01\xc2\x02\x01\xc2\x03
 
 var PlutoAllocJson = `{
     "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e": {
-		"balance": "100000000000000000007",
+		"balance": "100000000000000000008",
 		"staking":{
 			"amount":"800000000000000000000",
 			"s256pk":"0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70",
