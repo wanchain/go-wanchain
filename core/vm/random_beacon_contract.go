@@ -394,7 +394,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	if r != nil && err == nil {
 		hashR := GetRBRKeyHash(sigshareParam.EpochId + 1)
 		evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-		log.Info("generate r", )
+		log.Info("generate","r", r)
 	}
 
 	// TODO: add an dkg event
@@ -468,7 +468,7 @@ func computeRandom(statedb StateDB, epochId uint64) (*big.Int, error) {
 
 	log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
 	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+		log.Warn("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
 		return nil, errors.New("insufficient proposer")
 	}
 
