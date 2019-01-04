@@ -674,7 +674,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
 		if err != nil {
-			log.Error("getSMAPieces error", "epochID", epochID, "SecurityMsg", SecurityMsg)
+			log.Warn("getSMAPieces error", "epochID", epochID, "SecurityMsg", SecurityMsg)
 		}
 		fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
 		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
