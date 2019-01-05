@@ -836,7 +836,7 @@ loopCheck:
 	if err != nil {
 		log.Error("Verify error", "error", err.Error())
 	}
-
+	pos.UpdateEpochBlock(epochIDPack, number)
 	return block.WithSeal(header), nil
 }
 

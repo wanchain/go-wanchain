@@ -62,18 +62,19 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	return inst
 }
 
-func (e *Epocher) getTargetBlkNumber() uint64 {
-	targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
-	if targetBlkNum >= safeK {
-		return (targetBlkNum - safeK)
-	} else {
-		return 0
-	}
 
+func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
+	//targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
+	//if targetBlkNum >= safeK {
+	//	return (targetBlkNum - safeK)
+	//} else {
+	//	return 0
+	//}
+	return pos.GetEpochBlock(epochId)
 }
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
-	targetBlkNum := e.getTargetBlkNumber()
+	targetBlkNum := e.getTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
@@ -192,8 +193,8 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	blkNumber := e.getTargetBlkNumber()
-
+	blkNumber := e.getTargetBlkNumber(epochId)
+	fmt.Println("CreateStakerProbabilityArray blkNumber : ", blkNumber)
 	blk := e.blkChain.GetBlockByNumber(blkNumber)
 
 	blkTime := blk.Header().Time.Uint64()

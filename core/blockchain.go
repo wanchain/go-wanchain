@@ -43,6 +43,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
+	"github.com/wanchain/go-wanchain/pos"
 )
 
 var (
@@ -951,6 +952,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
+		// TODO: varify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
 		var parent *types.Block
@@ -1000,6 +1002,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)
+		// TODO: update epoch ->blockNumber
+		epochID := block.Header().Difficulty.Uint64() >> 32
+		pos.UpdateEpochBlock(epochID, block.Number().Uint64());
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
