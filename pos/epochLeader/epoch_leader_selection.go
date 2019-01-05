@@ -64,13 +64,31 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 
 
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
+	if epochId < 2 {
+		return uint64(0)
+	}
+	targetEpochId := epochId-2
+	targetBlkNum := pos.GetEpochBlock(targetEpochId)
+	if targetBlkNum == 0 {
+		curNum := e.blkChain.CurrentBlock().NumberU64()
+		for {
+			curBlock := e.blkChain.GetBlockByNumber(curNum)
+			curEpochId := curBlock.Header().Difficulty.Uint64()>>32
+			if curEpochId <= targetEpochId {
+				break
+			}
+			curNum--
+		}
+		targetBlkNum = curNum
+		pos.UpdateEpochBlock(targetEpochId, targetBlkNum)
+	}
+	return targetBlkNum
 	//targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
 	//if targetBlkNum >= safeK {
 	//	return (targetBlkNum - safeK)
 	//} else {
 	//	return 0
 	//}
-	return pos.GetEpochBlock(epochId)
 }
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
