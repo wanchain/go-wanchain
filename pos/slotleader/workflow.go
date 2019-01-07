@@ -61,6 +61,12 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		if err != nil {
 			log.Debug(err.Error())
 		}
+
+		// If not in current epoch leaders, Do nothing in this epoch.
+		if !s.isLocalPkInCurrentEpochLeaders() {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+		}
+
 		//s.buildEpochLeaderGroup(epochID)
 
 		s.setWorkingEpochID(epochID)

@@ -218,6 +218,23 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	return pks
 }
 
+func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) bool {
+	prePks := s.getEpochLeadersPK(epochID - 1)
+
+	localPk, err := s.getLocalPublicKey()
+	if err != nil {
+		log.Error("SlotLeaderSelection.IsLocalPkInPreEpochLeaders getLocalPublicKey error", "error", err)
+		return false
+	}
+
+	for i := 0; i < len(prePks); i++ {
+		if posdb.PkEqual(localPk, prePks[i]) {
+			return true
+		}
+	}
+	return false
+}
+
 //getWorkStage get work stage of epochID from levelDB
 func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
@@ -556,6 +573,11 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
+	if !s.isLocalPkInPreEpochLeaders(epochID) {
+		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
+		return nil
+	}
+
 	err := s.buildEpochLeaderGroup(epochID)
 	if err != nil {
 		return errors.New("build epoch leader group error!")
@@ -650,6 +672,16 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 func (s *SlotLeaderSelection) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte) bool {
 	return (pkIndex < uint64(len(s.epochLeadersArray))) && (hex.EncodeToString(pkBytes) == s.epochLeadersArray[pkIndex])
+}
+
+func (s *SlotLeaderSelection) isLocalPkInCurrentEpochLeaders() bool {
+	selfPublicKey, _ := s.getLocalPublicKey()
+	var inEpochLeaders bool
+	_, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
+	if inEpochLeaders {
+		return true
+	}
+	return false
 }
 
 func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error) {
