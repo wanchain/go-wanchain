@@ -352,8 +352,14 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 
 // from random proposer
 func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error) {
-	s.updateStateDB()
-	rb := vm.GetR(s.stateDb, epochID)
+	stateDb, err := s.getStateDb()
+	if err != nil {
+		log.Error("SlotLeaderSelection.getRandom getStateDb return error, use a default value", "epochID", epochID)
+		rb := big.NewInt(1)
+		return rb, nil
+	}
+
+	rb := vm.GetR(stateDb, epochID)
 	if rb == nil {
 		log.Error("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = big.NewInt(1)

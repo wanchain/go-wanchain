@@ -19,8 +19,9 @@ package miner
 
 import (
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"sync/atomic"
+
+	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
@@ -188,7 +189,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		fmt.Println("Every slot run:")
 		//epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochid)
 		//Add for slot leader selection
-		slotleader.GetSlotLeaderSelection().Loop(stateDb, rc, key, epocher, epochid, slotid)
+		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
 		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
 		cur := uint64(time.Now().Unix())

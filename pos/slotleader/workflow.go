@@ -10,7 +10,6 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
@@ -35,11 +34,10 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 //Loop check work every 10 second. Called by backend loop
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
+func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
 	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 	s.key = key
-	s.stateDb = stateDb
 	s.epochInstance = epochInstance
 
 	//epochID, slotID, err := GetEpochSlotID()
