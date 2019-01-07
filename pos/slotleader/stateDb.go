@@ -14,8 +14,8 @@ const (
 )
 
 func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
-	//s.updateStateDB()
-	s.updateToLastStateDb()
+	s.updateStateDB()
+	//s.updateToLastStateDb()
 	if s.stateDb == nil {
 		return nil, errors.New("Do not have stateDb instance now")
 	}
@@ -60,6 +60,7 @@ func (s *SlotLeaderSelection) updateStateDB() {
 		if slotID <= targetSlotID {
 			break
 		}
+		backIndex++
 	}
 
 	stateDb, err := s.blockChain.StateAt(s.blockChain.GetBlockByNumber(curNumber - backIndex).Root())
