@@ -19,12 +19,12 @@ package miner
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
-	"strconv"
 	"time"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -92,10 +92,11 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	randombeacon.GetRandonBeaconInst().Init(epocher, key)
 
 	eerr := epocher.SelectLeadersLoop(0)
+	eerr1 := epocher.SelectLeadersLoop(1)
 
 	slotleader.GetSlotLeaderSelection().Init(s.BlockChain(), nil, key, epocher)
 
-	fmt.Println("posInit: ", eerr)
+	fmt.Println("posInit: ", eerr, eerr1)
 	return epocher
 }
 
@@ -146,7 +147,12 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		}
 
 		slotleader.CalEpochSlotID()
+		epochid, slotid, err := slotleader.GetEpochSlotID()
+		if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
+			time.Sleep(pos.SlotTime * time.Second)
+			continue
 
+		}
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err2 != nil {
 			fmt.Println(err2)
@@ -154,7 +160,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			continue
 		}
 
-		epochid, slotid, err := slotleader.GetEpochSlotID()
+		//epochid, slotid, err := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid: ", epochid, slotid)
 		if err != nil {
 			fmt.Println("haven't block 1 base")
@@ -165,17 +171,17 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		if slotid == 0 {
 			fmt.Println("epocher begin")
 
-			epocher.SelectLeadersLoop(epochid)
-
-			epl := epocher.GetEpochLeaders(epochid)
-			for idx, item := range epl {
-				fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
-			}
-			rbl := epocher.GetRBProposerGroup(epochid)
-			for idx, item := range rbl {
-				fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
-			}
-			fmt.Println(rbl)
+			//epocher.SelectLeadersLoop(epochid)
+			//
+			//epl := epocher.GetEpochLeaders(epochid)
+			//for idx, item := range epl {
+			//	fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
+			//}
+			//rbl := epocher.GetRBProposerGroup(epochid)
+			//for idx, item := range rbl {
+			//	fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
+			//}
+			//fmt.Println(rbl)
 		}
 
 		// every slot

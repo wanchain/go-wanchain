@@ -1,5 +1,6 @@
 package pos
 
+
 //import (
 //	"fmt"
 //	"time"
@@ -17,20 +18,3 @@ package pos
 //
 //
 //}
-
-var (
-	lastBlockEpoch  =  make(map[uint64] uint64)
-
-)
-
-func UpdateEpochBlock(epochID uint64, blockNumber uint64) {
-	lastBlockEpoch[epochID] = blockNumber
-}
-
-func GetEpochBlock(epochID uint64) uint64 {
-	if epochID < 2 {
-		return uint64(0)
-	}
-	targetEpoch := epochID - 2
-	return lastBlockEpoch[targetEpoch]
-}

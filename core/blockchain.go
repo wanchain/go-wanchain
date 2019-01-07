@@ -20,6 +20,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -27,7 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -43,7 +44,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
-	"github.com/wanchain/go-wanchain/pos"
 )
 
 var (
@@ -1004,7 +1004,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.report(chain, i)
 		// TODO: update epoch ->blockNumber
 		epochID := block.Header().Difficulty.Uint64() >> 32
-		pos.UpdateEpochBlock(epochID, block.Number().Uint64());
+		posdb.UpdateEpochBlock(epochID, block.Number().Uint64());
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {

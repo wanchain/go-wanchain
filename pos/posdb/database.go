@@ -413,3 +413,27 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 }
 
 //-------------------------------------------------------------------
+
+
+
+var (
+	lastBlockEpoch  =  make(map[uint64] uint64)
+
+)
+
+var lastEpochId = uint64(0)
+func UpdateEpochBlock(epochID uint64, blockNumber uint64) {
+	if epochID != lastEpochId {
+		GetEpocherInst().SelectLeadersLoop(epochID+1)
+		lastEpochId = epochID
+	}
+	lastBlockEpoch[epochID] = blockNumber
+}
+
+func GetEpochBlock(epochID uint64) uint64 {
+	if epochID < 2 {
+		return uint64(0)
+	}
+	targetEpoch := epochID - 2
+	return lastBlockEpoch[targetEpoch]
+}

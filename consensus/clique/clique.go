@@ -20,6 +20,7 @@ package clique
 import (
 	"bytes"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -836,7 +837,7 @@ loopCheck:
 	if err != nil {
 		log.Error("Verify error", "error", err.Error())
 	}
-	pos.UpdateEpochBlock(epochIDPack, number)
+	posdb.UpdateEpochBlock(epochIDPack, number)
 	return block.WithSeal(header), nil
 }
 

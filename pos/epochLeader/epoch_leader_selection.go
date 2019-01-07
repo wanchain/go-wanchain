@@ -64,11 +64,12 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 
 
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
+	// TODO how to get thee target blockNumber
 	if epochId < 2 {
 		return uint64(0)
 	}
 	targetEpochId := epochId-2
-	targetBlkNum := pos.GetEpochBlock(targetEpochId)
+	targetBlkNum := posdb.GetEpochBlock(targetEpochId)
 	if targetBlkNum == 0 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
@@ -80,7 +81,7 @@ func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 			curNum--
 		}
 		targetBlkNum = curNum
-		pos.UpdateEpochBlock(targetEpochId, targetBlkNum)
+		posdb.UpdateEpochBlock(targetEpochId, targetBlkNum)
 	}
 	return targetBlkNum
 	//targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
@@ -353,6 +354,8 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 //get epochLeaders of epochID in localdb
 func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
+	// TODO: how to cache these
+	//e.SelectLeadersLoop(epochID)
 	ksarray := e.epochLeadersDb.GetStorageByteArray(epochID)
 
 	return ksarray
