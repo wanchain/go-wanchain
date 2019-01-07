@@ -14,7 +14,8 @@ const (
 )
 
 func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
-	s.updateStateDB()
+	//s.updateStateDB()
+	s.updateToLastStateDb()
 	if s.stateDb == nil {
 		return nil, errors.New("Do not have stateDb instance now")
 	}
