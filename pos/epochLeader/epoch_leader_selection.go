@@ -180,12 +180,19 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 
 	} else {
 
-		alignTime := int64(blkTime/(pos.SlotTime*pos.SlotCount)) * (pos.SlotTime * pos.SlotCount) //align time to one epoch time
 
-		leftTimePercent = (float64(int64(lockTime)-(alignTime-pstaker.StakingTime)) / float64(lockTime))
+		//epochTime := (blkTime - pos.EpochBaseTime)/(pos.SlotTime*pos.SlotCount)
+		//alignTime := int64(epochTime * (pos.SlotTime * pos.SlotCount))//align time to one epoch time
+
+		//leftTimePercent = (float64(int64(lockTime)-(alignTime-pstaker.StakingTime)) / float64(lockTime))
+		leftTimePercent = 1
 	}
 
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
+
+	//if pb == 0 {
+	fmt.Println(epochId,amount,lockTime,leftTimePercent,pb,pstaker.StakingTime)
+	//}
 
 	gb := new(bn256.G1)
 	_, err := gb.Unmarshal(pstaker.PubBn256)
@@ -214,7 +221,6 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
 
-
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
 		//fmt.Println("for each get data",value)
@@ -231,19 +237,23 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		if staker.Amount.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
+			fmt.Println(common.ToHex((*pitem).probabilities.Bytes()))
 		}
 
 		return true
 	})
 
-	sort.Sort(ProposerSorter(ps))
-
 	for idx, _ := range ps {
 		if idx == 0 {
 			continue
 		}
-		fmt.Println("probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
+
+		fmt.Println("epochid=" +  strconv.Itoa(int(epochId)) + "   probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
 	}
+
+
+	sort.Sort(ProposerSorter(ps))
+
 
 	fmt.Println("------------------------------------------------------------------------------------------")
 	for idx, _ := range ps {
