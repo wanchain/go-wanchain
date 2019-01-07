@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/wanchain/go-wanchain/pos/posdb"
-
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -149,11 +147,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		slotleader.CalEpochSlotID()
 		epochid, slotid, err := slotleader.GetEpochSlotID()
-		if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
-			time.Sleep(pos.SlotTime * time.Second)
-			continue
-
-		}
+		//if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
+		//	time.Sleep(pos.SlotTime * time.Second)
+		//	continue
+		//}
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err2 != nil {
 			fmt.Println(err2)
