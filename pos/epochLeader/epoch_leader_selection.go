@@ -212,11 +212,12 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	blkNumber := e.getTargetBlkNumber(epochId)
-	fmt.Println("CreateStakerProbabilityArray blkNumber : ", blkNumber)
-	blk := e.blkChain.GetBlockByNumber(blkNumber)
+	//blkNumber := e.getTargetBlkNumber(epochId)
+	//fmt.Println("CreateStakerProbabilityArray blkNumber : ", blkNumber)
+	//blk := e.blkChain.GetBlockByNumber(blkNumber)
 
-	blkTime := blk.Header().Time.Uint64()
+	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
 		//fmt.Println("for each get data",value)
