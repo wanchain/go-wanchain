@@ -325,13 +325,13 @@ func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecd
 
 	_, ok := s.slotCreateStatus[epochID]
 	if !ok {
-		//return nil, errors.New("slot leaders group not ready")
-		log.Debug("slot leaders group not ready use a fake one")
-		fakeSlotLeaders := make([]*ecdsa.PublicKey, 0)
-		for i := 0; i < pos.SlotCount; i++ {
-			fakeSlotLeaders = append(fakeSlotLeaders, s.epochLeadersPtrArray[i%pos.EpochLeaderCount])
-		}
-		return fakeSlotLeaders, nil
+		return nil, errors.New("slot leaders group not ready")
+		// log.Debug("slot leaders group not ready use a fake one")
+		// fakeSlotLeaders := make([]*ecdsa.PublicKey, 0)
+		// for i := 0; i < pos.SlotCount; i++ {
+		// 	fakeSlotLeaders = append(fakeSlotLeaders, s.epochLeadersPtrArray[i%pos.EpochLeaderCount])
+		// }
+		// return fakeSlotLeaders, nil
 	}
 
 	if len(s.slotLeadersPtrArray) != pos.SlotCount {
@@ -343,9 +343,7 @@ func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecd
 func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	_, ok := s.slotCreateStatus[epochID]
 	if !ok {
-		//return nil, errors.New("slot leaders group not ready")
-		log.Debug("slot leaders group not ready use a fake one")
-		return s.epochLeadersPtrArray[slotID%pos.EpochLeaderCount], nil
+		return nil, errors.New("slot leaders group not ready")
 	}
 	if len(s.slotLeadersPtrArray) != pos.SlotCount {
 		return nil, errors.New("slot leaders group data is not integrated")
