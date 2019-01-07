@@ -174,7 +174,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	lockTime := pstaker.LockTime
 
 	var leftTimePercent float64
-	if epochId == 0 {
+	if epochId < 2 {
 
 		leftTimePercent = 1
 
@@ -212,11 +212,8 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	//blkNumber := e.getTargetBlkNumber(epochId)
-	//fmt.Println("CreateStakerProbabilityArray blkNumber : ", blkNumber)
-	//blk := e.blkChain.GetBlockByNumber(blkNumber)
-
 	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+
 
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
