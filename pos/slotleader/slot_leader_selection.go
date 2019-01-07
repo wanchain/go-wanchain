@@ -562,7 +562,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	s.clearData()
 
-	if !s.isLocalPkInPreEpochLeaders(epochID) {
+	if epochID > 1 && !s.isLocalPkInPreEpochLeaders(epochID) {
 		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
 		return nil
 	}
