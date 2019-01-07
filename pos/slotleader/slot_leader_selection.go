@@ -218,6 +218,10 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 }
 
 func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) bool {
+	if epochID < 2 {
+		return true
+	}
+
 	prePks := s.getEpochLeadersPK(epochID - 1)
 
 	localPk, err := s.getLocalPublicKey()
@@ -562,7 +566,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	s.clearData()
 
-	if epochID > 1 && !s.isLocalPkInPreEpochLeaders(epochID) {
+	if !s.isLocalPkInPreEpochLeaders(epochID) {
 		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
 		return nil
 	}
