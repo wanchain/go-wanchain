@@ -71,7 +71,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	fmt.Println("compressed pk: :", hex.EncodeToString(pkCompress.SerializeCompressed()), "len: ", len(pkCompress.SerializeCompressed()))
 
 	epochID := uint64(8192)
-	payload, err := slot.GenerateCommitment(&privKey.PublicKey, epochID, 0)
+	payload, err := slot.generateCommitment(&privKey.PublicKey, epochID, 0)
 	if err != nil {
 		t.Fail()
 	}
@@ -112,7 +112,7 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	}
 	epochID := uint64(1)
 
-	_, err = slot.GenerateCommitment(nil, epochID, 0)
+	_, err = slot.generateCommitment(nil, epochID, 0)
 	if err == nil {
 		t.Fail()
 	}
@@ -124,14 +124,14 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 
 	privKey.PublicKey.X = nil
 	privKey.PublicKey.Y = nil
-	_, err = slot.GenerateCommitment(&privKey.PublicKey, epochID, 0)
+	_, err = slot.generateCommitment(&privKey.PublicKey, epochID, 0)
 	if err == nil {
 		t.Fail()
 	}
 
 	privKey, err = crypto.GenerateKey()
 	privKey.PublicKey.Curve = nil
-	_, err = slot.GenerateCommitment(&privKey.PublicKey, epochID, 0)
+	_, err = slot.generateCommitment(&privKey.PublicKey, epochID, 0)
 	if err == nil {
 		t.Fail()
 	}
@@ -140,7 +140,7 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	privKey2, _ := crypto.GenerateKey()
 
 	privKey.X = privKey2.X
-	_, err = slot.GenerateCommitment(&privKey.PublicKey, epochID, 0)
+	_, err = slot.generateCommitment(&privKey.PublicKey, epochID, 0)
 	if err == nil {
 		t.Fail()
 	}

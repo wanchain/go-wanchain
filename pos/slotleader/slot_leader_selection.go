@@ -3,7 +3,6 @@ package slotleader
 import (
 	"bytes"
 	"crypto/ecdsa"
-	Rand "crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -25,10 +24,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/rpc"
-
-	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/pos/uleaderselection"
@@ -114,222 +110,7 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 	return slotLeaderSelection
 }
 
-//--------------Workflow functions-------------------------------------------------------------
-func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
-	s.blockChain = blockChain
-	s.rc = rc
-	s.key = key
-	s.epochInstance = epochInstance
-	if blockChain != nil {
-		log.Info("SlotLeaderSelecton init success")
-	}
-}
-
-//Loop check work every 10 second. Called by backend loop
-//It's all slotLeaderSelection's main workflow loop
-//It's not loop at all, it is loop called by backend
-func (s *SlotLeaderSelection) Loop(stateDb *state.StateDB, rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
-	functrace.Enter("SlotLeaderSelection Loop")
-	s.rc = rc
-	s.key = key
-	s.stateDb = stateDb
-	s.epochInstance = epochInstance
-
-	//epochID, slotID, err := GetEpochSlotID()
-	log.Debug("Now epchoID and slotID:", "epochID", posdb.Uint64ToString(epochID), "slotID", posdb.Uint64ToString(slotID))
-
-	workStage, err := s.getWorkStage(epochID)
-
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-			workStage = slotLeaderSelectionStage1
-		} else {
-			log.Error("getWorkStage error: " + err.Error())
-		}
-	}
-
-	switch workStage {
-	case slotLeaderSelectionStage1:
-		log.Debug("Enter slotLeaderSelectionStage1")
-		err := s.generateSlotLeadsGroup(epochID)
-		if err != nil {
-			log.Debug(err.Error())
-		}
-		//s.buildEpochLeaderGroup(epochID)
-
-		s.setWorkingEpochID(epochID)
-		err = s.startStage1Work()
-		if err != nil {
-			log.Error(err.Error())
-		} else {
-			s.setWorkStage(epochID, slotLeaderSelectionStage2)
-		}
-
-	case slotLeaderSelectionStage2:
-		log.Debug("Enter slotLeaderSelectionStage2")
-
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
-
-		// if slotID < SlotStage1 {
-		// 	break
-		// }
-
-		//s.buildEpochLeaderGroup(epochID)
-
-		err := s.startStage2Work()
-		if err != nil {
-			log.Error(err.Error())
-		} else {
-			s.setWorkStage(epochID, slotLeaderSelectionStage3)
-		}
-
-	case slotLeaderSelectionStage3:
-		log.Debug("Enter slotLeaderSelectionStage3")
-
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
-
-		if slotID < SlotStage2 {
-			break
-		}
-
-		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
-		if err != nil {
-			log.Error(err.Error())
-		} else {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
-		}
-	case slotLeaderSelectionStageFinished:
-		log.Debug("Enter slotLeaderSelectionStageFinished")
-
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
-	default:
-	}
-	functrace.Exit()
-}
-
-// startStage1Work start the stage 1 work and send tx
-func (s *SlotLeaderSelection) startStage1Work() error {
-	functrace.Enter("")
-	selfPublicKey, _ := s.getLocalPublicKey()
-
-	selfPublicKeyIndex, inEpochLeaders := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
-	if inEpochLeaders {
-		log.Debug(fmt.Sprintf("Local node in epoch leaders times: %d", len(selfPublicKeyIndex)))
-
-		for i := 0; i < len(selfPublicKeyIndex); i++ {
-			workingEpochID, err := s.getWorkingEpochID()
-			if err != nil {
-				return err
-			}
-			data, err := s.GenerateCommitment(selfPublicKey, workingEpochID, selfPublicKeyIndex[i])
-			if err != nil {
-				return err
-			}
-
-			err = s.sendStage1Tx(data)
-			if err != nil {
-				log.Error(err.Error())
-				return err
-			}
-		}
-	} else {
-		log.Debug("Local node is not in epoch leaders")
-	}
-
-	functrace.Exit()
-	return nil
-}
-
-// startStage2Work start the stage 2 work and send tx
-func (s *SlotLeaderSelection) startStage2Work() error {
-
-	functrace.Enter("startStage2Work")
-	s.getWorkingEpochID()
-	selfPublicKey, _ := s.getLocalPublicKey()
-	selfPublicKeyIndex := make([]uint64, 0)
-	var inEpochLeaders bool
-	selfPublicKeyIndex, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
-	if inEpochLeaders {
-		for i := 0; i < len(selfPublicKeyIndex); i++ {
-			workingEpochID, err := s.getWorkingEpochID()
-			if err != nil {
-				return err
-			}
-			data, err := s.buildStage2TxPayload(workingEpochID, uint64(selfPublicKeyIndex[i]))
-			if err != nil {
-				return err
-			}
-
-			err = s.sendStage2Tx(data)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	functrace.Exit()
-	return nil
-}
-
-//GenerateCommitment generate a commitment and send it by tx message
-//Returns the commitment buffer []byte which is publicKey and alpha * publicKey
-//payload should be send with tx.
-func (s *SlotLeaderSelection) GenerateCommitment(publicKey *ecdsa.PublicKey,
-	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
-	functrace.Enter()
-	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
-		return nil, errors.New("Invalid input parameters")
-	}
-
-	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {
-		return nil, errors.New("Public key point is not on S256 curve")
-	}
-
-	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
-
-	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
-	if err != nil {
-		return nil, err
-	}
-
-	pk := btcec.PublicKey(*commitment[0])
-	mi := btcec.PublicKey(*commitment[1])
-
-	pkCompress := pk.SerializeCompressed()
-	miCompress := mi.SerializeCompressed()
-	epochIDBuf := posdb.Uint64ToBytes(epochID)
-	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
-
-	log.Debug("epochIDBuf(hex): " + hex.EncodeToString(epochIDBuf))
-	log.Debug("selfIndexBuf: " + hex.EncodeToString(selfIndexBuf))
-	log.Debug("pkCompress: " + hex.EncodeToString(pkCompress))
-	log.Debug("miCompress: " + hex.EncodeToString(miCompress))
-
-	buffer, err := slottools.RlpPackCompressedPK(epochIDBuf, selfIndexBuf, pkCompress, miCompress)
-
-	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
-
-	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
-
-	functrace.Exit()
-	return buffer, err
-}
+//---------------Information get/set functions--------------------------------------------
 
 //GetAlpha get alpha of epochID
 func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
@@ -345,8 +126,6 @@ func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.I
 	var alpha = big.NewInt(0).SetBytes(buf)
 	return alpha, nil
 }
-
-//---------------Information get/set functions--------------------------------------------
 
 //getLocalPublicKey get local public key from memory keystore
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
@@ -455,6 +234,7 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
 	return err
 }
+
 func (s *SlotLeaderSelection) clearData() {
 	s.slotCreated = false
 	// clear Array
@@ -568,14 +348,6 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 		return nil, errors.New("slot id index out of range")
 	}
 	return s.slotLeadersPtrArray[slotID], nil
-}
-
-func (s *SlotLeaderSelection) updateStateDB() {
-	stateDb, err := s.blockChain.StateAt(s.blockChain.CurrentBlock().Root())
-	if err != nil {
-		log.Error("Update stateDb error in SlotLeaderSelection.updateStateDB", "error", err.Error())
-	}
-	s.stateDb = stateDb
 }
 
 // from random proposer
@@ -695,6 +467,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		return piecesPtr, nil
 	}
 }
+
 func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error) {
 	// 1. get SMA[pre]
 	if epochID == uint64(0) {
@@ -774,6 +547,7 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 		return crsPtr, nil
 	}
 }
+
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	err := s.buildEpochLeaderGroup(epochID)
@@ -870,14 +644,6 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 func (s *SlotLeaderSelection) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte) bool {
 	return (pkIndex < uint64(len(s.epochLeadersArray))) && (hex.EncodeToString(pkBytes) == s.epochLeadersArray[pkIndex])
-}
-
-func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
-	s.updateStateDB()
-	if s.stateDb == nil {
-		return nil, errors.New("Do not have stateDb instance now")
-	}
-	return s.stateDb, nil
 }
 
 func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error) {
@@ -1056,109 +822,6 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	return nil
 }
 
-//ProofMes = [PK, Gt, skGt] []*PublicKey
-//Proof = [e,z] []*big.Int
-func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-	//1. SMA PRE
-	smaPiecesPtr, err := s.getSMAPieces(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	//2. epochLeader PRE
-	var epochLeadersPtrPre []*ecdsa.PublicKey
-	if epochID == 0 {
-		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
-			buf, err := hex.DecodeString(pos.GenesisPK)
-			if err != nil {
-				log.Error("hex.DecodeString(pos.GenesisPK) error!")
-				continue
-			}
-			epochLeadersPtrPre[i] = crypto.ToECDSAPub(buf)
-		}
-	} else {
-		epochLeadersPtrPre = s.getEpochLeadersPK(epochID - 1)
-	}
-
-	//3. RB PRE
-	var rbPtr *big.Int
-
-	rbPtr, err = s.getRandom(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	rbBytes := rbPtr.Bytes()
-	//4. CR PRE
-	crsPtr, err := s.getCRs(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(PrivateKey, smaPiecesPtr, epochLeadersPtrPre, rbBytes[:], crsPtr[:], int(slotID))
-
-	return profMeg, proof, err
-}
-
-func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
-
-	var epochLeadersPtrPre []*ecdsa.PublicKey
-
-	if epochID == 0 {
-		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
-			buf, err := hex.DecodeString(pos.GenesisPK)
-			if err != nil {
-				log.Error("hex.DecodeString(pos.GenesisPK) error!")
-				continue
-			}
-			epochLeadersPtrPre[i] = crypto.ToECDSAPub(buf)
-		}
-	} else {
-		epochLeadersPtrPre = s.getEpochLeadersPK(epochID - 1)
-	}
-
-	//3. RB PRE
-	rbPtr, err := s.getRandom(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return false
-	}
-
-	rbBytes := rbPtr.Bytes()
-
-	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
-}
-
-// PackSlotProof can make a pack info for header seal
-func (s *SlotLeaderSelection) PackSlotProof(epochID uint64, slotID uint64, privKey *ecdsa.PrivateKey) ([]byte, error) {
-	proofMeg, proof, err := s.GetSlotLeaderProof(privKey, epochID, slotID)
-	if err != nil {
-		return nil, err
-	}
-
-	objToPack := &Pack{Proof: posdb.BigIntArrayToByteArray(proof), ProofMeg: posdb.PkArrayToByteArray(proofMeg)}
-
-	buf, err := rlp.EncodeToBytes(objToPack)
-
-	return buf, err
-}
-
-func (s *SlotLeaderSelection) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error) {
-	var info Pack
-	err := rlp.DecodeBytes(input, &info)
-	if err != nil {
-		log.Error("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
-		return nil, nil, err
-	}
-
-	return posdb.ByteArrayToBigIntArray(info.Proof), posdb.ByteArrayToPkArray(info.ProofMeg), nil
-}
-
 // used for stage2 payload
 // stage2 tx payload 1(alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
 // stage2 tx payload 2 proof pai[i]
@@ -1178,6 +841,7 @@ func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) 
 	functrace.Exit()
 	return ArrayPiece, proof, err
 }
+
 func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
 	var selfPKHexStr, payLoadStr string
 	var alphaPkiHexStr, proofHexStr []string
@@ -1272,60 +936,4 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 	}
 
 	return nil, nil, errors.New("Stg1 data get from StateDb verified failed")
-}
-
-//--------------Transacton create / send --------------------------------------------
-
-func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
-	//test
-	fmt.Println("Ready to send StageTx1 tx:", hex.EncodeToString(data))
-
-	if s.rc == nil {
-		return errors.New("rc is not ready")
-	}
-
-	//Set payload infomation--------------
-	payload, err := slottools.PackStage1Data(data, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		log.Debug("PackStage1Data err:" + err.Error())
-		return err
-	}
-
-	arg := map[string]interface{}{}
-	arg["from"] = s.key.Address
-	arg["to"] = vm.GetSlotLeaderSCAddress()
-	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
-	arg["txType"] = 1
-	arg["data"] = hexutil.Bytes(payload)
-	log.Debug("Write data of payload", "length", len(payload))
-
-	_, err = pos.SendTx(s.rc, arg)
-	return err
-}
-func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
-	//test
-	fmt.Println("Ready send tx:", data)
-
-	if s.rc == nil {
-		return errors.New("rc is not ready")
-	}
-
-	//Set payload infomation--------------
-	payload, err := slottools.PackStage2Data(data, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		return err
-	}
-
-	arg := map[string]interface{}{}
-	arg["from"] = s.key.Address
-	arg["to"] = vm.GetSlotLeaderSCAddress()
-	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
-	arg["txType"] = 1
-	arg["data"] = hexutil.Bytes(payload)
-	log.Debug("Write data of payload", "length", len(payload))
-
-	_, err = pos.SendTx(s.rc, arg)
-	return err
 }
