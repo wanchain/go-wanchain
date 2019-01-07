@@ -70,25 +70,23 @@ var (
 
 //SlotLeaderSelection use to select unique slot leader
 type SlotLeaderSelection struct {
-	workingEpochID    uint64
-	workStage         int
-	rc                *rpc.Client
-	epochLeadersArray []string            // len(pki)=65 hex.EncodeToString
-	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexs of this pki. hex.EncodeToString
-	key               *keystore.Key
-	stateDb           *state.StateDB
-	epochInstance     interface{}
-
+	workingEpochID         uint64
+	workStage              int
+	rc                     *rpc.Client
+	epochLeadersArray      []string            // len(pki)=65 hex.EncodeToString
+	epochLeadersMap        map[string][]uint64 // key: pki value: []uint64 the indexs of this pki. hex.EncodeToString
+	key                    *keystore.Key
+	stateDb                *state.StateDB
+	epochInstance          interface{}
 	slotLeadersPtrArray    [pos.SlotCount]*ecdsa.PublicKey
 	slotLeadersIndex       [pos.SlotCount]uint64
 	epochLeadersPtrArray   [pos.EpochLeaderCount]*ecdsa.PublicKey
 	validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
-
-	stageOneMi       [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKi [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProof    [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
-	slotCreated      bool
-	blockChain       *core.BlockChain
+	stageOneMi             [pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi       [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof          [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	slotCreateStatus       map[uint64]bool
+	blockChain             *core.BlockChain
 }
 
 // Pack is use to pack info for slot proof
@@ -103,6 +101,7 @@ func init() {
 	slotLeaderSelection = &SlotLeaderSelection{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
+	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
 }
 
 //GetSlotLeaderSelection get the SlotLeaderSelection's object
@@ -253,7 +252,7 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 }
 
 func (s *SlotLeaderSelection) clearData() {
-	s.slotCreated = false
+	s.slotCreateStatus = make(map[uint64]bool)
 	// clear Array
 	s.epochLeadersArray = make([]string, 0)
 	// clear map
@@ -287,20 +286,7 @@ func (s *SlotLeaderSelection) clearData() {
 func (s *SlotLeaderSelection) dumpData() {
 
 	fmt.Printf("~~~~~~~~~~~dumpData begin~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-	// fmt.Printf("\t\t\ts.slotCreated = %v\n\n", s.slotCreated)
-	// fmt.Printf("\t\t\ts.epochLeadersArray= %v\n\n", s.epochLeadersArray)
-	// fmt.Printf("\t\t\ts.epochLeadersMap= %v\n\n", s.epochLeadersMap)
-	// fmt.Printf("\t\t\ts.epochLeadersPtrArray= %v\n\n", s.epochLeadersPtrArray)
-	// fmt.Printf("\t\t\ts.validEpochLeadersIndex= %v\n\n", s.validEpochLeadersIndex)
 
-	// fmt.Printf("\t\t\ts.stageOneMi= %v\n\n", s.stageOneMi)
-	// fmt.Printf("\t\t\ts.stageTwoAlphaPKi= %v\n\n", s.stageTwoAlphaPKi)
-	// fmt.Printf("\t\t\ts.stageTwoProof= %v\n\n", s.stageTwoProof)
-	// fmt.Printf("\t\t\ts.slotLeadersPtrArray= %v\n\n", s.slotLeadersPtrArray)
-	// fmt.Printf("\t\t\ts.epochLeadersPtrArray= %v\n\n", s.epochLeadersPtrArray)
-	// for index, value := range s.epochLeadersPtrArray {
-	// 	fmt.Printf("\tepochLeadersPtrArray index := %d, %v\t\n", index, crypto.FromECDSAPub(value))
-	// }
 	for index, value := range s.epochLeadersPtrArray {
 		fmt.Printf("\tepochLeadersPtrArrayHex index := %d, %v\t\n", index, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
@@ -315,7 +301,7 @@ func (s *SlotLeaderSelection) dumpData() {
 
 func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 	functrace.Enter()
-	s.clearData()
+
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
 	fmt.Printf("Data from jqg: %v", data)
@@ -336,7 +322,9 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 }
 
 func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecdsa.PublicKey, err error) {
-	if !s.slotCreated {
+
+	_, ok := s.slotCreateStatus[epochID]
+	if !ok {
 		//return nil, errors.New("slot leaders group not ready")
 		log.Debug("slot leaders group not ready use a fake one")
 		fakeSlotLeaders := make([]*ecdsa.PublicKey, 0)
@@ -353,7 +341,8 @@ func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecd
 }
 
 func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	if !s.slotCreated {
+	_, ok := s.slotCreateStatus[epochID]
+	if !ok {
 		//return nil, errors.New("slot leaders group not ready")
 		log.Debug("slot leaders group not ready use a fake one")
 		return s.epochLeadersPtrArray[slotID%pos.EpochLeaderCount], nil
@@ -573,6 +562,8 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
+	s.clearData()
+
 	if !s.isLocalPkInPreEpochLeaders(epochID) {
 		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
 		return nil
@@ -665,7 +656,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		s.slotLeadersIndex[index] = value
 	}
 
-	s.slotCreated = true
+	s.slotCreateStatus[epochID] = true
 	s.dumpData()
 	return nil
 }
