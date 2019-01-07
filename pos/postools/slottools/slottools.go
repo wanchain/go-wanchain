@@ -147,9 +147,11 @@ func InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
 	ok := false
 	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
 	if len(epochLeaders) != pos.EpochLeaderCount {
-		posdb.GetEpocherInst().SelectLeadersLoop(epochID)
-
-		epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(epochID)
+		return false
+		// Don't run if no Epoch leader
+		//posdb.GetEpocherInst().SelectLeadersLoop(epochID)
+		//
+		//epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(epochID)
 	}
 
 	for i := 0; i < len(epochLeaders); i++ {

@@ -717,6 +717,7 @@ loopCheck:
 				case <-stop:
 					return nil, nil
 				case <-time.After(time.Second):
+					fmt.Println("GetSlotLeader failed, sleep 1")
 					continue
 				}
 			}

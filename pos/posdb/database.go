@@ -393,14 +393,15 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 	pks := db.GetStorageByteArray(epochId)
 	length := len(pks)
 	if length == 0 {
-
-		selecter.SelectLeadersLoop(epochId)
-		pks = db.GetStorageByteArray(epochId)
-		if len(pks) == 0 {
-			log.Error("GetRBProposerGroup get pks error")
-			return nil
-		}
-		length = len(pks)
+		return nil
+		// TODO don't select if no epoch leader.
+		//selecter.SelectLeadersLoop(epochId)
+		//pks = db.GetStorageByteArray(epochId)
+		//if len(pks) == 0 {
+		//	log.Error("GetRBProposerGroup get pks error")
+		//	return nil
+		//}
+		//length = len(pks)
 	}
 	g1s := make([]bn256.G1, length, length)
 
