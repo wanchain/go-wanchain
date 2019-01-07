@@ -99,9 +99,11 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 func GetR(db StateDB, epochId uint64) *big.Int {
 	r := GetStateR(db, epochId)
 	if r == nil {
-		for i := uint64(1); r == nil; i++ {
+		i := uint64(1)
+		for ; r == nil; i++ {
 			r = GetStateR(db, epochId - i)
 		}
+		log.Warn("***fake random r", "epochId", epochId, "i", epochId - i + 1, "r", r)
 		bytes := r.Bytes()
 		bytes = append(bytes, UIntToByteSlice(epochId) ...)
 		random := crypto.Keccak256(bytes)
@@ -394,7 +396,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	if r != nil && err == nil {
 		hashR := GetRBRKeyHash(sigshareParam.EpochId + 1)
 		evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-		log.Info("generate","r", r)
+		log.Info("generate","r", r, "epochid", sigshareParam.EpochId + 1)
 	}
 
 	// TODO: add an dkg event

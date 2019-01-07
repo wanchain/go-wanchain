@@ -100,7 +100,12 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 		return err
 	}
 
-	rb := vm.GetR(stateDb, epochId)
+	epochIdIn := epochId
+	if epochIdIn > 0 {
+		epochIdIn --
+	}
+	rb := vm.GetR(stateDb, epochIdIn)
+
 	if rb == nil {
 		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
 		rb = big.NewInt(1)
