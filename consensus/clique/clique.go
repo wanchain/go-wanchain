@@ -713,8 +713,12 @@ loopCheck:
 		if epochId != 0 {
 			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 			if err != nil || leaderPub == nil {
-				time.Sleep(time.Second)
-				continue
+				select {
+				case <-stop:
+					return nil, nil
+				case <-time.After(pos.SlotTime * time.Second):
+					continue
+				}
 			}
 			leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 
