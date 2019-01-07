@@ -716,7 +716,7 @@ loopCheck:
 				select {
 				case <-stop:
 					return nil, nil
-				case <-time.After(pos.SlotTime * time.Second):
+				case <-time.After(time.Second):
 					continue
 				}
 			}
