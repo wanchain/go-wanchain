@@ -571,6 +571,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 
+	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
+	log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
+
 	err := s.buildEpochLeaderGroup(epochID)
 	if err != nil {
 		return errors.New("build epoch leader group error!")

@@ -134,7 +134,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	epID, index, pk, pkMi, err := slottools.RlpUnpackWithCompressedPK(readBuf)
 
-	c.addScCallTimes(posdb.BytesToUint64(epID))
+	addSlotScCallTimes(posdb.BytesToUint64(epID))
 
 	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
 		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
@@ -187,7 +187,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
 
-	c.addScCallTimes(posdb.BytesToUint64(epochIDBufDec))
+	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
 
 	keyBuf.Write(epochIDBufDec)
 
@@ -274,7 +274,7 @@ func GetSlotLeaderScAbiString() string {
 	return slotLeaderSCDef
 }
 
-func (c *slotLeaderSC) addScCallTimes(epochID uint64) error {
+func addSlotScCallTimes(epochID uint64) error {
 	buf, err := posdb.GetDb().Get(epochId, scCallTimes)
 	times := uint64(0)
 	if err != nil {
@@ -289,4 +289,14 @@ func (c *slotLeaderSC) addScCallTimes(epochID uint64) error {
 
 	posdb.GetDb().Put(epochId, scCallTimes, posdb.Uint64ToBytes(times))
 	return nil
+}
+
+// GetSlotScCallTimes can get this precompile contract called times
+func GetSlotScCallTimes(epochID uint64) uint64 {
+	buf, err := posdb.GetDb().Get(epochId, scCallTimes)
+	if err != nil {
+		return 0
+	} else {
+		return posdb.BytesToUint64(buf)
+	}
 }
