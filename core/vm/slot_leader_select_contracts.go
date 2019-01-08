@@ -61,7 +61,7 @@ var (
 	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
 	errIllegalSender                   = errors.New("sender is not in epoch leaders ")
-	scCallTimes                        = "SC_CALL_TIMES"
+	scCallTimes                        = "SLOT_LEADER_SC_CALL_TIMES"
 )
 
 func init() {
@@ -275,7 +275,7 @@ func GetSlotLeaderScAbiString() string {
 }
 
 func addSlotScCallTimes(epochID uint64) error {
-	buf, err := posdb.GetDb().Get(epochId, scCallTimes)
+	buf, err := posdb.GetDb().Get(epochID, scCallTimes)
 	times := uint64(0)
 	if err != nil {
 		if err.Error() != "leveldb: not found" {
@@ -287,13 +287,13 @@ func addSlotScCallTimes(epochID uint64) error {
 
 	times++
 
-	posdb.GetDb().Put(epochId, scCallTimes, posdb.Uint64ToBytes(times))
+	posdb.GetDb().Put(epochID, scCallTimes, posdb.Uint64ToBytes(times))
 	return nil
 }
 
 // GetSlotScCallTimes can get this precompile contract called times
 func GetSlotScCallTimes(epochID uint64) uint64 {
-	buf, err := posdb.GetDb().Get(epochId, scCallTimes)
+	buf, err := posdb.GetDb().Get(epochID, scCallTimes)
 	if err != nil {
 		return 0
 	} else {
