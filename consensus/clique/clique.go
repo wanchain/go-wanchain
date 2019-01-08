@@ -833,6 +833,8 @@ loopCheck:
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 
+	header.Coinbase = signer
+
 	log.Debug("signature", "hex", hex.EncodeToString(sighash))
 
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
