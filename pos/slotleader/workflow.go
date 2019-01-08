@@ -115,7 +115,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn(err.Error())
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		}
