@@ -69,3 +69,13 @@ func (s *SlotLeaderSelection) updateStateDB() {
 	}
 	s.stateDb = stateDb
 }
+
+func (s *SlotLeaderSelection) getLastEpochIDFromChain() uint64 {
+	lastEpochID := uint64((s.blockChain.CurrentBlock().Difficulty().Int64() >> 32))
+	return lastEpochID
+}
+
+func (s *SlotLeaderSelection) getLastSlotIDFromChain() uint64 {
+	curSlotID := uint64((s.blockChain.CurrentBlock().Difficulty().Int64() >> 8) & 0x00ffffff)
+	return curSlotID
+}

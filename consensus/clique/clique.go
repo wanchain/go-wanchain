@@ -20,11 +20,12 @@ package clique
 import (
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 
@@ -717,7 +718,7 @@ loopCheck:
 				case <-stop:
 					return nil, nil
 				case <-time.After(time.Second):
-					fmt.Println("GetSlotLeader failed, sleep 1")
+					fmt.Println("GetSlotLeader failed, sleep 1, epochID:", epochId, " slotID:", slotId)
 					continue
 				}
 			}
@@ -732,14 +733,14 @@ loopCheck:
 
 		if leader == localPublicKey {
 			cur := uint64(time.Now().Unix())
-			sleepTime :=uint64(0)
-			sealTime :=uint64(0)
+			sleepTime := uint64(0)
+			sealTime := uint64(0)
 			if pos.EpochBaseTime == 0 {
-				sealTime = header.Time.Uint64()+ pos.SlotTime/2
+				sealTime = header.Time.Uint64() + pos.SlotTime/2
 			} else {
-				sealTime = pos.EpochBaseTime+ pos.SlotTime/2 + (epochId*pos.SlotCount+slotId+1)*pos.SlotTime
+				sealTime = pos.EpochBaseTime + pos.SlotTime/2 + (epochId*pos.SlotCount+slotId+1)*pos.SlotTime
 			}
-			if cur <  sealTime{
+			if cur < sealTime {
 				sleepTime = sealTime - cur
 			}
 			fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
