@@ -61,6 +61,7 @@ var (
 	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
 	errIllegalSender                   = errors.New("sender is not in epoch leaders ")
+	scCallTimes                        = "SC_CALL_TIMES"
 )
 
 func init() {
@@ -133,6 +134,8 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	epID, index, pk, pkMi, err := slottools.RlpUnpackWithCompressedPK(readBuf)
 
+	c.addScCallTimes(posdb.BytesToUint64(epID))
+
 	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
 		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
 		hex.EncodeToString(pk) == hex.EncodeToString(pkSelf) &&
@@ -183,6 +186,8 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	// }
 
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
+
+	c.addScCallTimes(posdb.BytesToUint64(epochIDBufDec))
 
 	keyBuf.Write(epochIDBufDec)
 
@@ -259,10 +264,29 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 	return nil
 }
 
+// GetSlotLeaderSCAddress can get the precompile contract address
 func GetSlotLeaderSCAddress() common.Address {
 	return slotLeaderPrecompileAddr
 }
 
+// GetSlotLeaderScAbiString can get the precompile contract Define string
 func GetSlotLeaderScAbiString() string {
 	return slotLeaderSCDef
+}
+
+func (c *slotLeaderSC) addScCallTimes(epochID uint64) error {
+	buf, err := posdb.GetDb().Get(epochId, scCallTimes)
+	times := uint64(0)
+	if err != nil {
+		if err.Error() != "leveldb: not found" {
+			return err
+		}
+	} else {
+		times = posdb.BytesToUint64(buf)
+	}
+
+	times++
+
+	posdb.GetDb().Put(epochId, scCallTimes, posdb.Uint64ToBytes(times))
+	return nil
 }
