@@ -813,6 +813,7 @@ loopCheck:
 	// copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
 
 	header.Difficulty.SetUint64(epochSlotId)
+	header.Coinbase = signer
 
 	s := slotleader.GetSlotLeaderSelection()
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
@@ -832,8 +833,6 @@ loopCheck:
 		return nil, err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-
-	header.Coinbase = signer
 
 	log.Debug("signature", "hex", hex.EncodeToString(sighash))
 
