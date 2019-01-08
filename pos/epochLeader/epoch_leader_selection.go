@@ -185,12 +185,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 
 	} else {
 
-
-		//epochTime := (blkTime - pos.EpochBaseTime)/(pos.SlotTime*pos.SlotCount)
-		//alignTime := int64(epochTime * (pos.SlotTime * pos.SlotCount))//align time to one epoch time
-
-		//leftTimePercent = (float64(int64(lockTime)-(alignTime-pstaker.StakingTime)) / float64(lockTime))
-		leftTimePercent = 1
+		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
 	}
 
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
