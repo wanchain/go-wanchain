@@ -191,7 +191,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
 
 	//if pb == 0 {
-	fmt.Println(epochId,amount,lockTime,leftTimePercent,pb,pstaker.StakingTime)
+	//fmt.Println(epochId,amount,lockTime,leftTimePercent,pb,pstaker.StakingTime)
 	//}
 
 	gb := new(bn256.G1)
@@ -235,7 +235,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return false
 		}
 
-		if staker.Amount.Cmp(Big0) > 0 {
+		if staker.Amount.Cmp(Big0)  > 0 && (*pitem).probabilities.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
 			fmt.Println(common.ToHex((*pitem).probabilities.Bytes()))
 		}
