@@ -21,6 +21,7 @@ var Modules = map[string]string{
 	"admin":      Admin_JS,
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
+	"pos":        Pos_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
 	"miner":      Miner_JS,
@@ -109,6 +110,18 @@ web3._extend({
 });
 `
 
+const Pos_JS = `
+web3._extend({
+	property: 'pos',
+	methods: [
+		new web3._extend.Method({
+			name: 'version',
+			call: 'pos_version',
+			params: 0
+		}),
+	]
+});
+`
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
