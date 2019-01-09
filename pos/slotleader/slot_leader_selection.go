@@ -569,27 +569,27 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 
-	if epochID > 2 {
-		slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
-		log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
+	// if epochID > 2 {
+	// 	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
+	// 	log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
 
-		if slotScCallTimes == 0 {
-			log.Warn("Last epoch slotLeader SC called times is 0")
+	// 	if slotScCallTimes == 0 {
+	// 		log.Warn("Last epoch slotLeader SC called times is 0")
 
-			height := s.getBlockChainHeight()
-			for i := uint64(2); i < height; i++ {
-				slotScCallTimes := vm.GetSlotScCallTimes(epochID - i)
-				if slotScCallTimes >= slotLeaderTxMinCount {
-					log.Warn("Use the state of epoch instead of last", "epochID", epochID-i)
-					epochIDGet = epochID - i
-					break
-				}
-			}
-			if epochIDGet == epochID {
-				return errors.New("Can not found good tx epoch")
-			}
-		}
-	}
+	// 		height := s.getBlockChainHeight()
+	// 		for i := uint64(2); i < height; i++ {
+	// 			slotScCallTimes := vm.GetSlotScCallTimes(epochID - i)
+	// 			if slotScCallTimes >= slotLeaderTxMinCount {
+	// 				log.Warn("Use the state of epoch instead of last", "epochID", epochID-i)
+	// 				epochIDGet = epochID - i
+	// 				break
+	// 			}
+	// 		}
+	// 		if epochIDGet == epochID {
+	// 			return errors.New("Can not found good tx epoch")
+	// 		}
+	// 	}
+	// }
 
 	err := s.buildEpochLeaderGroup(epochIDGet)
 	if err != nil {
