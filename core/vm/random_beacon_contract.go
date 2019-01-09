@@ -211,6 +211,13 @@ func UInt32ToByteSlice(num uint32) []byte {
 	return b
 }
 
+func ByteSliceToUInt(bs []byte) uint64 {
+	return binary.LittleEndian.Uint64(bs)
+}
+func ByteSliceToUInt32(bs []byte) uint32 {
+	return binary.LittleEndian.Uint32(bs)
+}
+
 type RbDKGTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
@@ -285,16 +292,18 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	if err != nil {
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
-	log.Info("contract do dkg begin", "epochId", dkgParam.EpochId, "proposerId", dkgParam.ProposerId)
+	eid := dkgParam.EpochId
+	pid := dkgParam.ProposerId
+	log.Info("contract do dkg begin", "epochId", eid, "proposerId", pid)
 
-	pks := getRBProposerGroupVar(dkgParam.EpochId)
+	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpochStage(dkgParam.EpochId, RB_DKG_STAGE, evm) {
-		return nil, errors.New(" error epochId " + strconv.FormatUint(dkgParam.EpochId, 10))
+	if !c.isValidEpochStage(eid, RB_DKG_STAGE, evm) {
+		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(&pks, dkgParam.ProposerId) {
-		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(dkgParam.ProposerId), 10))
+	if !c.isInRandomGroup(&pks, pid) {
+		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
 	}
 
 	// 3. Enshare, Commit, Proof has the same size
@@ -302,7 +311,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	nr := len(dkgParam.Proof)
 	thres := pos.Cfg().PolymDegree + 1
 	if nr != len(dkgParam.Enshare) || nr != len(dkgParam.Commit) {
-		return nil, buildError("error in dkg params have different length", dkgParam.EpochId, dkgParam.ProposerId)
+		return nil, buildError("error in dkg params have different length", eid, pid)
 	}
 
 	x := make([]big.Int, nr)
@@ -315,7 +324,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	for j := 0; j < nr; j++ {
 		// get send public Key
 		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], pks[j], *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
-			return nil, buildError("dkg verify dleq error", dkgParam.EpochId, dkgParam.ProposerId)
+			return nil, buildError("dkg verify dleq error", eid, pid)
 		}
 	}
 	temp := make([]bn256.G2, nr)
@@ -324,19 +333,40 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 		temp[j] = *dkgParam.Commit[j]
 	}
 	if !wanpos.RScodeVerify(temp, x, int(thres-1)) {
-		return nil, buildError("rscode check error", dkgParam.EpochId, dkgParam.ProposerId)
+		return nil, buildError("rscode check error", eid, pid)
 	}
 
 	// save epochId*2^64 + proposerId
-	hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
-	log.Debug("vm.dkg", "len(dkgId)", len(dkgId), "epochID", dkgParam.EpochId, "proposerId", dkgParam.ProposerId, "hash", hash.Hex())
+	hash := GetRBKeyHash(dkgId[:], eid, pid)
+	log.Debug("vm.dkg", "len(dkgId)", len(dkgId), "epochID", eid, "proposerId", pid, "hash", hash.Hex())
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
 	// TODO: add an dkg event
 	// add event
 
-	log.Info("contract do dkg end", "epochId", dkgParam.EpochId, "proposerId", dkgParam.ProposerId)
+	log.Info("contract do dkg end", "epochId", eid, "proposerId", pid)
 	return nil, nil
+}
+
+func getSigsNum(epochId uint64, evm *EVM) uint32 {
+	tmpKey := common.Hash{0}
+	bytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, tmpKey)
+	if bytes != nil {
+		eid := ByteSliceToUInt(bytes)
+		if eid == epochId {
+			num := ByteSliceToUInt32(bytes[8:12])
+			return num
+		}
+	}
+	return 0
+}
+
+func setSigsNum(epochId uint64, num uint32, evm *EVM) {
+	tmpKey := common.Hash{0}
+	dataBytes := make([]byte, 12)
+	copy(dataBytes[0:], UIntToByteSlice(epochId))
+	copy(dataBytes[8:], UInt32ToByteSlice(num))
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, tmpKey, dataBytes)
 }
 
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -353,23 +383,24 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	if err != nil {
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
+	eid := sigshareParam.EpochId
+	pid := sigshareParam.ProposerId
+	log.Info("contract do sig begin", "epochId", eid, "proposerId", pid)
 
-	log.Info("contract do sig begin", "epochId", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId)
-	pks := getRBProposerGroupVar(sigshareParam.EpochId)
+	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpochStage(sigshareParam.EpochId, RB_SIGN_STAGE, evm) {
-		return nil, errors.New(" error epochId " + strconv.FormatUint(sigshareParam.EpochId, 10))
+	if !c.isValidEpochStage(eid, RB_SIGN_STAGE, evm) {
+		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(&pks, sigshareParam.ProposerId) {
-		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(sigshareParam.ProposerId), 10))
+	if !c.isInRandomGroup(&pks, pid) {
+		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
 	}
-	// TODO: check weather dkg stage has been finished
 
 	// 3. Verification
-	M, err := getRBMVar(evm.StateDB, sigshareParam.EpochId)
+	M, err := getRBMVar(evm.StateDB, eid)
 	if err != nil {
-		return nil, buildError("getRBM error", sigshareParam.EpochId, sigshareParam.ProposerId)
+		return nil, buildError("getRBM error", eid, pid)
 	}
 	m := new(big.Int).SetBytes(M)
 
@@ -377,41 +408,45 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	j := uint(0)
 	for i := 0; i < len(pks); i++ {
-		ci, _ := c.getCji(evm, sigshareParam.EpochId, uint32(i))
+		ci, _ := c.getCji(evm, eid, uint32(i))
 		if ci == nil {
 			continue
 		}
 		j++
-		gpkshare.Add(&gpkshare, ci[sigshareParam.ProposerId])
+		gpkshare.Add(&gpkshare, ci[pid])
 	}
 	if j < pos.Cfg().MinRBProposerCnt {
-		return nil, buildError(" insufficient proposer ", sigshareParam.EpochId, sigshareParam.ProposerId)
+		return nil, buildError(" insufficient proposer ", eid, pid)
 	}
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
 	pair1 := bn256.Pair(sigshareParam.Gsigshare, hbase)
 	pair2 := bn256.Pair(mG, &gpkshare)
 	if pair1.String() != pair2.String() {
-		return nil, buildError(" unequal sigi", sigshareParam.EpochId, sigshareParam.ProposerId)
+		return nil, buildError(" unequal sigi", eid, pid)
 	}
 
 	// save
-	hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
-	log.Debug("vm.sigshare", "len(sigshareId)", len(sigshareId), "epochID", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId, "hash", hash.Hex())
+	hash := GetRBKeyHash(sigshareId[:], eid, pid)
+	log.Debug("vm.sigshare", "len(sigshareId)", len(sigshareId), "epochID", eid, "proposerId", pid, "hash", hash.Hex())
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
 
 	/////////////////
 	// calc r if not exist
-	r, err := computeRandom(evm.StateDB, sigshareParam.EpochId)
-	if r != nil && err == nil {
-		hashR := GetRBRKeyHash(sigshareParam.EpochId + 1)
-		evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-		log.Info("generate","r", r, "epochid", sigshareParam.EpochId + 1)
+	signum := getSigsNum(eid, evm) + 1
+	setSigsNum(eid, signum, evm)
+	if uint(signum) >= pos.Cfg().MinRBProposerCnt {
+		r, err := computeRandom(evm.StateDB, eid)
+		if r != nil && err == nil {
+			hashR := GetRBRKeyHash(eid + 1)
+			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
+			log.Info("generate","r", r, "epochid", eid + 1)
+		}
 	}
 
 	// TODO: add an dkg event
-	log.Info("contract do sig end", "epochId", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId)
+	log.Info("contract do sig end", "epochId", eid, "proposerId", pid)
 
 
 	return nil, nil

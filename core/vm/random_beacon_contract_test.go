@@ -460,7 +460,7 @@ func TestGenerateR(t *testing.T) {
 			t.Fatal("TestGetR2 get dkg err", id)
 		}
 
-		sigData, err := GetSig(evm.StateDB, epochId, uint32(id))
+		sigData, err := GetSig(evm.StateDB, rbepochId, uint32(id))
 		if err == nil && sigData != nil {
 			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pubs[id]})
 		} else {
@@ -505,7 +505,7 @@ func TestGenerateR(t *testing.T) {
 	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
 
 	// mG
-	mBuf, err := GetRBM(statedb, epochId)
+	mBuf, err := GetRBM(statedb, rbepochId)
 	if err != nil {
 		t.Fatal("get M fail", "err", err)
 	}
@@ -521,7 +521,7 @@ func TestGenerateR(t *testing.T) {
 	}
 
 	r0 := new(big.Int).SetBytes(random)
-	strPayload, err := rbscAbi.Pack("genR", big.NewInt(int64(epochId + 1)), r0)
+	strPayload, err := rbscAbi.Pack("genR", big.NewInt(int64(rbepochId + 1)), r0)
 	if err != nil {
 		t.Fatal("pack failed")
 	}
@@ -530,7 +530,7 @@ func TestGenerateR(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	r1 := GetR(evm.StateDB, uint64(epochId + 1))
+	r1 := GetR(evm.StateDB, uint64(rbepochId + 1))
 	if r0.Cmp(r1) != 0 {
 		t.Error("GetR wrong")
 	}
@@ -557,7 +557,7 @@ func TestAutoGenerateR(t *testing.T) {
 	randomInput := crypto.Keccak256(gsigInput.Marshal())
 
 
-	r1 := GetR(evm.StateDB, uint64(epochId + 1))
+	r1 := GetR(evm.StateDB, uint64(rbepochId + 1))
 	r2 := new(big.Int).SetBytes(randomInput)
 	if r2.Cmp(r1) != 0 {
 		t.Error("generate r failed")
@@ -573,7 +573,7 @@ func TestGetCji(t *testing.T) {
 }
 
 func TestKeyHash(t *testing.T) {
-	// hash epochId 0 proposerId 0  ====? hash epochId 0
+	// hash rbepochId 0 proposerId 0  ====? hash rbepochId 0
 	h1 := GetRBRKeyHash(0)
 	h2 := GetRBKeyHash(genRId[:], 0, 0)
 
@@ -587,5 +587,15 @@ func TestFuncGetR(t *testing.T) {
 	r := GetR(evm.StateDB, 10)
 	if r == nil {
 		t.Fatal("GetR failed")
+	}
+}
+
+func TestSigsNum(t *testing.T) {
+	eid := uint64(18446744073709551615)
+	num := uint32(4294967295)
+	setSigsNum(eid, num, evm)
+	num1 := getSigsNum(eid, evm)
+	if num1 != num {
+		t.Fatal("num wrong")
 	}
 }
