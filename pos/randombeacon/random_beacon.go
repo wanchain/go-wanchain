@@ -130,14 +130,14 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	}
 
 	rbStage := vm.GetRBStage(slotId)
+	log.Info("get current rb statge", "statge", rbStage)
+
 	// belong to RB proposer group
-Exit:
 	for {
 		log.Info("do as proposer", "epoch stage", rb.epochStage)
 		switch rb.epochStage {
 		case vm.RB_DKG_STAGE:
 			if rbStage == vm.RB_DKG_STAGE {
-				log.Info("do epoch dkg")
 				err := rb.doDKGs(epochId, myProposerIds)
 				if err != nil {
 					return err
@@ -145,8 +145,8 @@ Exit:
 			}
 			rb.epochStage = vm.RB_SIGN_STAGE
 		case vm.RB_SIGN_STAGE:
-			if rbStage == vm.RB_DKG_CONFIRM_STAGE {
-				break
+			if rbStage < vm.RB_SIGN_STAGE {
+				return nil
 			} else if rbStage == vm.RB_SIGN_STAGE {
 				err := rb.doSIGs(epochId, myProposerIds)
 				if err != nil {
@@ -156,7 +156,8 @@ Exit:
 
 			rb.epochStage = vm.RB_AFTER_SIGH_STAGE
 		default:
-			break Exit
+			// RB_AFTER_SIGH_STAGE
+			return nil
 		}
 	}
 
@@ -185,6 +186,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 }
 
 func (rb *RandomBeacon) doDKGs(epochId uint64, proposerIds []uint32) error {
+	log.Info("do dkgs begin")
 	for _, id := range proposerIds {
 		err := rb.doDKG(epochId, id)
 		if err != nil {
@@ -260,6 +262,7 @@ func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDK
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
+	log.Info("do sigs begin")
 	for _, id := range proposerIds {
 		err := rb.doSIG(epochId, id)
 		if err != nil {
