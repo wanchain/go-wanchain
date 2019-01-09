@@ -5,9 +5,7 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
@@ -24,19 +22,9 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	}
 
 	//2. epochLeader PRE
-	var epochLeadersPtrPre []*ecdsa.PublicKey
-	if epochID == 0 {
-		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
-			buf, err := hex.DecodeString(pos.GenesisPK)
-			if err != nil {
-				log.Error("hex.DecodeString(pos.GenesisPK) error!")
-				continue
-			}
-			epochLeadersPtrPre[i] = crypto.ToECDSAPub(buf)
-		}
-	} else {
-		epochLeadersPtrPre = s.getEpochLeadersPK(epochID - 1)
+	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
+	if err != nil {
+		log.Warn(err.Error())
 	}
 
 	//3. RB PRE
@@ -65,18 +53,9 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, Proof []*big.Int, 
 
 	var epochLeadersPtrPre []*ecdsa.PublicKey
 
-	if epochID == 0 {
-		epochLeadersPtrPre = make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
-			buf, err := hex.DecodeString(pos.GenesisPK)
-			if err != nil {
-				log.Error("hex.DecodeString(pos.GenesisPK) error!")
-				continue
-			}
-			epochLeadersPtrPre[i] = crypto.ToECDSAPub(buf)
-		}
-	} else {
-		epochLeadersPtrPre = s.getEpochLeadersPK(epochID - 1)
+	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
+	if err != nil {
+		log.Warn(err.Error())
 	}
 
 	//3. RB PRE

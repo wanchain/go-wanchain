@@ -142,23 +142,21 @@ func GetFuncIDFromPayload(payload []byte) ([4]byte, error) {
 	return methodID, nil
 }
 
-// InEpochLeadersOrNotByPk can verify the tx sender
-func InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
-	ok := false
-	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
+// InPreEpochLeadersOrNotByPk can verify the tx sender in pre epochLeaders
+func InPreEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
+	if epochID == 0 {
+		return true
+	}
+
+	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID - 1)
 	if len(epochLeaders) != pos.EpochLeaderCount {
-		return false
-		// Don't run if no Epoch leader
-		//posdb.GetEpocherInst().SelectLeadersLoop(epochID)
-		//
-		//epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(epochID)
+		epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(0)
 	}
 
 	for i := 0; i < len(epochLeaders); i++ {
 		if hex.EncodeToString(pkBytes) == hex.EncodeToString(epochLeaders[i]) {
-			ok = true
-			break
+			return true
 		}
 	}
-	return ok
+	return false
 }

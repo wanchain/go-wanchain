@@ -67,6 +67,7 @@ const (
 var (
 	wanCscPrecompileAddr = common.BytesToAddress(big.NewInt(210).Bytes())
 	ErrEpochID           = errors.New("EpochID is not valid")
+	errorRetry	         = 3
 )
 
 //SlotLeaderSelection use to select unique slot leader
@@ -218,6 +219,20 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	return pks
 }
 
+func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
+	if epochID == 0 {
+		return s.getEpoch0LeadersPK(), nil
+	}
+
+	pks := s.getEpochLeadersPK(epochID - 1)
+	if len(pks) == 0 {
+		log.Warn("Can not found pre epoch leaders return epoch 0", "epochIDPre", epochID-1)
+		return s.getEpoch0LeadersPK(), errors.New("Can not found pre epoch leaders return epoch 0")
+	}
+
+	return pks, nil
+}
+
 func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
 	for i := 0; i < pos.EpochLeaderCount; i++ {
@@ -237,8 +252,8 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 		return true, nil
 	}
 
-	prePks := s.getEpochLeadersPK(epochID - 1)
-	if len(prePks) == 0 {
+	prePks, err := s.getPreEpochLeadersPK(epochID)
+	if err != nil {
 		return true, errors.New("can not get pre EpochLeaders PK")
 	}
 
@@ -384,7 +399,8 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 	return rb, nil
 }
 
-// from random proposer
+// getSMAPieces can get the SMA info generate in pre epoch.
+// It had been +1 when save into db, so do not -1 in get.
 func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, err error) {
 	// 1. get SMA[pre]
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
@@ -469,13 +485,10 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
 		if err != nil {
-			log.Warn("getSMAPieces error", "epochID", epochID, "SecurityMsg", SecurityMsg)
+			log.Warn("getSMAPieces error use epoch 0 SMA", "epochID", epochID, "SecurityMsg", SecurityMsg)
+			return s.getSMAPieces(0)
 		}
-		// fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
-		// fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
-		if err != nil {
-			return nil, err
-		}
+
 		piecesCount := len(pieces) / LengthPublicKeyBytes
 		var pubKeyByte []byte
 		for i := 0; i < piecesCount; i++ {
@@ -616,7 +629,10 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if epochIDGet == 0 {
 		epochLeadersPtrArray = s.getEpoch0LeadersPK()
 	} else {
-		epochLeadersPtrArray = s.getEpochLeadersPK(epochIDGet - 1)
+		epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
+		if err != nil {
+			log.Warn(err.Error())
+		}
 	}
 
 	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
