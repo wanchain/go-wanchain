@@ -621,12 +621,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-<<<<<<< Updated upstream
-	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
-=======
 	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount,epochID)
->>>>>>> Stashed changes
 	fmt.Printf("*******GenerateSlotLeaderSeqAndIndex rb:%s, epochID:%d\n", hex.EncodeToString(random.Bytes()), epochID)
 
 	fmt.Printf("===========================after GenerateSlotLeaderSeq\n")
