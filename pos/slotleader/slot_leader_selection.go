@@ -566,7 +566,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	piecesPtr, err := s.getSMAPieces(epochIDGet)
 	if err != nil {
-		return errors.New("get securiy message error")
+		return fmt.Errorf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet)
 	}
 
 	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
@@ -578,7 +578,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 		piecesPtr, err = s.getSMAPieces(epochIDGet)
 		if err != nil {
-			return errors.New("get securiy message error")
+			return fmt.Errorf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet)
 		}
 	}
 
