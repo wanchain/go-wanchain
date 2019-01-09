@@ -21,6 +21,13 @@ import (
 	wanpos "github.com/wanchain/pos/wanpos_crypto"
 )
 
+const (
+	_         int = iota
+	RB_DKG_STAGE
+	RB_DKG_CONFIRM_STAGE
+	RB_SIGN_STAGE
+	RB_AFTER_SIGH_STAGE
+)
 var (
 	rbscDefinition       = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"epochId","type":"uint256"},{"name":"r","type":"uint256"}],"name":"genR","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
 	rbscAbi, errRbscInit = abi.JSON(strings.NewReader(rbscDefinition))
@@ -32,7 +39,44 @@ var (
 	//gbase = new(bn256.G1).ScalarBaseMult(big.NewInt(int64(1)))
 	// Generator of G2
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
+
+	DkgBeginId = 0
+	DkgEndId = uint64(4*pos.Cfg().K - 1)
+	SignBeginId = uint64(5*pos.Cfg().K)
+	SignEndId = uint64(8*pos.Cfg().K - 1)
 )
+
+func IsSignStage(slotId uint64) bool {
+	if slotId >= SignBeginId && slotId < SignEndId {
+		return true
+	}
+	return false
+}
+func IsDkgStage(slotId uint64) bool {
+	if slotId < DkgEndId {
+		return true
+	}
+	return false
+}
+
+func IsDKgConfirmStage(slotId uint64) bool {
+	if slotId >= DkgEndId && slotId < SignBeginId {
+		return true
+	}
+	return false
+}
+func GetRBStage(slotId uint64) int {
+	if slotId < DkgEndId {
+		return RB_DKG_STAGE
+	} else if slotId < SignBeginId {
+		return RB_DKG_CONFIRM_STAGE
+	} else if slotId < SignEndId {
+		return RB_SIGN_STAGE
+	} else {
+		return RB_AFTER_SIGH_STAGE
+	}
+}
+
 
 type RandomBeaconContract struct {
 }
@@ -220,9 +264,17 @@ type RbSIGTxPayload struct {
 }
 
 // TODO: evm.EpochId evm.SlotId, Cfg.K---dkg:0 ~ 4k -1, sig: 5k ~ 8k -1
-func (c *RandomBeaconContract) isValidEpoch(epochId uint64) bool {
+// stage 0, 1 dkg sign
+func (c *RandomBeaconContract) isValidEpochSlot(epochId uint64, timeEpochId uint64, slotEpochId uint64, stage int) bool {
 	//Cfg
 	// evm
+	if epochId != timeEpochId {
+		return false
+	}
+	return true
+}
+
+func (c *RandomBeaconContract) isValidEpoch(epochId uint64) bool {
 	return true
 }
 
