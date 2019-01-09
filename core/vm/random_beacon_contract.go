@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/postools"
 	"math/big"
 	"strconv"
 	"strings"
@@ -40,37 +41,18 @@ var (
 	// Generator of G2
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
-	DkgBeginId = 0
-	DkgEndId = uint64(4*pos.Cfg().K - 1)
-	SignBeginId = uint64(5*pos.Cfg().K)
-	SignEndId = uint64(8*pos.Cfg().K - 1)
+	dkgBeginId = 0
+	dkgEndId = uint64(4*pos.Cfg().K - 1)
+	signBeginId = uint64(5*pos.Cfg().K)
+	signEndId = uint64(8*pos.Cfg().K - 1)
 )
 
-func IsSignStage(slotId uint64) bool {
-	if slotId >= SignBeginId && slotId < SignEndId {
-		return true
-	}
-	return false
-}
-func IsDkgStage(slotId uint64) bool {
-	if slotId < DkgEndId {
-		return true
-	}
-	return false
-}
-
-func IsDKgConfirmStage(slotId uint64) bool {
-	if slotId >= DkgEndId && slotId < SignBeginId {
-		return true
-	}
-	return false
-}
 func GetRBStage(slotId uint64) int {
-	if slotId < DkgEndId {
+	if slotId < dkgEndId {
 		return RB_DKG_STAGE
-	} else if slotId < SignBeginId {
+	} else if slotId < signBeginId {
 		return RB_DKG_CONFIRM_STAGE
-	} else if slotId < SignEndId {
+	} else if slotId < signEndId {
 		return RB_SIGN_STAGE
 	} else {
 		return RB_AFTER_SIGH_STAGE
@@ -215,26 +197,6 @@ func GetRBAddress() common.Address {
 	return randomBeaconPrecompileAddr
 }
 
-func getRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := posdb.GetDbByName("rblocaldb")
-	if db == nil {
-		return nil
-	}
-	pks := db.GetStorageByteArray(epochId)
-	length := len(pks)
-	if length == 0 {
-		return nil
-	}
-	g1s := make([]bn256.G1, length, length)
-
-	for i := 0; i < length; i++ {
-		g1s[i] = *new(bn256.G1)
-		g1s[i].Unmarshal(pks[i])
-	}
-
-	return g1s
-}
-
 var getRBProposerGroupVar func(epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
 var getRBMVar func(db StateDB, epochId uint64) ([]byte, error) = GetRBM
 
@@ -265,16 +227,15 @@ type RbSIGTxPayload struct {
 
 // TODO: evm.EpochId evm.SlotId, Cfg.K---dkg:0 ~ 4k -1, sig: 5k ~ 8k -1
 // stage 0, 1 dkg sign
-func (c *RandomBeaconContract) isValidEpochSlot(epochId uint64, timeEpochId uint64, slotEpochId uint64, stage int) bool {
-	//Cfg
-	// evm
-	if epochId != timeEpochId {
+func (c *RandomBeaconContract) isValidEpochStage(epochId uint64, stage int, evm *EVM) bool {
+	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
+	if epochId != eid {
 		return false
 	}
-	return true
-}
-
-func (c *RandomBeaconContract) isValidEpoch(epochId uint64) bool {
+	ss := GetRBStage(sid)
+	if ss != stage {
+		return false
+	}
 	return true
 }
 
@@ -327,9 +288,8 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	log.Info("contract do dkg begin", "epochId", dkgParam.EpochId, "proposerId", dkgParam.ProposerId)
 
 	pks := getRBProposerGroupVar(dkgParam.EpochId)
-	// TODO: check
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpoch(dkgParam.EpochId) {
+	if !c.isValidEpochStage(dkgParam.EpochId, RB_DKG_STAGE, evm) {
 		return nil, errors.New(" error epochId " + strconv.FormatUint(dkgParam.EpochId, 10))
 	}
 	// 2. ProposerId: weather in the random commit
@@ -396,9 +356,8 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	log.Info("contract do sig begin", "epochId", sigshareParam.EpochId, "proposerId", sigshareParam.ProposerId)
 	pks := getRBProposerGroupVar(sigshareParam.EpochId)
-	// TODO: check
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpoch(sigshareParam.EpochId) {
+	if !c.isValidEpochStage(sigshareParam.EpochId, RB_SIGN_STAGE, evm) {
 		return nil, errors.New(" error epochId " + strconv.FormatUint(sigshareParam.EpochId, 10))
 	}
 	// 2. ProposerId: weather in the random commit
