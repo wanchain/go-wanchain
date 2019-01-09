@@ -23,20 +23,8 @@ import (
 	wanpos "github.com/wanchain/pos/wanpos_crypto"
 )
 
-const (
-	_         int = iota
-	EPOCH_DKG     // 4K
-	EPOCH_SIG     // 8K
-	EPOCH_CMP     // compute random
-	EPOCH_TAIL
-)
-
 var (
 	maxUint64       = uint64(1<<64 - 1)
-	slot4kEndId     = uint64(4*pos.Cfg().K - 1)
-	slot4kConfirmId = uint64((4+1)*pos.Cfg().K - 1)
-	slot8kEndId     = uint64(8*pos.Cfg().K - 1)
-	slot8kConfirmId = uint64((8+1)*pos.Cfg().K - 1)
 )
 
 type RbDKGDataCollector struct {
@@ -78,7 +66,7 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
-	rb.epochStage = EPOCH_DKG
+	rb.epochStage = vm.RB_DKG_STAGE
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
 
@@ -124,90 +112,52 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	log.Info("rb", "epochId", rb.epochId)
 	if rb.epochId == maxUint64 {
 		log.Info("rb epochId is original")
-		//err := rb.computeRandoms(0, epochId)
-		//if err != nil {
-		//	log.Error("compute randoms fail", "err", err)
-		//	return err
-		//}
 
 		rb.epochId = epochId
-		rb.epochStage = EPOCH_DKG
+		rb.epochStage = vm.RB_DKG_STAGE
 	}
 
 	if rb.epochId < epochId {
-		//if !(rb.epochId == epochId-1 && rb.epochStage == EPOCH_TAIL) {
-		//	err := rb.computeRandoms(rb.epochId, epochId)
-		//	if err != nil {
-		//		return err
-		//	}
-		//}
-
 		rb.epochId = epochId
-		rb.epochStage = EPOCH_DKG
+		rb.epochStage = vm.RB_DKG_STAGE
 	}
 
 	// rb.epochId == epochId
 	myProposerIds := rb.getMyRBProposerId(epochId)
 	log.Info("get my RB proposer id", "id", myProposerIds)
 	if len(myProposerIds) == 0 {
-		log.Info("my proposer len is zero")
-		// not belong to RB proposer group
-		// wait 8K point to compute random
-		if rb.epochStage == EPOCH_TAIL {
-			// computed random already
-			return nil
-		} else if slotId >= slot8kConfirmId {
-			//err := rb.computeRandoms(epochId, epochId+1)
-			//if err != nil {
-			//	return err
-			//}
+		return nil
+	}
 
-			rb.epochStage = EPOCH_TAIL
-			return nil
-		}
-	} else {
-		// belong to RB proposer group
-		for {
-			log.Info("do as proposer", "epoch stage", rb.epochStage)
-			if rb.epochStage == EPOCH_DKG {
-				if slotId < slot4kEndId {
-					log.Info("do epoch dkg")
-					err := rb.doDKGs(epochId, myProposerIds)
-					if err != nil {
-						return err
-					}
+	rbStage := vm.GetRBStage(slotId)
+	log.Info("get current rb statge", "statge", rbStage)
+
+	// belong to RB proposer group
+	for {
+		log.Info("do as proposer", "epoch stage", rb.epochStage)
+		switch rb.epochStage {
+		case vm.RB_DKG_STAGE:
+			if rbStage == vm.RB_DKG_STAGE {
+				err := rb.doDKGs(epochId, myProposerIds)
+				if err != nil {
+					return err
 				}
-
-				rb.epochStage = EPOCH_SIG
-
-			} else if rb.epochStage == EPOCH_SIG {
-				if slotId < slot4kConfirmId {
-					break
-				} else if slotId < slot8kEndId {
-					err := rb.doSIGs(epochId, myProposerIds)
-					if err != nil {
-						return err
-					}
-
-				}
-
-				rb.epochStage = EPOCH_CMP
-
-			} else if rb.epochStage == EPOCH_CMP {
-				if slotId < slot8kConfirmId {
-					break
-				} else {
-					//err := rb.computeRandoms(epochId, epochId+1)
-					//if err != nil {
-					//	return err
-					//}
-
-					rb.epochStage = EPOCH_TAIL
-				}
-			} else {
-				// EPOCH_TAIL
-				break
 			}
+			rb.epochStage = vm.RB_SIGN_STAGE
+		case vm.RB_SIGN_STAGE:
+			if rbStage < vm.RB_SIGN_STAGE {
+				return nil
+			} else if rbStage == vm.RB_SIGN_STAGE {
+				err := rb.doSIGs(epochId, myProposerIds)
+				if err != nil {
+					return err
+				}
+			}
+
+			rb.epochStage = vm.RB_AFTER_SIGH_STAGE
+		default:
+			// RB_AFTER_SIGH_STAGE
+			return nil
 		}
 	}
 
@@ -236,6 +186,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 }
 
 func (rb *RandomBeacon) doDKGs(epochId uint64, proposerIds []uint32) error {
+	log.Info("do dkgs begin")
 	for _, id := range proposerIds {
 		err := rb.doDKG(epochId, id)
 		if err != nil {
@@ -311,6 +262,7 @@ func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDK
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
+	log.Info("do sigs begin")
 	for _, id := range proposerIds {
 		err := rb.doSIG(epochId, id)
 		if err != nil {

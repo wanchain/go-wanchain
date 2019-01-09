@@ -41,7 +41,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	1,
-	2,
+	SlotCount/10,
 	2,
 	0,
 	0,
