@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/log"
@@ -80,7 +82,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 	}
 
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		_, mi, _ := s.getStg1StateDbInfo(epochID, uint64(i))
+		_, mi, _ := s.getStg1StateDbInfo(epochID-1, uint64(i))
 		if len(mi) == 0 {
 			validEpochLeadersIndex[i] = false
 			continue
@@ -88,7 +90,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 			stageOneMi[i] = crypto.ToECDSAPub(mi)
 		}
 
-		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID, uint64(i))
+		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID-1, uint64(i))
 		if err != nil {
 			validEpochLeadersIndex[i] = false
 			continue
@@ -159,7 +161,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 
 		var buffer bytes.Buffer
 		buffer.Write(rbBytes[:])
-		buffer.Write(posdb.Uint64ToBytes(epochID))
+		buffer.Write(posdb.Uint64ToBytes(epochID-1))
 		buffer.Write(posdb.Uint64ToBytes(slotID))
 		temp := buffer.Bytes()
 
