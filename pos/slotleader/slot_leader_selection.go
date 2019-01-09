@@ -39,9 +39,9 @@ const (
 	StageTwoProofCount = 2
 
 	// SlotStage1 is 40% of slot count
-	SlotStage1 = uint64(pos.SlotCount * 4 / 10)
+	SlotStage1 = uint64(pos.SlotCount * 2 / 10)
 	// SlotStage2 is 80% of slot count
-	SlotStage2           = uint64(pos.SlotCount * 8 / 10)
+	SlotStage2           = uint64(pos.SlotCount * 4 / 10)
 	EpochLeaders         = "epochLeaders"
 	SecurityMsg          = "securityMsg"
 	CR                   = "cr"
@@ -571,9 +571,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
 
-	if len(piecesPtr) == 0 && epochID > 0 {
-		log.Warn("Can not find pre epoch SMA, use epoch 0.", "len(SMA)", len(piecesPtr))
-		log.Warn("Pre epoch slotLeader tx count", "lslotScCallTimes", slotScCallTimes, "curEpochID", epochID, "preEpochID", epochID-1)
+	// If node do not in epoch leaders len mean be 0, but slotScCallTimes must > 0, else error is occurs
+	if len(piecesPtr) == 0 && epochID > 0 && slotScCallTimes == 0 {
+		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "len(SMA)", len(piecesPtr), "slotScCallTimes", slotScCallTimes, "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
 
 		piecesPtr, err = s.getSMAPieces(epochIDGet)

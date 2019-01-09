@@ -68,8 +68,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		}
 
-		//s.buildEpochLeaderGroup(epochID)
-
 		s.setWorkingEpochID(epochID)
 		err = s.startStage1Work()
 		if err != nil {
@@ -90,8 +88,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		// if slotID < SlotStage1 {
 		// 	break
 		// }
-
-		//s.buildEpochLeaderGroup(epochID)
 
 		err := s.startStage2Work()
 		if err != nil {

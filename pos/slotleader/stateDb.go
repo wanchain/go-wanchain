@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// SafeBack2k is use to get a static safe block in 2k slots before
-	SafeBack2k = uint64(pos.SlotCount * 2 / 10)
+	// SafeBack2k is use to get a static safe block in 1k slots before
+	SafeBack2k = uint64(pos.SlotCount * 1 / 10)
 )
 
 func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
