@@ -79,3 +79,7 @@ func (s *SlotLeaderSelection) getLastSlotIDFromChain() uint64 {
 	curSlotID := uint64((s.blockChain.CurrentBlock().Difficulty().Int64() >> 8) & 0x00ffffff)
 	return curSlotID
 }
+
+func (s *SlotLeaderSelection) getBlockChainHeight() uint64 {
+	return s.blockChain.CurrentBlock().NumberU64()
+}

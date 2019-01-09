@@ -41,13 +41,14 @@ const (
 	// SlotStage1 is 40% of slot count
 	SlotStage1 = uint64(pos.SlotCount * 4 / 10)
 	// SlotStage2 is 80% of slot count
-	SlotStage2       = uint64(pos.SlotCount * 8 / 10)
-	EpochLeaders     = "epochLeaders"
-	SecurityMsg      = "securityMsg"
-	CR               = "cr"
-	RandFromProposer = "randFromProposer"
-	RandomSeqs       = "randomSeqs"
-	SlotLeader       = "slotLeader"
+	SlotStage2           = uint64(pos.SlotCount * 8 / 10)
+	EpochLeaders         = "epochLeaders"
+	SecurityMsg          = "securityMsg"
+	CR                   = "cr"
+	RandFromProposer     = "randFromProposer"
+	RandomSeqs           = "randomSeqs"
+	SlotLeader           = "slotLeader"
+	slotLeaderTxMinCount = 2
 )
 
 const (
@@ -305,21 +306,12 @@ func (s *SlotLeaderSelection) dumpData() {
 
 func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 	functrace.Enter()
-
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
-	fmt.Printf("Data from jqg: %v", data)
-	//for index, value := range s.getEpochLeaders(epochID) {
 	for index, value := range data {
-		//fmt.Printf("\n:::::buildEpochLeaderGroup\n")
-		//fmt.Printf("\n:::::value is %v\n",value)
-		//fmt.Printf("\n:::::hex.EncodeToString(value) is %v\n",hex.EncodeToString(value))
 		s.epochLeadersArray = append(s.epochLeadersArray, hex.EncodeToString(value))
 		s.epochLeadersMap[hex.EncodeToString(value)] = append(s.epochLeadersMap[hex.EncodeToString(value)], uint64(index))
-		//fmt.Printf("\n:::::s.epochLeadersPtrArray[%d], crypto.ToECDSAPub(value) is %v\n",index,crypto.ToECDSAPub(value))
 		s.epochLeadersPtrArray[index] = crypto.ToECDSAPub(value)
-		//fmt.Printf("\n:::::s.epochLeadersPtrArray[%d], hex.EncodeToString is %v\n",index,
-		//	hex.EncodeToString(crypto.FromECDSAPub(s.epochLeadersPtrArray[index])))
 	}
 	functrace.Exit()
 	return nil
@@ -565,26 +557,51 @@ func (s *SlotLeaderSelection) getCRs(epochID uint64) (ret []*big.Int, err error)
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	s.clearData()
+	epochIDGet := epochID
+
+	if epochID == 0 {
+		log.Info("Epoch 0 do not have pre epoch leaders")
+		return nil
+	}
 
 	if !s.isLocalPkInPreEpochLeaders(epochID) {
 		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
 		return nil
 	}
 
-	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
-	log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
+	if epochID > 2 {
+		slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
+		log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
 
-	err := s.buildEpochLeaderGroup(epochID)
+		if slotScCallTimes == 0 {
+			log.Warn("Last epoch slotLeader SC called times is 0")
+
+			height := s.getBlockChainHeight()
+			for i := uint64(2); i < height; i++ {
+				slotScCallTimes := vm.GetSlotScCallTimes(epochID - i)
+				if slotScCallTimes >= slotLeaderTxMinCount {
+					log.Warn("Use the state of epoch instead of last", "epochID", epochID-i)
+					epochIDGet = epochID - i
+					break
+				}
+			}
+			if epochIDGet == epochID {
+				return errors.New("Can not found good tx epoch")
+			}
+		}
+	}
+
+	err := s.buildEpochLeaderGroup(epochIDGet)
 	if err != nil {
 		return errors.New("build epoch leader group error!")
 	}
 
-	piecesPtr, err := s.getSMAPieces(epochID)
+	piecesPtr, err := s.getSMAPieces(epochIDGet)
 	if err != nil {
 		return errors.New("get securiy message error!")
 	}
 	// 2. get random
-	random, err := s.getRandom(epochID)
+	random, err := s.getRandom(epochIDGet)
 	if err != nil {
 		return errors.New("get random message error!")
 	}
@@ -595,16 +612,10 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	fmt.Printf("len(epochLeadersPtrArray)=%v\n", len(s.epochLeadersPtrArray))
 	fmt.Printf("len(random.Bytes)=%v\n", len(random.Bytes()))
 	fmt.Printf("SlotCount= %d\n", pos.SlotCount)
-	//fmt.Printf("===========================before GenerateSlotLeaderSeq\n")
-	//s.dumpData()
-	//epochLeadersPtrArray := s.epochLeadersPtrArray
-	if epochID == 0 {
-		log.Info("Epoch 0 do not have pre epoch leaders")
-		return nil
-	}
-	epochLeadersPtrArray := s.getEpochLeadersPK(epochID - 1)
+
+	epochLeadersPtrArray := s.getEpochLeadersPK(epochIDGet - 1)
 	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
-		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochID-1))
+		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochIDGet-1))
 	}
 	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)

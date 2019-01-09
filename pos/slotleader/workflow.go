@@ -60,7 +60,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		log.Debug("Enter slotLeaderSelectionStage1")
 		err := s.generateSlotLeadsGroup(epochID)
 		if err != nil {
-			log.Debug(err.Error())
+			log.Error(err.Error())
 		}
 
 		// If not in current epoch leaders, Do nothing in this epoch.
