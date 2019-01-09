@@ -218,25 +218,30 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	return pks
 }
 
-func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) bool {
+// isLocalPkInPreEpochLeaders check if local pk is in pre generate epochleader.
+// If get pre epochleader length is 0, return true,err to use epoch 0 info
+func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
 	if epochID < 2 {
-		return true
+		return true, nil
 	}
 
 	prePks := s.getEpochLeadersPK(epochID - 1)
+	if len(prePks) == 0 {
+		return true, errors.New("can not get pre EpochLeaders PK")
+	}
 
 	localPk, err := s.getLocalPublicKey()
 	if err != nil {
 		log.Error("SlotLeaderSelection.IsLocalPkInPreEpochLeaders getLocalPublicKey error", "error", err)
-		return false
+		return false, nil
 	}
 
 	for i := 0; i < len(prePks); i++ {
 		if posdb.PkEqual(localPk, prePks[i]) {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 //getWorkStage get work stage of epochID from levelDB
@@ -559,27 +564,15 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	s.clearData()
 	epochIDGet := epochID
 
-	if !s.isLocalPkInPreEpochLeaders(epochID) {
-		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
+	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
+	if !canBeContinue {
+		log.Info("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
 
-	piecesPtr, err := s.getSMAPieces(epochIDGet)
-	if err != nil {
-		log.Warn(fmt.Sprintf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet))
-	}
-
-	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
-
-	// If node do not in epoch leaders len mean be 0, but slotScCallTimes must > 0, else error is occurs
-	if err != nil && epochID > 0 && slotScCallTimes == 0 {
-		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "len(SMA)", len(piecesPtr), "slotScCallTimes", slotScCallTimes, "curEpochID", epochID, "preEpochID", epochID-1)
+	if err != nil && epochID > 1 {
+		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
-
-		piecesPtr, err = s.getSMAPieces(epochIDGet)
-		if err != nil {
-			return fmt.Errorf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet)
-		}
 	}
 
 	err = s.buildEpochLeaderGroup(epochIDGet)
@@ -593,6 +586,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return errors.New("get random message error")
 	}
 	fmt.Printf("\nRandom got is %v\n", hex.EncodeToString(random.Bytes()))
+
+	// 3. get pre sma
+	piecesPtr, err := s.getSMAPieces(epochIDGet)
+	if err != nil {
+		log.Warn(fmt.Sprintf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet))
+	}
+
 	// 5. return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	fmt.Printf("len(piecesPtr)=%v\n", len(piecesPtr))
