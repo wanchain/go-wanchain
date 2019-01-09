@@ -559,11 +559,6 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	s.clearData()
 	epochIDGet := epochID
 
-	if epochID == 0 {
-		log.Info("Epoch 0 do not have pre epoch leaders")
-		return nil
-	}
-
 	if !s.isLocalPkInPreEpochLeaders(epochID) {
 		log.Debug("SlotLeaderSelection.isLocalPkInPreEpochLeaders false")
 		return nil
@@ -612,6 +607,11 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	fmt.Printf("len(epochLeadersPtrArray)=%v\n", len(s.epochLeadersPtrArray))
 	fmt.Printf("len(random.Bytes)=%v\n", len(random.Bytes()))
 	fmt.Printf("SlotCount= %d\n", pos.SlotCount)
+
+	if epochID == 0 {
+		log.Info("Epoch 0 do not have pre epoch leaders")
+		return nil
+	}
 
 	epochLeadersPtrArray := s.getEpochLeadersPK(epochIDGet - 1)
 	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
