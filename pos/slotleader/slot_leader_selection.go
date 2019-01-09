@@ -564,41 +564,33 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 
-	// if epochID > 2 {
-	// 	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
-	// 	log.Info("Last epoch slotLeader SC called times:", "times", slotScCallTimes)
-
-	// 	if slotScCallTimes == 0 {
-	// 		log.Warn("Last epoch slotLeader SC called times is 0")
-
-	// 		height := s.getBlockChainHeight()
-	// 		for i := uint64(2); i < height; i++ {
-	// 			slotScCallTimes := vm.GetSlotScCallTimes(epochID - i)
-	// 			if slotScCallTimes >= slotLeaderTxMinCount {
-	// 				log.Warn("Use the state of epoch instead of last", "epochID", epochID-i)
-	// 				epochIDGet = epochID - i
-	// 				break
-	// 			}
-	// 		}
-	// 		if epochIDGet == epochID {
-	// 			return errors.New("Can not found good tx epoch")
-	// 		}
-	// 	}
-	// }
-
-	err := s.buildEpochLeaderGroup(epochIDGet)
-	if err != nil {
-		return errors.New("build epoch leader group error!")
-	}
-
 	piecesPtr, err := s.getSMAPieces(epochIDGet)
 	if err != nil {
-		return errors.New("get securiy message error!")
+		return errors.New("get securiy message error")
 	}
+
+	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
+
+	if len(piecesPtr) == 0 && epochID > 0 {
+		log.Warn("Can not find pre epoch SMA, use epoch 0.", "len(SMA)", len(piecesPtr))
+		log.Warn("Pre epoch slotLeader tx count", "lslotScCallTimes", slotScCallTimes, "curEpochID", epochID, "preEpochID", epochID-1)
+		epochIDGet = 0
+
+		piecesPtr, err = s.getSMAPieces(epochIDGet)
+		if err != nil {
+			return errors.New("get securiy message error")
+		}
+	}
+
+	err = s.buildEpochLeaderGroup(epochIDGet)
+	if err != nil {
+		return errors.New("build epoch leader group error")
+	}
+
 	// 2. get random
 	random, err := s.getRandom(epochIDGet)
 	if err != nil {
-		return errors.New("get random message error!")
+		return errors.New("get random message error")
 	}
 	fmt.Printf("\nRandom got is %v\n", hex.EncodeToString(random.Bytes()))
 	// 5. return slot leaders pointers.
@@ -615,8 +607,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	epochLeadersPtrArray := s.getEpochLeadersPK(epochIDGet - 1)
 	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
-		return errors.New(fmt.Sprintf("fail to get epochLeader:%d", epochIDGet-1))
+		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet-1)
 	}
+
 	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
@@ -628,7 +621,6 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	//slotLeadersPtr, crs, err := uleaderselection.GenerateSlotLeaderSeq(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount)
 	fmt.Printf("*******GenerateSlotLeaderSeqAndIndex rb:%s, epochID:%d\n", hex.EncodeToString(random.Bytes()), epochID)
 
