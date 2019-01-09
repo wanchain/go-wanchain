@@ -746,7 +746,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	selfPkRecievedPicesMap := make(map[uint64][]*ecdsa.PublicKey, 0)
 	for _, selfIndex := range indexs {
 		for i := 0; i < len(s.epochLeadersArray); i++ {
-			if s.stageTwoAlphaPKi[i][selfIndex] != nil {
+			if (s.stageTwoAlphaPKi[i][selfIndex] != nil) && (s.validEpochLeadersIndex[i]){
 				selfPkRecievedPicesMap[selfIndex] = append(selfPkRecievedPicesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
 			}
 		}
