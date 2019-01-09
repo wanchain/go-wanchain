@@ -218,6 +218,18 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	return pks
 }
 
+func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
+	pks := make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
+	for i := 0; i < pos.EpochLeaderCount; i++ {
+		pkBuf, err := hex.DecodeString(pos.GenesisPK)
+		if err != nil {
+			panic("pos.GenesisPK is Error")
+		}
+		pks[i] = crypto.ToECDSAPub(pkBuf)
+	}
+	return pks
+}
+
 // isLocalPkInPreEpochLeaders check if local pk is in pre generate epochleader.
 // If get pre epochleader length is 0, return true,err to use epoch 0 info
 func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
@@ -600,12 +612,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	fmt.Printf("len(random.Bytes)=%v\n", len(random.Bytes()))
 	fmt.Printf("SlotCount= %d\n", pos.SlotCount)
 
-	if epochID == 0 {
-		log.Info("Epoch 0 do not have pre epoch leaders")
-		return nil
+	var epochLeadersPtrArray []*ecdsa.PublicKey
+	if epochIDGet == 0 {
+		epochLeadersPtrArray = s.getEpoch0LeadersPK()
+	} else {
+		epochLeadersPtrArray = s.getEpochLeadersPK(epochIDGet - 1)
 	}
 
-	epochLeadersPtrArray := s.getEpochLeadersPK(epochIDGet - 1)
 	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet-1)
 	}
