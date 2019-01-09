@@ -566,13 +566,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	piecesPtr, err := s.getSMAPieces(epochIDGet)
 	if err != nil {
-		return fmt.Errorf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet)
+		log.Warn(fmt.Sprintf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet))
 	}
 
 	slotScCallTimes := vm.GetSlotScCallTimes(epochID - 1)
 
 	// If node do not in epoch leaders len mean be 0, but slotScCallTimes must > 0, else error is occurs
-	if len(piecesPtr) == 0 && epochID > 0 && slotScCallTimes == 0 {
+	if err != nil && epochID > 0 && slotScCallTimes == 0 {
 		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "len(SMA)", len(piecesPtr), "slotScCallTimes", slotScCallTimes, "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
 
