@@ -454,8 +454,8 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		if err != nil {
 			log.Warn("getSMAPieces error", "epochID", epochID, "SecurityMsg", SecurityMsg)
 		}
-		fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
-		fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
+		// fmt.Printf("getSMAPieces: get from db, epochID:%d, key:%s, pieces is = %v\n", epochID, SecurityMsg, pieces)
+		// fmt.Printf("getSMAPieces: get from db, hex.encodingToString(pieces) is = %v\n", hex.EncodeToString(pieces))
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +467,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			} else {
 				pubKeyByte = pieces[i*LengthPublicKeyBytes:]
 			}
-			fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID, hex.EncodeToString(pubKeyByte))
+			// fmt.Printf("epchoID=%d,getSMAPieces: one hex.EncodeToString(piece) is = %v\n\n", epochID, hex.EncodeToString(pubKeyByte))
 			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 		}
 		return piecesPtr, nil
