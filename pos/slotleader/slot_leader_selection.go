@@ -806,14 +806,14 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		}
 	}
 	ArrayPiece = ArrayPieceClean
-	fmt.Println("len(ArrayPiece):", len(ArrayPiece))
+	log.Debug(fmt.Sprintf("len(ArrayPiece):", len(ArrayPiece)))
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
 	}
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
-		fmt.Printf("\n&&&&&&&&&&&&&epochID+1 = %d set security message is %v\n", epochID+1, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Debug(fmt.Sprintf("epochID+1 = %d set security message is %v\n", epochID+1, hex.EncodeToString(crypto.FromECDSAPub(value))))
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
