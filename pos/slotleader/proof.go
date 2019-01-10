@@ -40,12 +40,6 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	}
 
 	rbBytes := rbPtr.Bytes()
-	//4. CR PRE
-	//crsPtr, err := s.getCRs(epochID)
-	//if err != nil {
-	//	log.Error(err.Error())
-	//	return nil, nil, err
-	//}
 
 	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(PrivateKey, smaPiecesPtr, epochLeadersPtrPre, rbBytes[:],slotID,epochID)
 
