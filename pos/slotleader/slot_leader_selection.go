@@ -334,7 +334,7 @@ func (s *SlotLeaderSelection) dumpPreEpochLeaders() {
 
 	preEpochLeaders := s.getEpochLeaders(currentEpochID -1)
 	for i:=0; i< len(preEpochLeaders);i++{
-		log.Info("index",i,"preEpochLeader", hex.EncodeToString(preEpochLeaders[i]))
+		log.Info("dumpPreEpochLeaders","index",i,"preEpochLeader", hex.EncodeToString(preEpochLeaders[i]))
 	}
 }
 func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
@@ -345,7 +345,7 @@ func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
 	}
 
 	for index,value := range s.epochLeadersPtrArray{
-		log.Info("index",index, "curEpochLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Info("dumpCurrentEpochLeaders","index",index, "curEpochLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 }
 
@@ -357,7 +357,7 @@ func (s *SlotLeaderSelection) dumpSlotLeaders() {
 	}
 
 	for index,value := range s.slotLeadersPtrArray{
-		log.Info("index",s.slotLeadersIndex[index], "curSlotLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Info("dumpSlotLeaders","index",s.slotLeadersIndex[index], "curSlotLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 }
 
