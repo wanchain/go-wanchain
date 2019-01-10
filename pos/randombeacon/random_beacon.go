@@ -506,7 +506,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["from"] = rb.getTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(29000000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
