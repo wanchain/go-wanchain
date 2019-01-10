@@ -66,14 +66,14 @@ func init() {
 	epochInterval = 3600
 }
 
-type pos_staking struct {
+type Pos_staking struct {
 }
 
-func (p *pos_staking) RequiredGas(input []byte) uint64 {
+func (p *Pos_staking) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
-func (p *pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (p *Pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(input) < 4 {
 		return nil, errors.New("parameter is wrong")
@@ -83,15 +83,15 @@ func (p *pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, e
 	copy(methodId[:], input[:4])
 
 	if methodId == stakeInId {
-		return p.stakeIn(input[4:], contract, evm)
+		return p.StakeIn(input[4:], contract, evm)
 	} else if methodId == stakeOutId {
-		return p.stakeOut(input[4:], contract, evm)
+		return p.StakeOut(input[4:], contract, evm)
 	}
 
 	return nil, nil
 }
 
-func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	secpub, bn256pub, lt := p.stakeInParseAndValid(payload)
 	if secpub == nil {
@@ -148,7 +148,7 @@ func (p *pos_staking) stakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 
 }
 
-func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (p *Pos_staking) StakeOut(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	staker, pubHash, err := p.stakeOutParseAndValid(evm.StateDB, payload)
 	if err != nil {
@@ -192,7 +192,7 @@ func (p *pos_staking) stakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 	return nil, nil
 }
 
-func (p *pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+func (p *Pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 
 	input := tx.Data()
 	if len(input) < 4 {
@@ -217,7 +217,7 @@ func (p *pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 	return nil
 }
 
-func (p *pos_staking) stakeInParseAndValid(payload []byte) (secPk []byte, bn256Pk []byte, lkt uint64) {
+func (p *Pos_staking) stakeInParseAndValid(payload []byte) (secPk []byte, bn256Pk []byte, lkt uint64) {
 
 	fmt.Println("" + common.ToHex(payload))
 	var Info struct {
@@ -250,7 +250,7 @@ func (p *pos_staking) stakeInParseAndValid(payload []byte) (secPk []byte, bn256P
 	return secPk, bn256Pk, lkt
 }
 
-func (p *pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (str *StakerInfo, pubHash common.Hash, err error) {
+func (p *Pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (str *StakerInfo, pubHash common.Hash, err error) {
 
 	fmt.Println("" + common.ToHex(payload))
 
