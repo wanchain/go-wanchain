@@ -18,9 +18,9 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 30
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 10
+	RandomProperCount = 256
 	// SlotCount is slot count in an epoch
-	SlotCount = 30
+	SlotCount = 200
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 6
 	// GenesisPK is the epoch0 pk

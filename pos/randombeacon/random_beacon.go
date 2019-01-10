@@ -288,7 +288,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		if err == nil && data != nil {
 			datas = append(datas, RbDKGDataCollector{data, &pk})
 		} else {
-			log.Warn("vm.GetDkg failed", "err", err)
+			//log.Debug("vm.GetDkg failed", "err", err)
 		}
 	}
 
@@ -506,7 +506,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["from"] = rb.getTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(29000000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
