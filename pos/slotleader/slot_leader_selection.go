@@ -39,9 +39,9 @@ const (
 	StageTwoProofCount = 2
 
 	// SlotStage1 is 40% of slot count
-	SlotStage1 = uint64(pos.SlotCount * 1 / 10)
+	SlotStage1 = pos.Stage1K
 	// SlotStage2 is 80% of slot count
-	SlotStage2           = uint64(pos.SlotCount * 4 / 10)
+	SlotStage2           = pos.Stage4K
 	EpochLeaders         = "epochLeaders"
 	SecurityMsg          = "securityMsg"
 	CR                   = "cr"
@@ -698,7 +698,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 
 func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, proofs []string, err error) {
 
-	stateDb, err := s.getStateDb()
+	stateDb, err := s.getCurrentStateDb()
 
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
@@ -906,7 +906,7 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 
 // getStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
 func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (pk []byte, mi []byte, err error) {
-	stateDb, err := s.getStateDb()
+	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
 		return nil, nil, err
 	}
