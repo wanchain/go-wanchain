@@ -32,10 +32,6 @@ func GetInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash) ([]byt
 	}
 
 	info := statedb.GetStateByteArray(listAddr, pubHash)
-	if len(info) == 0 {
-		return nil, errors.New("not get data")
-	}
-
 
 	return info, nil
 }
