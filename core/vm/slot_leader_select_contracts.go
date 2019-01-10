@@ -8,7 +8,10 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/wanchain/go-wanchain/pos"
+
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 
 	"github.com/wanchain/go-wanchain/functrace"
@@ -117,6 +120,10 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
+	if !isInValidStage(posdb.BytesToUint64(epochID), evm) {
+		return nil, nil
+	}
+
 	// address : sc slotLeaderPrecompileAddr
 	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
@@ -186,6 +193,10 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	// }
 
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
+
+	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm) {
+		return nil, nil
+	}
 
 	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
 
@@ -299,4 +310,19 @@ func GetSlotScCallTimes(epochID uint64) uint64 {
 	} else {
 		return posdb.BytesToUint64(buf)
 	}
+}
+
+func isInValidStage(epochID uint64, evm *EVM) bool {
+	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
+	if epochID != eid {
+		log.Warn("Tx is out of valid stage", "epochID", eid, "slotID", sid)
+		return false
+	}
+
+	if sid > pos.Stage3K {
+		log.Warn("Tx is out of valid stage", "epochID", eid, "slotID", sid)
+		return false
+	}
+
+	return true
 }
