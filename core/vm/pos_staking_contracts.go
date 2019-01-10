@@ -111,9 +111,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	}
 
 	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, pukHash)
-	if err != nil {
-		return nil, err
-	} else if gotInfoArray != nil {
+	if gotInfoArray != nil {
 		var gotStaker StakerInfo
 		error := json.Unmarshal(gotInfoArray, &gotStaker)
 		if error != nil {
@@ -268,8 +266,8 @@ func (p *Pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (st
 
 	pubHash = common.BytesToHash(pub)
 	infoArray, err := GetInfo(stateDB, StakersInfoAddr, pubHash)
-	if err != nil {
-		return nil, common.Hash{}, err
+	if infoArray == nil {
+		return nil, common.Hash{}, errors.New("not find staker staking info")
 	}
 
 	var staker StakerInfo
