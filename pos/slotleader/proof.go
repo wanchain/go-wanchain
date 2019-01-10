@@ -161,7 +161,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 
 		var buffer bytes.Buffer
 		buffer.Write(rbBytes[:])
-		buffer.Write(posdb.Uint64ToBytes(epochID-1))
+		buffer.Write(posdb.Uint64ToBytes(epochID))
 		buffer.Write(posdb.Uint64ToBytes(slotID))
 		temp := buffer.Bytes()
 
