@@ -160,6 +160,11 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 				smaPieces = append(smaPieces,stageTwoAlphaPKi[i][index])
 			}
 		}
+
+		if len(smaPieces) == 0 {
+			return false
+		}
+
 		smaLen := new(big.Int).SetInt64(int64(len(smaPieces)))
 
 		var buffer bytes.Buffer
