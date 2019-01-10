@@ -21,20 +21,29 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 		return nil, nil, err
 	}
 
+	var rbPtr *big.Int
 	//2. epochLeader PRE
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if err != nil {
 		log.Warn(err.Error())
+		//3. RB PRE
+
+		rbPtr, err = s.getRandom(0)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil, err
+		}
+	} else {
+		//3. RB PRE
+
+		rbPtr, err = s.getRandom(epochID)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil, err
+		}
 	}
 
-	//3. RB PRE
-	var rbPtr *big.Int
 
-	rbPtr, err = s.getRandom(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
 
 	rbBytes := rbPtr.Bytes()
 	//4. CR PRE

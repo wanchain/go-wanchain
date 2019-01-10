@@ -238,7 +238,7 @@ func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) e
 	if err != nil {
 		return err
 	}
-	if !slottools.InPreEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
+	if !slottools.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
 		return errIllegalSender
 	}
 	return nil
@@ -258,7 +258,7 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 	if err != nil {
 		return err
 	}
-	if !slottools.InPreEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
+	if !slottools.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
 		return errIllegalSender
 	}
 	return nil
