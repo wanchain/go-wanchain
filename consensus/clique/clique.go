@@ -508,6 +508,8 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	if len(header.Extra) == extraSeal {
 		log.Warn("Header extra info length is too short")
+		return errUnauthorized
+
 	} else {
 		proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
@@ -526,7 +528,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
 				log.Error("Pk signer verify failed in verifySeal", "number", number,
 					"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
-				//return errUnauthorized
+				return errUnauthorized
 			}
 
 			if epochID == 0 {
