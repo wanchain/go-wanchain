@@ -537,7 +537,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
 				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-				//return errUnauthorized
+				return errUnauthorized
 			} else {
 				log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
 			}
@@ -827,7 +827,7 @@ loopCheck:
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
 		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
-		//return nil, nil
+		return nil, nil
 	}
 
 	extra := make([]byte, len(buf)+extraSeal)
