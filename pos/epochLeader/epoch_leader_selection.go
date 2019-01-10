@@ -81,7 +81,7 @@ func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 			curNum--
 		}
 		targetBlkNum = curNum
-		posdb.UpdateEpochBlock(targetEpochId, targetBlkNum)
+		posdb.SetEpochBlock(targetEpochId, targetBlkNum)
 	}
 	return targetBlkNum
 	//targetBlkNum := e.blkChain.CurrentBlock().NumberU64()

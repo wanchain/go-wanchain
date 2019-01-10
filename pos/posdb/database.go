@@ -432,7 +432,9 @@ func UpdateEpochBlock(epochID uint64, blockNumber uint64) {
 	}
 	lastBlockEpoch[epochID] = blockNumber
 }
-
+func SetEpochBlock(epochID uint64, blockNumber uint64) {
+	lastBlockEpoch[epochID] = blockNumber
+}
 func GetEpochBlock(epochID uint64) uint64 {
 	return lastBlockEpoch[epochID]
 }
