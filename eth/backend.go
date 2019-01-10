@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/posapi"
 	"math/big"
 	"runtime"
 	"sync"
@@ -247,6 +248,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+	apis = append(apis, posapi.APIs(s.BlockChain())...)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
