@@ -508,8 +508,10 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	if len(header.Extra) == extraSeal {
 		log.Warn("Header extra info length is too short")
+		return errUnauthorized
+
 	} else {
-		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+		proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 		if err != nil {
 			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
@@ -526,13 +528,19 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
 				log.Error("Pk signer verify failed in verifySeal", "number", number,
 					"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
-				//return errUnauthorized
+				return errUnauthorized
 			}
 
-			// if !s.VerifySlotProof(epochID, proof, proofMeg) {
-			// 	log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-			// 	//return errUnauthorized
-			// }
+			if epochID == 0 {
+				return nil
+			}
+
+			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+				//return errUnauthorized
+			} else {
+				log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+			}
 		}
 	}
 

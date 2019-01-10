@@ -24,28 +24,31 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 		return nil, nil, err
 	}
 
+	var rbPtr *big.Int
 	//2. epochLeader PRE
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if err != nil {
 		log.Warn(err.Error())
+		//3. RB PRE
+
+		rbPtr, err = s.getRandom(0)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil, err
+		}
+	} else {
+		//3. RB PRE
+
+		rbPtr, err = s.getRandom(epochID)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil, err
+		}
 	}
 
-	//3. RB PRE
-	var rbPtr *big.Int
 
-	rbPtr, err = s.getRandom(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
 
 	rbBytes := rbPtr.Bytes()
-	//4. CR PRE
-	//crsPtr, err := s.getCRs(epochID)
-	//if err != nil {
-	//	log.Error(err.Error())
-	//	return nil, nil, err
-	//}
 
 	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(PrivateKey, smaPiecesPtr, epochLeadersPtrPre, rbBytes[:],slotID,epochID)
 
@@ -157,11 +160,21 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 				smaPieces = append(smaPieces,stageTwoAlphaPKi[i][index])
 			}
 		}
+
+		if len(smaPieces) == 0 {
+			return false
+		}
+
 		smaLen := new(big.Int).SetInt64(int64(len(smaPieces)))
+
+		log.Info("VerifySlotLeaderProof aphaiPki","index",index,"epochID",epochID,"slotID",slotID)
+		for i:=0;i<len(smaPieces);i++{
+			log.Info("VerifySlotLeaderProof","piece index",i,"piece",hex.EncodeToString(crypto.FromECDSAPub(smaPieces[i])))
+		}
 
 		var buffer bytes.Buffer
 		buffer.Write(rbBytes[:])
-		buffer.Write(posdb.Uint64ToBytes(epochID-1))
+		buffer.Write(posdb.Uint64ToBytes(epochID))
 		buffer.Write(posdb.Uint64ToBytes(slotID))
 		temp := buffer.Bytes()
 
@@ -172,6 +185,9 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 			tempHash := crypto.Keccak256(temp)
 			tempBig := new(big.Int).SetBytes(tempHash)
 			cstemp := new(big.Int).Mod(tempBig,smaLen)
+
+			log.Info("VerifySlotLeaderProof","skGtPiece index",i,"alphaiPki index",cstemp.Int64())
+
 			if i == 0 {
 				skGt.X = new(big.Int).Set(smaPieces[cstemp.Int64()].X)
 				skGt.Y = new(big.Int).Set(smaPieces[cstemp.Int64()].Y)
@@ -187,6 +203,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 		}
 	}
 	if !skGtValid{
+		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID",epochID,"slotID",slotID)
 		return false
 	}
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])

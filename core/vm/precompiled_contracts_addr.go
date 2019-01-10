@@ -101,7 +101,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	wanStampPrecompileAddr: &wanchainStampSC{},
 
 	//pos
-	WanCscPrecompileAddr: 	&pos_staking{},
+	WanCscPrecompileAddr: 	&Pos_staking{},
 	slotLeaderPrecompileAddr: 	  &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }

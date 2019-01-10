@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/postools"
 	"math/big"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/postools"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
@@ -21,12 +22,13 @@ import (
 )
 
 const (
-	_         int = iota
+	_ int = iota
 	RB_DKG_STAGE
 	RB_DKG_CONFIRM_STAGE
 	RB_SIGN_STAGE
 	RB_AFTER_SIGH_STAGE
 )
+
 var (
 	rbscDefinition       = `[{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"dkg","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"epochId","type":"uint256"},{"name":"r","type":"uint256"}],"name":"genR","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"info","type":"string"}],"name":"sigshare","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
 	rbscAbi, errRbscInit = abi.JSON(strings.NewReader(rbscDefinition))
@@ -62,7 +64,6 @@ func GetRBStage(slotId uint64) int {
 		return RB_AFTER_SIGH_STAGE
 	}
 }
-
 
 type RandomBeaconContract struct {
 }
@@ -129,18 +130,21 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 func GetR(db StateDB, epochId uint64) *big.Int {
 	r := GetStateR(db, epochId)
 	if r == nil {
-		i := uint64(1)
-		for ; r == nil; i++ {
-			r = GetStateR(db, epochId - i)
-		}
-		log.Warn("***fake random r", "epochId", epochId, "i", epochId - i + 1, "r", r)
-		bytes := r.Bytes()
-		bytes = append(bytes, UIntToByteSlice(epochId) ...)
-		random := crypto.Keccak256(bytes)
-		r = new(big.Int).SetBytes(random)
+		// i := uint64(1)
+		// for ; r == nil; i++ {
+		// 	r = GetStateR(db, epochId - i)
+		// }
+		// log.Warn("***fake random r", "epochId", epochId, "i", epochId - i + 1, "r", r)
+		// bytes := r.Bytes()
+		// bytes = append(bytes, UIntToByteSlice(epochId) ...)
+		// random := crypto.Keccak256(bytes)
+		// r = new(big.Int).SetBytes(random)
+		log.Warn("***Can not found random r just use epoch 0 R", "epochID", epochId)
+		r = GetStateR(db, 0)
 	}
 	return r
 }
+
 // get r in statedb
 func GetStateR(db StateDB, epochId uint64) *big.Int {
 	if epochId == 0 {
@@ -449,13 +453,12 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.Info("generate","r", r, "epochid", eid + 1)
+			log.Info("generate", "r", r, "epochid", eid+1)
 		}
 	}
 
 	// TODO: add an dkg event
 	log.Info("contract do sig end", "epochId", eid, "proposerId", pid)
-
 
 	return nil, nil
 }
@@ -479,7 +482,6 @@ func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM
 
 	return nil, nil
 }
-
 
 type RbDKGDataCollector struct {
 	data *RbDKGTxPayload

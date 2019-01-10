@@ -57,6 +57,12 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 	switch workStage {
 	case slotLeaderSelectionStage1:
+		// If it's too late to run, wait for next epoch
+		if slotID > SlotStage1 {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			break
+		}
+
 		log.Debug("Enter slotLeaderSelectionStage1")
 		err := s.generateSlotLeadsGroup(epochID)
 		if err != nil {
