@@ -13,6 +13,14 @@ const (
 	SafeBack2k = uint64(pos.SlotCount * 1 / 10)
 )
 
+func (s *SlotLeaderSelection) getCurrentStateDb() (stateDb *state.StateDB, err error) {
+	s.updateToLastStateDb()
+	if s.stateDb == nil {
+		return nil, errors.New("Do not have stateDb instance now")
+	}
+	return s.stateDb, nil
+}
+
 func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
 	s.updateStateDB()
 	//s.updateToLastStateDb()
