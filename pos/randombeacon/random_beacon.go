@@ -8,7 +8,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
@@ -343,133 +342,133 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 //
 //	return nil
 //}
-
-// todo: should create new random while error occur??
-func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
-	log.Info("RB do compute random", "epochId", epochId)
-	randomInt := vm.GetR(rb.statedb, epochId+1)
-	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
-		// exist already
-		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
-		return nil
-	}
-
-	pks := rb.getRBProposerGroup(epochId)
-	if len(pks) == 0 {
-		log.Error("can't find random beacon proposer group")
-		return errors.New("can't find random beacon proposer group")
-	}
-
-	// collact gsigshare
-	// collect DKG data
-	dkgDatas := make([]RbDKGDataCollector, 0)
-	sigDatas := make([]RbSIGDataCollector, 0)
-	for id, _ := range pks {
-		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
-		if err == nil && dkgData != nil {
-			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pks[id]})
-		}
-
-		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
-		if err == nil && sigData != nil {
-			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
-		}
-
-		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
-	}
-
-	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
-		// return errors.New("insufficient proposer")
-
-		randomInt := vm.GetR(rb.statedb, epochId)
-		if randomInt == nil {
-			log.Error("get random fail", "epochId", epochId)
-			return errors.New("get random fail")
-		}
-
-		newRandom := crypto.Keccak256(randomInt.Bytes())
-		err := rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
-		if err != nil {
-			log.Error("set random fail", "err", err)
-		} else {
-			log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(newRandom))
-		}
-
-		return err
-	}
-
-	gsigshare := make([]bn256.G1, len(sigDatas))
-	xSig := make([]big.Int, len(sigDatas))
-	for i, data := range sigDatas {
-		gsigshare[i] = *data.data.Gsigshare
-		xSig[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
-	}
-
-	// Compute the Output of Random Beacon
-	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
-	random := crypto.Keccak256(gsig.Marshal())
-	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
-
-	// Verification Logic for the Output of Random Beacon
-	// Computation of group public key
-	nr := len(pks)
-	c := make([]bn256.G2, nr)
-	for i := 0; i < nr; i++ {
-		c[i].ScalarBaseMult(big.NewInt(int64(0)))
-		for j := 0; j < len(dkgDatas); j++ {
-			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
-		}
-	}
-
-	xAll := make([]big.Int, nr)
-	for i := 0; i < nr; i++ {
-		xAll[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
-		xAll[i].Mod(&xAll[i], bn256.Order)
-	}
-	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
-
-	// mG
-	mBuf, err := vm.GetRBM(rb.statedb, epochId)
-	if err != nil {
-		log.Error("get M fail", "err", err)
-		return err
-	}
-
-	m := new(big.Int).SetBytes(mBuf)
-	mG := new(bn256.G1).ScalarBaseMult(m)
-
-	// Verify using pairing
-	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
-	pair2 := bn256.Pair(mG, &gPub)
-	log.Info("verify random", "pair1", pair1.String(), "pair2", pair2.String())
-	if pair1.String() != pair2.String() {
-		return errors.New("Final Pairing Check Failed")
-	}
-
-	err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(random))
-	if err != nil {
-		log.Error("set random fail", "err", err)
-	} else {
-		log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
-	}
-
-	return err
-}
-
-func (rb *RandomBeacon) saveRandom(epochId uint64, random *big.Int) error {
-	if random == nil {
-		log.Error("invalid random")
-		return errors.New("invalid random")
-	}
-
-	//err := posdb.SetRandom(epochId, random)
-	//if err != nil {
-	//	return err
-	//}
-
-	return rb.sendRandom(epochId, random)
-}
+//
+//// todo: should create new random while error occur??
+//func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
+//	log.Info("RB do compute random", "epochId", epochId)
+//	randomInt := vm.GetR(rb.statedb, epochId+1)
+//	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
+//		// exist already
+//		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
+//		return nil
+//	}
+//
+//	pks := rb.getRBProposerGroup(epochId)
+//	if len(pks) == 0 {
+//		log.Error("can't find random beacon proposer group")
+//		return errors.New("can't find random beacon proposer group")
+//	}
+//
+//	// collact gsigshare
+//	// collect DKG data
+//	dkgDatas := make([]RbDKGDataCollector, 0)
+//	sigDatas := make([]RbSIGDataCollector, 0)
+//	for id, _ := range pks {
+//		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
+//		if err == nil && dkgData != nil {
+//			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pks[id]})
+//		}
+//
+//		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
+//		if err == nil && sigData != nil {
+//			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
+//		}
+//
+//		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
+//	}
+//
+//	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
+//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+//		// return errors.New("insufficient proposer")
+//
+//		randomInt := vm.GetR(rb.statedb, epochId)
+//		if randomInt == nil {
+//			log.Error("get random fail", "epochId", epochId)
+//			return errors.New("get random fail")
+//		}
+//
+//		newRandom := crypto.Keccak256(randomInt.Bytes())
+//		err := rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
+//		if err != nil {
+//			log.Error("set random fail", "err", err)
+//		} else {
+//			log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(newRandom))
+//		}
+//
+//		return err
+//	}
+//
+//	gsigshare := make([]bn256.G1, len(sigDatas))
+//	xSig := make([]big.Int, len(sigDatas))
+//	for i, data := range sigDatas {
+//		gsigshare[i] = *data.data.Gsigshare
+//		xSig[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
+//	}
+//
+//	// Compute the Output of Random Beacon
+//	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
+//	random := crypto.Keccak256(gsig.Marshal())
+//	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
+//
+//	// Verification Logic for the Output of Random Beacon
+//	// Computation of group public key
+//	nr := len(pks)
+//	c := make([]bn256.G2, nr)
+//	for i := 0; i < nr; i++ {
+//		c[i].ScalarBaseMult(big.NewInt(int64(0)))
+//		for j := 0; j < len(dkgDatas); j++ {
+//			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
+//		}
+//	}
+//
+//	xAll := make([]big.Int, nr)
+//	for i := 0; i < nr; i++ {
+//		xAll[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+//		xAll[i].Mod(&xAll[i], bn256.Order)
+//	}
+//	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
+//
+//	// mG
+//	mBuf, err := vm.GetRBM(rb.statedb, epochId)
+//	if err != nil {
+//		log.Error("get M fail", "err", err)
+//		return err
+//	}
+//
+//	m := new(big.Int).SetBytes(mBuf)
+//	mG := new(bn256.G1).ScalarBaseMult(m)
+//
+//	// Verify using pairing
+//	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
+//	pair2 := bn256.Pair(mG, &gPub)
+//	log.Info("verify random", "pair1", pair1.String(), "pair2", pair2.String())
+//	if pair1.String() != pair2.String() {
+//		return errors.New("Final Pairing Check Failed")
+//	}
+//
+//	err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(random))
+//	if err != nil {
+//		log.Error("set random fail", "err", err)
+//	} else {
+//		log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
+//	}
+//
+//	return err
+//}
+//
+//func (rb *RandomBeacon) saveRandom(epochId uint64, random *big.Int) error {
+//	if random == nil {
+//		log.Error("invalid random")
+//		return errors.New("invalid random")
+//	}
+//
+//	//err := posdb.SetRandom(epochId, random)
+//	//if err != nil {
+//	//	return err
+//	//}
+//
+//	return rb.sendRandom(epochId, random)
+//}
 
 func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload) error {
 	log.Info("begin send dkg")
