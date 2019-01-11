@@ -48,6 +48,9 @@ type Config struct {
 	SelfPrK          *big.Int
 	Dbpath           string
 	NodeCfg          *node.Config
+	DkgEnd           uint64
+	SignBegin        uint64
+	SignEnd          uint64
 }
 
 var DefaultConfig = Config{
@@ -60,6 +63,9 @@ var DefaultConfig = Config{
 	big.NewInt(1),
 	"",
 	nil,
+	6 * SlotCount / 10 - 1,
+	7 * SlotCount / 10,
+	9 * SlotCount / 10 - 1,
 }
 
 func Cfg() *Config {
