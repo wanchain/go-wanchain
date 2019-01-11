@@ -43,9 +43,9 @@ var (
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
 	dkgBeginId = 0
-	dkgEndId = uint64(4*pos.Cfg().K - 1)
-	signBeginId = uint64(5*pos.Cfg().K)
-	signEndId = uint64(8*pos.Cfg().K - 1)
+	dkgEndId = pos.Cfg().DkgEnd
+	signBeginId = pos.Cfg().SignBegin
+	signEndId = pos.Cfg().SignEnd
 
 	errDkgParse  = errors.New("dkg payload parse failed")
 	errSigParse  = errors.New("sig payload parse failed")

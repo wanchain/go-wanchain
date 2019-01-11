@@ -189,7 +189,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		if slotid == 5 || slotid == uint64(pos.Cfg().K * 5) {
+		if slotid == 5 || slotid == pos.Cfg().SignBegin {
 			go randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
 		}
 		cur := uint64(time.Now().Unix())
