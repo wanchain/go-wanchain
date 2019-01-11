@@ -531,9 +531,9 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 				return errUnauthorized
 			}
 
-			if epochID == 0 {
-				return nil
-			}
+			//if epochID == 0 {
+			//	return nil
+			//}
 
 			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
 				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)

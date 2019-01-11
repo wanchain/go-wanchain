@@ -16,7 +16,21 @@ import (
 
 //ProofMes = [PK, Gt, skGt] []*PublicKey
 //Proof = [e,z] []*big.Int
+func (s *SlotLeaderSelection) GetSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+	//1. SMA PRE
+	smaPiecesPtr := s.smaGenesis
+	epochLeadersPtrPre := s.epochLeadersPtrArrayGenesis
+	rbBytes := s.randomGenesis.Bytes()
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(PrivateKey, smaPiecesPtr[:], epochLeadersPtrPre[:], rbBytes[:],slotID,epochID)
+	return profMeg, proof, err
+}
+
 func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+	_, err := s.getPreEpochLeadersPK(epochID)
+	if epochID == uint64(0) || err != nil {
+		return s.GetSlotLeaderProofByGenesis(PrivateKey,epochID,slotID)
+	}
+
 	//1. SMA PRE
 	smaPiecesPtr, err := s.getSMAPieces(epochID)
 	if err != nil {
@@ -55,8 +69,80 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	return profMeg, proof, err
 }
 
-func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID uint64,Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 
+	var publicKey *ecdsa.PublicKey
+	publicKey = ProofMeg[0]
+
+	publicKeyIndexes := make([]int,0)
+	for index, value := range s.epochLeadersPtrArrayGenesis{
+		if uleaderselection.PublicKeyEqual(publicKey,value){
+			publicKeyIndexes = append(publicKeyIndexes,index)
+		}
+	}
+
+	// Verify skGt
+	var skGtValid bool
+	skGtValid = false
+	for _, index := range publicKeyIndexes{
+
+		smaPieces := make([]*ecdsa.PublicKey,0)
+		for i :=0; i< pos.EpochLeaderCount;i++{
+			smaPieces = append(smaPieces,s.stageTwoAlphaPKiGenesis[i][index])
+		}
+
+		if len(smaPieces) == 0 {
+			return false
+		}
+		smaLen := new(big.Int).SetInt64(int64(len(smaPieces)))
+
+		log.Info("VerifySlotLeaderProof aphaiPki","index",index,"epochID",epochID,"slotID",slotID)
+		for i:=0;i<len(smaPieces);i++{
+			log.Info("VerifySlotLeaderProof","piece index",i,"piece",hex.EncodeToString(crypto.FromECDSAPub(smaPieces[i])))
+		}
+
+		var buffer bytes.Buffer
+		buffer.Write(s.randomGenesis.Bytes())
+		buffer.Write(posdb.Uint64ToBytes(epochID))
+		buffer.Write(posdb.Uint64ToBytes(slotID))
+		temp := buffer.Bytes()
+
+		skGt := new(ecdsa.PublicKey)
+		skGt.Curve = crypto.S256()
+
+		for i:=0; i< pos.EpochLeaderCount; i++{
+			tempHash := crypto.Keccak256(temp)
+			tempBig := new(big.Int).SetBytes(tempHash)
+			cstemp := new(big.Int).Mod(tempBig,smaLen)
+
+			log.Info("VerifySlotLeaderProof","skGtPiece index",i,"alphaiPki index",cstemp.Int64())
+
+			if i == 0 {
+				skGt.X = new(big.Int).Set(smaPieces[cstemp.Int64()].X)
+				skGt.Y = new(big.Int).Set(smaPieces[cstemp.Int64()].Y)
+			} else{
+				skGt.X, skGt.Y = uleaderselection.Wadd(skGt.X, skGt.Y, smaPieces[cstemp.Int64()].X, smaPieces[cstemp.Int64()].Y)
+			}
+			temp = tempHash
+		}
+
+		if uleaderselection.PublicKeyEqual(skGt,ProofMeg[2]) {
+			skGtValid = true
+			break
+		}
+	}
+	if !skGtValid{
+		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID",epochID,"slotID",slotID)
+		return false
+	}
+	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes()[:])
+}
+
+func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+	_, errGenesis := s.getPreEpochLeadersPK(epochID)
+	if epochID == 0 || errGenesis != nil {
+		return s.VerifySlotProofByGenesis(epochID, slotID,Proof,ProofMeg)
+	}
 
 	var epochLeadersPtrPre []*ecdsa.PublicKey
 
