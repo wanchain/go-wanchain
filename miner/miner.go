@@ -143,8 +143,8 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		} else {
 			pos.EpochBaseTime = h.Time.Uint64()
 		}
-	}
-	for {
+	//}
+	//for {
 
 		slotleader.CalEpochSlotID()
 		epochid, slotid := slotleader.GetEpochSlotID()
