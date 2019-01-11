@@ -142,7 +142,7 @@ func init() {
 		smaPiece.Curve = crypto.S256()
 		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
 		s.smaGenesis[i] = smaPiece
-		fmt.Printf("========================Jacob %d, %v\n", i, hex.EncodeToString(crypto.FromECDSAPub(s.smaGenesis[i])))
+		//fmt.Printf("========================Jacob %d, %v\n", i, hex.EncodeToString(crypto.FromECDSAPub(s.smaGenesis[i])))
 
 		for j:=0;j<pos.EpochLeaderCount;j++{
 			// AlphaIPki stage2Genesis
