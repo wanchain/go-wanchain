@@ -20,7 +20,7 @@ const (
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 10
 	// SlotCount is slot count in an epoch
-	SlotCount = 30
+	SlotCount = 60
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 3
 	// GenesisPK is the epoch0 pk
@@ -48,6 +48,9 @@ type Config struct {
 	SelfPrK          *big.Int
 	Dbpath           string
 	NodeCfg          *node.Config
+	DkgEnd           uint64
+	SignBegin        uint64
+	SignEnd          uint64
 }
 
 var DefaultConfig = Config{
@@ -60,6 +63,9 @@ var DefaultConfig = Config{
 	big.NewInt(1),
 	"",
 	nil,
+	6 * SlotCount / 10 - 1,
+	7 * SlotCount / 10,
+	9 * SlotCount / 10 - 1,
 }
 
 func Cfg() *Config {

@@ -133,7 +133,6 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 	//epochTimer := time.NewTicker(20 * time.Second)
 	//slotTimer := time.NewTicker(6 * time.Second)
-
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -144,9 +143,11 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		} else {
 			pos.EpochBaseTime = h.Time.Uint64()
 		}
+	//}
+	//for {
 
 		slotleader.CalEpochSlotID()
-		epochid, slotid, err := slotleader.GetEpochSlotID()
+		epochid, slotid := slotleader.GetEpochSlotID()
 		//if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
 		//	time.Sleep(pos.SlotTime * time.Second)
 		//	continue
@@ -160,10 +161,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		//epochid, slotid, err := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid: ", epochid, slotid)
-		if err != nil {
-			fmt.Println("haven't block 1 base")
-			continue
-		}
+		//if err != nil {
+		//	fmt.Println("haven't block 1 base")
+		//	continue
+		//}
 
 		// only the begin of epocher
 		if slotid == 0 {
@@ -188,7 +189,9 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
+		if slotid == 5 || slotid == pos.Cfg().SignBegin {
+			go randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc)
+		}
 		cur := uint64(time.Now().Unix())
 		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)

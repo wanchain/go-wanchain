@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/wanchain/go-wanchain/pos"
-
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
@@ -120,7 +119,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochID), evm) {
+	if !isInValidStage(posdb.BytesToUint64(epochID), evm, 0, pos.Stage1K) {
 		return nil, nil
 	}
 
@@ -184,17 +183,10 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var keyBuf bytes.Buffer
-	//keyBuf.Write([]byte(epochIDBuf))
-	//keyBuf.Write([]byte(selfIndexBuf))
-
-	// epochIDBufDec, err := hex.DecodeString(epochIDBuf)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm, pos.Stage2K, pos.Stage4K) {
 		return nil, nil
 	}
 
@@ -202,10 +194,6 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	keyBuf.Write(epochIDBufDec)
 
-	// selfIndexBufDec, err := hex.DecodeString(selfIndexBuf)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	selfIndexBufDec := posdb.Uint64StringToByte(selfIndexBuf)
 
 	keyBuf.Write(selfIndexBufDec)
@@ -312,14 +300,14 @@ func GetSlotScCallTimes(epochID uint64) uint64 {
 	}
 }
 
-func isInValidStage(epochID uint64, evm *EVM) bool {
+func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
 		log.Warn("Tx is out of valid stage", "epochID", eid, "slotID", sid)
 		return false
 	}
 
-	if sid > pos.Stage3K {
+	if sid > kEnd || sid < kStart {
 		log.Warn("Tx is out of valid stage", "epochID", eid, "slotID", sid)
 		return false
 	}

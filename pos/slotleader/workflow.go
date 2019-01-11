@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wanchain/go-wanchain/pos"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -58,7 +60,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	switch workStage {
 	case slotLeaderSelectionStage1:
 		// If it's too late to run, wait for next epoch
-		if slotID > SlotStage1 {
+		if slotID > pos.Stage1K {
 			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 			break
 		}
@@ -91,9 +93,14 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			s.setWorkStage(epochID, slotLeaderSelectionStage1)
 		}
 
-		// if slotID < SlotStage1 {
-		// 	break
-		// }
+		if slotID < pos.Stage2K {
+			break
+		}
+
+		if slotID > pos.Stage4K {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			break
+		}
 
 		err := s.startStage2Work()
 		if err != nil {
@@ -111,7 +118,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			s.setWorkStage(epochID, slotLeaderSelectionStage1)
 		}
 
-		if slotID < SlotStage2 {
+		if slotID < pos.Stage5K {
 			break
 		}
 

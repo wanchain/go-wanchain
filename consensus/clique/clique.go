@@ -537,7 +537,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
 				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-				//return errUnauthorized
+				return errUnauthorized
 			} else {
 				log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
 			}
@@ -647,8 +647,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 		hcur := cur - (cur % pos.SlotTime) + pos.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		curEpochId, curSlotId, err := slotleader.GetEpochSlotID()
-		fmt.Println(err)
+		curEpochId, curSlotId := slotleader.GetEpochSlotID()
 		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId+1)*pos.SlotTime))
 	}
 	return nil
@@ -711,11 +710,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	var slotIDPack uint64
 loopCheck:
 	for {
-		epochId, slotId, err := slotleader.GetEpochSlotID()
-		if err != nil {
-			fmt.Println(err)
-			return nil, nil
-		}
+		epochId, slotId := slotleader.GetEpochSlotID()
 		fmt.Println("Clique Seal: epochId:", epochId, "slotId:", slotId)
 
 		var leader string
@@ -827,7 +822,7 @@ loopCheck:
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
 		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
-		//return nil, nil
+		return nil, nil
 	}
 
 	extra := make([]byte, len(buf)+extraSeal)

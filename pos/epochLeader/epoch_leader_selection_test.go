@@ -7,10 +7,6 @@ import (
 )
 
 func TestGetGetEpochLeaders(t *testing.T) {
-	epochID, slotID, err := slotleader.GetEpochSlotID()
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println("epochID:", epochID, " slotID:", slotID)
-	}
+	epochID, slotID := slotleader.GetEpochSlotID()
+	fmt.Println("epochID:", epochID, " slotID:", slotID)
 }

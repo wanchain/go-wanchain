@@ -16,6 +16,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
+	"io/ioutil"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -151,7 +152,7 @@ func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [
 		sshare[i] = make([]big.Int, nr, nr)
 		poly[i] = wanpos.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
 		for j := 0; j < nr; j++ {
-			sshare[i][j] = wanpos.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			sshare[i][j], _ = wanpos.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
 	}
 
@@ -597,5 +598,27 @@ func TestSigsNum(t *testing.T) {
 	num1 := getSigsNum(eid, evm)
 	if num1 != num {
 		t.Fatal("num wrong")
+	}
+}
+
+func TestRB256(t *testing.T) {
+	nr = 256
+	pubs, pris, hpubs = generateKeyPairs()
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	rbgroupdb[rbepochId] = pubs
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKGTxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		println(payloadStr)
+		ioutil.WriteFile("256.bin", payloadBytes, 0644)
+		break
 	}
 }

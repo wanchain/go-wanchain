@@ -38,12 +38,8 @@ func TestLoop(t *testing.T) {
 }
 
 func TestGetEpochSlotID(t *testing.T) {
-	epochID, slotID, err := GetEpochSlotID()
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println("epochID:", epochID, " slotID:", slotID)
-	}
+	epochID, slotID := GetEpochSlotID()
+	fmt.Println("epochID:", epochID, " slotID:", slotID)
 }
 
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
