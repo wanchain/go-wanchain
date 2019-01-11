@@ -16,6 +16,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
+	"io/ioutil"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -597,5 +598,27 @@ func TestSigsNum(t *testing.T) {
 	num1 := getSigsNum(eid, evm)
 	if num1 != num {
 		t.Fatal("num wrong")
+	}
+}
+
+func TestRB256(t *testing.T) {
+	nr = 256
+	pubs, pris, hpubs = generateKeyPairs()
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	rbgroupdb[rbepochId] = pubs
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKGTxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+		payloadStr := common.Bytes2Hex(payloadBytes)
+		println(payloadStr)
+		ioutil.WriteFile("256.bin", payloadBytes, 0644)
+		break
 	}
 }
