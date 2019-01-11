@@ -42,7 +42,7 @@ func (s *SlotLeaderSelection) updateStateDB() {
 	curNumber := s.blockChain.CurrentBlock().NumberU64()
 	curSlotID := uint64((s.blockChain.CurrentBlock().Difficulty().Int64() >> 8) & 0x00ffffff)
 
-	if uint64(curSlotID) < SlotStage1 {
+	if uint64(curSlotID) < pos.Stage4K {
 		log.Debug("Current Slot ID is less than SlotStage1 (4k), do not use a SafeBack2k one, use last one")
 		s.updateToLastStateDb()
 		return

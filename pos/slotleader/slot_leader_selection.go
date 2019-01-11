@@ -36,12 +36,7 @@ const LengthPublicKeyBytes = 65
 const LengthCR = 32
 
 const (
-	StageTwoProofCount = 2
-
-	// SlotStage1 is 40% of slot count
-	SlotStage1 = pos.Stage1K
-	// SlotStage2 is 80% of slot count
-	SlotStage2           = pos.Stage4K
+	StageTwoProofCount   = 2
 	EpochLeaders         = "epochLeaders"
 	SecurityMsg          = "securityMsg"
 	CR                   = "cr"
