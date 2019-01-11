@@ -149,8 +149,8 @@ var (
 	curSlotId  = uint64(0)
 )
 
-func GetEpochSlotID() (uint64, uint64, error) {
-	return curEpochId, curSlotId, nil
+func GetEpochSlotID() (uint64, uint64) {
+	return curEpochId, curSlotId
 }
 func CalEpochSlotID() {
 	if pos.EpochBaseTime == 0 {

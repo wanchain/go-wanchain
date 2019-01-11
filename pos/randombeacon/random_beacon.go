@@ -97,12 +97,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	log.Info("set miner account", "puk", pos.Cfg().SelfPuK, "prk", pos.Cfg().SelfPrK)
 
 	// get epoch id, slot id
-	epochId, slotId, err := slotleader.GetEpochSlotID()
-	if err != nil {
-		log.Error("get epoch slot id fail", "err", err)
-		return nil
-	}
-
+	epochId, slotId := slotleader.GetEpochSlotID()
 	log.Info("get epoch slot id", "epochId", epochId, "slotId", slotId)
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
 		log.Error("blockchain rollback")
