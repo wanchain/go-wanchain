@@ -101,6 +101,7 @@ type worker struct {
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
 	chainSideSub event.Subscription
+	chainSlotTimer  chan struct{}
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
@@ -140,6 +141,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txCh:           make(chan core.TxPreEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
+		chainSlotTimer: make(chan struct{}, chainHeadChanSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -255,8 +257,9 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			//self.commitNewWork()
+		case <-self.chainSlotTimer:
 			self.commitNewWork()
-
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
@@ -289,7 +292,7 @@ func (self *worker) update() {
 
 func (self *worker) wait() {
 	for {
-		mustCommitNewWork := true
+		//mustCommitNewWork := true
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
 
@@ -330,10 +333,10 @@ func (self *worker) wait() {
 				continue
 			}
 			// check if canon block and write transactions
-			if stat == core.CanonStatTy {
-				// implicit by posting ChainHeadEvent
-				mustCommitNewWork = false
-			}
+			//if stat == core.CanonStatTy {
+			//	// implicit by posting ChainHeadEvent
+			//	mustCommitNewWork = false
+			//}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
@@ -349,9 +352,9 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			if mustCommitNewWork {
-				self.commitNewWork()
-			}
+			//if mustCommitNewWork {
+			//	self.commitNewWork()
+			//}
 		}
 	}
 }

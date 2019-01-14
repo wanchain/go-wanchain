@@ -142,16 +142,21 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			continue
 		} else {
 			pos.EpochBaseTime = h.Time.Uint64()
-		}
-	//}
-	//for {
+			cur := uint64(time.Now().Unix())
+			if  cur < pos.EpochBaseTime+pos.SlotTime {
+				time.Sleep(time.Duration((pos.EpochBaseTime+pos.SlotTime - cur))*time.Second)
+			}
+	}
+
 
 		slotleader.CalEpochSlotID()
 		epochid, slotid := slotleader.GetEpochSlotID()
+		fmt.Println("epochid, slotid", epochid, slotid)
 		//if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
 		//	time.Sleep(pos.SlotTime * time.Second)
 		//	continue
 		//}
+		self.worker.chainSlotTimer <- struct{}{}
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if err2 != nil {
 			fmt.Println(err2)

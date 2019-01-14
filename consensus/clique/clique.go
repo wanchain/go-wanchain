@@ -648,7 +648,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 		header.Time = big.NewInt(hcur)
 	} else {
 		curEpochId, curSlotId := slotleader.GetEpochSlotID()
-		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId+1)*pos.SlotTime))
+		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId)*pos.SlotTime))
 	}
 	return nil
 }
@@ -708,71 +708,58 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	epochSlotId := uint64(1)
 	var epochIDPack uint64
 	var slotIDPack uint64
-loopCheck:
-	for {
-		epochId, slotId := slotleader.GetEpochSlotID()
-		fmt.Println("Clique Seal: epochId:", epochId, "slotId:", slotId)
+	epochId, slotId := slotleader.GetEpochSlotID()
+	fmt.Println("Clique Seal: epochId:", epochId, "slotId:", slotId)
 
-		var leader string
-		if epochId != 0 {
-			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-			if err != nil || leaderPub == nil {
-				select {
-				case <-stop:
-					return nil, nil
-				case <-time.After(time.Second):
-					fmt.Println("GetSlotLeader failed, sleep 1, epochID:", epochId, " slotID:", slotId)
-					continue
-				}
-			}
-			leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-
-			fmt.Println("err:", err, "leaderPK:", leader)
-
-		} else {
-			//genesis block miner publicKey
-			leader = pos.GenesisPK
-		}
-
-		if leader == localPublicKey {
-			cur := uint64(time.Now().Unix())
-			sleepTime := uint64(0)
-			sealTime := uint64(0)
-			if pos.EpochBaseTime == 0 {
-				sealTime = header.Time.Uint64() + pos.SlotTime/2
-			} else {
-				sealTime = pos.EpochBaseTime + pos.SlotTime/2 + (epochId*pos.SlotCount+slotId+1)*pos.SlotTime
-			}
-			if cur < sealTime {
-				sleepTime = sealTime - cur
-			}
-			fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
-				"sleepTime:", sleepTime, "header.Time:", header.Time.Uint64())
+	var leader string
+	if epochId != 0 {
+		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+		if err != nil || leaderPub == nil {
 			select {
 			case <-stop:
 				return nil, nil
-			case <-time.After(time.Duration(sleepTime) * time.Second): // TODO when generate new block
-				//epochId, slotId, err := slotleader.GetEpochSlotID()
-				//if err != nil {
-				//	fmt.Println(err)
-				//	return nil, nil
-				//}
-				epochSlotId += slotId << 8
-				epochSlotId += epochId << 32
-
-				epochIDPack = epochId
-				slotIDPack = slotId
-				break loopCheck
-			}
-		} else {
-			select {
-			case <-stop:
+			case <-time.After(time.Second):
+				fmt.Println("GetSlotLeader failed, sleep 1, epochID:", epochId, " slotID:", slotId)
+				//continue
 				return nil, nil
-			case <-time.After(pos.SlotTime * time.Second):
-				fmt.Println("not our turn")
-				continue
 			}
 		}
+		leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+
+		fmt.Println("err:", err, "leaderPK:", leader)
+
+	} else {
+		//genesis block miner publicKey
+		leader = pos.GenesisPK
+	}
+
+	if leader == localPublicKey {
+		cur := uint64(time.Now().Unix())
+		sleepTime := uint64(0)
+		sealTime := uint64(0)
+		if pos.EpochBaseTime == 0 {
+			sealTime = header.Time.Uint64() + pos.SlotTime/2
+		} else {
+			sealTime = pos.EpochBaseTime + pos.SlotTime/2 + (epochId*pos.SlotCount+slotId)*pos.SlotTime
+		}
+		if cur < sealTime {
+			sleepTime = sealTime - cur
+		}
+		fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
+			"sleepTime:", sleepTime, "header.Time:", header.Time.Uint64())
+		select {
+		case <-stop:
+			return nil, nil
+		case <-time.After(time.Duration(sleepTime) * time.Second): // TODO when generate new block
+			epochSlotId += slotId << 8
+			epochSlotId += epochId << 32
+
+			epochIDPack = epochId
+			slotIDPack = slotId
+			//break loopCheck
+		}
+	} else {
+		return nil, nil
 	}
 
 	//// If we're amongst the recent signers, wait for the next block
@@ -822,7 +809,7 @@ loopCheck:
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
 		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
-		return nil, nil
+		return nil, err
 	}
 
 	extra := make([]byte, len(buf)+extraSeal)
@@ -846,6 +833,7 @@ loopCheck:
 	err = c.verifySeal(nil, header, nil)
 	if err != nil {
 		log.Error("Verify error", "error", err.Error())
+		return nil, err
 	}
 	posdb.UpdateEpochBlock(epochIDPack, number)
 	return block.WithSeal(header), nil
