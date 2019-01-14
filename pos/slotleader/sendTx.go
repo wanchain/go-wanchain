@@ -1,9 +1,7 @@
 package slotleader
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -17,7 +15,7 @@ import (
 
 func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	//test
-	fmt.Println("Ready to send StageTx1 tx:", hex.EncodeToString(data))
+	//fmt.Println("Ready to send StageTx1 tx:", hex.EncodeToString(data))
 
 	if s.rc == nil {
 		return errors.New("rc is not ready")
@@ -44,7 +42,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 }
 func (s *SlotLeaderSelection) sendStage2Tx(data string) error {
 	//test
-	fmt.Println("Ready send tx:", data)
+	//fmt.Println("Ready send tx:", data)
 
 	if s.rc == nil {
 		return errors.New("rc is not ready")

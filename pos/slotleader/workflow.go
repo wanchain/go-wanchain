@@ -125,6 +125,8 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
 		if err != nil {
 			log.Warn(err.Error())
+		} else {
+			log.Info("generateSecurityMsg SMA success!")
 		}
 
 		if err != nil && errorRetry > 0 {

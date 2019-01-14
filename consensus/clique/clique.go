@@ -539,7 +539,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
 				return errUnauthorized
 			} else {
-				log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+				//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
 			}
 		}
 	}
