@@ -51,15 +51,8 @@ type Epocher struct {
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
 
-	rbdb := posdb.NewDb("rblocaldb")
+	return NewEpocherWithLBN(blc,"rblocaldb","eplocaldb")
 
-	epdb := posdb.NewDb("eplocaldb")
-
-	inst := &Epocher{rbdb, epdb, blc}
-
-	posdb.SetEpocherInst(inst)
-
-	return inst
 }
 
 func NewEpocherWithLBN(blc *core.BlockChain,rbn string,epdbn string) *Epocher {
