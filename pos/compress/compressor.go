@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func compress(data []byte)([]byte,error)  {
+func Compress(data []byte)([]byte,error)  {
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 
@@ -29,7 +29,7 @@ func compress(data []byte)([]byte,error)  {
 	return  buf.Bytes(),nil
 }
 
-func uncompress(data []byte)([]byte,error)  {
+func Uncompress(data []byte)([]byte,error)  {
 	var buf bytes.Buffer
 	buf.Write(data)
 
