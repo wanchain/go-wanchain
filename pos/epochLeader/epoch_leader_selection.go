@@ -62,6 +62,19 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	return inst
 }
 
+func NewEpocherWithLBN(blc *core.BlockChain,rbn string,epdbn string) *Epocher {
+
+	rbdb := posdb.NewDb(rbn)
+
+	epdb := posdb.NewDb(epdbn)
+
+	inst := &Epocher{rbdb, epdb, blc}
+
+	posdb.SetEpocherInst(inst)
+
+	return inst
+}
+
 
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
