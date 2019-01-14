@@ -194,7 +194,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 		//epocher.SelectLeaders()
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc, epochid, slotid)
+		go randombeacon.GetRandonBeaconInst().Loop(stateDb, epocher, rc, epochid, slotid)
 		cur := uint64(time.Now().Unix())
 		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
