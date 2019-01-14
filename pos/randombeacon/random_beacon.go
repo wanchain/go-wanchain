@@ -88,7 +88,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
-	go rb.doLoop(statedb, epocher, rc, eid, sid)
+	rb.doLoop(statedb, epocher, rc, eid, sid)
 }
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) error {
