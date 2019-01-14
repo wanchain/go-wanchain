@@ -303,7 +303,7 @@ func GetSlotScCallTimes(epochID uint64) uint64 {
 func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
-		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid)
+		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
 		return false
 	}
 
