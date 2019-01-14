@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/pos/wanpos_crypto"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -50,6 +51,8 @@ type RandomBeacon struct {
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
+
+	mu	sync.Mutex
 }
 
 var (
@@ -81,8 +84,14 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
 		pos.Cfg().SelfPrK = new(big.Int).Set(key.PrivateKey3.D)
 	}
 }
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
 
-func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client) error {
+	go rb.doLoop(statedb, epocher, rc, eid, sid)
+}
+
+func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) error {
 	if statedb == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
@@ -97,6 +106,10 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 
 	// get epoch id, slot id
 	epochId, slotId := slotleader.GetEpochSlotID()
+	if eid != epochId || sid != slotId {
+		return errors.New("bad time")
+	}
+
 	log.Info("get epoch slot id", "epochId", epochId, "slotId", slotId)
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
 		log.Error("blockchain rollback")
