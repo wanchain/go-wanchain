@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wanchain/go-wanchain/pos/postools"
+
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/rlp"
 
@@ -47,15 +49,16 @@ const (
 )
 
 const (
+	slotLeaderSelectionInit = iota + 1 //1
 	//Ready to start slot leader selection stage1
-	slotLeaderSelectionStage1 = iota + 1 //1
+	slotLeaderSelectionStage1 = iota + 1 //2
 
 	//Slot leader selection stage1 finish
-	slotLeaderSelectionStage2 = iota + 1 //2
+	slotLeaderSelectionStage2 = iota + 1 //3
 
-	slotLeaderSelectionStage3 = iota + 1 //2
+	slotLeaderSelectionStage3 = iota + 1 //4
 
-	slotLeaderSelectionStageFinished = iota + 1 //2
+	slotLeaderSelectionStageFinished = iota + 1 //5
 
 )
 
@@ -63,6 +66,8 @@ var (
 	wanCscPrecompileAddr = common.BytesToAddress(big.NewInt(210).Bytes())
 	ErrEpochID           = errors.New("EpochID is not valid")
 	errorRetry           = 3
+	ErrorCount           = uint64(0)
+	WarnCount            = uint64(0)
 )
 
 //SlotLeaderSelection use to select unique slot leader
@@ -85,13 +90,12 @@ type SlotLeaderSelection struct {
 	slotCreateStatus       map[uint64]bool
 	blockChain             *core.BlockChain
 
-
-	epochLeadersPtrArrayGenesis   [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageOneMiGenesis             [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKiGenesis       [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProofGenesis          [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
-	randomGenesis				  *big.Int
-	smaGenesis					  [pos.EpochLeaderCount]*ecdsa.PublicKey
+	epochLeadersPtrArrayGenesis [pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageOneMiGenesis           [pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKiGenesis     [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProofGenesis        [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	randomGenesis               *big.Int
+	smaGenesis                  [pos.EpochLeaderCount]*ecdsa.PublicKey
 }
 
 // Pack is use to pack info for slot proof
@@ -113,18 +117,18 @@ func init() {
 	s.randomGenesis = big.NewInt(1)
 	//genesis epoch leaders
 	epoch0Leaders := s.getEpoch0LeadersPK()
-	for index,value := range epoch0Leaders {
+	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
 	}
 
 	alphas := make([]*big.Int, 0)
-	for _,value := range epoch0Leaders {
+	for _, value := range epoch0Leaders {
 		tempInt := new(big.Int).SetInt64(0)
 		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
-		alphas = append(alphas,tempInt)
+		alphas = append(alphas, tempInt)
 	}
 
-	for i:=0 ; i< pos.EpochLeaderCount; i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 
 		// AlphaPK  stage1Genesis
 		mi0 := new(ecdsa.PublicKey)
@@ -144,7 +148,7 @@ func init() {
 		s.smaGenesis[i] = smaPiece
 		//fmt.Printf("========================Jacob %d, %v\n", i, hex.EncodeToString(crypto.FromECDSAPub(s.smaGenesis[i])))
 
-		for j:=0;j<pos.EpochLeaderCount;j++{
+		for j := 0; j < pos.EpochLeaderCount; j++ {
 			// AlphaIPki stage2Genesis
 			alphaIPkj := new(ecdsa.PublicKey)
 			alphaIPkj.Curve = crypto.S256()
@@ -294,7 +298,7 @@ func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 // isLocalPkInPreEpochLeaders check if local pk is in pre generate epochleader.
 // If get pre epochleader length is 0, return true,err to use epoch 0 info
 func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
-	if epochID < 2 {
+	if epochID == 0 {
 		return true, nil
 	}
 
@@ -306,7 +310,7 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 	localPk, err := s.getLocalPublicKey()
 	if err != nil {
 		log.Error("SlotLeaderSelection.IsLocalPkInPreEpochLeaders getLocalPublicKey error", "error", err)
-		return false, nil
+		panic("SlotLeaderSelection.IsLocalPkInPreEpochLeaders getLocalPublicKey error")
 	}
 
 	for i := 0; i < len(prePks); i++ {
@@ -318,13 +322,19 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 }
 
 //getWorkStage get work stage of epochID from levelDB
-func (s *SlotLeaderSelection) getWorkStage(epochID uint64) (int, error) {
+func (s *SlotLeaderSelection) getWorkStage(epochID uint64) int {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
 	if err != nil {
-		return 0, err
+		if err.Error() == "leveldb: not found" {
+			s.setWorkStage(epochID, slotLeaderSelectionInit)
+			return slotLeaderSelectionInit
+		} else {
+			log.Error("getWorkStage error: " + err.Error())
+			panic("getWorkStage error")
+		}
 	}
 	workStageUint64 := posdb.BytesToUint64(ret)
-	return int(workStageUint64), err
+	return int(workStageUint64)
 }
 
 //saveWorkStage save the work stage of epochID in levelDB
@@ -376,7 +386,7 @@ func (s *SlotLeaderSelection) dumpData() {
 }
 
 func (s *SlotLeaderSelection) dumpPreEpochLeaders() {
-	currentEpochID, _ := s.getWorkingEpochID()
+	currentEpochID := s.getWorkingEpochID()
 	log.Info("dumpPreEpochLeaders", "currentEpochID", curEpochId)
 	if currentEpochID == 0 {
 		return
@@ -388,7 +398,7 @@ func (s *SlotLeaderSelection) dumpPreEpochLeaders() {
 	}
 }
 func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
-	currentEpochID, _ := s.getWorkingEpochID()
+	currentEpochID := s.getWorkingEpochID()
 	log.Info("dumpCurrentEpochLeaders", "currentEpochID", curEpochId)
 	if currentEpochID == 0 {
 		return
@@ -400,7 +410,7 @@ func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
 }
 
 func (s *SlotLeaderSelection) dumpSlotLeaders() {
-	currentEpochID, _ := s.getWorkingEpochID()
+	currentEpochID := s.getWorkingEpochID()
 	log.Info("dumpSlotLeaders", "currentEpochID", curEpochId)
 	if currentEpochID == 0 {
 		return
@@ -508,6 +518,11 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		return piecesPtr, nil
 	}
 }
+
+func (s *SlotLeaderSelection) GetSma(epochID uint64) ([]*ecdsa.PublicKey, error) {
+	return s.getSMAPieces(epochID)
+}
+
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
 	s.clearData()
@@ -562,10 +577,12 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
 			log.Error("not")
+			return errors.New("piecesPtr is not on curve")
 		}
 		ret = crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
 			log.Error("not")
+			return errors.New("epochLeadersPtrArray is not on curve")
 		}
 	}
 	slotLeadersPtr, crs, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
@@ -579,11 +596,19 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	// 6. insert slot address to local DB
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
-		//s.epochLeadersPtrArray[index] = val
 		s.slotLeadersPtrArray[index] = val
 		if err != nil {
 			return err
 		}
+
+		//ret, err := posdb.GetDb().GetWithIndex(uint64(epochID), uint64(index), SlotLeader)
+		//if err != nil {
+		//	log.Debug("get error:" + err.Error())
+		//}
+		//
+		//if hex.EncodeToString(ret) != hex.EncodeToString(crypto.FromECDSAPub(val)) {
+		//	log.Debug("compare error")
+		//}
 	}
 	// insert CRS to local DB
 	crBuf, err := rlp.EncodeToBytes(crs)
@@ -781,7 +806,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		}
 	}
 	ArrayPiece = ArrayPieceClean
-	log.Debug(fmt.Sprintf("len(ArrayPiece):", len(ArrayPiece)))
+	log.Debug(fmt.Sprintf("len(ArrayPiece):%d", len(ArrayPiece)))
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
 		return err
@@ -864,14 +889,20 @@ func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uin
 }
 
 func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
-	currentEpochID, _ := s.getWorkingEpochID()
+	currentEpochID := s.getWorkingEpochID()
 	s.setWorkStage(currentEpochID, workStage)
 }
 
-func (s *SlotLeaderSelection) getWorkingEpochID() (uint64, error) {
+func (s *SlotLeaderSelection) getWorkingEpochID() uint64 {
 	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
-	retUint64 := posdb.BytesToUint64(ret)
-	return retUint64, err
+	if err != nil {
+		if err.Error() == "leveldb: not found" {
+			posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", postools.Uint64ToBytes(0))
+			return 0
+		}
+	}
+	retUint64 := postools.BytesToUint64(ret)
+	return retUint64
 }
 
 func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
@@ -914,4 +945,12 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 	}
 
 	return nil, nil, errors.New("Stg1 data get from StateDb verified failed")
+}
+
+func ErrorCountAdd() {
+	ErrorCount++
+}
+
+func WarnCountAdd() {
+	WarnCount++
 }
