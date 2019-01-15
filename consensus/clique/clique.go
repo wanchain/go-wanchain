@@ -714,20 +714,11 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	var leader string
 	if epochId != 0 {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-		if err != nil || leaderPub == nil {
-			select {
-			case <-stop:
-				return nil, nil
-			case <-time.After(time.Second):
-				fmt.Println("GetSlotLeader failed, sleep 1, epochID:", epochId, " slotID:", slotId)
-				//continue
-				return nil, nil
-			}
+		if err != nil  {
+			return nil, err
 		}
 		leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-
-		fmt.Println("err:", err, "leaderPK:", leader)
-
+		fmt.Println("leaderPK:", leader)
 	} else {
 		//genesis block miner publicKey
 		leader = pos.GenesisPK
@@ -756,7 +747,6 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 			epochIDPack = epochId
 			slotIDPack = slotId
-			//break loopCheck
 		}
 	} else {
 		return nil, nil
