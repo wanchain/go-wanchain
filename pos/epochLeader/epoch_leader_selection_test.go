@@ -17,6 +17,10 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"encoding/json"
 	"github.com/wanchain/go-wanchain/log"
+	"crypto/rand"
+	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/common"
+	"strconv"
 )
 
 
@@ -24,7 +28,7 @@ var allocJson1 = `{
     "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e": {
 		"balance": "40000000000000000000028",
 		"staking":{
-			"amount":"200000000000000000000",
+			"amount":"400000000000000000000",
 			"s256pk":"0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70",
 			"bn256pk":"0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910"
 		}
@@ -80,7 +84,7 @@ var allocJson1 = `{
 	"0x435b316a70cdb8143d56b3967aacdb6392fd6125": {
 		"balance": "4000000000000000000000",
 		"staking":{
-			"amount":"100000000000000000000",
+			"amount":"400000000000000000000",
 			"s256pk":"0x04dcbab97fee67c00f6969d2e9eedf100d72bbce8fa06a40d2fb074bd8474b96c0288d1bab49c173a60d86356cddcec4e6c0f074b25e30f34e4f15cc23622409f1",
 			"bn256pk":"0x022134f210c03cbc04b185b45c413163a968c101d349225b2a2eb75edc34179a0fa19a9677be92993db3ddeb8de327ecb0a5bead05bbdcfe665e291a3c0954ef"
 		}
@@ -251,5 +255,47 @@ func TestGetGetEpochLeadersWithDirrentRand(t *testing.T) {
 	}
 
 	log.Info("rb proposer not same count%v",notCount)
+
+}
+
+func TestGetGetEpochLeadersCapability(t *testing.T) {
+
+	blkChain, _ := newTestBlockChain(true)
+
+	stateDb, err := blkChain.StateAt(blkChain.GetBlockByNumber(0).Root())
+	if err != nil {
+		t.Fail()
+	}
+
+	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
+
+	loopCount := 10000
+	for i:=0;i<loopCount;i++ {
+		_, ga, err := bn256.RandomG1(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		epocher1.SelectLeaders(ga.Marshal(),30,30,stateDb,uint64(i))
+	}
+
+	epochLeadersMap := make(map[string]int)
+	for i:=0;i<loopCount;i++ {
+		epochLeadersArray := epocher1.GetEpochLeaders(uint64(i))
+		for _,value := range epochLeadersArray {
+			key := common.ToHex(value)
+			if count,ok:= epochLeadersMap[key];ok {
+				epochLeadersMap[key] = count + 1
+			} else {
+				epochLeadersMap[key] = 1
+			}
+		}
+	}
+
+	fmt.Println("the select epoch leader count=" + strconv.Itoa(len(epochLeadersMap)))
+
+	for key,value := range epochLeadersMap {
+		fmt.Println("key=",key,"count=",value)
+	}
 
 }
