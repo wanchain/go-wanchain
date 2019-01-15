@@ -647,9 +647,8 @@ func (s *SlotLeaderSelection) isLocalPkInCurrentEpochLeaders() bool {
 func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err error) {
 	// MI == AlphaiPki
 	if !uleaderselection.PublicKeyEqual(s.stageOneMi[index], s.stageTwoAlphaPKi[index][index]) {
-		return false, nil
+		return false, errors.New("stageOneMi is not equal sageTwoAlphaPki")
 	} else {
-		log.Debug(fmt.Sprintf("VerifyDleqProof: len(pk):%d, len(alphaPK):%d, len(stageTwoProof):%d", len(s.epochLeadersPtrArray[:]), len(s.stageTwoAlphaPKi[index][:]), len(s.stageTwoProof[index][:])))
 		log.Debug(fmt.Sprintln("VerifyDleqProof: pk:", s.epochLeadersPtrArray[:], " , alphaPK:", s.stageTwoAlphaPKi[index][:], ", stageTwoProof:", s.stageTwoProof[index][:]))
 		// verify proof[index]
 		if s.epochLeadersPtrArray[0] == nil {
@@ -670,7 +669,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 
 	indexs, exist := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPk))]
 	if exist == false {
-		log.Debug(fmt.Sprintf("%v not in epoch leaders", hex.EncodeToString(crypto.FromECDSAPub(selfPk))))
+		log.Warn(fmt.Sprintf("%v not in epoch leaders", hex.EncodeToString(crypto.FromECDSAPub(selfPk))))
 		return nil, nil
 	}
 
@@ -694,22 +693,17 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, proofs []string, err error) {
 
 	stateDb, err := s.getCurrentStateDb()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var keyBuf bytes.Buffer
 	epochIDBufDec := posdb.Uint64ToBytes(epochID)
-	if err != nil {
-		return nil, nil, err
-	}
 	keyBuf.Write(epochIDBufDec)
-
 	selfIndexBufDec := posdb.Uint64ToBytes(selfIndex)
-	if err != nil {
-		return nil, nil, err
-	}
 	keyBuf.Write(selfIndexBufDec)
-
 	keyBuf.Write([]byte("slotLeaderStag2"))
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
 
@@ -717,10 +711,8 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
-		log.Debug("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
-		return nil, nil, errors.New("can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
+		return nil, nil, errors.New("getStage2TxAlphaPki can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
-
 	_, _, _, alphaPki, proof, err := slottools.RlpUnpackStage2Data(data)
 	if err != nil {
 		return nil, nil, err
@@ -729,41 +721,52 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 }
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
+
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		_, mi, _ := s.getStg1StateDbInfo(epochID, uint64(i))
-		if len(mi) == 0 {
+		_, mi, err := s.getStg1StateDbInfo(epochID, uint64(i))
+		if err != nil {
+			log.Warn("getStg1StateDbInfo","error",err.Error(),"index",i)
 			s.validEpochLeadersIndex[i] = false
-		} else {
-			s.stageOneMi[i] = crypto.ToECDSAPub(mi)
+		}else{
+			if len(mi) == 0 {
+				log.Warn("getStg1StateDbInfo","error","len(mi)=0","index",i)
+				s.validEpochLeadersIndex[i] = false
+			} else {
+				s.stageOneMi[i] = crypto.ToECDSAPub(mi)
+			}
 		}
 
+		if !s.validEpochLeadersIndex[i] {
+			continue
+		}
 		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID, uint64(i))
 		if err != nil {
+			log.Warn("getStage2TxAlphaPki","error",err.Error(),"index",i)
+			s.validEpochLeadersIndex[i] = false
 			continue
 		}
 
 		if (len(alphaPkis) != pos.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
+			log.Warn("getStage2TxAlphaPki","error","len(alphaPkis) or len(proofs) is wrong.","index",i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
 
 			for j := 0; j < pos.EpochLeaderCount; j++ {
-				//s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub([]byte(alphaPkis[j]))
 				alphaPkiDecodeBytes, err := hex.DecodeString(alphaPkis[j])
 				if err != nil {
-					return err
+					log.Warn("getStage2TxAlphaPki:DecodeString","error",err.Error(),"indexI",i,"indexJ",j)
+					s.validEpochLeadersIndex[i] = false
+				}else{
+					s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub(alphaPkiDecodeBytes)
 				}
-				s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub(alphaPkiDecodeBytes)
 			}
 
 			for j := 0; j < StageTwoProofCount; j++ {
-				//proof, err := strconv.ParseInt(proofs[j], 10, 64)
-				//if err != nil {
-				//	return err
-				//}
 				var err bool
 				s.stageTwoProof[i][j], err = big.NewInt(0).SetString(proofs[j], 16)
 				if !err {
-					return errors.New("proofs error")
+					log.Warn("getStage2TxAlphaPki:StageTwoProof:SetString","error",err,"indexI",i,"indexJ",j)
+					s.validEpochLeadersIndex[i] = false
 				}
 			}
 		}
@@ -774,6 +777,10 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 
 // create security message SMA and insert into localDB
 func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
+	if !s.isLocalPkInCurrentEpochLeaders(){
+		log.Debug("generateSecurityMsg","input public key", hex.EncodeToString(crypto.FromECDSAPub(&PrivateKey.PublicKey)))
+		return errors.New("local public key is not in current Epoch leaders")
+	}
 	// collect data
 	err := s.collectStagesData(epochID)
 	if err != nil {
@@ -781,8 +788,9 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	// verify security pieces
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		valid, _ := s.verifySecurityPiece(uint64(i))
+		valid, errVSP := s.verifySecurityPiece(uint64(i))
 		if !valid {
+			log.Warn("generateSecurityMsg","epochID",epochID,"index",i, "verifySecurityPiece error",errVSP.Error())
 			s.validEpochLeadersIndex[i] = false
 		}
 	}
@@ -790,20 +798,18 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	// build security self pieces. alpha1*pki, alpha2*pk2, alpha3*pk3....
 	ArrayPiece, err := s.buildSecurityPieces(epochID)
 	if err != nil {
+		log.Warn("generateSecurityMsg:buildSecurityPieces","error",err.Error())
 		return err
 	}
+
+	log.Info("generateSecurityMsg","len(ArrayPiece)",len(ArrayPiece))
+
 	smasPtr := make([]*ecdsa.PublicKey, 0)
 	var smasBytes bytes.Buffer
-	ArrayPieceClean := make([]*ecdsa.PublicKey, 0)
-	for i := 0; i < len(ArrayPiece); i++ {
-		if ArrayPiece[i] != nil {
-			ArrayPieceClean = append(ArrayPieceClean, ArrayPiece[i])
-		}
-	}
-	ArrayPiece = ArrayPieceClean
-	log.Debug(fmt.Sprintf("len(ArrayPiece):%d", len(ArrayPiece)))
+
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
+		log.Warn("generateSecurityMsg:GenerateSMA","error",err.Error())
 		return err
 	}
 	for _, value := range smasPtr {
@@ -812,6 +818,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
+		log.Warn("generateSecurityMsg:Put","error",err.Error())
 		return err
 	}
 

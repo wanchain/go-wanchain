@@ -23,7 +23,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderProofByGenesis(PrivateKey *ecdsa.Priv
 	rbBytes := s.randomGenesis.Bytes()
 
 	log.Debug("GetSlotLeaderProofByGenesis","epochID",epochID,"slotID",slotID)
-
+	log.Debug("GetSlotLeaderProofByGenesis","epochID",epochID,"slotID",slotID,"slotLeaderRb",hex.EncodeToString(rbBytes[:]))
 	for index,value := range epochLeadersPtrPre {
 		log.Debug("GetSlotLeaderProofByGenesis","epochID",epochID,"slotID",
 			slotID,"Genesis epochLeaderPtrPre",index,"Genesis epochLeaderPtrPre value",hex.EncodeToString(crypto.FromECDSAPub(value)))
@@ -73,7 +73,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 
 	log.Debug("GetSlotLeaderProof","epochID",epochID,"slotID",slotID)
 
-	log.Debug("GetSlotLeaderProof","epochID",epochID,"slotID",slotID,"rb",hex.EncodeToString(rbBytes))
+	log.Debug("GetSlotLeaderProof","epochID",epochID,"slotID",slotID,"slotLeaderRb",hex.EncodeToString(rbBytes))
 
 	for index,value := range epochLeadersPtrPre {
 		log.Debug("GetSlotLeaderProof","epochID",epochID,"slotID",
@@ -116,11 +116,13 @@ func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID ui
 			return false
 		}
 		smaLen := new(big.Int).SetInt64(int64(len(smaPieces)))
-
+		log.Debug("VerifySlotProofByGenesis","epochID",epochID,"slotID",slotID,"slotLeaderRb",hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("VerifySlotProofByGenesis aphaiPki","index",index,"epochID",epochID,"slotID",slotID)
 		for i:=0;i<len(smaPieces);i++{
 			log.Debug("VerifySlotProofByGenesis","piece index",i,"piece",hex.EncodeToString(crypto.FromECDSAPub(smaPieces[i])))
 		}
+
+
 
 		var buffer bytes.Buffer
 		buffer.Write(s.randomGenesis.Bytes())
@@ -275,6 +277,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64,Proo
 		smaLen := new(big.Int).SetInt64(int64(len(smaPieces)))
 
 		log.Debug("VerifySlotLeaderProof aphaiPki","index",index,"epochID",epochID,"slotID",slotID)
+		log.Debug("VerifySlotLeaderProof","epochID",epochID,"slotID",slotID,"slotLeaderRb",rbBytes[:])
 		for i:=0;i<len(smaPieces);i++{
 			log.Debug("VerifySlotLeaderProof","piece index",i,"piece",hex.EncodeToString(crypto.FromECDSAPub(smaPieces[i])))
 		}
