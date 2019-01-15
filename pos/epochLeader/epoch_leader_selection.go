@@ -229,7 +229,6 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
-		//fmt.Println("for each get data",value)
 		staker := vm.StakerInfo{}
 		err := json.Unmarshal(value, &staker)
 		if err != nil {
@@ -243,25 +242,17 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		if staker.Amount.Cmp(Big0)  > 0 && (*pitem).probabilities.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
-			fmt.Println(common.ToHex((*pitem).probabilities.Bytes()))
+			log.Info(common.ToHex((*pitem).probabilities.Bytes()))
 		}
 
 		return true
 	})
 
-	for idx, _ := range ps {
-		if idx == 0 {
-			continue
-		}
-
-		fmt.Println("epochid=" +  strconv.Itoa(int(epochId)) + "   probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
-	}
-
 
 	sort.Sort(ProposerSorter(ps))
 
 
-	fmt.Println("------------------------------------------------------------------------------------------")
+	log.Info("------------------------------------------------------------------------------------------")
 	for idx, _ := range ps {
 		if idx == 0 {
 			continue
@@ -269,7 +260,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		ps[idx].probabilities = big.NewInt(0).Add(ps[idx].probabilities, ps[idx-1].probabilities)
 
-		fmt.Println("after sum probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
+		log.Info("after sum probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
 	}
 
 	return ps, nil
@@ -284,7 +275,6 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	//the last one is total properties
 	tp := ps[len(ps)-1].probabilities
 
-	fmt.Println("tp=" + common.ToHex(tp.Bytes()))
 
 	var Byte0 = []byte{byte(0)}
 	var buffer bytes.Buffer
@@ -294,7 +284,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
-	fmt.Println("\n\n\n")
+	log.Info("\n\n\n")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
@@ -308,14 +298,14 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 			idx = len(ps) - 1
 		}
 
-		fmt.Println("select epoch leader epochid,idx,pubs", epochId, i, common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
+		log.Info("select epoch leader", "epochid=",epochId, "idx=",i, "pub=", common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx + 1].pubSec256)
 		e.epochLeadersDb.PutWithIndex(epochId, uint64(i), "", crypto.FromECDSAPub(ps[idx].pubSec256))
 
 		cr = crypto.Keccak256(cr)
 	}
 
-	fmt.Println("\n\n\n")
+	log.Info("\n\n\n")
 
 	return nil
 }
@@ -337,13 +327,11 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	r1 := buffer.Bytes()       //r1 = 1||r
 	cr := crypto.Keccak256(r1) //cr = hash(r1)
 
-	fmt.Println("\n\n\n")
+	log.Info("\n\n\n")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
-
-		//fmt.Println("mod tp=" + common.ToHex(crBig.Bytes()))
 
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
@@ -352,7 +340,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 			idx = len(ps) - 1
 		}
 
-		fmt.Println("select random leader epochid,idx,pubs", epochId, i, common.ToHex(ps[idx].pubBn256.Marshal()))
+		log.Info("random selector ","index:=",idx,"bn256",common.ToHex(ps[idx].pubBn256.Marshal()))
 
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
 		//EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
@@ -360,7 +348,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		cr = crypto.Keccak256(cr)
 	}
 
-	fmt.Println("\n\n\n")
+	log.Info("\n\n\n")
 
 	return nil
 }

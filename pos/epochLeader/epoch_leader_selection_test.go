@@ -14,7 +14,110 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"time"
 	"bytes"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"encoding/json"
+	"github.com/wanchain/go-wanchain/log"
 )
+
+
+var allocJson1 = `{
+    "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e": {
+		"balance": "40000000000000000000028",
+		"staking":{
+			"amount":"200000000000000000000",
+			"s256pk":"0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70",
+			"bn256pk":"0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910"
+		}
+    },
+	"0x8b179c2b542f47bb2fb2dc40a3cf648aaae1df16": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x04e37be2aa12f3df03953c0a172d0f964a1561f321120c8dfa061df35dac4d52d03bbeb5758c37de915209d412bf2aead300c6e530a46967dfb736a8b4f186d950",
+			"bn256pk":"0x2bf18653c442fa51689c70ad3169d444c12e8279e093bf8ddb1010fbd772d0db0c322c62c475d25fde04b245d8913b8f0c38c437cc819c679a51a5263a40fadb"
+		}
+    },
+	"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x045c6f2618a476792c14a5959e418c9038c0b347fca40403326f818c2ed5dbdba5a77ecbaa0a2822ffb9d98e2190630537387a2ca0c24afca372d41acd9c9bf7d1",
+			"bn256pk":"0x102158973be3fdcc6c73263995fb2bb441b5e71a24cbca1d87516a29a94f197f08e898b88e26b67d933c5bb980b5ae6d257acd6952a98ee8a321a3b747bd197f"
+		}
+    },
+	"0x7a22d4e2dc5c135c4e8a7554157446e206835b05": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x04a8aa21dc331a4471c0d32b4a1032812297c4c201acb48286279b701c990ea35a145eeeb5c97334e896683234d1deb28420c609c81375e4612b76ca823c80139f",
+			"bn256pk":"0x25230a3e503de1a331a36157568c97d4a38be6c60846a49c44c509d97e2b0792272d486e3eef5e323a5fae10121381d5fe7c7d63ba3d82839b9b10ef1e2a982f"
+		}
+    },
+	"0x8836c42e61310bb447cfa70aa789662bfece2832": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x04a754389f9beb3f09ff07610fb7adb6d6107bc7105b2a2bdc9b11d4b3ef55c27cd74cf829007b701c7b7b69768dccf3081d8d4dca626c1fe3c92c1017d4fb74e0",
+			"bn256pk":"0x11f4d33b5eaeec1067be306e8e047f28f95f4e7a241d92bddd616abff27337f527447ad54e497a16ae431aade12e2660b7e57004ae83387bdb66ba2625245d81"
+		}
+    },
+	"0x576713551e21b136c5b775f5fb4081441773b2d4": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x0480dc2f30861c94c3a9dd9aa6dad207c9431a771247f61c8d62e9b616435ceebcb6b60e40e9f46a6f08bbd3e05939b3c0ea3f690c116c34afde1e533c2e8bb0ff",
+			"bn256pk":"0x280e59db5249403de055615028242680bde1b89c3912a5d12ed0e76ad988f75a0a8e187dbc4688eb6eb708ced261859dd2ea470be08f2f4f0cbdfe6c36d8ae4c"
+		}
+    },
+	"0x32944ea9809c460305c269f75dbb83ff022e79da": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x049fe5b62c6300d3c913bc1d0082af669ee4ebdcc9fe967f4296bdb12e4c5d99c0a04d9712e35370e80a08a2db0e3d06f2281e0638ad92ffcb79c6473553ebe5d2",
+			"bn256pk":"0x166969216beaf17f488ad267dee8cb8edbd74fccff4ddff71244656a49da0ae42a98752303b46a118d1aaa7c604fe47366bf8948feeb842b3d887b47eaa071a3"
+		}
+    },
+	"0x435b316a70cdb8143d56b3967aacdb6392fd6125": {
+		"balance": "4000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x04dcbab97fee67c00f6969d2e9eedf100d72bbce8fa06a40d2fb074bd8474b96c0288d1bab49c173a60d86356cddcec4e6c0f074b25e30f34e4f15cc23622409f1",
+			"bn256pk":"0x022134f210c03cbc04b185b45c413163a968c101d349225b2a2eb75edc34179a0fa19a9677be92993db3ddeb8de327ecb0a5bead05bbdcfe665e291a3c0954ef"
+		}
+    },
+	"0x23fc2eda99667fd3df3caa7ce7e798d94eec06eb": {
+		"balance": "1000000000000000000000",
+		"staking":{
+			"amount":"100000000000000000000",
+			"s256pk":"0x04a5946c1968bbe53bfd897c06d53555292bef6e71a4c8ed92b9c1de1b1b94f797c3984581307788ff0c2a564548901f83000b1aa65a1532dacca01214e1f3fa6c",
+			"bn256pk":"0x1b4626213c1af35b38d226a386e3b661a98198794e52740d2be58c14315dc1a12d8e79a95c2b6a21653550b422bb3211e62b6af6b1afe09c3232bd6c6b601ea5"
+		}
+    },
+ 	"0xb02737095f945768ca983a60e0ba92b758111111": {"balance": "10000000000000000000000000000000000000"},
+	"0xb752027021340f2fec33abc91daf198915bbbbbb": {"balance": "10000000000000000000000000000000000000"},
+	"0xe8ffc3d0c02c0bfc39b139fa49e2c5475f000000": {"balance": "10000000000000000000000000000000000000"}
+ }`
+
+
+func jsonPrealloc(data string) core.GenesisAlloc {
+	var ga core.GenesisAlloc
+	if err := json.Unmarshal([]byte(data), &ga); err != nil {
+		panic(err)
+	}
+	return ga
+}
+
+func testGenesisBlock1() *core.Genesis {
+	return &core.Genesis{
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x59f83144,
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		//GasLimit:   0x47b760,	// 4700000
+		GasLimit:   0x2cd29c0,	// 47000000
+		Difficulty: big.NewInt(1),
+		Alloc:      jsonPrealloc(allocJson1),
+	}
+}
 
 type bproc struct{}
 
@@ -29,7 +132,7 @@ func (bproc) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) 
 func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 
 	db, _ := ethdb.NewMemDatabase()
-	gspec := core.DefaultPlutoGenesisBlock()
+	gspec := testGenesisBlock1()
 	gspec.Difficulty = big.NewInt(1)
 	gspec.MustCommit(db)
 	engine := ethash.NewFullFaker(db)
@@ -87,5 +190,66 @@ func TestGetGetEpochLeaders(t *testing.T) {
 		}
 	}
 
+}
+
+
+func TestGetGetEpochLeadersWithDirrentRand(t *testing.T) {
+
+
+	blkChain,_ := newTestBlockChain(true)
+
+	stateDb, err := blkChain.StateAt(blkChain.GetBlockByNumber(0).Root())
+	if err != nil {
+		t.Fail()
+	}
+
+
+	epocher1 := NewEpocherWithLBN(blkChain,"rb1","epdb1")
+	epocher2 := NewEpocherWithLBN(blkChain,"rb2","epdb2")
+
+	r1 := []byte{byte(1)}
+	epocher1.SelectLeaders(r1,10,10,stateDb,0)
+
+
+	r2 := []byte{byte(10)}
+	epocher2.SelectLeaders(r2,10,10,stateDb,0)
+
+	epl1 := epocher1.GetEpochLeaders(0)
+	epl2 := epocher2.GetEpochLeaders(0)
+
+
+	isSame := true;
+	notCount := 0
+	for idx,val := range epl1 {
+		if !bytes.Equal(val,epl2[idx]) {
+			isSame = false
+			notCount++
+		}
+	}
+
+	if isSame {
+		t.Fail()
+	}
+	log.Info("epoch leader not same count%v",notCount)
+
+
+	rbl1 := epocher1.GetRBProposerGroup(0)
+	rbl2 := epocher2.GetRBProposerGroup(0)
+
+	isSame = true;
+	notCount = 0
+
+	for idx,val := range rbl1 {
+		if !bytes.Equal(val.Marshal(),rbl2[idx].Marshal()) {
+			isSame = false
+			notCount++
+		}
+	}
+
+	if isSame {
+		t.Fail()
+	}
+
+	log.Info("rb proposer not same count%v",notCount)
 
 }
