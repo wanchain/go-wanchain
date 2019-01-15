@@ -3,6 +3,11 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
+	"math/big"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -14,16 +19,12 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/pos/wanpos_crypto"
-	"math/big"
-	"strings"
-	"sync"
-	"time"
+	bn256 "github.com/wanchain/pos/cloudflare"
+	wanpos "github.com/wanchain/pos/wanpos_crypto"
 )
 
 var (
-	maxUint64       = uint64(1<<64 - 1)
+	maxUint64 = uint64(1<<64 - 1)
 )
 
 type RbDKGDataCollector struct {
@@ -36,8 +37,7 @@ type RbSIGDataCollector struct {
 	pk   *bn256.G1
 }
 
-
-type GetRBProposerGroupFunc func (epochId uint64) []bn256.G1
+type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 
 type RandomBeacon struct {
 	epochStage int
@@ -51,7 +51,7 @@ type RandomBeacon struct {
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
 
-	mu	sync.Mutex
+	mu sync.Mutex
 }
 
 var (
@@ -545,7 +545,7 @@ func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 		pksStr += common.ToHex(pk.Marshal()) + ", "
 	}
 
-	log.Info("get rb proposer group", "proposer", pksStr)
+	log.Debug("get rb proposer group", "proposer", pksStr)
 	return pks
 }
 
