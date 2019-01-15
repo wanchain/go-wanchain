@@ -304,11 +304,13 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
 		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
+
 		return false
 	}
 
 	if sid > kEnd || sid < kStart {
 		log.Warn("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart, "rangeEnd", kEnd)
+
 		return false
 	}
 
