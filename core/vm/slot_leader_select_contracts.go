@@ -120,7 +120,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	if !isInValidStage(posdb.BytesToUint64(epochID), evm, 0, pos.Stage1K) {
-		return nil, nil
+		return nil, errors.New("Not in range")
 	}
 
 	// address : sc slotLeaderPrecompileAddr
@@ -187,7 +187,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
 
 	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm, pos.Stage2K, pos.Stage4K) {
-		return nil, nil
+		return nil, errors.New("Not in range")
 	}
 
 	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
