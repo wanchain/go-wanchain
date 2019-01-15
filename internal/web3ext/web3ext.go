@@ -119,6 +119,11 @@ web3._extend({
 			call: 'pos_version',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'random',
+			call: 'pos_random',
+			params: 2
+		}),
 	]
 });
 `
