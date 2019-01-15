@@ -84,7 +84,11 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) string {
 
 func (a PosApi) GetSmaByEpochID(epochID uint64) string {
 	pks, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
-	info := "" + err.Error() + "\n"
+	info := ""
+	if err != nil {
+		info = "" + err.Error() + "\n"
+	}
+
 	info += fmt.Sprintf("sma count:%d \n", len(pks))
 
 	for i := 0; i < len(pks); i++ {
