@@ -63,9 +63,9 @@ var DefaultConfig = Config{
 	big.NewInt(1),
 	"",
 	nil,
-	3 * SlotCount / 10 - 1,
-	6 * SlotCount / 10,
-	8 * SlotCount / 10 - 1,
+	Stage4K - 1,
+	Stage6K,
+	Stage9K - 1,
 }
 
 func Cfg() *Config {
