@@ -271,9 +271,9 @@ func (p *Pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (st
 	}
 
 	var staker StakerInfo
-	error := json.Unmarshal(infoArray, &staker)
-	if error != nil {
-		return nil, common.Hash{}, error
+	err = json.Unmarshal(infoArray, &staker)
+	if err != nil {
+		return nil, common.Hash{}, err
 	}
 
 	if staker.PubSec256 == nil {
