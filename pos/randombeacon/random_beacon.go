@@ -553,19 +553,23 @@ func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	payloadStr := common.Bytes2Hex(payloadBytes)
-	//log.Info("dkg payload hex string", "playload", payloadStr)
-	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	if err != nil {
-		log.Error("create abi instance fail", "err", err)
-		return nil, err
-	}
+	//payloadStr := common.Bytes2Hex(payloadBytes)
+	////log.Info("dkg payload hex string", "playload", payloadStr)
+	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
+	//if err != nil {
+	//	log.Error("create abi instance fail", "err", err)
+	//	return nil, err
+	//}
+	//
+	//ret, err := rbAbi.Pack("dkg", &payloadStr)
+	//if err != nil {
+	//	log.Error("abi pack fail", "err", err)
+	//	return nil, err
+	//}
 
-	ret, err := rbAbi.Pack("dkg", &payloadStr)
-	if err != nil {
-		log.Error("abi pack fail", "err", err)
-		return nil, err
-	}
+	ret := make([]byte, 4+len(payloadBytes))
+	copy(ret, vm.GetDkgId())
+	copy(ret[4:], payloadBytes)
 
 	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	return ret, nil
@@ -582,17 +586,21 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	payloadStr := common.Bytes2Hex(payloadBytes)
-	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	if err != nil {
-		return nil, err
-	}
+	//payloadStr := common.Bytes2Hex(payloadBytes)
+	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//ret, err := rbAbi.Pack("sigshare", payloadStr)
+	//if err != nil {
+	//	log.Error("abi pack payload", "err", err)
+	//	return nil, err
+	//}
 
-	ret, err := rbAbi.Pack("sigshare", payloadStr)
-	if err != nil {
-		log.Error("abi pack payload", "err", err)
-		return nil, err
-	}
+	ret := make([]byte, 4+len(payloadBytes))
+	copy(ret, vm.GetSigshareId())
+	copy(ret[4:], payloadBytes)
 
 	return ret, nil
 }
