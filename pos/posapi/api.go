@@ -6,7 +6,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
@@ -90,17 +89,7 @@ func (a PosApi) GetSmaByEpochID(epochID uint64) string {
 func (a PosApi) GetRandomProposersByEpochID(epochID uint64) string {
 	info := ""
 
-	type epoch interface {
-		GetRBProposerGroup(epochID uint64) []bn256.G1
-	}
-
-	selector := posdb.GetEpocherInst()
-
-	if selector == nil {
-		return "GetEpocherInst error"
-	}
-
-	leaders := selector.(epoch).GetRBProposerGroup(epochID)
+	leaders := posdb.GetRBProposerGroup(epochID)
 	info += fmt.Sprintf("random proposer count:%d \n", len(leaders))
 
 	for i := 0; i < len(leaders); i++ {
