@@ -12,7 +12,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/pos/cloudflare"
@@ -91,7 +90,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	rb.doLoop(statedb, epocher, rc, eid, sid)
 }
 
-func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) error {
+func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, epochId uint64, slotId uint64) error {
 	if statedb == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
@@ -105,10 +104,10 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher,
 	log.Info("set miner account", "puk", pos.Cfg().SelfPuK, "prk", pos.Cfg().SelfPrK)
 
 	// get epoch id, slot id
-	epochId, slotId := slotleader.GetEpochSlotID()
-	if eid != epochId || sid != slotId {
-		return errors.New("bad time")
-	}
+	//epochId, slotId := slotleader.GetEpochSlotID()
+	//if eid != epochId || sid != slotId {
+	//	return errors.New("bad time")
+	//}
 
 	log.Info("get epoch slot id", "epochId", epochId, "slotId", slotId)
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
