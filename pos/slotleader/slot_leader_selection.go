@@ -367,12 +367,10 @@ func (s *SlotLeaderSelection) clearData() {
 
 	for i := 0; i < pos.SlotCount; i++ {
 		s.slotLeadersPtrArray[i] = nil
-
 	}
 
 	for i := 0; i < pos.SlotCount; i++ {
 		s.slotLeadersIndex[i] = 0
-
 	}
 }
 
@@ -432,7 +430,7 @@ func (s *SlotLeaderSelection) dumpLocalPublicKeyIndex() {
 	log.Info("current Local publickey", "indexs in current epochLeaders", s.epochLeadersMap[hex.EncodeToString(localPublicKeyByte)])
 }
 
-func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
+func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Enter()
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
@@ -442,7 +440,6 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) error {
 		s.epochLeadersPtrArray[index] = crypto.ToECDSAPub(value)
 	}
 	functrace.Exit()
-	return nil
 }
 
 func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecdsa.PublicKey, err error) {
@@ -525,7 +522,7 @@ func (s *SlotLeaderSelection) GetSma(epochID uint64) ([]*ecdsa.PublicKey, error)
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	functrace.Enter()
-	s.clearData()
+
 	epochIDGet := epochID
 
 	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
@@ -537,11 +534,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil && epochID > 1 {
 		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
-	}
 
-	err = s.buildEpochLeaderGroup(epochIDGet)
-	if err != nil {
-		return errors.New("build epoch leader group error")
+		s.clearData()
+		s.buildEpochLeaderGroup(epochIDGet)
 	}
 
 	// 2. get random

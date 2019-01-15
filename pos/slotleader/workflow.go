@@ -54,6 +54,10 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionInit:
 		log.Debug("Enter slotLeaderSelectionInit")
 
+		s.clearData()
+
+		s.buildEpochLeaderGroup(epochID)
+
 		s.setWorkingEpochID(epochID)
 
 		err := s.generateSlotLeadsGroup(epochID)
