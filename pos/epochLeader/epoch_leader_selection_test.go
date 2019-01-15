@@ -270,13 +270,15 @@ func TestGetGetEpochLeadersCapability(t *testing.T) {
 	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
 
 	loopCount := 10000
+	nr := 30
+	ne := 30
 	for i:=0;i<loopCount;i++ {
 		_, ga, err := bn256.RandomG1(rand.Reader)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		epocher1.SelectLeaders(ga.Marshal(),30,30,stateDb,uint64(i))
+		epocher1.SelectLeaders(ga.Marshal(),ne,nr,stateDb,uint64(i))
 	}
 
 	epochLeadersMap := make(map[string]int)
@@ -293,9 +295,12 @@ func TestGetGetEpochLeadersCapability(t *testing.T) {
 	}
 
 	fmt.Println("the select epoch leader count=" + strconv.Itoa(len(epochLeadersMap)))
+	if len(epochLeadersMap) != 9 {
+		t.Fail()
+	}
 
 	for key,value := range epochLeadersMap {
-		fmt.Println("key=",key,"count=",value)
+		fmt.Println("key=",key,"count=",value,"selected percent=",(float32(value)/float32(loopCount*ne))*100,"%")
 	}
 
 }
