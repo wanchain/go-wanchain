@@ -44,8 +44,9 @@ func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) string {
 		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
 		if err != nil {
 			info += fmt.Sprintf("epochID:%d, index:%d, error:%s \n", err.Error())
+		} else {
+			info += fmt.Sprintf("epochID:%d, index:%d, pk:%s \n", epochID, i, hex.EncodeToString(buf))
 		}
-		info += fmt.Sprintf("epochID:%d, index:%d, pk:%s \n", epochID, i, hex.EncodeToString(buf))
 	}
 
 	return info
