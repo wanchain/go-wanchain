@@ -808,7 +808,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	s := slotleader.GetSlotLeaderSelection()
 	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
 	if err != nil {
-		log.Error("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
+		log.Warn("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
 		return nil, err
 	}
 
@@ -832,7 +832,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 	err = c.verifySeal(nil, header, nil)
 	if err != nil {
-		log.Error("Verify error", "error", err.Error())
+		log.Warn("Verify error", "error", err.Error())
 		return nil, err
 	}
 	posdb.UpdateEpochBlock(epochIDPack, number)

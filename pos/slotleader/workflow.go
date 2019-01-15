@@ -42,44 +42,51 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	s.key = key
 	s.epochInstance = epochInstance
 
-	//epochID, slotID, err := GetEpochSlotID()
 	log.Info("Now epchoID and slotID:", "epochID", posdb.Uint64ToString(epochID), "slotID", posdb.Uint64ToString(slotID))
 	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
 
-	workStage, err := s.getWorkStage(epochID)
+	//Check if epoch is new
+	s.checkNewEpochStart(epochID)
 
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-			workStage = slotLeaderSelectionStage1
-		} else {
-			log.Error("getWorkStage error: " + err.Error())
-		}
-	}
+	workStage := s.getWorkStage(epochID)
 
 	switch workStage {
-	case slotLeaderSelectionStage1:
-		// If it's too late to run, wait for next epoch
-		if slotID > pos.Stage1K {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
-			break
-		}
+	case slotLeaderSelectionInit:
+		log.Debug("Enter slotLeaderSelectionInit")
 
-		log.Debug("Enter slotLeaderSelectionStage1")
+		s.clearData()
+
+		s.buildEpochLeaderGroup(epochID)
+
+		s.setWorkingEpochID(epochID)
+
 		err := s.generateSlotLeadsGroup(epochID)
 		if err != nil {
 			log.Error(err.Error())
+			panic("generateSlotLeadsGroup error")
 		}
 
+		s.setWorkStage(epochID, slotLeaderSelectionStage1)
+
+	case slotLeaderSelectionStage1:
+		log.Debug("Enter slotLeaderSelectionStage1")
 		// If not in current epoch leaders, Do nothing in this epoch.
+
+		// If it's too late to run, wait for next epoch
+		if slotID > pos.Stage1K/2 {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
+			break
+		}
+
 		if !s.isLocalPkInCurrentEpochLeaders() {
 			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		}
 
-		s.setWorkingEpochID(epochID)
-		err = s.startStage1Work()
+		err := s.startStage1Work()
 		if err != nil {
 			log.Error(err.Error())
+			ErrorCountAdd()
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
 		}
@@ -87,13 +94,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStage2:
 		log.Debug("Enter slotLeaderSelectionStage2")
 
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
-
-		if slotID < pos.Stage2K {
+		if slotID < pos.Stage2K+1 {
 			break
 		}
 
@@ -105,18 +106,13 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		err := s.startStage2Work()
 		if err != nil {
 			log.Error(err.Error())
+			ErrorCountAdd()
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		}
 
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
-
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
 
 		if slotID < pos.Stage5K {
 			break
@@ -125,6 +121,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
 		if err != nil {
 			log.Warn(err.Error())
+			WarnCountAdd()
 		} else {
 			log.Info("generateSecurityMsg SMA success!")
 		}
@@ -140,11 +137,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStageFinished:
 		log.Debug("Enter slotLeaderSelectionStageFinished")
 
-		//If New epoch start
-		s.workingEpochID, err = s.getWorkingEpochID()
-		if epochID > s.workingEpochID {
-			s.setWorkStage(epochID, slotLeaderSelectionStage1)
-		}
 	default:
 	}
 	functrace.Exit()
@@ -159,11 +151,9 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 	if inEpochLeaders {
 		log.Debug(fmt.Sprintf("Local node in epoch leaders times: %d", len(selfPublicKeyIndex)))
 
+		workingEpochID := s.getWorkingEpochID()
+
 		for i := 0; i < len(selfPublicKeyIndex); i++ {
-			workingEpochID, err := s.getWorkingEpochID()
-			if err != nil {
-				return err
-			}
 			data, err := s.generateCommitment(selfPublicKey, workingEpochID, selfPublicKeyIndex[i])
 			if err != nil {
 				return err
@@ -194,10 +184,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 	selfPublicKeyIndex, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
 	if inEpochLeaders {
 		for i := 0; i < len(selfPublicKeyIndex); i++ {
-			workingEpochID, err := s.getWorkingEpochID()
-			if err != nil {
-				return err
-			}
+			workingEpochID := s.getWorkingEpochID()
 			data, err := s.buildStage2TxPayload(workingEpochID, uint64(selfPublicKeyIndex[i]))
 			if err != nil {
 				return err
@@ -259,4 +246,16 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 
 	functrace.Exit()
 	return buffer, err
+}
+
+func (s *SlotLeaderSelection) checkStageValid(slotID uint64) bool {
+	return true
+}
+
+func (s *SlotLeaderSelection) checkNewEpochStart(epochID uint64) {
+	//If New epoch start
+	workingEpochID := s.getWorkingEpochID()
+	if epochID > workingEpochID {
+		s.setWorkStage(epochID, slotLeaderSelectionInit)
+	}
 }

@@ -2,8 +2,6 @@ package posdb
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
-	"github.com/wanchain/pos/cloudflare"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -11,10 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/wanchain/go-wanchain/crypto"
+	bn256 "github.com/wanchain/pos/cloudflare"
+
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/postools"
 )
 
 //Db is the wanpos leveldb class
@@ -270,99 +270,54 @@ func (s *Db) getUniqueKeyBytes(epochID uint64, index uint64, key string) []byte 
 
 //PkEqual only can use in same curve. return whether the two points equal
 func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
-	if pk1 == nil || pk2 == nil {
-		return false
-	}
-
-	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
-		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
-		return true
-	}
-	return false
+	return postools.PkEqual(pk1, pk2)
 }
 
 // Uint64ToBytes use a big.Int to transfer uint64 to bytes
 // Must use big.Int to reverse
 func Uint64ToBytes(input uint64) []byte {
-	if input == 0 {
-		return []byte{0}
-	}
-	return big.NewInt(0).SetUint64(input).Bytes()
+	return postools.Uint64ToBytes(input)
 }
 
 // BytesToUint64 use a big.Int to transfer uint64 to bytes
 // Must input a big.Int bytes
 func BytesToUint64(input []byte) uint64 {
-	return big.NewInt(0).SetBytes(input).Uint64()
+	return postools.BytesToUint64(input)
 }
 
 // Uint64ToString can change uint64 to string through a big.Int, output is a 10 base number
 func Uint64ToString(input uint64) string {
-	str := big.NewInt(0).SetUint64(input).String()
-	if len(str) == 0 {
-		str = "00"
-	}
-	return str
+	return postools.Uint64ToString(input)
 }
 
 // Uint64StringToByte can change uint64  string to bytes through a big.Int, Input must be a 10 base number
 func Uint64StringToByte(input string) []byte {
-	num, ok := big.NewInt(0).SetString(input, 10)
-	if !ok {
-		return []byte{0}
-	}
-
-	if len(num.Bytes()) == 0 {
-		return []byte{0}
-	}
-
-	return num.Bytes()
+	return postools.Uint64StringToByte(input)
 }
 
 // StringToUint64 can change string to uint64 through a big.Int, Input must be a 10 base number
 func StringToUint64(input string) uint64 {
-	num, ok := big.NewInt(0).SetString(input, 10)
-	if !ok {
-		log.Error("StringToUint64 only support 10 base number string", "input", input)
-		return 0
-	}
-	return num.Uint64()
+	return postools.StringToUint64(input)
 }
 
 // BigIntArrayToByteArray can change []*big.Int to [][]byte
 func BigIntArrayToByteArray(input []*big.Int) [][]byte {
-	ret := make([][]byte, len(input))
-	for i := 0; i < len(input); i++ {
-		ret[i] = input[i].Bytes()
-	}
-	return ret
+	return postools.BigIntArrayToByteArray(input)
 }
 
 // ByteArrayToBigIntArray can change [][]byte to big.Int
 func ByteArrayToBigIntArray(input [][]byte) []*big.Int {
-	ret := make([]*big.Int, len(input))
-	for i := 0; i < len(input); i++ {
-		ret[i] = big.NewInt(0).SetBytes(input[i])
-	}
-	return ret
+	return postools.ByteArrayToBigIntArray(input)
 }
 
 // PkArrayToByteArray can change []*ecdsa.PublicKey to [][]byte
 func PkArrayToByteArray(input []*ecdsa.PublicKey) [][]byte {
-	ret := make([][]byte, len(input))
-	for i := 0; i < len(input); i++ {
-		ret[i] = crypto.FromECDSAPub(input[i])
-	}
-	return ret
+	return postools.PkArrayToByteArray(input)
 }
 
 // ByteArrayToPkArray can change [][]byte to []*ecdsa.PublicKey
 func ByteArrayToPkArray(input [][]byte) []*ecdsa.PublicKey {
-	ret := make([]*ecdsa.PublicKey, len(input))
-	for i := 0; i < len(input); i++ {
-		ret[i] = crypto.ToECDSAPub(input[i])
-	}
-	return ret
+	return postools.ByteArrayToPkArray(input)
 }
 
 type SelectLead interface {
@@ -415,18 +370,16 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 
 //-------------------------------------------------------------------
 
-
-
 var (
-	lastBlockEpoch  =  make(map[uint64] uint64)
-
+	lastBlockEpoch = make(map[uint64]uint64)
 )
 
 var lastEpochId = uint64(0)
+
 func UpdateEpochBlock(epochID uint64, blockNumber uint64) {
 	if epochID != lastEpochId {
 		if epochID > lastEpochId {
-			GetEpocherInst().SelectLeadersLoop(epochID+1)
+			GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		}
 		lastEpochId = epochID
 	}

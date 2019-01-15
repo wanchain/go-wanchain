@@ -23,17 +23,17 @@ import (
 func TestLoop(t *testing.T) {
 	pos.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
-	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
-	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
 
-	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
-	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
 	GetSlotLeaderSelection().setWorkingEpochID(1)
 
-	GetSlotLeaderSelection().Loop(nil, nil, nil, nil, 0, 0)
+	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
 }
 
@@ -324,6 +324,16 @@ func TestProof(t *testing.T) {
 }
 
 func TestCRSave(t *testing.T) {
+
+	fmt.Printf("hello world\n\n\n")
+
+	info := ""
+
+	i := 1
+	info += fmt.Sprintf("hello world %d \n\n\n", i)
+
+	fmt.Print(info)
+
 	cr := make([]*big.Int, 100)
 	for i := 0; i < 100; i++ {
 		key, _ := crypto.GenerateKey()

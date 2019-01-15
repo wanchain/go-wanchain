@@ -119,6 +119,48 @@ web3._extend({
 			call: 'pos_version',
 			params: 0
 		}),
+
+		new web3._extend.Method({
+			name: 'getSlotErrorCount',
+			call: 'pos_getSlotErrorCount',
+			params: 0
+		}),
+
+		new web3._extend.Method({
+			name: 'getSlotWarnCount',
+			call: 'pos_getSlotWarnCount',
+			params: 0
+		}),
+
+		new web3._extend.Method({
+			name: 'getSlotLeadersByEpochID',
+			call: 'pos_getSlotLeadersByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getEpochLeadersByEpochID',
+			call: 'pos_getEpochLeadersByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getSmaByEpochID',
+			call: 'pos_getSmaByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getRandomProposersByEpochID',
+			call: 'pos_getRandomProposersByEpochID',
+			params: 1
+		}),
+		
+		new web3._extend.Method({
+			name: 'random',
+			call: 'pos_random',
+			params: 2
+		}),
 	]
 });
 `

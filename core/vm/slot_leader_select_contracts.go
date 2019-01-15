@@ -120,7 +120,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	if !isInValidStage(posdb.BytesToUint64(epochID), evm, 0, pos.Stage1K) {
-		return nil, nil
+		return nil, errors.New("Not in range handleStgOne hash:" + crypto.Keccak256Hash(in).Hex())
 	}
 
 	// address : sc slotLeaderPrecompileAddr
@@ -187,7 +187,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
 
 	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm, pos.Stage2K, pos.Stage4K) {
-		return nil, nil
+		return nil, errors.New("Not in range handleStgTwo hash:" + crypto.Keccak256Hash(in).Hex())
 	}
 
 	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
@@ -304,11 +304,13 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
 		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
+
 		return false
 	}
 
 	if sid > kEnd || sid < kStart {
 		log.Warn("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart, "rangeEnd", kEnd)
+
 		return false
 	}
 
