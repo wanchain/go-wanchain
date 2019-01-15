@@ -29,7 +29,7 @@ func TestInit(t *testing.T) {
 
 	rb.Init(&epocher, &key)
 
-	if rb.epochStage != EPOCH_DKG {
+	if rb.epochStage != vm.RB_DKG_STAGE {
 		t.Error("invalid epoch stage")
 	}
 
@@ -53,11 +53,11 @@ func TestInit(t *testing.T) {
 		t.Error("invalid rb rpc client")
 	}
 
-	if pos.Cfg().SelfPrK.Cmp(key.PrivateKey3.D) != 0 {
+	if pos.Cfg().MinerSK.Cmp(key.PrivateKey3.D) != 0 {
 		t.Error("invalid self private key")
 	}
 
-	if pos.Cfg().SelfPuK.String() != key.PrivateKey3.PublicKeyBn256.G1.String() {
+	if pos.Cfg().MinerPK.String() != key.PrivateKey3.PublicKeyBn256.G1.String() {
 		t.Error("invalid self public key")
 	}
 }
