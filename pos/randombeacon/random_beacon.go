@@ -12,7 +12,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/pos/cloudflare"
@@ -80,10 +79,11 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
 	// config
 	if key != nil {
 		rb.key = key
-		pos.Cfg().SelfPuK = new(bn256.G1).Set(key.PrivateKey3.PublicKeyBn256.G1)
-		pos.Cfg().SelfPrK = new(big.Int).Set(key.PrivateKey3.D)
+		pos.Cfg().MinerPK = new(bn256.G1).Set(key.PrivateKey3.PublicKeyBn256.G1)
+		pos.Cfg().MinerSK = new(big.Int).Set(key.PrivateKey3.D)
 	}
 }
+
 func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
@@ -91,7 +91,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, r
 	rb.doLoop(statedb, epocher, rc, eid, sid)
 }
 
-func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) error {
+func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, epochId uint64, slotId uint64) error {
 	if statedb == nil || epocher == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
@@ -102,13 +102,13 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher,
 	rb.epocher = epocher
 	rb.rpcClient = rc
 
-	log.Info("set miner account", "puk", pos.Cfg().SelfPuK, "prk", pos.Cfg().SelfPrK)
+	log.Info("set miner account", "puk", pos.Cfg().MinerPK, "prk", pos.Cfg().MinerSK)
 
 	// get epoch id, slot id
-	epochId, slotId := slotleader.GetEpochSlotID()
-	if eid != epochId || sid != slotId {
-		return errors.New("bad time")
-	}
+	//epochId, slotId := slotleader.GetEpochSlotID()
+	//if eid != epochId || sid != slotId {
+	//	return errors.New("bad time")
+	//}
 
 	log.Info("get epoch slot id", "epochId", epochId, "slotId", slotId)
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
@@ -177,7 +177,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	selfPk := pos.Cfg().SelfPuK
+	selfPk := pos.Cfg().MinerPK
 	if selfPk == nil {
 		return nil
 	}
@@ -295,7 +295,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		return errors.New("can't find random beacon proposer group")
 	}
 
-	prikey := pos.Cfg().SelfPrK
+	prikey := pos.Cfg().MinerSK
 	datas := make([]RbDKGDataCollector, 0)
 	for id, pk := range pks {
 		data, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
@@ -539,7 +539,13 @@ func (rb *RandomBeacon) getTxFrom() common.Address {
 
 func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 	pks := rb.getRBProposerGroupF(epochId)
-	log.Info("get rb proposer group", "proposer", pks)
+
+	pksStr := ""
+	for _, pk := range pks {
+		pksStr += common.ToHex(pk.Marshal()) + ", "
+	}
+
+	log.Info("get rb proposer group", "proposer", pksStr)
 	return pks
 }
 

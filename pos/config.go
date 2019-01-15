@@ -44,8 +44,8 @@ type Config struct {
 	MinRBProposerCnt uint
 	EpochInterval    uint64
 	PosStartTime     int64
-	SelfPuK          *bn256.G1
-	SelfPrK          *big.Int
+	MinerPK          *bn256.G1
+	MinerSK          *big.Int
 	Dbpath           string
 	NodeCfg          *node.Config
 	DkgEnd           uint64
