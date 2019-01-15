@@ -76,22 +76,21 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
 }
 
-func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) {
+func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid uint64) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
-	rb.doLoop(statedb, epocher, rc, eid, sid)
+	rb.doLoop(statedb, rc, eid, sid)
 }
 
-func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, epochId uint64, slotId uint64) error {
-	if statedb == nil || epocher == nil || rc == nil {
+func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
+	if statedb == nil || rc == nil {
 		log.Error("invalid random beacon loop param")
 		return errors.New("invalid random beacon loop param")
 	}
 
-	log.Info("RB Loop begin", "statedb", statedb, "epocher", epocher)
+	log.Info("RB Loop begin", "statedb", statedb)
 	rb.statedb = statedb
-	rb.epocher = epocher
 	rb.rpcClient = rc
 
 	log.Info("set miner account", "puk", pos.Cfg().GetMinerBn256PK(), "prk", pos.Cfg().GetMinerBn256SK())
@@ -169,7 +168,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	selfPk := pos.Cfg().MinerKey.PrivateKey3.PublicKeyBn256.G1
+	selfPk := pos.Cfg().GetMinerBn256PK()
 	if selfPk == nil {
 		return nil
 	}
