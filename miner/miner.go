@@ -86,9 +86,14 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	log.Info("BackendTimerLoop is running!!!!!!")
 
+	// config
+	if key != nil {
+		pos.Cfg().MinerKey = key
+	}
+
 	epocher := epochLeader.NewEpocher(s.BlockChain())
 
-	randombeacon.GetRandonBeaconInst().Init(epocher, key)
+	randombeacon.GetRandonBeaconInst().Init(epocher)
 
 	eerr := epocher.SelectLeadersLoop(0)
 	eerr1 := epocher.SelectLeadersLoop(1)

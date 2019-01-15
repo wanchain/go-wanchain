@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -44,7 +43,7 @@ type RandomBeacon struct {
 	epochId    uint64
 
 	statedb   vm.StateDB
-	key       *keystore.Key
+	//key       *keystore.Key
 	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
 
@@ -59,14 +58,14 @@ var (
 )
 
 func init() {
-	randomBeacon.Init(nil, nil)
+	randomBeacon.Init(nil)
 }
 
 func GetRandonBeaconInst() *RandomBeacon {
 	return &randomBeacon
 }
 
-func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
+func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.epochStage = vm.RB_DKG_STAGE
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
@@ -75,13 +74,6 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher, key *keystore.Key) {
 
 	// function
 	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
-
-	// config
-	if key != nil {
-		rb.key = key
-		pos.Cfg().MinerPK = new(bn256.G1).Set(key.PrivateKey3.PublicKeyBn256.G1)
-		pos.Cfg().MinerSK = new(big.Int).Set(key.PrivateKey3.D)
-	}
 }
 
 func (rb *RandomBeacon) Loop(statedb vm.StateDB, epocher *epochLeader.Epocher, rc *rpc.Client, eid uint64, sid uint64) {
@@ -102,7 +94,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, epocher *epochLeader.Epocher,
 	rb.epocher = epocher
 	rb.rpcClient = rc
 
-	log.Info("set miner account", "puk", pos.Cfg().MinerPK, "prk", pos.Cfg().MinerSK)
+	log.Info("set miner account", "puk", pos.Cfg().GetMinerBn256PK(), "prk", pos.Cfg().GetMinerBn256SK())
 
 	// get epoch id, slot id
 	//epochId, slotId := slotleader.GetEpochSlotID()
@@ -177,7 +169,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	selfPk := pos.Cfg().MinerPK
+	selfPk := pos.Cfg().MinerKey.PrivateKey3.PublicKeyBn256.G1
 	if selfPk == nil {
 		return nil
 	}
@@ -295,7 +287,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		return errors.New("can't find random beacon proposer group")
 	}
 
-	prikey := pos.Cfg().MinerSK
+	prikey := pos.Cfg().GetMinerBn256SK()
 	datas := make([]RbDKGDataCollector, 0)
 	for id, pk := range pks {
 		data, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
@@ -534,7 +526,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 }
 
 func (rb *RandomBeacon) getTxFrom() common.Address {
-	return rb.key.Address
+	return pos.Cfg().GetMinerAddr()
 }
 
 func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
@@ -561,19 +553,23 @@ func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	payloadStr := common.Bytes2Hex(payloadBytes)
-	//log.Info("dkg payload hex string", "playload", payloadStr)
-	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	if err != nil {
-		log.Error("create abi instance fail", "err", err)
-		return nil, err
-	}
+	//payloadStr := common.Bytes2Hex(payloadBytes)
+	////log.Info("dkg payload hex string", "playload", payloadStr)
+	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
+	//if err != nil {
+	//	log.Error("create abi instance fail", "err", err)
+	//	return nil, err
+	//}
+	//
+	//ret, err := rbAbi.Pack("dkg", &payloadStr)
+	//if err != nil {
+	//	log.Error("abi pack fail", "err", err)
+	//	return nil, err
+	//}
 
-	ret, err := rbAbi.Pack("dkg", &payloadStr)
-	if err != nil {
-		log.Error("abi pack fail", "err", err)
-		return nil, err
-	}
+	ret := make([]byte, 4+len(payloadBytes))
+	copy(ret, vm.GetDkgId())
+	copy(ret[4:], payloadBytes)
 
 	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	return ret, nil
@@ -590,17 +586,21 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	payloadStr := common.Bytes2Hex(payloadBytes)
-	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	if err != nil {
-		return nil, err
-	}
+	//payloadStr := common.Bytes2Hex(payloadBytes)
+	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//ret, err := rbAbi.Pack("sigshare", payloadStr)
+	//if err != nil {
+	//	log.Error("abi pack payload", "err", err)
+	//	return nil, err
+	//}
 
-	ret, err := rbAbi.Pack("sigshare", payloadStr)
-	if err != nil {
-		log.Error("abi pack payload", "err", err)
-		return nil, err
-	}
+	ret := make([]byte, 4+len(payloadBytes))
+	copy(ret, vm.GetSigshareId())
+	copy(ret[4:], payloadBytes)
 
 	return ret, nil
 }

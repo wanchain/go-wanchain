@@ -1,10 +1,11 @@
 package pos
 
 import (
-	"math/big"
-
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/node"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
+	"math/big"
 )
 
 var (
@@ -44,8 +45,7 @@ type Config struct {
 	MinRBProposerCnt uint
 	EpochInterval    uint64
 	PosStartTime     int64
-	MinerPK          *bn256.G1
-	MinerSK          *big.Int
+	MinerKey         *keystore.Key
 	Dbpath           string
 	NodeCfg          *node.Config
 	DkgEnd           uint64
@@ -59,8 +59,7 @@ var DefaultConfig = Config{
 	2,
 	0,
 	0,
-	new(bn256.G1).ScalarBaseMult(big.NewInt(1)),
-	big.NewInt(1),
+	nil,
 	"",
 	nil,
 	Stage4K - 1,
@@ -71,3 +70,28 @@ var DefaultConfig = Config{
 func Cfg() *Config {
 	return &DefaultConfig
 }
+
+func (c *Config) GetMinerAddr() common.Address {
+	if c.MinerKey == nil {
+		return common.Address{}
+	}
+
+	return c.MinerKey.Address
+}
+
+func (c *Config) GetMinerBn256PK() *bn256.G1 {
+	if c.MinerKey == nil {
+		return nil
+	}
+
+	return new(bn256.G1).Set(c.MinerKey.PrivateKey3.PublicKeyBn256.G1)
+}
+
+func (c *Config) GetMinerBn256SK() *big.Int {
+	if c.MinerKey == nil {
+		return nil
+	}
+
+	return new(big.Int).Set(c.MinerKey.PrivateKey3.D)
+}
+

@@ -79,6 +79,13 @@ func init() {
 	copy(genRId[:], rbscAbi.Methods["genR"].Id())
 }
 
+func GetDkgId() []byte {
+	return dkgId[:]
+}
+func GetSigshareId() []byte {
+	return sigshareId[:]
+}
+
 func (c *RandomBeaconContract) RequiredGas(input []byte) uint64 {
 	return 0
 }
@@ -98,8 +105,6 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 		return c.dkg(input[4:], contract, evm)
 	} else if methodId == sigshareId {
 		return c.sigshare(input[4:], contract, evm)
-	} else if methodId == genRId {
-		return c.genR(input[4:], contract, evm)
 	} else {
 		log.Debug("No match id found")
 	}
@@ -215,9 +220,6 @@ func GetRBAddress() common.Address {
 	return randomBeaconPrecompileAddr
 }
 
-var getRBProposerGroupVar func(epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
-var getRBMVar func(db StateDB, epochId uint64) ([]byte, error) = GetRBM
-
 func UIntToByteSlice(num uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, num)
@@ -252,7 +254,7 @@ type RbSIGTxPayload struct {
 
 // TODO: evm.EpochId evm.SlotId, Cfg.K---dkg:0 ~ 4k -1, sig: 5k ~ 8k -1
 // stage 0, 1 dkg sign
-func (c *RandomBeaconContract) isValidEpochStage(epochId uint64, stage int, evm *EVM) bool {
+func isValidEpochStage(epochId uint64, stage int, evm *EVM) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochId != eid {
 		return false
@@ -264,12 +266,17 @@ func (c *RandomBeaconContract) isValidEpochStage(epochId uint64, stage int, evm 
 	return true
 }
 
-func (c *RandomBeaconContract) isInRandomGroup(pks *[]bn256.G1, proposerId uint32) bool {
+func isInRandomGroup(pks *[]bn256.G1, proposerId uint32) bool {
 	if len(*pks) <= int(proposerId) {
 		return false
 	}
 	return true
 }
+
+var getRBProposerGroupVar func(epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
+var getRBMVar func(db StateDB, epochId uint64) ([]byte, error) = GetRBM
+var isValidEpochStageVar func(epochId uint64, stage int, evm *EVM) bool = isValidEpochStage
+var isInRandomGroupVar func(pks *[]bn256.G1, proposerId uint32) bool = isInRandomGroup
 
 func buildError(err string, epochId uint64, proposerId uint32) error {
 	return errors.New(fmt.Sprintf("%v epochId = %v, proposerId = %v ", err, epochId, proposerId))
@@ -295,17 +302,18 @@ func (c *RandomBeaconContract) getCji(evm *EVM, epochId uint64, proposerId uint3
 	return dkgParam.Commit, nil
 }
 
+//func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	//var payloadHex string
+	//err := rbscAbi.UnpackInput(&payloadHex, "dkg", payload)
+	//if err != nil {
+	//	return nil, errDkgUnpack
+	//}
+	//
+	//payloadBytes := common.FromHex(payloadHex)
+
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	var payloadHex string
-	err := rbscAbi.UnpackInput(&payloadHex, "dkg", payload)
-	if err != nil {
-		return nil, errDkgUnpack
-	}
-
-	payloadBytes := common.FromHex(payloadHex)
-
 	var dkgParam RbDKGTxPayload
-	err = rlp.DecodeBytes(payloadBytes, &dkgParam)
+	err := rlp.DecodeBytes(payload, &dkgParam)
 	if err != nil {
 		return nil, errDkgParse
 	}
@@ -315,11 +323,11 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpochStage(eid, RB_DKG_STAGE, evm) {
+	if !isValidEpochStageVar(eid, RB_DKG_STAGE, evm) {
 		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(&pks, pid) {
+	if !isInRandomGroupVar(&pks, pid) {
 		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
 	}
 
@@ -355,7 +363,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	// save epochId*2^64 + proposerId
 	hash := GetRBKeyHash(dkgId[:], eid, pid)
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
-	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payload)
 	// TODO: add an dkg event
 	// add event
 	log.Debug("vm.dkg", "len(dkgId)", len(dkgId), "epochID", eid, "proposerId", pid, "hash", hash.Hex())
@@ -384,16 +392,8 @@ func setSigsNum(epochId uint64, num uint32, evm *EVM) {
 }
 
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	var payloadHex string
-	err := rbscAbi.UnpackInput(&payloadHex, "sigshare", payload)
-	if err != nil {
-		return nil, errors.New("error in sigshare abi parse")
-	}
-
-	payloadBytes := common.FromHex(payloadHex)
-
 	var sigshareParam RbSIGTxPayload
-	err = rlp.DecodeBytes(payloadBytes, &sigshareParam)
+	err := rlp.DecodeBytes(payload, &sigshareParam)
 	if err != nil {
 		return nil, errors.New("error in dkg param has a wrong struct")
 	}
@@ -403,11 +403,11 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !c.isValidEpochStage(eid, RB_SIGN_STAGE, evm) {
+	if !isValidEpochStageVar(eid, RB_SIGN_STAGE, evm) {
 		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !c.isInRandomGroup(&pks, pid) {
+	if !isInRandomGroupVar(&pks, pid) {
 		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
 	}
 
@@ -443,7 +443,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	// save
 	hash := GetRBKeyHash(sigshareId[:], eid, pid)
 	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
-	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payloadBytes)
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payload)
 
 	/////////////////
 	// calc r if not exist
@@ -465,24 +465,24 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 }
 
 // TODO: delete
-func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	var (
-		epochId = big.NewInt(0)
-		r       = big.NewInt(0)
-	)
-	out := []interface{}{&epochId, &r}
-	err := rbscAbi.UnpackInput(&out, "genR", payload)
-	if err != nil {
-		return nil, errors.New("error in genR abi parse")
-	}
-
-	// save
-	hash := GetRBRKeyHash(epochId.Uint64())
-	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, r.Bytes())
-	log.Info("contract do genR end", "epochId=", epochId.Uint64())
-
-	return nil, nil
-}
+//func (c *RandomBeaconContract) genR(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+//	var (
+//		epochId = big.NewInt(0)
+//		r       = big.NewInt(0)
+//	)
+//	out := []interface{}{&epochId, &r}
+//	err := rbscAbi.UnpackInput(&out, "genR", payload)
+//	if err != nil {
+//		return nil, errors.New("error in genR abi parse")
+//	}
+//
+//	// save
+//	hash := GetRBRKeyHash(epochId.Uint64())
+//	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, r.Bytes())
+//	log.Info("contract do genR end", "epochId=", epochId.Uint64())
+//
+//	return nil, nil
+//}
 
 type RbDKGDataCollector struct {
 	data *RbDKGTxPayload
