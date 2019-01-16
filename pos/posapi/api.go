@@ -98,16 +98,10 @@ func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
 	return vm.GetSlotScCallTimes(epochID)
 }
 
-func (a PosApi) GetSmaByEpochID(epochID uint64) (struct {
-	length int
-	data   []string
-}, error) {
+func (a PosApi) GetSmaByEpochID(epochID uint64) ([]string, error) {
 	pks, _, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
 	if err != nil {
-		return struct {
-			length int
-			data   []string
-		}{}, err
+		return nil, err
 	}
 
 	info := make([]string, len(pks))
@@ -116,10 +110,7 @@ func (a PosApi) GetSmaByEpochID(epochID uint64) (struct {
 		info[i] = hex.EncodeToString(crypto.FromECDSAPub(pks[i]))
 	}
 
-	return struct {
-		length int
-		data   []string
-	}{length: len(pks), data: info}, nil
+	return info, nil
 }
 
 func (a PosApi) GetRandomProposersByEpochID(epochID uint64) []string {
