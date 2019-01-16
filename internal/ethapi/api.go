@@ -1813,3 +1813,38 @@ func (s *PrivateAccountAPI) GetOTABalance(ctx context.Context, blockNr rpc.Block
 	return otaB, state.Error()
 
 }
+
+func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string,error) {
+
+	if len(addr) == 0 {
+		return nil, errors.New("address must be given as argument")
+	}
+	if len(passwd) == 0 {
+		return nil, errors.New("passwd must be given as argument")
+	}
+
+	ks := s.am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	all := ks.Accounts()
+	lenth := len(all)
+
+	pubs := make([]string,0)
+	for i := 0; i < lenth; i++ {
+		if all[i].Address == addr {
+			key, err := ks.GetKey(all[i], passwd)
+			if err != nil {
+				return nil, errors.New("Error failed to load keyfile ")
+			}
+			if key.PrivateKey != nil {
+				pubs =append(pubs,common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+			}
+			if key.PrivateKey2 != nil {
+				pubs = append(pubs,common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+			}
+
+			break
+		}
+	}
+
+	return pubs,nil
+}
+
