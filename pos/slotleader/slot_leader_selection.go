@@ -345,7 +345,7 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 }
 
 func (s *SlotLeaderSelection) clearData() {
-	s.slotCreateStatus = make(map[uint64]bool)
+	// s.slotCreateStatus = make(map[uint64]bool)
 	// clear Array
 	s.epochLeadersArray = make([]string, 0)
 	// clear map
@@ -440,6 +440,11 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) {
 		s.epochLeadersPtrArray[index] = crypto.ToECDSAPub(value)
 	}
 	functrace.Exit()
+}
+
+func (s *SlotLeaderSelection) GetSlotCreateStatusByEpochID(epochID uint64) bool {
+	_, ok := s.slotCreateStatus[epochID]
+	return ok
 }
 
 func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecdsa.PublicKey, err error) {

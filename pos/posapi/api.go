@@ -45,22 +45,22 @@ func (a PosApi) GetSlotWarnCount() string {
 	return postools.Uint64ToString(slotleader.WarnCount)
 }
 
-func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) string {
-	info := ""
+func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[uint64]string {
+	infoMap := make(map[uint64]string, 0)
 	for i := uint64(0); i < pos.SlotCount; i++ {
 		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
 		if err != nil {
-			info += fmt.Sprintf("epochID:%d, index:%d, error:%s \n", err.Error())
+			infoMap[i] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", err.Error())
 		} else {
-			info += fmt.Sprintf("epochID:%d, index:%d, pk:%s \n", epochID, i, hex.EncodeToString(buf))
+			infoMap[i] = hex.EncodeToString(buf)
 		}
 	}
 
-	return info
+	return infoMap
 }
 
-func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) string {
-	info := ""
+func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[int]string, error) {
+	infoMap := make(map[int]string, 0)
 
 	type epoch interface {
 		GetEpochLeaders(epochID uint64) [][]byte
@@ -69,17 +69,16 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) string {
 	selector := posdb.GetEpocherInst()
 
 	if selector == nil {
-		return "GetEpocherInst error"
+		return nil, errors.New("GetEpocherInst error")
 	}
 
 	epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
-	info += fmt.Sprintf("epoch leader count:%d \n", len(epochLeaders))
 
 	for i := 0; i < len(epochLeaders); i++ {
-		info += fmt.Sprintf("epochID:%d, index:%d, pk:%s \n", epochID, i, hex.EncodeToString(epochLeaders[i]))
+		infoMap[i] = hex.EncodeToString(epochLeaders[i])
 	}
 
-	return info
+	return infoMap, nil
 }
 
 func (a PosApi) GetLocalPK() ([]byte, error) {
@@ -126,6 +125,10 @@ func (a PosApi) GetRandomProposersByEpochID(epochID uint64) string {
 	}
 
 	return info
+}
+
+func (a PosApi) GetSlotCreateStatusByEpochID(epochID uint64) bool {
+	return slotleader.GetSlotLeaderSelection().GetSlotCreateStatusByEpochID(epochID)
 }
 
 func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
