@@ -265,7 +265,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 
 				for _,valueStage2Proof := range stageTwoProof[i]{
-					log.Debug("VerifySlotProof:VerifyDleqProof", "index",i,"alphaPK",hex.EncodeToString(valueStage2Proof.Bytes()))
+					log.Debug("VerifySlotProof:VerifyDleqProof", "index",i,"stg2Proof",hex.EncodeToString(valueStage2Proof.Bytes()))
 				}
 
 				validEpochLeadersIndex[i] = false
