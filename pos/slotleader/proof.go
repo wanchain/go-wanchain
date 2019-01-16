@@ -197,7 +197,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		_, mi, _ := s.getStg1StateDbInfo(epochID-1, uint64(i))
 		if len(mi) == 0 {
 			validEpochLeadersIndex[i] = false
-			log.Warn("VerifySlotProof", "index",i,"len(mi)",len(mi))
+			log.Warn("VerifySlotProof", "index", i, "len(mi)", len(mi))
 			continue
 		} else {
 			stageOneMi[i] = crypto.ToECDSAPub(mi)
@@ -205,12 +205,12 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID-1, uint64(i))
 		if err != nil {
-			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index",i,"error",err.Error())
+			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
 			continue
 		}
 		if (len(alphaPkis) != pos.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
-			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index",i,"len(alphaPkis)",len(alphaPkis),"len(proofs)",len(proofs))
+			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index", i, "len(alphaPkis)", len(alphaPkis), "len(proofs)", len(proofs))
 			validEpochLeadersIndex[i] = false
 			continue
 		} else {
@@ -218,7 +218,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			for j := 0; j < pos.EpochLeaderCount; j++ {
 				alphaPkiDecodeBytes, err := hex.DecodeString(alphaPkis[j])
 				if err != nil {
-					log.Warn("VerifySlotProof:DecodeString", "indexI",i,"indexJ",j,"error",err.Error())
+					log.Warn("VerifySlotProof:DecodeString", "indexI", i, "indexJ", j, "error", err.Error())
 					validEpochLeadersIndex[i] = false
 					break
 				}
@@ -229,7 +229,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 				var err bool
 				stageTwoProof[i][j], err = big.NewInt(0).SetString(proofs[j], 16)
 				if !err {
-					log.Warn("VerifySlotProof:SetString", "indexI",i,"indexJ",j,"error",err)
+					log.Warn("VerifySlotProof:SetString", "indexI", i, "indexJ", j, "error", err)
 					break
 				}
 			}
@@ -243,29 +243,28 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			continue
 		}
 		if !uleaderselection.PublicKeyEqual(stageOneMi[i], stageTwoAlphaPKi[i][i]) {
-			log.Warn("VerifySlotProof:PublicKeyEqual", "index",i,"PublicKeyEqual","Mi is not equal alphaIPki")
+			log.Warn("VerifySlotProof:PublicKeyEqual", "index", i, "PublicKeyEqual", "Mi is not equal alphaIPki")
 			validEpochLeadersIndex[i] = false
 			continue
 		} else {
 
 			if !uleaderselection.VerifyDleqProof(epochLeadersPtrPre[:], stageTwoAlphaPKi[i][:], stageTwoProof[i][:]) {
-				log.Warn("VerifySlotProof:VerifyDleqProof", "index",i,"VerifyDleqProof","false")
+				log.Warn("VerifySlotProof:VerifyDleqProof", "index", i, "VerifyDleqProof", "false")
 				//for index,value := range epochLeadersPtrPre {
 				//	log.Warn("VerifySlotProof:VerifyDleqProof", "index",index,"epochLeadersPtrPre",
 				//		hex.EncodeToString(crypto.FromECDSAPub(value)))
 				//}
 
-				for _,value := range epochLeadersPtrPre{
-					log.Debug("VerifySlotProof:VerifyDleqProof", "index",i,"epochLeader",hex.EncodeToString(crypto.FromECDSAPub(value)))
+				for _, value := range epochLeadersPtrPre {
+					log.Debug("VerifySlotProof:VerifyDleqProof", "index", i, "epochLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
 				}
 
-				for _,valueAplaPk := range stageTwoAlphaPKi[i]{
-					log.Debug("VerifySlotProof:VerifyDleqProof", "index",i,"alphaPK",hex.EncodeToString(crypto.FromECDSAPub(valueAplaPk)))
+				for _, valueAplaPk := range stageTwoAlphaPKi[i] {
+					log.Debug("VerifySlotProof:VerifyDleqProof", "index", i, "alphaPK", hex.EncodeToString(crypto.FromECDSAPub(valueAplaPk)))
 				}
 
-
-				for _,valueStage2Proof := range stageTwoProof[i]{
-					log.Debug("VerifySlotProof:VerifyDleqProof", "index",i,"stg2Proof",hex.EncodeToString(valueStage2Proof.Bytes()))
+				for _, valueStage2Proof := range stageTwoProof[i] {
+					log.Debug("VerifySlotProof:VerifyDleqProof", "index", i, "stg2Proof", hex.EncodeToString(valueStage2Proof.Bytes()))
 				}
 
 				validEpochLeadersIndex[i] = false
@@ -276,8 +275,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 	var hasValidTx bool
 	hasValidTx = false
-	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex",validEpochLeadersIndex)
-	for _,valid := range s.validEpochLeadersIndex{
+	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
+	for _, valid := range validEpochLeadersIndex {
 
 		if valid {
 			hasValidTx = true
