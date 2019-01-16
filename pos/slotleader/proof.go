@@ -197,7 +197,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		_, mi, _ := s.getStg1StateDbInfo(epochID-1, uint64(i))
 		if len(mi) == 0 {
 			validEpochLeadersIndex[i] = false
-			log.Warn("VerifySlotProof", "index", i, "len(mi)", len(mi))
+			log.Debug("VerifySlotProof", "index", i, "len(mi)", len(mi))
 			continue
 		} else {
 			stageOneMi[i] = crypto.ToECDSAPub(mi)
@@ -205,7 +205,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID-1, uint64(i))
 		if err != nil {
-			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index", i, "error", err.Error())
+			log.Debug("VerifySlotProof:getStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
 			continue
 		}
