@@ -405,7 +405,7 @@ func (s *SlotLeaderSelection) dumpPreEpochLeaders() {
 func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
 	log.Info("\n")
 	currentEpochID := s.getWorkingEpochID()
-	log.Info("dumpCurrentEpochLeaders", "currentEpochID", curEpochId)
+	log.Info("dumpCurrentEpochLeaders", "currentEpochID", currentEpochID)
 	if currentEpochID == 0 {
 		return
 	}
@@ -419,7 +419,7 @@ func (s *SlotLeaderSelection) dumpCurrentEpochLeaders() {
 func (s *SlotLeaderSelection) dumpSlotLeaders() {
 	log.Info("\n")
 	currentEpochID := s.getWorkingEpochID()
-	log.Info("dumpSlotLeaders", "currentEpochID", curEpochId)
+	log.Info("dumpSlotLeaders", "currentEpochID", currentEpochID)
 	if currentEpochID == 0 {
 		return
 	}
@@ -560,8 +560,6 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
 
-		s.clearData()
-		s.buildEpochLeaderGroup(epochIDGet)
 	}
 
 	// get random
