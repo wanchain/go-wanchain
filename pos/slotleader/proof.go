@@ -47,7 +47,10 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	}
 
 	//1. SMA PRE
-	smaPiecesPtr, err := s.getSMAPieces(epochID)
+	smaPiecesPtr, isGenesis,err := s.getSMAPieces(epochID)
+	if isGenesis{
+		return s.GetSlotLeaderProofByGenesis(PrivateKey,epochID,slotID)
+	}
 	if err != nil {
 		log.Error(err.Error())
 		return nil, nil, err
@@ -245,6 +248,16 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		}
 	}
 
+	var hasValidTx bool
+	for _,valid := range s.validEpochLeadersIndex{
+		if valid {
+			hasValidTx = true
+			break
+		}
+	}
+	if !hasValidTx {
+		return s.VerifySlotProofByGenesis(epochID, slotID,Proof,ProofMeg)
+	}
 	var publicKey *ecdsa.PublicKey
 	publicKey = ProofMeg[0]
 
