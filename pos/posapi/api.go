@@ -100,7 +100,7 @@ func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
 }
 
 func (a PosApi) GetSmaByEpochID(epochID uint64) string {
-	pks, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
+	pks,_, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
 	info := ""
 	if err != nil {
 		info = "" + err.Error() + "\n"
