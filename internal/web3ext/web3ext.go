@@ -163,6 +163,12 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getSlotCreateStatusByEpochID',
+			call: 'pos_getSlotCreateStatusByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
 			name: 'random',
 			call: 'pos_random',
 			params: 2
