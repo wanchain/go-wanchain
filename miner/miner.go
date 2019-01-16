@@ -157,49 +157,25 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		slotleader.CalEpochSlotID()
 		epochid, slotid := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid", epochid, slotid)
-		//if epochid >= 2 && posdb.GetEpochBlock(epochid) == 0 {
-		//	time.Sleep(pos.SlotTime * time.Second)
-		//	continue
-		//}
-		self.worker.chainSlotTimer <- struct{}{}
-		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
-		if err2 != nil {
-			fmt.Println(err2)
-			time.Sleep(pos.SlotTime * time.Second)
-			continue
-		}
 
-		//epochid, slotid, err := slotleader.GetEpochSlotID()
-		fmt.Println("epochid, slotid: ", epochid, slotid)
-		//if err != nil {
-		//	fmt.Println("haven't block 1 base")
-		//	continue
-		//}
 
 		// only the begin of epocher
 		if slotid == 0 {
 			fmt.Println("epocher begin")
-
-			//epocher.SelectLeadersLoop(epochid)
-			//
-			//epl := epocher.GetEpochLeaders(epochid)
-			//for idx, item := range epl {
-			//	fmt.Println("epoleader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item))
-			//}
-			//rbl := epocher.GetRBProposerGroup(epochid)
-			//for idx, item := range rbl {
-			//	fmt.Println("rb leader idx=" + strconv.Itoa(idx) + "  data=" + common.ToHex(item.Marshal()))
-			//}
-			//fmt.Println(rbl)
 		}
 
 		// every slot
 		fmt.Println("Every slot run:")
-		//epocher.SelectLeaders(rb, Nr, Ne, stateDbEpoch, epochid)
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
-		//epocher.SelectLeaders()
-		go randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
+		self.worker.chainSlotTimer <- struct{}{}
+		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
+		if(err2 != nil){
+			log.Error("Failed to get stateDb: ", err2)
+		}
+		if stateDb != nil {
+			go randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
+		}
 		cur := uint64(time.Now().Unix())
 		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
