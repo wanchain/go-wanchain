@@ -304,7 +304,7 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 	}
 
 	if epochID == 0 {
-		for _,value := range s.epochLeadersPtrArrayGenesis {
+		for _, value := range s.epochLeadersPtrArrayGenesis {
 			if posdb.PkEqual(localPk, value) {
 				return true, nil
 			}
@@ -433,7 +433,7 @@ func (s *SlotLeaderSelection) dumpSlotLeaders() {
 func (s *SlotLeaderSelection) dumpLocalPublicKey() {
 	log.Info("\n")
 	localPublicKey, _ := s.getLocalPublicKey()
-	log.Info("dumpLocalPublicKey","current Local publickey", hex.EncodeToString(crypto.FromECDSAPub(localPublicKey)))
+	log.Info("dumpLocalPublicKey", "current Local publickey", hex.EncodeToString(crypto.FromECDSAPub(localPublicKey)))
 
 }
 
@@ -508,17 +508,17 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 
 // getSMAPieces can get the SMA info generate in pre epoch.
 // It had been +1 when save into db, so do not -1 in get.
-func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool,err error) {
+func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
 	// 1. get SMA[pre]
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
 	if epochID == uint64(0) {
-		return s.smaGenesis[:], true,nil
+		return s.smaGenesis[:], true, nil
 	} else {
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
 		if err != nil {
 			log.Warn("getSMAPieces error use epoch 0 SMA", "epochID", epochID, "SecurityMsg", SecurityMsg)
-			return s.smaGenesis[:], true,nil
+			return s.smaGenesis[:], true, nil
 		}
 
 		piecesCount := len(pieces) / LengthPublicKeyBytes
@@ -545,7 +545,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	epochIDGet := epochID
 
 	// get pre sma
-	piecesPtr, isGenesis,err := s.getSMAPieces(epochIDGet)
+	piecesPtr, isGenesis, err := s.getSMAPieces(epochIDGet)
 	if err != nil {
 		log.Warn(fmt.Sprintf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet))
 	}
@@ -650,17 +650,16 @@ func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err
 		log.Debug(fmt.Sprintln("VerifyDleqProof: pk:", s.epochLeadersPtrArray[:], " , alphaPK:", s.stageTwoAlphaPKi[index][:], ", stageTwoProof:", s.stageTwoProof[index][:]))
 		// verify proof[index]
 
-		for _,value := range s.epochLeadersPtrArray{
-			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"epochLeader",hex.EncodeToString(crypto.FromECDSAPub(value)))
+		for _, value := range s.epochLeadersPtrArray {
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index", index, "epochLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
 		}
 
-		for _,valueAplaPk := range s.stageTwoAlphaPKi[index]{
-			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"alphaPK",hex.EncodeToString(crypto.FromECDSAPub(valueAplaPk)))
+		for _, valueAplaPk := range s.stageTwoAlphaPKi[index] {
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index", index, "alphaPK", hex.EncodeToString(crypto.FromECDSAPub(valueAplaPk)))
 		}
 
-
-		for _,valueStage2Proof := range s.stageTwoProof[index]{
-			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"stg2Proof",hex.EncodeToString(valueStage2Proof.Bytes()))
+		for _, valueStage2Proof := range s.stageTwoProof[index] {
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index", index, "stg2Proof", hex.EncodeToString(valueStage2Proof.Bytes()))
 		}
 
 		if s.epochLeadersPtrArray[0] == nil {
@@ -718,7 +717,6 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	keyBuf.Write(selfIndexBufDec)
 	keyBuf.Write([]byte("slotLeaderStag2"))
 	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
-
 
 	log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 
@@ -934,7 +932,6 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
 	keyHash := vm.GetSlotLeaderStage1KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(index))
-
 
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
