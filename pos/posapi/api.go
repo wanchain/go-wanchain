@@ -81,49 +81,53 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[int]string, error)
 	return infoMap, nil
 }
 
-func (a PosApi) GetLocalPK() ([]byte, error) {
+func (a PosApi) GetLocalPK() (string, error) {
 	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
 	if err != nil {
-		return nil, err
+		return "nil", err
 	}
 
-	return crypto.FromECDSAPub(pk), nil
+	return hex.EncodeToString(crypto.FromECDSAPub(pk)), nil
 }
 
-func (a PosApi) GetBootNodePK() ([]byte, error) {
-	return hex.DecodeString(pos.GenesisPK)
+func (a PosApi) GetBootNodePK() string {
+	return pos.GenesisPK
 }
 
 func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
 	return vm.GetSlotScCallTimes(epochID)
 }
 
-func (a PosApi) GetSmaByEpochID(epochID uint64) string {
-	pks,_, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
-	info := ""
+func (a PosApi) GetSmaByEpochID(epochID uint64) (struct {
+	length int
+	data   []string
+}, error) {
+	pks, _, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
 	if err != nil {
-		info = "" + err.Error() + "\n"
+		return struct {
+			length int
+			data   []string
+		}{}, err
 	}
 
-	info += fmt.Sprintf("sma count:%d \n", len(pks))
+	info := make([]string, len(pks))
 
 	for i := 0; i < len(pks); i++ {
-		info += fmt.Sprintf("epochID:%d, index:%d, SMA:%s \n", epochID, i, hex.EncodeToString(crypto.FromECDSAPub(pks[i])))
+		info[i] = hex.EncodeToString(crypto.FromECDSAPub(pks[i]))
 	}
 
-	return info
+	return struct {
+		length int
+		data   []string
+	}{length: len(pks), data: info}, nil
 }
 
-func (a PosApi) GetRandomProposersByEpochID(epochID uint64) string {
-	info := ""
-
+func (a PosApi) GetRandomProposersByEpochID(epochID uint64) []string {
 	leaders := posdb.GetRBProposerGroup(epochID)
-	info += fmt.Sprintf("random proposer count:%d \n", len(leaders))
-
+	info := make([]string, len(leaders))
 	for i := 0; i < len(leaders); i++ {
-		info += fmt.Sprintf("epochID:%d, index:%d, random proposer:%s \n", epochID, i, hex.EncodeToString(leaders[i].Marshal()))
+		info[i] = hex.EncodeToString(leaders[i].Marshal())
 	}
-
 	return info
 }
 
