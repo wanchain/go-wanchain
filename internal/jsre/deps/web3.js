@@ -5659,6 +5659,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, null, null]
     });
 
+    var showPublicKey = new Method({
+        name: 'showPublicKey',
+        call: 'personal_showPublicKey',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,null]
+    });
+
     var sendTransaction = new Method({
         name: 'sendTransaction',
         call: 'personal_sendTransaction',
@@ -5704,7 +5711,8 @@ var methods = function () {
         sendPrivacyCxtTransaction,
         genRingSignData,
         lockAccount,
-        updateAccount
+        updateAccount,
+        showPublicKey
     ];
 };
 
