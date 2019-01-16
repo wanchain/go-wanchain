@@ -710,13 +710,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
 
-	var keyBuf bytes.Buffer
-	epochIDBufDec := posdb.Uint64ToBytes(epochID)
-	keyBuf.Write(epochIDBufDec)
-	selfIndexBufDec := posdb.Uint64ToBytes(selfIndex)
-	keyBuf.Write(selfIndexBufDec)
-	keyBuf.Write([]byte("slotLeaderStag2"))
-	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
+	keyHash := vm.GetSlotLeaderStage2KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(selfIndex))
 
 	log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 

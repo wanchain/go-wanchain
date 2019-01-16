@@ -171,8 +171,6 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	var keyBuf bytes.Buffer
-
 	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
 
 	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm, pos.Stage2K, pos.Stage4K) {
@@ -182,14 +180,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
 
-	keyBuf.Write(epochIDBufDec)
-
-	selfIndexBufDec := posdb.Uint64StringToByte(selfIndexBuf)
-
-	keyBuf.Write(selfIndexBufDec)
-
-	keyBuf.Write([]byte("slotLeaderStag2"))
-	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
+	keyHash := GetSlotLeaderStage2KeyHash(epochIDBufDec, posdb.Uint64StringToByte(selfIndexBuf))
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
 	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(data)))
@@ -313,5 +304,14 @@ func GetSlotLeaderStage1KeyHash(epochID, selfIndex []byte) common.Hash {
 	keyBuf.Write(epochID)
 	keyBuf.Write(selfIndex)
 	keyBuf.Write([]byte("slotLeaderStag1"))
+	return crypto.Keccak256Hash(keyBuf.Bytes())
+}
+
+// GetSlotLeaderStage2KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
+func GetSlotLeaderStage2KeyHash(epochID, selfIndex []byte) common.Hash {
+	var keyBuf bytes.Buffer
+	keyBuf.Write(epochID)
+	keyBuf.Write(selfIndex)
+	keyBuf.Write([]byte("slotLeaderStag2"))
 	return crypto.Keccak256Hash(keyBuf.Bytes())
 }
