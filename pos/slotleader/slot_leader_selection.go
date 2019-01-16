@@ -649,6 +649,20 @@ func (s *SlotLeaderSelection) verifySecurityPiece(index uint64) (valid bool, err
 	} else {
 		log.Debug(fmt.Sprintln("VerifyDleqProof: pk:", s.epochLeadersPtrArray[:], " , alphaPK:", s.stageTwoAlphaPKi[index][:], ", stageTwoProof:", s.stageTwoProof[index][:]))
 		// verify proof[index]
+
+		for _,value := range s.epochLeadersPtrArray{
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"epochLeader",hex.EncodeToString(crypto.FromECDSAPub(value)))
+		}
+
+		for _,valueAplaPk := range s.stageTwoAlphaPKi[index]{
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"alphaPK",hex.EncodeToString(crypto.FromECDSAPub(valueAplaPk)))
+		}
+
+
+		for _,valueStage2Proof := range s.stageTwoProof[index]{
+			log.Debug("verifySecurityPiece:VerifyDleqProof", "index",index,"alphaPK",hex.EncodeToString(valueStage2Proof.Bytes()))
+		}
+
 		if s.epochLeadersPtrArray[0] == nil {
 			return false, errors.New("Epoch leaders are not ready")
 		}
