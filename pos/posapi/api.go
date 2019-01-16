@@ -82,6 +82,23 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) string {
 	return info
 }
 
+func (a PosApi) GetLocalPK() ([]byte, error) {
+	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return crypto.FromECDSAPub(pk), nil
+}
+
+func (a PosApi) GetBootNodePK() ([]byte, error) {
+	return hex.DecodeString(pos.GenesisPK)
+}
+
+func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
+	return vm.GetSlotScCallTimes(epochID)
+}
+
 func (a PosApi) GetSmaByEpochID(epochID uint64) string {
 	pks, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
 	info := ""

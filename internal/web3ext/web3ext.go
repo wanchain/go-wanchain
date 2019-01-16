@@ -155,7 +155,13 @@ web3._extend({
 			call: 'pos_getRandomProposersByEpochID',
 			params: 1
 		}),
-		
+
+		new web3._extend.Method({
+			name: 'getSlotScCallTimesByEpochID',
+			call: 'pos_getSlotScCallTimesByEpochID',
+			params: 1
+		}),
+
 		new web3._extend.Method({
 			name: 'random',
 			call: 'pos_random',
