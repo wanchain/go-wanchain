@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/wanchain/go-wanchain/pos"
@@ -124,15 +123,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, errors.New("Not in range handleStgOne hash:" + crypto.Keccak256Hash(in).Hex())
 	}
 
-	// address : sc slotLeaderPrecompileAddr
-	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
-	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
-
-	var keyBuf bytes.Buffer
-	keyBuf.Write(epochID)
-	keyBuf.Write(selfIndex)
-	keyBuf.Write([]byte("slotLeaderStag1"))
-	keyHash := crypto.Keccak256Hash(keyBuf.Bytes())
+	keyHash := GetSlotLeaderStage1KeyHash(epochID, selfIndex)
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
 
@@ -179,9 +170,6 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	if err != nil {
 		return nil, err
 	}
-	// address : sc slotLeaderPrecompileAddr
-	// key:      hash(epochID,selfIndex,"slotLeaderStag2")
-	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
 
 	var keyBuf bytes.Buffer
 
@@ -317,4 +305,13 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	}
 
 	return true
+}
+
+// GetSlotLeaderStage1KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
+func GetSlotLeaderStage1KeyHash(epochID, selfIndex []byte) common.Hash {
+	var keyBuf bytes.Buffer
+	keyBuf.Write(epochID)
+	keyBuf.Write(selfIndex)
+	keyBuf.Write([]byte("slotLeaderStag1"))
+	return crypto.Keccak256Hash(keyBuf.Bytes())
 }
