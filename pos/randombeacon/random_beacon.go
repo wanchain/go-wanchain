@@ -299,7 +299,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 	dkgCount := len(datas)
 	log.Info("collecte dkg", "count", dkgCount)
-	if uint(dkgCount) < pos.Cfg().MinRBProposerCnt {
+	if uint(dkgCount) < pos.Cfg().RBThres {
 		return errors.New("insufficient proposer")
 	}
 
@@ -381,8 +381,8 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 //		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
 //	}
 //
-//	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().RBThres, "acture", len(sigDatas))
 //		// return errors.New("insufficient proposer")
 //
 //		randomInt := vm.GetR(rb.statedb, epochId)

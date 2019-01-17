@@ -488,8 +488,8 @@ func TestUtil(t *testing.T) {
 //		}
 //	}
 //
-//	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-//		t.Fatal("sigDatas < MinRBProposerCnt")
+//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+//		t.Fatal("sigDatas < RBThres")
 //	}
 //
 //	gsigshare := make([]bn256.G1, len(sigDatas))
