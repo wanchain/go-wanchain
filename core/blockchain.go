@@ -24,7 +24,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"io"
 	"math/big"
-	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,7 +32,6 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -45,6 +43,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
+	"github.com/wanchain/go-wanchain/consensus/ethash"
+
 )
 
 var (
@@ -785,6 +785,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
@@ -819,10 +820,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		return NonStatTy, err
 	}
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
-	// Second clause in the if statement reduces the vulnerability to selfish mining.
-	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	/// If the total difficulty is higher than our known, add it to the canonical chain
+	/// Second clause in the if statement reduces the vulnerability to selfish mining.
+	/// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+
+	//removed second clause in the if statement reduces the vulnerability to selfish mining
+	if externTd.Cmp(localTd) > 0  {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -852,6 +855,76 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.futureBlocks.Remove(block.Hash())
 	return status, nil
 }
+
+
+
+// WriteBlock writes the block to the chain.
+//func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+//	bc.wg.Add(1)
+//	defer bc.wg.Done()
+//
+//	// Calculate the total difficulty of the block
+//	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
+//	if ptd == nil {
+//		return NonStatTy, consensus.ErrUnknownAncestor
+//	}
+//	// Make sure no inconsistent state is leaked during insertion
+//	bc.mu.Lock()
+//	defer bc.mu.Unlock()
+//
+//	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
+//	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+//
+//	// Irrelevant of the canonical status, write the block itself to the database
+//	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+//		return NonStatTy, err
+//	}
+//	// Write other block data using a batch.
+//	batch := bc.chainDb.NewBatch()
+//	if err := WriteBlock(batch, block); err != nil {
+//		return NonStatTy, err
+//	}
+//
+//	if _, err := state.CommitTo(batch, true /*bc.config.IsEIP158(block.Number())*/); err != nil {
+//		return NonStatTy, err
+//	}
+//	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
+//		return NonStatTy, err
+//	}
+//
+//	// If the total difficulty is higher than our known, add it to the canonical chain
+//	// Second clause in the if statement reduces the vulnerability to selfish mining.
+//	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+//	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+//		// Reorganise the chain if the parent is not the head block
+//		if block.ParentHash() != bc.currentBlock.Hash() {
+//			if err := bc.reorg(bc.currentBlock, block); err != nil {
+//				return NonStatTy, err
+//			}
+//		}
+//		// Write the positional metadata for transaction and receipt lookups
+//		if err := WriteTxLookupEntries(batch, block); err != nil {
+//			return NonStatTy, err
+//		}
+//		// Write hash preimages
+//		if err := WritePreimages(bc.chainDb, block.NumberU64(), state.Preimages()); err != nil {
+//			return NonStatTy, err
+//		}
+//		status = CanonStatTy
+//	} else {
+//		status = SideStatTy
+//	}
+//	if err := batch.Write(); err != nil {
+//		return NonStatTy, err
+//	}
+//
+//	// Set new head.
+//	if status == CanonStatTy {
+//		bc.insert(block)
+//	}
+//	bc.futureBlocks.Remove(block.Hash())
+//	return status, nil
+//}
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical
 // chain or, otherwise, create a fork. If an error is returned it will return
@@ -1067,9 +1140,40 @@ func countTransactions(chain []*types.Block) (c int) {
 	return c
 }
 
+
+
 // reorgs takes two blocks, an old chain and a new chain and will reconstruct the blocks and inserts them
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
+func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
+	if pos.EpochBaseTime == 0 {
+		return
+	}
+
+	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
+	epochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
+
+	return
+}
+
+func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64,blkSlotId uint64,err error){
+	blkTime := block.Time().Uint64()
+
+	blkTd := block.Difficulty().Uint64()
+
+	blkEpochId = (blkTd&(0xffffffffffffff00)>>32)
+	blkSlotId = ((blkTd&0xff)>>8)
+
+	calEpochId,calSlotId := calEpochSlotIDFromTime(blkTime)
+	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
+
+	if calEpochId!=blkEpochId || calSlotId!=blkSlotId {
+		return 0,0,errors.New("epochid and slotid is not match with blk time")
+	}
+
+	return
+}
+
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var (
 		newChain    types.Blocks
@@ -1108,6 +1212,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			newChain = append(newChain, newBlock)
 		}
 	}
+
 	if oldBlock == nil {
 		return fmt.Errorf("Invalid old chain")
 	}
@@ -1134,6 +1239,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			return fmt.Errorf("Invalid new chain")
 		}
 	}
+
 	//ppow extend
 	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
 		log.Trace("wanchain willing revert")
@@ -1155,38 +1261,180 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	} else {
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
+
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
-	for _, block := range newChain {
-		// insert the block in the canonical way, re-writing history
-		bc.insert(block)
-		// write lookup entries for hash based transaction/receipt searches
-		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
-			return err
-		}
-		addedTxs = append(addedTxs, block.Transactions()...)
+
+
+	oldEpochId,oldSlotId,err := bc.GetBlockEpochIdAndSlotId(oldChain[0])
+	if err != nil {
+		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
 	}
 
-	// calculate the difference between deleted and added transactions
-	diff := types.TxDifference(deletedTxs, addedTxs)
-	// When transactions get deleted from the database that means the
-	// receipts that were created in the fork must also be deleted
-	for _, tx := range diff {
-		DeleteTxLookupEntry(bc.chainDb, tx.Hash())
+
+	newEpochId,newSlotId,err := bc.GetBlockEpochIdAndSlotId(newChain[0])
+	if err != nil {
+		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
-	if len(deletedLogs) > 0 {
-		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
-	}
-	if len(oldChain) > 0 {
-		go func() {
-			for _, block := range oldChain {
-				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
+
+	//new chain have smaller epochid,then use new chain
+	//epochid is same  and new chain slotid is smaller,then use new chain
+	//epochid is same and new chain slotid is same,then use new chain
+	if newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId <= oldSlotId) {
+
+		for _, block := range newChain {
+			// insert the block in the canonical way, re-writing history
+			bc.insert(block)
+			// write lookup entries for hash based transaction/receipt searches
+			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
+				return err
 			}
-		}()
-	}
+
+			addedTxs = append(addedTxs, block.Transactions()...)
+		}
+
+		// calculate the difference between deleted and added transactions
+		diff := types.TxDifference(deletedTxs, addedTxs)
+		// When transactions get deleted from the database that means the
+		// receipts that were created in the fork must also be deleted
+		for _, tx := range diff {
+			DeleteTxLookupEntry(bc.chainDb, tx.Hash())
+		}
+		if len(deletedLogs) > 0 {
+			go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
+		}
+
+		if len(oldChain) > 0 {
+			go func() {
+				for _, block := range oldChain {
+					bc.chainSideFeed.Send(ChainSideEvent{Block: block})
+				}
+			}()
+		}
+
+	}//if new chain is right one
 
 	return nil
 }
+
+//func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
+//	var (
+//		newChain    types.Blocks
+//		oldChain    types.Blocks
+//		commonBlock *types.Block
+//		deletedTxs  types.Transactions
+//		deletedLogs []*types.Log
+//		// collectLogs collects the logs that were generated during the
+//		// processing of the block that corresponds with the given hash.
+//		// These logs are later announced as deleted.
+//		collectLogs = func(h common.Hash) {
+//			// Coalesce logs and set 'Removed'.
+//			receipts := GetBlockReceipts(bc.chainDb, h, bc.hc.GetBlockNumber(h))
+//			for _, receipt := range receipts {
+//				for _, log := range receipt.Logs {
+//					del := *log
+//					del.Removed = true
+//					deletedLogs = append(deletedLogs, &del)
+//				}
+//			}
+//		}
+//	)
+//
+//	// first reduce whoever is higher bound
+//	if oldBlock.NumberU64() > newBlock.NumberU64() {
+//		// reduce old chain
+//		for ; oldBlock != nil && oldBlock.NumberU64() != newBlock.NumberU64(); oldBlock = bc.GetBlock(oldBlock.ParentHash(), oldBlock.NumberU64()-1) {
+//			oldChain = append(oldChain, oldBlock)
+//			deletedTxs = append(deletedTxs, oldBlock.Transactions()...)
+//
+//			collectLogs(oldBlock.Hash())
+//		}
+//	} else {
+//		// reduce new chain and append new chain blocks for inserting later on
+//		for ; newBlock != nil && newBlock.NumberU64() != oldBlock.NumberU64(); newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1) {
+//			newChain = append(newChain, newBlock)
+//		}
+//	}
+//
+//	if oldBlock == nil {
+//		return fmt.Errorf("Invalid old chain")
+//	}
+//	if newBlock == nil {
+//		return fmt.Errorf("Invalid new chain")
+//	}
+//
+//	for {
+//		if oldBlock.Hash() == newBlock.Hash() {
+//			commonBlock = oldBlock
+//			break
+//		}
+//
+//		oldChain = append(oldChain, oldBlock)
+//		newChain = append(newChain, newBlock)
+//		deletedTxs = append(deletedTxs, oldBlock.Transactions()...)
+//		collectLogs(oldBlock.Hash())
+//
+//		oldBlock, newBlock = bc.GetBlock(oldBlock.ParentHash(), oldBlock.NumberU64()-1), bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
+//		if oldBlock == nil {
+//			return fmt.Errorf("Invalid old chain")
+//		}
+//		if newBlock == nil {
+//			return fmt.Errorf("Invalid new chain")
+//		}
+//	}
+//	//ppow extend
+//	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
+//		log.Trace("wanchain willing revert")
+//		err := ethash.VerifyPPOWReorg(bc, oldBlock, oldChain, newChain)
+//		if err != nil {
+//			log.Error("wanchain revert invalid")
+//			return err
+//		}
+//	}
+//
+//	// Ensure the user sees large reorgs
+//	if len(oldChain) > 0 && len(newChain) > 0 {
+//		logFn := log.Debug
+//		if len(oldChain) > 63 {
+//			logFn = log.Warn
+//		}
+//		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
+//			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
+//	} else {
+//		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+//	}
+//	var addedTxs types.Transactions
+//	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
+//	for _, block := range newChain {
+//		// insert the block in the canonical way, re-writing history
+//		bc.insert(block)
+//		// write lookup entries for hash based transaction/receipt searches
+//		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
+//			return err
+//		}
+//		addedTxs = append(addedTxs, block.Transactions()...)
+//	}
+//
+//	// calculate the difference between deleted and added transactions
+//	diff := types.TxDifference(deletedTxs, addedTxs)
+//	// When transactions get deleted from the database that means the
+//	// receipts that were created in the fork must also be deleted
+//	for _, tx := range diff {
+//		DeleteTxLookupEntry(bc.chainDb, tx.Hash())
+//	}
+//	if len(deletedLogs) > 0 {
+//		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
+//	}
+//	if len(oldChain) > 0 {
+//		go func() {
+//			for _, block := range oldChain {
+//				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
+//			}
+//		}()
+//	}
+//
+//	return nil
+//}
 
 // PostChainEvents iterates over the events generated by a chain insertion and
 // posts them into the event feed.
