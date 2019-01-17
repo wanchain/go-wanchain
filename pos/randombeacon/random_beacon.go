@@ -3,11 +3,6 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
-	"math/big"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -18,8 +13,11 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	bn256 "github.com/wanchain/pos/cloudflare"
-	wanpos "github.com/wanchain/pos/wanpos_crypto"
+	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/wanpos_crypto"
+	"math/big"
+	"strings"
+	"time"
 )
 
 var (
@@ -38,19 +36,25 @@ type RbSIGDataCollector struct {
 
 type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 
+type LoopEvent struct {
+	statedb vm.StateDB
+	rc *rpc.Client
+	eid uint64
+	sid uint64
+}
+
 type RandomBeacon struct {
+	loopEvents chan *LoopEvent
+
 	epochStage int
 	epochId    uint64
 
 	statedb   vm.StateDB
-	//key       *keystore.Key
 	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
-
-	mu sync.Mutex
 }
 
 var (
@@ -58,7 +62,7 @@ var (
 )
 
 func init() {
-	randomBeacon.Init(nil)
+	//randomBeacon.Init(nil)
 }
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -74,13 +78,29 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 
 	// function
 	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
+
+	rb.loopEvents = make(chan *LoopEvent, 1000)
+
+	go rb.LoopRoutine()
+}
+
+func (rb *RandomBeacon) Uninit() {
+	close(rb.loopEvents)
 }
 
 func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid uint64) {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
+	rb.loopEvents <- &LoopEvent{statedb, rc, eid, sid}
+}
 
-	rb.doLoop(statedb, rc, eid, sid)
+func (rb *RandomBeacon) LoopRoutine()  {
+	for {
+		event, ok := <-rb.loopEvents
+		if !ok {
+			break
+		}
+
+		rb.doLoop(event.statedb, event.rc, event.eid, event.sid)
+	}
 }
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
@@ -89,19 +109,10 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		return errors.New("invalid random beacon loop param")
 	}
 
-	log.Info("RB Loop begin", "statedb", statedb)
+	log.Info("rb doLoop begin", "epochId", epochId, "slotId", slotId)
 	rb.statedb = statedb
 	rb.rpcClient = rc
 
-	log.Info("set miner account", "puk", pos.Cfg().GetMinerBn256PK(), "prk", pos.Cfg().GetMinerBn256SK())
-
-	// get epoch id, slot id
-	//epochId, slotId := slotleader.GetEpochSlotID()
-	//if eid != epochId || sid != slotId {
-	//	return errors.New("bad time")
-	//}
-
-	log.Info("get epoch slot id", "epochId", epochId, "slotId", slotId)
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
 		log.Error("blockchain rollback")
 		return errors.New("blockchain rollback")
@@ -299,7 +310,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 	dkgCount := len(datas)
 	log.Info("collecte dkg", "count", dkgCount)
-	if uint(dkgCount) < pos.Cfg().MinRBProposerCnt {
+	if uint(dkgCount) < pos.Cfg().RBThres {
 		return errors.New("insufficient proposer")
 	}
 
@@ -381,8 +392,8 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 //		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
 //	}
 //
-//	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().RBThres, "acture", len(sigDatas))
 //		// return errors.New("insufficient proposer")
 //
 //		randomInt := vm.GetR(rb.statedb, epochId)

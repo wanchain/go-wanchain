@@ -174,7 +174,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			log.Error("Failed to get stateDb: ", err2)
 		}
 		if stateDb != nil {
-			go randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
 		}
 		cur := uint64(time.Now().Unix())
 		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)

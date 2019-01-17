@@ -20,7 +20,7 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 10
+	RandomProperCount = 21
 	// SlotCount is slot count in an epoch
 	SlotCount = 100
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
@@ -43,7 +43,7 @@ const (
 type Config struct {
 	PolymDegree      uint
 	K                uint
-	MinRBProposerCnt uint
+	RBThres          uint
 	EpochInterval    uint64
 	PosStartTime     int64
 	MinerKey         *keystore.Key
@@ -57,7 +57,7 @@ type Config struct {
 var DefaultConfig = Config{
 	1,
 	SlotCount / 10,
-	2,
+	11,
 	0,
 	0,
 	nil,

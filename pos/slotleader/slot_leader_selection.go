@@ -144,7 +144,6 @@ func init() {
 		smaPiece.Curve = crypto.S256()
 		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
 		s.smaGenesis[i] = smaPiece
-		//fmt.Printf("========================Jacob %d, %v\n", i, hex.EncodeToString(crypto.FromECDSAPub(s.smaGenesis[i])))
 
 		for j := 0; j < pos.EpochLeaderCount; j++ {
 			// AlphaIPki stage2Genesis
@@ -545,19 +544,16 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	epochIDGet := epochID
 
 	// get pre sma
-	piecesPtr, isGenesis, err := s.getSMAPieces(epochIDGet)
-	if err != nil {
-		log.Warn(fmt.Sprintf("get securiy message error: "+err.Error()+", epocIDGet:%d", epochIDGet))
-	}
+	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
 
 	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
 	if !canBeContinue {
-		log.Info("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
+		log.Warn("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
 
 	if (err != nil && epochID > 1) || isGenesis {
-		log.Warn("Can not find pre epoch SMA and Pre epoch slotLeader tx, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
+		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
 
 	}
@@ -588,13 +584,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
-			log.Error("not")
 			return errors.New("piecesPtr is not on curve")
 		}
-		ret = crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
+	}
+	for i :=0; i< pos.EpochLeaderCount;i++ {
+		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
-			log.Error("not")
-			return errors.New("epochLeadersPtrArray is not on curve")
+			return errors.New("epochLeaders pk is not on curve")
 		}
 	}
 	log.Info("Before GenerateSlotLeaderSeq")
@@ -603,18 +599,21 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
 
 	if err != nil {
+		log.Error("generateSlotLeadsGroup","error",err.Error())
 		return err
 	}
 
-	log.Info("GenerateSlotLeaderSeq success")
-
-	// 6. insert slot address to local DB
+	// insert slot address to local DB
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
-		s.slotLeadersPtrArray[index] = val
 		if err != nil {
+			log.Error("generateSlotLeadsGroup:PutWithIndex","error",err.Error())
 			return err
 		}
+	}
+
+	for index, val := range slotLeadersPtr {
+		s.slotLeadersPtrArray[index] = val
 	}
 
 	for index, value := range slotLeadersIndex {
@@ -622,6 +621,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	}
 
 	s.slotCreateStatus[epochID] = true
+	log.Info("GenerateSlotLeaderSeq success")
+
 	s.dumpData()
 	return nil
 }
@@ -825,7 +826,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return err
 	}
 
-	log.Debug(fmt.Sprintf("----Generate SMA Success-----epochID:%d, key:%s, bytes:%s", epochID+1, SecurityMsg, hex.EncodeToString(smasBytes.Bytes())))
+	log.Info("generateSecurityMsg","Generate SMA Success.", "epochID+1",epochID+1, "len(SMA)",len(smasPtr))
 
 	return nil
 }

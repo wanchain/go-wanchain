@@ -16,7 +16,6 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
-	"io/ioutil"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -489,8 +488,8 @@ func TestUtil(t *testing.T) {
 //		}
 //	}
 //
-//	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-//		t.Fatal("sigDatas < MinRBProposerCnt")
+//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+//		t.Fatal("sigDatas < RBThres")
 //	}
 //
 //	gsigshare := make([]bn256.G1, len(sigDatas))
@@ -622,7 +621,7 @@ func TestSigsNum(t *testing.T) {
 }
 
 func TestRB256(t *testing.T) {
-	nr = 256
+	nr = 10
 	pubs, pris, hpubs = generateKeyPairs()
 	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
 	rbgroupdb[rbepochId] = pubs
@@ -638,7 +637,7 @@ func TestRB256(t *testing.T) {
 		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
 		payloadStr := common.Bytes2Hex(payloadBytes)
 		println(payloadStr)
-		ioutil.WriteFile("256.bin", payloadBytes, 0644)
+		//ioutil.WriteFile("256.bin", payloadBytes, 0644)
 		break
 	}
 }

@@ -429,7 +429,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		j++
 		gpkshare.Add(&gpkshare, ci[pid])
 	}
-	if j < pos.Cfg().MinRBProposerCnt {
+	if j < pos.Cfg().RBThres {
 		return nil, buildError(" insufficient proposer ", eid, pid)
 	}
 
@@ -449,7 +449,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	// calc r if not exist
 	signum := getSigsNum(eid, evm) + 1
 	setSigsNum(eid, signum, evm)
-	if uint(signum) >= pos.Cfg().MinRBProposerCnt {
+	if uint(signum) >= pos.Cfg().RBThres {
 		r, err := computeRandom(evm.StateDB, eid)
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
@@ -526,8 +526,8 @@ func computeRandom(statedb StateDB, epochId uint64) (*big.Int, error) {
 	}
 
 	log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
-	if uint(len(sigDatas)) < pos.Cfg().MinRBProposerCnt {
-		log.Warn("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().MinRBProposerCnt, "acture", len(sigDatas))
+	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+		log.Warn("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().RBThres, "acture", len(sigDatas))
 		return nil, errors.New("insufficient proposer")
 	}
 
