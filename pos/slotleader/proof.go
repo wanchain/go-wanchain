@@ -41,36 +41,30 @@ func (s *SlotLeaderSelection) GetSlotLeaderProofByGenesis(PrivateKey *ecdsa.Priv
 }
 
 func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-	_, err := s.getPreEpochLeadersPK(epochID)
+
+	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if epochID == uint64(0) || err != nil {
+		log.Warn("GetSlotLeaderProof","getPreEpochLeadersPK error",err.Error())
 		return s.GetSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
 
-	//1. SMA PRE
+	//SMA PRE
 	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
 		return s.GetSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
 
+	//RB PRE
 	var rbPtr *big.Int
-	//2. epochLeader PRE
-	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
+	rbPtr, err = s.getRandom(epochID)
 	if err != nil {
-		log.Warn(err.Error())
-	} else {
-		//3. RB PRE
-
-		rbPtr, err = s.getRandom(epochID)
-		if err != nil {
-			log.Error(err.Error())
-			return nil, nil, err
-		}
+		log.Error("GetSlotLeaderProof","getRandom error",err.Error())
+		return nil, nil, err
 	}
 
 	rbBytes := rbPtr.Bytes()
 
 	log.Debug("GetSlotLeaderProof", "epochID", epochID, "slotID", slotID)
-
 	log.Debug("GetSlotLeaderProof", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes))
 
 	for index, value := range epochLeadersPtrPre {
