@@ -1,11 +1,12 @@
 package pos
 
 import (
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/node"
-	"github.com/wanchain/pos/cloudflare"
-	"math/big"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 var (
@@ -17,7 +18,7 @@ var (
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCount = 30
+	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 21
 	// SlotCount is slot count in an epoch
@@ -40,23 +41,23 @@ const (
 )
 
 type Config struct {
-	PolymDegree      uint
-	K                uint
-	RBThres          uint
-	EpochInterval    uint64
-	PosStartTime     int64
-	MinerKey         *keystore.Key
-	Dbpath           string
-	NodeCfg          *node.Config
-	DkgEnd           uint64
-	SignBegin        uint64
-	SignEnd          uint64
+	PolymDegree   uint
+	K             uint
+	RBThres       uint
+	EpochInterval uint64
+	PosStartTime  int64
+	MinerKey      *keystore.Key
+	Dbpath        string
+	NodeCfg       *node.Config
+	DkgEnd        uint64
+	SignBegin     uint64
+	SignEnd       uint64
 }
 
 var DefaultConfig = Config{
 	1,
 	SlotCount / 10,
-	11,
+	3,
 	0,
 	0,
 	nil,
@@ -94,4 +95,3 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 
 	return new(big.Int).Set(c.MinerKey.PrivateKey3.D)
 }
-
