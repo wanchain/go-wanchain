@@ -7,9 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wanchain/go-wanchain/core/vm"
+
 	"github.com/wanchain/go-wanchain/pos"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -205,7 +206,6 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 //payload should be send with tx.
 func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
-	functrace.Enter()
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errors.New("Invalid input parameters")
 	}
@@ -225,26 +225,12 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 		return nil, err
 	}
 
-	pk := btcec.PublicKey(*commitment[0])
-	mi := btcec.PublicKey(*commitment[1])
-
-	pkCompress := pk.SerializeCompressed()
-	miCompress := mi.SerializeCompressed()
-	epochIDBuf := posdb.Uint64ToBytes(epochID)
-	selfIndexBuf := posdb.Uint64ToBytes(selfIndexInEpochLeader)
-
-	log.Debug("epochIDBuf(hex): " + hex.EncodeToString(epochIDBuf))
-	log.Debug("selfIndexBuf: " + hex.EncodeToString(selfIndexBuf))
-	log.Debug("pkCompress: " + hex.EncodeToString(pkCompress))
-	log.Debug("miCompress: " + hex.EncodeToString(miCompress))
-
-	buffer, err := slottools.RlpPackCompressedPK(epochIDBuf, selfIndexBuf, pkCompress, miCompress)
+	buffer, err := slottools.RlpPackStage1DataForTx(epochID, selfIndexInEpochLeader, commitment[1], vm.GetSlotLeaderScAbiString())
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
 	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
 
-	functrace.Exit()
 	return buffer, err
 }
 

@@ -71,7 +71,7 @@ func init() {
 	}
 
 	stgOneIdArr, _ = slottools.GetStage1FunctionID(slotLeaderSCDef)
-	copy(stgTwoIdArr[:], slotLeaderAbi.Methods["slotLeaderStage2InfoSave"].Id())
+	stgTwoIdArr, _ = slottools.GetStage2FunctionID(slotLeaderSCDef)
 }
 
 type slotLeaderSC struct {
@@ -95,7 +95,7 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	if methodId == stgOneIdArr {
 		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
-		return c.handleStgTwo(in[4:], contract, evm)
+		return c.handleStgTwo(in[:], contract, evm)
 	}
 
 	functrace.Exit()
@@ -103,88 +103,50 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 }
 
 func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	functrace.Enter()
 	log.Debug("slotLeaderSC handleStgOne is called")
-	if evm == nil {
-		return nil, errors.New("state db is not ready")
-	}
-	data, err := slottools.UnpackStage1Data(in, slotLeaderSCDef)
+
+	epochIDBuf, selfIndexBuf, err := slottools.RlpGetStage1IDFromTx(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
 
-	epochID, selfIndex, pkSelf, miGen, err := slottools.RlpUnpackWithCompressedPK(data) // use this function to unpack rlp []byte
-	if err != nil {
-		return nil, err
-	}
-
-	if !isInValidStage(posdb.BytesToUint64(epochID), evm, 0, pos.Stage1K) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, 0, pos.Stage1K) {
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, errors.New("Not in range handleStgOne hash:" + crypto.Keccak256Hash(in).Hex())
 	}
 
-	keyHash := GetSlotLeaderStage1KeyHash(epochID, selfIndex)
+	keyHash := GetSlotLeaderStage1KeyHash(epochIDBuf, selfIndexBuf)
 
-	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
+	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, in)
 
-	// Read and Verify
-	readBuf := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	addSlotScCallTimes(posdb.BytesToUint64(epochIDBuf))
 
-	epID, index, pk, pkMi, err := slottools.RlpUnpackWithCompressedPK(readBuf)
+	log.Debug(fmt.Sprintf("-----------------------------------------handleStgOne save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
+	log.Debug("handleStgTwo save", "epochID", postools.BytesToUint64(epochIDBuf), "selfIndex", postools.BytesToUint64(selfIndexBuf))
 
-	addSlotScCallTimes(posdb.BytesToUint64(epID))
-
-	if hex.EncodeToString(epID) == hex.EncodeToString(epochID) &&
-		hex.EncodeToString(index) == hex.EncodeToString(selfIndex) &&
-		hex.EncodeToString(pk) == hex.EncodeToString(pkSelf) &&
-		hex.EncodeToString(pkMi) == hex.EncodeToString(miGen) &&
-		err == nil {
-		log.Debug("--------------------------------------------------handleStgOne Data save to StateDb and verified success")
-		log.Debug("epID:" + hex.EncodeToString(epID))
-		log.Debug("index:" + hex.EncodeToString(index))
-		log.Debug("pk:" + hex.EncodeToString(pk))
-		log.Debug("pkMi:" + hex.EncodeToString(pkMi))
-
-	} else {
-		log.Debug("Data save to StateDb and verified failed")
-		return nil, errors.New("Data save to StateDb and verified failed")
-	}
-
-	functrace.Exit()
 	return nil, nil
 }
 
 func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	functrace.Enter()
-	log.Debug("slotLeaderSC handleStgTwo is called")
-	if evm == nil {
-		return nil, errors.New("state db is not ready")
-	}
 
-	data, err := slottools.UnpackStage2Data(in, slotLeaderSCDef)
+	epochIDBuf, selfIndexBuf, err := slottools.RlpGetStage2IDFromTx(in, slotLeaderSCDef)
 	if err != nil {
 		return nil, err
 	}
 
-	epochIDBuf, selfIndexBuf, _, _, _, err := slottools.RlpUnpackStage2Data(data)
-	if err != nil {
-		return nil, err
-	}
-
-	epochIDBufDec := posdb.Uint64StringToByte(epochIDBuf)
-
-	if !isInValidStage(posdb.BytesToUint64(epochIDBufDec), evm, pos.Stage2K, pos.Stage4K) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Stage2K, pos.Stage4K) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, errors.New("Not in range handleStgTwo hash:" + crypto.Keccak256Hash(in).Hex())
 	}
 
-	addSlotScCallTimes(posdb.BytesToUint64(epochIDBufDec))
+	keyHash := GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
 
-	keyHash := GetSlotLeaderStage2KeyHash(epochIDBufDec, posdb.Uint64StringToByte(selfIndexBuf))
+	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, in)
 
-	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, data)
-	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(data)))
-	log.Debug("handleStgTwo save", "epochID", epochIDBuf, "selfIndex", selfIndexBuf)
+	addSlotScCallTimes(posdb.BytesToUint64(epochIDBuf))
+
+	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
+	log.Debug("handleStgTwo save", "epochID", postools.BytesToUint64(epochIDBuf), "selfIndex", postools.BytesToUint64(selfIndexBuf))
 
 	functrace.Exit()
 	return nil, nil

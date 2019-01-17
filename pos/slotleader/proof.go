@@ -44,7 +44,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if epochID == uint64(0) || err != nil {
-		log.Warn("GetSlotLeaderProof","getPreEpochLeadersPK error",err.Error())
+		log.Warn("GetSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
 		return s.GetSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
 
@@ -58,7 +58,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	var rbPtr *big.Int
 	rbPtr, err = s.getRandom(epochID)
 	if err != nil {
-		log.Error("GetSlotLeaderProof","getRandom error",err.Error())
+		log.Error("GetSlotLeaderProof", "getRandom error", err.Error())
 		return nil, nil, err
 	}
 
@@ -184,8 +184,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	}
 
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		_, mi, _ := s.getStg1StateDbInfo(epochID-1, uint64(i))
-		if len(mi) == 0 {
+		mi, err := s.getStg1StateDbInfo(epochID-1, uint64(i))
+		if err != nil || len(mi) == 0 {
 			validEpochLeadersIndex[i] = false
 			log.Debug("VerifySlotProof", "index", i, "len(mi)", len(mi))
 			continue
@@ -193,38 +193,24 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			stageOneMi[i] = crypto.ToECDSAPub(mi)
 		}
 
-		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID-1, uint64(i))
+		alphaPki, proof, err := s.getStage2TxAlphaPki(epochID-1, uint64(i))
 		if err != nil {
 			log.Debug("VerifySlotProof:getStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
 			continue
 		}
-		if (len(alphaPkis) != pos.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
-			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index", i, "len(alphaPkis)", len(alphaPkis), "len(proofs)", len(proofs))
+		if (len(alphaPki) != pos.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
+			log.Warn("VerifySlotProof:getStage2TxAlphaPki", "index", i, "len(alphaPkis)", len(alphaPki), "len(proofs)", len(proof))
 			validEpochLeadersIndex[i] = false
 			continue
 		} else {
-
 			for j := 0; j < pos.EpochLeaderCount; j++ {
-				alphaPkiDecodeBytes, err := hex.DecodeString(alphaPkis[j])
-				if err != nil {
-					log.Warn("VerifySlotProof:DecodeString", "indexI", i, "indexJ", j, "error", err.Error())
-					validEpochLeadersIndex[i] = false
-					break
-				}
-				stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub(alphaPkiDecodeBytes)
+				stageTwoAlphaPKi[i][j] = alphaPki[j]
 			}
-
 			for j := 0; j < StageTwoProofCount; j++ {
-				var err bool
-				stageTwoProof[i][j], err = big.NewInt(0).SetString(proofs[j], 16)
-				if !err {
-					log.Warn("VerifySlotProof:SetString", "indexI", i, "indexJ", j, "error", err)
-					break
-				}
+				stageTwoProof[i][j] = proof[j]
 			}
 		}
-
 	}
 
 	// 5. verify tx1 data and tx2 data

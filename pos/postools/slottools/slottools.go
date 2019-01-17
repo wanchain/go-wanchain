@@ -1,10 +1,16 @@
 package slottools
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"github.com/wanchain/go-wanchain/log"
+	"math/big"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/postools"
+
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/abi"
@@ -16,7 +22,7 @@ import (
 func GetStage1FunctionID(abiString string) ([4]byte, error) {
 	var slotStage1ID [4]byte
 
-	abi, err := GetStage1Abi(abiString)
+	abi, err := GetAbi(abiString)
 	if err != nil {
 		return slotStage1ID, err
 	}
@@ -26,25 +32,29 @@ func GetStage1FunctionID(abiString string) ([4]byte, error) {
 	return slotStage1ID, nil
 }
 
-func GetStage1Abi(abiString string) (abi.ABI, error) {
+func GetStage2FunctionID(abiString string) ([4]byte, error) {
+	var slotStage2ID [4]byte
+
+	abi, err := GetAbi(abiString)
+	if err != nil {
+		return slotStage2ID, err
+	}
+
+	copy(slotStage2ID[:], abi.Methods["slotLeaderStage2InfoSave"].Id())
+
+	return slotStage2ID, nil
+}
+
+func GetAbi(abiString string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(abiString))
 }
 
 func UnpackStage1Data(input []byte, abiString string) ([]byte, error) {
-	abi, err := GetStage1Abi(abiString)
-	if err != nil {
-		return nil, err
-	}
-	var data string
-	err = abi.Unpack(&data, "slotLeaderStage1MiSave", input[4:])
-	if err != nil {
-		return nil, err
-	}
-	return hex.DecodeString(data)
+	return input[4:], nil
 }
 
 func UnpackStage2Data(input []byte, abiString string) ([]byte, error) {
-	abi, err := GetStage1Abi(abiString)
+	abi, err := GetAbi(abiString)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +117,11 @@ func RlpUnpackStage2Data(buf []byte) (epochIDBuf string, selfIndexBuf string, pk
 
 // PackStage1Data can pack stage1 data into abi []byte for tx payload
 func PackStage1Data(input []byte, abiString string) ([]byte, error) {
-	abi, err := GetStage1Abi(abiString)
-	if err != nil {
-		return nil, err
-	}
-	data := hex.EncodeToString(input)
-	return abi.Pack("slotLeaderStage1MiSave", data)
+	id, err := GetStage1FunctionID(abiString)
+	outBuf := make([]byte, len(id)+len(input))
+	copy(outBuf[:4], id[:])
+	copy(outBuf[4:], input[:])
+	return outBuf, err
 }
 
 // PackStage1Data can pack stage1 data into abi []byte for tx payload
@@ -123,7 +132,7 @@ func PackStage2Data(input string, abiString string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	abi, err := GetStage1Abi(abiString)
+	abi, err := GetAbi(abiString)
 	if err != nil {
 		return nil, err
 	}
@@ -179,3 +188,173 @@ func InEpochLeadersOrNotByPk(epochID uint64, pkBytes []byte) bool {
 //	}
 //	return false
 //}
+
+type stage1Data struct {
+	EpochID    uint64
+	SelfIndex  uint64
+	MiCompress []byte
+}
+
+// RlpPackStage1DataForTx
+func RlpPackStage1DataForTx(epochID uint64, selfIndex uint64, mi *ecdsa.PublicKey, abiString string) ([]byte, error) {
+	pkBuf, err := PkCompress(mi)
+	if err != nil {
+		return nil, err
+	}
+	data := &stage1Data{
+		EpochID:    epochID,
+		SelfIndex:  selfIndex,
+		MiCompress: pkBuf,
+	}
+
+	buf, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return PackStage1Data(buf, abiString)
+}
+
+// RlpUnpackStage1DataForTx
+func RlpUnpackStage1DataForTx(input []byte, abiString string) (epochID uint64, selfIndex uint64, mi *ecdsa.PublicKey, err error) {
+	var data *stage1Data
+
+	buf, _ := UnpackStage1Data(input, abiString)
+
+	err = rlp.DecodeBytes(buf, &data)
+	if err != nil {
+		return
+	}
+
+	epochID = data.EpochID
+	selfIndex = data.SelfIndex
+	mi, err = PkUncompress(data.MiCompress)
+	return
+}
+
+// RlpGetStage1IDFromTx
+func RlpGetStage1IDFromTx(input []byte, abiString string) (epochIDBuf []byte, selfIndexBuf []byte, err error) {
+	var data *stage1Data
+
+	buf, _ := UnpackStage1Data(input, abiString)
+
+	err = rlp.DecodeBytes(buf, &data)
+	if err != nil {
+		return
+	}
+	epochIDBuf = postools.Uint64ToBytes(data.EpochID)
+	selfIndexBuf = postools.Uint64ToBytes(data.SelfIndex)
+	return
+}
+
+// PkCompress
+func PkCompress(pk *ecdsa.PublicKey) ([]byte, error) {
+	if !crypto.S256().IsOnCurve(pk.X, pk.Y) {
+		return nil, errors.New("Pk point is not on S256 curve")
+	}
+	pkBtc := btcec.PublicKey(*pk)
+	return pkBtc.SerializeCompressed(), nil
+}
+
+// PkUncompress
+func PkUncompress(buf []byte) (*ecdsa.PublicKey, error) {
+	key, err := btcec.ParsePubKey(buf, btcec.S256())
+	if err != nil {
+		return nil, err
+	}
+
+	privK, _ := crypto.GenerateKey()
+	pk := &privK.PublicKey
+	pk.X = key.X
+	pk.Y = key.Y
+	return pk, nil
+}
+
+type stage2Data struct {
+	EpochID   uint64
+	SelfIndex uint64
+	SelfPk    []byte
+	AlphaPki  [][]byte
+	Proof     []*big.Int
+}
+
+func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey, proof []*big.Int, abiString string) ([]byte, error) {
+	pk, err := PkCompress(selfPK)
+	if err != nil {
+		return nil, err
+	}
+
+	pks := make([][]byte, len(alphaPki))
+	for i := 0; i < len(alphaPki); i++ {
+		pks[i], err = PkCompress(alphaPki[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data := &stage2Data{
+		EpochID:   epochID,
+		SelfIndex: selfIndex,
+		SelfPk:    pk,
+		AlphaPki:  pks,
+		Proof:     proof,
+	}
+
+	buf, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := GetStage2FunctionID(abiString)
+	if err != nil {
+		return nil, err
+	}
+
+	outBuf := make([]byte, len(id)+len(buf))
+	copy(outBuf[:4], id[:])
+	copy(outBuf[4:], buf[:])
+
+	return outBuf, nil
+}
+
+func RlpUnpackStage2DataForTx(input []byte, abiString string) (epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey, proof []*big.Int, err error) {
+	inputBuf := input[4:]
+
+	var data stage2Data
+	err = rlp.DecodeBytes(inputBuf, &data)
+	if err != nil {
+		return
+	}
+
+	epochID = data.EpochID
+	selfIndex = data.SelfIndex
+	selfPK, err = PkUncompress(data.SelfPk)
+	if err != nil {
+		return
+	}
+
+	alphaPki = make([]*ecdsa.PublicKey, len(data.AlphaPki))
+	for i := 0; i < len(data.AlphaPki); i++ {
+		alphaPki[i], err = PkUncompress(data.AlphaPki[i])
+		if err != nil {
+			return
+		}
+	}
+
+	proof = data.Proof
+	return
+}
+
+func RlpGetStage2IDFromTx(input []byte, abiString string) (epochIDBuf []byte, selfIndexBuf []byte, err error) {
+	inputBuf := input[4:]
+
+	var data stage2Data
+	err = rlp.DecodeBytes(inputBuf, &data)
+	if err != nil {
+		return
+	}
+
+	epochIDBuf = postools.Uint64ToBytes(data.EpochID)
+	selfIndexBuf = postools.Uint64ToBytes(data.SelfIndex)
+	return
+}

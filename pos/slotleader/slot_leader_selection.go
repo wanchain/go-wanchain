@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
@@ -587,7 +586,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return errors.New("piecesPtr is not on curve")
 		}
 	}
-	for i :=0; i< pos.EpochLeaderCount;i++ {
+	for i := 0; i < pos.EpochLeaderCount; i++ {
 		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
 			return errors.New("epochLeaders pk is not on curve")
@@ -599,7 +598,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
 
 	if err != nil {
-		log.Error("generateSlotLeadsGroup","error",err.Error())
+		log.Error("generateSlotLeadsGroup", "error", err.Error())
 		return err
 	}
 
@@ -607,7 +606,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
 		if err != nil {
-			log.Error("generateSlotLeadsGroup:PutWithIndex","error",err.Error())
+			log.Error("generateSlotLeadsGroup:PutWithIndex", "error", err.Error())
 			return err
 		}
 	}
@@ -700,8 +699,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	return piece, nil
 }
 
-func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []string, proofs []string, err error) {
-
+func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
 		return nil, nil, err
@@ -717,17 +715,22 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	if data == nil {
 		return nil, nil, errors.New("getStage2TxAlphaPki can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
-	_, _, _, alphaPki, proof, err := slottools.RlpUnpackStage2Data(data)
+
+	epID, slfIndex, _, alphaPki, proof, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if epID != epochID || slfIndex != selfIndex {
+		return nil, nil, errors.New("Verify failed, epID != epochID || slfIndex != selfIndex in getStage2TxAlphaPki")
+	}
+
 	return alphaPki, proof, nil
 }
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
-
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		_, mi, err := s.getStg1StateDbInfo(epochID, uint64(i))
+		mi, err := s.getStg1StateDbInfo(epochID, uint64(i))
 		if err != nil {
 			log.Warn("getStg1StateDbInfo", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
@@ -743,38 +746,26 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 		if !s.validEpochLeadersIndex[i] {
 			continue
 		}
-		alphaPkis, proofs, err := s.getStage2TxAlphaPki(epochID, uint64(i))
+
+		alphaPki, proof, err := s.getStage2TxAlphaPki(epochID, uint64(i))
 		if err != nil {
 			log.Warn("getStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
 
-		if (len(alphaPkis) != pos.EpochLeaderCount) || (len(proofs) != StageTwoProofCount) {
+		if (len(alphaPki) != pos.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
 			log.Warn("getStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
-
 			for j := 0; j < pos.EpochLeaderCount; j++ {
-				alphaPkiDecodeBytes, err := hex.DecodeString(alphaPkis[j])
-				if err != nil {
-					log.Warn("getStage2TxAlphaPki:DecodeString", "error", err.Error(), "indexI", i, "indexJ", j)
-					s.validEpochLeadersIndex[i] = false
-				} else {
-					s.stageTwoAlphaPKi[i][j] = crypto.ToECDSAPub(alphaPkiDecodeBytes)
-				}
+				s.stageTwoAlphaPKi[i][j] = alphaPki[j]
 			}
 
 			for j := 0; j < StageTwoProofCount; j++ {
-				var err bool
-				s.stageTwoProof[i][j], err = big.NewInt(0).SetString(proofs[j], 16)
-				if !err {
-					log.Warn("getStage2TxAlphaPki:StageTwoProof:SetString", "error", err, "indexI", i, "indexJ", j)
-					s.validEpochLeadersIndex[i] = false
-				}
+				s.stageTwoProof[i][j] = proof[j]
 			}
 		}
-
 	}
 	return nil
 }
@@ -826,7 +817,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return err
 	}
 
-	log.Info("generateSecurityMsg","Generate SMA Success.", "epochID+1",epochID+1, "len(SMA)",len(smasPtr))
+	log.Info("generateSecurityMsg", "Generate SMA Success.", "epochID+1", epochID+1, "len(SMA)", len(smasPtr))
 
 	return nil
 }
@@ -851,17 +842,7 @@ func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) 
 	return ArrayPiece, proof, err
 }
 
-func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) (string, error) {
-	var selfPKHexStr, payLoadStr string
-	var alphaPkiHexStr, proofHexStr []string
-
-	alphaPkiHexStr = make([]string, 0)
-	proofHexStr = make([]string, 0)
-
-	epochIDHexStr := posdb.Uint64ToString(epochID)
-
-	selfIndexHexStr := posdb.Uint64ToString(selfIndex)
-
+func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, error) {
 	var selfPk *ecdsa.PublicKey
 	var err error
 	if pos.SelfTestMode {
@@ -869,29 +850,18 @@ func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uin
 	} else {
 		selfPk, err = s.getLocalPublicKey()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	selfPKHexStr = hex.EncodeToString(crypto.FromECDSAPub(selfPk))
-
 	alphaPki, proof, err := s.buildArrayPiece(epochID, selfIndex)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	for _, value := range alphaPki {
-		alphaPkiHexStr = append(alphaPkiHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
-	}
-	alphaPkiHexStrAll := strings.Join(alphaPkiHexStr, "-")
+	buf, err := slottools.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
 
-	for _, valueProof := range proof {
-		proofHexStr = append(proofHexStr, hex.EncodeToString(valueProof.Bytes()))
-	}
-	proofHexStrAll := strings.Join(proofHexStr, "-")
-
-	payLoadStr = strings.Join([]string{epochIDHexStr, selfIndexHexStr, selfPKHexStr, alphaPkiHexStrAll, proofHexStrAll}, "+")
-	return payLoadStr, nil
+	return buf, err
 }
 
 func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
@@ -917,10 +887,10 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 }
 
 // getStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
-func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (pk []byte, mi []byte, err error) {
+func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
@@ -929,22 +899,23 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if readBuf == nil {
-		return nil, nil, errors.New("getStg1StateDbInfo: Found not data of key")
+		return nil, errors.New("getStg1StateDbInfo: Found not data of key")
 	}
 
-	//pk and mi is 65 bytes length
-	epID, idxID, pk, mi, err := slottools.RlpUnpackAndWithUncompressPK(readBuf)
+	epID, idxID, miPoint, err := slottools.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
 	if err != nil {
-		return nil, nil, errors.New("getStg1StateDbInfo: RlpUnpackAndWithUncompressPK error")
+		return nil, errors.New("getStg1StateDbInfo: RlpUnpackStage1DataForTx error")
 	}
+	mi = crypto.FromECDSAPub(miPoint)
+	//pk and mi is 65 bytes length
 
-	if hex.EncodeToString(epID) == hex.EncodeToString(posdb.Uint64ToBytes(epochID)) &&
-		hex.EncodeToString(idxID) == hex.EncodeToString(posdb.Uint64ToBytes(index)) &&
+	if epID == epochID &&
+		idxID == index &&
 		err == nil {
 		return
 	}
 
-	return nil, nil, errors.New("Stg1 data get from StateDb verified failed")
+	return nil, errors.New("Stg1 data get from StateDb verified failed")
 }
 
 func ErrorCountAdd() {
