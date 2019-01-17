@@ -51,30 +51,6 @@ var (
 		]`
 )
 
-func TestStage1DataPack(t *testing.T) {
-
-	data := []byte("Each winter, npm, Inc. circulates a survey of software developers and npm users to solicit your ")
-
-	payload, err := PackStage1Data(data, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-	id1, _ := GetStage1FunctionID(slotLeaderSCDef)
-	id2, _ := GetFuncIDFromPayload(payload)
-	if id1 != id2 {
-		t.Fail()
-	}
-
-	unpack, err := UnpackStage1Data(payload, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	if hex.EncodeToString(unpack) != hex.EncodeToString(data) {
-		t.Fail()
-	}
-}
-
 func TestStage1RlpCompress(t *testing.T) {
 	epochID := uint64(88665544)
 	selfIndex := uint64(789012)

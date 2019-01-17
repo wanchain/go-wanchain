@@ -2,7 +2,6 @@ package vm
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -172,37 +171,44 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 }
 
 func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) error {
-	data, err := slottools.UnpackStage1Data(tx.Data(), slotLeaderSCDef)
+	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
-	epochIDBuf, _, pkSelf, _, err := slottools.RlpUnpackAndWithUncompressPK(data) // use this function to unpack rlp []byte
+
+	epochIDBuf, _, err := slottools.RlpGetStage1IDFromTx(tx.Data(), slotLeaderSCDef)
 	if err != nil {
+		log.Error("ValidTxStg1 failed")
 		return err
 	}
-	if !slottools.InEpochLeadersOrNotByPk(posdb.BytesToUint64(epochIDBuf), pkSelf) {
+
+	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), sender) {
+		log.Error("ValidTxStg1 failed")
 		return errIllegalSender
 	}
+
+	log.Info("ValidTxStg1 success")
 	return nil
 }
 
 func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
-	data, err := slottools.UnpackStage2Data(tx.Data()[4:], slotLeaderSCDef)
-	if err != nil {
-		return err
-	}
-	epochIDString, _, pk, _, _, err := slottools.RlpUnpackStage2Data(data)
+	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
 
-	pkiDec, err := hex.DecodeString(pk)
+	epochIDBuf, _, err := slottools.RlpGetStage2IDFromTx(tx.Data(), slotLeaderSCDef)
 	if err != nil {
+		log.Error("ValidTxStg2 failed")
 		return err
 	}
-	if !slottools.InEpochLeadersOrNotByPk(posdb.StringToUint64(epochIDString), pkiDec) {
+
+	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), sender) {
+		log.Error("ValidTxStg2 failed")
 		return errIllegalSender
 	}
+
+	log.Info("ValidTxStg2 success")
 	return nil
 }
 
