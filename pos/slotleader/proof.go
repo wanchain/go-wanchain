@@ -47,13 +47,9 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	}
 
 	//1. SMA PRE
-	smaPiecesPtr, isGenesis, err := s.getSMAPieces(epochID)
+	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
 		return s.GetSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
-	}
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
 	}
 
 	var rbPtr *big.Int
