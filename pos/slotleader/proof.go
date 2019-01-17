@@ -44,7 +44,9 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if epochID == uint64(0) || err != nil {
-		log.Warn("GetSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
+		if err != nil {
+			log.Warn("GetSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
+		}
 		return s.GetSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
 
