@@ -208,7 +208,7 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 		return errIllegalSender
 	}
 
-	log.Info("ValidTxStg2 success")
+	//log.Info("ValidTxStg2 success")
 	return nil
 }
 
