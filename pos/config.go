@@ -41,23 +41,23 @@ const (
 )
 
 type Config struct {
-	PolymDegree      uint
-	K                uint
-	RBThres          uint
-	EpochInterval    uint64
-	PosStartTime     int64
-	MinerKey         *keystore.Key
-	Dbpath           string
-	NodeCfg          *node.Config
-	DkgEnd           uint64
-	SignBegin        uint64
-	SignEnd          uint64
+	PolymDegree   uint
+	K             uint
+	RBThres       uint
+	EpochInterval uint64
+	PosStartTime  int64
+	MinerKey      *keystore.Key
+	Dbpath        string
+	NodeCfg       *node.Config
+	DkgEnd        uint64
+	SignBegin     uint64
+	SignEnd       uint64
 }
 
 var DefaultConfig = Config{
 	1,
 	SlotCount / 10,
-	11,
+	3,
 	0,
 	0,
 	nil,
