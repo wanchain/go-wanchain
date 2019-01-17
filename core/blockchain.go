@@ -1161,8 +1161,8 @@ func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId u
 
 	blkTd := block.Difficulty().Uint64()
 
-	blkEpochId = (blkTd&(0xffffffffffffff00)>>32)
-	blkSlotId = ((blkTd&0xff)>>8)
+	blkEpochId = (blkTd >> 32)
+	blkSlotId = ((blkTd&0xffffffff) >> 8)
 
 	calEpochId,calSlotId := calEpochSlotIDFromTime(blkTime)
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
