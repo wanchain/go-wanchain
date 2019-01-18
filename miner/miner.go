@@ -18,7 +18,9 @@
 package miner
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/crypto"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/pos"
@@ -131,6 +133,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		panic(err)
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
+	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
 	epocher := PosInit(s, key)
 	// get rpcClient
 	url := pos.Cfg().NodeCfg.IPCEndpoint()
@@ -175,7 +178,14 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		fmt.Println("Every slot run:")
 		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
-		self.worker.chainSlotTimer <- struct{}{}
+
+		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
+		if err == nil  {
+			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+			if leader == localPublicKey {
+				self.worker.chainSlotTimer <- struct{}{}
+			}
+		}
 		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
 		if(err2 != nil){
 			log.Error("Failed to get stateDb: ", err2)

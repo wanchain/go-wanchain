@@ -712,18 +712,22 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	fmt.Println("Clique Seal: epochId:", epochId, "slotId:", slotId)
 
 	var leader string
-	if epochId != 0 {
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-		if err != nil  {
-			return nil, err
-		}
-		leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-		fmt.Println("leaderPK:", leader)
-	} else {
-		//genesis block miner publicKey
-		leader = pos.GenesisPK
+	//if epochId != 0 {
+	//	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+	//	if err != nil  {
+	//		return nil, err
+	//	}
+	//	leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+	//	fmt.Println("leaderPK:", leader)
+	//} else {
+	//	//genesis block miner publicKey
+	//	leader = pos.GenesisPK
+	//}
+	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+	if err != nil  {
+		return nil, err
 	}
-
+	leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 	if leader == localPublicKey {
 		cur := uint64(time.Now().Unix())
 		sleepTime := uint64(0)

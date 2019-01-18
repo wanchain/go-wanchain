@@ -474,6 +474,13 @@ func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecd
 }
 
 func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
+	if epochID == 0 {
+		b, err := hex.DecodeString(pos.GenesisPK)
+		if err != nil {
+			return nil, errors.New("invalid GenesisPK hex string")
+		}
+		return crypto.ToECDSAPub(b), nil
+	}
 	_, ok := s.slotCreateStatus[epochID]
 	if !ok {
 		return nil, errors.New("slot leaders group not ready")
