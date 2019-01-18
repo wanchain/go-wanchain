@@ -91,6 +91,13 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 		pos.Cfg().MinerKey = key
 	}
 
+	if pos.EpochBaseTime == 0 {
+		h := s.BlockChain().GetHeaderByNumber(1)
+		if nil != h {
+			pos.EpochBaseTime = h.Time.Uint64()
+		}
+	}
+
 	epocher := epochLeader.NewEpocher(s.BlockChain())
 
 	randombeacon.GetRandonBeaconInst().Init(epocher)
@@ -151,7 +158,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			if  cur < pos.EpochBaseTime+pos.SlotTime {
 				time.Sleep(time.Duration((pos.EpochBaseTime+pos.SlotTime - cur))*time.Second)
 			}
-	}
+		}
 
 
 		slotleader.CalEpochSlotID()
