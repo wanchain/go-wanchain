@@ -1156,6 +1156,8 @@ func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
 	return
 }
 
+
+
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64,blkSlotId uint64,err error){
 	blkTime := block.Time().Uint64()
 
@@ -1211,7 +1213,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		for ; newBlock != nil && newBlock.NumberU64() != oldBlock.NumberU64(); newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1) {
 			newChain = append(newChain, newBlock)
 		}
+
 	}
+
 
 	if oldBlock == nil {
 		return fmt.Errorf("Invalid old chain")
@@ -1221,6 +1225,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	}
 
 	for {
+
 		if oldBlock.Hash() == newBlock.Hash() {
 			commonBlock = oldBlock
 			break
@@ -1239,6 +1244,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			return fmt.Errorf("Invalid new chain")
 		}
 	}
+
+
 
 	//ppow extend
 	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
@@ -1277,10 +1284,11 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
 
-	//new chain have smaller epochid,then use new chain
-	//epochid is same  and new chain slotid is smaller,then use new chain
-	//epochid is same and new chain slotid is same,then use new chain
-	if newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId <= oldSlotId) {
+	//||  newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId <= oldSlotId
+	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId < oldSlotId)))
+	isReOrg = isReOrg || len(oldChain) < len(newChain)
+
+	if (isReOrg) {
 
 		for _, block := range newChain {
 			// insert the block in the canonical way, re-writing history
