@@ -76,7 +76,7 @@ func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	}
 	targetEpochId := epochId-2
 	targetBlkNum := posdb.GetEpochBlock(targetEpochId)
-	if targetBlkNum == 0 {
+	if targetBlkNum == 0 || nil ==  e.blkChain.GetBlockByNumber(targetBlkNum) {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
 			curBlock := e.blkChain.GetBlockByNumber(curNum)
@@ -342,6 +342,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
 
 		//select pki whose probability bigger than cr_big left
+		// TODO: the return value.
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
 		if idx == len(ps) {
