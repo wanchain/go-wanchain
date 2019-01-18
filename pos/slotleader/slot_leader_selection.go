@@ -109,6 +109,8 @@ func init() {
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
 	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
 
+	slottools.SetSlotLeaderInst(slotLeaderSelection)
+
 	s := slotLeaderSelection
 	//genesis random
 	s.randomGenesis = big.NewInt(1)
@@ -154,6 +156,19 @@ func init() {
 		}
 
 	}
+
+	epochLeadersPreHexStr := make([]string,0)
+	for _, value := range s.epochLeadersPtrArrayGenesis {
+		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
+
+	smaPiecesHexStr := make([]string,0)
+	for _, value := range s.smaGenesis {
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
+
 }
 
 //GetSlotLeaderSelection get the SlotLeaderSelection's object
@@ -212,7 +227,6 @@ func CalEpochSlotID() {
 	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
-
 //getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
@@ -263,6 +277,10 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	}
 
 	return pks
+}
+
+func (s *SlotLeaderSelection) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
+	return s.getEpochLeadersPK(epochID)
 }
 
 func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
@@ -599,7 +617,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return errors.New("epochLeaders pk is not on curve")
 		}
 	}
-	log.Info("Before GenerateSlotLeaderSeq")
+	log.Info("Before generateSlotLeadsGroup")
 	s.dumpData()
 
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
@@ -627,7 +645,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	}
 
 	s.slotCreateStatus[epochID] = true
-	log.Info("GenerateSlotLeaderSeq success")
+	log.Info("generateSlotLeadsGroup success")
 
 	s.dumpData()
 	return nil
@@ -706,7 +724,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	return piece, nil
 }
 
-func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
+func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
 		return nil, nil, err
@@ -720,7 +738,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
-		return nil, nil, errors.New("getStage2TxAlphaPki can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
+		return nil, nil, errors.New("GetStage2TxAlphaPki can not find from statedb:" + fmt.Sprintf("addr:%s, key:%s, epochID:%d, selfIndex:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), epochID, selfIndex))
 	}
 
 	epID, slfIndex, _, alphaPki, proof, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
@@ -729,7 +747,7 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 	}
 
 	if epID != epochID || slfIndex != selfIndex {
-		return nil, nil, errors.New("Verify failed, epID != epochID || slfIndex != selfIndex in getStage2TxAlphaPki")
+		return nil, nil, errors.New("Verify failed, epID != epochID || slfIndex != selfIndex in GetStage2TxAlphaPki")
 	}
 
 	return alphaPki, proof, nil
@@ -737,13 +755,13 @@ func (s *SlotLeaderSelection) getStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		mi, err := s.getStg1StateDbInfo(epochID, uint64(i))
+		mi, err := s.GetStg1StateDbInfo(epochID, uint64(i))
 		if err != nil {
-			log.Warn("getStg1StateDbInfo", "error", err.Error(), "index", i)
+			log.Warn("GetStg1StateDbInfo", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
 			if len(mi) == 0 {
-				log.Warn("getStg1StateDbInfo", "error", "len(mi)=0", "index", i)
+				log.Warn("GetStg1StateDbInfo", "error", "len(mi)=0", "index", i)
 				s.validEpochLeadersIndex[i] = false
 			} else {
 				s.stageOneMi[i] = crypto.ToECDSAPub(mi)
@@ -754,15 +772,15 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			continue
 		}
 
-		alphaPki, proof, err := s.getStage2TxAlphaPki(epochID, uint64(i))
+		alphaPki, proof, err := s.GetStage2TxAlphaPki(epochID, uint64(i))
 		if err != nil {
-			log.Warn("getStage2TxAlphaPki", "error", err.Error(), "index", i)
+			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
 
 		if (len(alphaPki) != pos.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
-			log.Warn("getStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
+			log.Warn("GetStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
 			for j := 0; j < pos.EpochLeaderCount; j++ {
@@ -788,14 +806,14 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 	if err != nil {
 		return errors.New("collect stage data error!")
 	}
-	// verify security pieces
-	for i := 0; i < pos.EpochLeaderCount; i++ {
-		valid, errVSP := s.verifySecurityPiece(uint64(i))
-		if !valid {
-			log.Warn("generateSecurityMsg", "epochID", epochID, "index", i, "verifySecurityPiece error", errVSP.Error())
-			s.validEpochLeadersIndex[i] = false
-		}
-	}
+	//// verify security pieces
+	//for i := 0; i < pos.EpochLeaderCount; i++ {
+	//	valid, errVSP := s.verifySecurityPiece(uint64(i))
+	//	if !valid {
+	//		log.Warn("generateSecurityMsg", "epochID", epochID, "index", i, "verifySecurityPiece error", errVSP.Error())
+	//		s.validEpochLeadersIndex[i] = false
+	//	}
+	//}
 
 	// build security self pieces. alpha1*pki, alpha2*pk2, alpha3*pk3....
 	ArrayPiece, err := s.buildSecurityPieces(epochID)
@@ -824,7 +842,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return err
 	}
 
-	log.Info("generateSecurityMsg", "Generate SMA Success.", "epochID+1", epochID+1, "len(SMA)", len(smasPtr))
+	log.Info("generateSecurityMsg Generate SMA Success.", "epochID+1", epochID+1, "len(SMA)", len(smasPtr))
 
 	return nil
 }
@@ -893,8 +911,8 @@ func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 	return err
 }
 
-// getStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
-func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
+// GetStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
+func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
 		return nil, err
@@ -906,12 +924,12 @@ func (s *SlotLeaderSelection) getStg1StateDbInfo(epochID uint64, index uint64) (
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if readBuf == nil {
-		return nil, errors.New("getStg1StateDbInfo: Found not data of key")
+		return nil, errors.New("GetStg1StateDbInfo: Found not data of key")
 	}
 
 	epID, idxID, miPoint, err := slottools.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
 	if err != nil {
-		return nil, errors.New("getStg1StateDbInfo: RlpUnpackStage1DataForTx error")
+		return nil, errors.New("GetStg1StateDbInfo: RlpUnpackStage1DataForTx error")
 	}
 	mi = crypto.FromECDSAPub(miPoint)
 	//pk and mi is 65 bytes length

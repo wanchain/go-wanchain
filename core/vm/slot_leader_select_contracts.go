@@ -2,8 +2,11 @@ package vm
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wanchain/pos/uleaderselection"
+	"math/big"
 	"strings"
 
 	"github.com/wanchain/go-wanchain/pos"
@@ -197,18 +200,50 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 		return err
 	}
 
-	epochIDBuf, _, err := slottools.RlpGetStage2IDFromTx(tx.Data(), slotLeaderSCDef)
+	epochID, selfIndex, _, alphaPkis, proofs, err := slottools.RlpUnpackStage2DataForTx(tx.Data()[:], slotLeaderSCDef)
 	if err != nil {
-		log.Error("ValidTxStg2 failed")
+		log.Error("ValidTxStg2:RlpUnpackStage2DataForTx failed")
 		return err
 	}
 
-	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), sender) {
-		log.Error("ValidTxStg2 failed")
+	if !slottools.InEpochLeadersOrNotByAddress(epochID, sender) {
+		log.Error("ValidTxStg2:InEpochLeadersOrNotByAddress failed")
 		return errIllegalSender
 	}
 
 	//log.Info("ValidTxStg2 success")
+	type slot interface {
+		GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error)
+		GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error)
+		GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
+	}
+
+	selector := slottools.GetSlotLeaderInst()
+
+	if selector == nil {
+		return nil
+	}
+	mi,err := selector.(slot).GetStg1StateDbInfo(epochID,selfIndex)
+	if err != nil {
+		log.Error("ValidTxStg2","GetStg1StateDbInfo error",err.Error())
+		return err
+	}
+
+	//mi
+	if len(mi) == 0 || len(alphaPkis) != pos.EpochLeaderCount {
+		log.Error("ValidTxStg2","len(mi)==0 or len(alphaPkis) not equal",len(alphaPkis))
+		return errors.New("len(mi)==0 or len(alphaPkis) is not right")
+	}
+	if !postools.PkEqual(crypto.ToECDSAPub(mi),alphaPkis[selfIndex]){
+		log.Error("ValidTxStg2","mi is not equal alphaPkis[index]",selfIndex)
+		return errors.New("mi is not equal alphaPkis[index]")
+	}
+	//Dleq
+	epochLeaders := selector.(slot).GetEpochLeadersPK(epochID)
+	if !(uleaderselection.VerifyDleqProof(epochLeaders,alphaPkis,proofs)){
+		log.Error("ValidTxStg2","VerifyDleqProof false self Index",selfIndex)
+		return errors.New("VerifyDleqProof false")
+	}
 	return nil
 }
 

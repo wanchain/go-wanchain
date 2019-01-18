@@ -20,6 +20,8 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
+var selecter SlotLeader
+
 func GetStage1FunctionID(abiString string) ([4]byte, error) {
 	var slotStage1ID [4]byte
 
@@ -243,4 +245,21 @@ func RlpGetStage2IDFromTx(input []byte, abiString string) (epochIDBuf []byte, se
 	epochIDBuf = postools.Uint64ToBytes(data.EpochID)
 	selfIndexBuf = postools.Uint64ToBytes(data.SelfIndex)
 	return
+}
+
+type SlotLeader interface {
+	GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error)
+	GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error)
+	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
+}
+
+func SetSlotLeaderInst(sor SlotLeader) {
+	selecter = sor
+}
+
+func GetSlotLeaderInst() SlotLeader {
+	if selecter == nil {
+		panic("GetSlotLeaderInst")
+	}
+	return selecter
 }
