@@ -119,10 +119,13 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	r := rb.Bytes()
 
+
 	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
 	if err != nil {
 		return err
 	}
+
+
 
 	return nil
 }
@@ -177,6 +180,11 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
+func Round(f float64, n int) float64 {
+	n10 := math.Pow10(n)
+	return math.Trunc((f+0.5/n10)*n10) / n10
+}
+
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blkTime uint64) (*Proposer, error) {
@@ -192,7 +200,11 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	} else {
 
 		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
+
+		leftTimePercent = Round(leftTimePercent,32)
 	}
+
+	//fmt.Println(lockTime,blkTime,pstaker.StakingTime,leftTimePercent)
 
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
 
@@ -294,12 +306,8 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
-		if idx == len(ps) {
-			idx = len(ps) - 1
-		}
-
 		log.Info("select epoch leader", "epochid=",epochId, "idx=",i, "pub=", common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
-		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx + 1].pubSec256)
+		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].pubSec256)
 		e.epochLeadersDb.PutWithIndex(epochId, uint64(i), "", crypto.FromECDSAPub(ps[idx].pubSec256))
 
 		cr = crypto.Keccak256(cr)
