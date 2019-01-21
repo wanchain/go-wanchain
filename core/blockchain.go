@@ -45,6 +45,7 @@ import (
 	"github.com/wanchain/go-wanchain/trie"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 
+	"encoding/binary"
 )
 
 var (
@@ -1156,7 +1157,41 @@ func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
 	return
 }
 
+func updateReOrg () {
+	reOrgDb :=  posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		posdb.NewDb("forkdb")
+	}
 
+	numberBytes,err := reOrgDb.Get(0,"reorgNumber")
+	if err!= nil {
+		return
+	}
+	num := binary.BigEndian.Uint64(numberBytes) + 1
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(0,"reorgNumber",b)
+}
+
+func updateFork () {
+	reOrgDb :=  posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		posdb.NewDb("forkdb")
+	}
+
+	numberBytes,err := reOrgDb.Get(0,"forkNumber")
+	if err!= nil {
+		return
+	}
+	num := binary.BigEndian.Uint64(numberBytes) + 1
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(0,"forkNumber",b)
+}
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64,blkSlotId uint64,err error){
 	blkTime := block.Time().Uint64()
@@ -1199,6 +1234,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			}
 		}
 	)
+
+	updateFork()
 
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
@@ -1294,6 +1331,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	if (isReOrg) {
 
+		updateReOrg()
+		
 		for _, block := range newChain {
 			// insert the block in the canonical way, re-writing history
 			bc.insert(block)

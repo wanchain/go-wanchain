@@ -17,6 +17,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
+	"encoding/binary"
 )
 
 type PosApi struct {
@@ -139,3 +140,21 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 
 	return r, nil
 }
+
+func (a PosApi) GetPos(epochID uint64) (forkNum uint64,reOrgNum uint64) {
+	reOrgDb :=  posdb.GetDbByName("forkdb")
+
+	forkBytes,err:=  reOrgDb.Get(0,"forkNumber")
+	if err == nil {
+		forkNum = binary.BigEndian.Uint64(forkBytes)
+	}
+
+	reorBytes,err := reOrgDb.Get(0,"reorgNumber")
+	if err == nil {
+		reOrgNum = binary.BigEndian.Uint64(reorBytes)
+	}
+
+	return
+}
+
+
