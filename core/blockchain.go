@@ -1170,6 +1170,7 @@ func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId u
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
 
 	if calEpochId!=blkEpochId || calSlotId!=blkSlotId {
+		fmt.Println(calEpochId,blkEpochId,calSlotId,blkSlotId)
 		return 0,0,errors.New("epochid and slotid is not match with blk time")
 	}
 
@@ -1278,8 +1279,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
 	}
 
+	newChainLen := len(newChain)
 
-	newEpochId,newSlotId,err := bc.GetBlockEpochIdAndSlotId(newChain[0])
+	newEpochId,newSlotId,err := bc.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
