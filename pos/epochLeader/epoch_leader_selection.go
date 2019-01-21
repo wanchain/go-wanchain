@@ -51,11 +51,11 @@ type Epocher struct {
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
 
-	return NewEpocherWithLBN(blc,"rblocaldb","eplocaldb")
+	return NewEpocherWithLBN(blc, "rblocaldb", "eplocaldb")
 
 }
 
-func NewEpocherWithLBN(blc *core.BlockChain,rbn string,epdbn string) *Epocher {
+func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher {
 
 	rbdb := posdb.NewDb(rbn)
 
@@ -68,19 +68,18 @@ func NewEpocherWithLBN(blc *core.BlockChain,rbn string,epdbn string) *Epocher {
 	return inst
 }
 
-
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 	if epochId < 2 {
 		return uint64(0)
 	}
-	targetEpochId := epochId-2
+	targetEpochId := epochId - 2
 	targetBlkNum := posdb.GetEpochBlock(targetEpochId)
 	if targetBlkNum == 0 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
 			curBlock := e.blkChain.GetBlockByNumber(curNum)
-			curEpochId := curBlock.Header().Difficulty.Uint64()>>32
+			curEpochId := curBlock.Header().Difficulty.Uint64() >> 32
 			if curEpochId <= targetEpochId {
 				break
 			}
@@ -108,7 +107,7 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	epochIdIn := epochId
 	if epochIdIn > 0 {
-		epochIdIn --
+		epochIdIn--
 	}
 	rb := vm.GetR(stateDb, epochIdIn)
 
@@ -119,13 +118,10 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	r := rb.Bytes()
 
-
 	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
 	if err != nil {
 		return err
 	}
-
-
 
 	return nil
 }
@@ -201,7 +197,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 
 		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
 
-		leftTimePercent = Round(leftTimePercent,32)
+		leftTimePercent = Round(leftTimePercent, 32)
 	}
 
 	//fmt.Println(lockTime,blkTime,pstaker.StakingTime,leftTimePercent)
@@ -209,7 +205,8 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
 
 	//if pb == 0 {
-	log.Warn("epochId=",epochId,",amount=",amount,",locktime=",lockTime,",leftTimePercent=",leftTimePercent,",pb=",pb,",staking time=",pstaker.StakingTime)
+	log.Warn("epoch Info:", "epochId=", epochId, ",amount=", amount, ",locktime=", lockTime, ",leftTimePercent=", leftTimePercent, ",pb=", pb, ",staking time=", pstaker.StakingTime)
+
 	//}
 
 	gb := new(bn256.G1)
@@ -252,7 +249,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return false
 		}
 
-		if staker.Amount.Cmp(Big0)  > 0 && (*pitem).probabilities.Cmp(Big0) > 0 {
+		if staker.Amount.Cmp(Big0) > 0 && (*pitem).probabilities.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
 			log.Info(common.ToHex((*pitem).probabilities.Bytes()))
 		}
@@ -260,9 +257,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		return true
 	})
 
-
 	sort.Sort(ProposerSorter(ps))
-
 
 	log.Info("------------------------------------------------------------------------------------------")
 	for idx, _ := range ps {
@@ -287,7 +282,6 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	//the last one is total properties
 	tp := ps[len(ps)-1].probabilities
 
-
 	var Byte0 = []byte{byte(0)}
 	var buffer bytes.Buffer
 	buffer.Write(Byte0)
@@ -306,7 +300,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
-		log.Info("select epoch leader", "epochid=",epochId, "idx=",i, "pub=", common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
+		log.Info("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", common.ToHex(crypto.FromECDSAPub(ps[idx].pubSec256)))
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].pubSec256)
 		e.epochLeadersDb.PutWithIndex(epochId, uint64(i), "", crypto.FromECDSAPub(ps[idx].pubSec256))
 
@@ -344,7 +338,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
-		log.Info("random selector ","index:=",idx,"bn256",common.ToHex(ps[idx].pubBn256.Marshal()))
+		log.Info("random selector ", "index:=", idx, "bn256", common.ToHex(ps[idx].pubBn256.Marshal()))
 
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
 		//EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
