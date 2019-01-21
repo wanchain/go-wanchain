@@ -144,6 +144,9 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 
 func (a PosApi) GetPosReorg(epochID uint64) (forkNum uint64,reOrgNum uint64) {
 	reOrgDb :=  posdb.GetDbByName("forkdb")
+	if reOrgDb== nil {
+		return
+	}
 
 	forkBytes,err:=  reOrgDb.Get(0,"forkNumber")
 	if err == nil {
