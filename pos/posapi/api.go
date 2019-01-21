@@ -141,6 +141,7 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
+
 func (a PosApi) GetPos(epochID uint64) (forkNum uint64,reOrgNum uint64) {
 	reOrgDb :=  posdb.GetDbByName("forkdb")
 
@@ -157,4 +158,22 @@ func (a PosApi) GetPos(epochID uint64) (forkNum uint64,reOrgNum uint64) {
 	return
 }
 
+
+func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
+	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
+	if err != nil {
+		return 0, err
+	}
+	j := 0
+	for i:=0; i<pos.RandomProperCount; i++ {
+		sigData, err := vm.GetSig(state, epochId, uint32(i))
+		if err != nil {
+			return 0, err
+		}
+		if sigData != nil {
+			j++
+		}
+	}
+	return j, nil
+}
 

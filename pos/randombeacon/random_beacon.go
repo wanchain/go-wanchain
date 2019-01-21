@@ -3,7 +3,6 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
-	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -16,7 +15,6 @@ import (
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
 	"math/big"
-	"strings"
 	"time"
 )
 
@@ -119,14 +117,9 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	}
 
 	log.Info("rb", "epochId", rb.epochId)
-	if rb.epochId == maxUint64 {
+	if rb.epochId == maxUint64 || rb.epochId < epochId {
 		log.Info("rb epochId is original")
 
-		rb.epochId = epochId
-		rb.epochStage = vm.RB_DKG_STAGE
-	}
-
-	if rb.epochId < epochId {
 		rb.epochId = epochId
 		rb.epochStage = vm.RB_DKG_STAGE
 	}
@@ -344,147 +337,6 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	return rb.sendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
-//func (rb *RandomBeacon) computeRandoms(bgEpochId uint64, endEpochId uint64) error {
-//	log.Info("RB compute randoms", "beEpochId", bgEpochId, "endEpochId", endEpochId)
-//	for i := bgEpochId; i < endEpochId; i++ {
-//		err := rb.DoComputeRandom(i)
-//		if err != nil {
-//			log.Error("do compute random fail", "err", err)
-//			return err
-//		}
-//
-//	}
-//
-//	return nil
-//}
-//
-//// todo: should create new random while error occur??
-//func (rb *RandomBeacon) DoComputeRandom(epochId uint64) error {
-//	log.Info("RB do compute random", "epochId", epochId)
-//	randomInt := vm.GetR(rb.statedb, epochId+1)
-//	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
-//		// exist already
-//		log.Info("random exist already", "epochId", epochId+1, "random", randomInt.String())
-//		return nil
-//	}
-//
-//	pks := rb.getRBProposerGroup(epochId)
-//	if len(pks) == 0 {
-//		log.Error("can't find random beacon proposer group")
-//		return errors.New("can't find random beacon proposer group")
-//	}
-//
-//	// collact gsigshare
-//	// collect DKG data
-//	dkgDatas := make([]RbDKGDataCollector, 0)
-//	sigDatas := make([]RbSIGDataCollector, 0)
-//	for id, _ := range pks {
-//		dkgData, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
-//		if err == nil && dkgData != nil {
-//			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pks[id]})
-//		}
-//
-//		sigData, err := vm.GetSig(rb.statedb, epochId, uint32(id))
-//		if err == nil && sigData != nil {
-//			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
-//		}
-//
-//		log.Info("dkgDatas and sigDatas length", "len(dkgDatas)", len(dkgDatas), "len(sigDatas)", len(sigDatas))
-//	}
-//
-//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
-//		log.Error("compute random fail, insufficient proposer", "epochId", epochId, "min", pos.Cfg().RBThres, "acture", len(sigDatas))
-//		// return errors.New("insufficient proposer")
-//
-//		randomInt := vm.GetR(rb.statedb, epochId)
-//		if randomInt == nil {
-//			log.Error("get random fail", "epochId", epochId)
-//			return errors.New("get random fail")
-//		}
-//
-//		newRandom := crypto.Keccak256(randomInt.Bytes())
-//		err := rb.saveRandom(epochId+1, new(big.Int).SetBytes(newRandom))
-//		if err != nil {
-//			log.Error("set random fail", "err", err)
-//		} else {
-//			log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(newRandom))
-//		}
-//
-//		return err
-//	}
-//
-//	gsigshare := make([]bn256.G1, len(sigDatas))
-//	xSig := make([]big.Int, len(sigDatas))
-//	for i, data := range sigDatas {
-//		gsigshare[i] = *data.data.Gsigshare
-//		xSig[i].SetBytes(vm.GetPolynomialX(data.pk, data.data.ProposerId))
-//	}
-//
-//	// Compute the Output of Random Beacon
-//	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
-//	random := crypto.Keccak256(gsig.Marshal())
-//	log.Info("sig lagrange", "gsig", gsig, "gsigshare", gsigshare)
-//
-//	// Verification Logic for the Output of Random Beacon
-//	// Computation of group public key
-//	nr := len(pks)
-//	c := make([]bn256.G2, nr)
-//	for i := 0; i < nr; i++ {
-//		c[i].ScalarBaseMult(big.NewInt(int64(0)))
-//		for j := 0; j < len(dkgDatas); j++ {
-//			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
-//		}
-//	}
-//
-//	xAll := make([]big.Int, nr)
-//	for i := 0; i < nr; i++ {
-//		xAll[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
-//		xAll[i].Mod(&xAll[i], bn256.Order)
-//	}
-//	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
-//
-//	// mG
-//	mBuf, err := vm.GetRBM(rb.statedb, epochId)
-//	if err != nil {
-//		log.Error("get M fail", "err", err)
-//		return err
-//	}
-//
-//	m := new(big.Int).SetBytes(mBuf)
-//	mG := new(bn256.G1).ScalarBaseMult(m)
-//
-//	// Verify using pairing
-//	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
-//	pair2 := bn256.Pair(mG, &gPub)
-//	log.Info("verify random", "pair1", pair1.String(), "pair2", pair2.String())
-//	if pair1.String() != pair2.String() {
-//		return errors.New("Final Pairing Check Failed")
-//	}
-//
-//	err = rb.saveRandom(epochId+1, new(big.Int).SetBytes(random))
-//	if err != nil {
-//		log.Error("set random fail", "err", err)
-//	} else {
-//		log.Info("set random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
-//	}
-//
-//	return err
-//}
-//
-//func (rb *RandomBeacon) saveRandom(epochId uint64, random *big.Int) error {
-//	if random == nil {
-//		log.Error("invalid random")
-//		return errors.New("invalid random")
-//	}
-//
-//	//err := posdb.SetRandom(epochId, random)
-//	//if err != nil {
-//	//	return err
-//	//}
-//
-//	return rb.sendRandom(epochId, random)
-//}
-
 func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload) error {
 	log.Info("begin send dkg")
 	start := time.Now()
@@ -508,16 +360,6 @@ func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
 	}
 
 	//log.Info("send sig tx", "payload", common.Bytes2Hex(payload))
-	return rb.doSendRBTx(payload)
-}
-
-func (rb *RandomBeacon) sendRandom(epochId uint64, random *big.Int) error {
-	log.Info("begin send random")
-	payload, err := getGenRTxPayloadBytes(epochId, random)
-	if err != nil {
-		return err
-	}
-
 	return rb.doSendRBTx(payload)
 }
 
@@ -563,20 +405,6 @@ func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	//payloadStr := common.Bytes2Hex(payloadBytes)
-	////log.Info("dkg payload hex string", "playload", payloadStr)
-	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	//if err != nil {
-	//	log.Error("create abi instance fail", "err", err)
-	//	return nil, err
-	//}
-	//
-	//ret, err := rbAbi.Pack("dkg", &payloadStr)
-	//if err != nil {
-	//	log.Error("abi pack fail", "err", err)
-	//	return nil, err
-	//}
-
 	ret := make([]byte, 4+len(payloadBytes))
 	copy(ret, vm.GetDkgId())
 	copy(ret[4:], payloadBytes)
@@ -596,18 +424,6 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 		return nil, err
 	}
 
-	//payloadStr := common.Bytes2Hex(payloadBytes)
-	//rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//ret, err := rbAbi.Pack("sigshare", payloadStr)
-	//if err != nil {
-	//	log.Error("abi pack payload", "err", err)
-	//	return nil, err
-	//}
-
 	ret := make([]byte, 4+len(payloadBytes))
 	copy(ret, vm.GetSigshareId())
 	copy(ret[4:], payloadBytes)
@@ -615,22 +431,3 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	return ret, nil
 }
 
-func getGenRTxPayloadBytes(epochId uint64, random *big.Int) ([]byte, error) {
-	log.Info("get GenR tx payload begin")
-	if random == nil {
-		return nil, errors.New("invalid random")
-	}
-
-	rbAbi, err := abi.JSON(strings.NewReader(vm.GetRBAbiDefinition()))
-	if err != nil {
-		return nil, err
-	}
-
-	ret, err := rbAbi.Pack("genR", big.NewInt(int64(epochId)), random)
-	if err != nil {
-		log.Error("abi pack payload", "err", err)
-		return nil, err
-	}
-
-	return ret, nil
-}

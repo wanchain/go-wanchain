@@ -283,6 +283,11 @@ func buildError(err string, epochId uint64, proposerId uint32) error {
 	//return errors.New(err + ". epochId " + strconv.FormatUint(epochId, 10) + ", proposerId " + strconv.FormatUint(uint64(proposerId), 10))
 }
 
+func logError(err error) error {
+	log.Error(err.Error())
+	return err
+}
+
 func GetPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
 	return crypto.Keccak256(pk.Marshal(), big.NewInt(int64(proposerId)).Bytes())
 }
@@ -315,7 +320,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	var dkgParam RbDKGTxPayload
 	err := rlp.DecodeBytes(payload, &dkgParam)
 	if err != nil {
-		return nil, errDkgParse
+		return nil, logError(errDkgParse)
 	}
 	eid := dkgParam.EpochId
 	pid := dkgParam.ProposerId
@@ -324,25 +329,25 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RB_DKG_STAGE, evm) {
-		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
+		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
 	}
 	// 2. ProposerId: weather in the random commit
 	if !isInRandomGroupVar(&pks, pid) {
-		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
+		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
 	// 3. Enshare, Commit, Proof has the same size
 	// check same size
 	nr := len(dkgParam.Proof)
 	if nr != len(dkgParam.Enshare) || nr != len(dkgParam.Commit) {
-		return nil, buildError("error in dkg params have different length", eid, pid)
+		return nil, logError(buildError("error in dkg params have different length", eid, pid))
 	}
 
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
 		// get send public Key
 		if !wanpos.VerifyDLEQ(dkgParam.Proof[j], pks[j], *hbase, *dkgParam.Enshare[j], *dkgParam.Commit[j]) {
-			return nil, errDleq
+			return nil, logError(errDleq)
 		}
 	}
 
@@ -357,7 +362,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 		temp[j] = *dkgParam.Commit[j]
 	}
 	if !wanpos.RScodeVerify(temp, x, int(pos.Cfg().PolymDegree)) {
-		return nil, errRScode
+		return nil, logError(errRScode)
 	}
 
 	// save epochId*2^64 + proposerId
@@ -395,7 +400,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	var sigshareParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payload, &sigshareParam)
 	if err != nil {
-		return nil, errors.New("error in dkg param has a wrong struct")
+		return nil, logError(errors.New("error in dkg param has a wrong struct"))
 	}
 	eid := sigshareParam.EpochId
 	pid := sigshareParam.ProposerId
@@ -404,17 +409,17 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RB_SIGN_STAGE, evm) {
-		return nil, errors.New(" error epochId " + strconv.FormatUint(eid, 10))
+		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
 	}
 	// 2. ProposerId: weather in the random commit
 	if !isInRandomGroupVar(&pks, pid) {
-		return nil, errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10))
+		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
 	// 3. Verification
 	M, err := getRBMVar(evm.StateDB, eid)
 	if err != nil {
-		return nil, buildError("getRBM error", eid, pid)
+		return nil, logError(buildError("getRBM error", eid, pid))
 	}
 	m := new(big.Int).SetBytes(M)
 
@@ -430,14 +435,14 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		gpkshare.Add(&gpkshare, ci[pid])
 	}
 	if j < pos.Cfg().RBThres {
-		return nil, buildError(" insufficient proposer ", eid, pid)
+		return nil, logError(buildError(" insufficient proposer ", eid, pid))
 	}
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
 	pair1 := bn256.Pair(sigshareParam.Gsigshare, hbase)
 	pair2 := bn256.Pair(mG, &gpkshare)
 	if pair1.String() != pair2.String() {
-		return nil, buildError(" unequal sigi", eid, pid)
+		return nil, logError(buildError(" unequal sigi", eid, pid))
 	}
 
 	// save

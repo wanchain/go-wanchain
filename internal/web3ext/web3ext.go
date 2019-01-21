@@ -173,6 +173,11 @@ web3._extend({
 			call: 'pos_random',
 			params: 2
 		}),
+		new web3._extend.Method({
+			name: 'getSijCount',
+			call: 'pos_getSijCount',
+			params: 2
+		}),
 	]
 });
 `
