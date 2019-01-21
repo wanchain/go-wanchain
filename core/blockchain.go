@@ -1333,10 +1333,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	if (isReOrg) {
 
 		//updateReOrg()
-
+		log.Info("reorg happended")
 		for _, block := range newChain {
 			// insert the block in the canonical way, re-writing history
 			bc.insert(block)
+
+			fmt.Println(block.Number().String(),block.Hash(),block.ParentHash())
 			// write lookup entries for hash based transaction/receipt searches
 			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 				return err
