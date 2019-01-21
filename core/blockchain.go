@@ -1274,7 +1274,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 
 
-	oldEpochId,oldSlotId,err := bc.GetBlockEpochIdAndSlotId(oldChain[0])
+	oldChainLen := len(oldChain)
+
+	oldEpochId,oldSlotId,err := bc.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
 	}
