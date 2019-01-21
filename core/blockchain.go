@@ -982,6 +982,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	defer close(abort)
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
+
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			log.Debug("Premature abort during blocks processing")
@@ -1235,7 +1236,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	)
 
-	updateFork()
+	//updateFork()
 
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
@@ -1331,8 +1332,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	if (isReOrg) {
 
-		updateReOrg()
-		
+		//updateReOrg()
+
 		for _, block := range newChain {
 			// insert the block in the canonical way, re-writing history
 			bc.insert(block)
@@ -1363,7 +1364,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			}()
 		}
 
-	}//if new chain is right one
+	} else {
+
+	}
 
 	return nil
 }
