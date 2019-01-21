@@ -1330,15 +1330,18 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId < oldSlotId)))
 	isReOrg = isReOrg || len(oldChain) < len(newChain)
 
-	if (isReOrg) {
-
+	if (!isReOrg) {
+		log.Info("can not meet condition for reorg")
+		return errors.New("can not meet condition for reorg")
+	}
 		//updateReOrg()
-		log.Info("reorg happended")
-		for _, block := range newChain {
+	log.Info("reorg happended")
+	for _, block := range newChain {
+
 			// insert the block in the canonical way, re-writing history
 			bc.insert(block)
 
-			fmt.Println(block.Number().String(),block.Hash(),block.ParentHash())
+			fmt.Println(block.Number().String(),common.ToHex(block.Hash().Bytes()),common.ToHex(block.ParentHash().Bytes()))
 			// write lookup entries for hash based transaction/receipt searches
 			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 				return err
@@ -1364,10 +1367,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 					bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 				}
 			}()
-		}
-
-	} else {
-
 	}
 
 	return nil
