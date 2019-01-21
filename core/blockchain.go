@@ -1338,7 +1338,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			// insert the block in the canonical way, re-writing history
 			bc.insert(block)
 
-			log.Warn(block.Number().String(),block.Hash(),block.ParentHash())
+			fmt.Println(block.Number().String(),block.Hash(),block.ParentHash())
 			// write lookup entries for hash based transaction/receipt searches
 			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 				return err
