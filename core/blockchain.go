@@ -1152,7 +1152,7 @@ func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
 
 	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
 	epochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
-
+	slotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
 	return
 }
 
