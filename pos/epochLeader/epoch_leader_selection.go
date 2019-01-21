@@ -209,7 +209,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
 
 	//if pb == 0 {
-	//fmt.Println(epochId,amount,lockTime,leftTimePercent,pb,pstaker.StakingTime)
+	log.Warn("epochId=",epochId,",amount=",amount,",locktime=",lockTime,",leftTimePercent=",leftTimePercent,",pb=",pb,",staking time=",pstaker.StakingTime)
 	//}
 
 	gb := new(bn256.G1)
