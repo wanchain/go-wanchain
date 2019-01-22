@@ -1157,14 +1157,16 @@ func calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 func updateReOrg() {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
-		posdb.NewDb("forkdb")
+		reOrgDb = posdb.NewDb("forkdb")
 	}
 
-	numberBytes, err := reOrgDb.Get(0, "reorgNumber")
-	if err != nil {
-		return
+
+	numberBytes, _ := reOrgDb.Get(0, "reorgNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+		num = binary.BigEndian.Uint64(numberBytes) + 1
 	}
-	num := binary.BigEndian.Uint64(numberBytes) + 1
 
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
@@ -1175,14 +1177,16 @@ func updateReOrg() {
 func updateFork() {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
-		posdb.NewDb("forkdb")
+		reOrgDb = posdb.NewDb("forkdb")
 	}
 
-	numberBytes, err := reOrgDb.Get(0, "forkNumber")
-	if err != nil {
-		return
+	numberBytes, _ := reOrgDb.Get(0, "forkNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+
+		num = binary.BigEndian.Uint64(numberBytes) + 1
 	}
-	num := binary.BigEndian.Uint64(numberBytes) + 1
 
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
@@ -1232,7 +1236,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	)
 
-	//updateFork()
+
 
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
@@ -1295,11 +1299,14 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		if len(oldChain) > 63 {
 			logFn = log.Warn
 		}
+
+		updateFork()
+
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
-		return errors.New("len(oldChain) == 0")
+		return fmt.Errorf("Impossible reorg, please file an issue")
 	}
 
 	var addedTxs types.Transactions
@@ -1310,24 +1317,28 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	oldEpochId, oldSlotId, err := bc.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
+		return fmt.Errorf("Impossible reorg because old epochId or slotId not match with time")
 	}
 
 	newChainLen := len(newChain)
 
 	newEpochId, newSlotId, err := bc.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
 	if err != nil {
-		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-	//||  newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId <= oldSlotId
+
 	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId && newSlotId < oldSlotId)))
 	isReOrg = isReOrg || len(oldChain) < len(newChain)
 
 	if !isReOrg {
 		log.Info("can not meet condition for reorg")
-		return errors.New("can not meet condition for reorg")
+		return fmt.Errorf("can not meet condition for reorg")
 	}
-	//updateReOrg()
+
+	updateReOrg()
+
 	log.Info("reorg happended")
 	for _, block := range newChain {
 
