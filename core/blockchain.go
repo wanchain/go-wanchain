@@ -1205,7 +1205,7 @@ func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId u
 	calEpochId, calSlotId := calEpochSlotIDFromTime(blkTime)
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
 
-	if calEpochId != blkEpochId || calSlotId != blkSlotId {
+	if calEpochId != blkEpochId {
 		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
 		return 0, 0, errors.New("epochid and slotid is not match with blk time")
 	}
