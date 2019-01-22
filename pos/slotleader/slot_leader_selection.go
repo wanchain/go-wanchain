@@ -35,14 +35,13 @@ const CompressedPubKeyLen = 33
 const LengthPublicKeyBytes = 65
 
 const (
-	StageTwoProofCount   = 2
-	EpochLeaders         = "epochLeaders"
-	SecurityMsg          = "securityMsg"
-	CR                   = "cr"
-	RandFromProposer     = "randFromProposer"
-	RandomSeqs           = "randomSeqs"
-	SlotLeader           = "slotLeader"
-	slotLeaderTxMinCount = 2
+	StageTwoProofCount = 2
+	EpochLeaders       = "epochLeaders"
+	SecurityMsg        = "securityMsg"
+	CR                 = "cr"
+	RandFromProposer   = "randFromProposer"
+	RandomSeqs         = "randomSeqs"
+	SlotLeader         = "slotLeader"
 )
 
 const (
@@ -92,7 +91,7 @@ type SlotLeaderSelection struct {
 	workStage              int
 	rc                     *rpc.Client
 	epochLeadersArray      []string            // len(pki)=65 hex.EncodeToString
-	epochLeadersMap        map[string][]uint64 // key: pki value: []uint64 the indexs of this pki. hex.EncodeToString
+	epochLeadersMap        map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
 	key                    *keystore.Key
 	stateDb                *state.StateDB
 	epochInstance          interface{}
@@ -552,7 +551,6 @@ func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error
 // getSMAPieces can get the SMA info generate in pre epoch.
 // It had been +1 when save into db, so do not -1 in get.
 func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
-	// 1. get SMA[pre]
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
 	if epochID == uint64(0) {
 		return s.smaGenesis[:], true, nil
@@ -726,10 +724,9 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	keyHash := vm.GetSlotLeaderStage2KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(selfIndex))
 
-	log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
-
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
+		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 		return nil, nil, ErrNoTx2TransInDB
 	}
 
