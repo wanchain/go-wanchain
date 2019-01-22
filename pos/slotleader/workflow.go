@@ -22,6 +22,10 @@ import (
 	"github.com/wanchain/pos/uleaderselection"
 )
 
+var (
+	ErrInvalidCommitParameter = errors.New("Invalid input parameters")
+)
+
 //--------------Workflow functions-------------------------------------------------------------
 // Init can set import info for slotleader at startup
 func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
@@ -207,11 +211,11 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
-		return nil, errors.New("Invalid input parameters")
+		return nil, ErrInvalidCommitParameter
 	}
 
 	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {
-		return nil, errors.New("Public key point is not on S256 curve")
+		return nil, ErrNotOnCurve
 	}
 
 	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)
