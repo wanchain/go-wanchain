@@ -312,6 +312,38 @@ func TestCRSave(t *testing.T) {
 
 }
 
+func TestArraySave(t *testing.T) {
+
+	fmt.Printf("TestArraySave\n\n\n")
+	var sendtrans [pos.EpochLeaderCount]bool
+	for index, _ := range sendtrans {
+		sendtrans[index] = false
+	}
+	fmt.Println(sendtrans)
+
+	sendtrans[0] = true
+	sendtrans[pos.EpochLeaderCount-1] = true
+
+	bytes, err := rlp.EncodeToBytes(sendtrans)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	db := posdb.NewDb("testArraySave")
+	db.Put(uint64(0), "TestArraySave", bytes)
+
+	var sendtransGet [pos.EpochLeaderCount]bool
+	bytesGet, err := db.Get(uint64(0), "TestArraySave")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	err = rlp.DecodeBytes(bytesGet, &sendtransGet)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	fmt.Println(sendtransGet)
+}
+
 // func TestWholeFlow(t *testing.T) {
 // 	pos.SelfTestMode = true
 

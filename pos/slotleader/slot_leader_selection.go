@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
 )
 
@@ -744,22 +745,42 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 	return alphaPki, proof, nil
 }
 
-func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
-	for i := 0; i < pos.EpochLeaderCount; i++ {
-		mi, err := s.GetStg1StateDbInfo(epochID, uint64(i))
-		if err != nil {
-			log.Warn("GetStg1StateDbInfo", "error", err.Error(), "index", i)
-			s.validEpochLeadersIndex[i] = false
-		} else {
-			if len(mi) == 0 {
-				log.Warn("GetStg1StateDbInfo", "error", "len(mi)=0", "index", i)
-				s.validEpochLeadersIndex[i] = false
-			} else {
-				s.stageOneMi[i] = crypto.ToECDSAPub(mi)
-			}
-		}
+func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
+	var ret [pos.EpochLeaderCount]bool
+	stateDb, err := s.getCurrentStateDb()
+	if err != nil {
+		return ret[:], err
+	}
 
-		if !s.validEpochLeadersIndex[i] {
+	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
+
+	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(posdb.Uint64ToBytes(epochID))
+
+	log.Debug(fmt.Sprintf("GetSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+
+	if data == nil {
+		return ret[:], ErrNoTx2TransInDB
+	}
+
+	err = rlp.DecodeBytes(data, &ret)
+	if err != nil {
+		return ret[:], ErrNoTx2TransInDB
+	}
+	return ret[:], nil
+}
+
+func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
+	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID)
+	log.Info("collectStagesData", "indexesSentTran", indexesSentTran)
+	if err != nil {
+		return ErrCollectTxData
+	}
+	for i := 0; i < pos.EpochLeaderCount; i++ {
+
+		if !indexesSentTran[i] {
+			s.validEpochLeadersIndex[i] = false
 			continue
 		}
 
