@@ -1154,14 +1154,14 @@ func calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 	return
 }
 
-func updateReOrg() {
+func updateReOrg(epochId uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
 	}
 
 
-	numberBytes, _ := reOrgDb.Get(0, "reorgNumber")
+	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
 
 	num := uint64(0)
 	if numberBytes != nil {
@@ -1171,10 +1171,10 @@ func updateReOrg() {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
 
-	reOrgDb.Put(0, "reorgNumber", b)
+	reOrgDb.Put(epochId, "reorgNumber", b)
 }
 
-func updateFork() {
+func updateFork(epochId uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
@@ -1191,7 +1191,7 @@ func updateFork() {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
 
-	reOrgDb.Put(0, "forkNumber", b)
+	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -1300,7 +1300,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			logFn = log.Warn
 		}
 
-		updateFork()
+
 
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
@@ -1328,7 +1328,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-
+	updateFork(newEpochId)
 	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId && newSlotId < oldSlotId)))
 	isReOrg = isReOrg || len(oldChain) < len(newChain)
 
@@ -1337,7 +1337,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		return fmt.Errorf("can not meet condition for reorg")
 	}
 
-	updateReOrg()
+	updateReOrg(newEpochId)
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
