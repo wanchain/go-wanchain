@@ -185,7 +185,7 @@ const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blkTime uint64) (*Proposer, error) {
 
-	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan)).Int64()
+	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
 	lockTime := pstaker.LockTime
 
 	var leftTimePercent float64
@@ -196,13 +196,15 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	} else {
 
 		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
-
 		leftTimePercent = Round(leftTimePercent, 32)
 	}
 
-	//fmt.Println(lockTime,blkTime,pstaker.StakingTime,leftTimePercent)
 
-	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
+	percent := big.NewInt(int64(math.Exp(-leftTimePercent) * Accuracy))
+	timeBig := big.NewInt(int64(lockTime))
+
+	pb := big.NewInt(0).Mul(amount,percent)
+	pb = big.NewInt(0).Mul(pb,timeBig)
 
 	//if pb == 0 {
 	log.Warn("epoch Info:", "epochId=", epochId, ",amount=", amount, ",locktime=", lockTime, ",leftTimePercent=", leftTimePercent, ",pb=", pb, ",staking time=", pstaker.StakingTime)
@@ -218,7 +220,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	p := &Proposer{
 		pubSec256:     crypto.ToECDSAPub(pstaker.PubSec256),
 		pubBn256:      gb,
-		probabilities: big.NewInt(int64(pb)),
+		probabilities: pb,
 	}
 
 	return p, nil

@@ -303,3 +303,4 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 		db.Close()
 	}
 }
+
