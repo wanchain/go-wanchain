@@ -201,7 +201,11 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 		}
 	}
 
-	epercent := big.NewInt(int64(math.Exp(-leftTimePercent) * Accuracy))
+
+	fpercent := Round(math.Exp(-leftTimePercent),4)
+
+	epercent := big.NewInt(int64( fpercent* Accuracy))
+
 	timeBig := big.NewInt(int64(lockTime))
 
 	pb := big.NewInt(0).Mul(amount,epercent)
