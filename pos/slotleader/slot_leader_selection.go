@@ -634,8 +634,8 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return ErrNotOnCurve
 		}
 	}
-	log.Info("Before generateSlotLeadsGroup")
-	s.dumpData()
+	//log.Info("Before generateSlotLeadsGroup")
+	//s.dumpData()
 
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
 
@@ -664,7 +664,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	s.slotCreateStatus[epochID] = true
 	log.Info("generateSlotLeadsGroup success")
 
-	s.dumpData()
+	//s.dumpData()
 	return nil
 }
 
@@ -770,7 +770,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (inde
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID)
-	log.Info("collectStagesData", "indexesSentTran", indexesSentTran)
+	log.Debug("collectStagesData", "indexesSentTran", indexesSentTran)
 	if err != nil {
 		return ErrCollectTxData
 	}

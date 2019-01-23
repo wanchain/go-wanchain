@@ -138,7 +138,7 @@ func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID ui
 		log.Warn("VerifySlotProofByGenesis Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false
 	}
-	log.Info("VerifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
+	log.Debug("VerifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes()[:])
 }
 
@@ -175,7 +175,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	}
 
 	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID - 1)
-	log.Info("VerifySlotProof", "indexesSentTran", indexesSentTran)
+	log.Debug("VerifySlotProof", "indexesSentTran", indexesSentTran)
 	if err != nil {
 		log.Error("VerifySlotProof", "indexesSentTran error", err.Error())
 		return false
@@ -203,7 +203,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 	var hasValidTx bool
 	hasValidTx = false
-	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
+	log.Debug("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
 	for _, valid := range validEpochLeadersIndex {
 
 		if valid {
@@ -284,7 +284,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false
 	}
-	log.Info("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
+	log.Debug("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
 
