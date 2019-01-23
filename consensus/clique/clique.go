@@ -289,7 +289,7 @@ func (c *Clique) VerifyHeaders(chain consensus.ChainReader, headers []*types.Hea
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	if header.Number.Uint64() ==100 {
+	if header.Number.Uint64() == 100 {
 		fmt.Println("got bad blk number")
 	}
 
@@ -349,9 +349,9 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	//}
 	// All basic checks passed, verify cascading fields
 	// caculate leader
-	epochidSlotid := header.Difficulty.Uint64()
-	epochId := epochidSlotid >> 32
-	fmt.Println("verifyheader epochid: ", epochId)
+	//epochidSlotid := header.Difficulty.Uint64()
+	//epochId := epochidSlotid >> 32
+	//fmt.Println("verifyheader epochid: ", epochId)
 	//if epochId != 0 {
 	//	randombeacon.GetRandonBeaconInst().DoComputeRandom(epochId-1)
 	//}
@@ -728,7 +728,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	//	leader = pos.GenesisPK
 	//}
 	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-	if err != nil  {
+	if err != nil {
 		return nil, err
 	}
 	leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
