@@ -473,9 +473,10 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+	tt := time.Now()
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
-
+	fmt.Println("commitTransactions used time:", time.Since(tt))
 	// compute uncles for the new block.
 	//var (
 	//	uncles    []*types.Header
@@ -532,11 +533,20 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	var coalescedLogs []*types.Log
 
+	var rbCount  = 0
 	for {
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
 			break
+		}
+		fmt.Println(tx.To().String())
+		fmt.Println(vm.RandomBeaconPrecompileAddr.String())
+		if tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
+			rbCount++
+			if rbCount > 3 {
+				break
+			}
 		}
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
