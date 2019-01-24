@@ -148,7 +148,7 @@ func (a PosApi) GetReorg(epochID uint64) ([]uint64, error) {
 		return nil,errors.New("not find db")
 	}
 
-	var forkNum,reOrgNum uint64
+	var forkNum,reOrgNum,reOrgLen uint64
 
 	forkNum = 0
 	reOrgNum = 0
@@ -165,10 +165,10 @@ func (a PosApi) GetReorg(epochID uint64) ([]uint64, error) {
 
 	lenBytes,err := reOrgDb.Get(epochID,"reorgLength")
 	if err == nil && reorBytes!=nil {
-		reOrgNum = binary.BigEndian.Uint64(lenBytes)
+		reOrgLen = binary.BigEndian.Uint64(lenBytes)
 	}
 
-	return []uint64{forkNum,reOrgNum},nil
+	return []uint64{forkNum,reOrgNum,reOrgLen},nil
 }
 
 
