@@ -163,6 +163,11 @@ func (a PosApi) GetReorg(epochID uint64) ([]uint64, error) {
 		reOrgNum = binary.BigEndian.Uint64(reorBytes)
 	}
 
+	lenBytes,err := reOrgDb.Get(epochID,"reorgLength")
+	if err == nil && reorBytes!=nil {
+		reOrgNum = binary.BigEndian.Uint64(lenBytes)
+	}
+
 	return []uint64{forkNum,reOrgNum},nil
 }
 

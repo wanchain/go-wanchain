@@ -1154,7 +1154,7 @@ func calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 	return
 }
 
-func updateReOrg(epochId uint64) {
+func updateReOrg(epochId uint64,length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
@@ -1172,6 +1172,10 @@ func updateReOrg(epochId uint64) {
 	binary.BigEndian.PutUint64(b, num)
 
 	reOrgDb.Put(epochId, "reorgNumber", b)
+
+	b = make([]byte, 8)
+	binary.BigEndian.PutUint64(b, length)
+	reOrgDb.Put(epochId, "reorgLength", b)
 }
 
 func updateFork(epochId uint64) {
@@ -1337,7 +1341,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		return fmt.Errorf("can not meet condition for reorg")
 	}
 
-	updateReOrg(newEpochId)
+	updateReOrg(newEpochId,uint64(len(newChain)))
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
