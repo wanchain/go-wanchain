@@ -356,7 +356,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		oldNum := oldHead.Number.Uint64()
 		newNum := newHead.Number.Uint64()
 
-		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 1024{
+		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 1024 {
 			log.Warn("Skipping deep transaction reorg", "depth", depth)
 		} else {
 			// Reorg seems shallow enough to pull in all transactions into memory
@@ -556,7 +556,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
-	if tx.Size() > 32*1024 {
+	if tx.Size() > 320*1024 {
 		return ErrOversizedData
 	}
 
@@ -805,13 +805,13 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	if !replace {
 		from, _ := types.Sender(pool.signer, tx) // already validated
 		pool.promoteExecutables([]common.Address{from})
-		
-	}  else {//fixing the bug that replaced tx can not be broadcast
-		if err==nil {
-		   go pool.txFeed.Send(TxPreEvent{tx})
+
+	} else { //fixing the bug that replaced tx can not be broadcast
+		if err == nil {
+			go pool.txFeed.Send(TxPreEvent{tx})
 		}
 	}
-	
+
 	return nil
 }
 

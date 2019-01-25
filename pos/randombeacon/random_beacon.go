@@ -36,9 +36,9 @@ type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 
 type LoopEvent struct {
 	statedb vm.StateDB
-	rc *rpc.Client
-	eid uint64
-	sid uint64
+	rc      *rpc.Client
+	eid     uint64
+	sid     uint64
 }
 
 type RandomBeacon struct {
@@ -90,7 +90,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 	rb.loopEvents <- &LoopEvent{statedb, rc, eid, sid}
 }
 
-func (rb *RandomBeacon) LoopRoutine()  {
+func (rb *RandomBeacon) LoopRoutine() {
 	for {
 		event, ok := <-rb.loopEvents
 		if !ok {
@@ -368,7 +368,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["from"] = rb.getTxFrom()
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
+	arg["gas"] = (*hexutil.Big)(big.NewInt(4500000))
 	arg["txType"] = 1
 	arg["data"] = hexutil.Bytes(payload)
 
@@ -430,4 +430,3 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
-
