@@ -289,9 +289,6 @@ func (c *Clique) VerifyHeaders(chain consensus.ChainReader, headers []*types.Hea
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	if header.Number.Uint64() == 100 {
-		fmt.Println("got bad blk number")
-	}
 
 	if header.Number == nil {
 		return errUnknownBlock

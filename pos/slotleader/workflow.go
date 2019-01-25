@@ -79,7 +79,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 		// If it's too late to run, wait for next epoch
 		if slotID > pos.Stage1K/2 {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
 			break
 		}
@@ -92,6 +92,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		if err != nil {
 			log.Error(err.Error())
 			ErrorCountAdd()
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
 		}
@@ -104,7 +105,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		}
 
 		if slotID > pos.Stage4K {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			break
 		}
 
@@ -112,9 +113,8 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		if err != nil {
 			log.Error(err.Error())
 			ErrorCountAdd()
-		} else {
-			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		}
+		s.setWorkStage(epochID, slotLeaderSelectionStage3)
 
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
@@ -180,7 +180,6 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 
 // startStage2Work start the stage 2 work and send tx
 func (s *SlotLeaderSelection) startStage2Work() error {
-
 	functrace.Enter("startStage2Work")
 	s.getWorkingEpochID()
 	selfPublicKey, _ := s.getLocalPublicKey()
