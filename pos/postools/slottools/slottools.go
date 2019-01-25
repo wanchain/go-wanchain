@@ -150,12 +150,7 @@ func PkUncompress(buf []byte) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	privK, _ := crypto.GenerateKey()
-	pk := &privK.PublicKey
-	pk.X = key.X
-	pk.Y = key.Y
-	return pk, nil
+	return (*ecdsa.PublicKey)(key), nil
 }
 
 type stage2Data struct {
