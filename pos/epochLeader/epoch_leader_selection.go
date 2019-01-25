@@ -135,15 +135,10 @@ func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB
 		return err
 	}
 
-	epl := e.GetEpochLeaders(epochId)
-	if len(epl) != ne {
-		e.epochLeaderSelection(r, ne, pa, epochId)
-	}
+	e.epochLeaderSelection(r, ne, pa, epochId)
 
-	rbl := e.GetRBProposerGroup(epochId)
-	if len(rbl) != nr {
-		e.randomProposerSelection(r, nr, pa, epochId)
-	}
+	e.randomProposerSelection(r, nr, pa, epochId)
+
 
 	return nil
 
@@ -204,7 +199,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 
 	fpercent := Round(math.Exp(-leftTimePercent),4)
 
-	epercent := big.NewInt(int64( fpercent* Accuracy))
+	epercent := big.NewInt(int64(fpercent* Accuracy))
 
 	timeBig := big.NewInt(int64(lockTime))
 
