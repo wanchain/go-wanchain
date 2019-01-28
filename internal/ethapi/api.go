@@ -1834,11 +1834,13 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 			if err != nil {
 				return nil, errors.New("Error failed to load keyfile ")
 			}
+
 			if key.PrivateKey != nil {
 				pubs =append(pubs,common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
-			if key.PrivateKey2 != nil {
-				pubs = append(pubs,common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+
+			if key.PrivateKey3 != nil {
+				pubs = append(pubs, common.ToHex(key.PrivateKey3.G1.Marshal()))
 			}
 
 			break

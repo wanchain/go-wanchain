@@ -62,7 +62,10 @@ var (
 	slotLeaderPrecompileAddr 	= common.BytesToAddress(big.NewInt(600).Bytes())
 
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
+
+	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
+	SlotLeaderPrecompileAddr = slotLeaderPrecompileAddr
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
