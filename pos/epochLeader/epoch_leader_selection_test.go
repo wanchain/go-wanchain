@@ -304,3 +304,63 @@ func TestGetGetEpochLeadersCapability(t *testing.T) {
 	}
 
 }
+
+
+
+
+func TestGetGetEpochLeaderAddress(t *testing.T) {
+
+	checkArray := [3][2]string{
+		{
+		 "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
+		 "0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910",
+		},
+
+		{"0x8b179c2b542f47bb2fb2dc40a3cf648aaae1df16",
+		"0x2bf18653c442fa51689c70ad3169d444c12e8279e093bf8ddb1010fbd772d0db0c322c62c475d25fde04b245d8913b8f0c38c437cc819c679a51a5263a40fadb",
+		},
+
+		{"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
+		"0x102158973be3fdcc6c73263995fb2bb441b5e71a24cbca1d87516a29a94f197f08e898b88e26b67d933c5bb980b5ae6d257acd6952a98ee8a321a3b747bd197f",
+		},
+	}
+
+
+	blkChain,_ := newTestBlockChain(true)
+
+	stateDb, err := blkChain.StateAt(blkChain.GetBlockByNumber(0).Root())
+	if err != nil {
+		t.Fail()
+	}
+
+	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
+
+	nr := 30
+	ne := 30
+
+	_, ga, err := bn256.RandomG1(rand.Reader)
+	epocher1.SelectLeaders(ga.Marshal(),ne,nr,stateDb,0)
+
+	rbl1 := epocher1.GetRBProposerGroup(0)
+	epMap :=  make(map[string]int)
+	for idx,val := range rbl1 {
+		v := common.ToHex(val.Marshal())
+		epMap[v] = idx
+	}
+
+	for _,val := range checkArray {
+		g1 := val[1]
+
+		if idx,ok := epMap[g1];ok {
+			addrBytes := common.FromHex(val[0])
+			addr := common.BytesToAddress(addrBytes)
+			ret := epocher1.IsGoodProposer(0, uint64(idx), addr)
+			fmt.Println(addr,ret)
+			if !ret {
+				t.Fail()
+			}
+		}
+	}
+
+
+}

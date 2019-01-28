@@ -39,7 +39,7 @@ for (idx=0;idx<regCount;idx++) {
         to:address,
         value: web3.toWin(tranValue),
         gas: 200000,
-        gasprice: '0x' + (20000000000).toString(16)
+        gasprice: '0x' + (200000000000).toString(16)
     });
 
     console.log("tx=" + tx)

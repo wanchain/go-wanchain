@@ -45,7 +45,9 @@ var (
 
 type Epocher struct {
 	rbLeadersDb    *posdb.Db
+	rbLeadersAddrDb  *posdb.Db
 	epochLeadersDb *posdb.Db
+
 	blkChain       *core.BlockChain
 }
 
@@ -58,10 +60,11 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher {
 
 	rbdb := posdb.NewDb(rbn)
+	rbldAddrDb := posdb.NewDb(rbn + "addresss")
 
 	epdb := posdb.NewDb(epdbn)
 
-	inst := &Epocher{rbdb, epdb, blc}
+	inst := &Epocher{rbdb,rbldAddrDb,epdb, blc}
 
 	posdb.SetEpocherInst(inst)
 
@@ -340,10 +343,11 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].probabilities.Cmp(crBig) > 0 })
 
-		log.Info("random selector ", "index:=", idx, "bn256", common.ToHex(ps[idx].pubBn256.Marshal()))
+		fmt.Println("random selector ", "index:=", idx, "bn256", common.ToHex(ps[idx].pubBn256.Marshal()))
 
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
-		//EpochLeaderBn256G1s = append(EpochLeaderBn256G1s, ps[idx + 1].pubBn256)
+
+		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i),"",crypto.PubkeyToAddress(*ps[idx].pubSec256).Bytes())
 
 		cr = crypto.Keccak256(cr)
 	}
@@ -383,3 +387,20 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 
 	return g1ksArray
 }
+
+func (e *Epocher) IsGoodProposer(epochID uint64,idx uint64,addr common.Address) (bool) {
+	val :=e.rbLeadersAddrDb.GetStorageByteArray(epochID)
+
+	if val == nil || len(val)== 0 {
+		return false
+	}
+
+	bingoAddr := common.BytesToAddress(val[idx])
+
+	if bingoAddr == addr {
+		return true
+	} else {
+		return false
+	}
+}
+
