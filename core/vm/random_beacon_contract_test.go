@@ -94,7 +94,7 @@ type dummyCtDB struct {
 }
 
 var (
-	nr = 100
+	nr = 21
 	thres = pos.Cfg().PolymDegree + 1
 
 	db, _      = ethdb.NewMemDatabase()
@@ -103,6 +103,7 @@ var (
 	evm = NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	rbcontract = &RandomBeaconContract{}
+	rbcontractParam = &Contract{}
 
 	pubs, pris, hpubs = generateKeyPairs()
 	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
@@ -240,7 +241,7 @@ func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
 func isValidEpochStageMock(epochId uint64, stage int, evm *EVM) bool {
 	return true
 }
-func isInRandomGroupMock(pks *[]bn256.G1, proposerId uint32) bool {
+func isInRandomGroupMock(pks *[]bn256.G1, epockId uint64, proposerId uint32, address common.Address) bool {
 	return true
 }
 
@@ -293,16 +294,16 @@ func TestRBDkg(t *testing.T) {
 
 		payload := buildDkg(payloadBytes)
 
-		hash_cij := GetRBKeyHash(kind_cij, dkgParam.EpochId, dkgParam.ProposerId)
-		hash_ens := GetRBKeyHash(kind_ens, dkgParam.EpochId, dkgParam.ProposerId)
+		hashCij := GetRBKeyHash(kindCij, dkgParam.EpochId, dkgParam.ProposerId)
+		hashEns := GetRBKeyHash(kindEns, dkgParam.EpochId, dkgParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
 			t.Error(err)
 		}
 
-		cijBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_cij)
-		ensBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_ens)
+		cijBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hashCij)
+		ensBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hashEns)
 
 		if !bytes.Equal(cijBytes1, cijBytes2) {
 			println("cij error")
@@ -331,9 +332,9 @@ func TestGetCij(t *testing.T) {
 
 		payload := buildDkg(payloadBytes)
 
-		hash_cij := GetRBKeyHash(kind_cij, dkgParam.EpochId, dkgParam.ProposerId)
+		hash_cij := GetRBKeyHash(kindCij, dkgParam.EpochId, dkgParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
 			t.Error(err)
 		}
@@ -374,9 +375,9 @@ func TestGetEns(t *testing.T) {
 
 		payload := buildDkg(payloadBytes)
 
-		hash_ens := GetRBKeyHash(kind_ens, dkgParam.EpochId, dkgParam.ProposerId)
+		hash_ens := GetRBKeyHash(kindEns, dkgParam.EpochId, dkgParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
 			t.Error(err)
 		}
@@ -411,7 +412,7 @@ func TestRBSig(t *testing.T)  {
 		payload := buildSig(payloadBytes)
 		hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
 			t.Error(err)
 		}
@@ -436,7 +437,7 @@ func TestGetSig(t *testing.T) {
 		payload := buildSig(payloadBytes)
 		hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, nil, evm)
+		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
 			t.Error(err)
 		}

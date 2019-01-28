@@ -2,6 +2,7 @@ package posdb
 
 import (
 	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/common"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -323,6 +324,7 @@ func ByteArrayToPkArray(input [][]byte) []*ecdsa.PublicKey {
 type SelectLead interface {
 	SelectLeadersLoop(epochId uint64) error
 	GetEpochLeaders(epochID uint64) [][]byte
+	GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) []byte
 }
 
 func SetEpocherInst(sor SelectLead) {
@@ -368,6 +370,9 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 	return g1s
 }
 
+func GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) []byte {
+	return selecter.GetProposerBn256PK(epochID, idx, addr)
+}
 //-------------------------------------------------------------------
 
 var (
