@@ -101,10 +101,22 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 
 	var methodId [4]byte
 	copy(methodId[:], in[:4])
+	var from common.Address
+	from = contract.CallerAddress
 
 	if methodId == stgOneIdArr {
+		err := c.ValidTxStg1ByData(from, in[:])
+		if err != nil {
+			log.Error("slotLeaderSC:Run:ValidTxStg1ByData", "from", from)
+			return nil, err
+		}
 		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
+		err := c.ValidTxStg2ByData(from, in[:])
+		if err != nil {
+			log.Error("slotLeaderSC:Run:ValidTxStg2ByData", "from", from)
+			return nil, err
+		}
 		return c.handleStgTwo(in[:], contract, evm)
 	}
 
@@ -197,13 +209,18 @@ func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) e
 		return err
 	}
 
-	epochIDBuf, _, err := slottools.RlpGetStage1IDFromTx(tx.Data(), slotLeaderSCDef)
+	return c.ValidTxStg1ByData(sender, tx.Data())
+}
+
+func (c *slotLeaderSC) ValidTxStg1ByData(from common.Address, payload []byte) error {
+
+	epochIDBuf, _, err := slottools.RlpGetStage1IDFromTx(payload[:], slotLeaderSCDef)
 	if err != nil {
 		log.Error("ValidTxStg1 failed")
 		return err
 	}
 
-	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), sender) {
+	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), from) {
 		log.Error("ValidTxStg1 failed")
 		return slottools.ErrIllegalSender
 	}
@@ -212,19 +229,14 @@ func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) e
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
-	sender, err := signer.Sender(tx)
-	if err != nil {
-		return err
-	}
-
-	epochID, selfIndex, _, alphaPkis, proofs, err := slottools.RlpUnpackStage2DataForTx(tx.Data()[:], slotLeaderSCDef)
+func (c *slotLeaderSC) ValidTxStg2ByData(from common.Address, payload []byte) error {
+	epochID, selfIndex, _, alphaPkis, proofs, err := slottools.RlpUnpackStage2DataForTx(payload[:], slotLeaderSCDef)
 	if err != nil {
 		log.Error("ValidTxStg2:RlpUnpackStage2DataForTx failed")
 		return err
 	}
 
-	if !slottools.InEpochLeadersOrNotByAddress(epochID, sender) {
+	if !slottools.InEpochLeadersOrNotByAddress(epochID, from) {
 		log.Error("ValidTxStg2:InEpochLeadersOrNotByAddress failed")
 		return slottools.ErrIllegalSender
 	}
@@ -263,6 +275,14 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 		return slottools.ErrDleqProof
 	}
 	return nil
+}
+
+func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
+	sender, err := signer.Sender(tx)
+	if err != nil {
+		return err
+	}
+	return c.ValidTxStg2ByData(sender, tx.Data())
 }
 
 // GetSlotLeaderSCAddress can get the precompile contract address
