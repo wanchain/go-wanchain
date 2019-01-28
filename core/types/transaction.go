@@ -523,12 +523,18 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 const (
 	NORMAL_TX  = 1
 	PRIVACY_TX = 6
+	POS_TX     = 7
 )
 
 func IsNormalTransaction(txType uint64) bool {
-	return txType != PRIVACY_TX
+	return txType == NORMAL_TX
 }
-
+func IsPosTransaction(txType uint64) bool {
+	return txType == POS_TX
+}
+func IsPrivacyTransaction(txType uint64) bool {
+	return txType == PRIVACY_TX
+}
 func IsValidTransactionType(txType uint64) bool {
-	return (txType == NORMAL_TX || txType == PRIVACY_TX)
+	return (txType == NORMAL_TX || txType == PRIVACY_TX|| txType == POS_TX)
 }

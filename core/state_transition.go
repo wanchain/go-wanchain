@@ -245,7 +245,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	var stampTotalGas uint64
-	if !types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsPrivacyTransaction(st.msg.TxType()) {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
 			sender.Address().Bytes(),
 			st.data, st.gasPrice, st.value)
@@ -262,6 +262,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		if err := st.gp.SubGas(new(big.Int).SetUint64(totalUseableGas)); err != nil {
 			return nil, nil, nil, false, err
 		}
+	}
+	var posTotalGas uint64
+	if types.IsPosTransaction(st.msg.TxType()) {
+		posTotalGas = 0
 	}
 
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
@@ -302,9 +306,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
 		log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
-	} else {
+	}else if types.IsPrivacyTransaction(st.msg.TxType()) {
 		requiredGas = new(big.Int).SetUint64(stampTotalGas)
 		usedGas = requiredGas
+		log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
+	} else if types.IsPosTransaction(st.msg.TxType()){
+		requiredGas = new(big.Int).SetUint64(posTotalGas)
+		usedGas = requiredGas
+		requiredGas = st.gasUsed()
+		st.refundGas()
+		usedGas = new(big.Int).Set(requiredGas)
 		log.Trace("calc used gas, privacy tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
