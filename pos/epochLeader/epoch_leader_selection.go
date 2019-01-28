@@ -20,7 +20,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 )
 
 var (
@@ -49,6 +49,12 @@ type Epocher struct {
 	epochLeadersDb *posdb.Db
 
 	blkChain       *core.BlockChain
+}
+
+
+type puksInfo struct {
+	PubSec256 []byte //staker’s ethereum public key
+	PubBn256  []byte //staker’s bn256 public key
 }
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
@@ -347,7 +353,17 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
 
-		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i),"",crypto.PubkeyToAddress(*ps[idx].pubSec256).Bytes())
+		info := &puksInfo{
+			PubSec256:  crypto.FromECDSAPub(ps[idx].pubSec256),
+			PubBn256:   ps[idx].pubBn256.Marshal(),
+		}
+
+		val,err := json.Marshal(&info)
+		if err != nil {
+			continue
+		}
+
+		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i),"",val)
 
 		cr = crypto.Keccak256(cr)
 	}
@@ -388,19 +404,32 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 	return g1ksArray
 }
 
-func (e *Epocher) IsGoodProposer(epochID uint64,idx uint64,addr common.Address) (bool) {
-	val :=e.rbLeadersAddrDb.GetStorageByteArray(epochID)
+func (e *Epocher) GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) ([]byte) {
+	valSet :=e.rbLeadersAddrDb.GetStorageByteArray(epochID)
 
-	if val == nil || len(val)== 0 {
-		return false
+	if valSet == nil || len(valSet)== 0 {
+		return nil
 	}
 
-	bingoAddr := common.BytesToAddress(val[idx])
+	psValue := valSet[idx]
+	var info puksInfo
+	err := json.Unmarshal(psValue,&info)
+	if err != nil {
+		return nil
+	}
+
+	pub := crypto.ToECDSAPub(info.PubSec256)
+
+	if pub == nil {
+		return nil
+	}
+
+	bingoAddr := crypto.PubkeyToAddress(*pub)
 
 	if bingoAddr == addr {
-		return true
+		return info.PubBn256
 	} else {
-		return false
+		return nil
 	}
 }
 

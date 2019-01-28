@@ -354,9 +354,9 @@ func TestGetGetEpochLeaderAddress(t *testing.T) {
 		if idx,ok := epMap[g1];ok {
 			addrBytes := common.FromHex(val[0])
 			addr := common.BytesToAddress(addrBytes)
-			ret := epocher1.IsGoodProposer(0, uint64(idx), addr)
-			fmt.Println(addr,ret)
-			if !ret {
+			ret := epocher1.GetProposerBn256PK(0, uint64(idx), addr)
+			fmt.Println(common.ToHex(addrBytes),common.ToHex(ret))
+			if !bytes.Equal(ret,common.FromHex(g1)) {
 				t.Fail()
 			}
 		}
