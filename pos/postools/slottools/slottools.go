@@ -20,6 +20,34 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
+var (
+	ErrEpochID                         = errors.New("EpochID is not valid")
+	ErrIllegalSender                   = errors.New("sender is not in epoch leaders ")
+	ErrInvalidLocalPublicKey           = errors.New("getLocalPublicKey error, do not found unlock address")
+	ErrInvalidPreEpochLeaders          = errors.New("can not found pre epoch leaders return epoch 0")
+	ErrInvalidGenesisPk                = errors.New("invalid GenesisPK hex string")
+	ErrSlotLeaderGroupNotReady         = errors.New("slot leaders group not ready")
+	ErrSlotIDOutOfRange                = errors.New("slot id index out of range")
+	ErrPkNotInCurrentEpochLeadersGroup = errors.New("local public key is not in current Epoch leaders")
+	ErrInvalidRandom                   = errors.New("get random message error")
+	ErrNotOnCurve                      = errors.New("not on curve")
+	ErrTx1AndTx2NotConsistent          = errors.New("stageOneMi is not equal sageTwoAlphaPki")
+	ErrEpochLeaderNotReady             = errors.New("epoch leaders are not ready")
+
+	ErrNoTx2TransInDB = errors.New("tx2 is not in db")
+	ErrCollectTxData  = errors.New("collect tx data error")
+	ErrRlpUnpackErr   = errors.New("RlpUnpackDataForTx error")
+
+	ErrNoTx1TransInDB = errors.New("GetStg1StateDbInfo: Found not data of key")
+	ErrVerifyStg1Data = errors.New("stg1 data get from StateDb verified failed")
+
+	ErrDleqProof    = errors.New("VerifyDleqProof false")
+	ErrInvalidTxLen = errors.New("len(mi)==0 or len(alphaPkis) is not right")
+
+	ErrInvalidTx1Range = errors.New("slot leader tx1 is not in invalid range")
+	ErrInvalidTx2Range = errors.New("slot leader tx2 is not in invalid range")
+)
+
 var selecter SlotLeader
 
 func GetStage1FunctionID(abiString string) ([4]byte, error) {
