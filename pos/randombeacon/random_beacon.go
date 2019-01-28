@@ -68,7 +68,7 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
-	rb.epochStage = vm.RB_DKG_STAGE
+	rb.epochStage = vm.RbDkgStage
 	rb.epochId = maxUint64
 	rb.rpcClient = nil
 
@@ -121,7 +121,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		log.Info("rb epochId is original")
 
 		rb.epochId = epochId
-		rb.epochStage = vm.RB_DKG_STAGE
+		rb.epochStage = vm.RbDkgStage
 	}
 
 	// rb.epochId == epochId
@@ -138,27 +138,27 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	for {
 		log.Info("do as proposer", "epoch stage", rb.epochStage)
 		switch rb.epochStage {
-		case vm.RB_DKG_STAGE:
-			if rbStage == vm.RB_DKG_STAGE {
+		case vm.RbDkgStage:
+			if rbStage == vm.RbDkgStage {
 				err := rb.doDKGs(epochId, myProposerIds)
 				if err != nil {
 					return err
 				}
 			}
-			rb.epochStage = vm.RB_SIGN_STAGE
-		case vm.RB_SIGN_STAGE:
-			if rbStage < vm.RB_SIGN_STAGE {
+			rb.epochStage = vm.RbSignStage
+		case vm.RbSignStage:
+			if rbStage < vm.RbSignStage {
 				return nil
-			} else if rbStage == vm.RB_SIGN_STAGE {
+			} else if rbStage == vm.RbSignStage {
 				err := rb.doSIGs(epochId, myProposerIds)
 				if err != nil {
 					return err
 				}
 			}
 
-			rb.epochStage = vm.RB_AFTER_SIGH_STAGE
+			rb.epochStage = vm.RbAfterSignStage
 		default:
-			// RB_AFTER_SIGH_STAGE
+			// RbAfterSignStage
 			return nil
 		}
 	}

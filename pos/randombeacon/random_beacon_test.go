@@ -29,7 +29,7 @@ func TestInit(t *testing.T) {
 
 	rb.Init(&epocher, &key)
 
-	if rb.epochStage != vm.RB_DKG_STAGE {
+	if rb.epochStage != vm.RbDkgStage {
 		t.Error("invalid epoch stage")
 	}
 
