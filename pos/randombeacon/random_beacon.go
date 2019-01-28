@@ -22,8 +22,8 @@ var (
 	maxUint64 = uint64(1<<64 - 1)
 )
 
-type RbDKGDataCollector struct {
-	data *vm.RbDKGTxPayload
+type RbEnsDataCollector struct {
+	ens []*bn256.G1
 	pk   *bn256.G1
 }
 
@@ -36,9 +36,9 @@ type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 
 type LoopEvent struct {
 	statedb vm.StateDB
-	rc      *rpc.Client
-	eid     uint64
-	sid     uint64
+	rc *rpc.Client
+	eid uint64
+	sid uint64
 }
 
 type RandomBeacon struct {
@@ -90,7 +90,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 	rb.loopEvents <- &LoopEvent{statedb, rc, eid, sid}
 }
 
-func (rb *RandomBeacon) LoopRoutine() {
+func (rb *RandomBeacon) LoopRoutine()  {
 	for {
 		event, ok := <-rb.loopEvents
 		if !ok {
@@ -209,7 +209,7 @@ func (rb *RandomBeacon) doDKG(epochId uint64, proposerId uint32) error {
 	return rb.sendDKG(txPayload)
 }
 
-func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDKGTxPayload, error) {
+func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDKGTxPayload1, error) {
 	//log.Info("time", "1", time.Now().Unix())
 	start := time.Now()
 
@@ -264,10 +264,11 @@ func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDK
 		proof[i] = wanpos.DLEQ(pks[i], *wanpos.Hbase, &sshare[i])
 	}
 
-	txPayload := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
+	tmp := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
+	txPayload := vm.DkgToDkg1(&tmp)
 
 	log.Info("generateDKG used time", "time", time.Since(start))
-	return &txPayload, nil
+	return txPayload, nil
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
@@ -291,11 +292,12 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	}
 
 	prikey := pos.Cfg().GetMinerBn256SK()
-	datas := make([]RbDKGDataCollector, 0)
+	datas := make([]RbEnsDataCollector, 0)
+
 	for id, pk := range pks {
-		data, err := vm.GetDkg(rb.statedb, epochId, uint32(id))
+		data, err := vm.GetEns(rb.statedb, epochId, uint32(id))
 		if err == nil && data != nil {
-			datas = append(datas, RbDKGDataCollector{data, &pk})
+			datas = append(datas, RbEnsDataCollector{data, &pk})
 		} else {
 			//log.Debug("vm.GetDkg failed", "err", err)
 		}
@@ -316,8 +318,8 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	// sk^-1
 	skinver := new(big.Int).ModInverse(prikey, bn256.Order)
 	for i := 0; i < dkgCount; i++ {
-		log.Info("compute gskshare", "i", i, "enshare len", len(datas[i].data.Enshare))
-		temp := new(bn256.G1).ScalarMult(datas[i].data.Enshare[proposerId], skinver)
+		log.Info("compute gskshare", "i", i, "enshare len", len(datas[i].ens))
+		temp := new(bn256.G1).ScalarMult(datas[i].ens[proposerId], skinver)
 
 		// gskshare[i] = (sk^-1)*(enshare[1][i]+...+enshare[Nr][i])
 		gskshare.Add(gskshare, temp)
@@ -337,7 +339,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	return rb.sendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
-func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload) error {
+func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload1) error {
 	log.Info("begin send dkg")
 	start := time.Now()
 	payload, err := getRBDKGTxPayloadBytes(payloadObj)
@@ -393,7 +395,7 @@ func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 	return pks
 }
 
-func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload) ([]byte, error) {
+func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload1) ([]byte, error) {
 	if payload == nil {
 		log.Error("get dkg tx payload fail, invalid DKG payload object")
 		return nil, errors.New("invalid DKG payload object")
@@ -430,3 +432,4 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
+
