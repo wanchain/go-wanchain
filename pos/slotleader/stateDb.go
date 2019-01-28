@@ -8,6 +8,10 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 )
 
+var (
+	ErrNoStateDbInstance = errors.New("Do not have stateDb instance now")
+)
+
 const (
 	// SafeBack2k is use to get a static safe block in 1k slots before
 	SafeBack2k = uint64(pos.SlotCount * 1 / 10)
@@ -16,7 +20,7 @@ const (
 func (s *SlotLeaderSelection) getCurrentStateDb() (stateDb *state.StateDB, err error) {
 	s.updateToLastStateDb()
 	if s.stateDb == nil {
-		return nil, errors.New("Do not have stateDb instance now")
+		return nil, ErrNoStateDbInstance
 	}
 	return s.stateDb, nil
 }
@@ -25,7 +29,7 @@ func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
 	s.updateStateDB()
 	//s.updateToLastStateDb()
 	if s.stateDb == nil {
-		return nil, errors.New("Do not have stateDb instance now")
+		return nil, ErrNoStateDbInstance
 	}
 	return s.stateDb, nil
 }

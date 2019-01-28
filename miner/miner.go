@@ -112,6 +112,23 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	fmt.Println("posInit: ", eerr, eerr1)
 	return epocher
 }
+func PosInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
+	log.Info("timer BackendTimerLoop is running!!!!!!")
+
+	// config
+	if key != nil {
+		pos.Cfg().MinerKey = key
+	}
+
+	if pos.EpochBaseTime == 0 {
+		h := s.BlockChain().GetHeaderByNumber(1)
+		if nil != h {
+			pos.EpochBaseTime = h.Time.Uint64()
+		}
+	}
+	epocher := epochLeader.NewEpocher(s.BlockChain())
+	return epocher
+}
 
 // BackendTimerLoop is pos main time loop
 func (self *Miner) BackendTimerLoop(s Backend) {
@@ -134,7 +151,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
-	epocher := PosInit(s, key)
+	epocher := PosInitMiner(s, key)
 	// get rpcClient
 	url := pos.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)

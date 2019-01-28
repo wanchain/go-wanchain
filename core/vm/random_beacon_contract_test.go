@@ -94,7 +94,7 @@ type dummyCtDB struct {
 }
 
 var (
-	nr = 10
+	nr = 100
 	thres = pos.Cfg().PolymDegree + 1
 
 	db, _      = ethdb.NewMemDatabase()
@@ -272,8 +272,8 @@ func buildSig(payloadBytes [] byte) []byte {
 	copy(payload[4:], payloadBytes)
 	return payload
 }
-func TestRBDkg(t *testing.T) {
 
+func TestRBDkg(t *testing.T) {
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
@@ -284,33 +284,36 @@ func TestRBDkg(t *testing.T) {
 		dkgParam.Enshare = enshareA[i]
 		dkgParam.Proof = proofA[i]
 
-		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
-		//payloadStr := common.Bytes2Hex(payloadBytes)
-		//rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
-		//payload, _ := rbAbi.Pack("dkg", payloadStr)
+		dkg1 := DkgToDkg1(&dkgParam)
+		cijBytes1, _ := rlp.EncodeToBytes(dkg1.Commit)
+		ensBytes1, _ := rlp.EncodeToBytes(dkg1.Enshare)
 
-		//rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
-		//copy(payload, rbAbi.Methods["dkg"].Id())
+		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
+
+
 		payload := buildDkg(payloadBytes)
 
-		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
-
+		hash_cij := GetRBKeyHash(kind_cij, dkgParam.EpochId, dkgParam.ProposerId)
+		hash_ens := GetRBKeyHash(kind_ens, dkgParam.EpochId, dkgParam.ProposerId)
 
 		_, err := rbcontract.Run(payload, nil, evm)
 		if err != nil {
 			t.Error(err)
 		}
 
-		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+		cijBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_cij)
+		ensBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_ens)
 
-		if !bytes.Equal(payloadBytes, payloadBytes2) {
-			println("error")
+		if !bytes.Equal(cijBytes1, cijBytes2) {
+			println("cij error")
+		}
+		if !bytes.Equal(ensBytes1, ensBytes2) {
+			println("cij error")
 		}
 	}
-	//contract.Run(data, nil, nil)
 }
 
-func TestGetDkg(t *testing.T) {
+func TestGetCij(t *testing.T) {
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
@@ -321,24 +324,77 @@ func TestGetDkg(t *testing.T) {
 		dkgParam.Enshare = enshareA[i]
 		dkgParam.Proof = proofA[i]
 
-		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+		dkg1 := DkgToDkg1(&dkgParam)
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
+
+
 		payload := buildDkg(payloadBytes)
 
-		hash := GetRBKeyHash(dkgId[:], dkgParam.EpochId, dkgParam.ProposerId)
+		hash_cij := GetRBKeyHash(kind_cij, dkgParam.EpochId, dkgParam.ProposerId)
 
 		_, err := rbcontract.Run(payload, nil, evm)
 		if err != nil {
 			t.Error(err)
 		}
 
-		payloadBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+		cijBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_cij)
 
-		if !bytes.Equal(payloadBytes, payloadBytes2) {
-			println("error")
+		tmp := make([][]byte, 0)
+		_ = rlp.DecodeBytes(cijBytes2, &tmp)
+
+		cijs := BytesToCij(&tmp)
+		if len(cijs) != nr {
+			t.Error("length not equal")
+		}
+		for i:=0; i < nr; i++ {
+			if cijs[i].String() != dkgParam.Commit[i].String() {
+				t.Error(" Cij failed")
+			}
+		}
+	}
+}
+
+
+func TestGetEns(t *testing.T) {
+	rbgroupdb[rbepochId] = pubs
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKGTxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		dkg1 := DkgToDkg1(&dkgParam)
+
+		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
+
+
+		payload := buildDkg(payloadBytes)
+
+		hash_ens := GetRBKeyHash(kind_ens, dkgParam.EpochId, dkgParam.ProposerId)
+
+		_, err := rbcontract.Run(payload, nil, evm)
+		if err != nil {
+			t.Error(err)
 		}
 
-		dkgParam2, err := GetDkg(evm.StateDB, rbepochId, uint32(i))
-		println (dkgParam2)
+		ensBytes2 := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, *hash_ens)
+
+		tmp := make([][]byte, 0)
+		_ = rlp.DecodeBytes(ensBytes2, &tmp)
+
+		enss := BytesToEns(&tmp)
+		if len(enss) != nr {
+			t.Error("length not equal")
+		}
+		for i:=0; i < nr; i++ {
+			if enss[i].String() != dkgParam.Enshare[i].String() {
+				t.Error(" Cij failed")
+			}
+		}
 	}
 }
 
@@ -410,157 +466,6 @@ func TestUtil(t *testing.T) {
 	}
 }
 
-//func TestGetR(t *testing.T) {
-//	rbAbi, _ := abi.JSON(strings.NewReader(GetRBAbiDefinition()))
-//	strPayload, err := rbAbi.Pack("genR", big.NewInt(1), big.NewInt(2))
-//	if err != nil {
-//		t.Error(err.Error())
-//	}
-//	var (
-//		epochId = big.NewInt(0)
-//		r = big.NewInt(0)
-//	)
-//	out := []interface{}{&epochId, &r}
-//	err = rbscAbi.UnpackInput(&out, "genR", strPayload[4:])
-//	if err != nil {
-//		t.Error(err.Error())
-//	}
-//	if epochId.Cmp(big.NewInt(1)) != 0 {
-//		t.Error("ttt", epochId.String())
-//	}
-//	if r.Cmp(big.NewInt(2)) != 0 {
-//		t.Error("ttt2", r.String())
-//	}
-//
-//	_, err = rbcontract.Run(strPayload, nil, evm)
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	r1 := GetR(evm.StateDB, epochId.Uint64())
-//	if r.Cmp(r1) != 0 {
-//		t.Error("GetR wrong")
-//	}
-//}
-
-//func TestGenerateR(t *testing.T) {
-//	pubs, pris, hpubs = generateKeyPairs()
-//	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
-//	TestGetSig(t)
-//
-//	// calc r by input data
-//	// check whether equal
-//	gsigshareA := prepareSig(pris, enshareA)
-//	gsigshareInput := make([]bn256.G1, nr)
-//	for i := 0; i < nr; i++ { // signature share = M * secret key share
-//		gsigshareInput[i] = *gsigshareA[i]
-//	}
-//	gsigInput := wanpos.LagrangeSig(gsigshareInput, hpubs, int(pos.Cfg().PolymDegree))
-//	randomInput := crypto.Keccak256(gsigInput.Marshal())
-//
-//	//////////////////////////////////////////////////////////
-//	// calc r by on chain data
-//
-//	type RbDKGDataCollector struct {
-//		data *RbDKGTxPayload
-//		pk   *bn256.G1
-//	}
-//
-//	type RbSIGDataCollector struct {
-//		data *RbSIGTxPayload
-//		pk   *bn256.G1
-//	}
-//
-//	dkgDatas := make([]RbDKGDataCollector, 0)
-//	sigDatas := make([]RbSIGDataCollector, 0)
-//	for id, _ := range pubs {
-//		dkgData, err := GetDkg(evm.StateDB, rbepochId, uint32(id))
-//		if err == nil && dkgData != nil {
-//			dkgDatas = append(dkgDatas, RbDKGDataCollector{dkgData, &pubs[id]})
-//		} else {
-//			t.Fatal("TestGetR2 get dkg err", id)
-//		}
-//
-//		sigData, err := GetSig(evm.StateDB, rbepochId, uint32(id))
-//		if err == nil && sigData != nil {
-//			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pubs[id]})
-//		} else {
-//			t.Fatal("TestGetR2 get sig err", id)
-//		}
-//	}
-//
-//	if uint(len(sigDatas)) < pos.Cfg().RBThres {
-//		t.Fatal("sigDatas < RBThres")
-//	}
-//
-//	gsigshare := make([]bn256.G1, len(sigDatas))
-//	xSig := make([]big.Int, len(sigDatas))
-//	for i, data := range sigDatas {
-//		gsigshare[i] = *data.data.Gsigshare
-//		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
-//	}
-//
-//	for i:= 0; i < nr - int(pos.Cfg().PolymDegree) - 1; i++ {
-//		gsig8 := wanpos.LagrangeSig(gsigshare[i:], xSig[i:], int(pos.Cfg().PolymDegree))
-//		fmt.Println("sig",i,":", gsig8.String())
-//	}
-//
-//	gsig := wanpos.LagrangeSig(gsigshare, xSig, int(pos.Cfg().PolymDegree))
-//	fmt.Println("sig:", gsig.String())
-//	random := crypto.Keccak256(gsig.Marshal())
-//
-//	nr := len(pubs)
-//	c := make([]bn256.G2, nr)
-//	for i := 0; i < nr; i++ {
-//		c[i].ScalarBaseMult(big.NewInt(int64(0)))
-//		for j := 0; j < len(dkgDatas); j++ {
-//			c[i].Add(&c[i], dkgDatas[j].data.Commit[i])
-//		}
-//	}
-//
-//	xAll := make([]big.Int, nr)
-//	for i := 0; i < nr; i++ {
-//		xAll[i].SetBytes(GetPolynomialX(&pubs[i], uint32(i)))
-//		xAll[i].Mod(&xAll[i], bn256.Order)
-//	}
-//	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
-//
-//	// mG
-//	mBuf, err := GetRBM(statedb, rbepochId)
-//	if err != nil {
-//		t.Fatal("get M fail", "err", err)
-//	}
-//
-//	m := new(big.Int).SetBytes(mBuf)
-//	mG := new(bn256.G1).ScalarBaseMult(m)
-//
-//	// Verify using pairing
-//	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
-//	pair2 := bn256.Pair(mG, &gPub)
-//	if pair1.String() != pair2.String() {
-//		t.Fatal("Final Pairing Check Failed")
-//	}
-//
-//	r0 := new(big.Int).SetBytes(random)
-//	strPayload, err := rbscAbi.Pack("genR", big.NewInt(int64(rbepochId + 1)), r0)
-//	if err != nil {
-//		t.Fatal("pack failed")
-//	}
-//
-//	_, err = rbcontract.Run(strPayload, nil, evm)
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	r1 := GetR(evm.StateDB, uint64(rbepochId + 1))
-//	if r0.Cmp(r1) != 0 {
-//		t.Error("GetR wrong")
-//	}
-//
-//	r2 := new(big.Int).SetBytes(randomInput)
-//	if r2.Cmp(r0) != 0 {
-//		t.Error("generate r failed")
-//	}
-//}
-
 func TestAutoGenerateR(t *testing.T) {
 	pubs, pris, hpubs = generateKeyPairs()
 	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
@@ -626,18 +531,18 @@ func TestRB256(t *testing.T) {
 	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
 	rbgroupdb[rbepochId] = pubs
 
-	for i := 0; i < nr; i++ {
-		var dkgParam RbDKGTxPayload
-		dkgParam.EpochId = rbepochId
-		dkgParam.ProposerId = uint32(i)
-		dkgParam.Commit = commitA[i]
-		dkgParam.Enshare = enshareA[i]
-		dkgParam.Proof = proofA[i]
-
-		payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
-		payloadStr := common.Bytes2Hex(payloadBytes)
-		println(payloadStr)
-		//ioutil.WriteFile("256.bin", payloadBytes, 0644)
-		break
-	}
+	//for i := 0; i < nr; i++ {
+	//	var dkgParam RbDKGTxPayload
+	//	dkgParam.EpochId = rbepochId
+	//	dkgParam.ProposerId = uint32(i)
+	//	dkgParam.Commit = commitA[i]
+	//	dkgParam.Enshare = enshareA[i]
+	//	dkgParam.Proof = proofA[i]
+	//
+	//	payloadBytes, _ := rlp.EncodeToBytes(dkgParam)
+	//	payloadStr := common.Bytes2Hex(payloadBytes)
+	//	println(payloadStr)
+	//	//ioutil.WriteFile("256.bin", payloadBytes, 0644)
+	//	break
+	//}
 }

@@ -1069,6 +1069,14 @@ func TestCanonicalBlockRetrieval(t *testing.T) {
 	pend.Wait()
 }
 
+func TestUpdateReOrg(t *testing.T) {
+	updateReOrg()
+}
+
+func TestUpdateFork(t *testing.T) {
+	updateFork()
+}
+
 //func TestEIP155Transition(t *testing.T) {
 //	// Configure and generate a sample block chain
 //	var (

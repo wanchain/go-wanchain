@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
 
@@ -95,8 +96,8 @@ func TestStage2RlpCompress(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	selfPK := &key.PublicKey
 
-	alphaPki := make([]*ecdsa.PublicKey, 1000)
-	proof := make([]*big.Int, 10)
+	alphaPki := make([]*ecdsa.PublicKey, 50)
+	proof := make([]*big.Int, 2)
 
 	for i := 0; i < len(alphaPki); i++ {
 		k, _ := crypto.GenerateKey()
@@ -115,10 +116,14 @@ func TestStage2RlpCompress(t *testing.T) {
 
 	fmt.Println("len(buf):", len(buf))
 
+	t1 := time.Now()
+
 	epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err := RlpUnpackStage2DataForTx(buf, slotLeaderSCDef)
 	if err != nil {
 		t.Fail()
 	}
+
+	fmt.Println("time:", time.Since(t1))
 
 	if postools.Uint64ToString(epochID) != postools.Uint64ToString(epochIDUnpack) ||
 		postools.Uint64ToString(selfIndex) != postools.Uint64ToString(selfIndexUnpack) {

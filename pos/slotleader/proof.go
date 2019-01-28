@@ -58,13 +58,13 @@ func (s *SlotLeaderSelection) GetSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	log.Debug("GetSlotLeaderProof", "epochID", epochID, "slotID", slotID)
 	log.Debug("GetSlotLeaderProof", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes))
 
-	epochLeadersHexStr := make([]string,0)
+	epochLeadersHexStr := make([]string, 0)
 	for _, value := range epochLeadersPtrPre {
 		epochLeadersHexStr = append(epochLeadersHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	log.Debug("GetSlotLeaderProof", "epochID", epochID, "slotID", slotID, "epochLeadersHexStr", epochLeadersHexStr)
 
-	smaPiecesHexStr := make([]string,0)
+	smaPiecesHexStr := make([]string, 0)
 	for _, value := range smaPiecesPtr {
 		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
@@ -104,7 +104,6 @@ func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID ui
 		log.Debug("VerifySlotProofByGenesis", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("VerifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
 
-
 		var buffer bytes.Buffer
 		buffer.Write(s.randomGenesis.Bytes())
 		buffer.Write(posdb.Uint64ToBytes(epochID))
@@ -139,7 +138,7 @@ func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID ui
 		log.Warn("VerifySlotProofByGenesis Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false
 	}
-	log.Info("VerifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
+	log.Debug("VerifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes()[:])
 }
 
@@ -171,19 +170,28 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	var stageTwoAlphaPKi [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
 	var stageTwoProof [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 
-
 	for i := 0; i < pos.EpochLeaderCount; i++ {
 		validEpochLeadersIndex[i] = true
 	}
 
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID - 1)
+	log.Debug("VerifySlotProof", "indexesSentTran", indexesSentTran)
+	if err != nil {
+		log.Error("VerifySlotProof", "indexesSentTran error", err.Error())
+		return false
+	}
 
+	for i := 0; i < pos.EpochLeaderCount; i++ {
+		if !indexesSentTran[i] {
+			validEpochLeadersIndex[i] = false
+			continue
+		}
 		alphaPki, proof, err := s.GetStage2TxAlphaPki(epochID-1, uint64(i))
 		if err != nil {
 			log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
 			continue
-		}else{
+		} else {
 			for j := 0; j < pos.EpochLeaderCount; j++ {
 				stageTwoAlphaPKi[i][j] = alphaPki[j]
 			}
@@ -195,7 +203,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 	var hasValidTx bool
 	hasValidTx = false
-	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
+	log.Debug("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
 	for _, valid := range validEpochLeadersIndex {
 
 		if valid {
@@ -238,7 +246,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		log.Debug("VerifySlotLeaderProofskGT aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
 		log.Debug("VerifySlotLeaderProofskGT", "epochID", epochID, "slotID", slotID, "slotLeaderRb", rbBytes[:])
 
-		smaPiecesHexStr := make([]string,0)
+		smaPiecesHexStr := make([]string, 0)
 		for _, value := range smaPieces {
 			smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 		}
@@ -252,7 +260,6 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 		skGt := new(ecdsa.PublicKey)
 		skGt.Curve = crypto.S256()
-
 
 		for i := 0; i < len(epochLeadersPtrPre); i++ {
 			tempHash := crypto.Keccak256(temp)
@@ -277,7 +284,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false
 	}
-	log.Info("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
+	log.Debug("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
 

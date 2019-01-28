@@ -10,11 +10,15 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 )
 
+var (
+	ErrRCNotReady = errors.New("rc is not ready")
+)
+
 //--------------Transacton create / send --------------------------------------------
 
 func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	if s.rc == nil {
-		return errors.New("rc is not ready")
+		return ErrRCNotReady
 	}
 
 	arg := map[string]interface{}{}
@@ -31,7 +35,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 }
 func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
 	if s.rc == nil {
-		return errors.New("rc is not ready")
+		return ErrRCNotReady
 	}
 
 	arg := map[string]interface{}{}

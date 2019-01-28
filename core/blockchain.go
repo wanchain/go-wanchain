@@ -20,18 +20,20 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"io"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -43,8 +45,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
-	"github.com/wanchain/go-wanchain/consensus/ethash"
 
+	"encoding/binary"
 )
 
 var (
@@ -785,7 +787,6 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
@@ -825,7 +826,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	/// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 
 	//removed second clause in the if statement reduces the vulnerability to selfish mining
-	if externTd.Cmp(localTd) > 0  {
+	if externTd.Cmp(localTd) > 0 {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -855,8 +856,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.futureBlocks.Remove(block.Hash())
 	return status, nil
 }
-
-
 
 // WriteBlock writes the block to the chain.
 //func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
@@ -981,6 +980,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	defer close(abort)
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
+
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			log.Debug("Premature abort during blocks processing")
@@ -1081,7 +1081,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.NumberU64() == 1 {
 			pos.EpochBaseTime = block.Time().Uint64()
 		}
-		posdb.UpdateEpochBlock(epochID, block.Number().Uint64());
+		posdb.UpdateEpochBlock(epochID, block.Number().Uint64())
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
@@ -1140,12 +1140,10 @@ func countTransactions(chain []*types.Block) (c int) {
 	return c
 }
 
-
-
 // reorgs takes two blocks, an old chain and a new chain and will reconstruct the blocks and inserts them
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
-func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
+func calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 	if pos.EpochBaseTime == 0 {
 		return
 	}
@@ -1156,22 +1154,64 @@ func calEpochSlotIDFromTime(timeUnix uint64)(epochId uint64,slotId uint64) {
 	return
 }
 
+func updateReOrg(epochId uint64,length uint64) {
+	reOrgDb := posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		reOrgDb = posdb.NewDb("forkdb")
+	}
 
 
-func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64,blkSlotId uint64,err error){
+	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+		num = binary.BigEndian.Uint64(numberBytes) + 1
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(epochId, "reorgNumber", b)
+
+	b = make([]byte, 8)
+	binary.BigEndian.PutUint64(b, length)
+	reOrgDb.Put(epochId, "reorgLength", b)
+}
+
+func updateFork(epochId uint64) {
+	reOrgDb := posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		reOrgDb = posdb.NewDb("forkdb")
+	}
+
+	numberBytes, _ := reOrgDb.Get(0, "forkNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+
+		num = binary.BigEndian.Uint64(numberBytes) + 1
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(epochId, "forkNumber", b)
+}
+
+func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
 	blkTime := block.Time().Uint64()
 
 	blkTd := block.Difficulty().Uint64()
 
 	blkEpochId = (blkTd >> 32)
-	blkSlotId = ((blkTd&0xffffffff) >> 8)
+	blkSlotId = ((blkTd & 0xffffffff) >> 8)
 
-	calEpochId,calSlotId := calEpochSlotIDFromTime(blkTime)
+	calEpochId, calSlotId := calEpochSlotIDFromTime(blkTime)
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
 
-	if calEpochId!=blkEpochId || calSlotId!=blkSlotId {
-		fmt.Println(calEpochId,blkEpochId,calSlotId,blkSlotId)
-		return 0,0,errors.New("epochid and slotid is not match with blk time")
+	if calEpochId != blkEpochId {
+		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
+		return 0, 0, errors.New("epochid and slotid is not match with blk time")
 	}
 
 	return
@@ -1200,6 +1240,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	)
 
+
+
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
 		// reduce old chain
@@ -1216,7 +1258,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 
 	}
-
 
 	if oldBlock == nil {
 		return fmt.Errorf("Invalid old chain")
@@ -1246,8 +1287,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	}
 
-
-
 	//ppow extend
 	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
 		log.Trace("wanchain willing revert")
@@ -1264,67 +1303,79 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		if len(oldChain) > 63 {
 			logFn = log.Warn
 		}
+
+
+
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		return fmt.Errorf("Impossible reorg, please file an issue")
 	}
 
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 
-
 	oldChainLen := len(oldChain)
 
-	oldEpochId,oldSlotId,err := bc.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
+	oldEpochId, oldSlotId, err := bc.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
+		return fmt.Errorf("Impossible reorg because old epochId or slotId not match with time")
 	}
 
 	newChainLen := len(newChain)
 
-	newEpochId,newSlotId,err := bc.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
+	newEpochId, newSlotId, err := bc.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
 	if err != nil {
-		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-	//||  newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId <= oldSlotId
-	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId&&newSlotId < oldSlotId)))
+	updateFork(newEpochId)
+	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId && newSlotId < oldSlotId)))
 	isReOrg = isReOrg || len(oldChain) < len(newChain)
 
-	if (isReOrg) {
+	if !isReOrg {
+		//log.Info("can not meet condition for reorg")
+		//return fmt.Errorf("can not meet condition for reorg")
+	}
 
-		for _, block := range newChain {
-			// insert the block in the canonical way, re-writing history
-			bc.insert(block)
-			// write lookup entries for hash based transaction/receipt searches
-			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
-				return err
+	updateReOrg(newEpochId,uint64(len(newChain)))
+
+	log.Info("reorg happended")
+	for _, block := range newChain {
+
+		// insert the block in the canonical way, re-writing history
+		bc.insert(block)
+
+		fmt.Println(block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
+		// write lookup entries for hash based transaction/receipt searches
+		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
+			return err
+		}
+
+		addedTxs = append(addedTxs, block.Transactions()...)
+	}
+
+	// calculate the difference between deleted and added transactions
+	diff := types.TxDifference(deletedTxs, addedTxs)
+	// When transactions get deleted from the database that means the
+	// receipts that were created in the fork must also be deleted
+	for _, tx := range diff {
+		DeleteTxLookupEntry(bc.chainDb, tx.Hash())
+	}
+	if len(deletedLogs) > 0 {
+		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
+	}
+
+	if len(oldChain) > 0 {
+		go func() {
+			for _, block := range oldChain {
+				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 			}
-
-			addedTxs = append(addedTxs, block.Transactions()...)
-		}
-
-		// calculate the difference between deleted and added transactions
-		diff := types.TxDifference(deletedTxs, addedTxs)
-		// When transactions get deleted from the database that means the
-		// receipts that were created in the fork must also be deleted
-		for _, tx := range diff {
-			DeleteTxLookupEntry(bc.chainDb, tx.Hash())
-		}
-		if len(deletedLogs) > 0 {
-			go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
-		}
-
-		if len(oldChain) > 0 {
-			go func() {
-				for _, block := range oldChain {
-					bc.chainSideFeed.Send(ChainSideEvent{Block: block})
-				}
-			}()
-		}
-
-	}//if new chain is right one
+		}()
+	}
 
 	return nil
 }

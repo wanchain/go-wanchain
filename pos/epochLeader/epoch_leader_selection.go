@@ -135,15 +135,10 @@ func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB
 		return err
 	}
 
-	epl := e.GetEpochLeaders(epochId)
-	if len(epl) != ne {
-		e.epochLeaderSelection(r, ne, pa, epochId)
-	}
+	e.epochLeaderSelection(r, ne, pa, epochId)
 
-	rbl := e.GetRBProposerGroup(epochId)
-	if len(rbl) != nr {
-		e.randomProposerSelection(r, nr, pa, epochId)
-	}
+	e.randomProposerSelection(r, nr, pa, epochId)
+
 
 	return nil
 
@@ -185,24 +180,31 @@ const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blkTime uint64) (*Proposer, error) {
 
-	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan)).Int64()
+	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
 	lockTime := pstaker.LockTime
 
 	var leftTimePercent float64
 	if epochId < 2 {
-
 		leftTimePercent = 1
-
 	} else {
 
 		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
-
-		leftTimePercent = Round(leftTimePercent, 32)
+		if leftTimePercent > 0 {
+			leftTimePercent = Round(leftTimePercent, 32)
+		} else {
+			leftTimePercent = 0
+		}
 	}
 
-	//fmt.Println(lockTime,blkTime,pstaker.StakingTime,leftTimePercent)
 
-	pb := float64(amount) * float64(lockTime) * math.Exp(-leftTimePercent) * Accuracy
+	fpercent := Round(math.Exp(-leftTimePercent),4)
+
+	epercent := big.NewInt(int64(fpercent* Accuracy))
+
+	timeBig := big.NewInt(int64(lockTime))
+
+	pb := big.NewInt(0).Mul(amount,epercent)
+	pb = big.NewInt(0).Mul(pb,timeBig)
 
 	//if pb == 0 {
 	log.Warn("epoch Info:", "epochId=", epochId, ",amount=", amount, ",locktime=", lockTime, ",leftTimePercent=", leftTimePercent, ",pb=", pb, ",staking time=", pstaker.StakingTime)
@@ -218,7 +220,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 	p := &Proposer{
 		pubSec256:     crypto.ToECDSAPub(pstaker.PubSec256),
 		pubBn256:      gb,
-		probabilities: big.NewInt(int64(pb)),
+		probabilities: pb,
 	}
 
 	return p, nil
