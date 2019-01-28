@@ -222,7 +222,7 @@ func (st *StateTransition) preCheck() error {
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	if types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsNormalTransaction(st.msg.TxType()) || types.IsPosTransaction(st.msg.TxType()) {
 		if err = st.preCheck(); err != nil {
 			return
 		}
@@ -263,10 +263,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 			return nil, nil, nil, false, err
 		}
 	}
-	var posTotalGas uint64
-	if types.IsPosTransaction(st.msg.TxType()) {
-		posTotalGas = 0
-	}
 
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
@@ -301,7 +297,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		}
 	}
 
-	if types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsNormalTransaction(st.msg.TxType()) || types.IsPosTransaction(st.msg.TxType()) {
 		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
@@ -310,13 +306,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		requiredGas = new(big.Int).SetUint64(stampTotalGas)
 		usedGas = requiredGas
 		log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
-	} else if types.IsPosTransaction(st.msg.TxType()){
-		requiredGas = new(big.Int).SetUint64(posTotalGas)
-		usedGas = requiredGas
-		requiredGas = st.gasUsed()
-		st.refundGas()
-		usedGas = new(big.Int).Set(requiredGas)
-		log.Trace("calc used gas, privacy tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
