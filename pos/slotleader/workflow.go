@@ -214,7 +214,7 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	}
 
 	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {
-		return nil, ErrNotOnCurve
+		return nil, slottools.ErrNotOnCurve
 	}
 
 	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)

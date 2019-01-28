@@ -3,7 +3,6 @@ package vm
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
@@ -72,8 +71,8 @@ var (
 		]`
 	slotLeaderAbi, errSlotLeaderSCInit = abi.JSON(strings.NewReader(slotLeaderSCDef))
 	stgOneIdArr, stgTwoIdArr           [4]byte
-	errIllegalSender                   = errors.New("sender is not in epoch leaders ")
-	scCallTimes                        = "SLOT_LEADER_SC_CALL_TIMES"
+
+	scCallTimes = "SLOT_LEADER_SC_CALL_TIMES"
 )
 
 func init() {
@@ -123,7 +122,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, 0, pos.Stage1K) {
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
-		return nil, errors.New("Not in range handleStgOne hash:" + crypto.Keccak256Hash(in).Hex())
+		return nil, slottools.ErrInvalidTx1Range
 	}
 
 	keyHash := GetSlotLeaderStage1KeyHash(epochIDBuf, selfIndexBuf)
@@ -153,7 +152,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Stage2K, pos.Stage4K) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
-		return nil, errors.New("Not in range handleStgTwo hash:" + crypto.Keccak256Hash(in).Hex())
+		return nil, slottools.ErrInvalidTx2Range
 	}
 
 	keyHash := GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
@@ -206,7 +205,7 @@ func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) e
 
 	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), sender) {
 		log.Error("ValidTxStg1 failed")
-		return errIllegalSender
+		return slottools.ErrIllegalSender
 	}
 
 	//log.Info("ValidTxStg1 success")
@@ -227,7 +226,7 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 
 	if !slottools.InEpochLeadersOrNotByAddress(epochID, sender) {
 		log.Error("ValidTxStg2:InEpochLeadersOrNotByAddress failed")
-		return errIllegalSender
+		return slottools.ErrIllegalSender
 	}
 
 	//log.Info("ValidTxStg2 success")
@@ -251,17 +250,17 @@ func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) e
 	//mi
 	if len(mi) == 0 || len(alphaPkis) != pos.EpochLeaderCount {
 		log.Error("ValidTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
-		return errors.New("len(mi)==0 or len(alphaPkis) is not right")
+		return slottools.ErrInvalidTxLen
 	}
 	if !postools.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
 		log.Error("ValidTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
-		return errors.New("mi is not equal alphaPkis[index]")
+		return slottools.ErrTx1AndTx2NotConsistent
 	}
 	//Dleq
 	epochLeaders := selector.(slot).GetEpochLeadersPK(epochID)
 	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
 		log.Error("ValidTxStg2", "VerifyDleqProof false self Index", selfIndex)
-		return errors.New("VerifyDleqProof false")
+		return slottools.ErrDleqProof
 	}
 	return nil
 }
