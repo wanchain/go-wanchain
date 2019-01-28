@@ -1337,8 +1337,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	isReOrg = isReOrg || len(oldChain) < len(newChain)
 
 	if !isReOrg {
-		log.Info("can not meet condition for reorg")
-		return fmt.Errorf("can not meet condition for reorg")
+		//log.Info("can not meet condition for reorg")
+		//return fmt.Errorf("can not meet condition for reorg")
 	}
 
 	updateReOrg(newEpochId,uint64(len(newChain)))
