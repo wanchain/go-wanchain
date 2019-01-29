@@ -405,6 +405,7 @@ func GetEns(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) 
 }
 
 func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	dkgStart := time.Now()
 	var dkgParam1 RbDKGTxPayload1
 	t1 := time.Now()
 	err := rlp.DecodeBytes(payload, &dkgParam1)
@@ -477,6 +478,8 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	// TODO: add an dkg event
 	// add event
 	log.Debug("vm.dkg", "len(dkgId)", len(dkgId), "epochID", eid, "proposerId", pid, "hash", hash.Hex())
+	dkgTime := time.Since(dkgStart)
+	log.Info("dkg time:", "dkgTime", dkgTime)
 	return nil, nil
 }
 
