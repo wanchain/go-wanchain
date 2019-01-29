@@ -9,8 +9,6 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"strconv"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -269,17 +267,25 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	})
 
 	sort.Sort(ProposerSorter(ps))
-
-	log.Info("------------------------------------------------------------------------------------------")
 	for idx, _ := range ps {
 		if idx == 0 {
+
 			continue
 		}
 
 		ps[idx].probabilities = big.NewInt(0).Add(ps[idx].probabilities, ps[idx-1].probabilities)
-
-		log.Info("after sum probility" + strconv.Itoa(idx) + "  	" + common.ToHex(ps[idx].probabilities.Bytes()))
 	}
+
+	fmt.Println("\n\n------------------------------------------------------------------------------------------")
+	for i, val := range ps {
+		if i== 0 {
+			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=",0,"to=",val.probabilities,"span wide=",val.probabilities.Text(10))
+		} else {
+			diff := big.NewInt(0).Sub(val.probabilities,ps[i-1].probabilities)
+			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=",ps[i-1].probabilities.Text(10),"to=",val.probabilities.Text(10),"span wide=",diff.Text(10))
+		}
+	}
+	fmt.Println("------------------------------------------------------------------------------------------\n\n")
 
 	return ps, nil
 }
