@@ -548,7 +548,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			}
 		} else  if tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
 			slotCount++
-			if slotCount > 50 {
+			if slotCount > 20 {
 				break
 			}
 		}
