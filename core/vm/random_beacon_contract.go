@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -25,10 +26,10 @@ import (
 
 const (
 	_ int = iota
-	RB_DKG_STAGE
-	RB_DKG_CONFIRM_STAGE
-	RB_SIGN_STAGE
-	RB_AFTER_SIGH_STAGE
+	RbDkgStage
+	RbDkgConfirmStage
+	RbSignStage
+	RbAfterSignStage
 )
 
 var (
@@ -39,22 +40,20 @@ var (
 	sigshareId [4]byte
 	genRId     [4]byte
 
-	kind_cij   = []byte{100}
-	kind_ens   = []byte{200}
+	kindCij   = []byte{100}
+	kindEns   = []byte{200}
 	// Generator of G1
 	//gbase = new(bn256.G1).ScalarBaseMult(big.NewInt(int64(1)))
 	// Generator of G2
 	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
-	dkgBeginId = 0
 	dkgEndId = pos.Cfg().DkgEnd
 	signBeginId = pos.Cfg().SignBegin
 	signEndId = pos.Cfg().SignEnd
 
 	errDkgParse  = errors.New("dkg payload parse failed")
 	errSigParse  = errors.New("sig payload parse failed")
-	errDkgUnpack = errors.New("dkg param unpack failed")
-	errRScode = errors.New("rscode verify failed")
+	errRScode = errors.New("rs code verify failed")
 	errDleq = errors.New("dleq verify failed")
 	errRlpCij = errors.New("rlp encode cij failed")
 	errRlpEns = errors.New("rlp encode ens failed")
@@ -64,17 +63,18 @@ var (
 
 func GetRBStage(slotId uint64) int {
 	if slotId < dkgEndId {
-		return RB_DKG_STAGE
+		return RbDkgStage
 	} else if slotId < signBeginId {
-		return RB_DKG_CONFIRM_STAGE
+		return RbDkgConfirmStage
 	} else if slotId < signEndId {
-		return RB_SIGN_STAGE
+		return RbSignStage
 	} else {
-		return RB_AFTER_SIGH_STAGE
+		return RbAfterSignStage
 	}
 }
 
 type RandomBeaconContract struct {
+	CallerAddress common.Address
 }
 
 func init() {
@@ -275,27 +275,27 @@ func DkgToDkg1(d *RbDKGTxPayload) *RbDKGTxPayload1 {
 
 func BytesToCij(d *[][]byte) []*bn256.G2 {
 	l := len(*d)
-	cijs := make([]*bn256.G2, l, l)
+	cij := make([]*bn256.G2, l, l)
 	g2s := make([]bn256.G2, l, l)
 	for i := 0; i<l; i++ {
 		//var g2 bn256.G2
 		g2s[i].UnmarshalPure((*d)[i])
-		cijs[i] = &g2s[i]
+		cij[i] = &g2s[i]
 	}
 
-	return cijs
+	return cij
 }
 
 func BytesToEns(d *[][]byte) []*bn256.G1 {
 	l := len(*d)
-	enss := make([]*bn256.G1, l, l)
+	ens := make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
 	for i := 0; i<l; i++ {
 		g1s[i].UnmarshalPure((*d)[i])
-		enss[i] = &g1s[i]
+		ens[i] = &g1s[i]
 	}
 
-	return enss
+	return ens
 }
 
 func Dkg1ToDkg(d * RbDKGTxPayload1) *RbDKGTxPayload {
@@ -323,13 +323,11 @@ func Dkg1ToDkg(d * RbDKGTxPayload1) *RbDKGTxPayload {
 	l = len(d.Proof)
 	dkgParam.Proof = make([]wanpos.DLEQproof, l, l)
 	for i := 0; i<l; i++ {
-		//dkgParam.Proof[i] = wanpos.Proof1ToProof(&d.Proof[i])
 		(&dkgParam.Proof[i]).Proof1ToProof(&d.Proof[i])
 	}
 	return &dkgParam
 }
 
-// TODO: evm.EpochId evm.SlotId, Cfg.K---dkg:0 ~ 4k -1, sig: 5k ~ 8k -1
 // stage 0, 1 dkg sign
 func isValidEpochStage(epochId uint64, stage int, evm *EVM) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
@@ -343,21 +341,24 @@ func isValidEpochStage(epochId uint64, stage int, evm *EVM) bool {
 	return true
 }
 
-func isInRandomGroup(pks *[]bn256.G1, proposerId uint32) bool {
+func isInRandomGroup(pks *[]bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
 	if len(*pks) <= int(proposerId) {
 		return false
 	}
-	return true
+	pk1 := posdb.GetProposerBn256PK(epochId, uint64(proposerId), address)
+	if pk1 != nil {
+		return bytes.Equal(pk1, (*pks)[proposerId].Marshal())
+	}
+	return false
 }
 
-var getRBProposerGroupVar func(epochId uint64) []bn256.G1 = posdb.GetRBProposerGroup
-var getRBMVar func(db StateDB, epochId uint64) ([]byte, error) = GetRBM
-var isValidEpochStageVar func(epochId uint64, stage int, evm *EVM) bool = isValidEpochStage
-var isInRandomGroupVar func(pks *[]bn256.G1, proposerId uint32) bool = isInRandomGroup
+var getRBProposerGroupVar = posdb.GetRBProposerGroup
+var getRBMVar = GetRBM
+var isValidEpochStageVar = isValidEpochStage
+var isInRandomGroupVar = isInRandomGroup
 
 func buildError(err string, epochId uint64, proposerId uint32) error {
 	return errors.New(fmt.Sprintf("%v epochId = %v, proposerId = %v ", err, epochId, proposerId))
-	//return errors.New(err + ". epochId " + strconv.FormatUint(epochId, 10) + ", proposerId " + strconv.FormatUint(uint64(proposerId), 10))
 }
 
 func logError(err error) error {
@@ -370,35 +371,35 @@ func GetPolynomialX(pk *bn256.G1, proposerId uint32) []byte {
 }
 
 func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
-	hash := GetRBKeyHash(kind_cij, epochId, proposerId)
+	hash := GetRBKeyHash(kindCij, epochId, proposerId)
 	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
-	cijs := make([][]byte, 0)
-	err := rlp.DecodeBytes(dkgBytes, &cijs)
+	cij := make([][]byte, 0)
+	err := rlp.DecodeBytes(dkgBytes, &cij)
 	if err != nil {
 		return nil, errUnRlpCij
 	}
 
-	rt := BytesToCij(&cijs)
+	rt := BytesToCij(&cij)
 
 	return rt, nil
 }
 
 func GetEns(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
-	hash := GetRBKeyHash(kind_ens, epochId, proposerId)
+	hash := GetRBKeyHash(kindEns, epochId, proposerId)
 	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
-	enss := make([][]byte, 0)
-	err := rlp.DecodeBytes(dkgBytes, &enss)
+	ens := make([][]byte, 0)
+	err := rlp.DecodeBytes(dkgBytes, &ens)
 	if err != nil {
 		return nil, errUnRlpEns
 	}
 
-	rt := BytesToEns(&enss)
+	rt := BytesToEns(&ens)
 
 	return rt, nil
 }
@@ -421,11 +422,11 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !isValidEpochStageVar(eid, RB_DKG_STAGE, evm) {
+	if !isValidEpochStageVar(eid, RbDkgStage, evm) {
 		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !isInRandomGroupVar(&pks, pid) {
+	if !isInRandomGroupVar(&pks, eid, pid, contract.CallerAddress) {
 		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
@@ -459,7 +460,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	}
 
 	// save cij
-	hash := GetRBKeyHash(kind_cij, eid, pid)
+	hash := GetRBKeyHash(kindCij, eid, pid)
 	cijBytes, err := rlp.EncodeToBytes(dkgParam1.Commit)
 	if err != nil {
 		return nil, logError(errRlpCij)
@@ -467,7 +468,7 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, cijBytes)
 
 	// save ens
-	hash = GetRBKeyHash(kind_ens, eid, pid)
+	hash = GetRBKeyHash(kindEns, eid, pid)
 	ensBytes, err := rlp.EncodeToBytes(dkgParam1.Enshare)
 	if err != nil {
 		return nil, logError(errRlpEns)
@@ -481,11 +482,11 @@ func (c *RandomBeaconContract) dkg(payload []byte, contract *Contract, evm *EVM)
 
 func getSigsNum(epochId uint64, evm *EVM) uint32 {
 	tmpKey := common.Hash{0}
-	bytes := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, tmpKey)
-	if bytes != nil {
-		eid := ByteSliceToUInt(bytes)
+	bs := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, tmpKey)
+	if bs != nil {
+		eid := ByteSliceToUInt(bs)
 		if eid == epochId {
-			num := ByteSliceToUInt32(bytes[8:12])
+			num := ByteSliceToUInt32(bs[8:12])
 			return num
 		}
 	}
@@ -513,11 +514,11 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
-	if !isValidEpochStageVar(eid, RB_SIGN_STAGE, evm) {
+	if !isValidEpochStageVar(eid, RbSignStage, evm) {
 		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
 	}
 	// 2. ProposerId: weather in the random commit
-	if !isInRandomGroupVar(&pks, pid) {
+	if !isInRandomGroupVar(&pks, eid, pid, contract.CallerAddress) {
 		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
@@ -530,15 +531,15 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	var gpkshare bn256.G2
 
-	dkgDatas := make([]RbCijDataCollector, 0)
-	for id, _ := range pks {
-		dkgData, err := GetCji(evm.StateDB, eid, uint32(id))
-		if err == nil && dkgData != nil {
-			dkgDatas = append(dkgDatas, RbCijDataCollector{dkgData, &pks[id]})
-			gpkshare.Add(&gpkshare, dkgData[pid])
+	dkgData := make([]RbCijDataCollector, 0)
+	for id := range pks {
+		dkgDataOne, err := GetCji(evm.StateDB, eid, uint32(id))
+		if err == nil && dkgDataOne != nil {
+			dkgData = append(dkgData, RbCijDataCollector{dkgDataOne, &pks[id]})
+			gpkshare.Add(&gpkshare, dkgDataOne[pid])
 		}
 	}
-	if uint(len(dkgDatas)) < pos.Cfg().RBThres {
+	if uint(len(dkgData)) < pos.Cfg().RBThres {
 		//return nil, logError(buildError(" insufficient proposer ", eid, pid))
 		logError(buildError(" insufficient proposer ", eid, pid))
 		return nil, nil
@@ -548,12 +549,11 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	pair1 := bn256.Pair(sigshareParam.Gsigshare, hbase)
 	pair2 := bn256.Pair(mG, &gpkshare)
 	if pair1.String() != pair2.String() {
-		return nil, logError(buildError(" unequal sigi", eid, pid))
+		return nil, logError(buildError(" unequal si gi", eid, pid))
 	}
 
 	// save
 	hash := GetRBKeyHash(sigshareId[:], eid, pid)
-	// TODO: maybe we can use tx hash to replace payloadBytes, a tx saved in a chain block
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, payload)
 
 	/////////////////
@@ -561,7 +561,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 	signum := getSigsNum(eid, evm) + 1
 	setSigsNum(eid, signum, evm)
 	if uint(signum) >= pos.Cfg().RBThres {
-		r, err := computeRandom(evm.StateDB, eid, dkgDatas, pks)
+		r, err := computeRandom(evm.StateDB, eid, dkgData, pks)
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
@@ -569,7 +569,6 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		}
 	}
 
-	// TODO: add an dkg event
 	log.Info("contract do sig end", "epochId", eid, "proposerId", pid)
 
 	elapsed := time.Since(t1)
@@ -604,7 +603,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 
 	// collact DKG SIG
 	sigDatas := make([]RbSIGDataCollector, 0)
-	for id, _ := range pks {
+	for id := range pks {
 		sigData, err := GetSig(statedb, epochId, uint32(id))
 		if err == nil && sigData != nil {
 			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
