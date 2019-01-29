@@ -107,7 +107,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		PubBn256:    bn256pub,
 		Amount:      contract.value,
 		LockTime:    lkperiod,
-		StakingTime: time.Now().Unix(),
+		StakingTime: evm.Time.Int64(),
 	}
 
 	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, pukHash)

@@ -109,11 +109,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			break
 		}
 
-		err := s.startStage2Work()
-		if err != nil {
-			log.Error(err.Error())
-			ErrorCountAdd()
-		}
+		go DoStage2Work(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage3)
 
 	case slotLeaderSelectionStage3:
@@ -176,6 +172,15 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 
 	functrace.Exit()
 	return nil
+}
+
+func DoStage2Work(epochID uint64) {
+	s := GetSlotLeaderSelection()
+	err := s.startStage2Work()
+	if err != nil {
+		log.Error(err.Error())
+		ErrorCountAdd()
+	}
 }
 
 // startStage2Work start the stage 2 work and send tx

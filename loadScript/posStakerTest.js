@@ -101,7 +101,7 @@ function stakeUnregister(address) {
 
   //var lockTime = web3.toWin(lockTimeSecond)
 
-  var payload = coinContract.stakeOut.getData(datapks, web3.toWin(tranValue))
+  var payload = coinContract.stakeOut.getData(datapks, web3.toWin(stakeValue))
 
   var tx = eth.sendTransaction({
     from: address,
