@@ -188,6 +188,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte   { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Txtype() uint64 { return tx.data.Txtype }
+func (tx *Transaction) SetTxtype(txtype uint64)  { tx.data.Txtype = txtype }
 
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }

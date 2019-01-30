@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
@@ -371,7 +372,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["to"] = vm.GetRBAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	arg["gas"] = (*hexutil.Big)(big.NewInt(4500000))
-	arg["txType"] = 1
+	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(payload)
 
 	log.Info("do send rb tx", "payload len", len(payload))
