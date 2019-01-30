@@ -318,7 +318,7 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 // InvalidPrivacyTx remove invalidate privacy transactions
 func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLimit *big.Int) types.Transactions {
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		if types.IsNormalTransaction(tx.Txtype()) {
+		if !types.IsPrivacyTransaction(tx.Txtype()){
 			return false
 		}
 
