@@ -208,7 +208,7 @@ func (p *Pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 	} else if methodId == stakeOutId {
 		_, _, err := p.stakeOutParseAndValid(stateDB, input[4:])
 		if err != nil {
-			return errors.New("stakeout verify failed")
+			return errors.New("stakeout verify failed " + err.Error())
 		}
 	}
 
