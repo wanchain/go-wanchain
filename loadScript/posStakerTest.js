@@ -142,6 +142,9 @@ function stakeUnregister(address) {
 
   var payload = coinContract.stakeOut.getData(datapks, web3.toWin(stakeValue))
 
+  console.log("stakeOut payload:")
+  console.log(payload)
+
   var tx = eth.sendTransaction({
     from: address,
     to: cscContractAddr,
