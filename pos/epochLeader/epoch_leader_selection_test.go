@@ -361,6 +361,21 @@ func TestGetGetEpochLeaderAddress(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestGetGetStakerIfo(t *testing.T) {
 
+	blkChain, _ := newTestBlockChain(true)
+
+	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
+
+	userPubk := "0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+
+	info,err:=epocher1.GetEpochStakers(0,userPubk)
+
+	if err!= nil {
+		t.Fail()
+	}
+
+	fmt.Println(info)
 }

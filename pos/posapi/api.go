@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 type PosApi struct {
@@ -187,4 +188,14 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 		}
 	}
 	return j, nil
+}
+
+func (a PosApi) GetEpochStakerInfo(epochID uint64,pubk string) ([]string, error) {
+	epocherInst := epochLeader.GetEpocher()
+
+	if epocherInst == nil {
+		return nil,errors.New("epocher instance do not exist")
+	}
+
+	return epocherInst.GetEpochStakers(epochID,pubk)
 }

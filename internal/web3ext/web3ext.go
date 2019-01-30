@@ -183,6 +183,11 @@ web3._extend({
 			call: 'pos_getReorg',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getEpochStakerInfo',
+			call: 'pos_getEpochStakerInfo',
+			params: 2
+		}),
 	]
 });
 `
