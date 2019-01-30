@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos"
@@ -26,7 +27,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	//arg["gas"] = (*hexutil.Big)(big.NewInt(1500000)) //use default gas
-	arg["txType"] = 7
+	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))
 
@@ -43,7 +44,7 @@ func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
-	arg["txType"] = 7
+	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))
 
