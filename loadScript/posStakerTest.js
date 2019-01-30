@@ -7,7 +7,7 @@ var randomAccountCount = 10
 // tranValue is normal tx send value
 var tranValue = 0.01
 // stakeValue is staker balance to use
-var stakeValue = 1000
+var stakeValue = 1
 
 var lockTimeSecond = 3600
 
@@ -16,20 +16,59 @@ var balanceSourceAddress = '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e';
 // Start staker register
 setTimeout(stakeRegisterTest, 1000 * stakerRegisterPeriod, null);
 
-var cscDefinition = [{
-  "constant": false,
-  "type": "function",
-  "stateMutability": "nonpayable",
-  "inputs": [{ "name": "Pubs", "type": "string" }, { "name": "LockTime", "type": "uint256" }],
-  "name": "stakeIn",
-  "outputs": [{ "name": "Pubs", "type": "string" }, { "name": "LockTime", "type": "uint256" }]
-}, {
-  "constant": false,
-  "type": "function",
-  "inputs": [{ "name": "Pub", "type": "string" }],
-  "name": "stakeOut",
-  "outputs": [{ "name": "Pub", "type": "string" }]
-}]
+var cscDefinition = [
+  {
+    "constant": false,
+    "type": "function",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "Pubs",
+        "type": "string"
+      },
+      {
+        "name": "LockTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "stakeIn",
+    "outputs": [
+      {
+        "name": "Pubs",
+        "type": "string"
+      },
+      {
+        "name": "LockTime",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "constant": false,
+    "type": "function",
+    "inputs": [
+      {
+        "name": "Pub",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ],
+    "name": "stakeOut",
+    "outputs": [
+      {
+        "name": "Pub",
+        "type": "string"
+      },
+      {
+        "name": "Value",
+        "type": "uint256"
+      }
+    ]
+  }
+]
 
 function stakeRegisterTest() {
   personal.unlockAccount(balanceSourceAddress, 'wanglu', 9999999)
