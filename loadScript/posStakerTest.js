@@ -7,7 +7,7 @@ var randomAccountCount = 10
 // tranValue is normal tx send value
 var tranValue = 0.01
 // stakeValue is staker balance to use
-var stakeValue = 1
+var stakeValue = 1000
 
 var lockTimeSecond = 3600
 
