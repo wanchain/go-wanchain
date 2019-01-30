@@ -143,7 +143,7 @@ function stakeUnregister(address, index) {
   var g1pub = pubs[1]
 
   /////////////////////////////////register staker////////////////////////////////////////////////////////////////////////
-  var datapks = '' + g1pub
+  var datapks = secpub + '';//'' + g1pub
 
   var contractDef = eth.contract(cscDefinition);
   var cscContractAddr = "0x00000000000000000000000000000000000000d2";
