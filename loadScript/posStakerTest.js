@@ -128,7 +128,7 @@ function stakeRegisterTest() {
 
   console.log("stake register success")
 
-  setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, [address, stakeIndex])
+  setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, address, stakeIndex)
 
   // Start staker register
   setTimeout(stakeRegisterTest, 1000 * stakerRegisterPeriod, null);
