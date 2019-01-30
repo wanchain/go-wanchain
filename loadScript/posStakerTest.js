@@ -9,7 +9,7 @@ var tranValue = 0.01
 // stakeValue is staker balance to use
 var stakeValue = 1000
 
-var lockTimeSecond = 3600
+var lockTimeSecond = 600
 
 var balanceSourceAddress = '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e';
 
@@ -144,6 +144,8 @@ function stakeUnregister(address) {
 
   console.log("stakeOut payload:")
   console.log(payload)
+  console.log("G1")
+  console.log(g1pub)
 
   var tx = eth.sendTransaction({
     from: address,
