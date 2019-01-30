@@ -70,6 +70,8 @@ var cscDefinition = [
   }
 ]
 
+var stakeIndex = 0
+
 function stakeRegisterTest() {
   personal.unlockAccount(balanceSourceAddress, 'wanglu', 9999999)
 
@@ -82,6 +84,7 @@ function stakeRegisterTest() {
     gasprice: '0x' + (200000000000).toString(16)
   });
 
+  console.log("stake index:" + stakeIndex)
   console.log("stake balance tx=" + tx)
   console.log("wait tx in blockchain")
   wait(function () { return eth.getTransaction(tx).blockNumber != null; });
@@ -91,6 +94,9 @@ function stakeRegisterTest() {
   pubs = personal.showPublicKey(address, "wanglu")
   var secpub = pubs[0]
   var g1pub = pubs[1]
+
+  console.log("pk:" + secpub + ", G1:" + g1pub)
+
 
   /////////////////////////////////register staker////////////////////////////////////////////////////////////////////////
   var datapks = secpub + g1pub
@@ -102,6 +108,9 @@ function stakeRegisterTest() {
   var lockTime = web3.toWin(lockTimeSecond)
 
   var payload = coinContract.stakeIn.getData(datapks, lockTime)
+
+  console.log("payload:")
+  console.log(payload)
 
   var tx = eth.sendTransaction({
     from: address,
@@ -119,13 +128,15 @@ function stakeRegisterTest() {
 
   console.log("stake register success")
 
-  setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, address)
+  setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, [address, stakeIndex])
 
   // Start staker register
   setTimeout(stakeRegisterTest, 1000 * stakerRegisterPeriod, null);
+
+  stakeIndex++;
 }
 
-function stakeUnregister(address) {
+function stakeUnregister(address, index) {
 
   pubs = personal.showPublicKey(address, "wanglu")
   var secpub = pubs[0]
@@ -142,6 +153,7 @@ function stakeUnregister(address) {
 
   var payload = coinContract.stakeOut.getData(datapks, web3.toWin(stakeValue))
 
+  console.log("stakeOut index:" + index)
   console.log("stakeOut payload:")
   console.log(payload)
   console.log("G1")
