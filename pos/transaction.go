@@ -26,7 +26,7 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 
 	ctx := context.Background()
 	var txHash common.Hash
-	err := rc.CallContext(ctx, &txHash, "eth_sendTransaction", tx)
+	err := rc.CallContext(ctx, &txHash, "eth_sendPosTransaction", tx)
 	if nil != err {
 		log.Error("send pos tx fail", "err", err)
 		return common.Hash{}, err

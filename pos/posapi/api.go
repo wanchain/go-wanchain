@@ -31,7 +31,7 @@ func APIs(chain consensus.ChainReader, backend ethapi.Backend) []rpc.API {
 		Namespace: "pos",
 		Version:   "1.0",
 		Service:   &PosApi{chain, backend},
-		Public:    false,
+		Public:    true,
 	}}
 }
 

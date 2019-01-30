@@ -590,7 +590,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if types.IsNormalTransaction(tx.Txtype()) {
+	if types.IsNormalTransaction(tx.Txtype()) || types.IsPosTransaction(tx.Txtype()) {
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
 		}
