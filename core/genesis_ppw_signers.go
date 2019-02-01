@@ -47,6 +47,25 @@ func getTestNetPpwSignStr() string {
 
 }
 
+func getPrivatePpwSignStr() string {
+
+        var buf bytes.Buffer
+        buf.WriteString("0x")
+
+        for _, str := range ppwPrivateSigAddr {
+                addr := strings.ToLower(str[:])
+                if strings.HasPrefix(addr,"0x") {
+                        buf.WriteString(addr[2:])
+                } else {
+                        buf.WriteString(addr[:])
+                }
+        }
+
+        //fmt.Print(buf.String())
+        return buf.String()
+
+}
+
 func getInternalNetPpwSignStr() string {
 
 	var buf bytes.Buffer
@@ -761,6 +780,11 @@ var (
 		"0x3ecb7c39cf5d7b885b3e3f9704f6bb20a35db077",
 		"0x69d37238330ffcafcba91adba8b86453f115357a",
 		"0x2cc79fa3b80c5b9b02051facd02478ea88a78e2c",
+	}
+
+	ppwPrivateSigAddr []string = []string{
+		"0x184bfe537380d650533846c8c7e2a80d75acee63",
+		"0x68489694189aa9081567dfc6d74a08c0c21d92c6",
 	}
 
 	ppwInternalSigAddr []string = []string{

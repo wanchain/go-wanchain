@@ -166,6 +166,9 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		} else if genesis.Config.ChainId.Cmp(big.NewInt(3)) == 0 {
 			log.Info("Writing default  test net genesis block")
 			genesis = DefaultTestnetGenesisBlock()
+		} else if genesis.Config.ChainId.Cmp(big.NewInt(99)) == 0 {
+			log.Info("Writing default private genesis block")
+			genesis = DefaultPrivateGenesisBlock()
 		} else {
 			log.Info("Writing custom genesis block")
 		}
@@ -221,6 +224,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.WanchainChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
+	case ghash == params.PrivateGenesisHash:
+		return params.PrivateChainConfig
 	case ghash == params.InternalGenesisHash:
 		return params.TestnetChainConfig
 
@@ -356,6 +361,18 @@ func DefaultTestnetGenesisBlock() *Genesis {
 		Difficulty: big.NewInt(1048576),
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),
 	}
+}
+
+func DefaultPrivateGenesisBlock() *Genesis {
+	fmt.Print("DefaultPrivateGenesisBlock");
+        return &Genesis{
+                Config:     params.PrivateChainConfig,
+                Nonce:      99, //same with the version
+                ExtraData:  hexutil.MustDecode(getPrivatePpwSignStr()),
+                GasLimit:   0x2fefd8,
+                Difficulty: big.NewInt(1),
+                Alloc:      jsonPrealloc(wanchainPrivateAllocJson),
+        }
 }
 
 // DefaultInternalGenesisBlock returns the Rinkeby network genesis block.

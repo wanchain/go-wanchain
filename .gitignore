@@ -11,6 +11,8 @@ build/_workspace/**
 build/bin/**
 build/_vendor/pkg
 tests/testdata/**
+data_*
+passwd.txt
 
 #*
 .#*

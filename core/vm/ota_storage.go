@@ -427,7 +427,7 @@ func GetOTASet(statedb StateDB, otaAX []byte, setNum int) (otaWanAddrs [][]byte,
 			return nil, balance, errors.New("no ota exist! balance:" + balance.String())
 		} else if setNum >= mptEleCount {
 			return nil, balance, errors.New("too more required ota number! balance:" + balance.String() +
-				", exist count:" + strconv.Itoa(mptEleCount))
+				", exist count:" + strconv.Itoa(mptEleCount) + ", setNum count:" + strconv.Itoa(setNum))
 		} else {
 			continue
 		}
