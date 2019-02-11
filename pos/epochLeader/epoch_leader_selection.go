@@ -263,12 +263,14 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		staker := vm.StakerInfo{}
 		err := json.Unmarshal(value, &staker)
 		if err != nil {
-			return false
+			log.Info(err.Error())
+			return true
 		}
 
 		pitem, err := e.generateProblility(&staker, epochId, blkTime)
 		if err != nil {
-			return false
+			log.Info(err.Error())
+			return true
 		}
 
 		if staker.Amount.Cmp(Big0) > 0 && (*pitem).probabilities.Cmp(Big0) > 0 {
