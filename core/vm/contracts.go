@@ -856,6 +856,8 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 
 	addrSrc := contract.CallerAddress
+
+
 	evm.StateDB.AddBalance(addrSrc, value)
 	return []byte{1}, nil
 
