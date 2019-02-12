@@ -541,12 +541,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		//fmt.Println(tx.To().String())
 		//fmt.Println(vm.RandomBeaconPrecompileAddr.String())
-		if tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
+		if tx.To()!=nil&&tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
 			rbCount++
 			if rbCount > 10 {
 				break
 			}
-		} else  if tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
+		} else  if tx.To()!=nil&&tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
 			slotCount++
 			if slotCount > 20 {
 				break
