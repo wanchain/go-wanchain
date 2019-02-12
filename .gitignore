@@ -32,7 +32,7 @@ profile.cov
 .idea
 
 # Docker Env 
-#DOCKER/**
+DOCKER/**
 
 # go unit test cover out
 *.out
