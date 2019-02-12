@@ -468,6 +468,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, g
 		gasLimit:   gasLimit,
 		data:       data,
 		checkNonce: checkNonce,
+		txType:		NORMAL_TX,
 	}
 }
 
