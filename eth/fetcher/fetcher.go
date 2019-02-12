@@ -680,7 +680,7 @@ func (f *Fetcher) initKsecMap() {
 }
 
 func (f *Fetcher) selectBlk([]common.Hash) *types.Block{
-
+	return nil
 }
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, if updates
