@@ -267,6 +267,11 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return true
 		}
 
+		if staker.Amount.Cmp(Big0)== 0{
+			//log.Info("staker ",common.ToHex(staker.PubSec256),"stake out already")
+			return true
+		}
+
 		pitem, err := e.generateProblility(&staker, epochId, blkTime)
 		if err != nil {
 			log.Info(err.Error())
