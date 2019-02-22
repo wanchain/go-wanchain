@@ -123,8 +123,8 @@ const wanchainTestAllocJson = `{
 }`
 
 const wanchainPrivateAllocJson = `{
-	  "0x184bfe537380d650533846c8c7e2a80d75acee63": {"balance": "100000000000000000000000"},
-	  "0x68489694189aa9081567dfc6d74a08c0c21d92c6": {"balance": "100000000000000000000000"}
+	  "0x184bfe537380d650533846c8c7e2a80d75acee63": {"balance": "10000000000000000000000000"},
+	  "0x68489694189aa9081567dfc6d74a08c0c21d92c6": {"balance": "10000000000000000000000000"}
 }`
 
 const wanchainPPOWTestAllocJson = `{

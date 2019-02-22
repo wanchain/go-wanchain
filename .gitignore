@@ -42,4 +42,6 @@ DOCKER/**
 # tmp data directory
 data_pluto/*
 data_testnet/*
-
+devData/
+devTest/
+pwdfile
