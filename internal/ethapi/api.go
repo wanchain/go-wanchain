@@ -1805,7 +1805,7 @@ func (args *SendTxArgs) toOTATransaction() *types.Transaction {
 	return types.NewOTATransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data)
 }
 
-func (s *PrivateAccountAPI) GetOTABalance(ctx context.Context, blockNr rpc.BlockNumber) (*big.Int, error) {
+func (s *PrivateAccountAPI) GetOTAUnspendBalance(ctx context.Context, blockNr rpc.BlockNumber) (*big.Int, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err

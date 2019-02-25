@@ -5702,6 +5702,14 @@ var methods = function () {
         outputFormatter: formatters.outputBigNumberFormatter
     });
 
+    var getOTAUnspendBalance = new Method({
+        name: 'getOTAUnspendBalance',
+        call: 'personal_getOTAUnspendBalance',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
 
     return [
         newAccount,
@@ -5714,7 +5722,8 @@ var methods = function () {
         genRingSignData,
         lockAccount,
         updateAccount,
-        getTotalBalance
+        getTotalBalance,
+        getOTAUnspendBalance
     ];
 };
 
