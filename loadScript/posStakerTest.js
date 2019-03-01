@@ -89,6 +89,7 @@ function stakeRegisterTest() {
   console.log("wait tx in blockchain")
   wait(function () { return eth.getTransaction(tx).blockNumber != null; });
 
+  console.log("address:" + address + ", balance:" + eth.getBalance(address))
   personal.unlockAccount(address, 'wanglu', 9999999)
 
   pubs = personal.showPublicKey(address, "wanglu")
