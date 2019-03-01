@@ -42,11 +42,19 @@ type LoopEvent struct {
 	sid uint64
 }
 
+type PolyInfo struct {
+	poly wanpos.Polynomial
+	s 	 *big.Int
+}
+
+type PolyMap map[uint32]PolyInfo
+
 type RandomBeacon struct {
 	loopEvents chan *LoopEvent
 
 	epochStage int
 	epochId    uint64
+	polys 		   PolyMap
 
 	statedb   vm.StateDB
 	epocher   *epochLeader.Epocher
@@ -69,8 +77,9 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
-	rb.epochStage = vm.RbDkgStage
+	rb.epochStage = vm.RbDkg1Stage
 	rb.epochId = maxUint64
+	rb.polys = make(PolyMap)
 	rb.rpcClient = nil
 
 	rb.epocher = epocher
@@ -122,7 +131,8 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		log.Info("rb epochId is original")
 
 		rb.epochId = epochId
-		rb.epochStage = vm.RbDkgStage
+		rb.epochStage = vm.RbDkg1Stage
+		rb.polys = make(PolyMap)
 	}
 
 	// rb.epochId == epochId
@@ -139,9 +149,19 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	for {
 		log.Info("do as proposer", "epoch stage", rb.epochStage)
 		switch rb.epochStage {
-		case vm.RbDkgStage:
-			if rbStage == vm.RbDkgStage {
-				err := rb.doDKGs(epochId, myProposerIds)
+		case vm.RbDkg1Stage:
+			if rbStage == vm.RbDkg1Stage {
+				err := rb.doDKG1s(epochId, myProposerIds)
+				if err != nil {
+					return err
+				}
+			}
+			rb.epochStage = vm.RbDkg2Stage
+		case vm.RbDkg2Stage:
+			if rbStage < vm.RbDkg2Stage {
+				return nil
+			} else if rbStage == vm.RbDkg2Stage {
+				err := rb.doDKG2s(epochId, myProposerIds)
 				if err != nil {
 					return err
 				}
@@ -188,10 +208,10 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	return ids
 }
 
-func (rb *RandomBeacon) doDKGs(epochId uint64, proposerIds []uint32) error {
-	log.Info("do dkgs begin")
+func (rb *RandomBeacon) doDKG1s(epochId uint64, proposerIds []uint32) error {
+	log.Info("do dkg1s begin")
 	for _, id := range proposerIds {
-		err := rb.doDKG(epochId, id)
+		err := rb.doDKG1(epochId, id)
 		if err != nil {
 			return err
 		}
@@ -200,17 +220,17 @@ func (rb *RandomBeacon) doDKGs(epochId uint64, proposerIds []uint32) error {
 	return nil
 }
 
-func (rb *RandomBeacon) doDKG(epochId uint64, proposerId uint32) error {
-	log.Info("begin do dkg", "epochId", epochId, "proposerId", proposerId)
-	txPayload, err := rb.generateDKG(epochId, proposerId)
+func (rb *RandomBeacon) doDKG1(epochId uint64, proposerId uint32) error {
+	log.Info("begin do dkg1", "epochId", epochId, "proposerId", proposerId)
+	txPayload, err := rb.generateDKG1(epochId, proposerId)
 	if err != nil {
 		return err
 	}
 
-	return rb.sendDKG(txPayload)
+	return rb.sendDKG1(txPayload)
 }
 
-func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDKGTxPayload1, error) {
+func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32) (*vm.RbDKG1FlatTxPayload, error) {
 	//log.Info("time", "1", time.Now().Unix())
 	start := time.Now()
 
@@ -239,6 +259,7 @@ func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDK
 	}
 
 	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s)
+	rb.polys[proposerId] = PolyInfo{poly, s}
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
 		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree))
@@ -265,11 +286,98 @@ func (rb *RandomBeacon) generateDKG(epochId uint64, proposerId uint32) (*vm.RbDK
 		proof[i] = wanpos.DLEQ(pks[i], *wanpos.Hbase, &sshare[i])
 	}
 
-	tmp := vm.RbDKGTxPayload{epochId, proposerId, enshare[:], commit[:], proof[:]}
-	txPayload := vm.DkgToDkg1(&tmp)
+	commitBytes := make([][]byte, nr)
+	for i := 0; i < nr; i++ {
+		commitBytes[i] = commit[i].Marshal()
+	}
 
-	log.Info("generateDKG used time", "time", time.Since(start))
-	return txPayload, nil
+	txPayload := vm.RbDKG1FlatTxPayload{epochId, proposerId, commitBytes}
+
+	log.Info("generateDKG1 used time", "time", time.Since(start))
+	return &txPayload, nil
+}
+
+
+func (rb *RandomBeacon) doDKG2s(epochId uint64, proposerIds []uint32) error {
+	log.Info("do dkg2s begin")
+	for _, id := range proposerIds {
+		err := rb.doDKG2(epochId, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (rb *RandomBeacon) doDKG2(epochId uint64, proposerId uint32) error {
+	log.Info("begin do dkg2", "epochId", epochId, "proposerId", proposerId)
+	txPayload, err := rb.generateDKG2(epochId, proposerId)
+	if err != nil {
+		return err
+	}
+
+	return rb.sendDKG2(txPayload)
+}
+
+func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32) (*vm.RbDKG2FlatTxPayload, error) {
+	//log.Info("time", "1", time.Now().Unix())
+	start := time.Now()
+
+	pks := rb.getRBProposerGroup(epochId)
+	nr := len(pks)
+	if nr == 0 {
+		err := errors.New("can't find random beacon proposer group")
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	// fix the evaluation point: Hash(Pub[1]+1), Hash(Pub[2]+2), ..., Hash(Pub[Nr]+Nr)
+	x := make([]big.Int, nr)
+	for i := 0; i < nr; i++ {
+		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		x[i].Mod(&x[i], bn256.Order)
+	}
+
+	sshare := make([]big.Int, nr)
+
+	// fi(x)
+	if rb.polys[proposerId].s == nil || rb.polys[proposerId].poly == nil {
+		log.Warn("no DKG1's random, don't generate DKG2 tx")
+		return nil, nil
+	}
+
+	poly := rb.polys[proposerId].poly
+	for i := 0; i < nr; i++ {
+		// share for i is fi(x) evaluation result on x[i]
+		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree))
+	}
+
+	// encrypt the secret share, i.e. multiply with the receiver's public key
+	enshare := make([]*bn256.G1, nr)
+	for i := 0; i < nr; i++ {
+		// enshare[i] = sshare[i]*Pub[i], it is a point on ECC
+		enshare[i] = new(bn256.G1).ScalarMult(&pks[i], &sshare[i])
+	}
+
+	// generate DLEQ proof
+	proof := make([]wanpos.DLEQproof, nr)
+	for i := 0; i < nr; i++ {
+		// proof = (a1, a2, z)
+		proof[i] = wanpos.DLEQ(pks[i], *wanpos.Hbase, &sshare[i])
+	}
+
+	enshareBytes := make([][]byte, nr)
+	proofBytes := make([]wanpos.DLEQproofFlat, nr)
+	for i := 0; i < nr; i++ {
+		enshareBytes[i] = enshare[i].Marshal()
+		proofBytes[i] = wanpos.ProofToProofFlat(&proof[i])
+	}
+
+	txPayload := vm.RbDKG2FlatTxPayload{epochId, proposerId, enshareBytes, proofBytes}
+
+	log.Info("generateDKG2 used time", "time", time.Since(start))
+	return &txPayload, nil
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
@@ -340,10 +448,10 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	return rb.sendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
 }
 
-func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload1) error {
-	log.Info("begin send dkg")
+func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
+	log.Info("begin send dkg1")
 	start := time.Now()
-	payload, err := getRBDKGTxPayloadBytes(payloadObj)
+	payload, err := getRBDKG1TxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
 	}
@@ -351,7 +459,22 @@ func (rb *RandomBeacon) sendDKG(payloadObj *vm.RbDKGTxPayload1) error {
 	//log.Info("send dkg", "payload", common.Bytes2Hex(payload))
 	err = rb.doSendRBTx(payload)
 
-	log.Info("sendDKG used time", "time", time.Since(start))
+	log.Info("sendDKG1 used time", "time", time.Since(start))
+	return err
+}
+
+func (rb *RandomBeacon) sendDKG2(payloadObj *vm.RbDKG2FlatTxPayload) error {
+	log.Info("begin send dkg2")
+	start := time.Now()
+	payload, err := getRBDKG2TxPayloadBytes(payloadObj)
+	if err != nil {
+		return err
+	}
+
+	//log.Info("send dkg", "payload", common.Bytes2Hex(payload))
+	err = rb.doSendRBTx(payload)
+
+	log.Info("sendDKG2 used time", "time", time.Since(start))
 	return err
 }
 
@@ -396,7 +519,7 @@ func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 	return pks
 }
 
-func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload1) ([]byte, error) {
+func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	if payload == nil {
 		log.Error("get dkg tx payload fail, invalid DKG payload object")
 		return nil, errors.New("invalid DKG payload object")
@@ -409,7 +532,27 @@ func getRBDKGTxPayloadBytes(payload *vm.RbDKGTxPayload1) ([]byte, error) {
 	}
 
 	ret := make([]byte, 4+len(payloadBytes))
-	copy(ret, vm.GetDkgId())
+	copy(ret, vm.GetDkg1Id())
+	copy(ret[4:], payloadBytes)
+
+	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
+	return ret, nil
+}
+
+func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
+	if payload == nil {
+		log.Error("get dkg tx payload fail, invalid DKG payload object")
+		return nil, errors.New("invalid DKG payload object")
+	}
+
+	payloadBytes, err := rlp.EncodeToBytes(payload)
+	if err != nil {
+		log.Error("rlp encode fail", "err", err)
+		return nil, err
+	}
+
+	ret := make([]byte, 4+len(payloadBytes))
+	copy(ret, vm.GetDkg2Id())
 	copy(ret[4:], payloadBytes)
 
 	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
