@@ -128,15 +128,22 @@ func TestAddEpochGas(t *testing.T) {
 	}
 }
 
+func getInfo(common.Address) ([]common.Address, []*big.Int, float64, float64) { return nil, nil, 0, 0 }
+
+func setInfo([]common.Address, []*big.Int) {}
 func TestSetStakerInterface(t *testing.T) {
 	SetStakerInterface(getInfo, setInfo)
 }
 
-func getInfo(common.Address) ([]common.Address, []*big.Int, float64, float64) {
-	return nil, nil, 0, 0
-}
+func testgetEpLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
 
-func setInfo([]common.Address, []*big.Int) {}
+func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
+
+func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []*big.Int, float64)
+
+func TestSetActivityInterface(t *testing.T) {
+	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
+}
 
 func TestCalcBaseSubsidy(t *testing.T) {
 
