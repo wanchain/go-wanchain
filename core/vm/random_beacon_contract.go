@@ -27,6 +27,7 @@ import (
 const (
 	_ int = iota
 	RbDkg1Stage
+	RbDkg1ConfirmStage
 	RbDkg2Stage
 	RbDkg2ConfirmStage
 	RbSignStage
@@ -66,6 +67,8 @@ var (
 func GetRBStage(slotId uint64) int {
 	if slotId <= pos.Cfg().Dkg1End {
 		return RbDkg1Stage
+	} else if slotId < pos.Cfg().Dkg2Begin {
+		return RbDkg1ConfirmStage
 	} else if slotId <= pos.Cfg().Dkg2End {
 		return RbDkg2Stage
 	} else if slotId < pos.Cfg().SignBegin {
@@ -431,11 +434,11 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, evm) {
-		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
+		return nil, logError(errors.New("invalid dkg1 stage, epochId " + strconv.FormatUint(eid, 10)))
 	}
 	// 2. ProposerId: weather in the random commit
 	if !isInRandomGroupVar(&pks, eid, pid, contract.CallerAddress) {
-		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
+		return nil, logError(errors.New("invalid proposer, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
 	// prevent reset

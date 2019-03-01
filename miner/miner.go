@@ -203,7 +203,16 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 				self.worker.chainSlotTimer <- struct{}{}
 			}
 		}
-		stateDb, err2 := s.BlockChain().StateAt(s.BlockChain().CurrentBlock().Root())
+
+		// get state of k blocks ahead the last block
+		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
+		log.Info("get state ahead k blocks", "last block numer", lastBlockNum)
+		if lastBlockNum < uint64(pos.Cfg().K) {
+			lastBlockNum = uint64(pos.Cfg().K)
+		}
+
+		root := s.BlockChain().GetBlockByNumber(lastBlockNum - uint64(pos.Cfg().K)).Root()
+		stateDb, err2 := s.BlockChain().StateAt(root)
 		if(err2 != nil){
 			log.Error("Failed to get stateDb: ", err2)
 		}

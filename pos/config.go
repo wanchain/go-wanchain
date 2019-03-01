@@ -20,11 +20,11 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 21
+	RandomProperCount = 9
 	// SlotCount is slot count in an epoch
-	SlotCount = 100
+	SlotCount = 40
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
+	SlotTime = 3
 	// GenesisPK is the epoch0 pk
 	GenesisPK = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
 
@@ -49,7 +49,9 @@ type Config struct {
 	MinerKey      *keystore.Key
 	Dbpath        string
 	NodeCfg       *node.Config
-	DkgEnd        uint64
+	Dkg1End       uint64
+	Dkg2Begin     uint64
+	Dkg2End       uint64
 	SignBegin     uint64
 	SignEnd       uint64
 }
@@ -63,9 +65,11 @@ var DefaultConfig = Config{
 	nil,
 	"",
 	nil,
-	Stage4K - 1,
-	Stage6K,
-	Stage9K - 1,
+	Stage1K - 1,
+	Stage3K,
+	Stage5K - 1,
+	Stage7K,
+	Stage8K - 1,
 }
 
 func Cfg() *Config {
