@@ -1,7 +1,10 @@
 package incentive
 
 import (
+	"fmt"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
 
@@ -69,6 +72,47 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 		return true
 	}
 
+	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
+
+	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+
 	finished(stateDb, epochID)
 	return true
+}
+
+// calcBaseSubsidy returns the subsidy amount a slot at the provided epoch
+// should have. This is mainly used for determining how much the incentive for
+// newly generated blocks awards as well as validating the incentive for blocks
+// has the expected value.
+//
+// The subsidy is halved every SubsidyReductionInterval
+// this is: baseSubsidy / 2^(epoch/SubsidyReductionInterval)
+//
+// At the target block generation rate for the main network, this is
+// approximately every 5 years.
+// It will be Zero after 300 years.
+func calcBaseSubsidy(epochID uint64) *big.Int {
+	subsidyReductionInterval := uint64((365 * 24 * 3600 * 5) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
+
+	year := big.NewInt(2.1e6) // 2100000 for first year
+	weiOfYear := big.NewInt(0).Mul(year, big.NewInt(1e18))
+	secondPerYear := big.NewInt(365 * 24 * 3600)
+	weiPerSecond := big.NewInt(0).Div(weiOfYear, secondPerYear)
+	baseSubsidy := big.NewInt(0).Mul(weiPerSecond, big.NewInt(pos.SlotTime)) // base subsidy for one slot in first year
+
+	return big.NewInt(0).SetUint64(baseSubsidy.Uint64() >> (epochID / subsidyReductionInterval))
+}
+
+// calcWanFromFoundation returns subsidy Of Epoch from wan foundation by Wei
+func calcWanFromFoundation(epochID uint64) *big.Int {
+	subsidyOfSlot := calcBaseSubsidy(epochID)
+	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(pos.SlotCount))
+	return subsidyOfEpoch
+}
+
+func calculateIncentivePool(stateDb *state.StateDB, epochID uint64) (total *big.Int, foundation *big.Int, gasPool *big.Int) {
+	foundation = calcWanFromFoundation(epochID)
+	gasPool = getEpochGas(stateDb, epochID)
+	total = big.NewInt(0).Add(foundation, gasPool)
+	return
 }

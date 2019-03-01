@@ -1,6 +1,7 @@
 package incentive
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos"
@@ -55,10 +55,8 @@ func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) b
 func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
 var (
-	rbdb      = make(map[common.Hash][]byte)
-	rbgroupdb = make(map[uint64][]bn256.G1)
-	rbranddb  = make(map[uint64]*big.Int)
-	account   = make(map[common.Address]*big.Int)
+	rbdb    = make(map[common.Hash][]byte)
+	account = make(map[common.Address]*big.Int)
 )
 
 func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
@@ -104,8 +102,9 @@ var (
 //-------------------------------------------------------------------------------
 
 func TestAddEpochGas(t *testing.T) {
+
 	testTimes := 100
-	testMaxWan := int64(1000)
+	testMaxWan := int64(1)
 	randNums := make([]*big.Int, 0)
 
 	for index := 0; index < testTimes; index++ {
@@ -129,11 +128,6 @@ func TestAddEpochGas(t *testing.T) {
 	}
 }
 
-func TestRun(t *testing.T) {
-	Run(statedb, uint64(0))
-	Run(statedb, uint64(0))
-}
-
 func TestSetStakerInterface(t *testing.T) {
 	SetStakerInterface(getInfo, setInfo)
 }
@@ -143,3 +137,45 @@ func getInfo(common.Address) ([]common.Address, []*big.Int, float64, float64) {
 }
 
 func setInfo([]common.Address, []*big.Int) {}
+
+func TestCalcBaseSubsidy(t *testing.T) {
+
+	base := uint64(665905631659056310)
+
+	subsidy := calcBaseSubsidy(0)
+	fmt.Println(subsidy.String())
+
+	if subsidy.String() != "665905631659056310" {
+		t.FailNow()
+	}
+
+	for i := uint64(1); i < uint64(500); i++ {
+		subsidyReductionInterval := uint64((365 * 24 * 3600 * 5) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
+		fmt.Println(subsidyReductionInterval)
+		subsidy = calcBaseSubsidy(subsidyReductionInterval * i)
+		fmt.Println(subsidy.String())
+		if subsidy.Uint64() == 0 {
+			fmt.Println("finish", i)
+			return
+		}
+		if subsidy.Uint64() != (base >> i) {
+			fmt.Println("error: ", subsidy.Uint64(), base/(i+1))
+			t.FailNow()
+		}
+	}
+}
+
+func TestRun(t *testing.T) {
+	testTimes := 100
+
+	for i := 0; i < testTimes; i++ {
+		Run(statedb, uint64(i))
+		Run(statedb, uint64(i))
+		Run(statedb, uint64(i))
+
+		total, foundation, gasPool := calculateIncentivePool(statedb, uint64(i))
+		if total.String() != (big.NewInt(0).Add(foundation, gasPool)).String() {
+			t.FailNow()
+		}
+	}
+}
