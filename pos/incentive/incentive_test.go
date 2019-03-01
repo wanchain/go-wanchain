@@ -135,11 +135,17 @@ func TestSetStakerInterface(t *testing.T) {
 	SetStakerInterface(getInfo, setInfo)
 }
 
-func testgetEpLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
+func testgetEpLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, int) {
+	return nil, 0
+}
 
-func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
+func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address, int) {
+	return nil, 0
+}
 
-func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []*big.Int, float64)
+func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []*big.Int, float64) {
+	return nil, nil, 0
+}
 
 func TestSetActivityInterface(t *testing.T) {
 	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
@@ -147,12 +153,13 @@ func TestSetActivityInterface(t *testing.T) {
 
 func TestCalcBaseSubsidy(t *testing.T) {
 
-	base := uint64(665905631659056310)
+	base := uint64(199771689497716893)
 
 	subsidy := calcBaseSubsidy(0)
 	fmt.Println(subsidy.String())
 
-	if subsidy.String() != "665905631659056310" {
+	if subsidy.String() != "199771689497716893" {
+		fmt.Println("error subsidy:", subsidy.String())
 		t.FailNow()
 	}
 
