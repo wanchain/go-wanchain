@@ -55,9 +55,51 @@ func TestSetActivityInterface(t *testing.T) {
 	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
 }
 
-func getInfo(common.Address) ([]common.Address, []*big.Int, float64, float64) { return nil, nil, 0, 0 }
+var (
+	delegateStakerCount        = 40
+	delegateStakerMap          = make(map[common.Address][]common.Address)
+	delegateStakerProbilityMap = make(map[common.Address][]*big.Int)
+)
 
-func setInfo([]common.Address, []*big.Int) {}
+func getInfo(addr common.Address, epochID uint64) ([]common.Address, []*big.Int, int, float64) {
+	return delegateStakerMap[addr], delegateStakerProbilityMap[addr], 10, 0.025
+}
+
+func setInfo([]common.Address, []*big.Int, uint64) {}
+
+func generateTestStaker() {
+	for i := 0; i < addrsCount; i++ {
+		stakers := make([]common.Address, delegateStakerCount)
+		probility := make([]*big.Int, delegateStakerCount)
+		for m := 0; m < delegateStakerCount; m++ {
+			key, _ := crypto.GenerateKey()
+			stakers[m] = crypto.PubkeyToAddress(key.PublicKey)
+			probility[m] = key.D
+		}
+		stakers[0] = epAddrs[i]
+		delegateStakerMap[epAddrs[i]] = stakers
+		delegateStakerProbilityMap[epAddrs[i]] = probility
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		stakers := make([]common.Address, delegateStakerCount)
+		probility := make([]*big.Int, delegateStakerCount)
+		for m := 0; m < delegateStakerCount; m++ {
+			key, _ := crypto.GenerateKey()
+			stakers[m] = crypto.PubkeyToAddress(key.PublicKey)
+			probility[m] = key.D
+		}
+		stakers[0] = rpAddrs[i]
+		delegateStakerMap[rpAddrs[i]] = stakers
+		delegateStakerProbilityMap[rpAddrs[i]] = probility
+	}
+}
 func TestSetStakerInterface(t *testing.T) {
+	generateTestAddrs()
+	generateTestStaker()
+
+	// fmt.Println(delegateStakerMap)
+	// fmt.Println(delegateStakerProbilityMap)
+
 	SetStakerInterface(getInfo, setInfo)
 }

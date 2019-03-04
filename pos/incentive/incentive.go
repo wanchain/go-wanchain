@@ -20,6 +20,7 @@ var (
 	percentOfEpochLeader     = 20
 	percentOfRandomProposer  = 20
 	percentOfSlotLeader      = 60
+	ceilingPercentS0         = 0.1
 )
 
 const (
@@ -50,16 +51,36 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID), []byte(dictFinished))
 }
 
-// epochLeaderAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int) ([]common.Address, []*big.Int, *big.Int) {
+// protocalRunerAllocate use to calc the subsidy of protocal Participant (Epoch leader and Random proposer)
+func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
 	remains := big.NewInt(0)
-	return nil, nil, remains
+	count := len(addrs)
+
+	fundOne := funds.Div(funds, big.NewInt(int64(count)))
+	fundAddrs := make([]common.Address, 0)
+	fundValues := make([]*big.Int, 0)
+
+	for i := 0; i < count; i++ {
+		if acts[i] == 1 {
+			fundAddrs = append(fundAddrs, addrs[i])
+			fundValues = append(fundValues, fundOne)
+		} else {
+			remains.Add(remains, fundOne)
+		}
+	}
+
+	finalAddrs, finalValues := delegate(fundAddrs, fundValues, epochID)
+	return finalAddrs, finalValues, remains
+}
+
+// epochLeaderAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
+func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
+	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //randomProposerAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int) ([]common.Address, []*big.Int, *big.Int) {
-	remains := big.NewInt(0)
-	return nil, nil, remains
+func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
+	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
@@ -74,12 +95,6 @@ func checkTotalValue(total *big.Int, readyToPay []*big.Int, remain *big.Int) boo
 
 func pay(addrs []common.Address, values []*big.Int) {
 
-}
-
-func calcPercent(total *big.Int, percent int) *big.Int {
-	value := big.NewInt(0).Mul(total, big.NewInt(int64(percent)))
-	value.Div(value, big.NewInt(100))
-	return value
 }
 
 // Run is use to run the incentive
@@ -103,12 +118,12 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	valuesAll := make([]*big.Int, 0)
 	remainsAll := big.NewInt(0)
 
-	addrs, values, remains := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct)
+	addrs, values, remains := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	addressAll = append(addressAll, addrs...)
 	valuesAll = append(valuesAll, values...)
 	remainsAll.Add(remainsAll, remains)
 
-	addrs, values, remains = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct)
+	addrs, values, remains = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
 	addressAll = append(addressAll, addrs...)
 	valuesAll = append(valuesAll, values...)
 	remainsAll.Add(remainsAll, remains)
@@ -126,7 +141,7 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 
 	pay(addressAll, valuesAll)
 
-	setStakerInfo(addressAll, valuesAll)
+	setStakerInfo(addressAll, valuesAll, epochID)
 
 	finished(stateDb, epochID)
 	return true

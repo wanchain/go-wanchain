@@ -7,9 +7,9 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 )
 
-type getStakerInfoFn func(common.Address) ([]common.Address, []*big.Int, float64, float64)
+type getStakerInfoFn func(common.Address, uint64) ([]common.Address, []*big.Int, int, float64)
 
-type setStakerInfoFn func([]common.Address, []*big.Int)
+type setStakerInfoFn func([]common.Address, []*big.Int, uint64)
 
 type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
