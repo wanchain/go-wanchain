@@ -130,11 +130,11 @@ type ClientInfo struct {
 	LockTime	uint64
 }
 type ClientProbability struct {
-	addr common.Address
-	probability  *big.Int
+	Addr common.Address
+	Probability  *big.Int
 }
 type ClientIncentive struct {
-	addr common.Address
+	Addr common.Address
 	Incentive  *big.Int
 }
 func init() {
