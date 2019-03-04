@@ -461,6 +461,17 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64,idx uint64,addr common.Addre
 }
 
 
+
+func (e *Epocher)GetEpochProbability(epochId uint64,addr common.Address) (infors []vm.ClientProbability,  feeRate uint64, totalProbability *big.Int, err error) {
+	infors = make([]vm.ClientProbability, 10) // TODO: the array length?
+	feeRate = uint64(30)
+	totalProbability = big.NewInt(0)
+	return infors,feeRate,totalProbability, nil
+}
+
+func (e *Epocher)SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
+	return nil
+}
 func (e *Epocher)GetEpochStakers(epochId uint64,puk string) ([]string, error) {
 
 	targetBlkNum := e.getTargetBlkNumber(epochId)

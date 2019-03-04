@@ -17,10 +17,83 @@ import (
 	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
+/* the contract interface described by solidity.
+contract stake {
+	function stakeIn( string memory Pubs, uint256 LockTime) public {}
+	function stakeOut(string memory Pub, uint256 Value) public pure {}
+}
+
+contract stake {
+	function stakeIn( string memory sPub, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public {}
+	// function stakeOut(string memory sPub) public pure {} // TODO: need it?
+	function delegateIn(string memory delegateSpub, uint256 lockEpochs) public {}
+}
+
+*/
+
 var (
 	//cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"Pub","type":"string"}],"name":"stakeOut","outputs":[{"name":"Pub","type":"string"}]}]`
-	cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}],"name":"stakeOut","outputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}]}]`
-
+	//cscDefinition = `[{"constant":false,"type":"function","stateMutability":"nonpayable","inputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}],"name":"stakeIn","outputs":[{"name":"Pubs","type":"string"},{"name":"LockTime","type":"uint256"}]},{"constant":false,"type":"function","inputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}],"name":"stakeOut","outputs":[{"name":"Pub","type":"string"},{"name":"Value","type":"uint256"}]}]`
+	//cscDefinition = `[{"constant":false,"inputs":[{"name":"sPub","type":"string"},{"name":"bnPub","type":"string"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"delegateSpub","type":"string"}],"name":"delegateIn","outputs":[],"payable":false,"type":"function"}]`
+	cscDefinition = `
+[
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "secPk",
+				"type": "string"
+			},
+			{
+				"name": "bn256Pk",
+				"type": "string"
+			},
+			{
+				"name": "lkt",
+				"type": "uint256"
+			},
+			{
+				"name": "feeRate",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeIn",
+		"outputs": [
+			{
+				"name": "secPk",
+				"type": "string"
+			},
+			{
+				"name": "bn256Pk",
+				"type": "string"
+			},
+			{
+				"name": "lkt",
+				"type": "uint256"
+			},
+			{
+				"name": "feeRate",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "delegateSpub",
+				"type": "string"
+			}
+		],
+		"name": "delegateIn",
+		"outputs": [],
+		"payable": false,
+		"type": "function"
+	}
+]
+	`
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	stakeInId  [4]byte
@@ -38,7 +111,7 @@ var (
 
 	epochInterval uint64
 
-	isRanFake = false
+	//isRanFake = false
 	FakeCh    = make(chan int)
 )
 
@@ -51,6 +124,19 @@ type StakerInfo struct {
 	StakingTime int64    //the user’s staking time
 }
 
+type ClientInfo struct {
+	Delegate common.Address
+	Amount  *big.Int
+	LockTime	uint64
+}
+type ClientProbability struct {
+	addr common.Address
+	probability  *big.Int
+}
+type ClientIncentive struct {
+	addr common.Address
+	Incentive  *big.Int
+}
 func init() {
 
 	if errCscInit != nil {
@@ -112,18 +198,19 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, pukHash)
 	if gotInfoArray != nil {
-		var gotStaker StakerInfo
-		error := json.Unmarshal(gotInfoArray, &gotStaker)
-		if error != nil {
-			return nil, error
-		}
-		//if staker existed already,update value
-		if gotStaker.PubSec256 != nil {
-			staker.Amount = staker.Amount.Add(staker.Amount, gotStaker.Amount)
-			if staker.LockTime < gotStaker.LockTime {
-				staker.LockTime = gotStaker.LockTime
-			}
-		}
+		return nil, errors.New("public key registed")
+		//var gotStaker StakerInfo
+		//error := json.Unmarshal(gotInfoArray, &gotStaker)
+		//if error != nil {
+		//	return nil, error
+		//}
+		////if staker existed already,update value
+		//if gotStaker.PubSec256 != nil {
+		//	staker.Amount = staker.Amount.Add(staker.Amount, gotStaker.Amount)
+		//	if staker.LockTime < gotStaker.LockTime {
+		//		staker.LockTime = gotStaker.LockTime
+		//	}
+		//}
 	}
 
 	infoArray, err := json.Marshal(staker)
@@ -137,10 +224,10 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		return nil, res
 	}
 
-	if isRanFake {
-		runFake(evm.StateDB)
-		isRanFake = true
-	}
+	//if isRanFake {
+	//	runFake(evm.StateDB)
+	//	isRanFake = true
+	//}
 
 	return nil, nil
 
@@ -215,12 +302,14 @@ func (p *Pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 	return nil
 }
 
-func (p *Pos_staking) stakeInParseAndValid(payload []byte) (secPk []byte, bn256Pk []byte, lkt uint64) {
+func (p *Pos_staking) stakeInParseAndValid(payload []byte) ( []byte,  []byte,  uint64) {
 
 	fmt.Println("" + common.ToHex(payload))
 	var Info struct {
-		Pubs     string   //staker’s original public key + bn256 pairing public key
-		LockTime *big.Int //lock time which is input by user
+		SecPk     string   //staker’s original public key + bn256 pairing public key
+		Bn256Pk     string   //staker’s original public key + bn256 pairing public key
+		Lkt *big.Int //lock time which is input by user
+		FeeRate *big.Int //lock time which is input by user
 	}
 
 	err := cscAbi.Unpack(&Info, "stakeIn", payload)
@@ -228,24 +317,24 @@ func (p *Pos_staking) stakeInParseAndValid(payload []byte) (secPk []byte, bn256P
 		return nil, nil, 0
 	}
 
-	//get public keys
-	ss := strings.Split(strings.ToLower(Info.Pubs), "0x")
+	////get public keys
+	//ss := strings.Split(strings.ToLower(Info.Pubs), "0x")
+	//
+	//secPk = common.FromHex(ss[1])
+	//pub := crypto.ToECDSAPub(secPk)
+	//if pub == nil {
+	//	return nil, nil, 0
+	//}
+	//
+	//bn256Pk = common.FromHex(ss[2])
+	//_, err = new(bn256.G1).Unmarshal(bn256Pk)
+	//if err != nil {
+	//	return nil, nil, 0
+	//}
+	//
+	//lkt = big.NewInt(0).Div(Info.LockTime, ether).Uint64()
 
-	secPk = common.FromHex(ss[1])
-	pub := crypto.ToECDSAPub(secPk)
-	if pub == nil {
-		return nil, nil, 0
-	}
-
-	bn256Pk = common.FromHex(ss[2])
-	_, err = new(bn256.G1).Unmarshal(bn256Pk)
-	if err != nil {
-		return nil, nil, 0
-	}
-
-	lkt = big.NewInt(0).Div(Info.LockTime, ether).Uint64()
-
-	return secPk, bn256Pk, lkt
+	return []byte(Info.SecPk), []byte(Info.Bn256Pk), Info.Lkt.Uint64()
 }
 
 func (p *Pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (str *StakerInfo, pubHash common.Hash, err error) {
