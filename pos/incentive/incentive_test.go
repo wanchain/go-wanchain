@@ -101,12 +101,15 @@ var (
 func TestRun(t *testing.T) {
 
 	TestSetActivityInterface(t)
+	TestSetStakerInterface(t)
 
 	testTimes := 100
 
 	for i := 0; i < testTimes; i++ {
 		for m := 0; m < pos.SlotCount; m++ {
-			Run(statedb, uint64(i))
+			if !Run(statedb, uint64(i)) {
+				t.FailNow()
+			}
 		}
 
 		total, foundation, gasPool := calculateIncentivePool(statedb, uint64(i))

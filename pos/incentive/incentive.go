@@ -50,6 +50,38 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID), []byte(dictFinished))
 }
 
+// epochLeaderAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
+func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int) ([]common.Address, []*big.Int, *big.Int) {
+	remains := big.NewInt(0)
+	return nil, nil, remains
+}
+
+//randomProposerAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
+func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int) ([]common.Address, []*big.Int, *big.Int) {
+	remains := big.NewInt(0)
+	return nil, nil, remains
+}
+
+//slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
+func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64) ([]common.Address, []*big.Int, *big.Int) {
+	remains := big.NewInt(0)
+	return nil, nil, remains
+}
+
+func checkTotalValue(total *big.Int, readyToPay []*big.Int, remain *big.Int) bool {
+	return true
+}
+
+func pay(addrs []common.Address, values []*big.Int) {
+
+}
+
+func calcPercent(total *big.Int, percent int) *big.Int {
+	value := big.NewInt(0).Mul(total, big.NewInt(int64(percent)))
+	value.Div(value, big.NewInt(100))
+	return value
+}
+
 // Run is use to run the incentive
 func Run(stateDb *state.StateDB, epochID uint64) bool {
 	if isFinished(stateDb, epochID) {
@@ -59,22 +91,42 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
 	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
 
-	epochLeaderSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfEpochLeader)))
-	epochLeaderSubsidy.Div(epochLeaderSubsidy, big.NewInt(100))
-
-	randomProposerSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfRandomProposer)))
-	randomProposerSubsidy.Div(randomProposerSubsidy, big.NewInt(100))
-
-	slotLeaderSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfSlotLeader)))
-	slotLeaderSubsidy.Div(slotLeaderSubsidy, big.NewInt(100))
-
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
 	slAddrs, slBlk, slAct := getSlotLeaderInfo(stateDb, epochID)
 
-	fmt.Println(epAddrs, epAct)
-	fmt.Println(rpAddrs, rpAct)
-	fmt.Println(slAddrs, slBlk, slAct)
+	epochLeaderSubsidy := calcPercent(total, percentOfEpochLeader)
+	randomProposerSubsidy := calcPercent(total, percentOfRandomProposer)
+	slotLeaderSubsidy := calcPercent(total, percentOfSlotLeader)
+
+	addressAll := make([]common.Address, 0)
+	valuesAll := make([]*big.Int, 0)
+	remainsAll := big.NewInt(0)
+
+	addrs, values, remains := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct)
+	addressAll = append(addressAll, addrs...)
+	valuesAll = append(valuesAll, values...)
+	remainsAll.Add(remainsAll, remains)
+
+	addrs, values, remains = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct)
+	addressAll = append(addressAll, addrs...)
+	valuesAll = append(valuesAll, values...)
+	remainsAll.Add(remainsAll, remains)
+
+	addrs, values, remains = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct)
+	addressAll = append(addressAll, addrs...)
+	valuesAll = append(valuesAll, values...)
+	remainsAll.Add(remainsAll, remains)
+
+	if !checkTotalValue(total, valuesAll, remainsAll) {
+		return false
+	}
+
+	addRemainIncentivePool(stateDb, epochID, remainsAll)
+
+	pay(addressAll, valuesAll)
+
+	setStakerInfo(addressAll, valuesAll)
 
 	finished(stateDb, epochID)
 	return true
