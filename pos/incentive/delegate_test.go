@@ -18,13 +18,21 @@ func TestDelegatesCalc(t *testing.T) {
 		values[i] = big.NewInt(1e18)
 	}
 
-	addrsFinal, valueFinal := delegate(epAddrs, values, 0)
+	finalIncentive, remain, err := delegate(epAddrs, values, 0)
 
-	for i := 0; i < len(addrsFinal); i++ {
-		fmt.Println(addrsFinal[i].Hex())
-		fmt.Println("-------->")
-		fmt.Println(valueFinal[i].String())
-		fmt.Println("<--------")
+	if err != nil {
+		t.FailNow()
 	}
 
+	fmt.Println("remains:", remain)
+
+	for i := 0; i < len(finalIncentive); i++ {
+		fmt.Println("group:", i)
+		for m := 0; m < len(finalIncentive[i]); m++ {
+			fmt.Println(finalIncentive[i][m].Addr.Hex())
+			fmt.Println("-------->")
+			fmt.Println(finalIncentive[i][m].Incentive.String())
+			fmt.Println("<--------")
+		}
+	}
 }

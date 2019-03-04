@@ -5,11 +5,12 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
-type getStakerInfoFn func(common.Address, uint64) ([]common.Address, []*big.Int, int, float64)
+type getStakerInfoFn func(common.Address, uint64) ([]vm.ClientProbability, uint64, *big.Int, error)
 
-type setStakerInfoFn func([]common.Address, []*big.Int, uint64)
+type setStakerInfoFn func([][]vm.ClientIncentive, uint64) error
 
 type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 

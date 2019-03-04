@@ -6,6 +6,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 )
 
@@ -61,11 +62,13 @@ var (
 	delegateStakerProbilityMap = make(map[common.Address][]*big.Int)
 )
 
-func getInfo(addr common.Address, epochID uint64) ([]common.Address, []*big.Int, int, float64) {
-	return delegateStakerMap[addr], delegateStakerProbilityMap[addr], 10, 0.025
+func getInfo(addr common.Address, epochID uint64) ([]vm.ClientProbability, uint64, *big.Int, error) {
+
+	//return delegateStakerMap[addr], delegateStakerProbilityMap[addr], 10, 0.025
+	return nil, 0, nil, nil
 }
 
-func setInfo([]common.Address, []*big.Int, uint64) {}
+func setInfo([][]vm.ClientIncentive, uint64) error { return nil }
 
 func generateTestStaker() {
 	for i := 0; i < addrsCount; i++ {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/core/vm"
+
 	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
@@ -52,7 +54,7 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 }
 
 // protocalRunerAllocate use to calc the subsidy of protocal Participant (Epoch leader and Random proposer)
-func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
+func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
 	count := len(addrs)
 
@@ -69,31 +71,36 @@ func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, e
 		}
 	}
 
-	finalAddrs, finalValues := delegate(fundAddrs, fundValues, epochID)
-	return finalAddrs, finalValues, remains
+	finalIncentive, subRemain, err := delegate(fundAddrs, fundValues, epochID)
+	if err != nil {
+		return nil, nil, err
+	}
+	remains.Add(remains, subRemain)
+
+	return finalIncentive, remains, nil
 }
 
 // epochLeaderAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
+func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //randomProposerAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([]common.Address, []*big.Int, *big.Int) {
+func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
-func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64) ([]common.Address, []*big.Int, *big.Int) {
+func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
-	return nil, nil, remains
+	return nil, remains, nil
 }
 
-func checkTotalValue(total *big.Int, readyToPay []*big.Int, remain *big.Int) bool {
+func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *big.Int) bool {
 	return true
 }
 
-func pay(addrs []common.Address, values []*big.Int) {
+func pay(incentives [][]vm.ClientIncentive) {
 
 }
 
@@ -114,34 +121,39 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	randomProposerSubsidy := calcPercent(total, percentOfRandomProposer)
 	slotLeaderSubsidy := calcPercent(total, percentOfSlotLeader)
 
-	addressAll := make([]common.Address, 0)
-	valuesAll := make([]*big.Int, 0)
+	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remainsAll := big.NewInt(0)
 
-	addrs, values, remains := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
-	addressAll = append(addressAll, addrs...)
-	valuesAll = append(valuesAll, values...)
+	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	addrs, values, remains = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
-	addressAll = append(addressAll, addrs...)
-	valuesAll = append(valuesAll, values...)
+	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	addrs, values, remains = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct)
-	addressAll = append(addressAll, addrs...)
-	valuesAll = append(valuesAll, values...)
+	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	if !checkTotalValue(total, valuesAll, remainsAll) {
+	if !checkTotalValue(total, finalIncentive, remainsAll) {
 		return false
 	}
 
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
 
-	pay(addressAll, valuesAll)
+	pay(finalIncentive)
 
-	setStakerInfo(addressAll, valuesAll, epochID)
+	setStakerInfo(finalIncentive, epochID)
 
 	finished(stateDb, epochID)
 	return true
