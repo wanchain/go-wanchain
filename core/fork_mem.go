@@ -6,30 +6,25 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"fmt"
 	"errors"
-	"github.com/wanchain/go-wanchain/ethdb"
+	"sync"
+	"math/big"
+	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 type ForkMem struct {
-	kBufferedChains  *ethdb.MemDatabase
-	kBufferedBlks	 *ethdb.MemDatabase
+	kBufferedChains  map[string][]common.Hash
+	kBufferedBlks	 map[common.Hash]*types.Block
+	curMaxBlkNum	 uint64
+	lock sync.RWMutex
 }
 
 func NewForkMem() *ForkMem{
+
 	f := &ForkMem{}
-	kBufferedChains,err:= ethdb.NewMemDatabase()
-	if err != nil {
-		return nil
-	}
-	f.kBufferedChains = kBufferedChains
-
-	kBufferedBlks,err := ethdb.NewMemDatabase()
-
-	if err != nil {
-		return nil
-	}
-
-	f.kBufferedBlks = kBufferedBlks
-
+	f.kBufferedChains = make(map[string][]common.Hash)
+	f.kBufferedBlks = make(map[common.Hash]*types.Block)
+	f.curMaxBlkNum = 0
 	return f
 }
 
@@ -65,9 +60,123 @@ func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint6
 }
 
 
-func (f *ForkMem) selectBlk([]common.Hash) *types.Block{
+func (f *ForkMem) Maxvalid(workBlk *types.Block) types.Blocks{
+
+	var allBlks types.Blocks
+	var midSidBlk *types.Block
+
+	workBlkNum := workBlk.NumberU64()
+
+	if workBlkNum >= f.curMaxBlkNum {
+		return types.Blocks{workBlk}
+	}
+
+	maxNumKey := big.NewInt(int64(f.curMaxBlkNum)).Text(16)
+	hashs := f.kBufferedChains[maxNumKey]
+
+	minSid := ^uint64(0)
+	midSidBlk = nil
+
+	for _,hs := range hashs {
+		blk := f.kBufferedBlks[hs]
+		_,sid,err := f.GetBlockEpochIdAndSlotId(blk)
+		if err != nil {
+			continue
+		}
+
+		if sid < minSid {
+			minSid = sid
+			midSidBlk = blk
+		}
+
+		allBlks = append(allBlks,blk)
+	}
+
+
+	return  types.Blocks{midSidBlk}
+}
+
+
+func (f *ForkMem) Push(blockChain types.Blocks) error{
+
+	for _,blk := range blockChain {
+
+		if len(f.kBufferedBlks) > 0 {
+			parent := f.kBufferedBlks[blk.ParentHash()]
+
+			if parent == nil {
+				log.Debug("Unknown parent of propagated block", "number", blk.Number(), "hash", blk.Hash(), "parent", blk.ParentHash())
+				return errors.New("not find parent hash in buffer")
+			}
+		}
+
+		err := f.push(blk)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
+
+
+func (f *ForkMem) push(block *types.Block) error{
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	newbn := block.NumberU64()
+
+	if f.curMaxBlkNum == 0 {
+		f.curMaxBlkNum = newbn
+	} else {
+		//input need to be continous block
+		if f.curMaxBlkNum + 1 == newbn {
+			f.curMaxBlkNum = newbn
+		} else if f.curMaxBlkNum > newbn+1 {
+			//if block number is bigger 1 than current max block ,return future block
+			return consensus.ErrFutureBlock
+		} else if newbn < f.curMaxBlkNum-pos.Stage1K {
+			//if the block number is older k than current max block,return old block error
+			return consensus.ErrOldblockNumber
+		}
+	}
+
+	num := block.Number().Text(16)
+
+	f.kBufferedChains[num] = append(f.kBufferedChains[num],block.Hash())
+	f.kBufferedBlks[block.Hash()] = block
+
+
+	return nil
+}
+
+func (f *ForkMem) popBack() *types.Block{
+
+	//need to store k data
+	if len(f.kBufferedChains) > int(pos.Cfg().K) {
+
+		blkNumBeforeK := f.curMaxBlkNum - uint64(pos.Cfg().K)
+
+		bnText := big.NewInt(int64(blkNumBeforeK))
+
+		blkHashs := f.kBufferedChains[bnText.Text(16)]
+
+		for _,bh := range blkHashs {
+			delete(f.kBufferedBlks,bh)
+		}
+
+		delete(f.kBufferedChains,bnText.Text(16))
+	}
+
+	return nil
+}
+
+
+
+func (f *ForkMem) GetBlock([]common.Hash) *types.Block{
+	return nil
+}
+
 
 
 //f.initKsecMap()

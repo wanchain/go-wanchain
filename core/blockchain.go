@@ -121,6 +121,7 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -823,6 +824,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		return NonStatTy, err
 	}
 
+
 	/// If the total difficulty is higher than our known, add it to the canonical chain
 	/// Second clause in the if statement reduces the vulnerability to selfish mining.
 	/// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
@@ -983,6 +985,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	}
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
+
+
+
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
 
