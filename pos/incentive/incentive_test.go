@@ -1,11 +1,8 @@
 package incentive
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
-
-	"github.com/dedis/kyber/util/random"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -23,7 +20,7 @@ type CTStateDB struct {
 func (CTStateDB) CreateAccount(common.Address) {}
 
 func (CTStateDB) SubBalance(addr common.Address, pVal *big.Int) {
-	account[addr] = account[addr].Add(account[addr], pVal.Mul(pVal, big.NewInt(-1)))
+	account[addr] = account[addr].Sub(account[addr], pVal)
 }
 func (CTStateDB) AddBalance(addr common.Address, pval *big.Int) {
 	account[addr] = account[addr].Add(account[addr], pval)
@@ -101,91 +98,16 @@ var (
 
 //-------------------------------------------------------------------------------
 
-func TestAddEpochGas(t *testing.T) {
-
-	testTimes := 100
-	testMaxWan := int64(1)
-	randNums := make([]*big.Int, 0)
-
-	for index := 0; index < testTimes; index++ {
-		for i := 0; i < testTimes; i++ {
-			gas := random.Int(big.NewInt(0).Mul(big.NewInt(testMaxWan), big.NewInt(1e18)), random.New()) //1000 WAN
-			AddEpochGas(statedb, gas, uint64(index))
-			randNums = append(randNums, gas)
-		}
-	}
-
-	for index := 0; index < testTimes; index++ {
-		totalInEpoch := big.NewInt(0)
-		for i := 0; i < testTimes; i++ {
-			totalInEpoch = totalInEpoch.Add(totalInEpoch, randNums[index*testTimes+i])
-		}
-
-		gas := getEpochGas(statedb, uint64(index))
-		if gas.String() != totalInEpoch.String() {
-			t.FailNow()
-		}
-	}
-}
-
-func getInfo(common.Address) ([]common.Address, []*big.Int, float64, float64) { return nil, nil, 0, 0 }
-
-func setInfo([]common.Address, []*big.Int) {}
-func TestSetStakerInterface(t *testing.T) {
-	SetStakerInterface(getInfo, setInfo)
-}
-
-func testgetEpLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, int) {
-	return nil, 0
-}
-
-func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address, int) {
-	return nil, 0
-}
-
-func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []*big.Int, float64) {
-	return nil, nil, 0
-}
-
-func TestSetActivityInterface(t *testing.T) {
-	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
-}
-
-func TestCalcBaseSubsidy(t *testing.T) {
-
-	base := uint64(199771689497716893)
-
-	subsidy := calcBaseSubsidy(0)
-	fmt.Println(subsidy.String())
-
-	if subsidy.String() != "199771689497716893" {
-		fmt.Println("error subsidy:", subsidy.String())
-		t.FailNow()
-	}
-
-	for i := uint64(1); i < uint64(500); i++ {
-		subsidyReductionInterval := uint64((365 * 24 * 3600 * 5) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
-		fmt.Println(subsidyReductionInterval)
-		subsidy = calcBaseSubsidy(subsidyReductionInterval * i)
-		fmt.Println(subsidy.String())
-		if subsidy.Uint64() == 0 {
-			fmt.Println("finish", i)
-			return
-		}
-		if subsidy.Uint64() != (base >> i) {
-			fmt.Println("error: ", subsidy.Uint64(), base/(i+1))
-			t.FailNow()
-		}
-	}
-}
-
 func TestRun(t *testing.T) {
+
+	TestSetActivityInterface(t)
+
 	testTimes := 100
 
 	for i := 0; i < testTimes; i++ {
-		Run(statedb, uint64(i))
-		Run(statedb, uint64(i))
-		Run(statedb, uint64(i))
+		for m := 0; m < pos.SlotCount; m++ {
+			Run(statedb, uint64(i))
+		}
 
 		total, foundation, gasPool := calculateIncentivePool(statedb, uint64(i))
 		if total.String() != (big.NewInt(0).Add(foundation, gasPool)).String() {

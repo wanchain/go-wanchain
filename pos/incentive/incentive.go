@@ -14,62 +14,27 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 )
 
-type getStakerInfoFn func(common.Address) ([]common.Address, []*big.Int, float64, float64)
+var (
+	redutionYears            = 5
+	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
+	percentOfEpochLeader     = 20
+	percentOfRandomProposer  = 20
+	percentOfSlotLeader      = 60
+)
 
-type setStakerInfoFn func([]common.Address, []*big.Int)
-
-type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
-
-type getRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, int)
-
-type getSlotLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []*big.Int, float64)
-
-var getStakerInfo getStakerInfoFn
-
-var setStakerInfo setStakerInfoFn
-
-var getEpochLeaderInfo getEpochLeaderInfoFn
-
-var getRandomProposerInfo getRandomProposerInfoFn
-
-var getSlotLeaderInfo getSlotLeaderInfoFn
-
-// SetStakerInterface is use for Staker module to set its interface
-func SetStakerInterface(get getStakerInfoFn, set setStakerInfoFn) {
-	getStakerInfo = get
-	setStakerInfo = set
-}
-
-// SetActivityInterface is use for get activty module to set its interface
-func SetActivityInterface(getEpl getEpochLeaderInfoFn, getRnp getRandomProposerInfoFn, getSlr getSlotLeaderInfoFn) {
-	getEpochLeaderInfo = getEpl
-	getRandomProposerInfo = getRnp
-	getSlotLeaderInfo = getSlr
-}
+const (
+	dictGasCollection = "gas_collection"
+	dictEpochRun      = "epoch_run"
+	dictRemainPool    = "remain_pool"
+	dictFinished      = "finished"
+)
 
 func getIncentivePrecompileAddress() common.Address {
 	return common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
 }
 
-// AddEpochGas is used for every block's gas fee collection in each epoch
-func AddEpochGas(stateDb *state.StateDB, gasValue *big.Int, epochID uint64) {
-	nowGas := getEpochGas(stateDb, epochID)
-	nowGas = nowGas.Add(nowGas, gasValue)
-	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getGasHashKey(epochID), nowGas.Bytes())
-}
-
-func getEpochGas(stateDb *state.StateDB, epochID uint64) *big.Int {
-	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getGasHashKey(epochID))
-	return big.NewInt(0).SetBytes(buf)
-}
-
-func getGasHashKey(epochID uint64) common.Hash {
-	hash := crypto.Keccak256Hash(postools.Uint64ToBytes(epochID), []byte("gas_collection"))
-	return hash
-}
-
 func getRunFlagKey(epochID uint64) common.Hash {
-	hash := crypto.Keccak256Hash(postools.Uint64ToBytes(epochID), []byte("epoch_run"))
+	hash := crypto.Keccak256Hash(postools.Uint64ToBytes(epochID), []byte(dictEpochRun))
 	return hash
 }
 
@@ -82,7 +47,7 @@ func isFinished(stateDb *state.StateDB, epochID uint64) bool {
 }
 
 func finished(stateDb *state.StateDB, epochID uint64) {
-	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID), []byte("finished"))
+	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID), []byte(dictFinished))
 }
 
 // Run is use to run the incentive
@@ -92,46 +57,25 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	}
 
 	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
-
 	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+
+	epochLeaderSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfEpochLeader)))
+	epochLeaderSubsidy.Div(epochLeaderSubsidy, big.NewInt(100))
+
+	randomProposerSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfRandomProposer)))
+	randomProposerSubsidy.Div(randomProposerSubsidy, big.NewInt(100))
+
+	slotLeaderSubsidy := big.NewInt(0).Mul(total, big.NewInt(int64(percentOfSlotLeader)))
+	slotLeaderSubsidy.Div(slotLeaderSubsidy, big.NewInt(100))
+
+	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
+	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
+	slAddrs, slBlk, slAct := getSlotLeaderInfo(stateDb, epochID)
+
+	fmt.Println(epAddrs, epAct)
+	fmt.Println(rpAddrs, rpAct)
+	fmt.Println(slAddrs, slBlk, slAct)
 
 	finished(stateDb, epochID)
 	return true
-}
-
-// calcBaseSubsidy returns the subsidy amount a slot at the provided epoch
-// should have. This is mainly used for determining how much the incentive for
-// newly generated blocks awards as well as validating the incentive for blocks
-// has the expected value.
-//
-// The subsidy is halved every SubsidyReductionInterval
-// this is: baseSubsidy / 2^(epoch/SubsidyReductionInterval)
-//
-// At the target block generation rate for the main network, this is
-// approximately every 5 years.
-// It will be Zero after 300 years.
-func calcBaseSubsidy(epochID uint64) *big.Int {
-	subsidyReductionInterval := uint64((365 * 24 * 3600 * 5) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
-
-	year := big.NewInt(2.1e6) // 2100000 for first year
-	weiOfYear := big.NewInt(0).Mul(year, big.NewInt(1e18))
-	secondPerYear := big.NewInt(365 * 24 * 3600)
-	weiPerSecond := big.NewInt(0).Div(weiOfYear, secondPerYear)
-	baseSubsidy := big.NewInt(0).Mul(weiPerSecond, big.NewInt(pos.SlotTime)) // base subsidy for one slot in first year
-
-	return big.NewInt(0).SetUint64(baseSubsidy.Uint64() >> (epochID / subsidyReductionInterval))
-}
-
-// calcWanFromFoundation returns subsidy Of Epoch from wan foundation by Wei
-func calcWanFromFoundation(epochID uint64) *big.Int {
-	subsidyOfSlot := calcBaseSubsidy(epochID)
-	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(pos.SlotCount))
-	return subsidyOfEpoch
-}
-
-func calculateIncentivePool(stateDb *state.StateDB, epochID uint64) (total *big.Int, foundation *big.Int, gasPool *big.Int) {
-	foundation = calcWanFromFoundation(epochID)
-	gasPool = getEpochGas(stateDb, epochID)
-	total = big.NewInt(0).Add(foundation, gasPool)
-	return
 }
