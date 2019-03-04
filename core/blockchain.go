@@ -847,6 +847,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	} else {
 		status = SideStatTy
 	}
+
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
 	}
@@ -934,6 +935,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
+
+	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
 	return n, err
@@ -1656,6 +1659,7 @@ func (bc *BlockChain) GetTdByHash(hash common.Hash) *big.Int {
 // GetHeader retrieves a block header from the database by hash and number,
 // caching it if found.
 func (bc *BlockChain) GetHeader(hash common.Hash, number uint64) *types.Header {
+	//return pos buffer if number < k
 	return bc.hc.GetHeader(hash, number)
 }
 

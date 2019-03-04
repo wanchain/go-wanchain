@@ -26,10 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"fmt"
-	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/consensus"
-	"sort"
 )
 
 const (
@@ -147,8 +144,6 @@ type Fetcher struct {
 	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (eth/62)
 	importedHook       func(*types.Block)      // Method to call upon successful block import (both eth/61 and eth/62)
 
-	kSecureChain map[int][]common.Hash
-	kAllBlksMap	 map[common.Hash]*types.Block
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
@@ -639,146 +634,10 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 }
 
 
-// reorgs takes two blocks, an old chain and a new chain and will reconstruct the blocks and inserts them
-// to be part of the new canonical chain and accumulates potential missing transactions and post an
-// event about them
-func (f *Fetcher) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
-	if pos.EpochBaseTime == 0 {
-		return
-	}
 
-	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
-	epochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
-	slotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	return
-}
-
-func (f *Fetcher) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := block.Time().Uint64()
-
-	blkTd := block.Difficulty().Uint64()
-
-	blkEpochId = (blkTd >> 32)
-	blkSlotId = ((blkTd & 0xffffffff) >> 8)
-
-	calEpochId, calSlotId := f.calEpochSlotIDFromTime(blkTime)
-	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
-
-	if calEpochId != blkEpochId {
-		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
-		return 0, 0, errors.New("epochid and slotid is not match with blk time")
-	}
-
-	return
-}
-
-func (f *Fetcher) initKsecMap() {
-	if f.kSecureChain == nil {
-		f.kSecureChain = make(map[int][]common.Hash)
-		f.kAllBlksMap = make(map[common.Hash]*types.Block)
-	}
-}
-
-func (f *Fetcher) selectBlk([]common.Hash) *types.Block{
-	return nil
-}
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, if updates
 // the phase states accordingly.
-
-func (f *Fetcher) insertNew(peer string, block *types.Block) {
-
-	f.initKsecMap()
-
-	blkNum := block.Number().Uint64()
-	startKBlkNum := uint64((blkNum/pos.Stage1K)*pos.Stage1K)
-	endAlignBlkNum := uint64((blkNum/pos.Stage1K + 1)*pos.Stage1K)
-
-
-	//push current block into map
-	idx := int(blkNum - startKBlkNum)
-	if f.kSecureChain[idx] == nil {
-		f.kSecureChain[idx] =  make([]common.Hash,0)
-	}
-
-	f.kSecureChain[idx] = append(f.kSecureChain[idx],block.Hash())
-	f.kAllBlksMap[block.Hash()] = block
-
-	blkKeyArray := make([]int,0)
-	blksChain := make(types.Blocks,0)
-	if blkNum==endAlignBlkNum-1 || len(f.kSecureChain)==int(pos.Stage1K){
-	   for key,_:= range f.kSecureChain {
-		   blkKeyArray = append(blkKeyArray,key)
-	   }
-
-	   sort.Ints(blkKeyArray)
-
-	   k := blkKeyArray[0]
-	   for (uint64(k) + startKBlkNum) < endAlignBlkNum {
-	   	 hashs := f.kSecureChain[k]
-		 l := len(hashs)
-	   	 if l==0 {
-	   	 	return
-		 } else {
-			 blksChain = append(blksChain,f.selectBlk(hashs))
-		 }
-		 k += 1
-	   }
-
-	} else {
-		return
-	}
-
-	hash := block.Hash()
-
-	// Run the import on a new thread
-	log.Debug("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash)
-
-	go func() {
-		defer func() { f.done <- hash }()
-
-		// If the parent's unknown, abort insertion
-		parent := f.getBlock(block.ParentHash())
-		if parent == nil {
-			log.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
-			return
-		}
-
-
-		// Quickly validate the header and propagate the block if it passes
-		switch err := f.verifyHeader(block.Header()); err {
-		case nil:
-			// All ok, quickly propagate to our peers
-			propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
-			go f.broadcastBlock(block, true)
-
-		case consensus.ErrFutureBlock:
-			// Weird future block, don't fail, but neither propagate
-
-		default:
-			// Something went very wrong, drop the peer
-			log.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			f.dropPeer(peer)
-			return
-		}
-
-
-		// Run the actual import and log any issues
-		if _, err := f.insertChain(types.Blocks{block}); err != nil {
-			log.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			return
-		}
-		// If import succeeded, broadcast the block
-		propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
-		go f.broadcastBlock(block, false)
-
-		// Invoke the testing hook if needed
-		if f.importedHook != nil {
-			f.importedHook(block)
-		}
-	}()
-}
-
 func (f *Fetcher) insert(peer string, block *types.Block) {
 	hash := block.Hash()
 
