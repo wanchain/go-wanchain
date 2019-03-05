@@ -42,7 +42,7 @@ func generateTestAddrs() {
 		epAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
 		epActs[i] = 1
 		if (i+1)%10 == 0 {
-			epActs[i] = 0
+			//	epActs[i] = 0
 		}
 	}
 

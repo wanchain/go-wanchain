@@ -22,7 +22,7 @@ func TestRun(t *testing.T) {
 	TestSetActivityInterface(t)
 	TestSetStakerInterface(t)
 
-	testTimes := 100
+	testTimes := 1
 
 	for i := 0; i < testTimes; i++ {
 		for m := 0; m < pos.SlotCount; m++ {
@@ -37,14 +37,19 @@ func TestRun(t *testing.T) {
 		}
 	}
 
+	sumTotal := big.NewInt(0)
 	for k, v := range delegateStakerMap {
 		fmt.Println("Delegate of:", k.Hex())
 		fmt.Println("---------->")
 		for i := 0; i < len(v); i++ {
-			fmt.Println("addr:", v[i].Hex(), "balance:", statedb.GetBalance(v[i]).String())
+			sum := statedb.GetBalance(v[i])
+			fmt.Println("addr:", v[i].Hex(), "balance:", sum.String())
+			sumTotal.Add(sumTotal, sum)
 		}
 		fmt.Println("<----------")
 	}
+
+	fmt.Println("sum Total:", sumTotal.String())
 }
 
 func TestCheckTotalValue(t *testing.T) {

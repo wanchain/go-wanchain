@@ -152,7 +152,10 @@ func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
 
 func saveIncentiveIncome(total, foundation, gasPool *big.Int) {
 	//	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+}
 
+func saveIncentiveDivide(ep, rp, sl *big.Int) {
+	fmt.Println("ep:", ep, "rp:", rp, "sl:", sl)
 }
 
 func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
@@ -186,6 +189,7 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
 	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
+	saveIncentiveDivide(epochLeaderSubsidy, randomProposerSubsidy, slotLeaderSubsidy)
 
 	sum := big.NewInt(0)
 	sum.Add(sum, epochLeaderSubsidy)
