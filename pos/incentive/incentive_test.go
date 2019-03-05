@@ -84,3 +84,7 @@ func TestCheckTotalValue(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestInit(t *testing.T) {
+	Init(getInfo, setInfo)
+}

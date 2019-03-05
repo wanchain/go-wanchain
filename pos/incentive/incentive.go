@@ -171,7 +171,14 @@ func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
 	return extraRemain
 }
 
-// Run is use to run the incentive
+// Init is use to init the outsides interface of staker.
+// Should be called at the node start
+func Init(get getStakerInfoFn, set setStakerInfoFn) {
+	SetStakerInterface(get, set)
+	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
+}
+
+// Run is use to run the incentive should be called in Finalize of consensus
 func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
 	if isFinished(stateDb, epochID) {
 		return true
