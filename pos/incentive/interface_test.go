@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/pos"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -31,7 +33,7 @@ func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address,
 }
 
 func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int, float64) {
-	return slAddrs, slBlks, 1
+	return epAddrs, slBlks, 1
 }
 
 func generateTestAddrs() {
@@ -48,9 +50,8 @@ func generateTestAddrs() {
 	}
 
 	for i := 0; i < addrsCount; i++ {
-		key, _ := crypto.GenerateKey()
-		slAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
-		slBlks[i] = 20
+		slAddrs[i] = epAddrs[i]
+		slBlks[i] = pos.SlotCount / addrsCount
 	}
 }
 func TestSetActivityInterface(t *testing.T) {

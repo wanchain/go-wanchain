@@ -91,9 +91,34 @@ func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int, 
 }
 
 //slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
-func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64) ([][]vm.ClientIncentive, *big.Int, error) {
+func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64, slotCount int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
-	return nil, remains, nil
+
+	scale := 100000.0
+
+	incentiveOfSlot := big.NewInt(0).Div(funds, big.NewInt(int64(slotCount)))
+	incentiveScale := big.NewInt(0).Mul(incentiveOfSlot, big.NewInt(int64(act*scale)))
+	incentiveActive := incentiveScale.Div(incentiveScale, big.NewInt(int64(scale))) // get incentive after activity calc.
+	singleRemain := big.NewInt(0).Sub(incentiveOfSlot, incentiveActive)
+
+	remains.Add(remains, big.NewInt(0).Mul(singleRemain, big.NewInt(int64(slotCount))))
+
+	fundAddrs := make([]common.Address, 0)
+	fundValues := make([]*big.Int, 0)
+
+	count := len(addrs)
+	for i := 0; i < count; i++ {
+		fundAddrs = append(fundAddrs, addrs[i])
+		fundValues = append(fundValues, big.NewInt(0).Mul(incentiveActive, big.NewInt(int64(blocks[i]))))
+	}
+
+	finalIncentive, subRemain, err := delegate(fundAddrs, fundValues, epochID)
+	if err != nil {
+		return nil, nil, err
+	}
+	remains.Add(remains, subRemain)
+
+	return finalIncentive, remains, nil
 }
 
 func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *big.Int) bool {
@@ -149,7 +174,7 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct)
+	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, pos.SlotCount, epochID)
 	if err != nil {
 		return false
 	}
