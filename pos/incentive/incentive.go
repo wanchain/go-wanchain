@@ -136,8 +136,12 @@ func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *
 	return true
 }
 
-func pay(incentives [][]vm.ClientIncentive) {
-
+func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
+	for i := 0; i < len(incentives); i++ {
+		for m := 0; m < len(incentives[i]); m++ {
+			stateDb.AddBalance(incentives[i][m].Addr, incentives[i][m].Incentive)
+		}
+	}
 }
 
 // Run is use to run the incentive
@@ -187,7 +191,7 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
 
-	pay(finalIncentive)
+	pay(finalIncentive, stateDb)
 
 	setStakerInfo(finalIncentive, epochID)
 
