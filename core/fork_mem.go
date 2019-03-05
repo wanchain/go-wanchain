@@ -84,49 +84,56 @@ func (f *ForkMem) Maxvalid(bc *BlockChain) (types.Blocks,error){
 	hashs := f.kBufferedChains[maxNumKey]
 
 	minSid := ^uint64(0)
-	midSidBlk = nil
+	midSidBlk = f.kBufferedBlks[hashs[0]]
 	epidOld := uint64(0)
-	//same block height
-	for _,hs := range hashs {
+	//if there are more
+	if len(hashs) > 1 {
+		//same block height
+		for _, hs := range hashs {
 
-		blk := f.kBufferedBlks[hs]
-		epidNew,sid,err := f.GetBlockEpochIdAndSlotId(blk)
-		if err != nil {
-			continue
-		}
+			blk := f.kBufferedBlks[hs]
+			epidNew, sid, err := f.GetBlockEpochIdAndSlotId(blk)
+			if err != nil {
+				continue
+			}
 
-		if epidOld == 0 {
-			epidOld = epidNew
-		}
+			if epidOld == 0 {
+				epidOld = epidNew
+			}
 
-		if sid < minSid {
-			minSid = sid
-			midSidBlk = blk
+			if sid < minSid {
+				minSid = sid
+				midSidBlk = blk
+			}
 		}
 	}
-
-	// reduce new chain
+		// reduce new chain
 	for ; midSidBlk != nil && midSidBlk.NumberU64() != workBlkNum; midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()] {
 		chainBlks = append(chainBlks, midSidBlk)
 	}
 
-	//find common prefix
-	for {
+		//find common prefix
+	if midSidBlk != nil && midSidBlk.Hash() != workBlk.Hash() {
+		for {
 
-		if workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64()==midSidBlk.NumberU64() {
-			break
+				if workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64() == midSidBlk.NumberU64() {
+					break
+				}
+
+				midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()]
+				if midSidBlk == nil {
+					return nil, errors.New("can not find common prefix")
+				}
+
+				chainBlks = append(chainBlks, midSidBlk)
+				workBlk = bc.GetBlock(workBlk.ParentHash(), workBlk.NumberU64()-1)
 		}
-
-		midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()]
-		if midSidBlk == nil {
-			return nil,errors.New("can not find common prefix")
-		}
-
-		chainBlks = append(chainBlks, midSidBlk)
-		workBlk = bc.GetBlock(workBlk.ParentHash(), workBlk.NumberU64()-1)
 	}
 
-	return chainBlks,nil
+
+
+	return chainBlks, nil
+
 }
 
 
