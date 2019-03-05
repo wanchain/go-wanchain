@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -32,7 +33,7 @@ func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address,
 	return rpAddrs, rpActs
 }
 
-func testgetSltLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int, float64) {
+func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {
 	return epAddrs, slBlks, 1
 }
 
@@ -57,6 +58,7 @@ func generateTestAddrs() {
 		slBlks[i] = pos.SlotCount / addrsCount
 	}
 }
+
 func TestSetActivityInterface(t *testing.T) {
 	generateTestAddrs()
 	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)

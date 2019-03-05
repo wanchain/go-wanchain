@@ -3,6 +3,8 @@ package incentive
 import (
 	"math"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/common"
 )
 
 func calcPercent(total *big.Int, percent float64) *big.Int {
@@ -13,4 +15,26 @@ func calcPercent(total *big.Int, percent float64) *big.Int {
 
 func round(x float64) int64 {
 	return int64(math.Floor(x + 0.5))
+}
+
+func getEpochIDFromDifficulty(difficulty *big.Int) uint64 {
+	epochID := difficulty.Uint64() >> 32
+	return epochID
+}
+
+func sumIntArray(array []int) int {
+	sum := 0
+	for i := 0; i < len(array); i++ {
+		sum += array[i]
+	}
+	return sum
+}
+
+func addressInclude(addr common.Address, addrs []common.Address) bool {
+	for i := 0; i < len(addrs); i++ {
+		if addr.Hex() == addrs[i].Hex() {
+			return true
+		}
+	}
+	return false
 }

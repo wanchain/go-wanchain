@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/wanchain/go-wanchain/pos"
@@ -171,7 +172,7 @@ func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
 }
 
 // Run is use to run the incentive
-func Run(stateDb *state.StateDB, epochID uint64) bool {
+func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
 	if isFinished(stateDb, epochID) {
 		return true
 	}
@@ -184,7 +185,7 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
-	slAddrs, slBlk, slAct := getSlotLeaderInfo(stateDb, epochID)
+	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, pos.SlotCount)
 
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))

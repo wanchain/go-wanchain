@@ -26,7 +26,7 @@ func TestRun(t *testing.T) {
 
 	for i := 0; i < testTimes; i++ {
 		for m := 0; m < pos.SlotCount; m++ {
-			if !Run(statedb, uint64(i)) {
+			if !Run(nil, statedb, uint64(i)) {
 				t.FailNow()
 			}
 		}

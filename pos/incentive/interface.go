@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 )
@@ -16,7 +17,7 @@ type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common
 
 type getRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
-type getSlotLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int, float64)
+type getSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
 var getStakerInfo getStakerInfoFn
 
