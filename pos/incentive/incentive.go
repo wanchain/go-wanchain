@@ -129,9 +129,16 @@ func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *
 		}
 	}
 
+	fmt.Println("Total:", total, "payout:", sumPay.String(), "remains:", remain)
+
 	sumPay.Add(sumPay, remain)
 	if total.Cmp(sumPay) == -1 {
 		return false
+	}
+
+	if total.Cmp(sumPay) == 1 {
+		remain.Add(remain, big.NewInt(0).Sub(total, sumPay))
+		fmt.Println("After rejust Total:", total, "payout:", sumPay.String(), "remains:", remain)
 	}
 	return true
 }
@@ -144,14 +151,22 @@ func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
 	}
 }
 
+func saveIncentiveIncome(total, foundation, gasPool *big.Int) {
+	//	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+
+}
+
 // Run is use to run the incentive
 func Run(stateDb *state.StateDB, epochID uint64) bool {
 	if isFinished(stateDb, epochID) {
 		return true
 	}
 
+	finalIncentive := make([][]vm.ClientIncentive, 0)
+	remainsAll := big.NewInt(0)
+
 	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
-	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+	saveIncentiveIncome(total, foundation, gasPool)
 
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
@@ -161,8 +176,12 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
 	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
 
-	finalIncentive := make([][]vm.ClientIncentive, 0)
-	remainsAll := big.NewInt(0)
+	sum := big.NewInt(0)
+	sum.Add(sum, epochLeaderSubsidy)
+	sum.Add(sum, randomProposerSubsidy)
+	sum.Add(sum, slotLeaderSubsidy)
+	sumRemain := big.NewInt(0).Sub(total, sum)
+	remainsAll.Add(remainsAll, sumRemain)
 
 	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	if err != nil {
