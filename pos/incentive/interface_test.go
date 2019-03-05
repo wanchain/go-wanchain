@@ -41,6 +41,9 @@ func generateTestAddrs() {
 		key, _ := crypto.GenerateKey()
 		epAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
 		epActs[i] = 1
+		if (i+1)%10 == 0 {
+			epActs[i] = 0
+		}
 	}
 
 	for i := 0; i < addrsCount; i++ {

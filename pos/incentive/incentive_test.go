@@ -19,7 +19,6 @@ var (
 )
 
 func TestRun(t *testing.T) {
-
 	TestSetActivityInterface(t)
 	TestSetStakerInterface(t)
 
