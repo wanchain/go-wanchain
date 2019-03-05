@@ -120,8 +120,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-
-
+	forkMem 	  *ForkMem
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -146,6 +145,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		forkMem:	  NewForkMem(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -938,9 +938,22 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
+	err := bc.forkMem.Push(chain)
+	if err != nil {
+		return 0,err
+	}
+	defer bc.forkMem.PopBack()
+
+	chain,err = bc.forkMem.Maxvalid(bc)
+	if err != nil || chain == nil {
+		return 0,err
+	}
+
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
+
+
 	return n, err
 }
 
@@ -1153,19 +1166,6 @@ func countTransactions(chain []*types.Block) (c int) {
 	return c
 }
 
-// reorgs takes two blocks, an old chain and a new chain and will reconstruct the blocks and inserts them
-// to be part of the new canonical chain and accumulates potential missing transactions and post an
-// event about them
-func calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
-	if pos.EpochBaseTime == 0 {
-		return
-	}
-
-	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
-	epochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
-	slotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	return
-}
 
 func updateReOrg(epochId uint64,length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
@@ -1211,24 +1211,6 @@ func updateFork(epochId uint64) {
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
-func (bc *BlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := block.Time().Uint64()
-
-	blkTd := block.Difficulty().Uint64()
-
-	blkEpochId = (blkTd >> 32)
-	blkSlotId = ((blkTd & 0xffffffff) >> 8)
-
-	calEpochId, calSlotId := calEpochSlotIDFromTime(blkTime)
-	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
-
-	if calEpochId != blkEpochId {
-		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
-		return 0, 0, errors.New("epochid and slotid is not match with blk time")
-	}
-
-	return
-}
 
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var (
@@ -1329,7 +1311,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	oldChainLen := len(oldChain)
 
-	oldEpochId, oldSlotId, err := bc.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
+	oldEpochId, oldSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
 		return fmt.Errorf("Impossible reorg because old epochId or slotId not match with time")
@@ -1337,7 +1319,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	newChainLen := len(newChain)
 
-	newEpochId, newSlotId, err := bc.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
+	newEpochId, newSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
@@ -1390,125 +1372,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	return nil
 }
-
-//func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
-//	var (
-//		newChain    types.Blocks
-//		oldChain    types.Blocks
-//		commonBlock *types.Block
-//		deletedTxs  types.Transactions
-//		deletedLogs []*types.Log
-//		// collectLogs collects the logs that were generated during the
-//		// processing of the block that corresponds with the given hash.
-//		// These logs are later announced as deleted.
-//		collectLogs = func(h common.Hash) {
-//			// Coalesce logs and set 'Removed'.
-//			receipts := GetBlockReceipts(bc.chainDb, h, bc.hc.GetBlockNumber(h))
-//			for _, receipt := range receipts {
-//				for _, log := range receipt.Logs {
-//					del := *log
-//					del.Removed = true
-//					deletedLogs = append(deletedLogs, &del)
-//				}
-//			}
-//		}
-//	)
-//
-//	// first reduce whoever is higher bound
-//	if oldBlock.NumberU64() > newBlock.NumberU64() {
-//		// reduce old chain
-//		for ; oldBlock != nil && oldBlock.NumberU64() != newBlock.NumberU64(); oldBlock = bc.GetBlock(oldBlock.ParentHash(), oldBlock.NumberU64()-1) {
-//			oldChain = append(oldChain, oldBlock)
-//			deletedTxs = append(deletedTxs, oldBlock.Transactions()...)
-//
-//			collectLogs(oldBlock.Hash())
-//		}
-//	} else {
-//		// reduce new chain and append new chain blocks for inserting later on
-//		for ; newBlock != nil && newBlock.NumberU64() != oldBlock.NumberU64(); newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1) {
-//			newChain = append(newChain, newBlock)
-//		}
-//	}
-//
-//	if oldBlock == nil {
-//		return fmt.Errorf("Invalid old chain")
-//	}
-//	if newBlock == nil {
-//		return fmt.Errorf("Invalid new chain")
-//	}
-//
-//	for {
-//		if oldBlock.Hash() == newBlock.Hash() {
-//			commonBlock = oldBlock
-//			break
-//		}
-//
-//		oldChain = append(oldChain, oldBlock)
-//		newChain = append(newChain, newBlock)
-//		deletedTxs = append(deletedTxs, oldBlock.Transactions()...)
-//		collectLogs(oldBlock.Hash())
-//
-//		oldBlock, newBlock = bc.GetBlock(oldBlock.ParentHash(), oldBlock.NumberU64()-1), bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
-//		if oldBlock == nil {
-//			return fmt.Errorf("Invalid old chain")
-//		}
-//		if newBlock == nil {
-//			return fmt.Errorf("Invalid new chain")
-//		}
-//	}
-//	//ppow extend
-//	if ethash, ok := bc.engine.(*ethash.Ethash); ok {
-//		log.Trace("wanchain willing revert")
-//		err := ethash.VerifyPPOWReorg(bc, oldBlock, oldChain, newChain)
-//		if err != nil {
-//			log.Error("wanchain revert invalid")
-//			return err
-//		}
-//	}
-//
-//	// Ensure the user sees large reorgs
-//	if len(oldChain) > 0 && len(newChain) > 0 {
-//		logFn := log.Debug
-//		if len(oldChain) > 63 {
-//			logFn = log.Warn
-//		}
-//		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
-//			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
-//	} else {
-//		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
-//	}
-//	var addedTxs types.Transactions
-//	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
-//	for _, block := range newChain {
-//		// insert the block in the canonical way, re-writing history
-//		bc.insert(block)
-//		// write lookup entries for hash based transaction/receipt searches
-//		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
-//			return err
-//		}
-//		addedTxs = append(addedTxs, block.Transactions()...)
-//	}
-//
-//	// calculate the difference between deleted and added transactions
-//	diff := types.TxDifference(deletedTxs, addedTxs)
-//	// When transactions get deleted from the database that means the
-//	// receipts that were created in the fork must also be deleted
-//	for _, tx := range diff {
-//		DeleteTxLookupEntry(bc.chainDb, tx.Hash())
-//	}
-//	if len(deletedLogs) > 0 {
-//		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
-//	}
-//	if len(oldChain) > 0 {
-//		go func() {
-//			for _, block := range oldChain {
-//				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
-//			}
-//		}()
-//	}
-//
-//	return nil
-//}
 
 // PostChainEvents iterates over the events generated by a chain insertion and
 // posts them into the event feed.
