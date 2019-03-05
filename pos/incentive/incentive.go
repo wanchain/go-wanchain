@@ -97,6 +97,17 @@ func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, ac
 }
 
 func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *big.Int) bool {
+	sumPay := big.NewInt(0)
+	for i := 0; i < len(readyToPay); i++ {
+		for m := 0; m < len(readyToPay[i]); m++ {
+			sumPay.Add(sumPay, readyToPay[i][m].Incentive)
+		}
+	}
+
+	sumPay.Add(sumPay, remain)
+	if total.Cmp(sumPay) == -1 {
+		return false
+	}
 	return true
 }
 
@@ -117,9 +128,9 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
 	slAddrs, slBlk, slAct := getSlotLeaderInfo(stateDb, epochID)
 
-	epochLeaderSubsidy := calcPercent(total, percentOfEpochLeader)
-	randomProposerSubsidy := calcPercent(total, percentOfRandomProposer)
-	slotLeaderSubsidy := calcPercent(total, percentOfSlotLeader)
+	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
+	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
+	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
 
 	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remainsAll := big.NewInt(0)

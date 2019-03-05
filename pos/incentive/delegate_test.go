@@ -2,12 +2,15 @@ package incentive
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
+
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // delegatesCalc can calc the delegate division
-func TestDelegatesCalc(t *testing.T) {
+func TestDelegate(t *testing.T) {
 	TestSetActivityInterface(t)
 	TestSetStakerInterface(t)
 
@@ -34,5 +37,60 @@ func TestDelegatesCalc(t *testing.T) {
 			fmt.Println(finalIncentive[i][m].Incentive.String())
 			fmt.Println("<--------")
 		}
+	}
+}
+
+func TestCeilingCalc(t *testing.T) {
+	value := big.NewInt(100)
+	percent := 0.02
+	calcValue := ceilingCalc(value, percent)
+
+	if calcValue.String() != value.String() {
+		t.FailNow()
+	}
+
+	percent = ceilingPercentS0
+	calcValue = ceilingCalc(value, percent)
+
+	if calcValue.String() != value.String() {
+		t.FailNow()
+	}
+
+	percent = ceilingPercentS0 * 2
+	calcValue = ceilingCalc(value, percent)
+
+	if calcValue.Int64() != 0 {
+		t.FailNow()
+	}
+
+	percent = ceilingPercentS0 * 3
+	calcValue = ceilingCalc(value, percent)
+
+	if calcValue.Int64() != 0 {
+		t.FailNow()
+	}
+
+	percent = ceilingPercentS0 * 1.5
+	calcValue = ceilingCalc(value, percent)
+
+	if calcValue.Int64() != 75 {
+		fmt.Println(calcValue)
+		t.FailNow()
+	}
+}
+
+func TestCalcTotalPercent(t *testing.T) {
+	testValues := make([]vm.ClientProbability, 3)
+	testValues[0].Probability = big.NewInt(100)
+	testValues[1].Probability = big.NewInt(200)
+	testValues[2].Probability = big.NewInt(300)
+
+	totalProb := big.NewInt(1200)
+
+	percent := calcTotalPercent(testValues, totalProb)
+
+	if math.Abs(percent-50) > 0.001 {
+		fmt.Println(percent)
+		t.FailNow()
 	}
 }

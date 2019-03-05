@@ -118,3 +118,34 @@ func TestRun(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckTotalValue(t *testing.T) {
+	total := big.NewInt(1000)
+
+	remain := big.NewInt(100)
+
+	toPay := make([][]vm.ClientIncentive, 3)
+	toPay[0] = make([]vm.ClientIncentive, 1)
+	toPay[1] = make([]vm.ClientIncentive, 2)
+	toPay[2] = make([]vm.ClientIncentive, 3)
+	toPay[0][0].Incentive = big.NewInt(100)
+	toPay[1][0].Incentive = big.NewInt(100)
+	toPay[1][1].Incentive = big.NewInt(100)
+	toPay[2][0].Incentive = big.NewInt(100)
+	toPay[2][1].Incentive = big.NewInt(100)
+	toPay[2][2].Incentive = big.NewInt(100)
+
+	if !checkTotalValue(total, toPay, remain) {
+		t.FailNow()
+	}
+
+	total = big.NewInt(700)
+	if !checkTotalValue(total, toPay, remain) {
+		t.FailNow()
+	}
+
+	total = big.NewInt(699)
+	if checkTotalValue(total, toPay, remain) {
+		t.FailNow()
+	}
+}
