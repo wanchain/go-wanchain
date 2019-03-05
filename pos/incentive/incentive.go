@@ -19,10 +19,10 @@ import (
 var (
 	redutionYears            = 5
 	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
-	percentOfEpochLeader     = 20
-	percentOfRandomProposer  = 20
-	percentOfSlotLeader      = 60
-	ceilingPercentS0         = 0.1
+	percentOfEpochLeader     = 20                                                                         //20%
+	percentOfRandomProposer  = 20                                                                         //20%
+	percentOfSlotLeader      = 60                                                                         //60%
+	ceilingPercentS0         = 10.0                                                                       //10%
 )
 
 const (

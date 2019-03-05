@@ -35,6 +35,15 @@ func TestDelegate(t *testing.T) {
 			fmt.Println(finalIncentive[i][m].Addr.Hex())
 			fmt.Println("-------->")
 			fmt.Println(finalIncentive[i][m].Incentive.String())
+			if m == 0 {
+				if finalIncentive[i][m].Incentive.String() != "122500000000000000" {
+					t.FailNow()
+				}
+			} else {
+				if finalIncentive[i][m].Incentive.String() != "22500000000000000" {
+					t.FailNow()
+				}
+			}
 			fmt.Println("<--------")
 		}
 	}
@@ -42,7 +51,7 @@ func TestDelegate(t *testing.T) {
 
 func TestCeilingCalc(t *testing.T) {
 	value := big.NewInt(100)
-	percent := 0.02
+	percent := 2.0
 	calcValue := ceilingCalc(value, percent)
 
 	if calcValue.String() != value.String() {
