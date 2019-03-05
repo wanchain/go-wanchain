@@ -1,6 +1,8 @@
 package incentive
 
 import (
+	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -64,8 +66,21 @@ var (
 
 func getInfo(addr common.Address, epochID uint64) ([]vm.ClientProbability, uint64, *big.Int, error) {
 
-	//return delegateStakerMap[addr], delegateStakerProbilityMap[addr], 10, 0.025
-	return nil, 0, nil, nil
+	addrs := delegateStakerMap[addr]
+	probs := delegateStakerProbilityMap[addr]
+	count := len(addrs)
+	if count == 0 {
+		fmt.Println("Do not found address")
+		return nil, 0, nil, errors.New("Do not found address")
+	}
+
+	client := make([]vm.ClientProbability, count)
+	for i := 0; i < count; i++ {
+		client[i].Addr = addrs[i]
+		client[i].Probability = probs[i]
+	}
+
+	return client, 10, big.NewInt(int64(100 * count * 10)), nil
 }
 
 func setInfo([][]vm.ClientIncentive, uint64) error { return nil }
@@ -77,7 +92,7 @@ func generateTestStaker() {
 		for m := 0; m < delegateStakerCount; m++ {
 			key, _ := crypto.GenerateKey()
 			stakers[m] = crypto.PubkeyToAddress(key.PublicKey)
-			probility[m] = key.D
+			probility[m] = big.NewInt(100)
 		}
 		stakers[0] = epAddrs[i]
 		delegateStakerMap[epAddrs[i]] = stakers
@@ -90,7 +105,7 @@ func generateTestStaker() {
 		for m := 0; m < delegateStakerCount; m++ {
 			key, _ := crypto.GenerateKey()
 			stakers[m] = crypto.PubkeyToAddress(key.PublicKey)
-			probility[m] = key.D
+			probility[m] = big.NewInt(100)
 		}
 		stakers[0] = rpAddrs[i]
 		delegateStakerMap[rpAddrs[i]] = stakers
