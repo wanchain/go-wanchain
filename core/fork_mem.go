@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/log"
+	"sort"
 )
 
 type ForkMem struct {
@@ -26,6 +27,27 @@ func NewForkMem() *ForkMem{
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
 	f.curMaxBlkNum = 0
 	return f
+}
+
+type BlockSorter [] *types.Block
+
+func newBlockSorter() BlockSorter {
+	ps := make(BlockSorter, 0)
+	return ps
+}
+
+//Len()
+func (s BlockSorter) Len() int {
+	return len(s)
+}
+
+func (s BlockSorter) Less(i, j int) bool {
+	return s[i].NumberU64() < s[j].NumberU64()
+}
+
+//Swap()
+func (s BlockSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 
@@ -130,7 +152,7 @@ func (f *ForkMem) Maxvalid(bc *BlockChain) (types.Blocks,error){
 		}
 	}
 
-
+	sort.Sort(BlockSorter(chainBlks))
 
 	return chainBlks, nil
 
