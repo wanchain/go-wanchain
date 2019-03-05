@@ -11,23 +11,12 @@ import (
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
-func getEpochLeaderAddressAndActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
-	addrs := getEpLeaderAddress(epochID)
-	return getEpochLeaderActivity(stateDb, epochID, addrs)
-}
-
-func getEpLeaderAddress(epochID uint64) []common.Address {
+func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
 	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
 	addrs := make([]common.Address, len(epochLeaders))
-	for i := 0; i < len(epochLeaders); i++ {
-		addrs[i] = crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[i]))
-	}
-	return addrs
-}
-
-func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64, addrs []common.Address) ([]common.Address, []int) {
 	activity := make([]int, len(addrs))
 	for i := 0; i < len(addrs); i++ {
+		addrs[i] = crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[i]))
 		activity[i] = 0
 	}
 

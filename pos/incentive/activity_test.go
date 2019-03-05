@@ -6,6 +6,9 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -60,11 +63,27 @@ func TestGetSlotLeaderActivity(t *testing.T) {
 	}
 }
 
-func TestGetEpochLeaderActivity(t *testing.T) {
+type TestSelectLead struct{}
+
+func (t *TestSelectLead) SelectLeadersLoop(epochID uint64) error { return nil }
+func (t *TestSelectLead) GetEpochLeaders(epochID uint64) [][]byte {
+	buf := make([][]byte, len(epPks))
+	for i := 0; i < len(epPks); i++ {
+		buf[i] = crypto.FromECDSAPub(epPks[i])
+	}
+	return buf
+}
+func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
+	return nil
+}
+
+func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 	generateTestAddrs()
 	generateTestStaker()
 
 	epochID := uint64(0)
+	posdb.SetEpocherInst(&TestSelectLead{})
+
 	for i := 0; i < len(epAddrs); i++ {
 		epochIDBuf := postools.Uint64ToBytes(epochID)
 		selfIndexBuf := postools.Uint64ToBytes(uint64(i))
@@ -77,7 +96,8 @@ func TestGetEpochLeaderActivity(t *testing.T) {
 		statedb.SetStateByteArray(vm.GetSlotLeaderSCAddress(), keyHash, buf)
 	}
 
-	addrs, activity := getEpochLeaderActivity(statedb, epochID, epAddrs)
+	addrs, activity := getEpochLeaderActivity(statedb, epochID)
+
 	for i := 0; i < len(addrs); i++ {
 		if addrs[i].Hex() != epAddrs[i].Hex() {
 			t.FailNow()
