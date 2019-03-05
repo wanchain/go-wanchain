@@ -60,15 +60,24 @@ func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint6
 }
 
 
-func (f *ForkMem) Maxvalid(workBlk *types.Block) types.Blocks{
+func (f *ForkMem) Maxvalid(bc *BlockChain) (types.Blocks,error){
 
-	var allBlks types.Blocks
+	var chainBlks types.Blocks
 	var midSidBlk *types.Block
 
-	workBlkNum := workBlk.NumberU64()
+	if bc == nil {
+		return nil,errors.New("working block chain is nil")
+	}
 
+	workBlk := bc.CurrentBlock()
+	if workBlk == nil {
+		return nil,errors.New("can not get current block in working chain")
+	}
+
+	workBlkNum := workBlk.NumberU64()
+	//if work block is in the highest one or higher than buffer,use work blk,work chain will not change
 	if workBlkNum >= f.curMaxBlkNum {
-		return types.Blocks{workBlk}
+		return nil,nil
 	}
 
 	maxNumKey := big.NewInt(int64(f.curMaxBlkNum)).Text(16)
@@ -76,24 +85,48 @@ func (f *ForkMem) Maxvalid(workBlk *types.Block) types.Blocks{
 
 	minSid := ^uint64(0)
 	midSidBlk = nil
-
+	epidOld := uint64(0)
+	//same block height
 	for _,hs := range hashs {
+
 		blk := f.kBufferedBlks[hs]
-		_,sid,err := f.GetBlockEpochIdAndSlotId(blk)
+		epidNew,sid,err := f.GetBlockEpochIdAndSlotId(blk)
 		if err != nil {
 			continue
+		}
+
+		if epidOld == 0 {
+			epidOld = epidNew
 		}
 
 		if sid < minSid {
 			minSid = sid
 			midSidBlk = blk
 		}
-
-		allBlks = append(allBlks,blk)
 	}
 
+	// reduce new chain
+	for ; midSidBlk != nil && midSidBlk.NumberU64() != workBlkNum; midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()] {
+		chainBlks = append(chainBlks, midSidBlk)
+	}
 
-	return  types.Blocks{midSidBlk}
+	//find common prefix
+	for {
+
+		if workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64()==midSidBlk.NumberU64() {
+			break
+		}
+
+		midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()]
+		if midSidBlk == nil {
+			return nil,errors.New("can not find common prefix")
+		}
+
+		chainBlks = append(chainBlks, midSidBlk)
+		workBlk = bc.GetBlock(workBlk.ParentHash(), workBlk.NumberU64()-1)
+	}
+
+	return chainBlks,nil
 }
 
 
@@ -150,7 +183,7 @@ func (f *ForkMem) push(block *types.Block) error{
 	return nil
 }
 
-func (f *ForkMem) popBack() *types.Block{
+func (f *ForkMem) PopBack() {
 
 	//need to store k data
 	if len(f.kBufferedChains) > int(pos.Cfg().K) {
@@ -168,7 +201,7 @@ func (f *ForkMem) popBack() *types.Block{
 		delete(f.kBufferedChains,bnText.Text(16))
 	}
 
-	return nil
+	return
 }
 
 

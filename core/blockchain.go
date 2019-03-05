@@ -120,8 +120,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-
-
+	forkMem 	  *ForkMem
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -146,6 +145,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		forkMem:	  NewForkMem(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -938,9 +938,22 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
+	err := bc.forkMem.Push(chain)
+	if err != nil {
+		return 0,err
+	}
+	defer bc.forkMem.PopBack()
+
+	chain,err = bc.forkMem.Maxvalid(bc)
+	if err != nil || chain == nil {
+		return 0,err
+	}
+
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
+
+
 	return n, err
 }
 
