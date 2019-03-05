@@ -64,17 +64,19 @@ func TestCheckTotalValue(t *testing.T) {
 	toPay[2][1].Incentive = big.NewInt(100)
 	toPay[2][2].Incentive = big.NewInt(100)
 
-	if !checkTotalValue(total, toPay, remain) {
+	sumPay := sumToPay(toPay)
+
+	if !checkTotalValue(total, sumPay, remain) {
 		t.FailNow()
 	}
 
 	total = big.NewInt(700)
-	if !checkTotalValue(total, toPay, remain) {
+	if !checkTotalValue(total, sumPay, remain) {
 		t.FailNow()
 	}
 
 	total = big.NewInt(699)
-	if checkTotalValue(total, toPay, remain) {
+	if checkTotalValue(total, sumPay, remain) {
 		t.FailNow()
 	}
 }

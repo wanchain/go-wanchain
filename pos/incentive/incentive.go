@@ -121,25 +121,24 @@ func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, ac
 	return finalIncentive, remains, nil
 }
 
-func checkTotalValue(total *big.Int, readyToPay [][]vm.ClientIncentive, remain *big.Int) bool {
+func sumToPay(readyToPay [][]vm.ClientIncentive) *big.Int {
 	sumPay := big.NewInt(0)
 	for i := 0; i < len(readyToPay); i++ {
 		for m := 0; m < len(readyToPay[i]); m++ {
 			sumPay.Add(sumPay, readyToPay[i][m].Incentive)
 		}
 	}
+	return sumPay
+}
 
+func checkTotalValue(total *big.Int, sumPay, remain *big.Int) bool {
 	fmt.Println("Total:", total, "payout:", sumPay.String(), "remains:", remain)
 
-	sumPay.Add(sumPay, remain)
-	if total.Cmp(sumPay) == -1 {
+	sum := big.NewInt(0).Add(sumPay, remain)
+	if total.Cmp(sum) == -1 {
 		return false
 	}
 
-	if total.Cmp(sumPay) == 1 {
-		remain.Add(remain, big.NewInt(0).Sub(total, sumPay))
-		fmt.Println("After rejust Total:", total, "payout:", sumPay.String(), "remains:", remain)
-	}
 	return true
 }
 
@@ -154,6 +153,18 @@ func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
 func saveIncentiveIncome(total, foundation, gasPool *big.Int) {
 	//	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
 
+}
+
+func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
+	sum := big.NewInt(0)
+	sum.Add(sum, sumPay)
+	sum.Add(sum, remain)
+
+	extraRemain := big.NewInt(0)
+	if total.Cmp(sum) == 1 {
+		extraRemain.Sub(total, sum)
+	}
+	return extraRemain
 }
 
 // Run is use to run the incentive
@@ -204,7 +215,13 @@ func Run(stateDb *state.StateDB, epochID uint64) bool {
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	if !checkTotalValue(total, finalIncentive, remainsAll) {
+	sumPay := sumToPay(finalIncentive)
+
+	extraRemain := getExtraRemain(total, sumPay, remainsAll)
+
+	remainsAll.Add(remainsAll, extraRemain)
+
+	if !checkTotalValue(total, sumPay, remainsAll) {
 		return false
 	}
 
