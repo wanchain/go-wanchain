@@ -1,6 +1,7 @@
 package incentive
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -18,6 +19,7 @@ import (
 var (
 	addrsCount = 20
 	epAddrs    = make([]common.Address, addrsCount)
+	epPks      = make([]*ecdsa.PublicKey, addrsCount)
 	rpAddrs    = make([]common.Address, addrsCount)
 	slAddrs    = make([]common.Address, addrsCount)
 	epActs     = make([]int, addrsCount)
@@ -41,6 +43,7 @@ func generateTestAddrs() {
 	for i := 0; i < addrsCount; i++ {
 		key, _ := crypto.GenerateKey()
 		epAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
+		epPks[i] = &key.PublicKey
 		epActs[i] = 1
 		if (i+1)%10 == 0 {
 			//	epActs[i] = 0

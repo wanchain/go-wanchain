@@ -8,7 +8,10 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
 type TestChainReader struct {
@@ -55,5 +58,32 @@ func TestGetSlotLeaderActivity(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
 
+func TestGetEpochLeaderActivity(t *testing.T) {
+	generateTestAddrs()
+	generateTestStaker()
+
+	epochID := uint64(0)
+	for i := 0; i < len(epAddrs); i++ {
+		epochIDBuf := postools.Uint64ToBytes(epochID)
+		selfIndexBuf := postools.Uint64ToBytes(uint64(i))
+		keyHash := vm.GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
+
+		buf, err := slottools.RlpPackStage2DataForTx(epochID, uint64(i), epPks[i], epPks, []*big.Int{big.NewInt(100), big.NewInt(100), big.NewInt(100)}, vm.GetSlotLeaderScAbiString())
+		if err != nil {
+			t.FailNow()
+		}
+		statedb.SetStateByteArray(vm.GetSlotLeaderSCAddress(), keyHash, buf)
+	}
+
+	addrs, activity := getEpochLeaderActivity(statedb, epochID, epAddrs)
+	for i := 0; i < len(addrs); i++ {
+		if addrs[i].Hex() != epAddrs[i].Hex() {
+			t.FailNow()
+		}
+		if activity[i] != 1 {
+			t.FailNow()
+		}
+	}
 }

@@ -4,10 +4,61 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
-func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
-	return nil, nil
+func getEpochLeaderAddressAndActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
+	addrs := getEpLeaderAddress(epochID)
+	return getEpochLeaderActivity(stateDb, epochID, addrs)
+}
+
+func getEpLeaderAddress(epochID uint64) []common.Address {
+	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
+	addrs := make([]common.Address, len(epochLeaders))
+	for i := 0; i < len(epochLeaders); i++ {
+		addrs[i] = crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[i]))
+	}
+	return addrs
+}
+
+func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64, addrs []common.Address) ([]common.Address, []int) {
+	activity := make([]int, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		activity[i] = 0
+	}
+
+	for i := 0; i < len(addrs); i++ {
+		epochIDBuf := postools.Uint64ToBytes(epochID)
+		selfIndexBuf := postools.Uint64ToBytes(uint64(i))
+		keyHash := vm.GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
+
+		data := stateDb.GetStateByteArray(vm.GetSlotLeaderSCAddress(), keyHash)
+		if data == nil {
+			continue
+		}
+
+		epID, slfIndex, selfPk, _, _, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
+		if err != nil {
+			continue
+		}
+
+		if epID != epochID || uint64(i) != slfIndex {
+			continue
+		}
+
+		addr := crypto.PubkeyToAddress(*selfPk)
+		for m := 0; m < len(addrs); m++ {
+			if addr.Hex() == addrs[m].Hex() {
+				activity[m] = 1
+			}
+		}
+	}
+
+	return addrs, activity
 }
 
 func getRandomProposerActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
