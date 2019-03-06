@@ -145,7 +145,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		forkMem:	  NewForkMemBlockChain(),
+		forkMem:	  NewForkMemBlockChain(BLOCKCHAIN),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -938,13 +938,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
-	err := bc.forkMem.Push(chain)
+	err := bc.forkMem.PushBlocks(chain)
 	if err != nil {
 		return 0,err
 	}
 	defer bc.forkMem.PopBack()
 
-	chain,err = bc.forkMem.Maxvalid(bc)
+	chain,err = bc.forkMem.Maxvalid(bc.CurrentBlock())
 	if err != nil || chain == nil {
 		return 0,err
 	}
@@ -1311,7 +1311,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	oldChainLen := len(oldChain)
 
-	oldEpochId, oldSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1])
+	oldEpochId, oldSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1].Header())
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
 		return fmt.Errorf("Impossible reorg because old epochId or slotId not match with time")
@@ -1319,7 +1319,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	newChainLen := len(newChain)
 
-	newEpochId, newSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1])
+	newEpochId, newSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
@@ -1464,6 +1464,9 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
 		return i, err
 	}
+
+
+
 
 	// Make sure only one thread manipulates the chain at once
 	bc.chainmu.Lock()

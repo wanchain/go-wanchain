@@ -13,16 +13,24 @@ import (
 	"sort"
 )
 
+type chainType uint
+const(
+	BLOCKCHAIN = iota //0
+	HEADERCHAIN //1
+)
+
 type ForkMemBlockChain struct {
+	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
 	curMaxBlkNum	 uint64
 	lock sync.RWMutex
 }
 
-func NewForkMemBlockChain() *ForkMemBlockChain{
+func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain{
 
 	f := &ForkMemBlockChain{}
+	f.ctype = ctype
 	f.kBufferedChains = make(map[string][]common.Hash)
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
 	f.curMaxBlkNum = 0
@@ -57,10 +65,10 @@ func (f *ForkMemBlockChain) calEpochSlotIDFromTime(timeUnix uint64) (epochId uin
 	return
 }
 
-func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := block.Time().Uint64()
+func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
+	blkTime := header.Time.Uint64()
 
-	blkTd := block.Difficulty().Uint64()
+	blkTd := header.Difficulty.Uint64()
 
 	blkEpochId = (blkTd >> 32)
 	blkSlotId = ((blkTd & 0xffffffff) >> 8)
@@ -77,16 +85,11 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpo
 }
 
 
-func (f *ForkMemBlockChain) Maxvalid(bc *BlockChain) (types.Blocks,error){
+func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 
 	var chainBlks types.Blocks
 	var midSidBlk *types.Block
 
-	if bc == nil {
-		return nil,errors.New("working block chain is nil")
-	}
-
-	workBlk := bc.CurrentBlock()
 	if workBlk == nil {
 		return nil,errors.New("can not get current block in working chain")
 	}
@@ -109,7 +112,7 @@ func (f *ForkMemBlockChain) Maxvalid(bc *BlockChain) (types.Blocks,error){
 		for _, hs := range hashs {
 
 			blk := f.kBufferedBlks[hs]
-			epidNew, sid, err := f.GetBlockEpochIdAndSlotId(blk)
+			epidNew, sid, err := f.GetBlockEpochIdAndSlotId(blk.Header())
 			if err != nil {
 				continue
 			}
@@ -133,7 +136,7 @@ func (f *ForkMemBlockChain) Maxvalid(bc *BlockChain) (types.Blocks,error){
 	if midSidBlk != nil && midSidBlk.Hash() != workBlk.Hash() {
 		for {
 
-				if workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64() == midSidBlk.NumberU64() {
+				if workBlk!= nil && workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64() == midSidBlk.NumberU64() {
 					break
 				}
 
@@ -143,18 +146,47 @@ func (f *ForkMemBlockChain) Maxvalid(bc *BlockChain) (types.Blocks,error){
 				}
 
 				chainBlks = append(chainBlks, midSidBlk)
-				workBlk = bc.GetBlock(workBlk.ParentHash(), workBlk.NumberU64()-1)
+				workBlk = f.kBufferedBlks[workBlk.ParentHash()]
 		}
 	}
 
 	sort.Sort(BlockSorter(chainBlks))
 
 	return chainBlks, nil
-
 }
 
 
-func (f *ForkMemBlockChain) Push(blockChain types.Blocks) error{
+func (f *ForkMemBlockChain) PushHeaders(headerChain []*types.Header) error{
+
+	if f.ctype != HEADERCHAIN {
+		return errors.New("error chain type which require HEADERCHAIN")
+	}
+
+	for _,header := range headerChain {
+		blk := types.NewBlockWithHeader(header)
+		if len(f.kBufferedBlks) > 0 {
+			parent := f.kBufferedBlks[blk.ParentHash()]
+
+			if parent == nil {
+				log.Debug("Unknown parent of propagated block", "number", blk.Number(), "hash", blk.Hash(), "parent", blk.ParentHash())
+				return errors.New("not find parent hash in buffer")
+			}
+		}
+
+		err := f.push(blk)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *ForkMemBlockChain) PushBlocks(blockChain types.Blocks) error{
+
+	if f.ctype != BLOCKCHAIN {
+		return errors.New("error chain type which require BLOCKCHAIN")
+	}
 
 	for _,blk := range blockChain {
 
