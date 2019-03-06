@@ -1,11 +1,13 @@
 package incentive
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/log"
 
 	"github.com/wanchain/go-wanchain/pos"
 
@@ -39,6 +41,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 	SetStakerInterface(get, set)
 	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	SetRBAddressInterface(getRbAddr)
+	log.Info("--------Incentive Init Finish----------")
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
@@ -46,6 +49,8 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	if isFinished(stateDb, epochID) {
 		return true
 	}
+
+	log.Info("--------Incentive Run Start----------", "epochID", epochID)
 
 	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remainsAll := big.NewInt(0)
@@ -107,6 +112,8 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	setStakerInfo(epochID, finalIncentive)
 
 	finished(stateDb, epochID)
+
+	log.Info("--------Incentive Run Success Finish----------", "epochID", epochID)
 	return true
 }
 
@@ -135,6 +142,9 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
 	count := len(addrs)
+	if count == 0 {
+		return nil, nil, errors.New("protocalRunerAllocate addrs length == 0")
+	}
 
 	fundOne := funds.Div(funds, big.NewInt(int64(count)))
 	fundAddrs := make([]common.Address, 0)
