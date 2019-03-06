@@ -1,10 +1,12 @@
 package incentive
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 // delegate can calc the delegate division
@@ -12,7 +14,7 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 	finalIncentive := make([][]vm.ClientIncentive, len(addrs))
 	remain := big.NewInt(0)
 	for i := 0; i < len(addrs); i++ {
-		stakers, division, totalProbility, err := getStakerInfo(epochID, addrs[i])
+		stakers, division, totalProbility, err := getStakerInfoAndCheck(epochID, addrs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -21,6 +23,31 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 		remain.Add(remain, subRemain)
 	}
 	return finalIncentive, remain, nil
+}
+
+func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
+	stakers, division, totalProbility, err := getStakerInfo(epochID, addr)
+	if err != nil {
+		log.Error("getStakerInfo error", "error", err.Error())
+		return nil, 0, nil, err
+	}
+
+	if (stakers == nil) || (len(stakers) == 0) {
+		log.Error("getStakerInfo get stakers error")
+		return nil, 0, nil, errors.New("getStakerInfo get stakers error")
+	}
+
+	if division > 100 {
+		log.Error("getStakerInfo get division error")
+		return nil, 0, nil, errors.New("getStakerInfo get division error")
+	}
+
+	if totalProbility.Uint64() == 0 {
+		log.Error("getStakerInfo get totalProbility error")
+		return nil, 0, nil, errors.New("getStakerInfo get totalProbility error")
+	}
+
+	return stakers, division, totalProbility, err
 }
 
 func ceilingCalc(value *big.Int, totalPercent float64) *big.Int {

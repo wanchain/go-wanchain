@@ -6,6 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
@@ -13,6 +14,11 @@ import (
 
 func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
 	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
+	if epochLeaders == nil || len(epochLeaders) == 0 {
+		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
+		return []common.Address{}, []int{}
+	}
+
 	addrs := make([]common.Address, len(epochLeaders))
 	activity := make([]int, len(addrs))
 	for i := 0; i < len(addrs); i++ {
@@ -52,10 +58,16 @@ func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Ad
 
 func getRandomProposerActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
 	if getRandomProposerAddress == nil {
+		log.Error("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
 	addrs := getRandomProposerAddress(epochID)
+	if (addrs == nil) || (len(addrs) == 0) {
+		log.Error("incentive activity getRandomProposerAddress error", "epochID", epochID)
+		return []common.Address{}, []int{}
+	}
+
 	activity := make([]int, len(addrs))
 	for i := 0; i < len(addrs); i++ {
 		if vm.IsRBActive(stateDb, epochID, uint32(i)) {
@@ -72,6 +84,10 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 	miners := make(map[common.Address]int)
 	for i := currentNumber - 1; i > 0; i-- {
 		header := chain.GetHeaderByNumber(i)
+		if header == nil {
+			continue
+		}
+
 		epID := getEpochIDFromDifficulty(header.Difficulty)
 		if epID == epochID {
 			cnt, ok := miners[header.Coinbase]
