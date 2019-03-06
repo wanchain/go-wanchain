@@ -35,7 +35,7 @@ const (
 
 // Init is use to init the outsides interface of staker.
 // Should be called at the node start
-func Init(get getStakerInfoFn, set setStakerInfoFn, getRbAddr getRandomProposerAddressFn) {
+func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
 	SetStakerInterface(get, set)
 	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	SetRBAddressInterface(getRbAddr)
@@ -104,7 +104,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	pay(finalIncentive, stateDb)
 
-	setStakerInfo(finalIncentive, epochID)
+	setStakerInfo(epochID, finalIncentive)
 
 	finished(stateDb, epochID)
 	return true

@@ -9,44 +9,44 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 )
 
-type getStakerInfoFn func(common.Address, uint64) ([]vm.ClientProbability, uint64, *big.Int, error)
+type GetStakerInfoFn func(uint64, common.Address) ([]vm.ClientProbability, uint64, *big.Int, error)
 
-type setStakerInfoFn func([][]vm.ClientIncentive, uint64) error
+type SetStakerInfoFn func(uint64, [][]vm.ClientIncentive) error
 
-type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+type GetEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
-type getRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+type GetRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
-type getSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
+type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
-type getRandomProposerAddressFn func(epochID uint64) []common.Address
+type GetRandomProposerAddressFn func(epochID uint64) []common.Address
 
-var getStakerInfo getStakerInfoFn
+var getStakerInfo GetStakerInfoFn
 
-var setStakerInfo setStakerInfoFn
+var setStakerInfo SetStakerInfoFn
 
-var getEpochLeaderInfo getEpochLeaderInfoFn
+var getEpochLeaderInfo GetEpochLeaderInfoFn
 
-var getRandomProposerInfo getRandomProposerInfoFn
+var getRandomProposerInfo GetRandomProposerInfoFn
 
-var getSlotLeaderInfo getSlotLeaderInfoFn
+var getSlotLeaderInfo GetSlotLeaderInfoFn
 
-var getRandomProposerAddress getRandomProposerAddressFn
+var getRandomProposerAddress GetRandomProposerAddressFn
 
 // SetStakerInterface is used for Staker module to set its interface
-func SetStakerInterface(get getStakerInfoFn, set setStakerInfoFn) {
+func SetStakerInterface(get GetStakerInfoFn, set SetStakerInfoFn) {
 	getStakerInfo = get
 	setStakerInfo = set
 }
 
 // SetActivityInterface is used for get activty module to set its interface
-func SetActivityInterface(getEpl getEpochLeaderInfoFn, getRnp getRandomProposerInfoFn, getSlr getSlotLeaderInfoFn) {
+func SetActivityInterface(getEpl GetEpochLeaderInfoFn, getRnp GetRandomProposerInfoFn, getSlr GetSlotLeaderInfoFn) {
 	getEpochLeaderInfo = getEpl
 	getRandomProposerInfo = getRnp
 	getSlotLeaderInfo = getSlr
 }
 
 // SetRBAddressInterface is used to get random proposer address of epoch
-func SetRBAddressInterface(getRBAddress getRandomProposerAddressFn) {
+func SetRBAddressInterface(getRBAddress GetRandomProposerAddressFn) {
 	getRandomProposerAddress = getRBAddress
 }

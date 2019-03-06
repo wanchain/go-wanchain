@@ -73,7 +73,7 @@ var (
 	delegateStakerProbilityMap = make(map[common.Address][]*big.Int)
 )
 
-func getInfo(addr common.Address, epochID uint64) ([]vm.ClientProbability, uint64, *big.Int, error) {
+func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
 
 	addrs := delegateStakerMap[addr]
 	probs := delegateStakerProbilityMap[addr]
@@ -92,7 +92,7 @@ func getInfo(addr common.Address, epochID uint64) ([]vm.ClientProbability, uint6
 	return client, 10, big.NewInt(int64(100 * count * 10)), nil
 }
 
-func setInfo([][]vm.ClientIncentive, uint64) error { return nil }
+func setInfo(uint64, [][]vm.ClientIncentive) error { return nil }
 
 func generateTestStaker() {
 	for i := 0; i < addrsCount; i++ {

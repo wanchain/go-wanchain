@@ -12,7 +12,7 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 	finalIncentive := make([][]vm.ClientIncentive, len(addrs))
 	remain := big.NewInt(0)
 	for i := 0; i < len(addrs); i++ {
-		stakers, division, totalProbility, err := getStakerInfo(addrs[i], epochID)
+		stakers, division, totalProbility, err := getStakerInfo(epochID, addrs[i])
 		if err != nil {
 			return nil, nil, err
 		}
