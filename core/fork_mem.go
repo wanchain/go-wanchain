@@ -9,7 +9,6 @@ import (
 	"sync"
 	"math/big"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/log"
 	"sort"
 )
 
@@ -23,7 +22,7 @@ type ForkMemBlockChain struct {
 	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
-	curMaxBlkNum	 uint64
+	curMaxBlkNum	 int64
 	lock sync.RWMutex
 }
 
@@ -86,6 +85,8 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 
 
 func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	var chainBlks types.Blocks
 	var midSidBlk *types.Block
@@ -94,7 +95,7 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 		return nil,errors.New("can not get current block in working chain")
 	}
 
-	workBlkNum := workBlk.NumberU64()
+	workBlkNum := int64(workBlk.NumberU64())
 	//if work block is in the highest one or higher than buffer,use work blk,work chain will not change
 	if workBlkNum >= f.curMaxBlkNum {
 		return nil,nil
@@ -128,15 +129,15 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 		}
 	}
 		// reduce new chain
-	for ; midSidBlk != nil && midSidBlk.NumberU64() != workBlkNum; midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()] {
+	for ; midSidBlk != nil && int64(midSidBlk.NumberU64()) != workBlkNum; midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()] {
 		chainBlks = append(chainBlks, midSidBlk)
 	}
 
 		//find common prefix
 	if midSidBlk != nil && midSidBlk.Hash() != workBlk.Hash() {
 		for {
-
-				if workBlk!= nil && workBlk.Hash() == midSidBlk.Hash() && workBlk.NumberU64() == midSidBlk.NumberU64() {
+				chainBlks = append(chainBlks, midSidBlk)
+				if (workBlk!=nil && workBlk.NumberU64()==1)||(workBlk!=nil&&workBlk.Hash()==midSidBlk.Hash()&&workBlk.NumberU64()==midSidBlk.NumberU64()) {
 					break
 				}
 
@@ -145,8 +146,11 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 					return nil, errors.New("can not find common prefix")
 				}
 
-				chainBlks = append(chainBlks, midSidBlk)
 				workBlk = f.kBufferedBlks[workBlk.ParentHash()]
+			 	if workBlk == nil {
+					return nil, errors.New("can not find common prefix")
+				}
+
 		}
 	}
 
@@ -163,20 +167,13 @@ func (f *ForkMemBlockChain) PushHeaders(headerChain []*types.Header) error{
 	}
 
 	for _,header := range headerChain {
+
 		blk := types.NewBlockWithHeader(header)
-		if len(f.kBufferedBlks) > 0 {
-			parent := f.kBufferedBlks[blk.ParentHash()]
-
-			if parent == nil {
-				log.Debug("Unknown parent of propagated block", "number", blk.Number(), "hash", blk.Hash(), "parent", blk.ParentHash())
-				return errors.New("not find parent hash in buffer")
-			}
-		}
-
 		err := f.push(blk)
 		if err != nil {
 			return err
 		}
+
 	}
 
 	return nil
@@ -189,16 +186,6 @@ func (f *ForkMemBlockChain) PushBlocks(blockChain types.Blocks) error{
 	}
 
 	for _,blk := range blockChain {
-
-		if len(f.kBufferedBlks) > 0 {
-			parent := f.kBufferedBlks[blk.ParentHash()]
-
-			if parent == nil {
-				log.Debug("Unknown parent of propagated block", "number", blk.Number(), "hash", blk.Hash(), "parent", blk.ParentHash())
-				return errors.New("not find parent hash in buffer")
-			}
-		}
-
 		err := f.push(blk)
 		if err != nil {
 			return err
@@ -213,7 +200,7 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	newbn := block.NumberU64()
+	newbn := int64(block.NumberU64())
 
 	if f.curMaxBlkNum == 0 {
 		f.curMaxBlkNum = newbn
@@ -221,12 +208,9 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 		//input need to be continous block
 		if f.curMaxBlkNum + 1 == newbn {
 			f.curMaxBlkNum = newbn
-		} else if f.curMaxBlkNum > newbn+1 {
+		} else if newbn > f.curMaxBlkNum +1 {
 			//if block number is bigger 1 than current max block ,return future block
 			return consensus.ErrFutureBlock
-		} else if newbn < f.curMaxBlkNum-pos.Stage1K {
-			//if the block number is older k than current max block,return old block error
-			return consensus.ErrOldblockNumber
 		}
 	}
 
@@ -240,11 +224,17 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 }
 
 func (f *ForkMemBlockChain) PopBack() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	//need to store k data
 	if len(f.kBufferedChains) > int(pos.Cfg().K) {
 
-		blkNumBeforeK := f.curMaxBlkNum - uint64(pos.Cfg().K)
+		blkNumBeforeK := f.curMaxBlkNum - int64(pos.Cfg().K)
+
+		if blkNumBeforeK < 0 {
+			return
+		}
 
 		bnText := big.NewInt(int64(blkNumBeforeK))
 
