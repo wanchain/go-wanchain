@@ -4,19 +4,24 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/postools"
 )
 
 // AddEpochGas is used for every block's gas fee collection in each epoch
-func AddEpochGas(stateDb *state.StateDB, gasValue *big.Int, epochID uint64) {
+func AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
+	if stateDb == nil || gasValue == nil {
+		log.Error("AddEpochGas input param is nil")
+		return
+	}
 	nowGas := getEpochGas(stateDb, epochID)
 	nowGas.Add(nowGas, gasValue)
 	stateDb.SetStateByteArray(getIncentivePrecompileAddress(), getGasHashKey(epochID), nowGas.Bytes())
 }
 
-func getEpochGas(stateDb *state.StateDB, epochID uint64) *big.Int {
+func getEpochGas(stateDb vm.StateDB, epochID uint64) *big.Int {
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getGasHashKey(epochID))
 	return big.NewInt(0).SetBytes(buf)
 }

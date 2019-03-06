@@ -26,7 +26,7 @@ func TestRun(t *testing.T) {
 
 	for i := 0; i < testTimes; i++ {
 		for m := 0; m < pos.SlotCount; m++ {
-			if !Run(nil, statedb, uint64(i)) {
+			if !Run(&TestChainReader{}, statedb, uint64(i)) {
 				t.FailNow()
 			}
 		}
@@ -50,6 +50,12 @@ func TestRun(t *testing.T) {
 	}
 
 	fmt.Println("sum Total:", sumTotal.String())
+}
+
+func TestRunFail(t *testing.T) {
+	if Run(nil, nil, 0) {
+		t.FailNow()
+	}
 }
 
 func TestCheckTotalValue(t *testing.T) {
@@ -87,4 +93,8 @@ func TestCheckTotalValue(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	Init(getInfo, setInfo, testGetRBAddress)
+}
+
+func TestInitFail(t *testing.T) {
+	Init(nil, nil, nil)
 }

@@ -50,6 +50,8 @@ var (
 
 var selecter SlotLeader
 
+var CurEpochID uint64
+
 func GetStage1FunctionID(abiString string) ([4]byte, error) {
 	var slotStage1ID [4]byte
 

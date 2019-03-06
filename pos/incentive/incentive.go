@@ -38,6 +38,10 @@ const (
 // Init is use to init the outsides interface of staker.
 // Should be called at the node start
 func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
+	if get == nil || set == nil || getRbAddr == nil {
+		log.Error("incentive Init input param error (get == nil || set == nil || getRbAddr == nil)")
+	}
+
 	SetStakerInterface(get, set)
 	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	SetRBAddressInterface(getRbAddr)
@@ -46,6 +50,10 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 
 // Run is use to run the incentive should be called in Finalize of consensus
 func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
+	if chain == nil || stateDb == nil {
+		log.Error("incentive Run input param error (chain == nil || stateDb == nil)")
+		return false
+	}
 	if isFinished(stateDb, epochID) {
 		return true
 	}

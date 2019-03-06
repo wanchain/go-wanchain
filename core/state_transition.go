@@ -32,6 +32,8 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
 var (
@@ -302,13 +304,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
 		log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
-	}else if types.IsPrivacyTransaction(st.msg.TxType()) {
+	} else if types.IsPrivacyTransaction(st.msg.TxType()) {
 		requiredGas = new(big.Int).SetUint64(stampTotalGas)
 		usedGas = requiredGas
 		log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
+	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
+	incentive.AddEpochGas(st.state, new(big.Int).Mul(usedGas, st.gasPrice), slottools.CurEpochID)
 	return ret, requiredGas, usedGas, vmerr != nil, err
 }
 
