@@ -120,7 +120,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-	forkMem 	  *ForkMem
+	forkMem 	  *ForkMemBlockChain
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -145,7 +145,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		forkMem:	  NewForkMem(),
+		forkMem:	  NewForkMemBlockChain(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
