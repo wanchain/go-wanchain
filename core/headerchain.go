@@ -63,7 +63,7 @@ type HeaderChain struct {
 	rand   *mrand.Rand
 	engine consensus.Engine
 
-	//forkMem 	  *ForkMem
+	forkMem  *ForkMemBlockChain
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
@@ -90,7 +90,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
-		//forkMem:	   NewForkMem(),
+		forkMem:	  NewForkMemBlockChain(HEADERCHAIN),
 	}
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
@@ -217,6 +217,9 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 		}
 	}
 
+
+
+
 	// Generate the list of seal verification requests, and start the parallel verifier
 	seals := make([]bool, len(chain))
 	for i := 0; i < len(seals)/checkFreq; i++ {
@@ -260,10 +263,22 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 // of the header retrieval mechanisms already need to verfy nonces, as well as
 // because nonces can be verified sparsely, not needing to check each.
 func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCallback, start time.Time) (int, error) {
+
+	hc.forkMem.PushHeaders(chain)
+	defer hc.forkMem.PopBack()
+
+	curblk := types.NewBlockWithHeader(hc.CurrentHeader())
+	blkChain,err := hc.forkMem.Maxvalid(curblk)
+	if blkChain==nil || err!=nil {
+		return 0,err
+	}
+
 	// Collect some import statistics to report on
 	stats := struct{ processed, ignored int }{}
 	// All headers passed verification, import them into the database
-	for i, header := range chain {
+	for i, blk := range blkChain {
+
+		header :=blk.Header()
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")
@@ -274,6 +289,7 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			stats.ignored++
 			continue
 		}
+
 		if err := writeHeader(header); err != nil {
 			return i, err
 		}
