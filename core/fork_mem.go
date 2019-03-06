@@ -13,16 +13,16 @@ import (
 	"sort"
 )
 
-type ForkMem struct {
+type ForkMemBlockChain struct {
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
 	curMaxBlkNum	 uint64
 	lock sync.RWMutex
 }
 
-func NewForkMem() *ForkMem{
+func NewForkMemBlockChain() *ForkMemBlockChain{
 
-	f := &ForkMem{}
+	f := &ForkMemBlockChain{}
 	f.kBufferedChains = make(map[string][]common.Hash)
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
 	f.curMaxBlkNum = 0
@@ -30,11 +30,6 @@ func NewForkMem() *ForkMem{
 }
 
 type BlockSorter [] *types.Block
-
-func newBlockSorter() BlockSorter {
-	ps := make(BlockSorter, 0)
-	return ps
-}
 
 //Len()
 func (s BlockSorter) Len() int {
@@ -51,7 +46,7 @@ func (s BlockSorter) Swap(i, j int) {
 }
 
 
-func (f *ForkMem) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
+func (f *ForkMemBlockChain) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 	if pos.EpochBaseTime == 0 {
 		return
 	}
@@ -62,7 +57,7 @@ func (f *ForkMem) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotI
 	return
 }
 
-func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
+func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
 	blkTime := block.Time().Uint64()
 
 	blkTd := block.Difficulty().Uint64()
@@ -82,7 +77,7 @@ func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint6
 }
 
 
-func (f *ForkMem) Maxvalid(bc *BlockChain) (types.Blocks,error){
+func (f *ForkMemBlockChain) Maxvalid(bc *BlockChain) (types.Blocks,error){
 
 	var chainBlks types.Blocks
 	var midSidBlk *types.Block
@@ -159,7 +154,7 @@ func (f *ForkMem) Maxvalid(bc *BlockChain) (types.Blocks,error){
 }
 
 
-func (f *ForkMem) Push(blockChain types.Blocks) error{
+func (f *ForkMemBlockChain) Push(blockChain types.Blocks) error{
 
 	for _,blk := range blockChain {
 
@@ -182,7 +177,7 @@ func (f *ForkMem) Push(blockChain types.Blocks) error{
 }
 
 
-func (f *ForkMem) push(block *types.Block) error{
+func (f *ForkMemBlockChain) push(block *types.Block) error{
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -212,7 +207,7 @@ func (f *ForkMem) push(block *types.Block) error{
 	return nil
 }
 
-func (f *ForkMem) PopBack() {
+func (f *ForkMemBlockChain) PopBack() {
 
 	//need to store k data
 	if len(f.kBufferedChains) > int(pos.Cfg().K) {
