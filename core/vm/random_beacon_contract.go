@@ -407,6 +407,15 @@ func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) 
 	return rt, nil
 }
 
+func isCjiValid(db StateDB, epochId uint64, proposerId uint32) bool {
+	hash := GetRBKeyHash(kindEns, epochId, proposerId)
+	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if dkgBytes == nil || len(dkgBytes) == 0 {
+		return false
+	}
+	return true
+}
+
 func GetEns(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
 	hash := GetRBKeyHash(kindEns, epochId, proposerId)
 	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
@@ -617,10 +626,12 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 
 	dkgData := make([]RbCijDataCollector, 0)
 	for id := range pks {
-		dkgDataOne, err := GetCji(evm.StateDB, eid, uint32(id))
-		if err == nil && dkgDataOne != nil {
-			dkgData = append(dkgData, RbCijDataCollector{dkgDataOne, &pks[id]})
-			gpkshare.Add(&gpkshare, dkgDataOne[pid])
+		if isCjiValid(evm.StateDB, eid, uint32(id)) {
+			dkgDataOne, err := GetCji(evm.StateDB, eid, uint32(id))
+			if err == nil && dkgDataOne != nil {
+				dkgData = append(dkgData, RbCijDataCollector{dkgDataOne, &pks[id]})
+				gpkshare.Add(&gpkshare, dkgDataOne[pid])
+			}
 		}
 	}
 	if uint(len(dkgData)) < pos.Cfg().RBThres {
