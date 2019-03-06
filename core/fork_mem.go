@@ -85,6 +85,8 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 
 
 func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	var chainBlks types.Blocks
 	var midSidBlk *types.Block
@@ -222,6 +224,8 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 }
 
 func (f *ForkMemBlockChain) PopBack() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	//need to store k data
 	if len(f.kBufferedChains) > int(pos.Cfg().K) {
