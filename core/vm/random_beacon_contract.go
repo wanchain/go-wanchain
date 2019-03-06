@@ -326,6 +326,20 @@ func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) *RbDKG1TxPayload {
 
 	return &dkgParam
 }
+func Dkg1ToDkg1Flat(d * RbDKG1TxPayload) *RbDKG1FlatTxPayload {
+	var df RbDKG1FlatTxPayload
+	df.EpochId = d.EpochId
+	df.ProposerId = d.ProposerId
+
+	l := len(d.Commit)
+
+	df.Commit = make([][]byte, l)
+	for i := 0; i < l; i++ {
+		df.Commit[i] = d.Commit[i].Marshal()
+	}
+
+	return &df
+}
 
 func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) *RbDKG2TxPayload {
 	var dkg2Param RbDKG2TxPayload
@@ -346,6 +360,26 @@ func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) *RbDKG2TxPayload {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
 	return &dkg2Param
+}
+
+func Dkg2ToDkg2Flat(d * RbDKG2TxPayload) *RbDKG2FlatTxPayload {
+	var df RbDKG2FlatTxPayload
+	df.EpochId = d.EpochId
+	df.ProposerId = d.ProposerId
+
+	l := len(d.Enshare)
+	df.Enshare = make([][]byte, l)
+	for i := 0; i < l; i++ {
+		df.Enshare[i] = d.Enshare[i].Marshal()
+	}
+
+	l = len(d.Proof)
+	df.Proof = make([]wanpos.DLEQproofFlat, l)
+	for i := 0; i < l; i++ {
+		df.Proof[i] = wanpos.ProofToProofFlat(&d.Proof[i])
+	}
+
+	return &df
 }
 
 // stage 0, 1 dkg sign
