@@ -179,6 +179,16 @@ func GetStateR(db StateDB, epochId uint64) *big.Int {
 	return nil
 }
 
+func IsRBActive(db StateDB, epochId uint64, proposerId uint32) bool {
+	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
+	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if payloadBytes == nil || len(payloadBytes) == 0 {
+		return false
+	}
+
+	return true
+}
+
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
 	log.Debug("vm.GetSig", "len(sigshareId)", len(sigshareId), "epochID", epochId, "proposerId", proposerId, "hash", hash.Hex())
