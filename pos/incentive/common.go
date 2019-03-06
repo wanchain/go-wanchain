@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 func calcPercent(total *big.Int, percent float64) *big.Int {
@@ -37,4 +38,19 @@ func addressInclude(addr common.Address, addrs []common.Address) bool {
 		}
 	}
 	return false
+}
+
+func sumIncentive(payment [][]vm.ClientIncentive) *big.Int {
+	sum := big.NewInt(0)
+	if payment == nil {
+		return sum
+	}
+
+	for i := 0; i < len(payment); i++ {
+		for m := 0; m < len(payment[i]); m++ {
+			sum.Add(sum, payment[i][m].Incentive)
+		}
+	}
+
+	return sum
 }

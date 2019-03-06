@@ -9,16 +9,22 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 )
 
+// GetStakerInfoFn is a function use to get staker info
 type GetStakerInfoFn func(uint64, common.Address) ([]vm.ClientProbability, uint64, *big.Int, error)
 
+// SetStakerInfoFn is a function use to set payment info
 type SetStakerInfoFn func(uint64, [][]vm.ClientIncentive) error
 
+// GetEpochLeaderInfoFn is a function use to get epoch activity and address
 type GetEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
+// GetRandomProposerInfoFn is use to get rb group and activity
 type GetRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
+// GetSlotLeaderInfoFn is use to get slotleader address and activity
 type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
+// GetRandomProposerAddressFn is use to get rb group address
 type GetRandomProposerAddressFn func(epochID uint64) []common.Address
 
 var getStakerInfo GetStakerInfoFn

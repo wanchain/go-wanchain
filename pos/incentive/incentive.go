@@ -45,6 +45,8 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 	SetStakerInterface(get, set)
 	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	SetRBAddressInterface(getRbAddr)
+
+	initLocalDb("incentive")
 	log.Info("--------Incentive Init Finish----------")
 }
 
@@ -114,10 +116,12 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	}
 
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
+	go saveRemain(epochID, remainsAll)
 
 	pay(finalIncentive, stateDb)
 
-	setStakerInfo(epochID, finalIncentive)
+	go setStakerInfo(epochID, finalIncentive)
+	go saveIncentiveHistory(epochID, finalIncentive)
 
 	finished(stateDb, epochID)
 
