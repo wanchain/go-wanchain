@@ -33,6 +33,83 @@ const (
 	dictFinished      = "finished"
 )
 
+// Init is use to init the outsides interface of staker.
+// Should be called at the node start
+func Init(get getStakerInfoFn, set setStakerInfoFn, getRbAddr getRandomProposerAddressFn) {
+	SetStakerInterface(get, set)
+	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
+	SetRBAddressInterface(getRbAddr)
+}
+
+// Run is use to run the incentive should be called in Finalize of consensus
+func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
+	if isFinished(stateDb, epochID) {
+		return true
+	}
+
+	finalIncentive := make([][]vm.ClientIncentive, 0)
+	remainsAll := big.NewInt(0)
+
+	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
+	saveIncentiveIncome(total, foundation, gasPool)
+
+	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
+	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
+	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, pos.SlotCount)
+
+	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
+	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
+	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
+	saveIncentiveDivide(epochLeaderSubsidy, randomProposerSubsidy, slotLeaderSubsidy)
+
+	sum := big.NewInt(0)
+	sum.Add(sum, epochLeaderSubsidy)
+	sum.Add(sum, randomProposerSubsidy)
+	sum.Add(sum, slotLeaderSubsidy)
+	sumRemain := big.NewInt(0).Sub(total, sum)
+	remainsAll.Add(remainsAll, sumRemain)
+
+	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
+	remainsAll.Add(remainsAll, remains)
+
+	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
+	remainsAll.Add(remainsAll, remains)
+
+	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, pos.SlotCount, epochID)
+	if err != nil {
+		return false
+	}
+	finalIncentive = append(finalIncentive, incentives...)
+	remainsAll.Add(remainsAll, remains)
+
+	sumPay := sumToPay(finalIncentive)
+
+	extraRemain := getExtraRemain(total, sumPay, remainsAll)
+
+	remainsAll.Add(remainsAll, extraRemain)
+
+	if !checkTotalValue(total, sumPay, remainsAll) {
+		return false
+	}
+
+	addRemainIncentivePool(stateDb, epochID, remainsAll)
+
+	pay(finalIncentive, stateDb)
+
+	setStakerInfo(finalIncentive, epochID)
+
+	finished(stateDb, epochID)
+	return true
+}
+
 func getIncentivePrecompileAddress() common.Address {
 	return common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
 }
@@ -169,80 +246,4 @@ func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
 		extraRemain.Sub(total, sum)
 	}
 	return extraRemain
-}
-
-// Init is use to init the outsides interface of staker.
-// Should be called at the node start
-func Init(get getStakerInfoFn, set setStakerInfoFn) {
-	SetStakerInterface(get, set)
-	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
-}
-
-// Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
-	if isFinished(stateDb, epochID) {
-		return true
-	}
-
-	finalIncentive := make([][]vm.ClientIncentive, 0)
-	remainsAll := big.NewInt(0)
-
-	total, foundation, gasPool := calculateIncentivePool(stateDb, epochID)
-	saveIncentiveIncome(total, foundation, gasPool)
-
-	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
-	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
-	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, pos.SlotCount)
-
-	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
-	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
-	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
-	saveIncentiveDivide(epochLeaderSubsidy, randomProposerSubsidy, slotLeaderSubsidy)
-
-	sum := big.NewInt(0)
-	sum.Add(sum, epochLeaderSubsidy)
-	sum.Add(sum, randomProposerSubsidy)
-	sum.Add(sum, slotLeaderSubsidy)
-	sumRemain := big.NewInt(0).Sub(total, sum)
-	remainsAll.Add(remainsAll, sumRemain)
-
-	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
-	if err != nil {
-		return false
-	}
-	finalIncentive = append(finalIncentive, incentives...)
-	remainsAll.Add(remainsAll, remains)
-
-	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
-	if err != nil {
-		return false
-	}
-	finalIncentive = append(finalIncentive, incentives...)
-	remainsAll.Add(remainsAll, remains)
-
-	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, pos.SlotCount, epochID)
-	if err != nil {
-		return false
-	}
-	finalIncentive = append(finalIncentive, incentives...)
-	remainsAll.Add(remainsAll, remains)
-
-	sumPay := sumToPay(finalIncentive)
-
-	extraRemain := getExtraRemain(total, sumPay, remainsAll)
-
-	remainsAll.Add(remainsAll, extraRemain)
-
-	if !checkTotalValue(total, sumPay, remainsAll) {
-		return false
-	}
-
-	addRemainIncentivePool(stateDb, epochID, remainsAll)
-
-	pay(finalIncentive, stateDb)
-
-	setStakerInfo(finalIncentive, epochID)
-
-	finished(stateDb, epochID)
-	return true
 }

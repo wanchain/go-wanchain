@@ -51,7 +51,20 @@ func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Ad
 }
 
 func getRandomProposerActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
-	return nil, nil
+	if getRandomProposerAddress == nil {
+		return []common.Address{}, []int{}
+	}
+
+	addrs := getRandomProposerAddress(epochID)
+	activity := make([]int, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		if vm.IsRBActive(stateDb, epochID, uint32(i)) {
+			activity[i] = 1
+		} else {
+			activity[i] = 0
+		}
+	}
+	return addrs, activity
 }
 
 func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {

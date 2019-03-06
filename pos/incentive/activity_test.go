@@ -107,3 +107,48 @@ func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 		}
 	}
 }
+
+func testGetRBAddress(epochID uint64) []common.Address {
+	return rpAddrs
+}
+
+func testSimulateData(epochID uint64, index uint32) {
+	sig := []byte{157, 214, 103, 45}
+	hash := vm.GetRBKeyHash(sig, epochID, index)
+	randomBeaconPrecompileAddr := common.BytesToAddress(big.NewInt(610).Bytes())
+	statedb.SetStateByteArray(randomBeaconPrecompileAddr, *hash, []byte{1, 2, 3})
+}
+
+func TestGetRandomProposerActivity(t *testing.T) {
+	generateTestAddrs()
+	generateTestStaker()
+	SetRBAddressInterface(testGetRBAddress)
+
+	epochID := 0
+
+	addrs, activity := getRandomProposerActivity(statedb, uint64(epochID))
+
+	for i := 0; i < len(addrs); i++ {
+		if addrs[i].Hex() != rpAddrs[i].Hex() {
+			t.FailNow()
+		}
+		if activity[i] != 0 {
+			t.FailNow()
+		}
+	}
+
+	for i := 0; i < len(addrs); i++ {
+		testSimulateData(uint64(epochID), uint32(i))
+	}
+
+	addrs, activity = getRandomProposerActivity(statedb, uint64(epochID))
+
+	for i := 0; i < len(addrs); i++ {
+		if addrs[i].Hex() != rpAddrs[i].Hex() {
+			t.FailNow()
+		}
+		if activity[i] == 0 {
+			t.FailNow()
+		}
+	}
+}

@@ -19,6 +19,8 @@ type getRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]com
 
 type getSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
+type getRandomProposerAddressFn func(epochID uint64) []common.Address
+
 var getStakerInfo getStakerInfoFn
 
 var setStakerInfo setStakerInfoFn
@@ -29,15 +31,22 @@ var getRandomProposerInfo getRandomProposerInfoFn
 
 var getSlotLeaderInfo getSlotLeaderInfoFn
 
-// SetStakerInterface is use for Staker module to set its interface
+var getRandomProposerAddress getRandomProposerAddressFn
+
+// SetStakerInterface is used for Staker module to set its interface
 func SetStakerInterface(get getStakerInfoFn, set setStakerInfoFn) {
 	getStakerInfo = get
 	setStakerInfo = set
 }
 
-// SetActivityInterface is use for get activty module to set its interface
+// SetActivityInterface is used for get activty module to set its interface
 func SetActivityInterface(getEpl getEpochLeaderInfoFn, getRnp getRandomProposerInfoFn, getSlr getSlotLeaderInfoFn) {
 	getEpochLeaderInfo = getEpl
 	getRandomProposerInfo = getRnp
 	getSlotLeaderInfo = getSlr
+}
+
+// SetRBAddressInterface is used to get random proposer address of epoch
+func SetRBAddressInterface(getRBAddress getRandomProposerAddressFn) {
+	getRandomProposerAddress = getRBAddress
 }

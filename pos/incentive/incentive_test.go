@@ -86,5 +86,5 @@ func TestCheckTotalValue(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	Init(getInfo, setInfo)
+	Init(getInfo, setInfo, testGetRBAddress)
 }
