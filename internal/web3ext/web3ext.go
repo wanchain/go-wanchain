@@ -188,6 +188,62 @@ web3._extend({
 			call: 'pos_getEpochStakerInfo',
 			params: 2
 		}),
+
+		new web3._extend.Method({
+			name: 'getLocalPK',
+			call: 'pos_getLocalPK',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getBootNodePK',
+			call: 'pos_getBootNodePK',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIncentivePayDetail',
+			call: 'pos_getEpochIncentivePayDetail',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTotalIncentive',
+			call: 'pos_getTotalIncentive',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIncentive',
+			call: 'pos_getEpochIncentive',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochRemain',
+			call: 'pos_getEpochRemain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTotalRemain',
+			call: 'pos_getTotalRemain',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getIncentiveRunTimes',
+			call: 'pos_getIncentiveRunTimes',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getEpochGasPool',
+			call: 'pos_getEpochGasPool',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRBAddress',
+			call: 'pos_getRBAddress',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getIncentivePool',
+			call: 'pos_getIncentivePool',
+			params: 1
+		}),
 	]
 });
 `

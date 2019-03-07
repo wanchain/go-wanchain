@@ -3,6 +3,10 @@ package incentive
 import (
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/core/state"
+
+	"github.com/wanchain/go-wanchain/common"
+
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -152,6 +156,17 @@ func GetRunTimes() (*big.Int, error) {
 }
 
 // GetEpochGasPool use to get epoch gas pool
-func GetEpochGasPool(epochID uint64) (*big.Int, error) {
-	return nil, nil
+func GetEpochGasPool(stateDb vm.StateDB, epochID uint64) *big.Int {
+	return getEpochGas(stateDb, epochID)
+}
+
+func GetRBAddress(epochID uint64) []common.Address {
+	if getRandomProposerAddress == nil {
+		return nil
+	}
+	return getRandomProposerAddress(epochID)
+}
+
+func GetIncentivePool(stateDb *state.StateDB, epochID uint64) (*big.Int, *big.Int, *big.Int) {
+	return calculateIncentivePool(stateDb, epochID)
 }

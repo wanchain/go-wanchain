@@ -4,6 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/wanchain/go-wanchain/common"
+
+	"github.com/wanchain/go-wanchain/pos/incentive"
+
 	"context"
 	"errors"
 	"math/big"
@@ -15,11 +19,11 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/internal/ethapi"
 	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 type PosApi struct {
@@ -190,12 +194,65 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 	return j, nil
 }
 
-func (a PosApi) GetEpochStakerInfo(epochID uint64,pubk string) ([]string, error) {
+func (a PosApi) GetEpochStakerInfo(epochID uint64, pubk string) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
 
 	if epocherInst == nil {
-		return nil,errors.New("epocher instance do not exist")
+		return nil, errors.New("epocher instance do not exist")
 	}
 
-	return epocherInst.GetEpochStakers(epochID,pubk)
+	return epocherInst.GetEpochStakers(epochID, pubk)
+}
+
+func biToString(value *big.Int, err error) (string, error) {
+	if err != nil {
+		return "", nil
+	}
+	return value.String(), err
+}
+func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
+	return incentive.GetEpochPayDetail(epochID)
+}
+
+func (a PosApi) GetTotalIncentive() (string, error) {
+	return biToString(incentive.GetTotalIncentive())
+}
+
+func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
+	return biToString(incentive.GetEpochIncentive(epochID))
+}
+
+func (a PosApi) GetEpochRemain(epochID uint64) (string, error) {
+	return biToString(incentive.GetEpochRemain(epochID))
+}
+
+func (a PosApi) GetTotalRemain() (string, error) {
+	return biToString(incentive.GetTotalRemain())
+}
+
+func (a PosApi) GetIncentiveRunTimes() (string, error) {
+	return biToString(incentive.GetRunTimes())
+}
+
+func (a PosApi) GetEpochGasPool(epochID uint64) (string, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return "", err
+	}
+	return incentive.GetEpochGasPool(db, epochID).String(), nil
+}
+
+func (a PosApi) GetRBAddress(epochID uint64) []common.Address {
+	return incentive.GetRBAddress(epochID)
+}
+
+func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+	total, foundation, gasPool := incentive.GetIncentivePool(db, epochID)
+	return []string{total.String(), foundation.String(), gasPool.String()}, nil
 }
