@@ -26,6 +26,9 @@ type ForkMemBlockChain struct {
 	lock sync.RWMutex
 }
 
+
+
+
 func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain{
 
 	f := &ForkMemBlockChain{}

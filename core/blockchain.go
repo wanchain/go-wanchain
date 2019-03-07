@@ -560,6 +560,17 @@ func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	return block
 }
 
+
+func (bc *BlockChain) GetBlockByHashWithBuffer(hash common.Hash) *types.Block {
+	//this function is used by fether
+	blk := bc.forkMem.kBufferedBlks[hash]
+	if blk!=nil {
+		return blk
+	} else {
+		return bc.GetBlock(hash, bc.hc.GetBlockNumber(hash))
+	}
+}
+
 // GetBlockByHash retrieves a block from the database by hash, caching it if found.
 func (bc *BlockChain) GetBlockByHash(hash common.Hash) *types.Block {
 	return bc.GetBlock(hash, bc.hc.GetBlockNumber(hash))
