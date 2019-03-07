@@ -160,6 +160,7 @@ func GetEpochGasPool(stateDb vm.StateDB, epochID uint64) *big.Int {
 	return getEpochGas(stateDb, epochID)
 }
 
+// GetRBAddress use to get random proposer address list
 func GetRBAddress(epochID uint64) []common.Address {
 	if getRandomProposerAddress == nil {
 		return nil
@@ -167,6 +168,7 @@ func GetRBAddress(epochID uint64) []common.Address {
 	return getRandomProposerAddress(epochID)
 }
 
+// GetIncentivePool can get the total incentive, foundation part and gas pool part.
 func GetIncentivePool(stateDb *state.StateDB, epochID uint64) (*big.Int, *big.Int, *big.Int) {
 	return calculateIncentivePool(stateDb, epochID)
 }
