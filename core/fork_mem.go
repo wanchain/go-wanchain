@@ -8,8 +8,7 @@ import (
 	"errors"
 	"sync"
 	"math/big"
-	"github.com/wanchain/go-wanchain/consensus"
-	"sort"
+		"sort"
 )
 
 type chainType uint
@@ -116,10 +115,13 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 		for _, hs := range hashs {
 
 			blk := f.kBufferedBlks[hs]
+
 			epidNew, sid, err := f.GetBlockEpochIdAndSlotId(blk.Header())
 			if err != nil {
 				continue
 			}
+
+			fmt.Print("block hash",common.ToHex(hs[:]),"  block number",blk.NumberU64(),epidNew,sid)
 
 			if epidOld == 0 {
 				epidOld = epidNew
@@ -211,9 +213,6 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 		//input need to be continous block
 		if f.curMaxBlkNum + 1 == newbn {
 			f.curMaxBlkNum = newbn
-		} else if newbn > f.curMaxBlkNum +1 {
-			//if block number is bigger 1 than current max block ,return future block
-			return consensus.ErrFutureBlock
 		}
 	}
 

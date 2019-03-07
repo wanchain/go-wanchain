@@ -953,6 +953,7 @@ func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 	if err != nil {
 		return 0,err
 	}
+	
 	defer bc.forkMem.PopBack()
 
 	chain,err = bc.forkMem.Maxvalid(bc.CurrentBlock())

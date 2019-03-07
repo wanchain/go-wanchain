@@ -402,8 +402,8 @@ func testReorg(t *testing.T, first, second []int, td int64, full bool) {
 
 	// Insert an easy and a difficult chain afterwards
 	if full {
-		bc.InsertChain(makeBlockChainWithDiff(bc.genesisBlock, first, 11))
-		bc.InsertChain(makeBlockChainWithDiff(bc.genesisBlock, second, 22))
+		bc.InsertChainWithBuffer(makeBlockChainWithDiff(bc.genesisBlock, first, 11))
+		bc.InsertChainWithBuffer(makeBlockChainWithDiff(bc.genesisBlock, second, 22))
 	} else {
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, first, 11), 1)
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, second, 22), 1)
