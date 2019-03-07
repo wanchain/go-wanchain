@@ -231,9 +231,9 @@ func (f *ForkMemBlockChain) PopBack() {
 	defer f.lock.Unlock()
 
 	//need to store k data
-	if len(f.kBufferedChains) > int(pos.Cfg().K) {
+	if len(f.kBufferedChains) > int(pos.SlotCount) {
 
-		blkNumBeforeK := f.curMaxBlkNum - int64(2*pos.Cfg().K)
+		blkNumBeforeK := f.curMaxBlkNum - int64(pos.SlotCount)
 
 		if blkNumBeforeK < 0 {
 			return

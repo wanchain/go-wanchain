@@ -947,7 +947,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // wrong.
 //
 // After insertion is done, all accumulated events will be fired.
-func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
+func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 
 	err := bc.forkMem.PushBlocks(chain)
 	if err != nil {
@@ -964,6 +964,15 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
 
+
+	return n, err
+}
+
+func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
+
+	//insert here
+	n, events, logs, err := bc.insertChain(chain)
+	bc.PostChainEvents(events, logs)
 
 	return n, err
 }
