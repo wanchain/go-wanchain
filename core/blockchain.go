@@ -951,6 +951,7 @@ func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 
 	err := bc.forkMem.PushBlocks(chain)
 	if err != nil {
+		fmt.Println(err)
 		return 0,err
 	}
 	
@@ -958,13 +959,19 @@ func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 
 	chain,err = bc.forkMem.Maxvalid(bc.CurrentBlock())
 	if err != nil || chain == nil {
+		fmt.Println(err)
 		return 0,err
 	}
 
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
-
+	if err!=nil {
+		bc.forkMem.PrintAllBffer()
+		for _,blk := range chain {
+			fmt.Println("maxvalid chain hash=",common.ToHex(blk.Hash().Bytes()))
+		}
+	}
 
 	return n, err
 }

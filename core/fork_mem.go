@@ -252,3 +252,17 @@ func (f *ForkMemBlockChain) PopBack() {
 	return
 }
 
+
+func (f *ForkMemBlockChain) PrintAllBffer() {
+	for idx,blkHashs := range f.kBufferedChains {
+		for _,bh := range blkHashs {
+			fmt.Println("block number=",idx," hash=",common.ToHex(bh[:]))
+		}
+	}
+
+	for _,blk := range f.kBufferedBlks {
+		epid, sid,_:= f.GetBlockEpochIdAndSlotId(blk.Header())
+		fmt.Println(" hash=",common.ToHex(blk.Hash().Bytes())," epid=",epid," sid=",sid)
+	}
+}
+

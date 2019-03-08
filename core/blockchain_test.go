@@ -408,6 +408,9 @@ func testReorg(t *testing.T, first, second []int, td int64, full bool) {
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, first, 11), 1)
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, second, 22), 1)
 	}
+
+	bc.forkMem.PrintAllBffer()
+
 	// Check that the chain is valid number and link wise
 	if full {
 		prev := bc.CurrentBlock()
