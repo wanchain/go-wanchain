@@ -9,6 +9,7 @@ import (
 	"sync"
 	"math/big"
 		"sort"
+	"strconv"
 )
 
 type chainType uint
@@ -121,7 +122,7 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 				continue
 			}
 
-			fmt.Print("block hash",common.ToHex(hs[:]),"  block number",blk.NumberU64(),epidNew,sid)
+			fmt.Print("maxvalid block hash",common.ToHex(hs[:]),"  block number",blk.NumberU64(),epidNew,sid)
 
 			if epidOld == 0 {
 				epidOld = epidNew
@@ -254,9 +255,11 @@ func (f *ForkMemBlockChain) PopBack() {
 
 
 func (f *ForkMemBlockChain) PrintAllBffer() {
+
 	for idx,blkHashs := range f.kBufferedChains {
+		n,_:= strconv.Atoi(idx)
 		for _,bh := range blkHashs {
-			fmt.Println("block number=",idx," hash=",common.ToHex(bh[:]))
+			fmt.Println("block number=",n," hash=",common.ToHex(bh[:]))
 		}
 	}
 
