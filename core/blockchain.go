@@ -561,15 +561,15 @@ func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 }
 
 
-func (bc *BlockChain) GetBlockByHashWithBuffer(hash common.Hash) *types.Block {
-	//this function is used by fether
-	blk := bc.forkMem.kBufferedBlks[hash]
-	if blk!=nil {
-		return blk
-	} else {
-		return bc.GetBlock(hash, bc.hc.GetBlockNumber(hash))
-	}
-}
+//func (bc *BlockChain) GetBlockByHashWithBuffer(hash common.Hash) *types.Block {
+//	//this function is used by fether
+//	blk := bc.forkMem.kBufferedBlks[hash]
+//	if blk!=nil {
+//		return blk
+//	} else {
+//		return bc.GetBlock(hash, bc.hc.GetBlockNumber(hash))
+//	}
+//}
 
 // GetBlockByHash retrieves a block from the database by hash, caching it if found.
 func (bc *BlockChain) GetBlockByHash(hash common.Hash) *types.Block {
@@ -815,8 +815,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
+	//localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+
+	//localTd := bc.currentBlock.Difficulty()
+	//externTd := block.Difficulty()
 
 	// Irrelevant of the canonical status, write the block itself to the database
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
@@ -831,23 +834,38 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if _, err := state.CommitTo(batch, true /*bc.config.IsEIP158(block.Number())*/); err != nil {
 		return NonStatTy, err
 	}
+
 	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
 		return NonStatTy, err
 	}
-
 
 	/// If the total difficulty is higher than our known, add it to the canonical chain
 	/// Second clause in the if statement reduces the vulnerability to selfish mining.
 	/// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 
 	//removed second clause in the if statement reduces the vulnerability to selfish mining
-	if externTd.Cmp(localTd) > 0 {
+	//get maxvalid chain as our suppose
+	newChain,err := bc.forkMem.Maxvalid(bc.currentBlock)
+	var blockNew *types.Block
+	if newChain==nil || err!=nil {
+		//if current block is
+		return SideStatTy, err
+	} else {
+		blockNew = newChain[len(newChain)-1]
+	}
+
+	blockOld := block
+	block = blockNew
+	//if externTd.Cmp(localTd) > 0 {
+	//if blockOld.Hash() != blockNew.Hash() {
+
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
 				return NonStatTy, err
 			}
 		}
+
 		// Write the positional metadata for transaction and receipt lookups
 		if err := WriteTxLookupEntries(batch, block); err != nil {
 			return NonStatTy, err
@@ -856,10 +874,18 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		if err := WritePreimages(bc.chainDb, block.NumberU64(), state.Preimages()); err != nil {
 			return NonStatTy, err
 		}
+
+	if blockOld.Hash() == blockNew.Hash() {
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
 	}
+
+	//} else {
+	//	status = SideStatTy
+	//}
+
+
 
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
@@ -869,7 +895,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if status == CanonStatTy {
 		bc.insert(block)
 	}
+
 	bc.futureBlocks.Remove(block.Hash())
+
 	return status, nil
 }
 
@@ -947,17 +975,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // wrong.
 //
 // After insertion is done, all accumulated events will be fired.
-func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
+func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 
-	err := bc.forkMem.PushBlocks(chain)
-	if err != nil {
-		fmt.Println(err)
-		return 0,err
-	}
-	
-	defer bc.forkMem.PopBack()
 
-	chain,err = bc.forkMem.Maxvalid(bc.CurrentBlock())
+
+
+	chain,err := bc.forkMem.Maxvalid(bc.CurrentBlock())
 	if err != nil || chain == nil {
 		fmt.Println("maxvalid error",err)
 		return 0,err
@@ -966,9 +989,9 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
+
 	if err!=nil {
 		bc.forkMem.PrintAllBffer()
-
 		fmt.Println("maxValid \n\n")
 		for _,blk := range chain {
 
@@ -979,13 +1002,14 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	return n, err
 }
 
-func (bc *BlockChain) InsertChainOld(chain types.Blocks) (int, error) {
+func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
 	bc.PostChainEvents(events, logs)
 
 	return n, err
+
 }
 
 // insertChain will execute the actual chain insertion and event aggregation. The
@@ -1035,6 +1059,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
 
+		//push this block into buffer
+		e := bc.forkMem.Push(block)
+		if e != nil {
+			fmt.Println(e)
+		}
+		defer bc.forkMem.PopBack()
+
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			log.Debug("Premature abort during blocks processing")
@@ -1052,6 +1083,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
 		}
+
 		if err != nil {
 			if err == ErrKnownBlock {
 				stats.ignored++
@@ -1083,12 +1115,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// TODO: varify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
+
 		var parent *types.Block
 		if i == 0 {
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 		} else {
 			parent = chain[i-1]
 		}
+
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1339,33 +1373,18 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
-
-	oldChainLen := len(oldChain)
-
-	oldEpochId, oldSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(oldChain[oldChainLen-1].Header())
-	if err != nil {
-		log.Error("Impossible reorg because epochId or slotId not match with time ,please file an issue", "oldnum", oldChain[0].Number(), "oldhash", oldChain[0].Hash())
-		return fmt.Errorf("Impossible reorg because old epochId or slotId not match with time")
-	}
-
 	newChainLen := len(newChain)
-
-	newEpochId, newSlotId, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
+	newEpochId, _, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
 	updateFork(newEpochId)
-	isReOrg := (len(oldChain) == len(newChain) && (newEpochId < oldEpochId || (newEpochId == oldEpochId && newSlotId < oldSlotId)))
-	isReOrg = isReOrg || len(oldChain) < len(newChain)
-
-	if !isReOrg {
-		//log.Info("can not meet condition for reorg")
-		//return fmt.Errorf("can not meet condition for reorg")
-	}
-
 	updateReOrg(newEpochId,uint64(len(newChain)))
+
+
+
 
 	log.Info("reorg happended")
 	for _, block := range newChain {

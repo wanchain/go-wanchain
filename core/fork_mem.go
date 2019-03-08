@@ -9,7 +9,6 @@ import (
 	"sync"
 	"math/big"
 		"sort"
-	"strconv"
 )
 
 type chainType uint
@@ -88,6 +87,7 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 
 
 func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
+
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -99,12 +99,15 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 	}
 
 	workBlkNum := int64(workBlk.NumberU64())
+
+	fmt.Println("begin select maxvalid workblk=",workBlkNum)
+
 	//if work block is in the highest one or higher than buffer,use work blk,work chain will not change
 	if workBlkNum >= f.curMaxBlkNum {
 		return nil,nil
 	}
 
-	maxNumKey := big.NewInt(int64(f.curMaxBlkNum)).Text(16)
+	maxNumKey := big.NewInt(int64(f.curMaxBlkNum)).Text(10)
 	hashs := f.kBufferedChains[maxNumKey]
 
 	minSid := ^uint64(0)
@@ -161,13 +164,18 @@ func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
 	}
 
 	sort.Sort(BlockSorter(chainBlks))
+	fmt.Println("maxValid \n\n")
+	for _,blk := range chainBlks {
+		fmt.Println("blkNum=",blk.NumberU64()," hash=",common.ToHex(blk.Hash().Bytes()))
+	}
 
+	fmt.Println("end select maxvalid workBlkNum=",workBlkNum)
 	return chainBlks, nil
 }
 
 
 func (f *ForkMemBlockChain) PushHeaders(headerChain []*types.Header) error{
-
+	fmt.Println("begin pushHeaders")
 	if f.ctype != HEADERCHAIN {
 		return errors.New("error chain type which require HEADERCHAIN")
 	}
@@ -175,34 +183,36 @@ func (f *ForkMemBlockChain) PushHeaders(headerChain []*types.Header) error{
 	for _,header := range headerChain {
 
 		blk := types.NewBlockWithHeader(header)
-		err := f.push(blk)
+		err := f.Push(blk)
 		if err != nil {
 			return err
 		}
 
 	}
-
+	fmt.Println("end pushHeaders")
 	return nil
 }
 
 func (f *ForkMemBlockChain) PushBlocks(blockChain types.Blocks) error{
+	fmt.Println("push block begin")
 
 	if f.ctype != BLOCKCHAIN {
 		return errors.New("error chain type which require BLOCKCHAIN")
 	}
 
 	for _,blk := range blockChain {
-		err := f.push(blk)
+		err := f.Push(blk)
 		if err != nil {
 			return err
 		}
 	}
 
+	fmt.Println("push block end")
 	return nil
 }
 
 
-func (f *ForkMemBlockChain) push(block *types.Block) error{
+func (f *ForkMemBlockChain) Push(block *types.Block) error{
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -217,11 +227,10 @@ func (f *ForkMemBlockChain) push(block *types.Block) error{
 		}
 	}
 
-	num := block.Number().Text(16)
+	num := block.Number().Text(10)
 
 	f.kBufferedChains[num] = append(f.kBufferedChains[num],block.Hash())
 	f.kBufferedBlks[block.Hash()] = block
-
 
 	return nil
 }
@@ -241,13 +250,13 @@ func (f *ForkMemBlockChain) PopBack() {
 
 		bnText := big.NewInt(int64(blkNumBeforeK))
 
-		blkHashs := f.kBufferedChains[bnText.Text(16)]
+		blkHashs := f.kBufferedChains[bnText.Text(10)]
 
 		for _,bh := range blkHashs {
 			delete(f.kBufferedBlks,bh)
 		}
 
-		delete(f.kBufferedChains,bnText.Text(16))
+		delete(f.kBufferedChains,bnText.Text(10))
 	}
 
 	return
@@ -257,9 +266,8 @@ func (f *ForkMemBlockChain) PopBack() {
 func (f *ForkMemBlockChain) PrintAllBffer() {
 
 	for idx,blkHashs := range f.kBufferedChains {
-		n,_:= strconv.Atoi(idx)
 		for _,bh := range blkHashs {
-			fmt.Println("block number=",n," hash=",common.ToHex(bh[:]))
+			fmt.Println("block number=",idx," hash=",common.ToHex(bh[:]))
 		}
 	}
 
