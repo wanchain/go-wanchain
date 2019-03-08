@@ -25,7 +25,7 @@ type GetRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]com
 type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
 // GetRandomProposerAddressFn is use to get rb group address
-type GetRandomProposerAddressFn func(epochID uint64) []vm.Leader
+type GetRandomProposerAddressFn func(epochID uint64) ([]vm.Leader, error)
 
 var getStakerInfo GetStakerInfoFn
 

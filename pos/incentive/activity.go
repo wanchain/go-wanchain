@@ -62,8 +62,11 @@ func getRandomProposerActivity(stateDb *state.StateDB, epochID uint64) ([]common
 		return []common.Address{}, []int{}
 	}
 
-	leaders := getRandomProposerAddress(epochID)
-
+	leaders, err := getRandomProposerAddress(epochID)
+	if err != nil {
+		log.Error("incentive getRandomProposerActivity getRandomProposerAddress error", "msg", err.Error())
+		return []common.Address{}, []int{}
+	}
 	addrs := make([]common.Address, len(leaders))
 	for i := 0; i < len(leaders); i++ {
 		addrs[i] = leaders[i].SecAddr
