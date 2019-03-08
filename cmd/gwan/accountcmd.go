@@ -404,6 +404,7 @@ func showPublicKey(ctx *cli.Context) error {
 			}
 			if key.PrivateKey2 != nil {
 				fmt.Println("key2:" + hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+				fmt.Println("waddress:" + hex.EncodeToString(key.WAddress[:]))
 			}
 			if key.PrivateKey3 != nil {
 				fmt.Println("key3:" + hex.EncodeToString(key.PrivateKey3.G1.Marshal()))

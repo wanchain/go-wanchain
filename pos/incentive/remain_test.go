@@ -5,10 +5,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos"
 )
 
 func TestAddRemain(t *testing.T) {
+	statedb.Reset(common.Hash{})
+
 	remainConst := big.NewInt(0).SetUint64(99885844748858447)
 
 	subsidy := getBaseSubsidyTotalForSlot(statedb, subsidyReductionInterval)

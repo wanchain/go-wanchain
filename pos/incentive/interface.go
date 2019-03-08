@@ -4,38 +4,55 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/vm"
 )
 
-type getStakerInfoFn func(common.Address, uint64) ([]common.Address, []*big.Int, int, float64)
+// GetStakerInfoFn is a function use to get staker info
+type GetStakerInfoFn func(uint64, common.Address) ([]vm.ClientProbability, uint64, *big.Int, error)
 
-type setStakerInfoFn func([]common.Address, []*big.Int, uint64)
+// SetStakerInfoFn is a function use to set payment info
+type SetStakerInfoFn func(uint64, [][]vm.ClientIncentive) error
 
-type getEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+// GetEpochLeaderInfoFn is a function use to get epoch activity and address
+type GetEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
-type getRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+// GetRandomProposerInfoFn is use to get rb group and activity
+type GetRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
 
-type getSlotLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int, float64)
+// GetSlotLeaderInfoFn is use to get slotleader address and activity
+type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
 
-var getStakerInfo getStakerInfoFn
+// GetRandomProposerAddressFn is use to get rb group address
+type GetRandomProposerAddressFn func(epochID uint64) []common.Address
 
-var setStakerInfo setStakerInfoFn
+var getStakerInfo GetStakerInfoFn
 
-var getEpochLeaderInfo getEpochLeaderInfoFn
+var setStakerInfo SetStakerInfoFn
 
-var getRandomProposerInfo getRandomProposerInfoFn
+var getEpochLeaderInfo GetEpochLeaderInfoFn
 
-var getSlotLeaderInfo getSlotLeaderInfoFn
+var getRandomProposerInfo GetRandomProposerInfoFn
 
-// SetStakerInterface is use for Staker module to set its interface
-func SetStakerInterface(get getStakerInfoFn, set setStakerInfoFn) {
+var getSlotLeaderInfo GetSlotLeaderInfoFn
+
+var getRandomProposerAddress GetRandomProposerAddressFn
+
+// SetStakerInterface is used for Staker module to set its interface
+func SetStakerInterface(get GetStakerInfoFn, set SetStakerInfoFn) {
 	getStakerInfo = get
 	setStakerInfo = set
 }
 
-// SetActivityInterface is use for get activty module to set its interface
-func SetActivityInterface(getEpl getEpochLeaderInfoFn, getRnp getRandomProposerInfoFn, getSlr getSlotLeaderInfoFn) {
+// SetActivityInterface is used for get activty module to set its interface
+func SetActivityInterface(getEpl GetEpochLeaderInfoFn, getRnp GetRandomProposerInfoFn, getSlr GetSlotLeaderInfoFn) {
 	getEpochLeaderInfo = getEpl
 	getRandomProposerInfo = getRnp
 	getSlotLeaderInfo = getSlr
+}
+
+// SetRBAddressInterface is used to get random proposer address of epoch
+func SetRBAddressInterface(getRBAddress GetRandomProposerAddressFn) {
+	getRandomProposerAddress = getRBAddress
 }

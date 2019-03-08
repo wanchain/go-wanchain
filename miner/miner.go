@@ -20,10 +20,12 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/crypto"
 	"sync/atomic"
 
+	"github.com/wanchain/go-wanchain/crypto"
+
 	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
 	"time"
@@ -109,6 +111,7 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 
 	slotleader.GetSlotLeaderSelection().Init(s.BlockChain(), nil, key, epocher)
 
+	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, nil)
 	fmt.Println("posInit: ", eerr, eerr1)
 	return epocher
 }
@@ -175,16 +178,14 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		} else {
 			pos.EpochBaseTime = h.Time.Uint64()
 			cur := uint64(time.Now().Unix())
-			if  cur < pos.EpochBaseTime+pos.SlotTime {
-				time.Sleep(time.Duration((pos.EpochBaseTime+pos.SlotTime - cur))*time.Second)
+			if cur < pos.EpochBaseTime+pos.SlotTime {
+				time.Sleep(time.Duration((pos.EpochBaseTime + pos.SlotTime - cur)) * time.Second)
 			}
 		}
-
 
 		slotleader.CalEpochSlotID()
 		epochid, slotid := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid", epochid, slotid)
-
 
 		// only the begin of epocher
 		if slotid == 0 {
@@ -197,7 +198,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
-		if err == nil  {
+		if err == nil {
 			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
@@ -213,7 +214,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		root := s.BlockChain().GetBlockByNumber(lastBlockNum - uint64(pos.Cfg().K)).Root()
 		stateDb, err2 := s.BlockChain().StateAt(root)
-		if(err2 != nil){
+		if err2 != nil {
 			log.Error("Failed to get stateDb: ", err2)
 		}
 		if stateDb != nil {

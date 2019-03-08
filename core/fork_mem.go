@@ -8,28 +8,54 @@ import (
 	"errors"
 	"sync"
 	"math/big"
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/log"
+		"sort"
 )
 
-type ForkMem struct {
+type chainType uint
+const(
+	BLOCKCHAIN = iota //0
+	HEADERCHAIN //1
+)
+
+type ForkMemBlockChain struct {
+	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
-	curMaxBlkNum	 uint64
+	curMaxBlkNum	 int64
 	lock sync.RWMutex
 }
 
-func NewForkMem() *ForkMem{
 
-	f := &ForkMem{}
+
+
+func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain{
+
+	f := &ForkMemBlockChain{}
+	f.ctype = ctype
 	f.kBufferedChains = make(map[string][]common.Hash)
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
 	f.curMaxBlkNum = 0
 	return f
 }
 
+type BlockSorter [] *types.Block
 
-func (f *ForkMem) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
+//Len()
+func (s BlockSorter) Len() int {
+	return len(s)
+}
+
+func (s BlockSorter) Less(i, j int) bool {
+	return s[i].NumberU64() < s[j].NumberU64()
+}
+
+//Swap()
+func (s BlockSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+
+func (f *ForkMemBlockChain) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotId uint64) {
 	if pos.EpochBaseTime == 0 {
 		return
 	}
@@ -40,10 +66,10 @@ func (f *ForkMem) calEpochSlotIDFromTime(timeUnix uint64) (epochId uint64, slotI
 	return
 }
 
-func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := block.Time().Uint64()
+func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
+	blkTime := header.Time.Uint64()
 
-	blkTd := block.Difficulty().Uint64()
+	blkTd := header.Difficulty.Uint64()
 
 	blkEpochId = (blkTd >> 32)
 	blkSlotId = ((blkTd & 0xffffffff) >> 8)
@@ -60,56 +86,111 @@ func (f *ForkMem) GetBlockEpochIdAndSlotId(block *types.Block) (blkEpochId uint6
 }
 
 
-func (f *ForkMem) Maxvalid(workBlk *types.Block) types.Blocks{
+func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks,error){
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
-	var allBlks types.Blocks
+	var chainBlks types.Blocks
 	var midSidBlk *types.Block
 
-	workBlkNum := workBlk.NumberU64()
+	if workBlk == nil {
+		return nil,errors.New("can not get current block in working chain")
+	}
 
+	workBlkNum := int64(workBlk.NumberU64())
+	//if work block is in the highest one or higher than buffer,use work blk,work chain will not change
 	if workBlkNum >= f.curMaxBlkNum {
-		return types.Blocks{workBlk}
+		return nil,nil
 	}
 
 	maxNumKey := big.NewInt(int64(f.curMaxBlkNum)).Text(16)
 	hashs := f.kBufferedChains[maxNumKey]
 
 	minSid := ^uint64(0)
-	midSidBlk = nil
+	midSidBlk = f.kBufferedBlks[hashs[0]]
+	epidOld := uint64(0)
+	//if there are more
+	if len(hashs) > 1 {
+		//same block height
+		for _, hs := range hashs {
 
-	for _,hs := range hashs {
-		blk := f.kBufferedBlks[hs]
-		_,sid,err := f.GetBlockEpochIdAndSlotId(blk)
-		if err != nil {
-			continue
+			blk := f.kBufferedBlks[hs]
+
+			epidNew, sid, err := f.GetBlockEpochIdAndSlotId(blk.Header())
+			if err != nil {
+				continue
+			}
+
+			fmt.Print("block hash",common.ToHex(hs[:]),"  block number",blk.NumberU64(),epidNew,sid)
+
+			if epidOld == 0 {
+				epidOld = epidNew
+			}
+
+			if sid < minSid {
+				minSid = sid
+				midSidBlk = blk
+			}
 		}
-
-		if sid < minSid {
-			minSid = sid
-			midSidBlk = blk
-		}
-
-		allBlks = append(allBlks,blk)
+	}
+		// reduce new chain
+	for ; midSidBlk != nil && int64(midSidBlk.NumberU64()) != workBlkNum; midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()] {
+		chainBlks = append(chainBlks, midSidBlk)
 	}
 
+		//find common prefix
+	if midSidBlk != nil && midSidBlk.Hash() != workBlk.Hash() {
+		for {
+				chainBlks = append(chainBlks, midSidBlk)
+				if (workBlk!=nil && workBlk.NumberU64()==1)||(workBlk!=nil&&workBlk.Hash()==midSidBlk.Hash()&&workBlk.NumberU64()==midSidBlk.NumberU64()) {
+					break
+				}
 
-	return  types.Blocks{midSidBlk}
+				midSidBlk = f.kBufferedBlks[midSidBlk.ParentHash()]
+				if midSidBlk == nil {
+					return nil, errors.New("can not find common prefix")
+				}
+
+				workBlk = f.kBufferedBlks[workBlk.ParentHash()]
+			 	if workBlk == nil {
+					return nil, errors.New("can not find common prefix")
+				}
+
+		}
+	}
+
+	sort.Sort(BlockSorter(chainBlks))
+
+	return chainBlks, nil
 }
 
 
-func (f *ForkMem) Push(blockChain types.Blocks) error{
+func (f *ForkMemBlockChain) PushHeaders(headerChain []*types.Header) error{
 
-	for _,blk := range blockChain {
+	if f.ctype != HEADERCHAIN {
+		return errors.New("error chain type which require HEADERCHAIN")
+	}
 
-		if len(f.kBufferedBlks) > 0 {
-			parent := f.kBufferedBlks[blk.ParentHash()]
+	for _,header := range headerChain {
 
-			if parent == nil {
-				log.Debug("Unknown parent of propagated block", "number", blk.Number(), "hash", blk.Hash(), "parent", blk.ParentHash())
-				return errors.New("not find parent hash in buffer")
-			}
+		blk := types.NewBlockWithHeader(header)
+		err := f.push(blk)
+		if err != nil {
+			return err
 		}
 
+	}
+
+	return nil
+}
+
+func (f *ForkMemBlockChain) PushBlocks(blockChain types.Blocks) error{
+
+	if f.ctype != BLOCKCHAIN {
+		return errors.New("error chain type which require BLOCKCHAIN")
+	}
+
+	for _,blk := range blockChain {
 		err := f.push(blk)
 		if err != nil {
 			return err
@@ -120,11 +201,11 @@ func (f *ForkMem) Push(blockChain types.Blocks) error{
 }
 
 
-func (f *ForkMem) push(block *types.Block) error{
+func (f *ForkMemBlockChain) push(block *types.Block) error{
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	newbn := block.NumberU64()
+	newbn := int64(block.NumberU64())
 
 	if f.curMaxBlkNum == 0 {
 		f.curMaxBlkNum = newbn
@@ -132,12 +213,6 @@ func (f *ForkMem) push(block *types.Block) error{
 		//input need to be continous block
 		if f.curMaxBlkNum + 1 == newbn {
 			f.curMaxBlkNum = newbn
-		} else if f.curMaxBlkNum > newbn+1 {
-			//if block number is bigger 1 than current max block ,return future block
-			return consensus.ErrFutureBlock
-		} else if newbn < f.curMaxBlkNum-pos.Stage1K {
-			//if the block number is older k than current max block,return old block error
-			return consensus.ErrOldblockNumber
 		}
 	}
 
@@ -150,12 +225,18 @@ func (f *ForkMem) push(block *types.Block) error{
 	return nil
 }
 
-func (f *ForkMem) popBack() *types.Block{
+func (f *ForkMemBlockChain) PopBack() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	//need to store k data
-	if len(f.kBufferedChains) > int(pos.Cfg().K) {
+	if len(f.kBufferedChains) > int(pos.SlotCount) {
 
-		blkNumBeforeK := f.curMaxBlkNum - uint64(pos.Cfg().K)
+		blkNumBeforeK := f.curMaxBlkNum - int64(pos.SlotCount)
+
+		if blkNumBeforeK < 0 {
+			return
+		}
 
 		bnText := big.NewInt(int64(blkNumBeforeK))
 
@@ -168,55 +249,20 @@ func (f *ForkMem) popBack() *types.Block{
 		delete(f.kBufferedChains,bnText.Text(16))
 	}
 
-	return nil
+	return
 }
 
 
+func (f *ForkMemBlockChain) PrintAllBffer() {
+	for idx,blkHashs := range f.kBufferedChains {
+		for _,bh := range blkHashs {
+			fmt.Println("block number=",idx," hash=",common.ToHex(bh[:]))
+		}
+	}
 
-func (f *ForkMem) GetBlock([]common.Hash) *types.Block{
-	return nil
+	for _,blk := range f.kBufferedBlks {
+		epid, sid,_:= f.GetBlockEpochIdAndSlotId(blk.Header())
+		fmt.Println(" hash=",common.ToHex(blk.Hash().Bytes())," epid=",epid," sid=",sid)
+	}
 }
-
-
-
-//f.initKsecMap()
-//
-//blkNum := block.Number().Uint64()
-//startKBlkNum := uint64((blkNum/pos.Stage1K)*pos.Stage1K)
-//endAlignBlkNum := uint64((blkNum/pos.Stage1K + 1)*pos.Stage1K)
-//
-//
-////push current block into map
-//idx := int(blkNum - startKBlkNum)
-//if f.kSecureChain[idx] == nil {
-//f.kSecureChain[idx] =  make([]common.Hash,0)
-//}
-//
-//f.kSecureChain[idx] = append(f.kSecureChain[idx],block.Hash())
-//f.kAllBlksMap[block.Hash()] = block
-//
-//blkKeyArray := make([]int,0)
-//blksChain := make(types.Blocks,0)
-//if blkNum==endAlignBlkNum-1 || len(f.kSecureChain)==int(pos.Stage1K){
-//for key,_:= range f.kSecureChain {
-//blkKeyArray = append(blkKeyArray,key)
-//}
-//
-//sort.Ints(blkKeyArray)
-//
-//k := blkKeyArray[0]
-//for (uint64(k) + startKBlkNum) < endAlignBlkNum {
-//hashs := f.kSecureChain[k]
-//l := len(hashs)
-//if l==0 {
-//return
-//} else {
-//blksChain = append(blksChain,f.selectBlk(hashs))
-//}
-//k += 1
-//}
-//
-//} else {
-//return
-//}
 
