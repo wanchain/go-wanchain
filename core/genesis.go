@@ -251,8 +251,9 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				PubSec256:   account.Staking.S256pk,
 				PubBn256:    account.Staking.Bn256pk,
 				Amount:      account.Staking.Amount,
-				LockTime:    3600*24*365*100,//100 years
-				StakingTime: int64(g.Timestamp),
+				LockTime:    10000,//10000 epochs
+				StakingTime: uint64(0),
+				FeeRate:	 uint64(100),
 			}
 
 			infoArray, err := json.Marshal(staker)

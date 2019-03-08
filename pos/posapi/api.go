@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 
 	"context"
 	"errors"
@@ -15,11 +16,11 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/internal/ethapi"
 	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 type PosApi struct {
@@ -190,12 +191,24 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 	return j, nil
 }
 
-func (a PosApi) GetEpochStakerInfo(epochID uint64,pubk string) ([]string, error) {
+
+type stakerInfo struct {
+	infors []vm.ClientProbability
+	feeRate uint64
+	totalProbability *big.Int
+}
+func (a PosApi) GetEpochStakerInfo(epochID uint64,addr common.Address) (stakerInfo, error) {
+	skInfo := stakerInfo{}
 	epocherInst := epochLeader.GetEpocher()
-
 	if epocherInst == nil {
-		return nil,errors.New("epocher instance do not exist")
+		return skInfo,errors.New("epocher instance do not exist")
 	}
-
-	return epocherInst.GetEpochStakers(epochID,pubk)
+	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID,addr)
+	if(err !=  nil) {
+		return skInfo, err
+	}
+	skInfo.totalProbability = total
+	skInfo.feeRate = feeRate
+	skInfo.infors = infors
+	return skInfo, nil
 }

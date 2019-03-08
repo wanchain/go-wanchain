@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"math/big"
-	"sort"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -19,6 +16,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/pos/cloudflare"
+	"math"
+	"math/big"
+	"sort"
 	"strings"
 )
 
@@ -43,14 +43,14 @@ var (
 )
 
 type Epocher struct {
-	rbLeadersDb    	*posdb.Db
+	rbLeadersDb     *posdb.Db
+	leadersDb       *posdb.Db
 	rbLeadersAddrDb *posdb.Db
-	epochLeadersDb 	*posdb.Db
-	blkChain       *core.BlockChain
+	epochLeadersDb  *posdb.Db
+	blkChain        *core.BlockChain
 }
 
 var epocherInst *Epocher = nil
-
 
 type puksInfo struct {
 	PubSec256 []byte //staker’s ethereum public key
@@ -64,7 +64,7 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	}
 
 	if epocherInst == nil {
-		epocherInst = NewEpocherWithLBN(blc, "rblocaldb", "eplocaldb")
+		epocherInst = NewEpocherWithLBN(blc, "rblocaldb", "leaderdb", "eplocaldb")
 	}
 
 	return epocherInst
@@ -74,14 +74,14 @@ func GetEpocher() *Epocher {
 	return epocherInst
 }
 
-
-func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher {
+func NewEpocherWithLBN(blc *core.BlockChain, rbn string, leaderbn string, epdbn string) *Epocher {
 
 	rbdb := posdb.NewDb(rbn)
 	rbldAddrDb := posdb.NewDb(rbn + "addresss")
 
 	epdb := posdb.NewDb(epdbn)
-	inst := &Epocher{rbdb,rbldAddrDb,epdb, blc}
+	leaderdb := posdb.NewDb(leaderbn)
+	inst := &Epocher{rbdb, leaderdb, rbldAddrDb, epdb, blc}
 
 	posdb.SetEpocherInst(inst)
 
@@ -116,6 +116,37 @@ func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	//	return 0
 	//}
 }
+
+//func (e *Epocher) SelectLeadersLoop_bak(epochId uint64) error {
+//
+//	targetBlkNum := e.getTargetBlkNumber(epochId)
+//
+//	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+//	if err != nil {
+//		return err
+//	}
+//
+//	epochIdIn := epochId
+//	if epochIdIn > 0 {
+//		epochIdIn--
+//	}
+//	rb := vm.GetR(stateDb, epochIdIn)
+//
+//	if rb == nil {
+//		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
+//		rb = big.NewInt(1)
+//	}
+//
+//	r := rb.Bytes()
+//
+//	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
+
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.getTargetBlkNumber(epochId)
@@ -124,44 +155,12 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 	if err != nil {
 		return err
 	}
-
-	epochIdIn := epochId
-	if epochIdIn > 0 {
-		epochIdIn--
-	}
-	rb := vm.GetR(stateDb, epochIdIn)
-
-	if rb == nil {
-		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
-		rb = big.NewInt(1)
-	}
-
-	r := rb.Bytes()
-
-	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
+	err = e.GenerateLeader(stateDb, epochId)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
-
-	fmt.Println("\n\nselect randoms", epochId, common.ToHex(r))
-
-	pa, err := e.createStakerProbabilityArray(statedb, epochId)
-	if pa == nil || err != nil {
-		return err
-	}
-
-	e.epochLeaderSelection(r, ne, pa, epochId)
-
-	e.randomProposerSelection(r, nr, pa, epochId)
-
-
-	return nil
-
 }
 
 type Proposer struct {
@@ -191,6 +190,28 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
+type Leader struct {
+	PubSec256     []byte
+	PubBn256      []byte
+	SecAddr       common.Address
+	FromAddr      common.Address
+	Probabilities *big.Int
+}
+
+type LeaderSorter []Leader
+
+func (s LeaderSorter) Len() int {
+	return len(s)
+}
+
+func (s LeaderSorter) Less(i, j int) bool {
+	return s[i].Probabilities.Cmp(s[j].Probabilities) < 0
+}
+
+func (s LeaderSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 func Round(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc((f+0.5/n10)*n10) / n10
@@ -198,6 +219,26 @@ func Round(f float64, n int) float64 {
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
+func (e *Epocher) calProbability(epochId uint64, amount *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+	pb := big.NewInt(0)
+	var leftTimePercent float64
+	leftTimePercent = (float64(lockTime-(epochId-startEpochId)) / float64(lockTime))
+	if leftTimePercent > 0 {
+		leftTimePercent = Round(leftTimePercent, 32)
+	} else {
+		return pb
+	}
+	fpercent := Round(math.Exp(-leftTimePercent), 4)
+
+	epercent := big.NewInt(int64(fpercent * Accuracy))
+
+	timeBig := big.NewInt(int64(lockTime))
+
+	pb.Mul(amount, epercent)
+	pb.Mul(pb, timeBig)
+	fmt.Print("calProbability,pb:", pb)
+	return pb
+}
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blkTime uint64) (*Proposer, error) {
 
 	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
@@ -208,7 +249,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 		leftTimePercent = 1
 	} else {
 
-		leftTimePercent = (float64(int64(lockTime)-(int64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
+		leftTimePercent = (float64(uint64(lockTime)-(uint64(blkTime)-pstaker.StakingTime)) / float64(lockTime))
 		if leftTimePercent > 0 {
 			leftTimePercent = Round(leftTimePercent, 32)
 		} else {
@@ -216,15 +257,14 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blk
 		}
 	}
 
+	fpercent := Round(math.Exp(-leftTimePercent), 4)
 
-	fpercent := Round(math.Exp(-leftTimePercent),4)
-
-	epercent := big.NewInt(int64(fpercent* Accuracy))
+	epercent := big.NewInt(int64(fpercent * Accuracy))
 
 	timeBig := big.NewInt(int64(lockTime))
 
-	pb := big.NewInt(0).Mul(amount,epercent)
-	pb = big.NewInt(0).Mul(pb,timeBig)
+	pb := big.NewInt(0).Mul(amount, epercent)
+	pb = big.NewInt(0).Mul(pb, timeBig)
 
 	//if pb == 0 {
 	//log.Warn("epoch Info:", "epochId=", epochId, ",amount=", amount, ",locktime=", lockTime, ",leftTimePercent=", leftTimePercent, ",pb=", pb, ",staking time=", pstaker.StakingTime)
@@ -267,7 +307,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return true
 		}
 
-		if staker.Amount.Cmp(Big0)== 0{
+		if staker.Amount.Cmp(Big0) == 0 {
 			//log.Info("staker ",common.ToHex(staker.PubSec256),"stake out already")
 			return true
 		}
@@ -299,16 +339,61 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 	fmt.Println("\n\n------------------------------------------------------------------------------------------")
 	for i, val := range ps {
-		if i== 0 {
-			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=",0,"to=",val.probabilities,"span wide=",val.probabilities.Text(10))
+		if i == 0 {
+			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=", 0, "to=", val.probabilities, "span wide=", val.probabilities.Text(10))
 		} else {
-			diff := big.NewInt(0).Sub(val.probabilities,ps[i-1].probabilities)
-			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=",ps[i-1].probabilities.Text(10),"to=",val.probabilities.Text(10),"span wide=",diff.Text(10))
+			diff := big.NewInt(0).Sub(val.probabilities, ps[i-1].probabilities)
+			fmt.Println("puk=", common.ToHex(crypto.FromECDSAPub(val.pubSec256)), "probability percent from=", ps[i-1].probabilities.Text(10), "to=", val.probabilities.Text(10), "span wide=", diff.Text(10))
 		}
 	}
-	fmt.Println("------------------------------------------------------------------------------------------\n\n")
+	//fmt.Println("------------------------------------------------------------------------------------------\n\n")
 
 	return ps, nil
+}
+
+func (e *Epocher) GenerateLeader(statedb *state.StateDB, epochId uint64) error {
+
+	if statedb == nil {
+		return vm.ErrUnknown
+	}
+	maxCount := Nr + Ne
+	count := 0
+	stakersInfoAddr := vm.StakersInfoAddr
+	leaders := make([]Leader, 0)
+
+	statedb.ForEachStorageByteArray(stakersInfoAddr, func(key common.Hash, value []byte) bool {
+
+		staker := vm.StakerInfo{}
+		err := json.Unmarshal(value, &staker)
+		if err != nil {
+			log.Info(err.Error())
+			return true
+		}
+		leader := Leader{PubSec256: staker.PubSec256, PubBn256: staker.PubBn256}
+		// TODO: calculate probability
+		leader.Probabilities = e.calProbability(epochId, staker.Amount, staker.LockTime, staker.StakingTime)
+		leaders = append(leaders, leader)
+		count++
+		return true
+	})
+
+	sort.Sort(sort.Reverse(LeaderSorter(leaders)))
+
+	if count >= maxCount {
+		count = maxCount
+	}
+	fmt.Println("\n\n------------------------------------------------------------------------------------------")
+	for _, val := range leaders {
+		fmt.Println("puk=", common.ToHex(val.PubSec256), "span wide=", val.Probabilities.Text(10))
+	}
+	fmt.Println("------------------------------------------------------------------------------------------")
+	for i := 0; i < count; i++ {
+		leaderBytes, err := json.Marshal(leaders[i])
+		if err == nil {
+			e.leadersDb.PutWithIndex(epochId, uint64(i), "", leaderBytes)
+		}
+	}
+	return nil
 }
 
 //samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
@@ -381,16 +466,16 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].pubBn256.Marshal())
 
 		info := &puksInfo{
-			PubSec256:crypto.FromECDSAPub(ps[idx].pubSec256),
-			PubBn256:ps[idx].pubBn256.Marshal(),
+			PubSec256: crypto.FromECDSAPub(ps[idx].pubSec256),
+			PubBn256:  ps[idx].pubBn256.Marshal(),
 		}
 
-		val,err := json.Marshal(&info)
+		val, err := json.Marshal(&info)
 		if err != nil {
 			continue
 		}
 
-		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i),"",val)
+		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i), "", val)
 
 		cr = crypto.Keccak256(cr)
 	}
@@ -402,22 +487,69 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 
 //get epochLeaders of epochID in localdb
 func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
-
 	// TODO: how to cache these
-	//e.SelectLeadersLoop(epochID)
-	ksarray := e.epochLeadersDb.GetStorageByteArray(epochID)
+	eparray := e.GetLeaderGroup(epochID, 0, Ne)
+	ksarray := make([][]byte, Ne)
+	for i := 0; i < Ne; i++ {
+		leader := Leader{}
+		err := json.Unmarshal(eparray[i], &leader)
+		if err == nil {
+			ksarray[i] = leader.PubSec256
+		}
+	}
 
 	return ksarray
+}
+func (e *Epocher) GetEpochLeadersInfo(epochID uint64) []Leader {
+	// TODO: how to cache these
+	eparray := e.GetLeaderGroup(epochID, 0, Ne)
+	ksarray := make([]Leader, Ne)
+	for i := 0; i < Ne; i++ {
+		leader := Leader{}
+		err := json.Unmarshal(eparray[i], &leader)
+		if err == nil {
+			ksarray[i] = leader
+		}
+	}
 
+	return ksarray
+}
+func (e *Epocher) GetLeaderBase(epochID uint64) [][]byte {
+	ksarray := make([][]byte, 0)
+	i := 0
+	for ; i < Ne+Nr; i++ {
+		leaderBytes, err := e.leadersDb.GetWithIndex(epochID, uint64(i), "")
+		if err != nil {
+			break
+		}
+		ksarray = append(ksarray, leaderBytes)
+	}
+	return ksarray
+}
+func (e *Epocher) GetLeaderGroup(epochID uint64, start int, end int) [][]byte {
+	rbarray := make([][]byte, end-start)
+	index := 0
+	ksarray := e.GetLeaderBase(epochID)
+	count := len(ksarray)
+	if count == 0 {
+		return rbarray
+	}
+	for i := 0; i < Ne+Nr && i < end; i++ {
+		if i >= start {
+			rbarray[i-start] = ksarray[index]
+		}
+		index = (index + 1) % count
+	}
+	return rbarray
 }
 
 //get rbLeaders of epochID in localdb
 func (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 
-	ksarray := e.rbLeadersDb.GetStorageByteArray(epochID)
+	rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
 	g1ksArray := make([]bn256.G1, 0)
 
-	for _, ks := range ksarray {
+	for _, ks := range rbarray {
 
 		gb := new(bn256.G1)
 		_, err := gb.Unmarshal(ks)
@@ -431,16 +563,16 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
 	return g1ksArray
 }
 
-func (e *Epocher) GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) ([]byte) {
-	valSet :=e.rbLeadersAddrDb.GetStorageByteArray(epochID)
+func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
+	valSet := e.rbLeadersAddrDb.GetStorageByteArray(epochID)
 
-	if valSet == nil || len(valSet)== 0 {
+	if valSet == nil || len(valSet) == 0 {
 		return nil
 	}
 
 	psValue := valSet[idx]
 	var info puksInfo
-	err := json.Unmarshal(psValue,&info)
+	err := json.Unmarshal(psValue, &info)
 	if err != nil {
 		return nil
 	}
@@ -460,25 +592,51 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64,idx uint64,addr common.Addre
 	}
 }
 
+func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
+	eparray := e.GetLeaderBase(epochId)
 
+	leader := Leader{}
+	for i := 0; i < len(eparray); i++ {
+		err := json.Unmarshal(eparray[i], &leader)
+		if nil == err {
+			if leader.SecAddr == addr {
+				break
+			}
+		}
+	}
+	targetBlkNum := e.getTargetBlkNumber(epochId)
 
-func (e *Epocher)GetEpochProbability(epochId uint64,addr common.Address) (infors []vm.ClientProbability,  feeRate uint64, totalProbability *big.Int, err error) {
-	infors = make([]vm.ClientProbability, 10) // TODO: the array length?
-	feeRate = uint64(30)
-	totalProbability = big.NewInt(0)
-	return infors,feeRate,totalProbability, nil
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	pubHash := common.BytesToHash(leader.SecAddr[:])
+	stakerBytes := stateDb.GetStateByteArray(vm.StakersInfoAddr, pubHash)
+
+	staker := vm.StakerInfo{}
+	err = json.Unmarshal(stakerBytes, &staker)
+	if nil != err {
+		return nil, 0, nil, err
+	}
+	infors = make([]vm.ClientProbability, 1) // TODO: the array length?
+	infors[0].Addr = addr
+	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockTime, staker.StakingTime)
+	feeRate = staker.FeeRate
+	totalProbability = leader.Probabilities
+	return infors, feeRate, totalProbability, nil
 }
 
-func (e *Epocher)SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
+func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
 	return nil
 }
-func (e *Epocher)GetEpochStakers(epochId uint64,puk string) ([]string, error) {
+func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) {
 
 	targetBlkNum := e.getTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	sec256 := common.FromHex(strings.ToLower(puk))
@@ -504,14 +662,12 @@ func (e *Epocher)GetEpochStakers(epochId uint64,puk string) ([]string, error) {
 		return nil, err
 	}
 	strArray := make([]string, 0)
-	val := staker.Amount.Div(staker.Amount,big.NewInt(int64(params.Wan)))
+	val := staker.Amount.Div(staker.Amount, big.NewInt(int64(params.Wan)))
 
-	strArray = append(strArray,fmt.Sprint("amount:",val.Text(10)))
-	strArray = append(strArray,fmt.Sprint("lockTime:",staker.LockTime))
-	strArray = append(strArray,fmt.Sprint("probability:",pitem.probabilities.Text(10)))
+	strArray = append(strArray, fmt.Sprint("amount:", val.Text(10)))
+	strArray = append(strArray, fmt.Sprint("lockTime:", staker.LockTime))
+	strArray = append(strArray, fmt.Sprint("probability:", pitem.probabilities.Text(10)))
 
-	return strArray,nil
+	return strArray, nil
 
 }
-
-

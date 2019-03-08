@@ -16,21 +16,21 @@ personal.unlockAccount(eth.accounts[0],"wanglu",600);
 
 var tranValue = 10
 
-var secpub  = '0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70'
-var g1pub   = '0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910'
+var secpub  = '0x04a5946c1968bbe53bfd897c06d53555292bef6e71a4c8ed92b9c1de1b1b94f797c3984581307788ff0c2a564548901f83000b1aa65a1532dacca01214e1f3fa6c'
+var secAddr = '0x23Fc2eDa99667fD3df3CAa7cE7e798d94Eec06eb'
+var g1pub   = '0x1b4626213c1af35b38d226a386e3b661a98198794e52740d2be58c14315dc1a12d8e79a95c2b6a21653550b422bb3211e62b6af6b1afe09c3232bd6c6b601ea5'
 
-var cscDefinition =
-[
+var cscDefinition = [
 	{
 		"constant": false,
 		"inputs": [
 			{
-				"name": "sPub",
-				"type": "string"
+				"name": "secPk",
+				"type": "bytes"
 			},
 			{
-				"name": "bnPub",
-				"type": "string"
+				"name": "bn256Pk",
+				"type": "bytes"
 			},
 			{
 				"name": "lockEpochs",
@@ -43,24 +43,29 @@ var cscDefinition =
 		],
 		"name": "stakeIn",
 		"outputs": [],
-		"payable": false,
+		"payable": true,
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
 		"constant": false,
 		"inputs": [
 			{
-				"name": "delegateSpub",
-				"type": "string"
+				"name": "delegateAddr",
+				"type": "address"
+			},
+			{
+				"name": "lockEpochs",
+				"type": "uint256"
 			}
 		],
 		"name": "delegateIn",
 		"outputs": [],
-		"payable": false,
+		"payable": true,
+		"stateMutability": "payable",
 		"type": "function"
 	}
 ]
-
 
 /////////////////////////////////register staker////////////////////////////////////////////////////////////////////////
 console.log(JSON.stringify(cscDefinition) )
@@ -75,7 +80,10 @@ var feeRate = 100
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
 console.log("payload: ", payload)
 var tx = eth.sendTransaction({from:eth.accounts[0], to:cscContractAddr, value:web3.toWin(tranValue), data:payload, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
-
 console.log("tx=" + tx)
+
+var payloadDelegate = coinContract.delegateIn.getData(secAddr, lockTime)
+var tx2 = eth.sendTransaction({from:eth.accounts[0], to:cscContractAddr, value:web3.toWin(tranValue), data:payloadDelegate, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+console.log("tx2=" + tx2)
 
 /////////////////////////////////unregister staker//////////////////////////////////////////////////////////////////////

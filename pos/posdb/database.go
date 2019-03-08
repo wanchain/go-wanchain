@@ -238,9 +238,9 @@ func (s *Db) DbClose() {
 
 // GetStorageByteArray : cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
-	searchKey := s.getUniqueKey(epochID, 0, "")
-
-	searchKey = strings.Split(searchKey, "_")[0]
+	//searchKey := s.getUniqueKey(epochID, 0, "")
+	//
+	//searchKey = strings.Split(searchKey, "_")[0]
 
 	keys := s.getAllKeys(epochID)
 

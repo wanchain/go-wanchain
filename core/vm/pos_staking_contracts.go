@@ -14,7 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 )
 
 /* the contract interface described by solidity.
@@ -24,9 +24,9 @@ contract stake {
 }
 
 contract stake {
-	function stakeIn( string memory sPub, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public {}
+	function stakeIn( string memory secPk, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public payable {}
 	// function stakeOut(string memory sPub) public pure {} // TODO: need it?
-	function delegateIn(string memory delegateSpub, uint256 lockEpochs) public {}
+	function delegateIn(address delegateAddr, uint256 lockEpochs) public payable {}
 }
 
 */
@@ -42,14 +42,14 @@ var (
 		"inputs": [
 			{
 				"name": "secPk",
-				"type": "string"
+				"type": "bytes"
 			},
 			{
 				"name": "bn256Pk",
-				"type": "string"
+				"type": "bytes"
 			},
 			{
-				"name": "lkt",
+				"name": "lockEpochs",
 				"type": "uint256"
 			},
 			{
@@ -61,14 +61,14 @@ var (
 		"outputs": [
 			{
 				"name": "secPk",
-				"type": "string"
+				"type": "bytes"
 			},
 			{
 				"name": "bn256Pk",
-				"type": "string"
+				"type": "bytes"
 			},
 			{
-				"name": "lkt",
+				"name": "lockEpochs",
 				"type": "uint256"
 			},
 			{
@@ -76,28 +76,44 @@ var (
 				"type": "uint256"
 			}
 		],
-		"payable": false,
+		"payable": true,
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
 		"constant": false,
 		"inputs": [
 			{
-				"name": "delegateSpub",
-				"type": "string"
+				"name": "delegateAddr",
+				"type": "address"
+			},
+			{
+				"name": "lockEpochs",
+				"type": "uint256"
 			}
 		],
 		"name": "delegateIn",
-		"outputs": [],
-		"payable": false,
+		"outputs": [
+			{
+				"name": "delegateAddr",
+				"type": "address"
+			},
+			{
+				"name": "lockEpochs",
+				"type": "uint256"
+			}
+		],
+		"payable": true,
+		"stateMutability": "payable",
 		"type": "function"
 	}
 ]
-	`
+`
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	stakeInId  [4]byte
 	stakeOutId [4]byte
+	delegateId [4]byte
 
 	errStakeInAbiParse  = errors.New("error in stakein abi parse ")
 	errStakeInPubLen    = errors.New("error in getting stake public keys length")
@@ -121,7 +137,9 @@ type StakerInfo struct {
 
 	Amount      *big.Int //staking wan value
 	LockTime    uint64   //lock time which is input by user
-	StakingTime int64    //the user’s staking time
+	From		common.Address
+	StakingTime uint64    //the user’s staking time
+	FeeRate		uint64
 }
 
 type ClientInfo struct {
@@ -145,6 +163,7 @@ func init() {
 
 	copy(stakeInId[:], cscAbi.Methods["stakeIn"].Id())
 	copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
+	copy(delegateId[:], cscAbi.Methods["delegateIn"].Id())
 
 	//posStartTime = pos.Cfg().PosStartTime
 	//epochInterval = pos.Cfg().EpochInterval
@@ -170,6 +189,8 @@ func (p *Pos_staking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, e
 
 	if methodId == stakeInId {
 		return p.StakeIn(input[4:], contract, evm)
+	} else if methodId == delegateId {
+		return p.DelegateIn(input[4:], contract, evm)
 	} else if methodId == stakeOutId {
 		return p.StakeOut(input[4:], contract, evm)
 	}
@@ -183,8 +204,17 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	if secpub == nil {
 		return nil, errors.New("wrong parameter for stakeIn")
 	}
+	//bpub, err := hex.DecodeString(secpub)
+	//if(nil != err){
+	//	return nil, errors.New("secpub is invalid")
+	//}
+	pub := crypto.ToECDSAPub(secpub)
+	if(nil == pub){
+		return nil, errors.New("secpub is invalid")
+	}
 
-	pukHash := common.BytesToHash(secpub)
+	secAddr := crypto.PubkeyToAddress(*pub)
+	pukHash := common.BytesToHash(secAddr[:])
 	lkperiod := (lt / epochInterval) * epochInterval
 
 	//create staker's information
@@ -193,7 +223,8 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		PubBn256:    bn256pub,
 		Amount:      contract.value,
 		LockTime:    lkperiod,
-		StakingTime: evm.Time.Int64(),
+		From:		 contract.CallerAddress,
+		StakingTime: uint64(evm.Time.Int64()),
 	}
 
 	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, pukHash)
@@ -232,7 +263,38 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	return nil, nil
 
 }
+func (p *Pos_staking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	addr, err := p.delegateInParseAndValid(payload)
+	if err != nil {
+		return nil, err
+	}
 
+	delegateHash := common.BytesToHash(addr[:])
+	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, delegateHash)
+	if gotInfoArray == nil {
+		return nil, errors.New("delegate doesn't exist")
+	}
+
+	clientAddr := contract.CallerAddress
+	clientHash := common.BytesToHash(clientAddr[:])
+
+	clientInfoArray, err := GetInfo(evm.StateDB, addr, clientHash)
+	if clientInfoArray != nil {
+		return nil, errors.New("address has registed in this delegate")
+	}
+	info := &ClientInfo{Delegate: addr, Amount: big.NewInt(0), LockTime: uint64(0)}
+	infoArray, err := json.Marshal(info)
+	if err != nil {
+		return nil, err
+	}
+
+	res := StoreInfo(evm.StateDB, addr, clientHash, infoArray)
+	if res != nil {
+		return nil, res
+	}
+
+	return nil, nil
+}
 func (p *Pos_staking) StakeOut(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	staker, pubHash, err := p.stakeOutParseAndValid(evm.StateDB, payload)
@@ -241,7 +303,7 @@ func (p *Pos_staking) StakeOut(payload []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	//if the time already go beyong staker's staking time, staker can stake out
-	if time.Now().Unix() > staker.StakingTime+int64(staker.LockTime) {
+	if uint64(time.Now().Unix()) > staker.StakingTime+uint64(staker.LockTime) {
 
 		scBal := evm.StateDB.GetBalance(WanCscPrecompileAddr)
 		if scBal.Cmp(staker.Amount) >= 0 {
@@ -292,6 +354,12 @@ func (p *Pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 		if secpub == nil {
 			return errors.New("stakein verify failed")
 		}
+	} else if methodId == delegateId {
+		// TODO validate DelegateIn
+		_, err := p.delegateInParseAndValid(input[4:])
+		if err != nil {
+			return errors.New("delegateIn verify failed")
+		}
 	} else if methodId == stakeOutId {
 		_, _, err := p.stakeOutParseAndValid(stateDB, input[4:])
 		if err != nil {
@@ -306,9 +374,9 @@ func (p *Pos_staking) stakeInParseAndValid(payload []byte) ( []byte,  []byte,  u
 
 	fmt.Println("" + common.ToHex(payload))
 	var Info struct {
-		SecPk     string   //staker’s original public key + bn256 pairing public key
-		Bn256Pk     string   //staker’s original public key + bn256 pairing public key
-		Lkt *big.Int //lock time which is input by user
+		SecPk     	[]byte   //staker’s original public key + bn256 pairing public key
+		Bn256Pk     []byte   //staker’s original public key + bn256 pairing public key
+		LockEpochs *big.Int //lock time which is input by user
 		FeeRate *big.Int //lock time which is input by user
 	}
 
@@ -334,9 +402,22 @@ func (p *Pos_staking) stakeInParseAndValid(payload []byte) ( []byte,  []byte,  u
 	//
 	//lkt = big.NewInt(0).Div(Info.LockTime, ether).Uint64()
 
-	return []byte(Info.SecPk), []byte(Info.Bn256Pk), Info.Lkt.Uint64()
+	return Info.SecPk, Info.Bn256Pk, Info.LockEpochs.Uint64()
 }
+func (p *Pos_staking) delegateInParseAndValid(payload []byte) ( common.Address, error) {
 
+	fmt.Println("" + common.ToHex(payload))
+	var Info struct {
+		DelegateAddr common.Address
+	}
+
+	err := cscAbi.Unpack(&Info, "delegateIn", payload)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return Info.DelegateAddr, nil
+}
 func (p *Pos_staking) stakeOutParseAndValid(stateDB StateDB, payload []byte) (str *StakerInfo, pubHash common.Hash, err error) {
 
 	fmt.Println("" + common.ToHex(payload))
@@ -385,7 +466,7 @@ func runFake(statedb StateDB) error {
 			PubBn256:    g1pubs[i],
 			Amount:      big.NewInt(0).Mul(big.NewInt(int64(mrand.Float32()*1000)), ether),
 			LockTime:    uint64(mrand.Float32()*100) * 3600,
-			StakingTime: time.Now().Unix(),
+			StakingTime: uint64(time.Now().Unix()),
 		}
 
 		infoArray, _ := json.Marshal(staker)
