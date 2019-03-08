@@ -6,6 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"sort"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -15,11 +20,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/pos/cloudflare"
-	"math"
-	"math/big"
-	"sort"
-	"strings"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 var (
@@ -87,7 +88,9 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, leaderbn string, epdbn 
 
 	return inst
 }
-
+func (e *Epocher) GetBlkChain() *core.BlockChain{
+	return e.blkChain
+}
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 	if epochId < 2 {
@@ -190,15 +193,7 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type Leader struct {
-	PubSec256     []byte
-	PubBn256      []byte
-	SecAddr       common.Address
-	FromAddr      common.Address
-	Probabilities *big.Int
-}
-
-type LeaderSorter []Leader
+type LeaderSorter []vm.Leader
 
 func (s LeaderSorter) Len() int {
 	return len(s)
@@ -359,7 +354,7 @@ func (e *Epocher) GenerateLeader(statedb *state.StateDB, epochId uint64) error {
 	maxCount := Nr + Ne
 	count := 0
 	stakersInfoAddr := vm.StakersInfoAddr
-	leaders := make([]Leader, 0)
+	leaders := make([]vm.Leader, 0)
 
 	statedb.ForEachStorageByteArray(stakersInfoAddr, func(key common.Hash, value []byte) bool {
 
@@ -369,7 +364,7 @@ func (e *Epocher) GenerateLeader(statedb *state.StateDB, epochId uint64) error {
 			log.Info(err.Error())
 			return true
 		}
-		leader := Leader{PubSec256: staker.PubSec256, PubBn256: staker.PubBn256}
+		leader := vm.Leader{PubSec256: staker.PubSec256, PubBn256: staker.PubBn256}
 		// TODO: calculate probability
 		leader.Probabilities = e.calProbability(epochId, staker.Amount, staker.LockTime, staker.StakingTime)
 		leaders = append(leaders, leader)
@@ -491,7 +486,7 @@ func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 	eparray := e.GetLeaderGroup(epochID, 0, Ne)
 	ksarray := make([][]byte, Ne)
 	for i := 0; i < Ne; i++ {
-		leader := Leader{}
+		leader := vm.Leader{}
 		err := json.Unmarshal(eparray[i], &leader)
 		if err == nil {
 			ksarray[i] = leader.PubSec256
@@ -500,12 +495,12 @@ func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
 	return ksarray
 }
-func (e *Epocher) GetEpochLeadersInfo(epochID uint64) []Leader {
+func (e *Epocher) GetEpochLeadersInfo(epochID uint64) []vm.Leader {
 	// TODO: how to cache these
 	eparray := e.GetLeaderGroup(epochID, 0, Ne)
-	ksarray := make([]Leader, Ne)
+	ksarray := make([]vm.Leader, Ne)
 	for i := 0; i < Ne; i++ {
-		leader := Leader{}
+		leader := vm.Leader{}
 		err := json.Unmarshal(eparray[i], &leader)
 		if err == nil {
 			ksarray[i] = leader
@@ -544,18 +539,18 @@ func (e *Epocher) GetLeaderGroup(epochID uint64, start int, end int) [][]byte {
 }
 
 //get rbLeaders of epochID in localdb
-func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]Leader, error) {
+func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader, error) {
 	// TODO: how to cache these
 	rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
-	ksarray := make([]Leader, Nr)
+	ksarray := make([]vm.Leader, Nr)
 	for i := 0; i < Nr; i++ {
-		leader := Leader{}
+		leader := vm.Leader{}
 		err := json.Unmarshal(rbarray[i], &leader)
 		if err == nil {
 			ksarray[i] = leader
 		}
 	}
-	return 	ksarray, nil
+	return ksarray, nil
 }
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
@@ -590,7 +585,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 	eparray := e.GetLeaderBase(epochId)
 
-	leader := Leader{}
+	leader := vm.Leader{}
 	for i := 0; i < len(eparray); i++ {
 		err := json.Unmarshal(eparray[i], &leader)
 		if nil == err {

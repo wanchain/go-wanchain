@@ -111,7 +111,7 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 
 	slotleader.GetSlotLeaderSelection().Init(s.BlockChain(), nil, key, epocher)
 
-	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, nil)
+	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, epocher.GetRBProposerGroup)
 	fmt.Println("posInit: ", eerr, eerr1)
 	return epocher
 }
