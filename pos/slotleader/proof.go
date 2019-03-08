@@ -178,8 +178,6 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		return s.VerifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
-	var epochLeadersPtrPre []*ecdsa.PublicKey
-
 	epochLeadersWithStakes, err := s.GetPreEpochLeadersPKWithStake(epochID)
 	if err != nil {
 		return s.VerifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
@@ -256,8 +254,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	publicKey = ProofMeg[0]
 
 	publicKeyIndexes := make([]int, 0)
-	for index, value := range epochLeadersPtrPre {
-		if uleaderselection.PublicKeyEqual(publicKey, value) {
+	for index, value := range epochLeadersWithStakes {
+		if uleaderselection.PublicKeyEqual(publicKey, value.PK) {
 			publicKeyIndexes = append(publicKeyIndexes, index)
 		}
 	}
@@ -299,7 +297,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		skGt := new(ecdsa.PublicKey)
 		skGt.Curve = crypto.S256()
 
-		for i := 0; i < len(epochLeadersPtrPre); i++ {
+		for i := 0; i < len(epochLeadersWithStakes); i++ {
 			tempHash := crypto.Keccak256(temp)
 			tempBig := new(big.Int).SetBytes(tempHash)
 			cstemp := new(big.Int).Mod(tempBig, smaLen)
