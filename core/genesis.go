@@ -260,11 +260,11 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			if err != nil {
 				panic(err)
 			}
-			pukHash := common.BytesToHash(account.Staking.S256pk)
-
+			addr := crypto.PubkeyToAddress(*crypto.ToECDSAPub(account.Staking.S256pk))
+			addrHash := common.BytesToHash(addr[:])
 			statedb.AddBalance(vm.WanCscPrecompileAddr,staker.Amount)
 
-			statedb.SetStateByteArray(vm.StakersInfoAddr, pukHash, infoArray)
+			statedb.SetStateByteArray(vm.StakersInfoAddr, addrHash, infoArray)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
