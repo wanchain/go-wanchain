@@ -137,7 +137,7 @@ func (bproc) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) 
 func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 
 	db, _ := ethdb.NewMemDatabase()
-	gspec := testPlutoGenesisBlock()
+	gspec := testGenesisBlock1()
 	gspec.Difficulty = big.NewInt(1)
 	gspec.MustCommit(db)
 	engine := ethash.NewFullFaker(db)
@@ -397,6 +397,19 @@ func TestGenerateLeader(t *testing.T) {
 		t.Fail()
 	}
 	t.Log("GenerateLeader done")
+
+	i:=0
+	epLeaders := e.GetEpochLeadersInfo(epochId)
+	t.Log(epLeaders)
+	for i=0; i<len(epLeaders); i++ {
+		t.Log(common.ToHex(epLeaders[i].PubSec256))
+	}
+
+	rbGroup := e.GetRBProposerGroup(epochId)
+	t.Log(rbGroup)
+	for i=0; i<len(rbGroup); i++ {
+		t.Log(common.ToHex(rbGroup[i].PubSec256))
+	}
 
 }
 

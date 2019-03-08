@@ -539,7 +539,7 @@ func (e *Epocher) GetLeaderGroup(epochID uint64, start int, end int) [][]byte {
 }
 
 //get rbLeaders of epochID in localdb
-func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader, error) {
+func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader) {
 	// TODO: how to cache these
 	rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
 	ksarray := make([]vm.Leader, Nr)
@@ -550,7 +550,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader, error) {
 			ksarray[i] = leader
 		}
 	}
-	return ksarray, nil
+	return ksarray
 }
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
