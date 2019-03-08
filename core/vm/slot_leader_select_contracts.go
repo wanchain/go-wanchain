@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
 	"math/big"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/pos/uleaderselection"
 
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -162,7 +163,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Stage2K, pos.Stage4K) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Stage5K, pos.Stage7K) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx2Range
 	}
