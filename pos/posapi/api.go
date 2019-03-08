@@ -2,8 +2,10 @@ package posapi
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
 	"context"
@@ -212,6 +214,31 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (stakerI
 	skInfo.feeRate = feeRate
 	skInfo.infors = infors
 	return skInfo, nil
+}
+
+func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
+	stakers := make([]vm.StakerInfo, 0)
+	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return stakers, errors.New("epocher instance do not exist")
+	}
+
+	stateDb, err := epocherInst.GetBlkChain().StateAt(epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum).Root())
+	if err != nil {
+		return stakers, err
+	}
+	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr,  func(key common.Hash, value []byte) bool {
+
+		staker := vm.StakerInfo{}
+		err := json.Unmarshal(value, &staker)
+		if err != nil {
+			log.Info(err.Error())
+			return true
+		}
+		stakers = append(stakers, staker)
+		return true
+	})
+	return stakers, nil
 }
 
 func biToString(value *big.Int, err error) (string, error) {

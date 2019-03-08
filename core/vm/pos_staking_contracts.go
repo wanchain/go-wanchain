@@ -214,7 +214,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	}
 
 	secAddr := crypto.PubkeyToAddress(*pub)
-	pukHash := common.BytesToHash(secAddr[:])
+	addrHash := common.BytesToHash(secAddr[:])
 	lkperiod := (lt / epochInterval) * epochInterval
 
 	//create staker's information
@@ -227,7 +227,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		StakingTime: uint64(evm.Time.Int64()),
 	}
 
-	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, pukHash)
+	gotInfoArray, err := GetInfo(evm.StateDB, StakersInfoAddr, addrHash)
 	if gotInfoArray != nil {
 		return nil, errors.New("public key registed")
 		//var gotStaker StakerInfo
@@ -250,7 +250,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	}
 
 	//store stake info
-	res := StoreInfo(evm.StateDB, StakersInfoAddr, pukHash, infoArray)
+	res := StoreInfo(evm.StateDB, StakersInfoAddr, addrHash, infoArray)
 	if res != nil {
 		return nil, res
 	}

@@ -87,7 +87,9 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, leaderbn string, epdbn 
 
 	return inst
 }
-
+func (e *Epocher) GetBlkChain() *core.BlockChain{
+	return e.blkChain
+}
 func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 	if epochId < 2 {
