@@ -544,23 +544,18 @@ func (e *Epocher) GetLeaderGroup(epochID uint64, start int, end int) [][]byte {
 }
 
 //get rbLeaders of epochID in localdb
-func (e *Epocher) GetRBProposerGroup(epochID uint64) []bn256.G1 {
-
+func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]Leader, error) {
+	// TODO: how to cache these
 	rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
-	g1ksArray := make([]bn256.G1, 0)
-
-	for _, ks := range rbarray {
-
-		gb := new(bn256.G1)
-		_, err := gb.Unmarshal(ks)
-		if err != nil {
-			return nil
+	ksarray := make([]Leader, Nr)
+	for i := 0; i < Nr; i++ {
+		leader := Leader{}
+		err := json.Unmarshal(rbarray[i], &leader)
+		if err == nil {
+			ksarray[i] = leader
 		}
-
-		g1ksArray = append(g1ksArray, *gb)
 	}
-
-	return g1ksArray
+	return 	ksarray, nil
 }
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
