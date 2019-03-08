@@ -1,21 +1,20 @@
 package epochLeader
 
 import (
-	"testing"
-	"fmt"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"math/big"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/state"
-	"time"
-	"bytes"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"encoding/json"
+	"fmt"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/consensus/ethash"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/wanchain/go-wanchain/params"
+	"log"
+	"math/big"
+	"testing"
 	//"github.com/wanchain/go-wanchain/log"
 	//"crypto/rand"
 	//"github.com/wanchain/pos/cloudflare"
@@ -155,48 +154,48 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 	return blockchain, chainEnv
 }
 
-func TestGetEpochLeaders(t *testing.T) {
-
-	epochID, slotID := slotleader.GetEpochSlotID()
-	fmt.Println("epochID:", epochID, " slotID:", slotID)
-
-    blkChain,_ := newTestBlockChain(true)
-
-	epocher1 := NewEpocherWithLBN(blkChain,"rb1","leader1","epdb1")
-	epocher2 := NewEpocherWithLBN(blkChain,"rb2","leader2","epdb2")
-
-	epocher1.SelectLeadersLoop(0)
-
-	time.Sleep(30*time.Second)
-	epocher2.SelectLeadersLoop(0)
-
-	epl1 := epocher1.GetEpochLeaders(0)
-	epl2 := epocher2.GetEpochLeaders(0)
-
-	if len(epl1) != len(epl2) {
-		t.Fail()
-	}
-
-	for idx,val := range epl1 {
-		if !bytes.Equal(val,epl2[idx]) {
-			t.Fail()
-		}
-	}
-
-	rbl1 := epocher1.GetRBProposerGroup(0)
-	rbl2 := epocher2.GetRBProposerGroup(0)
-
-	if len(epl1) != len(epl2) {
-		t.Fail()
-	}
-
-	for idx,val := range rbl1 {
-		if !bytes.Equal(val.Marshal(),rbl2[idx].Marshal()) {
-			t.Fail()
-		}
-	}
-
-}
+//func TestGetEpochLeaders(t *testing.T) {
+//
+//	epochID, slotID := slotleader.GetEpochSlotID()
+//	fmt.Println("epochID:", epochID, " slotID:", slotID)
+//
+//    blkChain,_ := newTestBlockChain(true)
+//
+//	epocher1 := NewEpocherWithLBN(blkChain,"rb1","leader1","epdb1")
+//	epocher2 := NewEpocherWithLBN(blkChain,"rb2","leader2","epdb2")
+//
+//	epocher1.SelectLeadersLoop(0)
+//
+//	time.Sleep(30*time.Second)
+//	epocher2.SelectLeadersLoop(0)
+//
+//	epl1 := epocher1.GetEpochLeaders(0)
+//	epl2 := epocher2.GetEpochLeaders(0)
+//
+//	if len(epl1) != len(epl2) {
+//		t.Fail()
+//	}
+//
+//	for idx,val := range epl1 {
+//		if !bytes.Equal(val,epl2[idx]) {
+//			t.Fail()
+//		}
+//	}
+//
+//	rbl1 := epocher1.GetRBProposerGroup(0)
+//	rbl2 := epocher2.GetRBProposerGroup(0)
+//
+//	if len(epl1) != len(epl2) {
+//		t.Fail()
+//	}
+//
+//	for idx,val := range rbl1 {
+//		if !bytes.Equal(val.Marshal(),rbl2[idx].Marshal()) {
+//			t.Fail()
+//		}
+//	}
+//
+//}
 //
 //
 //func TestGetGetEpochLeadersWithDirrentRand(t *testing.T) {
@@ -399,4 +398,20 @@ func TestGenerateLeader(t *testing.T) {
 	}
 	t.Log("GenerateLeader done")
 
+}
+
+func TestGetEpochProbability(t *testing.T) {
+	blkChain, _ := newTestBlockChain(true)
+	epocherInst := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
+
+	epochID := uint64(0)
+	addr := common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+
+	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
+	if err != nil {
+		log.Fatal("failed to GetEpochProbability: ", err)
+	}
+	log.Println(infors)
+	log.Println(feeRate)
+	log.Println(total)
 }
