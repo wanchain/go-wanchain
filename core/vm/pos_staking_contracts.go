@@ -14,7 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/pos/cloudflare"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 /* the contract interface described by solidity.
@@ -128,7 +128,7 @@ var (
 	epochInterval uint64
 
 	//isRanFake = false
-	FakeCh    = make(chan int)
+	FakeCh = make(chan int)
 )
 
 type StakerInfo struct {
@@ -137,24 +137,32 @@ type StakerInfo struct {
 
 	Amount      *big.Int //staking wan value
 	LockTime    uint64   //lock time which is input by user
-	From		common.Address
-	StakingTime uint64    //the user’s staking time
-	FeeRate		uint64
+	From        common.Address
+	StakingTime uint64 //the user’s staking time
+	FeeRate     uint64
 }
 
+type Leader struct {
+	PubSec256     []byte
+	PubBn256      []byte
+	SecAddr       common.Address
+	FromAddr      common.Address
+	Probabilities *big.Int
+}
 type ClientInfo struct {
 	Delegate common.Address
-	Amount  *big.Int
-	LockTime	uint64
+	Amount   *big.Int
+	LockTime uint64
 }
 type ClientProbability struct {
-	Addr common.Address
-	Probability  *big.Int
+	Addr        common.Address
+	Probability *big.Int
 }
 type ClientIncentive struct {
-	Addr common.Address
-	Incentive  *big.Int
+	Addr      common.Address
+	Incentive *big.Int
 }
+
 func init() {
 
 	if errCscInit != nil {
@@ -209,7 +217,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 	//	return nil, errors.New("secpub is invalid")
 	//}
 	pub := crypto.ToECDSAPub(secpub)
-	if(nil == pub){
+	if nil == pub {
 		return nil, errors.New("secpub is invalid")
 	}
 
@@ -223,7 +231,7 @@ func (p *Pos_staking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]b
 		PubBn256:    bn256pub,
 		Amount:      contract.value,
 		LockTime:    lkperiod,
-		From:		 contract.CallerAddress,
+		From:        contract.CallerAddress,
 		StakingTime: uint64(evm.Time.Int64()),
 	}
 
@@ -370,14 +378,14 @@ func (p *Pos_staking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tr
 	return nil
 }
 
-func (p *Pos_staking) stakeInParseAndValid(payload []byte) ( []byte,  []byte,  uint64) {
+func (p *Pos_staking) stakeInParseAndValid(payload []byte) ([]byte, []byte, uint64) {
 
 	fmt.Println("" + common.ToHex(payload))
 	var Info struct {
-		SecPk     	[]byte   //staker’s original public key + bn256 pairing public key
-		Bn256Pk     []byte   //staker’s original public key + bn256 pairing public key
+		SecPk      []byte   //staker’s original public key + bn256 pairing public key
+		Bn256Pk    []byte   //staker’s original public key + bn256 pairing public key
 		LockEpochs *big.Int //lock time which is input by user
-		FeeRate *big.Int //lock time which is input by user
+		FeeRate    *big.Int //lock time which is input by user
 	}
 
 	err := cscAbi.Unpack(&Info, "stakeIn", payload)
@@ -404,7 +412,7 @@ func (p *Pos_staking) stakeInParseAndValid(payload []byte) ( []byte,  []byte,  u
 
 	return Info.SecPk, Info.Bn256Pk, Info.LockEpochs.Uint64()
 }
-func (p *Pos_staking) delegateInParseAndValid(payload []byte) ( common.Address, error) {
+func (p *Pos_staking) delegateInParseAndValid(payload []byte) (common.Address, error) {
 
 	fmt.Println("" + common.ToHex(payload))
 	var Info struct {

@@ -26,8 +26,7 @@ var (
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
 	WanCscPrecompileAddr = common.BytesToAddress([]byte{210})
-	StakersInfoAddr   = common.BytesToAddress(big.NewInt(400).Bytes())
-
+	StakersInfoAddr      = common.BytesToAddress(big.NewInt(400).Bytes())
 
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
@@ -59,13 +58,15 @@ var (
 	otaBalance50000WStorageAddr = common.HexToAddress(Wancoin50000)
 
 	//pos
-	slotLeaderPrecompileAddr 	= common.BytesToAddress(big.NewInt(600).Bytes())
+	slotLeaderPrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
+
+	incentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
 
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
-	SlotLeaderPrecompileAddr = slotLeaderPrecompileAddr
+	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -105,7 +106,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	wanStampPrecompileAddr: &wanchainStampSC{},
 
 	//pos
-	WanCscPrecompileAddr: 	&Pos_staking{},
-	slotLeaderPrecompileAddr: 	  &slotLeaderSC{},
+	WanCscPrecompileAddr:       &Pos_staking{},
+	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }

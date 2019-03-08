@@ -947,7 +947,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // wrong.
 //
 // After insertion is done, all accumulated events will be fired.
-func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
+func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	err := bc.forkMem.PushBlocks(chain)
 	if err != nil {
@@ -959,7 +959,7 @@ func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 
 	chain,err = bc.forkMem.Maxvalid(bc.CurrentBlock())
 	if err != nil || chain == nil {
-		fmt.Println(err)
+		fmt.Println("maxvalid error",err)
 		return 0,err
 	}
 
@@ -968,15 +968,18 @@ func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
 	bc.PostChainEvents(events, logs)
 	if err!=nil {
 		bc.forkMem.PrintAllBffer()
+
+		fmt.Println("maxValid \n\n")
 		for _,blk := range chain {
-			fmt.Println("maxvalid chain hash=",common.ToHex(blk.Hash().Bytes()))
+
+			fmt.Println("blkNum=",blk.NumberU64()," hash=",common.ToHex(blk.Hash().Bytes()))
 		}
 	}
 
 	return n, err
 }
 
-func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
+func (bc *BlockChain) InsertChainOld(chain types.Blocks) (int, error) {
 
 	//insert here
 	n, events, logs, err := bc.insertChain(chain)
