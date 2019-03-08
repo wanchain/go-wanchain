@@ -5,9 +5,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"math/big"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/poscommon"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
 
@@ -276,7 +277,7 @@ func (s *SlotLeaderSelection) GetEpochLeadersPKWithStake(epochID uint64) poscomm
 
 	type epoch interface {
 		GetEpochLeaders(epochID uint64) [][]byte
-		GetEpochLeadersInfo(epochID uint64) []poscommon.Leader
+		GetEpochLeadersInfo(epochID uint64) []vm.Leader
 	}
 
 	selector := posdb.GetEpocherInst()

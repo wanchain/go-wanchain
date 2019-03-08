@@ -2,7 +2,6 @@ package poscommon
 
 import (
 	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 )
 
@@ -27,10 +26,10 @@ func (s PkWithStakeArr) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type Leader struct {
-	PubSec256     []byte
-	PubBn256      []byte
-	SecAddr       common.Address
-	FromAddr      common.Address
-	Probabilities *big.Int
-}
+// type Leader struct {
+// 	PubSec256     []byte
+// 	PubBn256      []byte
+// 	SecAddr       common.Address
+// 	FromAddr      common.Address
+// 	Probabilities *big.Int
+// }
