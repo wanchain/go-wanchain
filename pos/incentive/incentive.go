@@ -26,7 +26,7 @@ var (
 	percentOfRandomProposer  = 20                                                                         //20%
 	percentOfSlotLeader      = 60                                                                         //60%
 	ceilingPercentS0         = 10.0                                                                       //10%
-	openIncentive            = false
+	openIncentive            = true
 )
 
 const (
