@@ -26,6 +26,7 @@ var (
 	percentOfRandomProposer  = 20                                                                         //20%
 	percentOfSlotLeader      = 60                                                                         //60%
 	ceilingPercentS0         = 10.0                                                                       //10%
+	openIncentive            = false
 )
 
 const (
@@ -56,7 +57,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.Error("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false
 	}
-	if isFinished(stateDb, epochID) {
+	if isFinished(stateDb, epochID) || !openIncentive {
 		return true
 	}
 
