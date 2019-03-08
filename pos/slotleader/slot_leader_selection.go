@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"math/big"
 	"time"
 
@@ -91,6 +92,8 @@ type SlotLeaderSelection struct {
 	stageTwoProofGenesis        [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	randomGenesis               *big.Int
 	smaGenesis                  [pos.EpochLeaderCount]*ecdsa.PublicKey
+
+	epochLeadersWithStakeGenesis [pos.EpochLeaderCount]poscommon.PkWithStake
 }
 
 // Pack is use to pack info for slot proof
@@ -116,6 +119,8 @@ func init() {
 	epoch0Leaders := s.getEpoch0LeadersPK()
 	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
+		s.epochLeadersWithStakeGenesis[index].PK = value
+		s.epochLeadersWithStakeGenesis[index].Stake = big.NewInt(0).SetUint64(uint64(pos.GenesisStake))
 	}
 
 	alphas := make([]*big.Int, 0)
@@ -267,6 +272,33 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 		return epochLeaders
 	}
 }
+func (s *SlotLeaderSelection) GetEpochLeadersPKWithStake(epochID uint64) poscommon.PkWithStakeArr {
+
+	type epoch interface {
+		GetEpochLeaders(epochID uint64) [][]byte
+		GetEpochLeadersInfo(epochID uint64) []poscommon.Leader
+	}
+
+	selector := posdb.GetEpocherInst()
+
+	if selector == nil {
+		return nil
+	}
+
+	epochLeadersInfo := selector.(epoch).GetEpochLeadersInfo(epochID)
+	if epochLeadersInfo != nil {
+		log.Debug(fmt.Sprintf("epochLeadersInfo called return len(epochLeadersInfo):%d", len(epochLeadersInfo)))
+	}
+
+	pkWithStakes := make(poscommon.PkWithStakeArr, 0)
+	for _, leader := range epochLeadersInfo {
+		var pkWithStake poscommon.PkWithStake
+		pkWithStake.PK = crypto.ToECDSAPub(leader.PubSec256)
+		pkWithStake.Stake = leader.Probabilities
+		pkWithStakes = append(pkWithStakes, pkWithStake)
+	}
+	return pkWithStakes
+}
 
 func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 	bufs := s.getEpochLeaders(epochID)
@@ -297,6 +329,20 @@ func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.Pub
 	return pks, nil
 }
 
+func (s *SlotLeaderSelection) GetPreEpochLeadersPKWithStake(epochID uint64) (poscommon.PkWithStakeArr, error) {
+	if epochID == 0 {
+		return s.getEpoch0LeadersPKWithStake(), nil
+	}
+
+	pkWithStakes := s.GetEpochLeadersPKWithStake(epochID - 1)
+	if len(pkWithStakes) == 0 {
+		log.Warn("Can not found pre epoch leaders return epoch 0", "epochIDPre", epochID-1)
+		return s.getEpoch0LeadersPKWithStake(), slottools.ErrInvalidPreEpochLeaders
+	}
+
+	return pkWithStakes, nil
+}
+
 func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
 	for i := 0; i < pos.EpochLeaderCount; i++ {
@@ -307,6 +353,23 @@ func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
 	return pks
+}
+
+func (s *SlotLeaderSelection) getEpoch0LeadersPKWithStake() poscommon.PkWithStakeArr {
+	pkWithStakes := make(poscommon.PkWithStakeArr, 0)
+	for i := 0; i < pos.EpochLeaderCount; i++ {
+		pkBuf, err := hex.DecodeString(pos.GenesisPK)
+		if err != nil {
+			panic("pos.GenesisPK is Error")
+		}
+		pk := crypto.ToECDSAPub(pkBuf)
+		stake := big.NewInt(0).SetUint64(uint64(pos.GenesisStake))
+		var pkWithStake poscommon.PkWithStake
+		pkWithStake.PK = pk
+		pkWithStake.Stake = stake
+		pkWithStakes = append(pkWithStakes, pkWithStake)
+	}
+	return pkWithStakes
 }
 
 // isLocalPkInPreEpochLeaders check if local pk is in pre generate epoch leader.
@@ -441,7 +504,7 @@ func (s *SlotLeaderSelection) dumpSlotLeaders() {
 	}
 
 	for index, value := range s.slotLeadersPtrArray {
-		log.Debug("dumpSlotLeaders", "index", s.slotLeadersIndex[index], "curSlotLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Debug("dumpSlotLeaders", "index", index, "curSlotLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 
 }
@@ -589,17 +652,20 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 
 	// return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
-	var epochLeadersPtrArray []*ecdsa.PublicKey
+	//var epochLeadersPtrArray []*ecdsa.PublicKey
+	var epochLeadersWithStakes poscommon.PkWithStakeArr
 	if epochIDGet == 0 {
-		epochLeadersPtrArray = s.getEpoch0LeadersPK()
+		//epochLeadersPtrArray = s.getEpoch0LeadersPK()
+		epochLeadersWithStakes = s.getEpoch0LeadersPKWithStake()
 	} else {
-		epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
+		//epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
+		epochLeadersWithStakes, err = s.GetPreEpochLeadersPKWithStake(epochIDGet)
 		if err != nil {
 			log.Warn(err.Error())
 		}
 	}
 
-	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
+	if len(epochLeadersWithStakes) != pos.EpochLeaderCount {
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
 	}
 
@@ -610,7 +676,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 	for i := 0; i < pos.EpochLeaderCount; i++ {
-		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
+		ret := crypto.S256().IsOnCurve(epochLeadersWithStakes[i].PK.X, epochLeadersWithStakes[i].PK.Y)
 		if !ret {
 			return slottools.ErrNotOnCurve
 		}
@@ -618,7 +684,15 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	log.Info("Before generateSlotLeadsGroup")
 	s.dumpData()
 
-	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
+	pkWithStakes := make(uleaderselection.PkWithStakeArr, 0)
+	for _, leaderWithStake := range epochLeadersWithStakes {
+		var pkWithStake uleaderselection.PkWithStake
+		pkWithStake.PK = leaderWithStake.PK
+		pkWithStake.Stake = leaderWithStake.Stake
+		pkWithStakes = append(pkWithStakes, pkWithStake)
+	}
+	//slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
+	slotLeadersPtr, _, err = uleaderselection.GenerateSlotLeaderSeqWithStake(piecesPtr[:], pkWithStakes, random.Bytes(), pos.SlotCount, epochID)
 
 	if err != nil {
 		log.Error("generateSlotLeadsGroup", "error", err.Error())
@@ -638,9 +712,9 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		s.slotLeadersPtrArray[index] = val
 	}
 
-	for index, value := range slotLeadersIndex {
-		s.slotLeadersIndex[index] = value
-	}
+	//for index, value := range slotLeadersIndex {
+	//	s.slotLeadersIndex[index] = value
+	//}
 
 	s.slotCreateStatus[epochID] = true
 	log.Info("generateSlotLeadsGroup success")
