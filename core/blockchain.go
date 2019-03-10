@@ -1317,6 +1317,9 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	bc.forkMem.updateFork(newEpochId)
 	bc.forkMem.updateReOrg(newEpochId,uint64(len(newChain)))
 
+	if uint64(len(newChain)) > pos.Stage1K {
+		return fmt.Errorf("Impossible reorg because reorg depth is beyong K blocks",pos.Stage1K)
+	}
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
