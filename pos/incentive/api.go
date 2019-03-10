@@ -166,10 +166,7 @@ func GetRBAddress(epochID uint64) []common.Address {
 		return nil
 	}
 
-	leaders, err := getRandomProposerAddress(epochID)
-	if err != nil {
-		return []common.Address{}
-	}
+	leaders := getRandomProposerAddress(epochID)
 	addrs := make([]common.Address, len(leaders))
 	for i := 0; i < len(leaders); i++ {
 		addrs[i] = leaders[i].SecAddr

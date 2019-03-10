@@ -108,8 +108,12 @@ func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 	}
 }
 
-func testGetRBAddress(epochID uint64) []common.Address {
-	return rpAddrs
+func testGetRBAddress(epochID uint64) []vm.Leader {
+	leaders := make([]vm.Leader, len(rpAddrs))
+	for i := 0; i < len(rpAddrs); i++ {
+		leaders[i].SecAddr = rpAddrs[i]
+	}
+	return leaders
 }
 
 func testSimulateData(epochID uint64, index uint32) {

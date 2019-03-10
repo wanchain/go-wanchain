@@ -12,6 +12,10 @@ import (
 
 // AddEpochGas is used for every block's gas fee collection in each epoch
 func AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
+	if !openIncentive {
+		return
+	}
+
 	if stateDb == nil || gasValue == nil {
 		log.Error("AddEpochGas input param is nil")
 		return

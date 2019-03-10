@@ -539,7 +539,7 @@ func (e *Epocher) GetLeaderGroup(epochID uint64, start int, end int) [][]byte {
 }
 
 //get rbLeaders of epochID in localdb
-func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader, error) {
+func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader) {
 	// TODO: how to cache these
 	rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
 	ksarray := make([]vm.Leader, Nr)
@@ -550,7 +550,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader, error) {
 			ksarray[i] = leader
 		}
 	}
-	return ksarray, nil
+	return ksarray
 }
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
@@ -583,17 +583,17 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 }
 
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
-	eparray := e.GetLeaderBase(epochId)
-
-	leader := vm.Leader{}
-	for i := 0; i < len(eparray); i++ {
-		err := json.Unmarshal(eparray[i], &leader)
-		if nil == err {
-			if leader.SecAddr == addr {
-				break
-			}
-		}
-	}
+	//eparray := e.GetLeaderBase(epochId)
+	//
+	//leader := vm.Leader{}
+	//for i := 0; i < len(eparray); i++ {
+	//	err := json.Unmarshal(eparray[i], &leader)
+	//	if nil == err {
+	//		if leader.SecAddr == addr {
+	//			break
+	//		}
+	//	}
+	//}
 	targetBlkNum := e.getTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
@@ -601,8 +601,8 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 		return nil, 0, nil, err
 	}
 
-	pubHash := common.BytesToHash(leader.SecAddr[:])
-	stakerBytes := stateDb.GetStateByteArray(vm.StakersInfoAddr, pubHash)
+	addrHash := common.BytesToHash(addr[:])
+	stakerBytes := stateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
 
 	staker := vm.StakerInfo{}
 	err = json.Unmarshal(stakerBytes, &staker)
@@ -613,7 +613,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	infors[0].Addr = addr
 	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockTime, staker.StakingTime)
 	feeRate = staker.FeeRate
-	totalProbability = leader.Probabilities
+	totalProbability = infors[0].Probability //TODO: add all client
 	return infors, feeRate, totalProbability, nil
 }
 

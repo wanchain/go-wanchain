@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 
@@ -46,7 +46,6 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 
-	"encoding/binary"
 )
 
 var (
@@ -845,20 +844,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//removed second clause in the if statement reduces the vulnerability to selfish mining
 	//get maxvalid chain as our suppose
-	newChain,err := bc.forkMem.Maxvalid(bc.currentBlock)
-	var blockNew *types.Block
-	if newChain==nil || err!=nil {
-		//if current block is
-		return SideStatTy, err
-	} else {
-		blockNew = newChain[len(newChain)-1]
-	}
 
-	blockOld := block
-	block = blockNew
 	//if externTd.Cmp(localTd) > 0 {
-	//if blockOld.Hash() != blockNew.Hash() {
-
+	 if bc.currentBlock.NumberU64() == 0||block.NumberU64() > bc.currentBlock.NumberU64() {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -875,16 +863,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			return NonStatTy, err
 		}
 
-	if blockOld.Hash() == blockNew.Hash() {
 		status = CanonStatTy
+
 	} else {
+		//if incoming block humber is smaller than or equal local block number,then keep current
 		status = SideStatTy
 	}
-
-	//} else {
-	//	status = SideStatTy
-	//}
-
 
 
 	if err := batch.Write(); err != nil {
@@ -1059,13 +1043,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
 
-		//push this block into buffer
-		e := bc.forkMem.Push(block)
-		if e != nil {
-			fmt.Println(e)
-		}
-		defer bc.forkMem.PopBack()
-
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			log.Debug("Premature abort during blocks processing")
@@ -1232,49 +1209,6 @@ func countTransactions(chain []*types.Block) (c int) {
 }
 
 
-func updateReOrg(epochId uint64,length uint64) {
-	reOrgDb := posdb.GetDbByName("forkdb")
-	if reOrgDb == nil {
-		reOrgDb = posdb.NewDb("forkdb")
-	}
-
-
-	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
-
-	num := uint64(0)
-	if numberBytes != nil {
-		num = binary.BigEndian.Uint64(numberBytes) + 1
-	}
-
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, num)
-
-	reOrgDb.Put(epochId, "reorgNumber", b)
-
-	b = make([]byte, 8)
-	binary.BigEndian.PutUint64(b, length)
-	reOrgDb.Put(epochId, "reorgLength", b)
-}
-
-func updateFork(epochId uint64) {
-	reOrgDb := posdb.GetDbByName("forkdb")
-	if reOrgDb == nil {
-		reOrgDb = posdb.NewDb("forkdb")
-	}
-
-	numberBytes, _ := reOrgDb.Get(0, "forkNumber")
-
-	num := uint64(0)
-	if numberBytes != nil {
-
-		num = binary.BigEndian.Uint64(numberBytes) + 1
-	}
-
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, num)
-
-	reOrgDb.Put(epochId, "forkNumber", b)
-}
 
 
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
@@ -1380,11 +1314,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-	updateFork(newEpochId)
-	updateReOrg(newEpochId,uint64(len(newChain)))
+	bc.forkMem.updateFork(newEpochId)
+	bc.forkMem.updateReOrg(newEpochId,uint64(len(newChain)))
 
-
-
+	if uint64(len(newChain)) > pos.Stage1K {
+		return fmt.Errorf("Impossible reorg because reorg depth is beyong K blocks",pos.Stage1K)
+	}
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
@@ -1514,9 +1449,6 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
 		return i, err
 	}
-
-
-
 
 	// Make sure only one thread manipulates the chain at once
 	bc.chainmu.Lock()

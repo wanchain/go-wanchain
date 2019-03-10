@@ -100,11 +100,11 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStage2:
 		log.Debug("Enter slotLeaderSelectionStage2")
 
-		if slotID < pos.Stage2K+1 {
+		if slotID < pos.Stage5K+1 {
 			break
 		}
 
-		if slotID > pos.Stage4K {
+		if slotID > pos.Stage7K {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			break
 		}
@@ -115,7 +115,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
 
-		if slotID < pos.Stage5K {
+		if slotID < pos.Stage9K {
 			break
 		}
 
