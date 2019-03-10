@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -660,12 +659,12 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
 	epochID, _ := slotleader.GetEpochSlotID()
-	if epochID >= 2 {
-		log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
-		if !incentive.Run(chain, state, epochID-2) {
-			log.Error("incentive.Run failed")
-		}
-	}
+	//if epochID >= 2 {
+	log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
+	//if !incentive.Run(chain, state, epochID-2) {
+	//	log.Error("incentive.Run failed")
+	//}
+	//}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
