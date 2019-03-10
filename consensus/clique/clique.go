@@ -662,7 +662,9 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	epochID, _ := slotleader.GetEpochSlotID()
 	if epochID >= 2 {
 		log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
-		incentive.Run(chain, state, epochID-2)
+		if !incentive.Run(chain, state, epochID-2) {
+			log.Error("incentive.Run failed")
+		}
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
