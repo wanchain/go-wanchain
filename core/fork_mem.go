@@ -9,6 +9,8 @@ import (
 	"sync"
 	"math/big"
 		"sort"
+	"encoding/binary"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 type chainType uint
@@ -276,4 +278,50 @@ func (f *ForkMemBlockChain) PrintAllBffer() {
 		fmt.Println(" hash=",common.ToHex(blk.Hash().Bytes())," epid=",epid," sid=",sid)
 	}
 }
+
+
+func (f *ForkMemBlockChain) updateReOrg(epochId uint64,length uint64) {
+	reOrgDb := posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		reOrgDb = posdb.NewDb("forkdb")
+	}
+
+
+	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+		num = binary.BigEndian.Uint64(numberBytes) + 1
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(epochId, "reorgNumber", b)
+
+	b = make([]byte, 8)
+	binary.BigEndian.PutUint64(b, length)
+	reOrgDb.Put(epochId, "reorgLength", b)
+}
+
+func (f *ForkMemBlockChain) updateFork(epochId uint64) {
+	reOrgDb := posdb.GetDbByName("forkdb")
+	if reOrgDb == nil {
+		reOrgDb = posdb.NewDb("forkdb")
+	}
+
+	numberBytes, _ := reOrgDb.Get(0, "forkNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+
+		num = binary.BigEndian.Uint64(numberBytes) + 1
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(epochId, "forkNumber", b)
+}
+
 
