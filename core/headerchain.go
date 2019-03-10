@@ -142,8 +142,13 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
-	localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
+
+	//localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
 	externTd := new(big.Int).Add(header.Difficulty, ptd)
+
+	//localTd := hc.CurrentHeader().Difficulty
+	//externTd :=header.Difficulty
+
 
 	// Irrelevant of the canonical status, write the td and header to the database
 	if err := hc.WriteTd(hash, number, externTd); err != nil {
@@ -155,7 +160,8 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	//if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	if hc.CurrentHeader().Number.Uint64() < header.Number.Uint64() {
 		// Delete any canonical number assignments above the new head
 		for i := number + 1; ; i++ {
 			hash := GetCanonicalHash(hc.chainDb, i)
@@ -264,21 +270,11 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 // because nonces can be verified sparsely, not needing to check each.
 func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCallback, start time.Time) (int, error) {
 
-	hc.forkMem.PushHeaders(chain)
-	defer hc.forkMem.PopBack()
-
-	curblk := types.NewBlockWithHeader(hc.CurrentHeader())
-	blkChain,err := hc.forkMem.Maxvalid(curblk)
-	if blkChain==nil || err!=nil {
-		return 0,err
-	}
-
 	// Collect some import statistics to report on
 	stats := struct{ processed, ignored int }{}
 	// All headers passed verification, import them into the database
-	for i, blk := range blkChain {
+	for i, header := range chain {
 
-		header :=blk.Header()
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")
