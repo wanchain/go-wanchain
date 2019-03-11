@@ -562,19 +562,14 @@ func (s *SlotLeaderSelection) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, is
 }
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
-	functrace.Enter()
-
 	epochIDGet := epochID
-
 	// get pre sma
 	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
-
 	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
 	if !canBeContinue {
 		log.Warn("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
-
 	if (err != nil && epochID > 1) || isGenesis {
 		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
 		epochIDGet = 0
@@ -615,11 +610,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return slottools.ErrNotOnCurve
 		}
 	}
-	log.Info("Before generateSlotLeadsGroup")
-	s.dumpData()
-
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
-
 	if err != nil {
 		log.Error("generateSlotLeadsGroup", "error", err.Error())
 		return err

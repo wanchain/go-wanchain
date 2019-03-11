@@ -11,7 +11,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -27,11 +26,11 @@ var (
 	slBlks     = make([]int, addrsCount)
 )
 
-func testgetEpLeader(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
+func testgetEpLeader(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	return epAddrs, epActs
 }
 
-func testgetRProposer(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
+func testgetRProposer(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	return rpAddrs, rpActs
 }
 

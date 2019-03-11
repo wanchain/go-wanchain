@@ -28,16 +28,28 @@ const (
 	// GenesisPK is the epoch0 pk
 	GenesisPK = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
 
+	//Incentive should perform delay some epochs.
+	IncentiveDelayEpochs = 1
+	IncentiveStartStage  = Stage2K
+
 	// Stage1K is divde a epoch into 10 pieces
-	Stage1K = uint64(SlotCount / 10)
-	Stage2K = Stage1K * 2
-	Stage3K = Stage1K * 3
-	Stage4K = Stage1K * 4
-	Stage5K = Stage1K * 5
-	Stage6K = Stage1K * 6
-	Stage7K = Stage1K * 7
-	Stage8K = Stage1K * 8
-	Stage9K = Stage1K * 9
+	Stage1K  = uint64(SlotCount / 10)
+	Stage2K  = Stage1K * 2
+	Stage3K  = Stage1K * 3
+	Stage4K  = Stage1K * 4
+	Stage5K  = Stage1K * 5
+	Stage6K  = Stage1K * 6
+	Stage7K  = Stage1K * 7
+	Stage8K  = Stage1K * 8
+	Stage9K  = Stage1K * 9
+	Stage10K = Stage1K * 10
+
+	Sma1Start = 0
+	Sma1End   = Stage3K
+	Sma2Start = Stage5K
+	Sma2End   = Stage7K
+	Sma3Start = Stage9K
+	Sma3End   = Stage10K
 )
 
 type Config struct {

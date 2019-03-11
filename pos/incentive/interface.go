@@ -5,7 +5,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 )
 
@@ -16,10 +15,10 @@ type GetStakerInfoFn func(uint64, common.Address) ([]vm.ClientProbability, uint6
 type SetStakerInfoFn func(uint64, [][]vm.ClientIncentive) error
 
 // GetEpochLeaderInfoFn is a function use to get epoch activity and address
-type GetEpochLeaderInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+type GetEpochLeaderInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int)
 
 // GetRandomProposerInfoFn is use to get rb group and activity
-type GetRandomProposerInfoFn func(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int)
+type GetRandomProposerInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int)
 
 // GetSlotLeaderInfoFn is use to get slotleader address and activity
 type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
