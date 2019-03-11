@@ -11,6 +11,10 @@ import (
 		"sort"
 	"encoding/binary"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/crypto"
+	"encoding/json"
 )
 
 type chainType uint
@@ -21,14 +25,14 @@ const(
 
 
 type EpochGenesis struct {
-	protocolMagic			[]byte	 	//magic number
-	epochId				  	uint	  	//current epochId
-	preEpochLastestBlkHash  common.Hash //the hash of last block of previous epoch
-	slotLeaders			  	[][]byte 	//current epoch slotleaders
-	genesisBlkHash		  	common.Hash	//the hash of this block
-	extra				  	[]byte   	//empty
+	ProtocolMagic			[]byte	 	//magic number
+	EpochId				  	uint64	  	//current epochId
+	PreEpochLastBlkHash  	common.Hash 	//the hash of last block of previous epoch
+	SlotLeaders			  	[][]byte 	//current epoch slotleaders
+	RBLeaders			  	[][]byte 	//current epoch slotleaders
+	GenesisBlkHash		  	common.Hash	//the hash of this block
+	Extra				  	[]byte   	//empty
 }
-
 
 type ForkMemBlockChain struct {
 	ctype 			chainType
@@ -291,6 +295,8 @@ func (f *ForkMemBlockChain) PrintAllBffer() {
 }
 
 
+
+
 func (f *ForkMemBlockChain) updateReOrg(epochId uint64,length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
@@ -334,5 +340,25 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
+
+
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block) ([]byte,error){
+
+	epGen := &EpochGenesis{}
+	epGen.ProtocolMagic = []byte("wanchainpos")
+	epGen.EpochId = epochid
+	epGen.PreEpochLastBlkHash = lastBlk.Hash()
+	epGen.RBLeaders = epochLeader.GetEpocher().GetEpochLeaders(epochid)
+	epGen.SlotLeaders = make([][]byte,0)
+	pks,err  := slotleader.GetSlotLeaderSelection().GetSlotLeaders(epochid)
+	if err!=nil {
+		for _, slpk := range pks {
+			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
+		}
+	}
+
+	return json.Marshal(epGen)
+}
+
 
 
