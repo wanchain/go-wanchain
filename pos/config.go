@@ -30,6 +30,7 @@ const (
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
+	IncentiveStartStage  = Stage2K
 
 	// Stage1K is divde a epoch into 10 pieces
 	Stage1K  = uint64(SlotCount / 10)
