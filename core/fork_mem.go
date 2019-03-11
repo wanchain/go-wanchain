@@ -18,11 +18,13 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"crypto/ecdsa"
 
+	"github.com/wanchain/go-wanchain/log"
 )
 
 type chainType uint
 
 type LeadersSelInt interface {
+	GetTargetBlkNumber(epochId uint64) uint64
 	GetRBProposerGroup(epochID uint64) []vm.Leader
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
@@ -369,6 +371,46 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block)
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
 	return json.Marshal(epGen)
+}
+
+func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *types.Block) bool{
+
+	epGen := &EpochGenesis{}
+	epGen.ProtocolMagic = []byte("wanchainpos")
+
+	epochid,_,err:= f.GetBlockEpochIdAndSlotId(firstBlk.Header())
+	if err!=nil {
+		log.Info("verify genesis failed because of wrong epochid or slotid")
+		return false
+	}
+	epGen.EpochId = epochid
+
+	lastBlk := bc.GetBlockByNumber(firstBlk.NumberU64()-1)
+	epGen.PreEpochLastBlkHash = lastBlk.Hash()
+
+	f.rbLeaderSelector.GetRBProposerGroup(epochid)
+
+
+	epGen.SlotLeaders = make([][]byte,0)
+	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
+	if pks!=nil {
+		for _, slpk := range pks {
+			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
+		}
+	}
+
+	byteVal,err := json.Marshal(epGen)
+
+	if err!=nil {
+		log.Info("verify genesis marshal failed")
+		return false
+	}
+
+	genesisBlkHash := crypto.Keccak256Hash(byteVal)
+
+	res := (genesisBlkHash==firstBlk.ParentHash())
+
+	return res
 }
 
 
