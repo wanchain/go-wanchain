@@ -321,11 +321,11 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 	fmt.Println("\n\n------------------------------------------------------------------------------------------")
 	for i, val := range ps {
-		if i== 0 {
-			fmt.Println("puk=", val.PubSec256, "probability percent from=",0,"to=",val.Probabilities,"span wide=",val.Probabilities.Text(10))
+		if i == 0 {
+			fmt.Println("puk=", val.PubSec256, "probability percent from=", 0, "to=", val.Probabilities, "span wide=", val.Probabilities.Text(10))
 		} else {
-			diff := big.NewInt(0).Sub(val.Probabilities,ps[i-1].Probabilities)
-			fmt.Println("puk=", val.PubSec256, "probability percent from=",ps[i-1].Probabilities.Text(10),"to=",val.Probabilities.Text(10),"span wide=",diff.Text(10))
+			diff := big.NewInt(0).Sub(val.Probabilities, ps[i-1].Probabilities)
+			fmt.Println("puk=", val.PubSec256, "probability percent from=", ps[i-1].Probabilities.Text(10), "to=", val.Probabilities.Text(10), "span wide=", diff.Text(10))
 		}
 	}
 	fmt.Println("------------------------------------------------------------------------------------------")
@@ -362,7 +362,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 
 		log.Info("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", ps[idx].PubSec256)
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].PubSec256)
-		val,err := rlp.EncodeToBytes(&ps[idx])
+		val, err := rlp.EncodeToBytes(&ps[idx])
 		//val,err := json.Marshal(&ps[idx])
 		if err != nil {
 			continue
@@ -411,7 +411,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		//	PubSec256:crypto.FromECDSAPub(ps[idx].PubSec256),
 		//	PubBn256:ps[idx].PubBn256.Marshal(),
 		//}
-		val,err := rlp.EncodeToBytes(ps[idx])
+		val, err := rlp.EncodeToBytes(ps[idx])
 		//val,err := json.Marshal(&ps[idx])
 
 		if err != nil {
@@ -439,7 +439,7 @@ func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 }
 
 //get rbLeaders of epochID in localdb only for incentive.
-func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader) {
+func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 	proposersArray := e.rbLeadersDb.GetStorageByteArray(epochID)
 	length := len(proposersArray)
 	g1s := make([]vm.Leader, length)
@@ -457,7 +457,6 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) ([]vm.Leader) {
 
 	return g1s
 }
-
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	valSet := e.rbLeadersAddrDb.GetStorageByteArray(epochID)
@@ -488,7 +487,6 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 }
 
-
 func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) {
 
 	targetBlkNum := e.getTargetBlkNumber(epochId)
@@ -515,8 +513,8 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 	if staker.PubSec256 == nil {
 		return nil, errors.New("staker has unregistered already")
 	}
-	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
-	pitem, err := e.generateProblility(&staker, epochId, blkTime)
+	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+	pitem, err := e.generateProblility(&staker, epochId)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +523,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 
 	strArray = append(strArray, fmt.Sprint("amount:", val.Text(10)))
 	strArray = append(strArray, fmt.Sprint("lockTime:", staker.LockTime))
-	strArray = append(strArray, fmt.Sprint("probability:", pitem.probabilities.Text(10)))
+	strArray = append(strArray, fmt.Sprint("probability:", pitem.Probabilities.Text(10)))
 
 	return strArray, nil
 
