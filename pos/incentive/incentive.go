@@ -87,7 +87,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 
 	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	if err != nil {
-		log.Error("Incentive epochLeaderAllocate error", "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
+		log.Error("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
