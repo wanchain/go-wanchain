@@ -23,9 +23,12 @@ import (
 
 type chainType uint
 
-type LeadersSelInt interface {
+type RbLeadersSelInt interface {
 	GetTargetBlkNumber(epochId uint64) uint64
 	GetRBProposerGroup(epochID uint64) []vm.Leader
+}
+
+type SlLeadersSelInt interface {
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
 
@@ -47,8 +50,9 @@ type EpochGenesis struct {
 
 type ForkMemBlockChain struct {
 
-	rbLeaderSelector LeadersSelInt
-	slotLeaderSelector LeadersSelInt
+	rbLeaderSelector   RbLeadersSelInt
+	slotLeaderSelector SlLeadersSelInt
+
 	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
@@ -299,6 +303,14 @@ func (f *ForkMemBlockChain) PrintAllBffer() {
 		fmt.Println(" hash=", common.ToHex(blk.Hash().Bytes()), " epid=", epid, " sid=", sid)
 	}
 }
+//////////////////////////////////////////////////////////////////////////
+func (f *ForkMemBlockChain)SetRbSelector(rbs RbLeadersSelInt){
+	f.rbLeaderSelector = rbs
+}
+
+func (f *ForkMemBlockChain)SetSlSelector(sls SlLeadersSelInt){
+	f.slotLeaderSelector = sls
+}
 
 func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
@@ -413,6 +425,25 @@ func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *ty
 	return res
 }
 
+
+func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
+	_,slotid,err:= f.GetBlockEpochIdAndSlotId(firstBlk.Header())
+	if err!=nil {
+		log.Info("verify genesis failed because of wrong epochid or slotid")
+		return false
+	}
+
+	if slotid==0 {
+		return true
+	}
+
+	return false
+}
+
+
+func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain,firstBlk *types.Block) *types.Block {
+	return nil
+}
 
 
 
