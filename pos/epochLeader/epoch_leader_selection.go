@@ -531,7 +531,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
-	return []vm.ClientProbability{{Addr: addr, Probability: big.NewInt(10)}}, 100, big.NewInt(10000), nil
+	//return []vm.ClientProbability{{Addr: addr, Probability: big.NewInt(10)}}, 100, big.NewInt(10000), nil
 
 	//eparray := e.GetLeaderBase(epochId)
 	//
