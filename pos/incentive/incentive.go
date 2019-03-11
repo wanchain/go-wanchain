@@ -27,7 +27,6 @@ var (
 	percentOfSlotLeader      = 60                                                                         //60%
 	ceilingPercentS0         = 100.0                                                                      //10%
 	openIncentive            = true                                                                       //If the incentive function is open
-	blockNumberRunMap        = make(map[uint64]bool)                                                      // One blockNumber only can run once no whether success or failed
 )
 
 const (
@@ -140,14 +139,9 @@ func getRunFlagKey(epochID uint64) common.Hash {
 }
 
 func isFinished(stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
-	// _, ok := blockNumberRunMap[blockNumber]
-	// if ok {
-	// 	return true
-	// }
 
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID))
 	if buf == nil || len(buf) == 0 {
-		// blockNumberRunMap[blockNumber] = true
 		return false
 	}
 
