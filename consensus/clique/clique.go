@@ -659,8 +659,6 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	epochSlotId += curEpochId << 32
 
 	header.Difficulty.SetUint64(epochSlotId)
-
-	log.Info("--------Incentive Prepare--------", "number", header.Number.String(), "epochID", curEpochId)
 	return nil
 }
 
