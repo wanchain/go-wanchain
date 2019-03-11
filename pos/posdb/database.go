@@ -3,6 +3,7 @@ package posdb
 import (
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/rlp"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -10,10 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	bn256 "github.com/wanchain/pos/cloudflare"
-
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/postools"
 )
@@ -339,36 +339,60 @@ func GetEpocherInst() SelectLead {
 	return selecter
 }
 
+// TODO duplicated with epochLeader
+type Proposer struct {
+	PubSec256     []byte
+	PubBn256      []byte
+	Probabilities *big.Int
+}
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	GetEpocherInst()
 	db := NewDb("rblocaldb")
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
 		return nil
 	}
 
-	pks := db.GetStorageByteArray(epochId)
-	length := len(pks)
-	if length == 0 {
-		return nil
-		// TODO don't select if no epoch leader.
-		//selecter.SelectLeadersLoop(epochId)
-		//pks = db.GetStorageByteArray(epochId)
-		//if len(pks) == 0 {
-		//	log.Error("GetRBProposerGroup get pks error")
-		//	return nil
-		//}
-		//length = len(pks)
-	}
+	proposersArray := db.GetStorageByteArray(epochId)
+	length := len(proposersArray)
 	g1s := make([]bn256.G1, length, length)
 
 	for i := 0; i < length; i++ {
+		proposer := Proposer{}
+		err := rlp.DecodeBytes(proposersArray[i], &proposer)
+		if err != nil {
+			log.Error("can't rlp decode:", err)
+		}
 		g1s[i] = *new(bn256.G1)
-		g1s[i].Unmarshal(pks[i])
+		g1s[i].Unmarshal(proposer.PubBn256)
 	}
 
 	return g1s
+
 }
+func GetEpochLeaderGroup(epochId uint64) [][]byte {
+	db := NewDb("eplocaldb")
+	if db == nil {
+		log.Error("GetEpochLeaderGroup create db error")
+		return nil
+	}
+
+	proposersArray := db.GetStorageByteArray(epochId)
+	length := len(proposersArray)
+	pks := make([][]byte, length, length)
+
+	for i := 0; i < length; i++ {
+		proposer := Proposer{}
+		err := rlp.DecodeBytes(proposersArray[i], &proposer)
+		if err != nil {
+			log.Error("can't rlp decode:", err)
+		}
+		pks[i]= proposer.PubSec256
+	}
+
+	return pks
+
+}
+
 
 func GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) []byte {
 	return selecter.GetProposerBn256PK(epochID, idx, addr)
