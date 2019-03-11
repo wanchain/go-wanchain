@@ -452,6 +452,12 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		}
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
+		pub := crypto.ToECDSAPub(proposer.PubSec256)
+		if nil == pub {
+			continue
+		}
+
+		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
 		g1s[i].Probabilities = proposer.Probabilities
 	}
 
