@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"math/big"
-	"sort"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -19,7 +16,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/pos/cloudflare"
-	"strings"
+	"math"
+	"math/big"
+	"sort"
 )
 
 var (
@@ -220,8 +219,9 @@ func (e *Epocher) calProbability(epochId uint64, amount *big.Int, lockTime uint6
 	return pb
 }
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64, blkTime uint64) (*Proposer, error) {
+func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
+	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
 	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
 	lockTime := pstaker.LockTime
 
@@ -278,7 +278,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
 
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
@@ -294,7 +294,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return true
 		}
 
-		pitem, err := e.generateProblility(&staker, epochId, blkTime)
+		pitem, err := e.generateProblility(&staker, epochId)
 		if err != nil {
 			log.Info(err.Error())
 			return true
@@ -477,48 +477,48 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64,idx uint64,addr common.Addre
 	}
 }
 
-
-func (e *Epocher)GetEpochStakers(epochId uint64,puk string) ([]string, error) {
-
-	targetBlkNum := e.getTargetBlkNumber(epochId)
-
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
-	if err != nil {
-		return nil,err
-	}
-
-	sec256 := common.FromHex(strings.ToLower(puk))
-	pubHash := common.BytesToHash(sec256)
-
-	infoArray, err := vm.GetInfo(stateDb, vm.StakersInfoAddr, pubHash)
-	if infoArray == nil {
-		return nil, errors.New("not find staker staking info")
-	}
-
-	var staker vm.StakerInfo
-	err = json.Unmarshal(infoArray, &staker)
-	if err != nil {
-		return nil, err
-	}
-
-	if staker.PubSec256 == nil {
-		return nil, errors.New("staker has unregistered already")
-	}
-	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
-	pitem, err := e.generateProblility(&staker, epochId, blkTime)
-	if err != nil {
-		return nil, err
-	}
-	strArray := make([]string, 0)
-	val := staker.Amount.Div(staker.Amount,big.NewInt(int64(params.Wan)))
-
-	strArray = append(strArray,fmt.Sprint("amount:",val.Text(10)))
-	strArray = append(strArray,fmt.Sprint("lockTime:",staker.LockTime))
-	strArray = append(strArray,fmt.Sprint("probability:",pitem.probabilities.Text(10)))
-
-	return strArray,nil
-
-}
+//
+//func (e *Epocher)GetEpochStakers(epochId uint64,puk string) ([]string, error) {
+//
+//	targetBlkNum := e.getTargetBlkNumber(epochId)
+//
+//	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+//	if err != nil {
+//		return nil,err
+//	}
+//
+//	sec256 := common.FromHex(strings.ToLower(puk))
+//	pubHash := common.BytesToHash(sec256)
+//
+//	infoArray, err := vm.GetInfo(stateDb, vm.StakersInfoAddr, pubHash)
+//	if infoArray == nil {
+//		return nil, errors.New("not find staker staking info")
+//	}
+//
+//	var staker vm.StakerInfo
+//	err = json.Unmarshal(infoArray, &staker)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if staker.PubSec256 == nil {
+//		return nil, errors.New("staker has unregistered already")
+//	}
+//	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+//	pitem, err := e.generateProblility(&staker, epochId)
+//	if err != nil {
+//		return nil, err
+//	}
+//	strArray := make([]string, 0)
+//	val := staker.Amount.Div(staker.Amount,big.NewInt(int64(params.Wan)))
+//
+//	strArray = append(strArray,fmt.Sprint("amount:",val.Text(10)))
+//	strArray = append(strArray,fmt.Sprint("lockTime:",staker.LockTime))
+//	strArray = append(strArray,fmt.Sprint("probability:",pitem.probabilities.Text(10)))
+//
+//	return strArray,nil
+//
+//}
 
 
 
