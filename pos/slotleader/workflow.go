@@ -42,27 +42,19 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 //It's all slotLeaderSelection's main workflow loop
 //It's not loop at all, it is loop called by backend
 func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
-	functrace.Enter("SlotLeaderSelection Loop")
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
-
 	log.Info("Now epchoID and slotID:", "epochID", posdb.Uint64ToString(epochID), "slotID", posdb.Uint64ToString(slotID))
 	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
-
 	//Check if epoch is new
 	s.checkNewEpochStart(epochID)
-
 	workStage := s.getWorkStage(epochID)
 
 	switch workStage {
 	case slotLeaderSelectionInit:
-		log.Debug("Enter slotLeaderSelectionInit")
-
 		s.clearData()
-
 		s.buildEpochLeaderGroup(epochID)
-
 		s.setWorkingEpochID(epochID)
 
 		err := s.generateSlotLeadsGroup(epochID)
@@ -72,12 +64,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		}
 
 		s.setWorkStage(epochID, slotLeaderSelectionStage1)
-
 	case slotLeaderSelectionStage1:
-		log.Debug("Enter slotLeaderSelectionStage1")
-		// If not in current epoch leaders, Do nothing in this epoch.
-
-		// If it's too late to run, wait for next epoch
 		if slotID > (pos.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
@@ -96,10 +83,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
 		}
-
 	case slotLeaderSelectionStage2:
-		log.Debug("Enter slotLeaderSelectionStage2")
-
 		if slotID < (pos.Sma2Start + 1) {
 			break
 		}
@@ -111,10 +95,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 		go DoStage2Work(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage3)
-
 	case slotLeaderSelectionStage3:
-		log.Debug("Enter slotLeaderSelectionStage3")
-
 		if slotID < pos.Sma3Start {
 			break
 		}
@@ -134,13 +115,9 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 		s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		errorRetry = 3
-
 	case slotLeaderSelectionStageFinished:
-		log.Debug("Enter slotLeaderSelectionStageFinished")
-
 	default:
 	}
-	functrace.Exit()
 }
 
 // startStage1Work start the stage 1 work and send tx

@@ -669,7 +669,7 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	epochID := header.Difficulty.Uint64() >> 32
 	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
 	if epochID >= pos.IncentiveDelayEpochs && slotID > pos.IncentiveStartStage {
-		log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
+		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
 		if !incentive.Run(chain, state, epochID-pos.IncentiveDelayEpochs, header.Number.Uint64()) {
 			log.Error("incentive.Run failed")
 		}
