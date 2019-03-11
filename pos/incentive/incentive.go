@@ -140,14 +140,14 @@ func getRunFlagKey(epochID uint64) common.Hash {
 }
 
 func isFinished(stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
-	_, ok := blockNumberRunMap[blockNumber]
-	if ok {
-		return true
-	}
+	// _, ok := blockNumberRunMap[blockNumber]
+	// if ok {
+	// 	return true
+	// }
 
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID))
 	if buf == nil || len(buf) == 0 {
-		blockNumberRunMap[blockNumber] = true
+		// blockNumberRunMap[blockNumber] = true
 		return false
 	}
 
