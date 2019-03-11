@@ -179,3 +179,13 @@ func GetRBAddress(epochID uint64) []common.Address {
 func GetIncentivePool(stateDb *state.StateDB, epochID uint64) (*big.Int, *big.Int, *big.Int) {
 	return calculateIncentivePool(stateDb, epochID)
 }
+
+// GetEpochLeaderActivity can get the address and activity of epoch leaders
+func GetEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
+	return getEpochLeaderActivity(stateDb, epochID)
+}
+
+// GetEpochRBLeaderActivity can get the address and activity of RB leaders
+func GetEpochRBLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
+	return getRandomProposerActivity(stateDb, epochID)
+}

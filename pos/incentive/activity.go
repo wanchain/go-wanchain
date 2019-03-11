@@ -3,7 +3,6 @@ package incentive
 import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
@@ -12,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
-func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
+func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
 	if epochLeaders == nil || len(epochLeaders) == 0 {
 		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
@@ -56,7 +55,7 @@ func getEpochLeaderActivity(stateDb *state.StateDB, epochID uint64) ([]common.Ad
 	return addrs, activity
 }
 
-func getRandomProposerActivity(stateDb *state.StateDB, epochID uint64) ([]common.Address, []int) {
+func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if getRandomProposerAddress == nil {
 		log.Error("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
 		return []common.Address{}, []int{}

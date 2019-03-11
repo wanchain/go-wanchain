@@ -25,8 +25,9 @@ var (
 	percentOfEpochLeader     = 20                                                                         //20%
 	percentOfRandomProposer  = 20                                                                         //20%
 	percentOfSlotLeader      = 60                                                                         //60%
-	ceilingPercentS0         = 10.0                                                                       //10%
-	openIncentive            = true
+	ceilingPercentS0         = 100.0                                                                      //10%
+	openIncentive            = true                                                                       //If the incentive function is open
+	blockNumberRunMap        = make(map[uint64]bool)                                                      // One blockNumber only can run once no whether success or failed
 )
 
 const (
@@ -52,17 +53,16 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
+func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
 	if chain == nil || stateDb == nil {
 		log.Error("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false
 	}
-	if isFinished(stateDb, epochID) || !openIncentive {
+
+	if isFinished(stateDb, epochID, blockNumber) || !openIncentive {
 		return true
 	}
-
 	log.Info("--------Incentive Run Start----------", "epochID", epochID)
-
 	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remainsAll := big.NewInt(0)
 
@@ -110,26 +110,22 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	remainsAll.Add(remainsAll, remains)
 
 	sumPay := sumToPay(finalIncentive)
-
 	extraRemain := getExtraRemain(total, sumPay, remainsAll)
-
 	remainsAll.Add(remainsAll, extraRemain)
-
 	if !checkTotalValue(total, sumPay, remainsAll) {
 		log.Error("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
 		return false
 	}
 
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
-	go saveRemain(epochID, remainsAll)
+	saveRemain(epochID, remainsAll)
 
 	pay(finalIncentive, stateDb)
 
-	go setStakerInfo(epochID, finalIncentive)
-	go saveIncentiveHistory(epochID, finalIncentive)
+	setStakerInfo(epochID, finalIncentive)
+	saveIncentiveHistory(epochID, finalIncentive)
 
 	finished(stateDb, epochID)
-
 	log.Info("--------Incentive Run Success Finish----------", "epochID", epochID)
 	return true
 }
@@ -143,11 +139,18 @@ func getRunFlagKey(epochID uint64) common.Hash {
 	return hash
 }
 
-func isFinished(stateDb *state.StateDB, epochID uint64) bool {
+func isFinished(stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
+	_, ok := blockNumberRunMap[blockNumber]
+	if ok {
+		return true
+	}
+
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID))
 	if buf == nil || len(buf) == 0 {
+		blockNumberRunMap[blockNumber] = true
 		return false
 	}
+
 	return true
 }
 

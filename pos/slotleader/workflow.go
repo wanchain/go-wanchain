@@ -78,7 +78,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		// If not in current epoch leaders, Do nothing in this epoch.
 
 		// If it's too late to run, wait for next epoch
-		if slotID > pos.Stage1K/2 {
+		if slotID > (pos.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
 			break
@@ -100,11 +100,11 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStage2:
 		log.Debug("Enter slotLeaderSelectionStage2")
 
-		if slotID < pos.Stage5K+1 {
+		if slotID < (pos.Sma2Start + 1) {
 			break
 		}
 
-		if slotID > pos.Stage7K {
+		if slotID > pos.Sma2End {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			break
 		}
@@ -115,7 +115,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	case slotLeaderSelectionStage3:
 		log.Debug("Enter slotLeaderSelectionStage3")
 
-		if slotID < pos.Stage9K {
+		if slotID < pos.Sma3Start {
 			break
 		}
 

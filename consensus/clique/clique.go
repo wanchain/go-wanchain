@@ -644,14 +644,23 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
+	curEpochId, curSlotId := slotleader.GetEpochSlotID()
+
 	if pos.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
 		hcur := cur - (cur % pos.SlotTime) + pos.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		curEpochId, curSlotId := slotleader.GetEpochSlotID()
 		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId)*pos.SlotTime))
 	}
+
+	epochSlotId := uint64(1)
+	epochSlotId += curSlotId << 8
+	epochSlotId += curEpochId << 32
+
+	header.Difficulty.SetUint64(epochSlotId)
+
+	log.Info("--------Incentive Prepare--------", "number", header.Number.String(), "epochID", curEpochId)
 	return nil
 }
 
@@ -660,9 +669,10 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header, mini
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
 	epochID := header.Difficulty.Uint64() >> 32
-	if epochID >= 2 {
+	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+	if epochID >= pos.IncentiveDelayEpochs && slotID > pos.Stage1K {
 		log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
-		if !incentive.Run(chain, state, epochID-2) {
+		if !incentive.Run(chain, state, epochID-pos.IncentiveDelayEpochs, header.Number.Uint64()) {
 			log.Error("incentive.Run failed")
 		}
 	}

@@ -133,7 +133,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, 0, pos.Stage1K) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Sma1Start, pos.Sma1End) {
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx1Range
 	}
@@ -163,7 +163,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Stage5K, pos.Stage7K) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Sma2Start, pos.Sma2End) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx2Range
 	}
