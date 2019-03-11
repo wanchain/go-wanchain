@@ -19,6 +19,17 @@ const(
 	HEADERCHAIN //1
 )
 
+
+type EpochGenesis struct {
+	protocolMagic			[]byte	 	//magic number
+	epochId				  	uint	  	//current epochId
+	preEpochLastestBlkHash  common.Hash //the hash of last block of previous epoch
+	slotLeaders			  	[][]byte 	//current epoch slotleaders
+	genesisBlkHash		  	common.Hash	//the hash of this block
+	extra				  	[]byte   	//empty
+}
+
+
 type ForkMemBlockChain struct {
 	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
