@@ -11,10 +11,12 @@ import (
 		"sort"
 	"encoding/binary"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	//"github.com/wanchain/go-wanchain/pos/slotleader"
+	//"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/crypto"
 	"encoding/json"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"crypto/ecdsa"
 )
 
 type chainType uint
@@ -23,6 +25,10 @@ const(
 	HEADERCHAIN //1
 )
 
+type LeadersSelInt interface {
+	GetRBProposerGroup(epochID uint64) []vm.Leader
+	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
+}
 
 type EpochGenesis struct {
 	ProtocolMagic			[]byte	 	//magic number
@@ -35,6 +41,8 @@ type EpochGenesis struct {
 }
 
 type ForkMemBlockChain struct {
+	rbLeaderSelector LeadersSelInt
+	slotLeaderSelector LeadersSelInt
 	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
@@ -348,17 +356,35 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block)
 	epGen.ProtocolMagic = []byte("wanchainpos")
 	epGen.EpochId = epochid
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
-	epGen.RBLeaders = epochLeader.GetEpocher().GetEpochLeaders(epochid)
+
+	f.rbLeaderSelector.GetRBProposerGroup(epochid)
+
+
 	epGen.SlotLeaders = make([][]byte,0)
-	pks,err  := slotleader.GetSlotLeaderSelection().GetSlotLeaders(epochid)
-	if err!=nil {
+	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
+	if pks!=nil {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
 		}
 	}
 
+	byteVal,err := json.Marshal(epGen)
+
+	if err!=nil {
+		return nil,err
+	}
+
+	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
+
 	return json.Marshal(epGen)
 }
+
+
+
+
+
+
+
 
 
 
