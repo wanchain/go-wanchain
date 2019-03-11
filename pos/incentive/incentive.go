@@ -95,7 +95,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 
 	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
 	if err != nil {
-		log.Error("Incentive randomProposerAllocate error", "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
+		log.Error("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)

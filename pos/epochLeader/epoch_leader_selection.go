@@ -434,7 +434,6 @@ func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
 //get rbLeaders of epochID in localdb
 func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
-	return []vm.Leader{}
 	// TODO: how to cache these
 	//rbarray := e.GetLeaderGroup(epochID, Ne, Ne+Nr)
 	ksarray := make([]vm.Leader, Nr)
