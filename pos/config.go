@@ -44,7 +44,7 @@ const (
 	Stage10K = Stage1K * 10
 
 	Sma1Start = 0
-	Sma1End   = Stage2K
+	Sma1End   = Stage3K
 	Sma2Start = Stage5K
 	Sma2End   = Stage7K
 	Sma3Start = Stage9K
