@@ -2,8 +2,6 @@ package epochLeader
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
@@ -12,9 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	"log"
 	"math/big"
-	"testing"
 	//"github.com/wanchain/go-wanchain/log"
 	//"crypto/rand"
 	//"github.com/wanchain/pos/cloudflare"
@@ -364,67 +360,67 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 //	}
 //}
 
-func TestGetGetStakerIfo(t *testing.T) {
-
-	blkChain, _ := newTestBlockChain(true)
-
-	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
-
-	userPubk := "0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
-
-	info,err:=epocher1.GetEpochStakers(0,userPubk)
-
-	if err!= nil {
-		t.Fail()
-	}
-
-	fmt.Println(info)
-}
-
-func TestGenerateLeader(t *testing.T) {
-	blkChain, _ := newTestBlockChain(true)
-	e := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
-	targetBlkNum := uint64(0)
-
-	epochId := uint64(0)
-
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
-	if err != nil {
-		t.Fail()
-	}
-	err = e.GenerateLeader(stateDb, epochId)
-	if err != nil {
-		t.Fail()
-	}
-	t.Log("GenerateLeader done")
-
-	i:=0
-	epLeaders := e.GetEpochLeadersInfo(epochId)
-	t.Log(epLeaders)
-	for i=0; i<len(epLeaders); i++ {
-		t.Log(common.ToHex(epLeaders[i].PubSec256))
-	}
-
-	rbGroup := e.GetRBProposerGroup(epochId)
-	t.Log(rbGroup)
-	for i=0; i<len(rbGroup); i++ {
-		t.Log(common.ToHex(rbGroup[i].PubSec256))
-	}
-
-}
-
-func TestGetEpochProbability(t *testing.T) {
-	blkChain, _ := newTestBlockChain(true)
-	epocherInst := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
-
-	epochID := uint64(0)
-	addr := common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
-
-	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
-	if err != nil {
-		log.Fatal("failed to GetEpochProbability: ", err)
-	}
-	log.Println(infors)
-	log.Println(feeRate)
-	log.Println(total)
-}
+//func TestGetGetStakerIfo(t *testing.T) {
+//
+//	blkChain, _ := newTestBlockChain(true)
+//
+//	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
+//
+//	userPubk := "0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+//
+//	info,err:=epocher1.GetEpochStakers(0,userPubk)
+//
+//	if err!= nil {
+//		t.Fail()
+//	}
+//
+//	fmt.Println(info)
+//}
+//
+//func TestGenerateLeader(t *testing.T) {
+//	blkChain, _ := newTestBlockChain(true)
+//	e := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
+//	targetBlkNum := uint64(0)
+//
+//	epochId := uint64(0)
+//
+//	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+//	if err != nil {
+//		t.Fail()
+//	}
+//	err = e.GenerateLeader(stateDb, epochId)
+//	if err != nil {
+//		t.Fail()
+//	}
+//	t.Log("GenerateLeader done")
+//
+//	i:=0
+//	epLeaders := e.GetEpochLeadersInfo(epochId)
+//	t.Log(epLeaders)
+//	for i=0; i<len(epLeaders); i++ {
+//		t.Log(common.ToHex(epLeaders[i].PubSec256))
+//	}
+//
+//	rbGroup := e.GetRBProposerGroup(epochId)
+//	t.Log(rbGroup)
+//	for i=0; i<len(rbGroup); i++ {
+//		t.Log(common.ToHex(rbGroup[i].PubSec256))
+//	}
+//
+//}
+//
+//func TestGetEpochProbability(t *testing.T) {
+//	blkChain, _ := newTestBlockChain(true)
+//	epocherInst := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
+//
+//	epochID := uint64(0)
+//	addr := common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+//
+//	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
+//	if err != nil {
+//		log.Fatal("failed to GetEpochProbability: ", err)
+//	}
+//	log.Println(infors)
+//	log.Println(feeRate)
+//	log.Println(total)
+//}
