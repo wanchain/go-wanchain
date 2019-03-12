@@ -348,7 +348,7 @@ type Proposer struct {
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := NewDb("rblocaldbaddress")
+	db := NewDb("rblocaldb")
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
 		return nil

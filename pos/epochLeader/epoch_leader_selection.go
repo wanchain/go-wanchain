@@ -419,7 +419,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 			continue
 		}
 
-		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i), "", val)
+		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", val)
 		log.Info("e.rbLeadersAddrDb.PutWithIndex", "epochID", epochId, "len(val)", len(val))
 
 		cr = crypto.Keccak256(cr)
