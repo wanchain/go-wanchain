@@ -89,7 +89,7 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher 
 func (e *Epocher) GetBlkChain() *core.BlockChain {
 	return e.blkChain
 }
-func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
+func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 	if epochId < 2 {
 		return uint64(0)
@@ -119,7 +119,7 @@ func (e *Epocher) getTargetBlkNumber(epochId uint64) uint64 {
 }
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
-	targetBlkNum := e.getTargetBlkNumber(epochId)
+	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
@@ -495,7 +495,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) {
 
-	targetBlkNum := e.getTargetBlkNumber(epochId)
+	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
@@ -550,7 +550,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	//		}
 	//	}
 	//}
-	targetBlkNum := e.getTargetBlkNumber(epochId)
+	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
