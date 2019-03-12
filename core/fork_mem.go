@@ -38,15 +38,6 @@ const (
 )
 
 
-type EpochGenesis struct {
-	ProtocolMagic       []byte      //magic number
-	EpochId             uint64      //current epochId
-	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
-	SlotLeaders         [][]byte    //current epoch slotleaders
-	RBLeaders           [][]byte    //current epoch slotleaders
-	GenesisBlkHash      common.Hash //the hash of this block
-	Extra               []byte      //empty
-}
 
 type ForkMemBlockChain struct {
 	useEpochGenesis	   bool
@@ -353,7 +344,7 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 
 func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block) ([]byte,error){
 
-	epGen := &EpochGenesis{}
+	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 	epGen.EpochId = epochid
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
@@ -382,7 +373,7 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block)
 
 func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *types.Block) bool{
 
-	epGen := &EpochGenesis{}
+	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 
 	epochid,_,err:= f.GetBlockEpochIdAndSlotId(firstBlk.Header())
