@@ -2,8 +2,6 @@ package posdb
 
 import (
 	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/rlp"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -11,11 +9,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/rlp"
+
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/postools"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 //Db is the wanpos leveldb class
@@ -324,7 +325,7 @@ func ByteArrayToPkArray(input [][]byte) []*ecdsa.PublicKey {
 type SelectLead interface {
 	SelectLeadersLoop(epochId uint64) error
 	GetEpochLeaders(epochID uint64) [][]byte
-	GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) []byte
+	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
 }
 
 func SetEpocherInst(sor SelectLead) {
@@ -345,8 +346,9 @@ type Proposer struct {
 	PubBn256      []byte
 	Probabilities *big.Int
 }
+
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := NewDb("rblocaldb")
+	db := NewDb("rblocaldbaddress")
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
 		return nil
@@ -386,17 +388,17 @@ func GetEpochLeaderGroup(epochId uint64) [][]byte {
 		if err != nil {
 			log.Error("can't rlp decode:", err)
 		}
-		pks[i]= proposer.PubSec256
+		pks[i] = proposer.PubSec256
 	}
 
 	return pks
 
 }
 
-
-func GetProposerBn256PK(epochID uint64,idx uint64,addr common.Address) []byte {
+func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return selecter.GetProposerBn256PK(epochID, idx, addr)
 }
+
 //-------------------------------------------------------------------
 
 var (

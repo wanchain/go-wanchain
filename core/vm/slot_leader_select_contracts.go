@@ -384,7 +384,7 @@ func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes
 		}
 		evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, key, value)
 
-		log.Info("updateSlotLeaderStageIndex", "key", key, "value", sendtrans)
+		log.Debug("updateSlotLeaderStageIndex", "key", key, "value", sendtrans)
 	} else {
 		err := rlp.DecodeBytes(bytes, &sendtransGet)
 		if err != nil {
@@ -397,7 +397,7 @@ func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes
 			return err
 		}
 		evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, key, value)
-		log.Info("updateSlotLeaderStageIndex", "key", key, "value", sendtransGet)
+		log.Debug("updateSlotLeaderStageIndex", "key", key, "value", sendtransGet)
 	}
 	return nil
 }
