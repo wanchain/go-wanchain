@@ -1570,3 +1570,12 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) event.Su
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
+
+
+func (bc *BlockChain)SetRbSelector(rbs RbLeadersSelInt){
+	bc.forkMem.rbLeaderSelector = rbs
+}
+
+func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
+	bc.forkMem.slotLeaderSelector = sls
+}

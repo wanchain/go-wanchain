@@ -109,10 +109,16 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	eerr := epocher.SelectLeadersLoop(0)
 	eerr1 := epocher.SelectLeadersLoop(1)
 
-	slotleader.GetSlotLeaderSelection().Init(s.BlockChain(), nil, key, epocher)
+	sls := slotleader.GetSlotLeaderSelection()
+	sls.Init(s.BlockChain(), nil, key, epocher)
 
 	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, epocher.GetRBProposerGroup)
 	fmt.Println("posInit: ", eerr, eerr1)
+
+	s.BlockChain().SetSlSelector(sls)
+	s.BlockChain().SetRbSelector(epocher)
+
+
 	return epocher
 }
 func PosInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {

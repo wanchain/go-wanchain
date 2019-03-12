@@ -304,13 +304,7 @@ func (f *ForkMemBlockChain) PrintAllBffer() {
 	}
 }
 //////////////////////////////////////////////////////////////////////////
-func (f *ForkMemBlockChain)SetRbSelector(rbs RbLeadersSelInt){
-	f.rbLeaderSelector = rbs
-}
 
-func (f *ForkMemBlockChain)SetSlSelector(sls SlLeadersSelInt){
-	f.slotLeaderSelector = sls
-}
 
 func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
