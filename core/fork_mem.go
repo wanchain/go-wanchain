@@ -49,7 +49,7 @@ type EpochGenesis struct {
 }
 
 type ForkMemBlockChain struct {
-
+	useEpochGenesis	   bool
 	rbLeaderSelector   RbLeadersSelInt
 	slotLeaderSelector SlLeadersSelInt
 
@@ -63,6 +63,7 @@ type ForkMemBlockChain struct {
 func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain {
 
 	f := &ForkMemBlockChain{}
+	f.useEpochGenesis = false
 	f.ctype = ctype
 	f.kBufferedChains = make(map[string][]common.Hash)
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
@@ -394,7 +395,11 @@ func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *ty
 	lastBlk := bc.GetBlockByNumber(firstBlk.NumberU64()-1)
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
 
-	f.rbLeaderSelector.GetRBProposerGroup(epochid)
+	epGen.RBLeaders = make([][]byte,0)
+	leaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
+	for _,ldr := range leaders {
+		epGen.RBLeaders = append(epGen.RBLeaders,ldr.PubSec256)
+	}
 
 
 	epGen.SlotLeaders = make([][]byte,0)
