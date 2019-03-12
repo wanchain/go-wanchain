@@ -62,6 +62,9 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	//GET Epoch genesis
+	GetEpochGenesisMsg = 0x11
 )
 
 type errCode int
@@ -181,3 +184,8 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+// GetEpochGenesisMsg represents a block header query.
+type getEpochGenesisData struct {
+	epochid uint64 // epochid from which to get epoch genesis
+}
