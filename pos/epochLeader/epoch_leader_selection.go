@@ -222,7 +222,7 @@ func (e *Epocher) calProbability(epochId uint64, amount *big.Int, lockTime uint6
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
-	blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
 	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
 	lockTime := pstaker.LockTime
 
@@ -231,7 +231,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*P
 		leftTimePercent = 1
 	} else {
 
-		leftTimePercent = (float64(lockTime-(blkTime-pstaker.StakingTime)) / float64(lockTime))
+		leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingTime)) / float64(lockTime))
 		if leftTimePercent > 0 {
 			leftTimePercent = Round(leftTimePercent, 32)
 		} else {
