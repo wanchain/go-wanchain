@@ -65,6 +65,7 @@ const (
 
 	//GET Epoch genesis
 	GetEpochGenesisMsg = 0x11
+	EpochGenesisMsg = 0x12
 )
 
 type errCode int
@@ -188,4 +189,8 @@ type blockBodiesData []*blockBody
 // GetEpochGenesisMsg represents a block header query.
 type getEpochGenesisData struct {
 	epochid uint64 // epochid from which to get epoch genesis
+}
+
+type genesisBody struct {
+
 }

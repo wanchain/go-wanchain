@@ -234,6 +234,12 @@ func (p *peer) RequestEpochGenesis(epochid uint64) error {
 	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{epochid:epochid})
 }
 
+//send epoch genesis
+func (p *peer) SendEpochGenesis(epochid uint64) error {
+	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
+	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{epochid:epochid})
+}
+
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
