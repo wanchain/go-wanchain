@@ -473,13 +473,14 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 
 	psValue := valSet[idx]
-	var info puksInfo
-	err := json.Unmarshal(psValue, &info)
+
+	proposer := Proposer{}
+	err := rlp.DecodeBytes(psValue, &proposer)
 	if err != nil {
-		return nil
+		log.Error("can't rlp decode:", err)
 	}
 
-	pub := crypto.ToECDSAPub(info.PubSec256)
+	pub := crypto.ToECDSAPub(proposer.PubSec256)
 
 	if pub == nil {
 		return nil
@@ -488,7 +489,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	bingoAddr := crypto.PubkeyToAddress(*pub)
 
 	if bingoAddr == addr {
-		return info.PubBn256
+		return proposer.PubBn256
 	} else {
 		return nil
 	}
