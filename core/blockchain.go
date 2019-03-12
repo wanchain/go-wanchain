@@ -847,12 +847,30 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//if externTd.Cmp(localTd) > 0 {
 	 if bc.currentBlock.NumberU64() == 0||block.NumberU64() > bc.currentBlock.NumberU64() {
-		// Reorganise the chain if the parent is not the head block
-		if block.ParentHash() != bc.currentBlock.Hash() {
-			if err := bc.reorg(bc.currentBlock, block); err != nil {
-				return NonStatTy, err
-			}
-		}
+
+		 //if use epochgeneis,they use this branch
+		 if bc.forkMem.useEpochGenesis {
+			 if bc.forkMem.IsFirstBlockInEpoch(block) {
+				 verifyRes := bc.forkMem.VerifyFirstBlockInEpoch(bc,block)
+				 if !verifyRes {
+					 lastBlkPreEpoch := bc.forkMem.GetLastBlkInPreEpoch(bc,block)
+					 err := bc.reorg(bc.currentBlock,lastBlkPreEpoch)
+					 if err!=nil {
+						 return NonStatTy, err
+					 }
+				 }
+
+			 }
+
+		 }
+
+		 // Reorganise the chain if the parent is not the head block
+		 if block.ParentHash() != bc.currentBlock.Hash() {
+			 if err := bc.reorg(bc.currentBlock, block); err != nil {
+				 return NonStatTy, err
+			 }
+		 }
+
 
 		// Write the positional metadata for transaction and receipt lookups
 		if err := WriteTxLookupEntries(batch, block); err != nil {
@@ -885,74 +903,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	return status, nil
 }
 
-// WriteBlock writes the block to the chain.
-//func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
-//	bc.wg.Add(1)
-//	defer bc.wg.Done()
-//
-//	// Calculate the total difficulty of the block
-//	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
-//	if ptd == nil {
-//		return NonStatTy, consensus.ErrUnknownAncestor
-//	}
-//	// Make sure no inconsistent state is leaked during insertion
-//	bc.mu.Lock()
-//	defer bc.mu.Unlock()
-//
-//	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
-//	externTd := new(big.Int).Add(block.Difficulty(), ptd)
-//
-//	// Irrelevant of the canonical status, write the block itself to the database
-//	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-//		return NonStatTy, err
-//	}
-//	// Write other block data using a batch.
-//	batch := bc.chainDb.NewBatch()
-//	if err := WriteBlock(batch, block); err != nil {
-//		return NonStatTy, err
-//	}
-//
-//	if _, err := state.CommitTo(batch, true /*bc.config.IsEIP158(block.Number())*/); err != nil {
-//		return NonStatTy, err
-//	}
-//	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
-//		return NonStatTy, err
-//	}
-//
-//	// If the total difficulty is higher than our known, add it to the canonical chain
-//	// Second clause in the if statement reduces the vulnerability to selfish mining.
-//	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-//	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
-//		// Reorganise the chain if the parent is not the head block
-//		if block.ParentHash() != bc.currentBlock.Hash() {
-//			if err := bc.reorg(bc.currentBlock, block); err != nil {
-//				return NonStatTy, err
-//			}
-//		}
-//		// Write the positional metadata for transaction and receipt lookups
-//		if err := WriteTxLookupEntries(batch, block); err != nil {
-//			return NonStatTy, err
-//		}
-//		// Write hash preimages
-//		if err := WritePreimages(bc.chainDb, block.NumberU64(), state.Preimages()); err != nil {
-//			return NonStatTy, err
-//		}
-//		status = CanonStatTy
-//	} else {
-//		status = SideStatTy
-//	}
-//	if err := batch.Write(); err != nil {
-//		return NonStatTy, err
-//	}
-//
-//	// Set new head.
-//	if status == CanonStatTy {
-//		bc.insert(block)
-//	}
-//	bc.futureBlocks.Remove(block.Hash())
-//	return status, nil
-//}
-
 // InsertChain attempts to insert the given batch of blocks in to the canonical
 // chain or, otherwise, create a fork. If an error is returned it will return
 // the index number of the failing block as well an error describing what went
@@ -960,9 +910,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
-
-
-
 
 	chain,err := bc.forkMem.Maxvalid(bc.CurrentBlock())
 	if err != nil || chain == nil {
@@ -1001,16 +948,36 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 // with deferred statements.
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
-	for i := 1; i < len(chain); i++ {
-		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
-			// Chain broke ancestry, log a messge (programming error) and skip insertion
-			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
-				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
 
-			return 0, nil, nil, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
-				chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
+	if bc.forkMem.useEpochGenesis {
+		for i := 1; i < len(chain); i++ {
+			isFirstBlk := bc.forkMem.IsFirstBlockInEpoch(chain[i])
+			if  (!isFirstBlk)&&
+				(chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
+				 chain[i].ParentHash() != chain[i-1].Hash()) {
+				// Chain broke ancestry, log a messge (programming error) and skip insertion
+				log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
+					"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
+
+				return 0, nil, nil, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
+					chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
+			}
+		}
+	} else {
+		for i := 1; i < len(chain); i++ {
+			if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
+				chain[i].ParentHash() != chain[i-1].Hash() {
+				// Chain broke ancestry, log a messge (programming error) and skip insertion
+				log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
+					"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
+
+				return 0, nil, nil, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
+					chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
+			}
 		}
 	}
+
+
 	// Pre-checks passed, start the full block imports
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -1357,6 +1324,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	return nil
 }
+
 
 // PostChainEvents iterates over the events generated by a chain insertion and
 // posts them into the event feed.
