@@ -420,7 +420,6 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		}
 
 		e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", val)
-		log.Info("e.rbLeadersAddrDb.PutWithIndex", "epochID", epochId, "len(val)", len(val))
 
 		cr = crypto.Keccak256(cr)
 	}
@@ -467,7 +466,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 }
 
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
-	valSet := e.rbLeadersAddrDb.GetStorageByteArray(epochID)
+	valSet := e.rbLeadersDb.GetStorageByteArray(epochID)
 
 	if valSet == nil || len(valSet) == 0 {
 		return nil
