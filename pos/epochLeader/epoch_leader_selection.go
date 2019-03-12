@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/rlp"
 	"math"
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
@@ -77,7 +78,7 @@ func GetEpocher() *Epocher {
 func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher {
 
 	rbdb := posdb.NewDb(rbn)
-	rbldAddrDb := posdb.NewDb(rbn + "addresss")
+	rbldAddrDb := posdb.NewDb(rbn + "address")
 
 	epdb := posdb.NewDb(epdbn)
 	inst := &Epocher{rbdb, rbldAddrDb, epdb, blc}
@@ -419,6 +420,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		}
 
 		e.rbLeadersAddrDb.PutWithIndex(epochId, uint64(i), "", val)
+		log.Info("e.rbLeadersAddrDb.PutWithIndex", "epochID", epochId, "len(val)", len(val))
 
 		cr = crypto.Keccak256(cr)
 	}
