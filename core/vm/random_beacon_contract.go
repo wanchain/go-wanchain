@@ -54,14 +54,17 @@ var (
 	//signBeginId = pos.Cfg().SignBegin
 	//signEndId = pos.Cfg().SignEnd
 
-	errDkgParse  = errors.New("dkg payload parse failed")
-	errSigParse  = errors.New("sig payload parse failed")
-	errRScode = errors.New("rs code verify failed")
-	errDleq = errors.New("dleq verify failed")
-	errRlpCij = errors.New("rlp encode cij failed")
-	errRlpEns = errors.New("rlp encode ens failed")
-	errUnRlpCij = errors.New("rlp decode cij failed")
-	errUnRlpEns = errors.New("rlp decode ens failed")
+	errDkg1Parse 			= errors.New("dkg1 payload parse failed")
+	errDkg2Parse 			= errors.New("dkg2 payload parse failed")
+	errSigParse 			= errors.New("sig payload parse failed")
+	errRScode				= errors.New("rs code verify failed")
+	errDleq					= errors.New("dleq verify failed")
+	errRlpCij				= errors.New("rlp encode cij failed")
+	errRlpEns				= errors.New("rlp encode ens failed")
+	errUnRlpCij				= errors.New("rlp decode cij failed")
+	errUnRlpEns				= errors.New("rlp decode ens failed")
+	errInvalidCommitBytes	= errors.New("invalid dkg commit bytes")
+	errInvalidEnshareBytes	= errors.New("invalid dkg enshare bytes")
 )
 
 func GetRBStage(slotId uint64) int {
@@ -138,6 +141,10 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	return nil
 }
+//
+//func  (c *RandomBeaconContract) ValidDkg1(epochId uint64, input []byte) error {
+//
+//}
 
 func GetRBKeyHash(kind []byte, epochId uint64, proposerId uint32) *common.Hash {
 	keyBytes := make([]byte, 12 + len(kind))
@@ -285,32 +292,48 @@ type RbDKGTxPayloadPure struct {
 }
 
 
-func BytesToCij(d *[][]byte) []*bn256.G2 {
+func BytesToCij(d *[][]byte) ([]*bn256.G2, error) {
 	l := len(*d)
 	cij := make([]*bn256.G2, l, l)
 	g2s := make([]bn256.G2, l, l)
 	for i := 0; i<l; i++ {
 		//var g2 bn256.G2
-		g2s[i].UnmarshalPure((*d)[i])
+		left, err := g2s[i].UnmarshalPure((*d)[i])
+		if err != nil {
+			return nil, err
+		}
+
+		if len(left) != 0 {
+			return nil, errInvalidCommitBytes
+		}
+
 		cij[i] = &g2s[i]
 	}
 
-	return cij
+	return cij, nil
 }
 
-func BytesToEns(d *[][]byte) []*bn256.G1 {
+func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
 	l := len(*d)
 	ens := make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
 	for i := 0; i<l; i++ {
-		g1s[i].UnmarshalPure((*d)[i])
+		left, err := g1s[i].UnmarshalPure((*d)[i])
+		if err != nil {
+			return nil, err
+		}
+
+		if len(left) != 0 {
+			return nil, errInvalidEnshareBytes
+		}
+
 		ens[i] = &g1s[i]
 	}
 
-	return ens
+	return ens, nil
 }
 
-func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) *RbDKG1TxPayload {
+func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
 	var dkgParam RbDKG1TxPayload
 	dkgParam.EpochId = d.EpochId
 	dkgParam.ProposerId = d.ProposerId
@@ -320,12 +343,21 @@ func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) *RbDKG1TxPayload {
 	g2s := make([]bn256.G2, l, l)
 	for i := 0; i<l; i++ {
 		//var g2 bn256.G2
-		g2s[i].Unmarshal(d.Commit[i])
+		left, err := g2s[i].Unmarshal(d.Commit[i])
+		if err != nil {
+			return nil, err
+		}
+
+		if len(left) != 0 {
+			return nil, errInvalidCommitBytes
+		}
+
 		dkgParam.Commit[i] = &g2s[i]
 	}
 
-	return &dkgParam
+	return &dkgParam, nil
 }
+
 func Dkg1ToDkg1Flat(d * RbDKG1TxPayload) *RbDKG1FlatTxPayload {
 	var df RbDKG1FlatTxPayload
 	df.EpochId = d.EpochId
@@ -341,7 +373,7 @@ func Dkg1ToDkg1Flat(d * RbDKG1TxPayload) *RbDKG1FlatTxPayload {
 	return &df
 }
 
-func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) *RbDKG2TxPayload {
+func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	var dkg2Param RbDKG2TxPayload
 	dkg2Param.EpochId = d.EpochId
 	dkg2Param.ProposerId = d.ProposerId
@@ -350,7 +382,15 @@ func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) *RbDKG2TxPayload {
 	dkg2Param.Enshare = make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
 	for i := 0; i<l; i++ {
-		g1s[i].Unmarshal(d.Enshare[i])
+		left, err := g1s[i].Unmarshal(d.Enshare[i])
+		if err != nil {
+			return nil, err
+		}
+
+		if len(left) != 0 {
+			return nil, errInvalidEnshareBytes
+		}
+
 		dkg2Param.Enshare[i] = &g1s[i]
 	}
 
@@ -359,7 +399,7 @@ func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) *RbDKG2TxPayload {
 	for i := 0; i<l; i++ {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
-	return &dkg2Param
+	return &dkg2Param, nil
 }
 
 func Dkg2ToDkg2Flat(d * RbDKG2TxPayload) *RbDKG2FlatTxPayload {
@@ -436,9 +476,7 @@ func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) 
 		return nil, errUnRlpCij
 	}
 
-	rt := BytesToCij(&cij)
-
-	return rt, nil
+	return BytesToCij(&cij)
 }
 
 func isCjiValid(db StateDB, epochId uint64, proposerId uint32) bool {
@@ -462,24 +500,23 @@ func GetEns(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) 
 		return nil, errUnRlpEns
 	}
 
-	rt := BytesToEns(&ens)
-
-	return rt, nil
+	return BytesToEns(&ens)
 }
 
 func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	dkgStart := time.Now()
+
 	var dkg1BytesParam RbDKG1FlatTxPayload
-	t1 := time.Now()
 	err := rlp.DecodeBytes(payload, &dkg1BytesParam)
-	elapsed2 := time.Since(t1)
-	fmt.Println("***dkg1: ", elapsed2)
-	dkg1Param := Dkg1FlatToDkg1(&dkg1BytesParam)
-	elapsed3 := time.Since(t1)
-	fmt.Println("***dkg2: ", elapsed3)
 	if err != nil {
-		return nil, logError(errDkgParse)
+		return nil, logError(errDkg1Parse)
 	}
+
+	dkg1Param, err := Dkg1FlatToDkg1(&dkg1BytesParam)
+	if err != nil {
+		return nil, logError(err)
+	}
+
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 	log.Debug("contract do dkg1 begin", "epochId", eid, "proposerId", pid)
@@ -539,17 +576,18 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 
 func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	dkgStart := time.Now()
+
 	var dkg2FlatParam RbDKG2FlatTxPayload
-	t1 := time.Now()
 	err := rlp.DecodeBytes(payload, &dkg2FlatParam)
-	elapsed2 := time.Since(t1)
-	fmt.Println("***dkg1: ", elapsed2)
-	dkg2Param := Dkg2FlatToDkg2(&dkg2FlatParam)
-	elapsed3 := time.Since(t1)
-	fmt.Println("***dkg2: ", elapsed3)
 	if err != nil {
-		return nil, logError(errDkgParse)
+		return nil, logError(errDkg2Parse)
 	}
+
+	dkg2Param, err := Dkg2FlatToDkg2(&dkg2FlatParam)
+	if err != nil {
+		return nil, logError(err)
+	}
+
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 	log.Debug("contract do dkg2 begin", "epochId", eid, "proposerId", pid)
@@ -694,7 +732,7 @@ func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.Info("generate", "r", r, "epochid", eid+1)
+			log.Info("generate random", "epochid", eid+1, "r", r)
 		}
 	}
 
