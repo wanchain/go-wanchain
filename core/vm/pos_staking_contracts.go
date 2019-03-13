@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	mrand "math/rand"
 	"strings"
@@ -14,7 +17,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 )
 
 /* the contract interface described by solidity.
@@ -523,4 +526,36 @@ func fakeGenG1PublicKeys(x int) [][]byte {
 	}
 
 	return g1Pubs
+}
+
+
+func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
+	stakers := make([]StakerInfo,0)
+	stateDb.ForEachStorageByteArray(StakersInfoAddr, func(key common.Hash, value []byte) bool {
+		staker := StakerInfo{}
+		err := json.Unmarshal(value, &staker)
+		if err != nil {
+			log.Info(err.Error())
+			return true
+		}
+		stakers = append(stakers, staker)
+		return true
+	})
+	return stakers
+}
+var 	StakersInfoStakeOutKeyHash      = common.BytesToHash(big.NewInt(700).Bytes())
+func stakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
+	b := big.NewInt(int64(epochID))
+	StoreInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash, b.Bytes())
+}
+func stakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
+	epochByte,err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
+	if err != nil {
+		return false
+	}
+	finishedEpochId := big.NewInt(0).SetBytes(epochByte).Uint64()
+	return finishedEpochId >= epochID
+}
+func stakeOutRun(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
+	return true
 }
