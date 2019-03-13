@@ -16,58 +16,98 @@ var balanceSourceAddress = '0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e';
 // Start staker register
 setTimeout(stakeRegisterTest, 1000 * stakerRegisterPeriod, null);
 
+// var cscDefinition = [
+//   {
+//     "constant": false,
+//     "type": "function",
+//     "stateMutability": "nonpayable",
+//     "inputs": [
+//       {
+//         "name": "Pubs",
+//         "type": "string"
+//       },
+//       {
+//         "name": "LockEpochs",
+//         "type": "uint256"
+//       }
+//     ],
+//     "name": "stakeIn",
+//     "outputs": [
+//       {
+//         "name": "Pubs",
+//         "type": "string"
+//       },
+//       {
+//         "name": "LockEpochs",
+//         "type": "uint256"
+//       }
+//     ]
+//   },
+//   {
+//     "constant": false,
+//     "type": "function",
+//     "inputs": [
+//       {
+//         "name": "Pub",
+//         "type": "string"
+//       },
+//       {
+//         "name": "Value",
+//         "type": "uint256"
+//       }
+//     ],
+//     "name": "stakeOut",
+//     "outputs": [
+//       {
+//         "name": "Pub",
+//         "type": "string"
+//       },
+//       {
+//         "name": "Value",
+//         "type": "uint256"
+//       }
+//     ]
+//   }
+// ]
 var cscDefinition = [
-  {
-    "constant": false,
-    "type": "function",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      {
-        "name": "Pubs",
-        "type": "string"
-      },
-      {
-        "name": "LockEpochs",
-        "type": "uint256"
-      }
-    ],
-    "name": "stakeIn",
-    "outputs": [
-      {
-        "name": "Pubs",
-        "type": "string"
-      },
-      {
-        "name": "LockEpochs",
-        "type": "uint256"
-      }
-    ]
-  },
-  {
-    "constant": false,
-    "type": "function",
-    "inputs": [
-      {
-        "name": "Pub",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ],
-    "name": "stakeOut",
-    "outputs": [
-      {
-        "name": "Pub",
-        "type": "string"
-      },
-      {
-        "name": "Value",
-        "type": "uint256"
-      }
-    ]
-  }
+    {
+        "constant": false,
+        "inputs": [
+            {
+                "name": "secPk",
+                "type": "bytes"
+            },
+            {
+                "name": "bn256Pk",
+                "type": "bytes"
+            },
+            {
+                "name": "lockEpochs",
+                "type": "uint256"
+            },
+            {
+                "name": "feeRate",
+                "type": "uint256"
+            }
+        ],
+        "name": "stakeIn",
+        "payable": true,
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "constant": false,
+        "inputs": [
+            {
+                "name": "delegateAddr",
+                "type": "address"
+            },
+        ],
+        "name": "delegateIn",
+        "payable": true,
+        "stateMutability": "payable",
+        "type": "function"
+    }
 ]
 
 var stakeIndex = 0

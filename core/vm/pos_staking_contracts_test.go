@@ -157,14 +157,15 @@ func TestStakeInAndOutTimeOut(t *testing.T) {
 
 func TestDelegateIn(t *testing.T) {
 	var input DelegateInParam
-	input.Address = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
-	input.LockEpochs = big.NewInt(10)
+	input.DelegateAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	//input.LockEpochs = big.NewInt(10)
 
 	// config
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 
-	bytes, err := cscAbi.Pack("delegateIn", input.Address, input.LockEpochs)
+	//bytes, err := cscAbi.Pack("delegateIn", input.Address, input.LockEpochs)
+	bytes, err := cscAbi.Pack("delegateIn", input.DelegateAddress)
 	if err != nil {
 		t.Fatal("delegateIn pack failed")
 	}
@@ -192,9 +193,9 @@ func TestStakeInAndOutNotTimeOut(t *testing.T) {
 
 }
 
-func TestRunFake(t *testing.T) {
-	runFake(stakerevm.StateDB)
-}
+//func TestRunFake(t *testing.T) {
+//	runFake(stakerevm.StateDB)
+//}
 
 
 
