@@ -248,8 +248,10 @@ func TestMain(m *testing.M) {
 	rbranddb[0] = big.NewInt(1)
 	getRBProposerGroupVar = getRBProposerGroupMock
 	getRBMVar = getRBMMock
-	isValidEpochStageVar = isValidEpochStageMock
-	isInRandomGroupVar = isInRandomGroupMock
+	//isValidEpochStageVar = isValidEpochStageMock
+	//isInRandomGroupVar = isInRandomGroupMock
+	isValidEpochStageVar = nil
+	isInRandomGroupVar = nil
 	println("rb test begin")
 	m.Run()
 	println("rb test end")

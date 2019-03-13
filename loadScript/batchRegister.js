@@ -54,9 +54,9 @@ for (idx=0;idx<regCount;idx++) {
         "constant": false,
         "type": "function",
         "stateMutability": "nonpayable",
-        "inputs": [{"name": "Pubs", "type": "string"}, {"name": "LockTime", "type": "uint256"}],
+        "inputs": [{"name": "Pubs", "type": "string"}, {"name": "LockEpochs", "type": "uint256"}],
         "name": "stakeIn",
-        "outputs": [{"name": "Pubs", "type": "string"}, {"name": "LockTime", "type": "uint256"}]
+        "outputs": [{"name": "Pubs", "type": "string"}, {"name": "LockEpochs", "type": "uint256"}]
     }, {
         "constant": false,
         "type": "function",

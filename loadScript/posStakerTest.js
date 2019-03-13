@@ -27,7 +27,7 @@ var cscDefinition = [
         "type": "string"
       },
       {
-        "name": "LockTime",
+        "name": "LockEpochs",
         "type": "uint256"
       }
     ],
@@ -38,7 +38,7 @@ var cscDefinition = [
         "type": "string"
       },
       {
-        "name": "LockTime",
+        "name": "LockEpochs",
         "type": "uint256"
       }
     ]

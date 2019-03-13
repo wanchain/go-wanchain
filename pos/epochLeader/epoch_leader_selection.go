@@ -225,14 +225,14 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*P
 
 	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
 	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
-	lockTime := pstaker.LockTime
+	lockTime := pstaker.LockEpochs
 
 	var leftTimePercent float64
 	if epochId < 2 {
 		leftTimePercent = 1
 	} else {
 
-		leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingTime)) / float64(lockTime))
+		leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingEpochs)) / float64(lockTime))
 		if leftTimePercent > 0 {
 			leftTimePercent = Round(leftTimePercent, 32)
 		} else {
@@ -530,7 +530,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 	val := staker.Amount.Div(staker.Amount, big.NewInt(int64(params.Wan)))
 
 	strArray = append(strArray, fmt.Sprint("amount:", val.Text(10)))
-	strArray = append(strArray, fmt.Sprint("lockTime:", staker.LockTime))
+	strArray = append(strArray, fmt.Sprint("lockTime:", staker.LockEpochs))
 	strArray = append(strArray, fmt.Sprint("probability:", pitem.Probabilities.Text(10)))
 
 	return strArray, nil
@@ -569,7 +569,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	}
 	infors = make([]vm.ClientProbability, 1) // TODO: the array length?
 	infors[0].Addr = addr
-	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockTime, staker.StakingTime)
+	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpochs)
 	feeRate = staker.FeeRate
 	totalProbability = infors[0].Probability //TODO: add all client
 	return infors, feeRate, totalProbability, nil

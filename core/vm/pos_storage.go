@@ -22,7 +22,6 @@ func StoreInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash, info
 
 //get stored info
 func GetInfo(statedb StateDB,listAddr common.Address,pubHash common.Hash) ([]byte, error) {
-
 	if statedb == nil {
 		return nil, ErrUnknown
 	}
