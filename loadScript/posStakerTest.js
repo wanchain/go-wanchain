@@ -91,6 +91,24 @@ var cscDefinition = [
             }
         ],
         "name": "stakeIn",
+		"outputs": [
+			{
+				"name": "secPk",
+				"type": "bytes"
+			},
+			{
+				"name": "bn256Pk",
+				"type": "bytes"
+			},
+			{
+				"name": "lockEpochs",
+				"type": "uint256"
+			},
+			{
+				"name": "feeRate",
+				"type": "uint256"
+			}
+		],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
@@ -101,9 +119,15 @@ var cscDefinition = [
             {
                 "name": "delegateAddr",
                 "type": "address"
-            },
+            }
         ],
         "name": "delegateIn",
+		"outputs": [
+			{
+				"name": "delegateAddr",
+				"type": "address"
+			}
+		],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
@@ -132,23 +156,27 @@ function stakeRegisterTest() {
   console.log("address:" + address + ", balance:" + eth.getBalance(address))
   personal.unlockAccount(address, 'wanglu', 9999999)
 
-  pubs = personal.showPublicKey(address, "wanglu")
-  var secpub = pubs[0]
-  var g1pub = pubs[1]
+  pubKeys = personal.showPublicKey(address, "wanglu");
+  console.log("pubKeys:" + pubKeys);
+  if (!pubKeys) {
+      console.log("showPublicKey,error")
+      return
+  }
+  var secpub = pubKeys[0]
+  var g1pub = pubKeys[1]
 
   console.log("pk:" + secpub + ", G1:" + g1pub)
 
 
   /////////////////////////////////register staker////////////////////////////////////////////////////////////////////////
-  var datapks = secpub + g1pub
-
   var contractDef = eth.contract(cscDefinition);
   var cscContractAddr = "0x00000000000000000000000000000000000000d2";
   var coinContract = contractDef.at(cscContractAddr);
 
-  var lockTime = web3.toWin(lockTimeSecond)
+  var lockEpochs = 10;
+  var feeRate = 99;
 
-  var payload = coinContract.stakeIn.getData(datapks, lockTime)
+  var payload = coinContract.stakeIn.getData(secpub, g1pub, lockEpochs, feeRate)
 
   console.log("payload:")
   console.log(payload)
@@ -169,7 +197,7 @@ function stakeRegisterTest() {
 
   console.log("stake register success")
 
-  setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, address, stakeIndex)
+  // setTimeout(stakeUnregister, lockTimeSecond * 1000 + 60 * 1000, address, stakeIndex)
 
   // Start staker register
   setTimeout(stakeRegisterTest, 1000 * stakerRegisterPeriod, null);

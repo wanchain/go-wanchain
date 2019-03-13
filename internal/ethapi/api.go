@@ -1872,7 +1872,7 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 			}
 
 			if key.PrivateKey != nil {
-				pubs =append(pubs,common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+				pubs =append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
 
 			if key.PrivateKey3 != nil {
