@@ -142,7 +142,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		return nil
 	}
 
-	rbStage := vm.GetRBStage(slotId)
+	rbStage, elapsedNum, leftNum := vm.GetRBStage(slotId)
 	log.Info("get current rb statge", "statge", rbStage)
 
 	// belong to RB proposer group
@@ -151,6 +151,12 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		switch rb.epochStage {
 		case vm.RbDkg1Stage:
 			if rbStage == vm.RbDkg1Stage {
+				// not send tx in first and last slot
+				if elapsedNum == 0 || leftNum == 0 {
+					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
+					return nil
+				}
+
 				err := rb.doDKG1s(epochId, myProposerIds)
 				if err != nil {
 					return err
@@ -161,6 +167,12 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 			if rbStage < vm.RbDkg2Stage {
 				return nil
 			} else if rbStage == vm.RbDkg2Stage {
+				// not send tx in first and last slot
+				if elapsedNum == 0 || leftNum == 0 {
+					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
+					return nil
+				}
+
 				err := rb.doDKG2s(epochId, myProposerIds)
 				if err != nil {
 					return err
@@ -171,6 +183,12 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 			if rbStage < vm.RbSignStage {
 				return nil
 			} else if rbStage == vm.RbSignStage {
+				// not send tx in first and last slot
+				if elapsedNum == 0 || leftNum == 0 {
+					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
+					return nil
+				}
+
 				err := rb.doSIGs(epochId, myProposerIds)
 				if err != nil {
 					return err

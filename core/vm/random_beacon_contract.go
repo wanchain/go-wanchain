@@ -67,19 +67,23 @@ var (
 	errInvalidEnshareBytes	= errors.New("invalid dkg enshare bytes")
 )
 
-func GetRBStage(slotId uint64) int {
+// return:
+// 	current stage index;
+//	elapsed slots number of current stage;
+//	left slots number of current stage;
+func GetRBStage(slotId uint64) (int,int,int) {
 	if slotId <= pos.Cfg().Dkg1End {
-		return RbDkg1Stage
+		return RbDkg1Stage, int(slotId), int(pos.Cfg().Dkg1End - slotId)
 	} else if slotId < pos.Cfg().Dkg2Begin {
-		return RbDkg1ConfirmStage
+		return RbDkg1ConfirmStage, int(slotId - pos.Cfg().Dkg1End - 1), int(pos.Cfg().Dkg2Begin - slotId - 1)
 	} else if slotId <= pos.Cfg().Dkg2End {
-		return RbDkg2Stage
+		return RbDkg2Stage, int(slotId - pos.Cfg().Dkg2Begin), int(pos.Cfg().Dkg2End - slotId)
 	} else if slotId < pos.Cfg().SignBegin {
-		return RbDkg2ConfirmStage
+		return RbDkg2ConfirmStage, int(slotId - pos.Cfg().Dkg2End - 1), int(pos.Cfg().SignBegin - slotId - 1)
 	} else if slotId <= pos.Cfg().SignEnd {
-		return RbSignStage
+		return RbSignStage, int(slotId - pos.Cfg().SignBegin), int(pos.Cfg().SignEnd - slotId)
 	} else {
-		return RbSignConfirmStage
+		return RbSignConfirmStage, int(slotId - pos.Cfg().SignEnd - 1), int(pos.SlotCount - slotId - 1)
 	}
 }
 
@@ -241,7 +245,7 @@ func validDkg1(statedb StateDB, time uint64, caller common.Address,
 
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
-		return nil, logError(errors.New("invalid dkg1 stage, epochId " + strconv.FormatUint(eid, 10)))
+		return nil, logError(errors.New("invalid rb stage, expect RbDkg1Stage. epochId " + strconv.FormatUint(eid, 10)))
 	}
 
 	// 2. ProposerId: weather in the random commit
@@ -303,11 +307,12 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
-		return nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
+		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
 	}
+
 	// 2. ProposerId: weather in the random commit
 	if !isInRandomGroupVar(pks, eid, pid, caller) {
-		return nil, logError(errors.New(" error proposerId " + strconv.FormatUint(uint64(pid), 10)))
+		return nil, logError(errors.New("error proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
 	// prevent reset
@@ -358,7 +363,7 @@ func validSigshare(statedb StateDB, time uint64, caller common.Address,
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
-		return nil, nil, nil, logError(errors.New(" error epochId " + strconv.FormatUint(eid, 10)))
+		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
 	}
 
 	// 2. ProposerId: weather in the random commit
@@ -685,7 +690,7 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 		return false
 	}
 
-	ss := GetRBStage(sid)
+	ss, _, _ := GetRBStage(sid)
 	if ss != stage {
 		return false
 	}
