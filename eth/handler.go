@@ -514,6 +514,23 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
+	case msg.Code == GetBlockBodiesMsg:
+		var query getEpochGenesisData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		p.SendEpochGenesis(query.epochid)
+
+	case msg.Code == BlockBodiesMsg:
+		var epBody epochGenesisBody
+		if err := msg.Decode(&epBody); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		pm.downloader.DeliverEpochGenesis(p.id,epBody.epochGenesis)
+
+
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))

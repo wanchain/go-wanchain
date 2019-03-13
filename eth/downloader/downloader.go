@@ -133,10 +133,15 @@ type Downloader struct {
 	receiptWakeCh chan bool            // [eth/63] Channel to signal the receipt fetcher of new tasks
 	headerProcCh  chan []*types.Header // [eth/62] Channel to feed the header processor new tasks
 
+	//for epoch genesis
+	epochGenesisCh chan	dataPack
+
 	// for stateFetcher
 	stateSyncStart chan *stateSync
 	trackStateReq  chan *stateReq
 	stateCh        chan dataPack // [eth/63] Channel receiving inbound node state data
+
+
 
 	// Cancellation and termination
 	cancelPeer string        // Identifier of the peer currently being used as the master (cancel on drop)
@@ -1489,6 +1494,14 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 	return d.deliver(id, d.stateCh, &statePack{id, data}, stateInMeter, stateDropMeter)
 }
+
+
+// DeliverNodeData injects a new batch of node state data received from a remote node.
+func (d *Downloader) DeliverEpochGenesis(id string,epochBody *types.EpochGenesis) (err error) {
+	return d.deliver(id, d.epochGenesisCh,&epochGenesisPack{peerId:id,epochGenesis:epochBody},epochGenesisInMeter ,epochGenesisDropMeter)
+}
+
+
 
 // deliver injects a new batch of data received from a remote node.
 func (d *Downloader) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {

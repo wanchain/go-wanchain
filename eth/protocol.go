@@ -191,6 +191,6 @@ type getEpochGenesisData struct {
 	epochid uint64 // epochid from which to get epoch genesis
 }
 
-type genesisBody struct {
-
+type epochGenesisBody struct {
+	epochGenesis 	*types.EpochGenesis
 }
