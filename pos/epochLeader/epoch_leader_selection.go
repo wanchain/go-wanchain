@@ -589,6 +589,9 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i:=0; i<len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
+		if epochID < staker.StakingEpochs + staker.LockEpochs + 3 { // TODO: check with design
+			continue
+		}
 		for j:=0; j<len(staker.Clients); j++ {
 			core.Transfer(stateDb, vm.StakersInfoAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 		}

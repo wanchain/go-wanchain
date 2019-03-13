@@ -308,7 +308,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	}
 
 	// create stakeholder's information
-	eidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
+	EidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
 	stakeholder := &StakerInfo{
 		Address:     secAddr,
 		PubSec256:   info.SecPk,
@@ -316,7 +316,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		Amount:      contract.value,
 		LockEpochs:    lockTime,
 		From:        contract.CallerAddress,
-		StakingEpochs: eidNow,
+		StakingEpochs: EidNow,
 	}
 	infoBytes, err := rlp.EncodeToBytes(stakeholder)
 	if err != nil {
@@ -360,11 +360,11 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 
 	// 3. epoch is valid
 	//lockEpochs := delegateInParam.LockEpochs.Uint64()
-	//eidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
-	//eidEnd := eidNow + lockEpochs + posEpochGap
+	//EidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
+	//eidEnd := EidNow + lockEpochs + posEpochGap
 	//
 	//dEidEnd := stakerInfo.StakingEpochs + stakerInfo.LockEpochs + posEpochGap - posDelegateEpochGap
-	//if eidNow < stakerInfo.StakingEpochs || eidNow > dEidEnd || eidEnd > dEidEnd {
+	//if EidNow < stakerInfo.StakingEpochs || EidNow > dEidEnd || eidEnd > dEidEnd {
 	//	return nil, errors.New("it's too late for your to delegate")
 	//}
 
