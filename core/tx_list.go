@@ -350,6 +350,41 @@ func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLi
 	return append(removed, invalids...)
 }
 
+// InvalidPosTx remove invalidate pos transactions
+func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer, gasLimit *big.Int) types.Transactions {
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		if !types.IsPosTransaction(tx.Txtype()) || (*tx.To()) != vm.GetRBAddress() {
+			return false
+		}
+
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return true
+		}
+
+		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+		err = vm.ValidPosTx(stateDB, from, tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
+
+		return err != nil
+	})
+
+	var invalids types.Transactions
+	if l.strict && len(removed) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range removed {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+
+	// Privacy transaction's sender is not real sender, just a hash info.
+	// So, no need to move invalid transactions to queue for later.
+	// Just remove all of invalid transactions.
+	return append(removed, invalids...)
+}
+
 // Cap places a hard limit on the number of items, returning all transactions
 // exceeding that limit.
 func (l *txList) Cap(threshold int) types.Transactions {

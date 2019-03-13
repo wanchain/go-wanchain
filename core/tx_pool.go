@@ -1121,6 +1121,16 @@ func (pool *TxPool) demoteUnexecutables() {
 			pendingNofundsCounter.Inc(1)
 		}
 
+		// Remove all invalid pos transactions
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		for _, tx := range invalidPos {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
 		// If there's a gap in front, warn (should never happen) and postpone all transactions
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
 			for _, tx := range list.Cap(0) {

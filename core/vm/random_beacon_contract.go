@@ -137,6 +137,45 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	return nil, nil
 }
 
+func ValidPosTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *big.Int,
+	intrGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
+	if intrGas == nil || intrGas.BitLen() > 64 || gasLimit == nil || intrGas.Cmp(gasLimit) > 0 {
+		return ErrOutOfGas
+	}
+
+	if txValue.Sign() != 0 {
+		return ErrInvalidPosValue
+	}
+
+	if gasPrice == nil || gasPrice.Sign() != 1 {
+		return ErrInvalidGasPrice
+	}
+
+	totalCost := new(big.Int).Mul(gasPrice, gasLimit)
+	totalCost.Add(totalCost, txValue)
+	if stateDB.GetBalance(from).Cmp(totalCost) < 0 {
+		return ErrOutOfGas
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], payload[:4])
+
+	if methodId == dkg1Id {
+		_, err := validDkg1(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		return err
+	} else if methodId == dkg2Id {
+		_, err := validDkg2(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		return err
+	} else if methodId == sigshareId {
+		_, _, _, err := validSigshare(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		return err
+	} else {
+		return errParameters
+	}
+
+}
+
+
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	if stateDB == nil || signer == nil || tx == nil {
 		return errParameters
@@ -156,13 +195,13 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 	copy(methodId[:], payload[:4])
 
 	if methodId == dkg1Id {
-		_, err := c.ValidDkg1(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		_, err := validDkg1(stateDB, uint64(time.Now().Unix()), from, payload[4:])
 		return err
 	} else if methodId == dkg2Id {
-		_, err := c.ValidDkg2(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		_, err := validDkg2(stateDB, uint64(time.Now().Unix()), from, payload[4:])
 		return err
 	} else if methodId == sigshareId {
-		_, _, _, err := c.ValidSigshare(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+		_, _, _, err := validSigshare(stateDB, uint64(time.Now().Unix()), from, payload[4:])
 		return err
 	} else {
 		return errParameters
@@ -179,7 +218,8 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 // 'caller' is the caller of DKG1. It should be set as Contract.CallerAddress
 // when called by precompiled contract. And should be set as tx's sender when
 // called by txpool.
-func (c *RandomBeaconContract) ValidDkg1(statedb StateDB, time uint64, caller common.Address, payload []byte) (*RbDKG1FlatTxPayload, error) {
+func validDkg1(statedb StateDB, time uint64, caller common.Address,
+	payload []byte) (*RbDKG1FlatTxPayload, error) {
 	log.Info("valid dkg1 begin", "time", time, "calller", caller)
 
 	var dkg1FlatParam RbDKG1FlatTxPayload
@@ -241,7 +281,8 @@ func (c *RandomBeaconContract) ValidDkg1(statedb StateDB, time uint64, caller co
 	return &dkg1FlatParam, nil
 }
 
-func (c *RandomBeaconContract) ValidDkg2(statedb StateDB, time uint64, caller common.Address, payload []byte) (*RbDKG2FlatTxPayload, error) {
+func validDkg2(statedb StateDB, time uint64, caller common.Address,
+	payload []byte) (*RbDKG2FlatTxPayload, error) {
 	log.Info("valid dkg2 begin", "time", time, "calller", caller)
 
 	var dkg2FlatParam RbDKG2FlatTxPayload
@@ -300,7 +341,8 @@ func (c *RandomBeaconContract) ValidDkg2(statedb StateDB, time uint64, caller co
 }
 
 
-func (c *RandomBeaconContract) ValidSigshare(statedb StateDB, time uint64, caller common.Address, payload []byte) (*RbSIGTxPayload, []bn256.G1, []RbCijDataCollector, error) {
+func validSigshare(statedb StateDB, time uint64, caller common.Address,
+	payload []byte) (*RbSIGTxPayload, []bn256.G1, []RbCijDataCollector, error) {
 	log.Info("valid sigshare begin", "time", time, "calller", caller)
 
 	var sigshareParam RbSIGTxPayload
@@ -411,7 +453,8 @@ func IsRBActive(db StateDB, epochId uint64, proposerId uint32) bool {
 
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(sigshareId[:], epochId, proposerId)
-	log.Debug("vm.GetSig", "len(sigshareId)", len(sigshareId), "epochID", epochId, "proposerId", proposerId, "hash", hash.Hex())
+	log.Debug("vm.GetSig", "len(sigshareId)", len(sigshareId), "epochID", epochId, "proposerId",
+		proposerId, "hash", hash.Hex())
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	// if missing
 	if len(payloadBytes) == 0 {
@@ -722,7 +765,7 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 	dkgStart := time.Now()
 
 	log.Info("contract do dkg1 begin")
-	dkg1FlatParam, err := c.ValidDkg1(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	dkg1FlatParam, err := validDkg1(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -749,7 +792,7 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	dkgStart := time.Now()
 
-	dkg2FlatParam, err := c.ValidDkg2(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	dkg2FlatParam, err := validDkg2(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -797,7 +840,7 @@ func setSigsNum(epochId uint64, num uint32, evm *EVM) {
 func (c *RandomBeaconContract) sigshare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	t1 := time.Now()
 
-	sigshareParam, pks, dkgData, err := c.ValidSigshare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	sigshareParam, pks, dkgData, err := validSigshare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
