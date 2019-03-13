@@ -20,6 +20,7 @@ package clique
 import (
 	"bytes"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -30,7 +31,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -672,6 +673,9 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
 		if !incentive.Run(chain, state, epochID-pos.IncentiveDelayEpochs, header.Number.Uint64()) {
 			log.Error("incentive.Run failed")
+		}
+		if !epochLeader.StakeOutRun(state, epochID) {
+			log.Error("Stake Out failed.")
 		}
 	}
 

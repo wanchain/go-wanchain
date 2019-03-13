@@ -21,7 +21,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/pos/cloudflare"
 )
 
 var (
@@ -577,4 +577,31 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 
 func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
 	return nil
+}
+
+func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
+	if vm.StakeoutIsFinished(stateDb, epochID) {
+		return true
+	}
+	vm.StakeoutSetEpoch(stateDb, epochID)
+
+	stakers := vm.GetStakersSnap(stateDb)
+	for i:=0; i<len(stakers); i++ {
+		// stakeout delegated client. client will expire at the same time with delegate node
+		staker := stakers[i]
+		for j:=0; j<len(staker.Clients); j++ {
+			core.Transfer(stateDb, vm.StakersInfoAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+		}
+
+		core.Transfer(stateDb, vm.StakersInfoAddr, staker.From, staker.Amount)
+		//staker.Clients = make([]vm.ClientInfo,0)
+		//infoBytes, err := rlp.EncodeToBytes(staker)
+		//if err != nil {
+		//	log.Error("EncodeToBytes failed: ", err)
+		//	return false
+		//}
+
+		vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+	}
+	return true
 }

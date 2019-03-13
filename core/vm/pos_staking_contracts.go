@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -590,7 +589,7 @@ func (p *PosStaking) delegateInParseAndValid(payload []byte) error {
 //}
 
 
-func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo, error) {
+func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
 	stakers := make([]StakerInfo,0)
 	stateDb.ForEachStorageByteArray(StakersInfoAddr, func(key common.Hash, value []byte) bool {
 		var stakerInfo StakerInfo
@@ -602,21 +601,18 @@ func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo, error) {
 		stakers = append(stakers, stakerInfo)
 		return true
 	})
-	return stakers, nil
+	return stakers
 }
 var 	StakersInfoStakeOutKeyHash      = common.BytesToHash(big.NewInt(700).Bytes())
-func stakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
+func StakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
 	b := big.NewInt(int64(epochID))
 	StoreInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash, b.Bytes())
 }
-func stakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
+func StakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
 	epochByte,err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
 	if err != nil {
 		return false
 	}
 	finishedEpochId := big.NewInt(0).SetBytes(epochByte).Uint64()
 	return finishedEpochId >= epochID
-}
-func stakeOutRun(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
-	return true
 }
