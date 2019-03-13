@@ -851,7 +851,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		 //if use epochgeneis,they use this branch
 		 if bc.forkMem.useEpochGenesis {
 			 if bc.forkMem.IsFirstBlockInEpoch(block) {
-				 verifyRes := bc.forkMem.VerifyFirstBlockInEpoch(bc,block)
+				 verifyRes := bc.forkMem.VerifyEpochGenesis(bc,block)
 				 if !verifyRes {
 					 lastBlkPreEpoch := bc.forkMem.GetLastBlkInPreEpoch(bc,block)
 					 err := bc.reorg(bc.currentBlock,lastBlkPreEpoch)
@@ -1258,6 +1258,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	}
 
+
+
 	// Ensure the user sees large reorgs
 	if len(oldChain) > 0 && len(newChain) > 0 {
 		logFn := log.Debug
@@ -1283,10 +1285,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 	bc.forkMem.updateFork(newEpochId)
 	bc.forkMem.updateReOrg(newEpochId,uint64(len(newChain)))
-
-	if uint64(len(newChain)) > pos.Stage1K {
-		return fmt.Errorf("Impossible reorg because reorg depth is beyong K blocks",pos.Stage1K)
-	}
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
@@ -1539,7 +1537,9 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
 
-
+///////////////////////////////////////////////////////////////////
+//for epoch genesis
+//////////////////////////////////////////////////////////////////
 func (bc *BlockChain)SetRbSelector(rbs RbLeadersSelInt){
 	bc.forkMem.rbLeaderSelector = rbs
 }
@@ -1547,3 +1547,18 @@ func (bc *BlockChain)SetRbSelector(rbs RbLeadersSelInt){
 func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 	bc.forkMem.slotLeaderSelector = sls
 }
+
+func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
+	return bc.forkMem.VerifyEpochGenesis(bc,blk)
+}
+
+func (bc *BlockChain) GetCurrentEpochGenesis(epochid uint64) ([]byte,error){
+	return bc.forkMem.GetEpochGenesis(epochid,bc.currentBlock)
+}
+
+func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
+	blkEpochId,blkSlotId,_ := bc.forkMem.GetBlockEpochIdAndSlotId(blk.Header())
+	return blkEpochId,blkSlotId
+}
+
+

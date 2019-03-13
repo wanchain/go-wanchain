@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/wanchain/go-wanchain/log"
+	"time"
 )
 
 type chainType uint
@@ -106,6 +107,22 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	}
 
 	return
+}
+
+
+func (f *ForkMemBlockChain) CalEpochSlotID() (uint64,uint64){
+
+	if pos.EpochBaseTime == 0 {
+		return 0,0
+	}
+
+	timeUnix := uint64(time.Now().Unix())
+	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
+	curEpochId := uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
+	curSlotId := uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
+	//slottools.CurEpochID = curEpochId
+	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
+	return curEpochId,curSlotId
 }
 
 func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks, error) {
@@ -342,12 +359,12 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 }
 
 
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block) ([]byte,error){
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]byte,error){
 
 	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 	epGen.EpochId = epochid
-	epGen.PreEpochLastBlkHash = lastBlk.Hash()
+	epGen.PreEpochLastBlkHash = blk.Hash()
 
 	f.rbLeaderSelector.GetRBProposerGroup(epochid)
 
@@ -371,19 +388,24 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,lastBlk *types.Block)
 	return json.Marshal(epGen)
 }
 
-func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *types.Block) bool{
+func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain,blk *types.Block) bool{
+
+	if !f.useEpochGenesis {
+		return true
+	}
+
 
 	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 
-	epochid,_,err:= f.GetBlockEpochIdAndSlotId(firstBlk.Header())
+	epochid,_,err:= f.GetBlockEpochIdAndSlotId(blk.Header())
 	if err!=nil {
 		log.Info("verify genesis failed because of wrong epochid or slotid")
 		return false
 	}
 	epGen.EpochId = epochid
 
-	lastBlk := bc.GetBlockByNumber(firstBlk.NumberU64()-1)
+	lastBlk := bc.GetBlockByNumber(blk.NumberU64()-1)
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
 
 	epGen.RBLeaders = make([][]byte,0)
@@ -410,7 +432,7 @@ func (f *ForkMemBlockChain) VerifyFirstBlockInEpoch(bc *BlockChain, firstBlk *ty
 
 	genesisBlkHash := crypto.Keccak256Hash(byteVal)
 
-	res := (genesisBlkHash==firstBlk.ParentHash())
+	res := (genesisBlkHash==blk.ParentHash())
 
 	return res
 }
