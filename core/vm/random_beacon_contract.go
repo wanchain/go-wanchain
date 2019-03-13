@@ -31,7 +31,7 @@ const (
 	RbDkg2Stage
 	RbDkg2ConfirmStage
 	RbSignStage
-	RbAfterSignStage
+	RbSignConfirmStage
 )
 
 var (
@@ -79,12 +79,11 @@ func GetRBStage(slotId uint64) int {
 	} else if slotId <= pos.Cfg().SignEnd {
 		return RbSignStage
 	} else {
-		return RbAfterSignStage
+		return RbSignConfirmStage
 	}
 }
 
 type RandomBeaconContract struct {
-	CallerAddress common.Address
 }
 
 func init() {
@@ -178,7 +177,7 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 // 'time' should be current system time when the method is called by txpool.
 //
 // 'caller' is the caller of DKG1. It should be set as Contract.CallerAddress
-// when called by precompiled contract. And should be set ad tx's sender when
+// when called by precompiled contract. And should be set as tx's sender when
 // called by txpool.
 func (c *RandomBeaconContract) ValidDkg1(statedb StateDB, time uint64, caller common.Address, payload []byte) (*RbDKG1FlatTxPayload, error) {
 	log.Info("valid dkg1 begin", "time", time, "calller", caller)

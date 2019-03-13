@@ -22,7 +22,7 @@ const (
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 9
 	// SlotCount is slot count in an epoch
-	SlotCount = 100
+	SlotCount = 120
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
 	// GenesisPK is the epoch0 pk
@@ -32,8 +32,11 @@ const (
 	IncentiveDelayEpochs = 1
 	IncentiveStartStage  = Stage2K
 
+	// K count of each epoch
+	KCount = 12
+
 	// Stage1K is divde a epoch into 10 pieces
-	Stage1K  = uint64(SlotCount / 10)
+	Stage1K  = uint64(SlotCount / KCount)
 	Stage2K  = Stage1K * 2
 	Stage3K  = Stage1K * 3
 	Stage4K  = Stage1K * 4
@@ -43,13 +46,15 @@ const (
 	Stage8K  = Stage1K * 8
 	Stage9K  = Stage1K * 9
 	Stage10K = Stage1K * 10
+	Stage11K = Stage1K * 11
+	Stage12K = Stage1K * 12
 
 	Sma1Start = 0
 	Sma1End   = Stage3K
-	Sma2Start = Stage5K
-	Sma2End   = Stage7K
-	Sma3Start = Stage9K
-	Sma3End   = Stage10K
+	Sma2Start = Stage6K
+	Sma2End   = Stage8K
+	Sma3Start = Stage10K
+	Sma3End   = Stage12K
 )
 
 type Config struct {
@@ -70,18 +75,18 @@ type Config struct {
 
 var DefaultConfig = Config{
 	1,
-	SlotCount / 10,
+	SlotCount / KCount,
 	3,
 	0,
 	0,
 	nil,
 	"",
 	nil,
-	Stage1K - 1,
-	Stage3K,
-	Stage5K - 1,
-	Stage7K,
-	Stage8K - 1,
+	Stage2K - 1,
+	Stage4K,
+	Stage6K - 1,
+	Stage8K,
+	Stage10K - 1,
 }
 
 func Cfg() *Config {

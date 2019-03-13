@@ -177,7 +177,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 				}
 			}
 
-			rb.epochStage = vm.RbAfterSignStage
+			rb.epochStage = vm.RbSignConfirmStage
 		default:
 			// RbAfterSignStage
 			return nil
