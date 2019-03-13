@@ -259,12 +259,7 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {
-	keyBytes := make([]byte, 12 + len(address))
-	copy(keyBytes, kindStakeIn)
-	copy(keyBytes[12:], address[:])
-	hash := common.BytesToHash(crypto.Keccak256(keyBytes))
-
-	return hash
+	return common.BytesToHash(address[:])
 }
 
 func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
