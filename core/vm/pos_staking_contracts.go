@@ -174,12 +174,14 @@ var (
 )
 
 type StakerInfo struct {
-	PubSec256 []byte //stakeholder’s wan public key
-	PubBn256  []byte //stakeholder’s bn256 public key
+	Address	    common.Address
+	PubSec256   []byte //stakeholder’s wan public key
+	PubBn256    []byte //stakeholder’s bn256 public key
 
 	Amount      *big.Int //staking wan value
-	LockEpochs    uint64   //lock time which is input by user
+	LockEpochs   uint64   //lock time which is input by user
 	From        common.Address
+
 	StakingEpochs uint64 //the user’s staking time
 	FeeRate     uint64
 	Clients      []ClientInfo
@@ -307,6 +309,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	// create stakeholder's information
 	eidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
 	stakeholder := &StakerInfo{
+		Address:     secAddr,
 		PubSec256:   info.SecPk,
 		PubBn256:    info.Bn256Pk,
 		Amount:      contract.value,

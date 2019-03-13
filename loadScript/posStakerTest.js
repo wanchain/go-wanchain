@@ -91,24 +91,6 @@ var cscDefinition = [
             }
         ],
         "name": "stakeIn",
-		"outputs": [
-			{
-				"name": "secPk",
-				"type": "bytes"
-			},
-			{
-				"name": "bn256Pk",
-				"type": "bytes"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
@@ -122,12 +104,6 @@ var cscDefinition = [
             }
         ],
         "name": "delegateIn",
-		"outputs": [
-			{
-				"name": "delegateAddr",
-				"type": "address"
-			}
-		],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
