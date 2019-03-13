@@ -88,7 +88,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			break
 		}
 
-		if slotID > pos.Sma2End {
+		if slotID > (pos.Sma2End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			break
 		}
