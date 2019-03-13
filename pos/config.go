@@ -21,8 +21,6 @@ const (
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 9
-	// SlotCount is slot count in an epoch
-	SlotCount = 120
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
 	// GenesisPK is the epoch0 pk
@@ -34,9 +32,12 @@ const (
 
 	// K count of each epoch
 	KCount = 12
+	K      = 10
+	// SlotCount is slot count in an epoch
+	SlotCount = K * KCount
 
 	// Stage1K is divde a epoch into 10 pieces
-	Stage1K  = uint64(SlotCount / KCount)
+	Stage1K  = uint64(K)
 	Stage2K  = Stage1K * 2
 	Stage3K  = Stage1K * 3
 	Stage4K  = Stage1K * 4
@@ -75,7 +76,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	1,
-	SlotCount / KCount,
+	K,
 	3,
 	0,
 	0,
