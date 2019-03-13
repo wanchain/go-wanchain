@@ -126,6 +126,7 @@ var (
 			}
 		],
 		"name": "stakeIn",
+        "outputs": [],
 		"payable": true,
 		"stateMutability": "payable",
 		"type": "function"
@@ -139,6 +140,7 @@ var (
 			}
 		],
 		"name": "delegateIn",
+        "outputs": [],
 		"payable": true,
 		"stateMutability": "payable",
 		"type": "function"

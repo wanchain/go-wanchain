@@ -18,6 +18,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"testing"
+	"time"
 )
 
 type CTStateDB struct {
@@ -98,7 +99,7 @@ var (
 	db, _      = ethdb.NewMemDatabase()
 	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	ref = &dummyCtRef{}
-	evm = NewEVM(Context{}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+	evm = NewEVM(Context{Time:big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	rbcontract = &RandomBeaconContract{}
 	rbcontractParam = &Contract{}
@@ -236,11 +237,36 @@ func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
 }
 
 
-func isValidEpochStageMock(epochId uint64, stage int, evm *EVM) bool {
+func isValidEpochStageMock(epochId uint64, stage int, time uint64) bool {
 	return true
 }
-func isInRandomGroupMock(pks *[]bn256.G1, epockId uint64, proposerId uint32, address common.Address) bool {
+func isInRandomGroupMock(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
 	return true
+}
+
+
+func intrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+	igas := new(big.Int)
+	if contractCreation && homestead {
+		igas.SetUint64(params.TxGasContractCreation)
+	} else {
+		igas.SetUint64(params.TxGas)
+	}
+	if len(data) > 0 {
+		var nz int64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		m := big.NewInt(nz)
+		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
+		igas.Add(igas, m)
+		m.SetInt64(int64(len(data)) - nz)
+		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
+		igas.Add(igas, m)
+	}
+	return igas
 }
 
 // test cases runs in testMain
@@ -248,11 +274,9 @@ func TestMain(m *testing.M) {
 	rbranddb[0] = big.NewInt(1)
 	getRBProposerGroupVar = getRBProposerGroupMock
 	getRBMVar = getRBMMock
-	//isValidEpochStageVar = isValidEpochStageMock
-	//isInRandomGroupVar = isInRandomGroupMock
-	isValidEpochStageVar = nil
-	isInRandomGroupVar = nil
-	println("rb test begin")
+	isValidEpochStageVar = isValidEpochStageMock
+	isInRandomGroupVar = isInRandomGroupMock
+	//println("rb test begin")
 	m.Run()
 	println("rb test end")
 }
@@ -371,3 +395,112 @@ func TestRBSig(t *testing.T)  {
 		println (sigshareParam2)
 	}
 }
+
+func TestValidPosTx(t *testing.T) {
+	rbgroupdb[rbepochId] = pubs
+
+	gasPrice := big.NewInt(1800000000000)
+	txAmount := big.NewInt(0)
+	gasLimit := big.NewInt(1000000)
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKG1TxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Commit = commitA[i]
+
+		dkg1 := Dkg1ToDkg1Flat(&dkgParam)
+		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
+		payload := buildDkg1(payloadBytes)
+
+		intrGas := intrinsicGas(payload, false, true)
+		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrGas, txAmount, gasLimit)
+		if err != nil {
+			t.Error("verify pos tx fail. err:", err)
+		}
+
+		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		if err != nil {
+			t.Error("rb contract run fail. err:", err)
+		}
+	}
+
+	for i := 0; i < nr; i++ {
+		var dkgParam RbDKG2TxPayload
+		dkgParam.EpochId = rbepochId
+		dkgParam.ProposerId = uint32(i)
+		dkgParam.Enshare = enshareA[i]
+		dkgParam.Proof = proofA[i]
+
+		dkg1 := Dkg2ToDkg2Flat(&dkgParam)
+		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
+		payload := buildDkg2(payloadBytes)
+
+		intrGas := intrinsicGas(payload, false, true)
+		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrGas, txAmount, gasLimit)
+		if err != nil {
+			t.Error("verify pos tx fail. err:", err)
+		}
+
+		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		if err != nil {
+			t.Error("rb contract run fail. err:", err)
+		}
+
+	}
+
+	gsigshareA := prepareSig(pris, enshareA)
+	for i := 0; i < nr; i++ {
+		var sigshareParam RbSIGTxPayload
+		sigshareParam.EpochId = rbepochId
+		sigshareParam.ProposerId = uint32(i)
+		sigshareParam.Gsigshare = gsigshareA[i]
+
+		payloadBytes, _ := rlp.EncodeToBytes(sigshareParam)
+		payload := buildSig(payloadBytes)
+
+		intrGas := intrinsicGas(payload, false, true)
+		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrGas, txAmount, gasLimit)
+		if err != nil {
+			t.Error("verify pos tx fail. err:", err)
+		}
+
+		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		if err != nil {
+			t.Error("rb contract run fail. err:", err)
+		}
+
+	}
+}
+
+func TestGetRBStage(t *testing.T) {
+	datas := [][]int{
+		{0, RbDkg1Stage, 0, int(2*pos.K-1)},
+		{9, RbDkg1Stage, 9, int(2*pos.K-10)},
+		{19, RbDkg1Stage, 19, 0},
+		{20, RbDkg1ConfirmStage, 0, int(2*pos.K-1)},
+		{29, RbDkg1ConfirmStage, 9, int(2*pos.K-10)},
+		{39, RbDkg1ConfirmStage, 19, 0},
+		{40, RbDkg2Stage, 0, int(2*pos.K-1)},
+		{49, RbDkg2Stage, 9, int(2*pos.K-10)},
+		{59, RbDkg2Stage, 19, 0},
+		{60, RbDkg2ConfirmStage, 0, int(2*pos.K-1)},
+		{69, RbDkg2ConfirmStage, 9, int(2*pos.K-10)},
+		{79, RbDkg2ConfirmStage, 19, 0},
+		{80, RbSignStage, 0, int(2*pos.K-1)},
+		{89, RbSignStage, 9, int(2*pos.K-10)},
+		{99, RbSignStage, 19, 0},
+		{100, RbSignConfirmStage, 0, int(2*pos.K-1)},
+		{109, RbSignConfirmStage, 9, int(2*pos.K-10)},
+		{119, RbSignConfirmStage, 19, 0},
+	}
+
+	for i, _ := range datas {
+		stage, elapsed, left := GetRBStage(uint64(datas[i][0]))
+		if datas[i][1] != stage || datas[i][2] != elapsed || datas[i][3] != left {
+			t.Error("expect(stage:", datas[i][1], ", elapsed:", datas[i][2], ", left:", datas[i][3],
+				")    acture(stage:", stage, ", elapsed:", elapsed, ", left:", left, ")")
+		}
+	}
+}
+

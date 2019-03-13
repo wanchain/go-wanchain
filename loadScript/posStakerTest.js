@@ -91,6 +91,7 @@ var cscDefinition = [
             }
         ],
         "name": "stakeIn",
+        "outputs": [],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
@@ -104,6 +105,7 @@ var cscDefinition = [
             }
         ],
         "name": "delegateIn",
+        "outputs": [],
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
