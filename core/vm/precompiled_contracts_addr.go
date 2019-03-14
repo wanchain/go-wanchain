@@ -110,3 +110,17 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }
+
+func IsPosPrecompiledAddr(addr *common.Address) bool {
+	if addr == nil {
+		return false
+	}
+
+	if (*addr) == slotLeaderPrecompileAddr ||
+		(*addr) == incentivePrecompileAddr ||
+		(*addr) == randomBeaconPrecompileAddr {
+		return true
+	}
+
+	return false
+}
