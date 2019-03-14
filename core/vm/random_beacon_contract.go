@@ -181,35 +181,38 @@ func ValidPosTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *
 
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	if stateDB == nil || signer == nil || tx == nil {
-		return errParameters
-	}
+	// in order to improve the transmission speed, return nil directly.
+	return nil
 
-	payload := tx.Data()
-	if len(payload) < 4 {
-		return errParameters
-	}
-
-	from, err := types.Sender(signer, tx)
-	if err != nil {
-		return err
-	}
-
-	var methodId [4]byte
-	copy(methodId[:], payload[:4])
-
-	if methodId == dkg1Id {
-		_, err := validDkg1(stateDB, uint64(time.Now().Unix()), from, payload[4:])
-		return err
-	} else if methodId == dkg2Id {
-		_, err := validDkg2(stateDB, uint64(time.Now().Unix()), from, payload[4:])
-		return err
-	} else if methodId == sigshareId {
-		_, _, _, err := validSigshare(stateDB, uint64(time.Now().Unix()), from, payload[4:])
-		return err
-	} else {
-		return errParameters
-	}
+	//if stateDB == nil || signer == nil || tx == nil {
+	//	return errParameters
+	//}
+	//
+	//payload := tx.Data()
+	//if len(payload) < 4 {
+	//	return errParameters
+	//}
+	//
+	//from, err := types.Sender(signer, tx)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//var methodId [4]byte
+	//copy(methodId[:], payload[:4])
+	//
+	//if methodId == dkg1Id {
+	//	_, err := validDkg1(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+	//	return err
+	//} else if methodId == dkg2Id {
+	//	_, err := validDkg2(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+	//	return err
+	//} else if methodId == sigshareId {
+	//	_, _, _, err := validSigshare(stateDB, uint64(time.Now().Unix()), from, payload[4:])
+	//	return err
+	//} else {
+	//	return errParameters
+	//}
 }
 
 // ValidDkg1 verify DKG1 precompiled contract transaction

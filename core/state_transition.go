@@ -91,7 +91,9 @@ type Message interface {
 // with the given data.
 //
 // TODO convert to uint64
-func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+func IntrinsicGas(data []byte, to *common.Address, homestead bool) *big.Int {
+	contractCreation := to == nil
+
 	igas := new(big.Int)
 	if contractCreation && homestead {
 		igas.SetUint64(params.TxGasContractCreation)
@@ -112,6 +114,12 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
 		igas.Add(igas, m)
 	}
+
+	// reduce gas used for pos tx
+	if vm.IsPosPrecompiledAddr(to) {
+		igas = igas.Div(igas, big.NewInt(10))
+	}
+
 	return igas
 }
 
@@ -240,7 +248,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(st.data, contractCreation, true /*homestead*/)
+	intrinsicGas := IntrinsicGas(st.data, msg.To(), true /*homestead*/)
 	log.Trace("get intrinsic gas", "gas", intrinsicGas.String())
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
