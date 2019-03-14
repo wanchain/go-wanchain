@@ -13,13 +13,15 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 
-	"github.com/wanchain/go-wanchain/crypto"
-	"encoding/json"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"crypto/ecdsa"
+	"encoding/json"
+
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/crypto"
+
+	"time"
 
 	"github.com/wanchain/go-wanchain/log"
-	"time"
 )
 
 type chainType uint
@@ -38,18 +40,16 @@ const (
 	HEADERCHAIN        //1
 )
 
-
-
 type ForkMemBlockChain struct {
-	useEpochGenesis	   bool
+	useEpochGenesis    bool
 	rbLeaderSelector   RbLeadersSelInt
 	slotLeaderSelector SlLeadersSelInt
 
-	ctype 			chainType
-	kBufferedChains  map[string][]common.Hash
-	kBufferedBlks	 map[common.Hash]*types.Block
-	curMaxBlkNum	 int64
-	lock sync.RWMutex
+	ctype           chainType
+	kBufferedChains map[string][]common.Hash
+	kBufferedBlks   map[common.Hash]*types.Block
+	curMaxBlkNum    int64
+	lock            sync.RWMutex
 }
 
 func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain {
@@ -109,20 +109,18 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	return
 }
 
-
-func (f *ForkMemBlockChain) CalEpochSlotID() (uint64,uint64){
+func (f *ForkMemBlockChain) CalEpochSlotID() (uint64, uint64) {
 
 	if pos.EpochBaseTime == 0 {
-		return 0,0
+		return 0, 0
 	}
 
 	timeUnix := uint64(time.Now().Unix())
 	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
 	curEpochId := uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
 	curSlotId := uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	//slottools.CurEpochID = curEpochId
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
-	return curEpochId,curSlotId
+	return curEpochId, curSlotId
 }
 
 func (f *ForkMemBlockChain) Maxvalid(workBlk *types.Block) (types.Blocks, error) {
@@ -312,8 +310,8 @@ func (f *ForkMemBlockChain) PrintAllBffer() {
 		fmt.Println(" hash=", common.ToHex(blk.Hash().Bytes()), " epid=", epid, " sid=", sid)
 	}
 }
-//////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////////
 
 func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
@@ -358,8 +356,7 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
-
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]byte,error){
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64, blk *types.Block) ([]byte, error) {
 
 	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
@@ -368,19 +365,18 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]
 
 	f.rbLeaderSelector.GetRBProposerGroup(epochid)
 
-
-	epGen.SlotLeaders = make([][]byte,0)
+	epGen.SlotLeaders = make([][]byte, 0)
 	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
-	if pks!=nil {
+	if pks != nil {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
 		}
 	}
 
-	byteVal,err := json.Marshal(epGen)
+	byteVal, err := json.Marshal(epGen)
 
-	if err!=nil {
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
@@ -388,80 +384,67 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]
 	return json.Marshal(epGen)
 }
 
-func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain,blk *types.Block) bool{
+func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain, blk *types.Block) bool {
 
 	if !f.useEpochGenesis {
 		return true
 	}
 
-
 	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 
-	epochid,_,err:= f.GetBlockEpochIdAndSlotId(blk.Header())
-	if err!=nil {
+	epochid, _, err := f.GetBlockEpochIdAndSlotId(blk.Header())
+	if err != nil {
 		log.Info("verify genesis failed because of wrong epochid or slotid")
 		return false
 	}
 	epGen.EpochId = epochid
 
-	lastBlk := bc.GetBlockByNumber(blk.NumberU64()-1)
+	lastBlk := bc.GetBlockByNumber(blk.NumberU64() - 1)
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
 
-	epGen.RBLeaders = make([][]byte,0)
+	epGen.RBLeaders = make([][]byte, 0)
 	leaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
-	for _,ldr := range leaders {
-		epGen.RBLeaders = append(epGen.RBLeaders,ldr.PubSec256)
+	for _, ldr := range leaders {
+		epGen.RBLeaders = append(epGen.RBLeaders, ldr.PubSec256)
 	}
 
-
-	epGen.SlotLeaders = make([][]byte,0)
+	epGen.SlotLeaders = make([][]byte, 0)
 	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
-	if pks!=nil {
+	if pks != nil {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
 		}
 	}
 
-	byteVal,err := json.Marshal(epGen)
+	byteVal, err := json.Marshal(epGen)
 
-	if err!=nil {
+	if err != nil {
 		log.Info("verify genesis marshal failed")
 		return false
 	}
 
 	genesisBlkHash := crypto.Keccak256Hash(byteVal)
 
-	res := (genesisBlkHash==blk.ParentHash())
+	res := (genesisBlkHash == blk.ParentHash())
 
 	return res
 }
 
-
 func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
-	_,slotid,err:= f.GetBlockEpochIdAndSlotId(firstBlk.Header())
-	if err!=nil {
+	_, slotid, err := f.GetBlockEpochIdAndSlotId(firstBlk.Header())
+	if err != nil {
 		log.Info("verify genesis failed because of wrong epochid or slotid")
 		return false
 	}
 
-	if slotid==0 {
+	if slotid == 0 {
 		return true
 	}
 
 	return false
 }
 
-
-func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain,firstBlk *types.Block) *types.Block {
+func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, firstBlk *types.Block) *types.Block {
 	return nil
 }
-
-
-
-
-
-
-
-
-
