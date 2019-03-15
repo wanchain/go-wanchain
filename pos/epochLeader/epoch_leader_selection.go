@@ -287,6 +287,10 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*P
 	//}
 
 	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
+	for i:=0; i<len(pstaker.Clients); i++ {
+		lockEpoch := pstaker.LockEpochs-(pstaker.Clients[i].StakingEpoch-pstaker.StakingEpoch)
+		pb.Add(pb, e.calProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
+	}
 	p := &Proposer{
 		PubSec256:     pstaker.PubSec256,
 		PubBn256:      pstaker.PubBn256,
