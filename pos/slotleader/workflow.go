@@ -137,7 +137,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 				return err
 			}
 
-			err = s.sendStage1Tx(data)
+			err = s.sendStage1Tx(data, pos.SendTx)
 			if err != nil {
 				log.Error(err.Error())
 				return err
@@ -176,7 +176,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 				return err
 			}
 
-			err = s.sendStage2Tx(data)
+			err = s.sendStage2Tx(data, pos.SendTx)
 			if err != nil {
 				return err
 			}

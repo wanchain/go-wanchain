@@ -4,11 +4,12 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 var (
@@ -17,7 +18,10 @@ var (
 
 //--------------Transacton create / send --------------------------------------------
 
-func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
+// SendTxFn is a founction type of send tx function
+type SendTxFn func(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error)
+
+func (s *SlotLeaderSelection) sendStage1Tx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
 		return ErrRCNotReady
 	}
@@ -31,10 +35,11 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte) error {
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))
 
-	_, err := pos.SendTx(s.rc, arg)
+	_, err := posSender(s.rc, arg)
 	return err
 }
-func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
+
+func (s *SlotLeaderSelection) sendStage2Tx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
 		return ErrRCNotReady
 	}
@@ -48,6 +53,6 @@ func (s *SlotLeaderSelection) sendStage2Tx(data []byte) error {
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))
 
-	_, err := pos.SendTx(s.rc, arg)
+	_, err := posSender(s.rc, arg)
 	return err
 }
