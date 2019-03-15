@@ -8,7 +8,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
-	"github.com/wanchain/go-wanchain/pos/postools/slottools"
+	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 )
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
