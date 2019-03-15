@@ -176,8 +176,8 @@ func GetSlotLeaderSelection() *SlotLeaderSelection {
 
 //---------------Information get/set functions--------------------------------------------
 
-//GetAlpha get alpha of epochID
-func (s *SlotLeaderSelection) GetAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
+//getAlpha get alpha of epochID
+func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
 	if pos.SelfTestMode {
 		ret := big.NewInt(123)
 		return ret, nil
@@ -475,19 +475,6 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) {
 func (s *SlotLeaderSelection) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 	_, ok := s.slotCreateStatus[epochID]
 	return ok
-}
-
-func (s *SlotLeaderSelection) GetSlotLeaders(epochID uint64) (slotLeaders []*ecdsa.PublicKey, err error) {
-
-	_, ok := s.slotCreateStatus[epochID]
-	if !ok {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
-	}
-
-	if len(s.slotLeadersPtrArray) != pos.SlotCount {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
-	}
-	return s.slotLeadersPtrArray[:], nil
 }
 
 func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
@@ -829,7 +816,7 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
 	// get alpha
-	alpha, err := s.GetAlpha(epochID, selfIndex)
+	alpha, err := s.getAlpha(epochID, selfIndex)
 	if err != nil {
 		return nil, nil, err
 	}

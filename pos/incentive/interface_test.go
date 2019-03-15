@@ -63,7 +63,7 @@ func generateTestAddrs() {
 
 func TestSetActivityInterface(t *testing.T) {
 	generateTestAddrs()
-	SetActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
+	setActivityInterface(testgetEpLeader, testgetRProposer, testgetSltLeader)
 }
 
 var (
@@ -127,5 +127,5 @@ func TestSetStakerInterface(t *testing.T) {
 	// fmt.Println(delegateStakerMap)
 	// fmt.Println(delegateStakerProbilityMap)
 
-	SetStakerInterface(getInfo, setInfo)
+	setStakerInterface(getInfo, setInfo)
 }

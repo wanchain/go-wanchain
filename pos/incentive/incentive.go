@@ -62,9 +62,9 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 		log.Error("incentive Init input param error (get == nil || set == nil || getRbAddr == nil)")
 	}
 
-	SetStakerInterface(get, set)
-	SetActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
-	SetRBAddressInterface(getRbAddr)
+	setStakerInterface(get, set)
+	setActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
+	setRBAddressInterface(getRbAddr)
 
 	initLocalDb("incentive")
 	log.Info("--------Incentive Init Finish----------")

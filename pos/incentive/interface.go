@@ -38,20 +38,20 @@ var getSlotLeaderInfo GetSlotLeaderInfoFn
 
 var getRandomProposerAddress GetRandomProposerAddressFn
 
-// SetStakerInterface is used for Staker module to set its interface
-func SetStakerInterface(get GetStakerInfoFn, set SetStakerInfoFn) {
+// setStakerInterface is used for Staker module to set its interface
+func setStakerInterface(get GetStakerInfoFn, set SetStakerInfoFn) {
 	getStakerInfo = get
 	setStakerInfo = set
 }
 
-// SetActivityInterface is used for get activty module to set its interface
-func SetActivityInterface(getEpl GetEpochLeaderInfoFn, getRnp GetRandomProposerInfoFn, getSlr GetSlotLeaderInfoFn) {
+// setActivityInterface is used for get activty module to set its interface
+func setActivityInterface(getEpl GetEpochLeaderInfoFn, getRnp GetRandomProposerInfoFn, getSlr GetSlotLeaderInfoFn) {
 	getEpochLeaderInfo = getEpl
 	getRandomProposerInfo = getRnp
 	getSlotLeaderInfo = getSlr
 }
 
-// SetRBAddressInterface is used to get random proposer address of epoch
-func SetRBAddressInterface(getRBAddress GetRandomProposerAddressFn) {
+// setRBAddressInterface is used to get random proposer address of epoch
+func setRBAddressInterface(getRBAddress GetRandomProposerAddressFn) {
 	getRandomProposerAddress = getRBAddress
 }

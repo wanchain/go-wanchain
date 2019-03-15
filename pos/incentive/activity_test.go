@@ -126,7 +126,7 @@ func testSimulateData(epochID uint64, index uint32) {
 func TestGetRandomProposerActivity(t *testing.T) {
 	generateTestAddrs()
 	generateTestStaker()
-	SetRBAddressInterface(testGetRBAddress)
+	setRBAddressInterface(testGetRBAddress)
 
 	epochID := 0
 
