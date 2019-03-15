@@ -252,7 +252,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				PubBn256:    account.Staking.Bn256pk,
 				Amount:      account.Staking.Amount,
 				LockEpochs:    10000,//10000 epochs
-				StakingEpochs: uint64(0),
+				StakingEpoch: uint64(0),
 				FeeRate:	 uint64(100),
 			}
 
