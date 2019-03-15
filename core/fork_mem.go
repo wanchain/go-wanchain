@@ -45,6 +45,8 @@ type ForkMemBlockChain struct {
 	rbLeaderSelector   RbLeadersSelInt
 	slotLeaderSelector SlLeadersSelInt
 
+	epochGens    	   map[uint64]*types.EpochGenesis
+
 	ctype 			chainType
 	kBufferedChains  map[string][]common.Hash
 	kBufferedBlks	 map[common.Hash]*types.Block
@@ -56,6 +58,8 @@ func NewForkMemBlockChain(ctype chainType) *ForkMemBlockChain {
 
 	f := &ForkMemBlockChain{}
 	f.useEpochGenesis = false
+	f.epochGens = make(map[uint64]*types.EpochGenesis)
+
 	f.ctype = ctype
 	f.kBufferedChains = make(map[string][]common.Hash)
 	f.kBufferedBlks = make(map[common.Hash]*types.Block)
@@ -359,19 +363,27 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 }
 
 
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]byte,error){
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) (*types.EpochGenesis,error){
 
+	if blk==nil {
+		return nil, errors.New("blk is nil")
+	}
 	epGen := &types.EpochGenesis{}
 	epGen.ProtocolMagic = []byte("wanchainpos")
 	epGen.EpochId = epochid
 	epGen.PreEpochLastBlkHash = blk.Hash()
 
-	f.rbLeaderSelector.GetRBProposerGroup(epochid)
-
+	epGen.RBLeaders = make([][]byte,0)
+	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
+	if len(rbleaders)!=0 {
+		for _, rbl := range rbleaders {
+			epGen.RBLeaders = append(epGen.RBLeaders, rbl.PubSec256)
+		}
+	}
 
 	epGen.SlotLeaders = make([][]byte,0)
 	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
-	if pks!=nil {
+	if len(pks)!=0 {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
 		}
@@ -385,7 +397,7 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) ([]
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
-	return json.Marshal(epGen)
+	return epGen,nil
 }
 
 func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain,blk *types.Block) bool{
@@ -454,6 +466,15 @@ func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 
 
 func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain,firstBlk *types.Block) *types.Block {
+	return nil
+}
+
+func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
+	return f.epochGens[epochid] != nil
+}
+
+func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
+	f.epochGens[epochgen.EpochId] = epochgen
 	return nil
 }
 

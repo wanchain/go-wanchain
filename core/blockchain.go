@@ -1552,8 +1552,10 @@ func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
 	return bc.forkMem.VerifyEpochGenesis(bc,blk)
 }
 
-func (bc *BlockChain) GetCurrentEpochGenesis(epochid uint64) ([]byte,error){
-	return bc.forkMem.GetEpochGenesis(epochid,bc.currentBlock)
+func (bc *BlockChain) GetEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
+	blkNum := bc.forkMem.rbLeaderSelector.GetTargetBlkNumber(epochid)
+	blk := bc.GetBlockByNumber(blkNum)
+	return bc.forkMem.GetEpochGenesis(epochid,blk)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
@@ -1561,4 +1563,10 @@ func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64
 	return blkEpochId,blkSlotId
 }
 
+func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool{
+	return bc.forkMem.IsExistEpochGenesis(epochid)
+}
 
+func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
+	return bc.forkMem.SetEpochGenesis(epochgen)
+}
