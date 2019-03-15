@@ -286,7 +286,7 @@ func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*P
 	//	return nil, err
 	//}
 
-	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpochs)
+	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
 	p := &Proposer{
 		PubSec256:     pstaker.PubSec256,
 		PubBn256:      pstaker.PubBn256,
