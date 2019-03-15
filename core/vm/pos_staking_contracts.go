@@ -236,7 +236,9 @@ func init() {
 
 type PosStaking struct {
 }
-
+func CalLocktimeWeight(lockEpoch uint64) (uint64) {
+	return 10+lockEpoch/(maxEpochNum/10)
+}
 func (p *PosStaking) RequiredGas(input []byte) uint64 {
 	return 0
 }
