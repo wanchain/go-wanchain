@@ -7,6 +7,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
+
 	"github.com/wanchain/go-wanchain/pos"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -16,22 +19,22 @@ import (
 )
 
 // TestLoop use to test main loop
-func TestLoop(t *testing.T) {
-	pos.SelfTestMode = true
-	posdb.GetDb().DbInit("test")
-	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+// func TestLoop(t *testing.T) {
+// 	pos.SelfTestMode = true
+// 	posdb.GetDb().DbInit("test")
+// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
-	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
+// 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
 
-	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
-	GetSlotLeaderSelection().setWorkingEpochID(1)
+// 	GetSlotLeaderSelection().setWorkingEpochID(1)
 
-	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
+// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 
-}
+// }
 
 func TestGetEpochSlotID(t *testing.T) {
 	epochID, slotID := GetEpochSlotID()
@@ -79,18 +82,15 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 		t.Fail()
 	}
 
+	epID, selfIndex, _, err := slottools.RlpUnpackStage1DataForTx(payload, vm.GetSlotLeaderScAbiString())
+	if err != nil {
+		t.Fail()
+	}
 	var output [][]byte
 	rlp.DecodeBytes(payload, &output)
 
-	if hex.EncodeToString(pkCompress.SerializeCompressed()) != hex.EncodeToString(output[2]) {
-		t.Fail()
-	}
-
-	fmt.Println("epochID: ", hex.EncodeToString(output[0]))
-	fmt.Println("selfIndex: ", hex.EncodeToString(output[1]))
-
-	fmt.Println("payload 0: ", hex.EncodeToString(output[2]))
-	fmt.Println("payload 1: ", hex.EncodeToString(output[3]))
+	fmt.Println("epochID: ", epID)
+	fmt.Println("selfIndex: ", selfIndex)
 	fmt.Println("Alpha: ", alpha)
 }
 
