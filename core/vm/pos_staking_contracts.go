@@ -183,7 +183,7 @@ type StakerInfo struct {
 	LockEpochs   uint64   //lock time which is input by user
 	From        common.Address
 
-	StakingEpochs uint64 //the user’s staking time
+	StakingEpoch uint64 //the user’s staking time
 	FeeRate     uint64
 	Clients      []ClientInfo
 }
@@ -199,6 +199,7 @@ type Leader struct {
 type ClientInfo struct {
 	Address common.Address
 	Amount   *big.Int
+	StakingEpoch uint64
 	//LockEpochs uint64
 }
 
@@ -236,7 +237,9 @@ func init() {
 
 type PosStaking struct {
 }
-
+func CalLocktimeWeight(lockEpoch uint64) (uint64) {
+	return 10+lockEpoch/(maxEpochNum/10)
+}
 func (p *PosStaking) RequiredGas(input []byte) uint64 {
 	return 0
 }
@@ -316,7 +319,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		Amount:      contract.value,
 		LockEpochs:    lockTime,
 		From:        contract.CallerAddress,
-		StakingEpochs: EidNow,
+		StakingEpoch: EidNow,
 	}
 	infoBytes, err := rlp.EncodeToBytes(stakeholder)
 	if err != nil {
@@ -359,12 +362,12 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	}
 
 	// 3. epoch is valid
+	EidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
 	//lockEpochs := delegateInParam.LockEpochs.Uint64()
-	//EidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
 	//eidEnd := EidNow + lockEpochs + posEpochGap
 	//
-	//dEidEnd := stakerInfo.StakingEpochs + stakerInfo.LockEpochs + posEpochGap - posDelegateEpochGap
-	//if EidNow < stakerInfo.StakingEpochs || EidNow > dEidEnd || eidEnd > dEidEnd {
+	//dEidEnd := stakerInfo.StakingEpoch + stakerInfo.LockEpochs + posEpochGap - posDelegateEpochGap
+	//if EidNow < stakerInfo.StakingEpoch || EidNow > dEidEnd || eidEnd > dEidEnd {
 	//	return nil, errors.New("it's too late for your to delegate")
 	//}
 
@@ -380,6 +383,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	info := &ClientInfo {
 		Address: contract.CallerAddress,
 		Amount: contract.value,
+		StakingEpoch: EidNow,
 		//LockEpochs: uint64(0),
 	}
 	stakerInfo.Clients = append(stakerInfo.Clients, *info)
@@ -404,7 +408,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 //	}
 //
 //	//if the time already go beyong stakeholder's staking time, stakeholder can stake out
-//	if uint64(time.Now().Unix()) > stakeholder.StakingEpochs + uint64(stakeholder.LockEpochs) {
+//	if uint64(time.Now().Unix()) > stakeholder.StakingEpoch + uint64(stakeholder.LockEpochs) {
 //
 //		scBal := evm.StateDB.GetBalance(WanCscPrecompileAddr)
 //		if scBal.Cmp(stakeholder.Amount) >= 0 {
@@ -424,7 +428,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 //		PubBn256:    nil,
 //		Amount:      big.NewInt(0),
 //		LockEpochs:    0,
-//		StakingEpochs: 0,
+//		StakingEpoch: 0,
 //	}
 //
 //	nilArray, err := json.Marshal(nilValue)
@@ -537,7 +541,7 @@ func (p *PosStaking) delegateInParseAndValid(payload []byte) error {
 //			PubBn256:    g1pubs[i],
 //			Amount:      big.NewInt(0).Mul(big.NewInt(int64(mrand.Float32()*1000)), ether),
 //			LockEpochs:    uint64(mrand.Float32()*100) * 3600,
-//			StakingEpochs: uint64(time.Now().Unix()),
+//			StakingEpoch: uint64(time.Now().Unix()),
 //		}
 //
 //		infoArray, _ := json.Marshal(stakeholder)

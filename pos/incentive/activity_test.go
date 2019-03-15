@@ -14,7 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/postools"
-	"github.com/wanchain/go-wanchain/pos/postools/slottools"
+	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 )
 
 type TestChainReader struct {

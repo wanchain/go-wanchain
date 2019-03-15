@@ -19,7 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/postools/slottools"
+	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -223,7 +223,6 @@ func CalEpochSlotID() {
 	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
 	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
 	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	//slottools.CurEpochID = curEpochId
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/pos/cloudflare"
 )
 
 var (
@@ -196,10 +195,42 @@ func Round(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc((f+0.5/n10)*n10) / n10
 }
+/*
+新的wancoin到stake的权重计算公式
+Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
+其中, Amount是注册进来的wan数量
+lockEpoch是要锁定的时长(epoch数), maxEpoch是运行锁定的最长时长, 目前是1000
+这样, 锁定时长对应的权重在[10,20]之间.
+t是锁定时间剩余时长的百分比,取值(1,0)之间, (2-exp(t-1))对应的权重在(1, 1.64)之间.
+ */
+func (e *Epocher) calProbability2(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
+	pb := big.NewInt(0)
+	var leftTimePercent float64
+	if(epochId < 2) {
+		leftTimePercent = 1
+	} else if(epochId < startEpochId+2 || epochId >= startEpochId+2+lockTime) {
+		leftTimePercent = 0
+	}else {
+		leftTimePercent = (float64(lockTime-(epochId-startEpochId-2)) / float64(lockTime))
+	}
+	fpercent := 2-Round(math.Exp(leftTimePercent-1), 4)
+
+	epercent := big.NewInt(int64(fpercent * Accuracy))
+
+	lockWeight := vm.CalLocktimeWeight(lockTime)
+	timeBig := big.NewInt(int64(lockWeight))
+
+	pb.Mul(amount, epercent)
+	pb.Mul(pb, timeBig)
+	fmt.Print("calProbability,pb:", pb)
+	return pb
+}
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) calProbability(epochId uint64, amount *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
 	leftTimePercent = (float64(lockTime-(epochId-startEpochId)) / float64(lockTime))
@@ -224,42 +255,38 @@ func (e *Epocher) calProbability(epochId uint64, amount *big.Int, lockTime uint6
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
 	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
-	amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
-	lockTime := pstaker.LockEpochs
+	//amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
+	//lockTime := pstaker.LockEpochs
+	//
+	//var leftTimePercent float64
+	//if epochId < 2 {
+	//	leftTimePercent = 1
+	//} else {
+	//
+	//	leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingEpochs)) / float64(lockTime))
+	//	if leftTimePercent > 0 {
+	//		leftTimePercent = Round(leftTimePercent, 32)
+	//	} else {
+	//		leftTimePercent = 0
+	//	}
+	//}
+	//
+	//fpercent := Round(math.Exp(-leftTimePercent), 4)
+	//
+	//epercent := big.NewInt(int64(fpercent * Accuracy))
+	//
+	//timeBig := big.NewInt(int64(lockTime))
+	//
+	//pb := big.NewInt(0).Mul(amount, epercent)
+	//pb = big.NewInt(0).Mul(pb, timeBig)
 
-	var leftTimePercent float64
-	if epochId < 2 {
-		leftTimePercent = 1
-	} else {
-
-		leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingEpochs)) / float64(lockTime))
-		if leftTimePercent > 0 {
-			leftTimePercent = Round(leftTimePercent, 32)
-		} else {
-			leftTimePercent = 0
-		}
-	}
-
-	fpercent := Round(math.Exp(-leftTimePercent), 4)
-
-	epercent := big.NewInt(int64(fpercent * Accuracy))
-
-	timeBig := big.NewInt(int64(lockTime))
-
-	pb := big.NewInt(0).Mul(amount, epercent)
-	pb = big.NewInt(0).Mul(pb, timeBig)
-
-	//if pb == 0 {
-	//log.Warn("epoch Info:", "epochId=", epochId, ",amount=", amount, ",locktime=", lockTime, ",leftTimePercent=", leftTimePercent, ",pb=", pb, ",staking time=", pstaker.StakingTime)
-
+	//gb := new(bn256.G1)
+	//_, err := gb.Unmarshal(pstaker.PubBn256)
+	//if err != nil {
+	//	return nil, err
 	//}
 
-	gb := new(bn256.G1)
-	_, err := gb.Unmarshal(pstaker.PubBn256)
-	if err != nil {
-		return nil, err
-	}
-
+	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
 	p := &Proposer{
 		PubSec256:     pstaker.PubSec256,
 		PubBn256:      pstaker.PubBn256,
@@ -313,7 +340,6 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 	for idx, _ := range ps {
 		if idx == 0 {
-
 			continue
 		}
 
@@ -569,7 +595,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	}
 	infors = make([]vm.ClientProbability, 1) // TODO: the array length?
 	infors[0].Addr = addr
-	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpochs)
+	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
 	feeRate = staker.FeeRate
 	totalProbability = infors[0].Probability //TODO: add all client
 	return infors, feeRate, totalProbability, nil
@@ -589,7 +615,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i:=0; i<len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if epochID < staker.StakingEpochs + staker.LockEpochs + 3 { // TODO: check with design
+		if epochID < staker.StakingEpoch + staker.LockEpochs + 3 { // TODO: check with design
 			continue
 		}
 		for j:=0; j<len(staker.Clients); j++ {

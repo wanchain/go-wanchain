@@ -252,7 +252,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				PubBn256:    account.Staking.Bn256pk,
 				Amount:      account.Staking.Amount,
 				LockEpochs:    10000,//10000 epochs
-				StakingEpochs: uint64(0),
+				StakingEpoch: uint64(0),
 				FeeRate:	 uint64(100),
 			}
 
@@ -404,8 +404,8 @@ func DefaultPlutoGenesisBlock() *Genesis {
 		Config:     params.PlutoChainConfig,
 		Timestamp:  0x59f83144,
 		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		//GasLimit:   0x47b760,	// 4700000
-		GasLimit:   0x2cd29c0,	// 47000000
+		GasLimit:   0x47b760,	// 4700000
+		//GasLimit:   0x2cd29c0,	// 47000000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}

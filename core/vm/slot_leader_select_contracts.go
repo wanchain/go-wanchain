@@ -13,7 +13,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
-	"github.com/wanchain/go-wanchain/pos/postools/slottools"
+	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 
 	"github.com/wanchain/go-wanchain/functrace"
 
