@@ -327,7 +327,7 @@ func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLi
 			return true
 		}
 
-		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+		intrGas := IntrinsicGas(tx.Data(), tx.To(), true)
 		err = ValidPrivacyTx(stateDB, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
 
 		return err != nil
@@ -362,7 +362,7 @@ func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer, gasLimi
 			return true
 		}
 
-		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+		intrGas := IntrinsicGas(tx.Data(), tx.To(), true)
 		err = vm.ValidPosTx(stateDB, from, tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
 
 		return err != nil

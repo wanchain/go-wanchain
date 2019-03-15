@@ -555,6 +555,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidTxType
 	}
 
+	// type must match to des address
+	isNormalType := types.IsNormalTransaction(tx.Txtype())
+	isPosType := types.IsPosTransaction(tx.Txtype())
+	isPosAddr := vm.IsPosPrecompiledAddr(tx.To())
+	if isPosType != isPosAddr {
+		return ErrInvalidTxType
+	}
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 320*1024 {
 		return ErrOversizedData
@@ -585,12 +593,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if types.IsNormalTransaction(tx.Txtype()) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	if (isNormalType || isPosType) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
 
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if types.IsNormalTransaction(tx.Txtype()) || types.IsPosTransaction(tx.Txtype()) {
+	intrGas := IntrinsicGas(tx.Data(), tx.To(), pool.homestead)
+	if isNormalType || isPosType {
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
 		}

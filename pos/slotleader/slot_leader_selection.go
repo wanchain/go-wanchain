@@ -223,7 +223,6 @@ func CalEpochSlotID() {
 	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
 	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
 	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	//slottools.CurEpochID = curEpochId
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 

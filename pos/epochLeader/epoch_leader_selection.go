@@ -595,7 +595,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	}
 	infors = make([]vm.ClientProbability, 1) // TODO: the array length?
 	infors[0].Addr = addr
-	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpochs)
+	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
 	feeRate = staker.FeeRate
 	totalProbability = infors[0].Probability //TODO: add all client
 	return infors, feeRate, totalProbability, nil
@@ -615,7 +615,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i:=0; i<len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if epochID < staker.StakingEpochs + staker.LockEpochs + 3 { // TODO: check with design
+		if epochID < staker.StakingEpoch + staker.LockEpochs + 3 { // TODO: check with design
 			continue
 		}
 		for j:=0; j<len(staker.Clients); j++ {

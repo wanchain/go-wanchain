@@ -230,8 +230,8 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'getIncentivePool',
-			call: 'pos_getIncentivePool',
+			name: 'getEpochGasPool',
+			call: 'pos_getEpochGasPool',
 			params: 1
 		}),
 		new web3._extend.Method({

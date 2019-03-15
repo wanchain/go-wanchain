@@ -33,7 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/postools/slottools"
 )
 
 var (
@@ -91,7 +90,9 @@ type Message interface {
 // with the given data.
 //
 // TODO convert to uint64
-func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+func IntrinsicGas(data []byte, to *common.Address, homestead bool) *big.Int {
+	contractCreation := to == nil
+
 	igas := new(big.Int)
 	if contractCreation && homestead {
 		igas.SetUint64(params.TxGasContractCreation)
@@ -112,6 +113,12 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
 		igas.Add(igas, m)
 	}
+
+	// reduce gas used for pos tx
+	if vm.IsPosPrecompiledAddr(to) {
+		igas = igas.Div(igas, big.NewInt(10))
+	}
+
 	return igas
 }
 
@@ -240,7 +247,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(st.data, contractCreation, true /*homestead*/)
+	intrinsicGas := IntrinsicGas(st.data, msg.To(), true /*homestead*/)
 	log.Trace("get intrinsic gas", "gas", intrinsicGas.String())
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
@@ -311,7 +318,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
-	incentive.AddEpochGas(st.state, new(big.Int).Mul(usedGas, st.gasPrice), slottools.CurEpochID)
+	epochID := st.evm.Context.Difficulty.Uint64() >> 32
+	incentive.AddEpochGas(st.state, new(big.Int).Mul(usedGas, st.gasPrice), epochID)
 	return ret, requiredGas, usedGas, vmerr != nil, err
 }
 
