@@ -201,7 +201,8 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	}
 
 	return nil
-} p
+}
+
 
 func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	pks := rb.getRBProposerGroup(epochId)
