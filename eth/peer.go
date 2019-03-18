@@ -28,6 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rlp"
 	set "gopkg.in/fatih/set.v0"
+	"github.com/wanchain/go-wanchain/core"
 )
 
 var (
@@ -65,6 +66,7 @@ type peer struct {
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -228,17 +230,42 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
+
+func (p *peer) CheckEpochBoundary(bc *core.BlockChain,headers []*types.Header) error {
+	for _,header := range headers {
+		headBlk := types.NewBlockWithHeader(header)
+		epochid,_:= bc.GetBlockEpochIdAndSlotId(headBlk)
+
+		bc.IsExistEpochGenesis(epochid)
+
+		if !bc.IsExistEpochGenesis(epochid) {
+			p.RequestEpochGenesis(epochid)
+		}
+
+	}
+
+	return nil
+}
+
 //get epoch genesis
 func (p *peer) RequestEpochGenesis(epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{epochid:epochid})
+	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{Epochid:epochid})
 }
 
 //send epoch genesis
-func (p *peer) SendEpochGenesis(epochid uint64) error {
+func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{epochid:epochid})
+	epochGenesis,_ := bc.GetEpochGenesis(epochid)
+	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
 }
+
+func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) error {
+	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
+	bc.SetEpochGenesis(epochgen)
+	return nil
+}
+////////////////////////////////////////////////////////////////
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.

@@ -16,7 +16,6 @@ import (
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
 	"math/big"
-	"time"
 )
 
 var (
@@ -68,10 +67,6 @@ var (
 	randomBeacon RandomBeacon
 )
 
-func init() {
-	//randomBeacon.Init(nil)
-}
-
 func GetRandonBeaconInst() *RandomBeacon {
 	return &randomBeacon
 }
@@ -113,20 +108,21 @@ func (rb *RandomBeacon) LoopRoutine()  {
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
 	if statedb == nil || rc == nil {
-		log.Error("invalid random beacon loop param")
-		return errors.New("invalid random beacon loop param")
+		err := errors.New("invalid random beacon loop param")
+		log.Error(err.Error())
+		return err
 	}
 
-	log.Info("rb doLoop begin", "epochId", epochId, "slotId", slotId)
+	log.Info("rb doLoop begin", "epochId", epochId, "slotId", slotId, "self epochId", rb.epochId)
 	rb.statedb = statedb
 	rb.rpcClient = rc
 
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
-		log.Error("blockchain rollback")
-		return errors.New("blockchain rollback")
+		err := errors.New("blockchain rollback")
+		log.Error(err.Error())
+		return err
 	}
 
-	log.Info("rb", "epochId", rb.epochId)
 	if rb.epochId == maxUint64 || rb.epochId < epochId {
 		log.Info("rb epochId is original")
 
@@ -143,17 +139,14 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	}
 
 	rbStage, elapsedNum, leftNum := vm.GetRBStage(slotId)
-	log.Info("get current rb statge", "statge", rbStage)
 
 	// belong to RB proposer group
 	for {
-		log.Info("do as proposer", "epoch stage", rb.epochStage)
 		switch rb.epochStage {
 		case vm.RbDkg1Stage:
 			if rbStage == vm.RbDkg1Stage {
-				// not send tx in first and last slot
+				// don't send tx in first and last slot
 				if elapsedNum == 0 || leftNum == 0 {
-					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
 					return nil
 				}
 
@@ -167,9 +160,8 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 			if rbStage < vm.RbDkg2Stage {
 				return nil
 			} else if rbStage == vm.RbDkg2Stage {
-				// not send tx in first and last slot
+				// don't send tx in first and last slot
 				if elapsedNum == 0 || leftNum == 0 {
-					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
 					return nil
 				}
 
@@ -183,9 +175,8 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 			if rbStage < vm.RbSignStage {
 				return nil
 			} else if rbStage == vm.RbSignStage {
-				// not send tx in first and last slot
+				// don't send tx in first and last slot
 				if elapsedNum == 0 || leftNum == 0 {
-					log.Info("in first or last slot, do not send rb tx", "elapsed", elapsedNum, "left", leftNum)
 					return nil
 				}
 
@@ -197,7 +188,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 			rb.epochStage = vm.RbSignConfirmStage
 		default:
-			// RbAfterSignStage
+			// RbSignConfirmStage
 			return nil
 		}
 	}
@@ -227,7 +218,6 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 }
 
 func (rb *RandomBeacon) doDKG1s(epochId uint64, proposerIds []uint32) error {
-	log.Info("do dkg1s begin")
 	for _, id := range proposerIds {
 		err := rb.doDKG1(epochId, id)
 		if err != nil {
@@ -249,9 +239,6 @@ func (rb *RandomBeacon) doDKG1(epochId uint64, proposerId uint32) error {
 }
 
 func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32) (*vm.RbDKG1FlatTxPayload, error) {
-	//log.Info("time", "1", time.Now().Unix())
-	start := time.Now()
-
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
@@ -311,13 +298,11 @@ func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32) (*vm.RbD
 
 	txPayload := vm.RbDKG1FlatTxPayload{epochId, proposerId, commitBytes}
 
-	log.Info("generateDKG1 used time", "time", time.Since(start))
 	return &txPayload, nil
 }
 
 
 func (rb *RandomBeacon) doDKG2s(epochId uint64, proposerIds []uint32) error {
-	log.Info("do dkg2s begin")
 	for _, id := range proposerIds {
 		err := rb.doDKG2(epochId, id)
 		if err != nil {
@@ -339,9 +324,6 @@ func (rb *RandomBeacon) doDKG2(epochId uint64, proposerId uint32) error {
 }
 
 func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32) (*vm.RbDKG2FlatTxPayload, error) {
-	//log.Info("time", "1", time.Now().Unix())
-	start := time.Now()
-
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
 	if nr == 0 {
@@ -394,12 +376,10 @@ func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32) (*vm.RbD
 
 	txPayload := vm.RbDKG2FlatTxPayload{epochId, proposerId, enshareBytes, proofBytes}
 
-	log.Info("generateDKG2 used time", "time", time.Since(start))
 	return &txPayload, nil
 }
 
 func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
-	log.Info("do sigs begin")
 	for _, id := range proposerIds {
 		err := rb.doSIG(epochId, id)
 		if err != nil {
@@ -414,8 +394,9 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	log.Info("do sig begin", "epochId", epochId, "proposerId", proposerId)
 	pks := rb.getRBProposerGroup(epochId)
 	if len(pks) == 0 {
-		log.Error("can't find random beacon proposer group")
-		return errors.New("can't find random beacon proposer group")
+		err := errors.New("can't find random beacon proposer group")
+		log.Error(err.Error())
+		return err
 	}
 
 	prikey := pos.Cfg().GetMinerBn256SK()
@@ -426,7 +407,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		if err == nil && data != nil {
 			datas = append(datas, RbEnsDataCollector{data, &pk})
 		} else {
-			//log.Debug("vm.GetDkg failed", "err", err)
+			// do nothing
 		}
 	}
 
@@ -445,7 +426,6 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	// sk^-1
 	skinver := new(big.Int).ModInverse(prikey, bn256.Order)
 	for i := 0; i < dkgCount; i++ {
-		log.Info("compute gskshare", "i", i, "enshare len", len(datas[i].ens))
 		temp := new(bn256.G1).ScalarMult(datas[i].ens[proposerId], skinver)
 
 		// gskshare[i] = (sk^-1)*(enshare[1][i]+...+enshare[Nr][i])
@@ -468,32 +448,22 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
 	log.Info("begin send dkg1")
-	start := time.Now()
 	payload, err := getRBDKG1TxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
 	}
 
-	//log.Info("send dkg", "payload", common.Bytes2Hex(payload))
-	err = rb.doSendRBTx(payload)
-
-	log.Info("sendDKG1 used time", "time", time.Since(start))
-	return err
+	return rb.doSendRBTx(payload)
 }
 
 func (rb *RandomBeacon) sendDKG2(payloadObj *vm.RbDKG2FlatTxPayload) error {
 	log.Info("begin send dkg2")
-	start := time.Now()
 	payload, err := getRBDKG2TxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
 	}
 
-	//log.Info("send dkg", "payload", common.Bytes2Hex(payload))
-	err = rb.doSendRBTx(payload)
-
-	log.Info("sendDKG2 used time", "time", time.Since(start))
-	return err
+	return rb.doSendRBTx(payload)
 }
 
 func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
@@ -503,7 +473,6 @@ func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
 		return err
 	}
 
-	//log.Info("send sig tx", "payload", common.Bytes2Hex(payload))
 	return rb.doSendRBTx(payload)
 }
 
@@ -533,14 +502,14 @@ func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
 		pksStr += common.ToHex(pk.Marshal()) + ", "
 	}
 
-	log.Debug("get rb proposer group", "proposer", pksStr)
 	return pks
 }
 
 func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	if payload == nil {
-		log.Error("get dkg tx payload fail, invalid DKG payload object")
-		return nil, errors.New("invalid DKG payload object")
+		err := errors.New("invalid DKG payload object")
+		log.Error(err.Error())
+		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
@@ -553,14 +522,14 @@ func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	copy(ret, vm.GetDkg1Id())
 	copy(ret[4:], payloadBytes)
 
-	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	return ret, nil
 }
 
 func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 	if payload == nil {
-		log.Error("get dkg tx payload fail, invalid DKG payload object")
-		return nil, errors.New("invalid DKG payload object")
+		err := errors.New("invalid DKG payload object")
+		log.Error(err.Error())
+		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
@@ -573,7 +542,6 @@ func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 	copy(ret, vm.GetDkg2Id())
 	copy(ret[4:], payloadBytes)
 
-	//log.Info("dkg abi packed payload", "payload", common.Bytes2Hex(ret))
 	return ret, nil
 }
 

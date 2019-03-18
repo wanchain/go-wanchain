@@ -30,7 +30,7 @@ import (
 
 //CompressedPubKeyLen means a compressed public key byte len.
 const CompressedPubKeyLen = 33
-const LengthPublicKeyBytes = 65
+const lengthPublicKeyBytes = 65
 
 const (
 	StageTwoProofCount = 2
@@ -56,8 +56,6 @@ const (
 
 var (
 	errorRetry = 3
-	ErrorCount = uint64(0)
-	WarnCount  = uint64(0)
 )
 
 //SlotLeaderSelection use to select unique slot leader
@@ -220,14 +218,14 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 		if err != nil {
 			return nil
 		}
-		piecesCount := len(epochLeaderAllBytes) / LengthPublicKeyBytes
+		piecesCount := len(epochLeaderAllBytes) / lengthPublicKeyBytes
 		ret := make([][]byte, 0)
 		var pubKeyByte []byte
 		for i := 0; i < piecesCount; i++ {
 			if i < piecesCount-1 {
-				pubKeyByte = epochLeaderAllBytes[i*LengthPublicKeyBytes : (i+1)*LengthPublicKeyBytes]
+				pubKeyByte = epochLeaderAllBytes[i*lengthPublicKeyBytes : (i+1)*lengthPublicKeyBytes]
 			} else {
-				pubKeyByte = epochLeaderAllBytes[i*LengthPublicKeyBytes:]
+				pubKeyByte = epochLeaderAllBytes[i*lengthPublicKeyBytes:]
 			}
 			ret = append(ret, pubKeyByte)
 		}
@@ -331,10 +329,9 @@ func (s *SlotLeaderSelection) getWorkStage(epochID uint64) int {
 		if err.Error() == "leveldb: not found" {
 			s.setWorkStage(epochID, slotLeaderSelectionInit)
 			return slotLeaderSelectionInit
-		} else {
-			log.Error("getWorkStage error: " + err.Error())
-			panic("getWorkStage error")
 		}
+		log.Error("getWorkStage error: " + err.Error())
+		panic("getWorkStage error")
 	}
 	workStageUint64 := posdb.BytesToUint64(ret)
 	return int(workStageUint64)
@@ -515,13 +512,13 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 			return s.smaGenesis[:], true, nil
 		}
 
-		piecesCount := len(pieces) / LengthPublicKeyBytes
+		piecesCount := len(pieces) / lengthPublicKeyBytes
 		var pubKeyByte []byte
 		for i := 0; i < piecesCount; i++ {
 			if i < piecesCount-1 {
-				pubKeyByte = pieces[i*LengthPublicKeyBytes : (i+1)*LengthPublicKeyBytes]
+				pubKeyByte = pieces[i*lengthPublicKeyBytes : (i+1)*lengthPublicKeyBytes]
 			} else {
-				pubKeyByte = pieces[i*LengthPublicKeyBytes:]
+				pubKeyByte = pieces[i*lengthPublicKeyBytes:]
 			}
 			piecesPtr = append(piecesPtr, crypto.ToECDSAPub(pubKeyByte))
 		}
@@ -529,6 +526,7 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 	}
 }
 
+// GetSma uses to get SMA information of the epoch.
 func (s *SlotLeaderSelection) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
 	return s.getSMAPieces(epochID)
 }
@@ -883,12 +881,4 @@ func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (
 	}
 
 	return nil, slottools.ErrVerifyStg1Data
-}
-
-func ErrorCountAdd() {
-	ErrorCount++
-}
-
-func WarnCountAdd() {
-	WarnCount++
 }

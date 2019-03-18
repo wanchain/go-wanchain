@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrNoStateDbInstance = errors.New("Do not have stateDb instance now")
+	errNoStateDbInstance = errors.New("Do not have stateDb instance now")
 )
 
 const (
@@ -17,6 +17,7 @@ const (
 	SafeBack2k = uint64(pos.SlotCount * 1 / 10)
 )
 
+// GetCurrentStateDb use to get statedb instance of current state.
 func (s *SlotLeaderSelection) GetCurrentStateDb() (stateDb *state.StateDB, err error) {
 	return s.getCurrentStateDb()
 }
@@ -24,7 +25,7 @@ func (s *SlotLeaderSelection) GetCurrentStateDb() (stateDb *state.StateDB, err e
 func (s *SlotLeaderSelection) getCurrentStateDb() (stateDb *state.StateDB, err error) {
 	s.updateToLastStateDb()
 	if s.stateDb == nil {
-		return nil, ErrNoStateDbInstance
+		return nil, errNoStateDbInstance
 	}
 	return s.stateDb, nil
 }
@@ -33,7 +34,7 @@ func (s *SlotLeaderSelection) getStateDb() (stateDb *state.StateDB, err error) {
 	s.updateStateDB()
 	//s.updateToLastStateDb()
 	if s.stateDb == nil {
-		return nil, ErrNoStateDbInstance
+		return nil, errNoStateDbInstance
 	}
 	return s.stateDb, nil
 }

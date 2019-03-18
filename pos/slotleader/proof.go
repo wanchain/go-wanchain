@@ -15,6 +15,7 @@ import (
 	"github.com/wanchain/pos/uleaderselection"
 )
 
+//GetSlotLeaderProofByGenesis use to get genesis proof.
 //ProofMes = [PK, Gt, skGt] []*PublicKey
 //Proof = [e,z] []*big.Int
 func (s *SlotLeaderSelection) GetSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
