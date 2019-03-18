@@ -23,7 +23,7 @@ contract stake {
 contract stake {
 	function stakeIn( string memory secPk, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public payable {}
 	// function stakeOut(string memory sPub) public pure {} // TODO: need it?
-	function delegateIn(address delegateAddr, uint256 lockEpochs) public payable {}
+	function delegateIn(address delegateAddress, uint256 lockEpochs) public payable {}
 }
 
 */
@@ -62,7 +62,7 @@ var (
 		"constant": false,
 		"inputs": [
 			{
-				"name": "delegateAddr",
+				"name": "delegateAddress",
 				"type": "address"
 			}
 		],
@@ -82,8 +82,8 @@ var (
 
 	maxEpochNum = uint64(1000)
 	minEpochNum = uint64(1)
-	minStakeholderStake = big.NewInt(10000)
-	minDelegateStake = big.NewInt(10000)
+	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
+	minDelegateStake = new(big.Int).Mul(big.NewInt(10000), ether)
 	minFeeRate = big.NewInt(0)
 	maxFeeRate = big.NewInt(100)
 
@@ -277,6 +277,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		PubBn256:     info.Bn256Pk,
 		Amount:       contract.value,
 		LockEpochs:   lockTime,
+		FeeRate: 	  info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow,
 	}

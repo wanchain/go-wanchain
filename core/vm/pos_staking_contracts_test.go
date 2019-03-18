@@ -5,7 +5,10 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -101,10 +104,7 @@ var (
 
 	stakerAddr =crypto.PubkeyToAddress(*pb)
 
-	stakerValue = big.NewInt(0).Mul(big.NewInt(10),ether)
 
-	//stdb, _      = ethdb.NewMemDatabase()
-	//stakerstatedb, _ = state.New(common.Hash{}, state.NewDatabase(stdb))
 	stakerref = &dummyStakerRef{}
 	stakerevm = NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
@@ -114,8 +114,13 @@ var (
 )
 
 
-func TestStakeInAndOutTimeOut(t *testing.T) {
+func TestStakeIn(t *testing.T) {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
+	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	a := new(big.Int).Mul(big.NewInt(200000), ether)
+	contract.Value().Set(a)
+	eidNow, _ := postools.CalEpochSlotID(stakerevm.Time.Uint64())
+
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	input.SecPk = common.FromHex("0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70")
@@ -127,75 +132,79 @@ func TestStakeInAndOutTimeOut(t *testing.T) {
 	if err != nil {
 		t.Fatal("stakeIn pack failed:", err)
 	}
-	println(len(bytes))
+
 	_, err = stakercontract.Run(bytes,contract,stakerevm)
 
 	if err != nil {
 		t.Fatal("stakeIn called failed")
 	}
-	//stakerevm.StateDB.AddBalance(WanCscPrecompileAddr,stakerValue)
-	//
-	//time.Sleep(20*time.Second)
-	//
-	//stakeOutInput := "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000003635c9adc5dea00000000000000000000000000000000000000000000000000000000000000000008230783164323535626362396138376336336463376636646532356336333961656164343339393161396566666231376139333336366565386663373538353463313732373330396235313534363932656137343564613839333431383431333563666263363737353933383736303137386239323235346235336237323864613265000000000000000000000000000000000000000000000000000000000000"
-	//_,err = stakercontract.StakeOut(common.FromHex(stakeOutInput),contract,stakerevm)
-	//
-	//if err != nil {
-	//	t.Fail()
-	//}
-	//
-	//cscValue := stakerevm.StateDB.GetBalance(WanCscPrecompileAddr)
-	//if cscValue.Cmp(big.NewInt(0)) != 0 {
-	//	t.Fail()
-	//}
-	//
-	//afterValue := stakerevm.StateDB.GetBalance(stakerAddr)
-	//if stakerValue.Cmp(afterValue) != 0 {
-	//	t.Fail()
-	//}
+
+	// check
+	pub := crypto.ToECDSAPub(input.SecPk)
+	secAddr := crypto.PubkeyToAddress(*pub)
+	key := GetStakeInKeyHash(secAddr)
+	bytes2 := evm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var info StakerInfo
+	err = rlp.DecodeBytes(bytes2, &info)
+	if err != nil {
+		t.Fatal("stakeIn rlp decode failed")
+	}
+	if info.LockEpochs != input.LockEpochs.Uint64() ||
+		info.FeeRate != input.FeeRate.Uint64() ||
+		!reflect.DeepEqual(info.PubBn256, input.Bn256Pk) ||
+		!reflect.DeepEqual(info.PubSec256, input.SecPk) {
+			t.Fatal("stakeIn parse StakerInfo failed")
+	}
+	if info.Address != secAddr ||
+		info.From != contract.CallerAddress ||
+		info.Amount.Cmp(a) != 0 ||
+		info.StakingEpoch != eidNow {
+			t.Fatal("stakeIn from amount epoch address saved wrong")
+	}
 }
 
 func TestDelegateIn(t *testing.T) {
-	var input DelegateInParam
-	input.DelegateAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
-	//input.LockEpochs = big.NewInt(10)
+	TestStakeIn(t)
 
-	// config
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	a := new(big.Int).Mul(big.NewInt(20000), ether)
+	contract.Value().Set(a)
+	eidNow, _ := postools.CalEpochSlotID(stakerevm.Time.Uint64())
 
-	//bytes, err := cscAbi.Pack("delegateIn", input.Address, input.LockEpochs)
+	var input DelegateInParam
+	input.DelegateAddress = contract.CallerAddress
+
 	bytes, err := cscAbi.Pack("delegateIn", input.DelegateAddress)
 	if err != nil {
 		t.Fatal("delegateIn pack failed")
 	}
-	println(len(bytes))
+
 	_, err = stakercontract.Run(bytes,contract,stakerevm)
 
-}
-
-
-func TestStakeInAndOutNotTimeOut(t *testing.T) {
-	stakeIninput := "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000c328093e61ee4000000000000000000000000000000000000000000000000000000000000000000106307830346437646666653565303664326337303234643962623933663637356238323432653731393031656536366131626665336665353336393332346330613735626636663033336463346166363566356430666537303732653938373838666366613637303931396235626463303436663163613931663238646666353964623730307831353062326233323330643664366338643163313333656334326438326638346164643565303936633537363635666635306164303731663633343563663435313931666438303135636561373263343539316162336664326164653132323837633238613039326163306162663965613139633133656236356664343931300000000000000000000000000000000000000000000000000000"
-
-	_,err := stakercontract.StakeIn(common.FromHex(stakeIninput),contract,stakerevm)
-
 	if err != nil {
-		t.Fail()
+		t.Fatal("delegateIn called failed")
+	}
+	// check
+	key := GetStakeInKeyHash(input.DelegateAddress)
+	bytes2 := evm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var infoS StakerInfo
+	err = rlp.DecodeBytes(bytes2, &infoS)
+	if err != nil {
+		t.Fatal("delegateIn rlp decode failed")
 	}
 
-	//stakeOutInput :=   "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000008ac7230489e80000000000000000000000000000000000000000000000000000000000000000008430783034643764666665356530366432633730323464396262393366363735623832343265373139303165653636613162666533666535333639333234633061373562663666303333646334616636356635643066653730373265393837383866636661363730393139623562646330343666316361393166323864666635396462373000000000000000000000000000000000000000000000000000000000"
-	//_,err = stakercontract.StakeOut(common.FromHex(stakeOutInput),contract,stakerevm)
-	//
-	//if err.Error() != "lockTIme did not reach" {
-	//	t.Fail()
-	//}
-
+	lenth := len(infoS.Clients)
+	if lenth <= 0 {
+		t.Fatal("delegateIn save error")
+	}
+	info := infoS.Clients[lenth -1]
+	if info.StakingEpoch != eidNow ||
+		info.Amount.Cmp(a) != 0 ||
+		info.Address != input.DelegateAddress {
+			t.Fatal("delegateIn fields save error")
+	}
 }
-
-//func TestRunFake(t *testing.T) {
-//	runFake(stakerevm.StateDB)
-//}
 
 
 
