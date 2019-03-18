@@ -217,10 +217,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		return clique.New(chainConfig.Clique, db)
 	}
 	if chainConfig.Pluto != nil {
-		var plutoCfg params.PlutoConfig
-		chainConfig.Pluto = &plutoCfg
-		chainConfig.Pluto.Period = chainConfig.Pluto.Period
-		chainConfig.Pluto.Epoch = chainConfig.Pluto.Epoch
 		return pluto.New(chainConfig.Pluto, db)
 	}
 	// Otherwise assume proof-of-work
