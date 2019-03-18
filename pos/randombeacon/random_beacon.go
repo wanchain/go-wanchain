@@ -8,7 +8,8 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -486,7 +487,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["data"] = hexutil.Bytes(payload)
 
 	log.Info("do send rb tx", "payload len", len(payload))
-	_, err := pos.SendTx(rb.rpcClient, arg)
+	_, err := poscommon.SendTx(rb.rpcClient, arg)
 	return err
 }
 

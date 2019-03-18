@@ -5,7 +5,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 var (

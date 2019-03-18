@@ -9,7 +9,8 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/vm"
 
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/poscommon"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -134,7 +135,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 				return err
 			}
 
-			err = s.sendStage1Tx(data, pos.SendTx)
+			err = s.sendStage1Tx(data, poscommon.SendTx)
 			if err != nil {
 				log.Error(err.Error())
 				return err
@@ -172,7 +173,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 				return err
 			}
 
-			err = s.sendStage2Tx(data, pos.SendTx)
+			err = s.sendStage2Tx(data, poscommon.SendTx)
 			if err != nil {
 				return err
 			}

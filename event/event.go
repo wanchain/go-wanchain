@@ -44,6 +44,8 @@ type TypeMux struct {
 	stopped bool
 }
 
+var mux *TypeMux
+
 // ErrMuxClosed is returned when Posting on a closed TypeMux.
 var ErrMuxClosed = errors.New("event: mux closed")
 

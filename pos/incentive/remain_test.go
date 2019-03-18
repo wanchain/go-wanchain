@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func TestAddRemain(t *testing.T) {
