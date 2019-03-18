@@ -87,13 +87,8 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	return miner
 }
 
-func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
+func PosInit(s Backend) *epochLeader.Epocher {
 	log.Info("BackendTimerLoop is running!!!!!!")
-
-	// config
-	if key != nil {
-		pos.Cfg().MinerKey = key
-	}
 
 	if pos.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -110,7 +105,7 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 	eerr1 := epocher.SelectLeadersLoop(1)
 
 	sls := slotleader.GetSlotLeaderSelection()
-	sls.Init(s.BlockChain(), nil, key, epocher)
+	sls.Init(s.BlockChain(), nil, nil, epocher)
 
 	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, epocher.GetRBProposerGroup)
 	fmt.Println("posInit: ", eerr, eerr1)
@@ -169,15 +164,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		panic(err)
 	}
 
-	// get epocher
-	//epocher := epochLeader.NewEpocher(s.BlockChain())
 
-	//epochTimer := time.NewTicker(20 * time.Second)
-	//slotTimer := time.NewTicker(6 * time.Second)
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
-		//fmt.Println(h)
 		if nil == h {
 			time.Sleep(pos.SlotTime * time.Second)
 			continue
@@ -193,14 +183,6 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		epochid, slotid := slotleader.GetEpochSlotID()
 		fmt.Println("epochid, slotid", epochid, slotid)
 
-		// only the begin of epocher
-		if slotid == 0 {
-			fmt.Println("epocher begin")
-		}
-
-		// every slot
-		fmt.Println("Every slot run:")
-		//Add for slot leader selection
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
