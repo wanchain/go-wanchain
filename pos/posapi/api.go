@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/incentive"
@@ -21,7 +22,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
 )
@@ -42,14 +42,6 @@ func APIs(chain consensus.ChainReader, backend ethapi.Backend) []rpc.API {
 
 func (a PosApi) Version() string {
 	return "1.0"
-}
-
-func (a PosApi) GetSlotErrorCount() string {
-	return postools.Uint64ToString(slotleader.ErrorCount)
-}
-
-func (a PosApi) GetSlotWarnCount() string {
-	return postools.Uint64ToString(slotleader.WarnCount)
 }
 
 func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {

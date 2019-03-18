@@ -57,15 +57,17 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
+	//GET Epoch genesis
+	GetEpochGenesisMsg = 0x08
+	EpochGenesisMsg    = 0x09
+
 	// Protocol messages belonging to eth/63
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
 
-	//GET Epoch genesis
-	GetEpochGenesisMsg = 0x11
-	EpochGenesisMsg = 0x12
+
 )
 
 type errCode int
@@ -188,9 +190,9 @@ type blockBodiesData []*blockBody
 
 // GetEpochGenesisMsg represents a block header query.
 type getEpochGenesisData struct {
-	epochid uint64 // epochid from which to get epoch genesis
+	Epochid uint64 // epochid from which to get epoch genesis
 }
 
 type epochGenesisBody struct {
-	epochGenesis 	*types.EpochGenesis
+	EpochGenesis 	*types.EpochGenesis
 }

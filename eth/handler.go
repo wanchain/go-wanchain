@@ -454,6 +454,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
 
+		//p.CheckEpochBoundary(pm.blockchain,headers)
+
+
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -486,6 +489,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				bytes += len(data)
 			}
 		}
+
 		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
@@ -507,6 +511,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if filter {
 			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
 		}
+
+
 		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
 			if err != nil {
@@ -514,22 +520,21 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-	case msg.Code == GetBlockBodiesMsg:
+	case msg.Code == GetEpochGenesisMsg:
 		var query getEpochGenesisData
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		p.SendEpochGenesis(query.epochid)
+		p.SendEpochGenesis(pm.blockchain,query.Epochid)
 
-	case msg.Code == BlockBodiesMsg:
+	case msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
 		if err := msg.Decode(&epBody); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		pm.downloader.DeliverEpochGenesis(p.id,epBody.epochGenesis)
-
+		pm.downloader.DeliverEpochGenesis(p.id,epBody.EpochGenesis)
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
@@ -633,6 +638,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 		for _, block := range unknown {
+
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
@@ -692,6 +698,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	}
 	return nil
 }
+
+
 
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).

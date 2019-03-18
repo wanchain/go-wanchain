@@ -86,9 +86,11 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher 
 
 	return inst
 }
+
 func (e *Epocher) GetBlkChain() *core.BlockChain {
 	return e.blkChain
 }
+
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 	if epochId < 2 {
@@ -110,12 +112,7 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 		posdb.SetEpochBlock(targetEpochId, targetBlkNum)
 	}
 	return targetBlkNum
-	//targetBlkNum := e.blkChain.CurrentBlock().NumberU64()
-	//if targetBlkNum >= safeK {
-	//	return (targetBlkNum - safeK)
-	//} else {
-	//	return 0
-	//}
+
 }
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
@@ -149,7 +146,7 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
-	fmt.Println("\n\nselect randoms", epochId, common.ToHex(r))
+	log.Debug("select randoms", epochId, common.ToHex(r))
 
 	pa, err := e.createStakerProbabilityArray(statedb, epochId)
 	if pa == nil || err != nil {
@@ -223,7 +220,9 @@ func (e *Epocher) calProbability2(epochId uint64, amountWin *big.Int, lockTime u
 
 	pb.Mul(amount, epercent)
 	pb.Mul(pb, timeBig)
-	fmt.Print("calProbability,pb:", pb)
+
+	log.Debug("calProbability,pb:", pb)
+
 	return pb
 }
 
@@ -254,37 +253,6 @@ func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime ui
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
-	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
-	//amount := big.NewInt(0).Div(pstaker.Amount, big.NewInt(params.Wan))
-	//lockTime := pstaker.LockEpochs
-	//
-	//var leftTimePercent float64
-	//if epochId < 2 {
-	//	leftTimePercent = 1
-	//} else {
-	//
-	//	leftTimePercent = (float64(lockTime-(epochId-pstaker.StakingEpochs)) / float64(lockTime))
-	//	if leftTimePercent > 0 {
-	//		leftTimePercent = Round(leftTimePercent, 32)
-	//	} else {
-	//		leftTimePercent = 0
-	//	}
-	//}
-	//
-	//fpercent := Round(math.Exp(-leftTimePercent), 4)
-	//
-	//epercent := big.NewInt(int64(fpercent * Accuracy))
-	//
-	//timeBig := big.NewInt(int64(lockTime))
-	//
-	//pb := big.NewInt(0).Mul(amount, epercent)
-	//pb = big.NewInt(0).Mul(pb, timeBig)
-
-	//gb := new(bn256.G1)
-	//_, err := gb.Unmarshal(pstaker.PubBn256)
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
 	for i:=0; i<len(pstaker.Clients); i++ {
@@ -350,16 +318,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		ps[idx].Probabilities = big.NewInt(0).Add(ps[idx].Probabilities, ps[idx-1].Probabilities)
 	}
 
-	fmt.Println("\n\n------------------------------------------------------------------------------------------")
-	for i, val := range ps {
-		if i == 0 {
-			fmt.Println("puk=", val.PubSec256, "probability percent from=", 0, "to=", val.Probabilities, "span wide=", val.Probabilities.Text(10))
-		} else {
-			diff := big.NewInt(0).Sub(val.Probabilities, ps[i-1].Probabilities)
-			fmt.Println("puk=", val.PubSec256, "probability percent from=", ps[i-1].Probabilities.Text(10), "to=", val.Probabilities.Text(10), "span wide=", diff.Text(10))
-		}
-	}
-	fmt.Println("------------------------------------------------------------------------------------------")
+	log.Debug("get createStakerProbabilityArray len=",len(ps))
 
 	return ps, nil
 }
@@ -381,7 +340,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
-	log.Info("\n\n\n")
+	log.Info("epochLeaderSelection selecting")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
@@ -403,7 +362,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		cr = crypto.Keccak256(cr)
 	}
 
-	log.Info("\n\n\n")
+
 
 	return nil
 }
@@ -425,7 +384,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	r1 := buffer.Bytes()       //r1 = 1||r
 	cr := crypto.Keccak256(r1) //cr = hash(r1)
 
-	log.Info("\n\n\n")
+	log.Info("random proposer selecting...\n")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
@@ -434,14 +393,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].Probabilities.Cmp(crBig) > 0 })
 
-		fmt.Println("random selector ", "index:=", idx, "bn256", ps[idx].PubBn256)
 
-		//e.rbLeadersDb.PutWithIndex(epochId, uint64(i), "", ps[idx].PubBn256.Marshal())
-
-		//info := &puksInfo{
-		//	PubSec256:crypto.FromECDSAPub(ps[idx].PubSec256),
-		//	PubBn256:ps[idx].PubBn256.Marshal(),
-		//}
 		val, err := rlp.EncodeToBytes(ps[idx])
 		//val,err := json.Marshal(&ps[idx])
 
@@ -454,7 +406,6 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		cr = crypto.Keccak256(cr)
 	}
 
-	log.Info("\n\n\n")
 
 	return nil
 }
@@ -569,19 +520,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
-	//return []vm.ClientProbability{{Addr: addr, Probability: big.NewInt(10)}}, 100, big.NewInt(10000), nil
 
-	//eparray := e.GetLeaderBase(epochId)
-	//
-	//leader := vm.Leader{}
-	//for i := 0; i < len(eparray); i++ {
-	//	err := json.Unmarshal(eparray[i], &leader)
-	//	if nil == err {
-	//		if leader.SecAddr == addr {
-	//			break
-	//		}
-	//	}
-	//}
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
@@ -627,12 +566,6 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 
 		core.Transfer(stateDb, vm.StakersInfoAddr, staker.From, staker.Amount)
-		//staker.Clients = make([]vm.ClientInfo,0)
-		//infoBytes, err := rlp.EncodeToBytes(staker)
-		//if err != nil {
-		//	log.Error("EncodeToBytes failed: ", err)
-		//	return false
-		//}
 
 		vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
 	}
