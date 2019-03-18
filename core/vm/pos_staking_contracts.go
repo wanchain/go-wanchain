@@ -29,80 +29,7 @@ contract stake {
 */
 
 var (
-//	cscDefinition = `
-//[
-//	{
-//		"constant": false,
-//		"inputs": [
-//			{
-//				"name": "secPk",
-//				"type": "bytes"
-//			},
-//			{
-//				"name": "bn256Pk",
-//				"type": "bytes"
-//			},
-//			{
-//				"name": "lockEpochs",
-//				"type": "uint256"
-//			},
-//			{
-//				"name": "feeRate",
-//				"type": "uint256"
-//			}
-//		],
-//		"name": "stakeIn",
-//		"outputs": [
-//			{
-//				"name": "secPk",
-//				"type": "bytes"
-//			},
-//			{
-//				"name": "bn256Pk",
-//				"type": "bytes"
-//			},
-//			{
-//				"name": "lockEpochs",
-//				"type": "uint256"
-//			},
-//			{
-//				"name": "feeRate",
-//				"type": "uint256"
-//			}
-//		],
-//		"payable": true,
-//		"stateMutability": "payable",
-//		"type": "function"
-//	},
-//	{
-//		"constant": false,
-//		"inputs": [
-//			{
-//				"name": "delegateAddr",
-//				"type": "address"
-//			},
-//			{
-//				"name": "lockEpochs",
-//				"type": "uint256"
-//			}
-//		],
-//		"name": "delegateIn",
-//		"outputs": [
-//			{
-//				"name": "delegateAddr",
-//				"type": "address"
-//			},
-//			{
-//				"name": "lockEpochs",
-//				"type": "uint256"
-//			}
-//		],
-//		"payable": true,
-//		"stateMutability": "payable",
-//		"type": "function"
-//	}
-//]
-//`
+
 	cscDefinition = `
 [
 	{
@@ -153,14 +80,9 @@ var (
 	stakeOutId [4]byte
 	delegateId [4]byte
 
-	//errStakeInAbiParse  = errors.New("error in stakein abi parse ")
-	//
-	//posStartTime int64
 
 	kindStakeIn   = []byte{100}
 
-	//posEpochGap = uint64(2)
-	//posDelegateEpochGap = uint64(4)
 	maxEpochNum = uint64(1000)
 	minEpochNum = uint64(1)
 	minStakeholderStake = big.NewInt(10000)
@@ -168,10 +90,6 @@ var (
 	minFeeRate = big.NewInt(0)
 	maxFeeRate = big.NewInt(100)
 
-	//epochInterval uint64
-
-	//isRanFake = false
-	//FakeCh = make(chan int)
 )
 
 type StakerInfo struct {
@@ -237,9 +155,11 @@ func init() {
 
 type PosStaking struct {
 }
+
 func CalLocktimeWeight(lockEpoch uint64) (uint64) {
 	return 10+lockEpoch/(maxEpochNum/10)
 }
+
 func (p *PosStaking) RequiredGas(input []byte) uint64 {
 	return 0
 }
@@ -527,72 +447,7 @@ func (p *PosStaking) delegateInParseAndValid(payload []byte) error {
 //
 //	return &staker, pubHash, nil
 //}
-//
-//func runFake(statedb StateDB) error {
-//	// num of public key samples
-//	Ns := 100
-//	secPubs := fakeGenSecPublicKeys(Ns)
-//	g1pubs := fakeGenG1PublicKeys(Ns)
-//	mrand.Seed(100000)
-//
-//	for i := 0; i < Ns; i++ {
-//		stakeholder := &StakerInfo{
-//			PubSec256:   secPubs[i],
-//			PubBn256:    g1pubs[i],
-//			Amount:      big.NewInt(0).Mul(big.NewInt(int64(mrand.Float32()*1000)), ether),
-//			LockEpochs:    uint64(mrand.Float32()*100) * 3600,
-//			StakingEpoch: uint64(time.Now().Unix()),
-//		}
-//
-//		infoArray, _ := json.Marshal(stakeholder)
-//		pukHash := common.BytesToHash(stakeholder.PubSec256)
-//
-//		StoreInfo(statedb, StakersInfoAddr, pukHash, infoArray)
-//
-//		infoArray, _ = GetInfo(statedb, StakersInfoAddr, pukHash)
-//
-//		fmt.Println("generate fake date ", infoArray)
-//
-//	}
-//
-//	println(posStartTime)
-//
-//	FakeCh <- 1
-//
-//	return nil
-//}
-//
-//func fakeGenSecPublicKeys(x int) [][]byte {
-//	if x <= 0 {
-//		return nil
-//	}
-//	PublicKeys := make([][]byte, 0) //PublicKey Samples
-//
-//	for i := 0; i < x; i++ {
-//		privateKeySample, err := crypto.GenerateKey()
-//		if err != nil {
-//			return nil
-//		}
-//		PublicKeys = append(PublicKeys, crypto.FromECDSAPub(&privateKeySample.PublicKey))
-//	}
-//
-//	return PublicKeys
-//}
-//
-//func fakeGenG1PublicKeys(x int) [][]byte {
-//
-//	g1Pubs := make([][]byte, 0) //PublicKey Samples
-//
-//	for i := 0; i < x; i++ {
-//		_, Pub, err := bn256.RandomG1(rand.Reader)
-//		if err != nil {
-//			continue
-//		}
-//		g1Pubs = append(g1Pubs, Pub.Marshal())
-//	}
-//
-//	return g1Pubs
-//}
+
 
 
 func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
@@ -609,11 +464,13 @@ func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
 	})
 	return stakers
 }
+
 var 	StakersInfoStakeOutKeyHash      = common.BytesToHash(big.NewInt(700).Bytes())
 func StakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
 	b := big.NewInt(int64(epochID))
 	StoreInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash, b.Bytes())
 }
+
 func StakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
 	epochByte,err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
 	if err != nil {
