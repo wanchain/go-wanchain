@@ -15,9 +15,6 @@ import (
 	"github.com/wanchain/pos/uleaderselection"
 )
 
-//GetSlotLeaderProofByGenesis use to get genesis proof.
-//ProofMes = [PK, Gt, skGt] []*PublicKey
-//Proof = [e,z] []*big.Int
 func (s *SlotLeaderSelection) GetSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis
@@ -143,20 +140,19 @@ func (s *SlotLeaderSelection) VerifySlotProofByGenesis(epochID uint64, slotID ui
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes()[:])
 }
 
+//ProofMes = [PK, Gt, skGt] []*PublicKey
+//Proof = [e,z] []*big.Int
 func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	_, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
 		return s.VerifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
-
 	var epochLeadersPtrPre []*ecdsa.PublicKey
-
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if err != nil {
 		log.Warn(err.Error())
 	}
 
-	//3. RB PRE
 	rbPtr, err := s.getRandom(epochID)
 	if err != nil {
 		log.Error(err.Error())
@@ -165,9 +161,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 	rbBytes := rbPtr.Bytes()
 
-	// 4. get preEpoch Tx1 data and Tx2 data
+	// build stage two and proof info
 	var validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
-	//var stageOneMi [pos.EpochLeaderCount]*ecdsa.PublicKey
 	var stageTwoAlphaPKi [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
 	var stageTwoProof [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 
@@ -286,6 +281,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		return false
 	}
 	log.Debug("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
+
+	// verify slot leader proof
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
 
