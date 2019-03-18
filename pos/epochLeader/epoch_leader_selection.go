@@ -64,7 +64,7 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	}
 
 	if epocherInst == nil {
-		epocherInst = NewEpocherWithLBN(blc, "rblocaldb", "eplocaldb")
+		epocherInst = NewEpocherWithLBN(blc, pos.RbLocalDB, pos.EpLocalDB)
 	}
 
 	return epocherInst
@@ -192,6 +192,7 @@ func Round(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc((f+0.5/n10)*n10) / n10
 }
+
 /*
 新的wancoin到stake的权重计算公式
 Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
@@ -199,20 +200,20 @@ Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
 lockEpoch是要锁定的时长(epoch数), maxEpoch是运行锁定的最长时长, 目前是1000
 这样, 锁定时长对应的权重在[10,20]之间.
 t是锁定时间剩余时长的百分比,取值(1,0)之间, (2-exp(t-1))对应的权重在(1, 1.64)之间.
- */
+*/
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
-	if(epochId < 2) {
+	if epochId < 2 {
 		leftTimePercent = 1
-	} else if(epochId < startEpochId+2 || epochId >= startEpochId+2+lockTime) {
+	} else if epochId < startEpochId+2 || epochId >= startEpochId+2+lockTime {
 		leftTimePercent = 0
-	}else {
+	} else {
 		leftTimePercent = (float64(lockTime-(epochId-startEpochId-2)) / float64(lockTime))
 	}
-	fpercent := 2-Round(math.Exp(leftTimePercent-1), 4)
+	fpercent := 2 - Round(math.Exp(leftTimePercent-1), 4)
 
 	epercent := big.NewInt(int64(fpercent * Accuracy))
 
@@ -227,15 +228,12 @@ func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime ui
 	return pb
 }
 
-
-
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
-
 	pb := e.calProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
-	for i:=0; i<len(pstaker.Clients); i++ {
-		lockEpoch := pstaker.LockEpochs-(pstaker.Clients[i].StakingEpoch-pstaker.StakingEpoch)
+	for i := 0; i < len(pstaker.Clients); i++ {
+		lockEpoch := pstaker.LockEpochs - (pstaker.Clients[i].StakingEpoch - pstaker.StakingEpoch)
 		pb.Add(pb, e.calProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
 	}
 	p := &Proposer{
@@ -297,7 +295,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		ps[idx].Probabilities = big.NewInt(0).Add(ps[idx].Probabilities, ps[idx-1].Probabilities)
 	}
 
-	log.Debug("get createStakerProbabilityArray len=",len(ps))
+	log.Debug("get createStakerProbabilityArray len=", len(ps))
 
 	return ps, nil
 }
@@ -341,8 +339,6 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		cr = crypto.Keccak256(cr)
 	}
 
-
-
 	return nil
 }
 
@@ -372,7 +368,6 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].Probabilities.Cmp(crBig) > 0 })
 
-
 		val, err := rlp.EncodeToBytes(ps[idx])
 		//val,err := json.Marshal(&ps[idx])
 
@@ -384,7 +379,6 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 
 		cr = crypto.Keccak256(cr)
 	}
-
 
 	return nil
 }
@@ -499,7 +493,6 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
-
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
@@ -534,13 +527,13 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	vm.StakeoutSetEpoch(stateDb, epochID)
 
 	stakers := vm.GetStakersSnap(stateDb)
-	for i:=0; i<len(stakers); i++ {
+	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if epochID < staker.StakingEpoch + staker.LockEpochs + 3 { // TODO: check with design
+		if epochID < staker.StakingEpoch+staker.LockEpochs+3 { // TODO: check with design
 			continue
 		}
-		for j:=0; j<len(staker.Clients); j++ {
+		for j := 0; j < len(staker.Clients); j++ {
 			core.Transfer(stateDb, vm.StakersInfoAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 		}
 
