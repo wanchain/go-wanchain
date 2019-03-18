@@ -1,18 +1,5 @@
 
-function Bytes2HexString (b) {
-    var hexs = "";
-    for (var i = 0; i < b.length; i++) {
-         var hex = b[i].toString(16);
-        if (hex.length == 1) {
-            hex = '0' + hex;
-        }
-        hexs += hex.toUpperCase();
-    }
-    console.log(hexs);
-}
-
 personal.unlockAccount(eth.accounts[0],"wanglu",600);
-//personal.unlockAccount(eth.accounts[1],"wanglu",99999);
 
 var tranValue = 10
 

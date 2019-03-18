@@ -15,15 +15,10 @@ import (
 )
 
 /* the contract interface described by solidity.
-contract stake {
-	function stakeIn( string memory Pubs, uint256 LockEpochs) public {}
-	function stakeOut(string memory Pub, uint256 Value) public pure {}
-}
 
 contract stake {
-	function stakeIn( string memory secPk, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public payable {}
-	// function stakeOut(string memory sPub) public pure {} // TODO: need it?
-	function delegateIn(address delegateAddress, uint256 lockEpochs) public payable {}
+	function stakeIn( bytes memory secPk, bytes memory bn256Pk, uint256 lockEpochs, uint256 feeRate) public payable {}
+	function delegateIn(address delegateAddress) public payable {}
 }
 
 */
