@@ -100,7 +100,7 @@ var cscDefinition = [
         "constant": false,
         "inputs": [
             {
-                "name": "delegateAddr",
+                "name": "delegateAddress",
                 "type": "address"
             }
         ],

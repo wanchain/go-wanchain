@@ -106,16 +106,16 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	from = contract.CallerAddress
 
 	if methodId == stgOneIdArr {
-		err := c.ValidTxStg1ByData(from, in[:])
+		err := c.validTxStg1ByData(from, in[:])
 		if err != nil {
-			log.Error("slotLeaderSC:Run:ValidTxStg1ByData", "from", from)
+			log.Error("slotLeaderSC:Run:validTxStg1ByData", "from", from)
 			return nil, err
 		}
 		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
-		err := c.ValidTxStg2ByData(from, in[:])
+		err := c.validTxStg2ByData(from, in[:])
 		if err != nil {
-			log.Error("slotLeaderSC:Run:ValidTxStg2ByData", "from", from)
+			log.Error("slotLeaderSC:Run:validTxStg2ByData", "from", from)
 			return nil, err
 		}
 		return c.handleStgTwo(in[:], contract, evm)
@@ -123,6 +123,74 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 
 	functrace.Exit()
 	return nil, errMethodId
+}
+
+func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	// 0. verify pk and whether in Epoch group list.
+	// 1. get transaction data
+	// 2. parse data to get the Pie[i] and A[i]
+	// 3. verify A[i]
+	// 4. verify Pie[i]
+	// 5. epochID verify
+	var methodId [4]byte
+	copy(methodId[:], tx.Data()[:4])
+
+	if methodId == stgOneIdArr {
+		return c.validTxStg1(signer, tx)
+	} else if methodId == stgTwoIdArr {
+		return c.validTxStg2(signer, tx)
+	}
+	return nil
+}
+
+// GetSlotLeaderStage2KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
+func GetSlotLeaderStage2KeyHash(epochID, selfIndex []byte) common.Hash {
+	return getSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag2)
+}
+
+func GetSlotLeaderStage2IndexesKeyHash(epochID []byte) common.Hash {
+	return getSlotLeaderStageIndexesKeyHash(epochID, SlotLeaderStag2Indexes)
+}
+
+// GetSlotLeaderSCAddress can get the precompile contract address
+func GetSlotLeaderSCAddress() common.Address {
+	return slotLeaderPrecompileAddr
+}
+
+// GetSlotLeaderScAbiString can get the precompile contract Define string
+func GetSlotLeaderScAbiString() string {
+	return slotLeaderSCDef
+}
+
+// GetSlotScCallTimes can get this precompile contract called times
+func GetSlotScCallTimes(epochID uint64) uint64 {
+	buf, err := posdb.GetDb().Get(epochID, scCallTimes)
+	if err != nil {
+		return 0
+	} else {
+		return posdb.BytesToUint64(buf)
+	}
+}
+
+// GetSlotLeaderStage1KeyHash use to get SlotLeader Stage 1 KeyHash by epoch id and self index
+
+func GetSlotLeaderStage1KeyHash(epochID, selfIndex []byte) common.Hash {
+	return getSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag1)
+}
+
+func getSlotLeaderStageIndexesKeyHash(epochID []byte, slotLeaderStageIndexes string) common.Hash {
+	var keyBuf bytes.Buffer
+	keyBuf.Write(epochID)
+	keyBuf.Write([]byte(slotLeaderStageIndexes))
+	return crypto.Keccak256Hash(keyBuf.Bytes())
+}
+
+func getSlotLeaderStageKeyHash(epochID, selfIndex []byte, slotLeaderStage string) common.Hash {
+	var keyBuf bytes.Buffer
+	keyBuf.Write(epochID)
+	keyBuf.Write(selfIndex)
+	keyBuf.Write([]byte(slotLeaderStage))
+	return crypto.Keccak256Hash(keyBuf.Bytes())
 }
 
 func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -186,63 +254,45 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	return nil, nil
 }
 
-func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// 0. verify pk and whether in Epoch group list.
-	// 1. get transaction data
-	// 2. parse data to get the Pie[i] and A[i]
-	// 3. verify A[i]
-	// 4. verify Pie[i]
-	// 5. epochID verify
-	var methodId [4]byte
-	copy(methodId[:], tx.Data()[:4])
-
-	if methodId == stgOneIdArr {
-		return c.ValidTxStg1(signer, tx)
-	} else if methodId == stgTwoIdArr {
-		return c.ValidTxStg2(signer, tx)
-	}
-	return nil
-}
-
-func (c *slotLeaderSC) ValidTxStg1(signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) validTxStg1(signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
 
-	return c.ValidTxStg1ByData(sender, tx.Data())
+	return c.validTxStg1ByData(sender, tx.Data())
 }
 
-func (c *slotLeaderSC) ValidTxStg1ByData(from common.Address, payload []byte) error {
+func (c *slotLeaderSC) validTxStg1ByData(from common.Address, payload []byte) error {
 
 	epochIDBuf, _, err := slottools.RlpGetStage1IDFromTx(payload[:], slotLeaderSCDef)
 	if err != nil {
-		log.Error("ValidTxStg1 failed")
+		log.Error("validTxStg1 failed")
 		return err
 	}
 
 	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), from) {
-		log.Error("ValidTxStg1 failed")
+		log.Error("validTxStg1 failed")
 		return slottools.ErrIllegalSender
 	}
 
-	//log.Info("ValidTxStg1 success")
+	//log.Info("validTxStg1 success")
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg2ByData(from common.Address, payload []byte) error {
+func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) error {
 	epochID, selfIndex, _, alphaPkis, proofs, err := slottools.RlpUnpackStage2DataForTx(payload[:], slotLeaderSCDef)
 	if err != nil {
-		log.Error("ValidTxStg2:RlpUnpackStage2DataForTx failed")
+		log.Error("validTxStg2:RlpUnpackStage2DataForTx failed")
 		return err
 	}
 
 	if !slottools.InEpochLeadersOrNotByAddress(epochID, from) {
-		log.Error("ValidTxStg2:InEpochLeadersOrNotByAddress failed")
+		log.Error("validTxStg2:InEpochLeadersOrNotByAddress failed")
 		return slottools.ErrIllegalSender
 	}
 
-	//log.Info("ValidTxStg2 success")
+	//log.Info("validTxStg2 success")
 	type slot interface {
 		GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error)
 		GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error)
@@ -256,44 +306,34 @@ func (c *slotLeaderSC) ValidTxStg2ByData(from common.Address, payload []byte) er
 	}
 	mi, err := selector.(slot).GetStg1StateDbInfo(epochID, selfIndex)
 	if err != nil {
-		log.Error("ValidTxStg2", "GetStg1StateDbInfo error", err.Error())
+		log.Error("validTxStg2", "GetStg1StateDbInfo error", err.Error())
 		return err
 	}
 
 	//mi
 	if len(mi) == 0 || len(alphaPkis) != pos.EpochLeaderCount {
-		log.Error("ValidTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
+		log.Error("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
 		return slottools.ErrInvalidTxLen
 	}
 	if !postools.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
-		log.Error("ValidTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
+		log.Error("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
 		return slottools.ErrTx1AndTx2NotConsistent
 	}
 	//Dleq
 	epochLeaders := selector.(slot).GetEpochLeadersPK(epochID)
 	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
-		log.Error("ValidTxStg2", "VerifyDleqProof false self Index", selfIndex)
+		log.Error("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
 		return slottools.ErrDleqProof
 	}
 	return nil
 }
 
-func (c *slotLeaderSC) ValidTxStg2(signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) validTxStg2(signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
-	return c.ValidTxStg2ByData(sender, tx.Data())
-}
-
-// GetSlotLeaderSCAddress can get the precompile contract address
-func GetSlotLeaderSCAddress() common.Address {
-	return slotLeaderPrecompileAddr
-}
-
-// GetSlotLeaderScAbiString can get the precompile contract Define string
-func GetSlotLeaderScAbiString() string {
-	return slotLeaderSCDef
+	return c.validTxStg2ByData(sender, tx.Data())
 }
 
 func addSlotScCallTimes(epochID uint64) error {
@@ -313,16 +353,6 @@ func addSlotScCallTimes(epochID uint64) error {
 	return nil
 }
 
-// GetSlotScCallTimes can get this precompile contract called times
-func GetSlotScCallTimes(epochID uint64) uint64 {
-	buf, err := posdb.GetDb().Get(epochID, scCallTimes)
-	if err != nil {
-		return 0
-	} else {
-		return posdb.BytesToUint64(buf)
-	}
-}
-
 func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
@@ -340,40 +370,11 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	return true
 }
 
-// GetSlotLeaderStage1KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
-func GetSlotLeaderStage1KeyHash(epochID, selfIndex []byte) common.Hash {
-	return GetSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag1)
-}
-
-// GetSlotLeaderStage2KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
-func GetSlotLeaderStage2KeyHash(epochID, selfIndex []byte) common.Hash {
-	return GetSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag2)
-}
-
-func GetSlotLeaderStageKeyHash(epochID, selfIndex []byte, slotLeaderStage string) common.Hash {
-	var keyBuf bytes.Buffer
-	keyBuf.Write(epochID)
-	keyBuf.Write(selfIndex)
-	keyBuf.Write([]byte(slotLeaderStage))
-	return crypto.Keccak256Hash(keyBuf.Bytes())
-}
-
-func GetSlotLeaderStage2IndexesKeyHash(epochID []byte) common.Hash {
-	return GetSlotLeaderStageIndexesKeyHash(epochID, SlotLeaderStag2Indexes)
-}
-
-func GetSlotLeaderStageIndexesKeyHash(epochID []byte, slotLeaderStageIndexes string) common.Hash {
-	var keyBuf bytes.Buffer
-	keyBuf.Write(epochID)
-	keyBuf.Write([]byte(slotLeaderStageIndexes))
-	return crypto.Keccak256Hash(keyBuf.Bytes())
-}
-
 func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes string, index uint64) error {
 	var sendtrans [pos.EpochLeaderCount]bool
 	var sendtransGet [pos.EpochLeaderCount]bool
 
-	key := GetSlotLeaderStageIndexesKeyHash(epochID, slotLeaderStageIndexes)
+	key := getSlotLeaderStageIndexesKeyHash(epochID, slotLeaderStageIndexes)
 	bytes := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, key)
 
 	if len(bytes) == 0 {

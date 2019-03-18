@@ -17,6 +17,12 @@ var (
 )
 
 const (
+	RbLocalDB  = "rblocaldb"
+	EpLocalDB  = "eplocaldb"
+	PosLocalDB = "pos"
+)
+
+const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake

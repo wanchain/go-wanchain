@@ -862,27 +862,6 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 	return []byte{1}, nil
 
 }
-//========================slot leader selection stage two begin ===============
-type slsStgTwoSC struct {
-
-}
-
-func (c *slsStgTwoSC) RequiredGas(input []byte) uint64 {
-
-	// A_i=α_i*PKi i = {1,2,....n}. size = sizeof(ecdsa.PublicKey)*N
-	// π_i							size = sizeof(uint64)x2 w[0]=e w[1]=z
-	return params.SlsStgTwoPerByteGas * uint64(len(input))
-}
-
-func (c *slsStgTwoSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	return nil, nil
-}
-
-func (c *slsStgTwoSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	return nil
-}
-
-//========================slot leader selection stage two end ===============
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	if len(ss) < 4 {

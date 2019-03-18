@@ -57,9 +57,9 @@ func init() {
 // DbInitAll init all db files
 func DbInitAll(pathname string) {
 	pos.Cfg().Dbpath = pathname
-	dbInstance = NewDb("pos")
-	NewDb("rblocaldb")
-	NewDb("eplocaldb")
+	dbInstance = NewDb(pos.PosLocalDB)
+	NewDb(pos.RbLocalDB)
+	NewDb(pos.EpLocalDB)
 }
 
 //GetDb can get a Db instance to use
@@ -348,7 +348,7 @@ type Proposer struct {
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := NewDb("rblocaldb")
+	db := NewDb(pos.RbLocalDB)
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
 		return nil
@@ -372,7 +372,7 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 
 }
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
-	db := NewDb("eplocaldb")
+	db := NewDb(pos.EpLocalDB)
 	if db == nil {
 		log.Error("GetEpochLeaderGroup create db error")
 		return nil

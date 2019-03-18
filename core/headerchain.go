@@ -90,7 +90,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
-		forkMem:	  NewForkMemBlockChain(HEADERCHAIN),
+		forkMem:	  NewForkMemBlockChain(),
 	}
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
