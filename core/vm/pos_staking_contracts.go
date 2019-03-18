@@ -23,13 +23,13 @@ contract stake {
 contract stake {
 	function stakeIn( string memory secPk, string memory bnPub, uint256 lockEpochs, uint256 feeRate) public payable {}
 	// function stakeOut(string memory sPub) public pure {} // TODO: need it?
-	function delegateIn(address delegateAddr, uint256 lockEpochs) public payable {}
+	function delegateIn(address delegateAddress, uint256 lockEpochs) public payable {}
 }
 
 */
 
 var (
-
+	// pos staking contract abi definition
 	cscDefinition = `
 [
 	{
@@ -62,7 +62,7 @@ var (
 		"constant": false,
 		"inputs": [
 			{
-				"name": "delegateAddr",
+				"name": "delegateAddress",
 				"type": "address"
 			}
 		],
@@ -74,16 +74,18 @@ var (
 	}
 ]
 `
+	// pos staking contract abi object
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
+	// function "stakeIn" "delegateIn" 's solidity binary id
 	stakeInId  [4]byte
-	stakeOutId [4]byte
+	//stakeOutId [4]byte
 	delegateId [4]byte
 
 	maxEpochNum = uint64(1000)
 	minEpochNum = uint64(1)
-	minStakeholderStake = big.NewInt(10000)
-	minDelegateStake = big.NewInt(10000)
+	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
+	minDelegateStake = new(big.Int).Mul(big.NewInt(10000), ether)
 	minFeeRate = big.NewInt(0)
 	maxFeeRate = big.NewInt(100)
 
@@ -128,7 +130,7 @@ type ClientInfo struct {
 }
 
 //
-// helper structures
+// public helper structures
 //
 type Leader struct {
 	PubSec256     []byte
@@ -147,6 +149,7 @@ type ClientIncentive struct {
 	Addr      common.Address
 	Incentive *big.Int
 }
+
 //
 // package initialize
 //
@@ -156,10 +159,11 @@ func init() {
 	}
 
 	copy(stakeInId[:], cscAbi.Methods["stakeIn"].Id())
-	copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
+	//copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
 	copy(delegateId[:], cscAbi.Methods["delegateIn"].Id())
 }
 
+/////////////////////////////
 //
 // pos staking contract
 //
@@ -277,6 +281,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		PubBn256:     info.Bn256Pk,
 		Amount:       contract.value,
 		LockEpochs:   lockTime,
+		FeeRate: 	  info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow,
 	}

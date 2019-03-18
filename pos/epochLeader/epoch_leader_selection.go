@@ -193,14 +193,6 @@ func Round(f float64, n int) float64 {
 	return math.Trunc((f+0.5/n10)*n10) / n10
 }
 
-/*
-新的wancoin到stake的权重计算公式
-Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
-其中, Amount是注册进来的wan数量
-lockEpoch是要锁定的时长(epoch数), maxEpoch是运行锁定的最长时长, 目前是1000
-这样, 锁定时长对应的权重在[10,20]之间.
-t是锁定时间剩余时长的百分比,取值(1,0)之间, (2-exp(t-1))对应的权重在(1, 1.64)之间.
-*/
 const Accuracy float64 = 1024.0 //accuracy to magnificate
 func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
