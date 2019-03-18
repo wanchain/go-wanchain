@@ -44,6 +44,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 var (
@@ -1088,7 +1089,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// TODO: update epoch ->blockNumber
 		epochID := block.Header().Difficulty.Uint64() >> 32
 		if block.NumberU64() == 1 {
-			pos.EpochBaseTime = block.Time().Uint64()
+			posconfig.EpochBaseTime = block.Time().Uint64()
 		}
 		posdb.UpdateEpochBlock(epochID, block.Number().Uint64())
 	}
