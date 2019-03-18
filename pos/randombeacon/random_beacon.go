@@ -8,9 +8,9 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/poscommon"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -34,6 +34,8 @@ type RbSIGDataCollector struct {
 }
 
 type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
+type GetEnsFunc func(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error)
+type GetRBMFunc func(db vm.StateDB, epochId uint64) ([]byte, error)
 
 type LoopEvent struct {
 	statedb vm.StateDB
@@ -62,6 +64,8 @@ type RandomBeacon struct {
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
+	getEns GetEnsFunc
+	getRBM GetRBMFunc
 }
 
 var (
@@ -82,6 +86,8 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 
 	// function
 	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
+	rb.getEns = vm.GetEns
+	rb.getRBM = vm.GetRBM
 
 	rb.loopEvents = make(chan *LoopEvent, 1000)
 
@@ -195,7 +201,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	}
 
 	return nil
-}
+} p
 
 func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	pks := rb.getRBProposerGroup(epochId)
@@ -393,18 +399,27 @@ func (rb *RandomBeacon) doSIGs(epochId uint64, proposerIds []uint32) error {
 
 func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	log.Info("do sig begin", "epochId", epochId, "proposerId", proposerId)
+	sig, err := rb.generateSIG(epochId, proposerId)
+	if err != nil {
+		return err
+	}
+
+	return rb.sendSIG(sig)
+}
+
+func (rb *RandomBeacon) generateSIG(epochId uint64, proposerId uint32) (*vm.RbSIGTxPayload, error) {
 	pks := rb.getRBProposerGroup(epochId)
 	if len(pks) == 0 {
 		err := errors.New("can't find random beacon proposer group")
 		log.Error(err.Error())
-		return err
+		return nil, err
 	}
 
 	prikey := posconfig.Cfg().GetMinerBn256SK()
 	datas := make([]RbEnsDataCollector, 0)
 
 	for id, pk := range pks {
-		data, err := vm.GetEns(rb.statedb, epochId, uint32(id))
+		data, err := rb.getEns(rb.statedb, epochId, uint32(id))
 		if err == nil && data != nil {
 			datas = append(datas, RbEnsDataCollector{data, &pk})
 		} else {
@@ -415,7 +430,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 	dkgCount := len(datas)
 	log.Info("collecte dkg", "count", dkgCount)
 	if uint(dkgCount) < posconfig.Cfg().RBThres {
-		return errors.New("insufficient proposer")
+		return nil, errors.New("insufficient proposer")
 	}
 
 	// Compute Group Secret Key Share
@@ -435,16 +450,16 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 	// Signing Stage
 	// In this stage, each random proposer computes its signature share and sends it on chain.
-	mBuf, err := vm.GetRBM(rb.statedb, epochId)
+	mBuf, err := rb.getRBM(rb.statedb, epochId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	m := new(big.Int).SetBytes(mBuf)
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return rb.sendSIG(&vm.RbSIGTxPayload{epochId, proposerId, gsigshare})
+	return &vm.RbSIGTxPayload{epochId, proposerId, gsigshare}, nil
 }
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
