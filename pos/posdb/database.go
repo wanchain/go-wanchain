@@ -14,7 +14,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	bn256 "github.com/wanchain/pos/cloudflare"
 )
@@ -56,10 +56,10 @@ func init() {
 
 // DbInitAll init all db files
 func DbInitAll(pathname string) {
-	pos.Cfg().Dbpath = pathname
-	dbInstance = NewDb(pos.PosLocalDB)
-	NewDb(pos.RbLocalDB)
-	NewDb(pos.EpLocalDB)
+	posconfig.Cfg().Dbpath = pathname
+	dbInstance = NewDb(posconfig.PosLocalDB)
+	NewDb(posconfig.RbLocalDB)
+	NewDb(posconfig.EpLocalDB)
 }
 
 //GetDb can get a Db instance to use
@@ -105,7 +105,7 @@ func (s *Db) DbInit(dbPath string) {
 	} else {
 		nameIdx := strings.LastIndex(dbPath, string(os.PathSeparator))
 		if nameIdx < 0 {
-			dirname = path.Join(pos.Cfg().Dbpath, "gwan")
+			dirname = path.Join(posconfig.Cfg().Dbpath, "gwan")
 			dirname = path.Join(dirname, dbPath)
 		} else {
 			dbPath = path.Join(dbPath, "gwan")
@@ -348,7 +348,7 @@ type Proposer struct {
 }
 
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
-	db := NewDb(pos.RbLocalDB)
+	db := NewDb(posconfig.RbLocalDB)
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
 		return nil
@@ -372,7 +372,7 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 
 }
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
-	db := NewDb(pos.EpLocalDB)
+	db := NewDb(posconfig.EpLocalDB)
 	if db == nil {
 		log.Error("GetEpochLeaderGroup create db error")
 		return nil

@@ -50,7 +50,7 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -647,12 +647,12 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	//}
 	curEpochId, curSlotId := slotleader.GetEpochSlotID()
 
-	if pos.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
-		hcur := cur - (cur % pos.SlotTime) + pos.SlotTime
+		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		header.Time = big.NewInt(int64(pos.EpochBaseTime + (curEpochId*pos.SlotCount+curSlotId)*pos.SlotTime))
+		header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
 	}
 
 	epochSlotId := uint64(1)
@@ -669,9 +669,9 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 
 	epochID := header.Difficulty.Uint64() >> 32
 	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
-	if epochID >= pos.IncentiveDelayEpochs && slotID > pos.IncentiveStartStage {
+	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
-		if !incentive.Run(chain, state, epochID-pos.IncentiveDelayEpochs, header.Number.Uint64()) {
+		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs, header.Number.Uint64()) {
 			log.Error("incentive.Run failed")
 		}
 		if !epochLeader.StakeOutRun(state, epochID) {
@@ -744,7 +744,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	//	fmt.Println("leaderPK:", leader)
 	//} else {
 	//	//genesis block miner publicKey
-	//	leader = pos.GenesisPK
+	//	leader = posconfig.GenesisPK
 	//}
 	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 	if err != nil {
@@ -755,10 +755,10 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		cur := uint64(time.Now().Unix())
 		sleepTime := uint64(0)
 		sealTime := uint64(0)
-		if pos.EpochBaseTime == 0 {
-			sealTime = header.Time.Uint64() + pos.SlotTime/2
+		if posconfig.EpochBaseTime == 0 {
+			sealTime = header.Time.Uint64() + posconfig.SlotTime/2
 		} else {
-			sealTime = pos.EpochBaseTime + pos.SlotTime/2 + (epochId*pos.SlotCount+slotId)*pos.SlotTime
+			sealTime = posconfig.EpochBaseTime + posconfig.SlotTime/2 + (epochId*posconfig.SlotCount+slotId)*posconfig.SlotTime
 		}
 		if cur < sealTime {
 			sleepTime = sealTime - cur

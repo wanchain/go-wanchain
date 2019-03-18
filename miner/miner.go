@@ -24,7 +24,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/crypto"
 
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/randombeacon"
 
@@ -92,13 +92,13 @@ func PosInit(s Backend, key *keystore.Key) *epochLeader.Epocher {
 
 	// config
 	if key != nil {
-		pos.Cfg().MinerKey = key
+		posconfig.Cfg().MinerKey = key
 	}
 
-	if pos.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil != h {
-			pos.EpochBaseTime = h.Time.Uint64()
+			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
 	}
 
@@ -126,13 +126,13 @@ func PosInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
 
 	// config
 	if key != nil {
-		pos.Cfg().MinerKey = key
+		posconfig.Cfg().MinerKey = key
 	}
 
-	if pos.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil != h {
-			pos.EpochBaseTime = h.Time.Uint64()
+			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
 	}
 	epocher := epochLeader.NewEpocher(s.BlockChain())
@@ -162,7 +162,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
 	epocher := PosInitMiner(s, key)
 	// get rpcClient
-	url := pos.Cfg().NodeCfg.IPCEndpoint()
+	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -179,13 +179,13 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		//fmt.Println(h)
 		if nil == h {
-			time.Sleep(pos.SlotTime * time.Second)
+			time.Sleep(posconfig.SlotTime * time.Second)
 			continue
 		} else {
-			pos.EpochBaseTime = h.Time.Uint64()
+			posconfig.EpochBaseTime = h.Time.Uint64()
 			cur := uint64(time.Now().Unix())
-			if cur < pos.EpochBaseTime+pos.SlotTime {
-				time.Sleep(time.Duration((pos.EpochBaseTime + pos.SlotTime - cur)) * time.Second)
+			if cur < posconfig.EpochBaseTime+posconfig.SlotTime {
+				time.Sleep(time.Duration((posconfig.EpochBaseTime + posconfig.SlotTime - cur)) * time.Second)
 			}
 		}
 
@@ -214,11 +214,11 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		// get state of k blocks ahead the last block
 		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
 		log.Info("get state ahead k blocks", "last block numer", lastBlockNum)
-		if lastBlockNum < uint64(pos.Cfg().K) {
-			lastBlockNum = uint64(pos.Cfg().K)
+		if lastBlockNum < uint64(posconfig.Cfg().K) {
+			lastBlockNum = uint64(posconfig.Cfg().K)
 		}
 
-		root := s.BlockChain().GetBlockByNumber(lastBlockNum - uint64(pos.Cfg().K)).Root()
+		root := s.BlockChain().GetBlockByNumber(lastBlockNum - uint64(posconfig.Cfg().K)).Root()
 		stateDb, err2 := s.BlockChain().StateAt(root)
 		if err2 != nil {
 			log.Error("Failed to get stateDb: ", err2)
@@ -227,7 +227,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
 		}
 		cur := uint64(time.Now().Unix())
-		sleepTime := pos.SlotTime - (cur - pos.EpochBaseTime - (epochid*pos.SlotCount+slotid)*pos.SlotTime)
+		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
 		fmt.Println("timeloop sleep: ", sleepTime)
 		select {
 		case <-self.timerStop:

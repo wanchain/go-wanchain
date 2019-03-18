@@ -10,7 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -20,7 +20,7 @@ import (
 
 // TestLoop use to test main loop
 // func TestLoop(t *testing.T) {
-// 	pos.SelfTestMode = true
+// 	posconfig.SelfTestMode = true
 // 	posdb.GetDb().DbInit("test")
 // 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
 // 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
@@ -315,14 +315,14 @@ func TestCRSave(t *testing.T) {
 func TestArraySave(t *testing.T) {
 
 	fmt.Printf("TestArraySave\n\n\n")
-	var sendtrans [pos.EpochLeaderCount]bool
+	var sendtrans [posconfig.EpochLeaderCount]bool
 	for index := range sendtrans {
 		sendtrans[index] = false
 	}
 	fmt.Println(sendtrans)
 
 	sendtrans[0] = true
-	sendtrans[pos.EpochLeaderCount-1] = true
+	sendtrans[posconfig.EpochLeaderCount-1] = true
 
 	bytes, err := rlp.EncodeToBytes(sendtrans)
 	if err != nil {
@@ -332,7 +332,7 @@ func TestArraySave(t *testing.T) {
 	db := posdb.NewDb("testArraySave")
 	db.Put(uint64(0), "TestArraySave", bytes)
 
-	var sendtransGet [pos.EpochLeaderCount]bool
+	var sendtransGet [posconfig.EpochLeaderCount]bool
 	bytesGet, err := db.Get(uint64(0), "TestArraySave")
 	if err != nil {
 		t.Error(err.Error())
@@ -345,13 +345,13 @@ func TestArraySave(t *testing.T) {
 }
 
 // func TestWholeFlow(t *testing.T) {
-// 	pos.SelfTestMode = true
+// 	posconfig.SelfTestMode = true
 
 // 	fmt.Println("\n=============whole flow==============================================")
 // 	// 1. build N PK for epoch leader and insert into DB
 // 	// 1.1 input genesis epoch leader group
 // 	PrivateKeys := make([]*ecdsa.PrivateKey, 0)
-// 	for i := 0; i < pos.EpochLeaderCount; i++ {
+// 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 // 		privateksample, err := crypto.GenerateKey()
 // 		if err != nil {
 // 			t.Fatal(err)
@@ -420,7 +420,7 @@ func TestArraySave(t *testing.T) {
 // 	}
 // 	// 2. read slot index from db
 // 	fmt.Println("\t===================Read slot leaders from local db========================================")
-// 	for i := 0; i < pos.SlotCount; i++ {
+// 	for i := 0; i < posconfig.SlotCount; i++ {
 // 		oneSlotBytes, err := posdb.GetDb().GetWithIndex(uint64(epochID+1), uint64(i), SlotLeader)
 // 		if err != nil {
 // 			fmt.Println(err.Error())

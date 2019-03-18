@@ -9,7 +9,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/vm"
 
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/poscommon"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -65,7 +65,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 		s.setWorkStage(epochID, slotLeaderSelectionStage1)
 	case slotLeaderSelectionStage1:
-		if slotID > (pos.Sma1End - 1) {
+		if slotID > (posconfig.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
 			break
@@ -83,11 +83,11 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
 		}
 	case slotLeaderSelectionStage2:
-		if slotID < (pos.Sma2Start + 1) {
+		if slotID < (posconfig.Sma2Start + 1) {
 			break
 		}
 
-		if slotID > (pos.Sma2End - 1) {
+		if slotID > (posconfig.Sma2End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			break
 		}
@@ -95,7 +95,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		go doStage2Work(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage3)
 	case slotLeaderSelectionStage3:
-		if slotID < pos.Sma3Start {
+		if slotID < posconfig.Sma3Start {
 			break
 		}
 

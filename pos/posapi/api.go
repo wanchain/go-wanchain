@@ -19,7 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/internal/ethapi"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
@@ -46,7 +46,7 @@ func (a PosApi) Version() string {
 
 func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
 	infoMap := make(map[string]string, 0)
-	for i := uint64(0); i < pos.SlotCount; i++ {
+	for i := uint64(0); i < posconfig.SlotCount; i++ {
 		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
 		if err != nil {
 			infoMap[fmt.Sprintf("%06d", i)] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", err.Error())
@@ -90,7 +90,7 @@ func (a PosApi) GetLocalPK() (string, error) {
 }
 
 func (a PosApi) GetBootNodePK() string {
-	return pos.GenesisPK
+	return posconfig.GenesisPK
 }
 
 func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
@@ -174,7 +174,7 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 		return 0, err
 	}
 	j := 0
-	for i := 0; i < pos.RandomProperCount; i++ {
+	for i := 0; i < posconfig.RandomProperCount; i++ {
 		sigData, err := vm.GetSig(state, epochId, uint32(i))
 		if err != nil {
 			return 0, err

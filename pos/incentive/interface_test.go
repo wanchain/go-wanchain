@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/consensus"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -57,7 +57,7 @@ func generateTestAddrs() {
 
 	for i := 0; i < addrsCount; i++ {
 		slAddrs[i] = epAddrs[i]
-		slBlks[i] = pos.SlotCount / addrsCount
+		slBlks[i] = posconfig.SlotCount / addrsCount
 	}
 }
 

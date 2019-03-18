@@ -3,7 +3,7 @@ package posdb
 import (
 	"encoding/hex"
 	"github.com/wanchain/go-wanchain/crypto"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"os"
 	"testing"
 )
@@ -59,17 +59,17 @@ func TestUint64Convert(t *testing.T) {
 func TestDbInitAll(t *testing.T) {
 	os.RemoveAll("/tmp/gwan")
 	DbInitAll("/tmp")
-	db := NewDb(pos.PosLocalDB)
+	db := NewDb(posconfig.PosLocalDB)
 	if db == nil {
 		t.Fail()
 	}
 
-	db = NewDb(pos.RbLocalDB)
+	db = NewDb(posconfig.RbLocalDB)
 	if db == nil {
 		t.Fail()
 	}
 
-	db = NewDb(pos.EpLocalDB)
+	db = NewDb(posconfig.EpLocalDB)
 	if db == nil {
 		t.Fail()
 	}
@@ -88,7 +88,7 @@ func TestDbInitAll(t *testing.T) {
 
 	go func() {
 		for i := 0; i < testCount; i++ {
-			db := NewDb(pos.PosLocalDB)
+			db := NewDb(posconfig.PosLocalDB)
 			db.PutWithIndex(0, uint64(i), "", keys[i])
 		}
 
@@ -111,7 +111,7 @@ func TestDbInitAll(t *testing.T) {
 
 	go func() {
 		for i := 0; i < testCount; i++ {
-			db := NewDb(pos.RbLocalDB)
+			db := NewDb(posconfig.RbLocalDB)
 			db.PutWithIndex(0, uint64(i), "", keys[i])
 		}
 
@@ -134,7 +134,7 @@ func TestDbInitAll(t *testing.T) {
 
 	go func() {
 		for i := 0; i < testCount; i++ {
-			db := NewDb(pos.EpLocalDB)
+			db := NewDb(posconfig.EpLocalDB)
 			db.PutWithIndex(0, uint64(i), "", keys[i])
 		}
 

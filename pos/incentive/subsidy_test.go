@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func TestCalcBaseSubsidy(t *testing.T) {
@@ -39,7 +39,7 @@ func TestCalcBaseSubsidy(t *testing.T) {
 func TestGetBaseSubsidyTotalForSlot(t *testing.T) {
 	statedb.Reset(common.Hash{})
 	year := big.NewInt(0).Mul(big.NewInt(2.1e6), big.NewInt(1e18))
-	base := calcBaseSubsidy(year, pos.SlotTime).Uint64()
+	base := calcBaseSubsidy(year, posconfig.SlotTime).Uint64()
 	for i := uint64(1); i < uint64(500); i++ {
 		fmt.Println(subsidyReductionInterval)
 		subsidy := getBaseSubsidyTotalForSlot(statedb, subsidyReductionInterval*i)

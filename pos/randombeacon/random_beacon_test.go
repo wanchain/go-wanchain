@@ -5,7 +5,7 @@ import (
 	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
 	"math/big"
@@ -73,7 +73,7 @@ func TestGetMyRBProposerId(t *testing.T) {
 	}
 
 	selfPrivate = key.PrivateKey3
-	pos.Cfg().MinerKey = &key
+	posconfig.Cfg().MinerKey = &key
 
 	commityPrivate, err = accBn256.GenerateBn256()
 	if err != nil {
@@ -118,7 +118,7 @@ func TestDoGenerateDKG(t *testing.T) {
 
 	selfPrivate = key.PrivateKey3
 	commityPrivate = selfPrivate
-	pos.Cfg().MinerKey = &key
+	posconfig.Cfg().MinerKey = &key
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
@@ -159,7 +159,7 @@ func TestDoGenerateDKG(t *testing.T) {
 		temp[j] = *dkg1Param.Commit[j]
 	}
 
-	if !wanpos.RScodeVerify(temp, x, int(pos.Cfg().PolymDegree)) {
+	if !wanpos.RScodeVerify(temp, x, int(posconfig.Cfg().PolymDegree)) {
 		t.Error("reed solomon verification fail")
 	}
 }

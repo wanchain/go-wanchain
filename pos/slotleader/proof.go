@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/crypto"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -37,11 +37,11 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	rbBytes := rbPtr.Bytes()
 
 	// build stage two and proof info
-	var validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
-	var stageTwoAlphaPKi [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
-	var stageTwoProof [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	var validEpochLeadersIndex [posconfig.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
+	var stageTwoAlphaPKi [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	var stageTwoProof [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		validEpochLeadersIndex[i] = true
 	}
 
@@ -52,7 +52,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		return false
 	}
 
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		if !indexesSentTran[i] {
 			validEpochLeadersIndex[i] = false
 			continue
@@ -63,7 +63,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			validEpochLeadersIndex[i] = false
 			continue
 		} else {
-			for j := 0; j < pos.EpochLeaderCount; j++ {
+			for j := 0; j < posconfig.EpochLeaderCount; j++ {
 				stageTwoAlphaPKi[i][j] = alphaPki[j]
 			}
 			for j := 0; j < StageTwoProofCount; j++ {
@@ -101,7 +101,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	for _, index := range publicKeyIndexes {
 
 		smaPieces := make([]*ecdsa.PublicKey, 0)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
+		for i := 0; i < posconfig.EpochLeaderCount; i++ {
 			if validEpochLeadersIndex[i] {
 				smaPieces = append(smaPieces, stageTwoAlphaPKi[i][index])
 			}
@@ -262,7 +262,7 @@ func (s *SlotLeaderSelection) verifySlotProofByGenesis(epochID uint64, slotID ui
 	for _, index := range publicKeyIndexes {
 
 		smaPieces := make([]*ecdsa.PublicKey, 0)
-		for i := 0; i < pos.EpochLeaderCount; i++ {
+		for i := 0; i < posconfig.EpochLeaderCount; i++ {
 			smaPieces = append(smaPieces, s.stageTwoAlphaPKiGenesis[i][index])
 		}
 
@@ -282,7 +282,7 @@ func (s *SlotLeaderSelection) verifySlotProofByGenesis(epochID uint64, slotID ui
 		skGt := new(ecdsa.PublicKey)
 		skGt.Curve = crypto.S256()
 
-		for i := 0; i < pos.EpochLeaderCount; i++ {
+		for i := 0; i < posconfig.EpochLeaderCount; i++ {
 			tempHash := crypto.Keccak256(temp)
 			tempBig := new(big.Int).SetBytes(tempHash)
 			cstemp := new(big.Int).Mod(tempBig, smaLen)

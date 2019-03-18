@@ -9,7 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 // Prepare a simulate stateDB ---------------------------------------------
@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 	testTimes := 1
 
 	for i := 0; i < testTimes; i++ {
-		for m := 0; m < pos.SlotCount; m++ {
+		for m := 0; m < posconfig.SlotCount; m++ {
 			if !Run(&TestChainReader{}, statedb, uint64(i), uint64(m)) {
 				t.FailNow()
 			}

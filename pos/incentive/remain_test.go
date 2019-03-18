@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func TestAddRemain(t *testing.T) {
@@ -35,7 +35,7 @@ func TestAddRemain(t *testing.T) {
 	fmt.Println(subsidy2.String(), float64(subsidy2.Uint64())/float64(1e18))
 
 	subsidy2 = subsidy2.Sub(subsidy2, subsidy)
-	totalRemain := subsidy.Mul(subsidy2, big.NewInt(0).SetUint64(subsidyReductionInterval*pos.SlotCount))
+	totalRemain := subsidy.Mul(subsidy2, big.NewInt(0).SetUint64(subsidyReductionInterval*posconfig.SlotCount))
 	fmt.Println(totalRemain.String())
 
 	subValue := remainDef.Sub(remainDef, totalRemain).Int64()

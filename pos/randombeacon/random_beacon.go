@@ -8,7 +8,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -203,7 +203,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
-	selfPk := pos.Cfg().GetMinerBn256PK()
+	selfPk := posconfig.Cfg().GetMinerBn256PK()
 	if selfPk == nil {
 		return nil
 	}
@@ -264,11 +264,11 @@ func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32) (*vm.RbD
 		return nil, err
 	}
 
-	poly := wanpos.RandPoly(int(pos.Cfg().PolymDegree), *s)
+	poly := wanpos.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
 	rb.polys[proposerId] = PolyInfo{poly, s}
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
-		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree))
+		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
 	}
 
 	// encrypt the secret share, i.e. multiply with the receiver's public key
@@ -351,7 +351,7 @@ func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32) (*vm.RbD
 	poly := rb.polys[proposerId].poly
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
-		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(pos.Cfg().PolymDegree))
+		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
 	}
 
 	// encrypt the secret share, i.e. multiply with the receiver's public key
@@ -400,7 +400,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 		return err
 	}
 
-	prikey := pos.Cfg().GetMinerBn256SK()
+	prikey := posconfig.Cfg().GetMinerBn256SK()
 	datas := make([]RbEnsDataCollector, 0)
 
 	for id, pk := range pks {
@@ -414,7 +414,7 @@ func (rb *RandomBeacon) doSIG(epochId uint64, proposerId uint32) error {
 
 	dkgCount := len(datas)
 	log.Info("collecte dkg", "count", dkgCount)
-	if uint(dkgCount) < pos.Cfg().RBThres {
+	if uint(dkgCount) < posconfig.Cfg().RBThres {
 		return errors.New("insufficient proposer")
 	}
 
@@ -492,7 +492,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 }
 
 func (rb *RandomBeacon) getTxFrom() common.Address {
-	return pos.Cfg().GetMinerAddr()
+	return posconfig.Cfg().GetMinerAddr()
 }
 
 func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {

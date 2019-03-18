@@ -19,14 +19,14 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 var (
 	safeK = uint64(1)
-	Nr    = pos.RandomProperCount //num of random proposers
-	Ne    = pos.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
+	Nr    = posconfig.RandomProperCount //num of random proposers
+	Ne    = posconfig.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
 
 	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
@@ -64,7 +64,7 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	}
 
 	if epocherInst == nil {
-		epocherInst = NewEpocherWithLBN(blc, pos.RbLocalDB, pos.EpLocalDB)
+		epocherInst = NewEpocherWithLBN(blc, posconfig.RbLocalDB, posconfig.EpLocalDB)
 	}
 
 	return epocherInst
@@ -255,7 +255,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+	//blkTime := epochId*(posconfig.SlotTime*posconfig.SlotCount) + posconfig.EpochBaseTime
 
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
@@ -475,7 +475,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 	if staker.PubSec256 == nil {
 		return nil, errors.New("staker has unregistered already")
 	}
-	//blkTime := epochId*(pos.SlotTime*pos.SlotCount) + pos.EpochBaseTime
+	//blkTime := epochId*(posconfig.SlotTime*posconfig.SlotCount) + posconfig.EpochBaseTime
 	pitem, err := e.generateProblility(&staker, epochId)
 	if err != nil {
 		return nil, err

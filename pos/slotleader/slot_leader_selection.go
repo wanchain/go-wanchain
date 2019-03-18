@@ -13,7 +13,7 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
@@ -64,22 +64,22 @@ type SlotLeaderSelection struct {
 	key                    *keystore.Key
 	stateDb                *state.StateDB
 	epochInstance          interface{}
-	slotLeadersPtrArray    [pos.SlotCount]*ecdsa.PublicKey
-	slotLeadersIndex       [pos.SlotCount]uint64
-	epochLeadersPtrArray   [pos.EpochLeaderCount]*ecdsa.PublicKey
-	validEpochLeadersIndex [pos.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
-	stageOneMi             [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKi       [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProof          [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	slotLeadersPtrArray    [posconfig.SlotCount]*ecdsa.PublicKey
+	slotLeadersIndex       [posconfig.SlotCount]uint64
+	epochLeadersPtrArray   [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	validEpochLeadersIndex [posconfig.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
+	stageOneMi             [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi       [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof          [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	slotCreateStatus       map[uint64]bool
 	blockChain             *core.BlockChain
 
-	epochLeadersPtrArrayGenesis [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageOneMiGenesis           [pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKiGenesis     [pos.EpochLeaderCount][pos.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProofGenesis        [pos.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+	epochLeadersPtrArrayGenesis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageOneMiGenesis           [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKiGenesis     [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProofGenesis        [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	randomGenesis               *big.Int
-	smaGenesis                  [pos.EpochLeaderCount]*ecdsa.PublicKey
+	smaGenesis                  [posconfig.EpochLeaderCount]*ecdsa.PublicKey
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -101,13 +101,13 @@ func GetEpochSlotID() (uint64, uint64) {
 	return curEpochId, curSlotId
 }
 func CalEpochSlotID() {
-	if pos.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 {
 		return
 	}
 	timeUnix := uint64(time.Now().Unix())
-	epochTimeSpan := uint64(pos.SlotTime * pos.SlotCount)
-	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimeSpan)
-	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
+	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
+	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
+	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 func (s *SlotLeaderSelection) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
@@ -121,7 +121,7 @@ func (s *SlotLeaderSelection) GetSlotCreateStatusByEpochID(epochID uint64) bool 
 
 func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	if epochID == 0 {
-		b, err := hex.DecodeString(pos.GenesisPK)
+		b, err := hex.DecodeString(posconfig.GenesisPK)
 		if err != nil {
 			return nil, slottools.ErrInvalidGenesisPk
 		}
@@ -131,10 +131,10 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 	if !ok {
 		return nil, slottools.ErrSlotLeaderGroupNotReady
 	}
-	if len(s.slotLeadersPtrArray) != pos.SlotCount {
+	if len(s.slotLeadersPtrArray) != posconfig.SlotCount {
 		return nil, slottools.ErrSlotLeaderGroupNotReady
 	}
-	if slotID >= pos.SlotCount {
+	if slotID >= posconfig.SlotCount {
 		return nil, slottools.ErrSlotIDOutOfRange
 	}
 	return s.slotLeadersPtrArray[slotID], nil
@@ -174,7 +174,7 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 }
 
 func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
-	var ret [pos.EpochLeaderCount]bool
+	var ret [posconfig.EpochLeaderCount]bool
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
 		return ret[:], err
@@ -251,7 +251,7 @@ func init() {
 		alphas = append(alphas, tempInt)
 	}
 
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 
 		// AlphaPK  stage1Genesis
 		mi0 := new(ecdsa.PublicKey)
@@ -270,7 +270,7 @@ func init() {
 		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
 		s.smaGenesis[i] = smaPiece
 
-		for j := 0; j < pos.EpochLeaderCount; j++ {
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
 			// AlphaIPki stage2Genesis
 			alphaIPkj := new(ecdsa.PublicKey)
 			alphaIPkj.Curve = crypto.S256()
@@ -296,7 +296,7 @@ func init() {
 }
 
 func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
-	if pos.SelfTestMode {
+	if posconfig.SelfTestMode {
 		ret := big.NewInt(123)
 		return ret, nil
 	}
@@ -322,7 +322,7 @@ func (s *SlotLeaderSelection) getLocalPrivateKey() (*ecdsa.PrivateKey, error) {
 
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
-	if pos.SelfTestMode {
+	if posconfig.SelfTestMode {
 		//test: generate test publicKey
 		epochLeaderAllBytes, err := posdb.GetDb().Get(epochID, EpochLeaders)
 		if err != nil {
@@ -385,11 +385,11 @@ func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.Pub
 }
 
 func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
-	pks := make([]*ecdsa.PublicKey, pos.EpochLeaderCount)
-	for i := 0; i < pos.EpochLeaderCount; i++ {
-		pkBuf, err := hex.DecodeString(pos.GenesisPK)
+	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
 		if err != nil {
-			panic("pos.GenesisPK is Error")
+			panic("posconfig.GenesisPK is Error")
 		}
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
@@ -454,13 +454,13 @@ func (s *SlotLeaderSelection) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
 
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArray[i] = nil
 		s.validEpochLeadersIndex[i] = true
 
 		s.stageOneMi[i] = nil
 
-		for j := 0; j < pos.EpochLeaderCount; j++ {
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
 			s.stageTwoAlphaPKi[i][j] = nil
 		}
 		for k := 0; k < StageTwoProofCount; k++ {
@@ -468,11 +468,11 @@ func (s *SlotLeaderSelection) clearData() {
 		}
 	}
 
-	for i := 0; i < pos.SlotCount; i++ {
+	for i := 0; i < posconfig.SlotCount; i++ {
 		s.slotLeadersPtrArray[i] = nil
 	}
 
-	for i := 0; i < pos.SlotCount; i++ {
+	for i := 0; i < posconfig.SlotCount; i++ {
 		s.slotLeadersIndex[i] = 0
 	}
 }
@@ -639,7 +639,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 		}
 	}
 
-	if len(epochLeadersPtrArray) != pos.EpochLeaderCount {
+	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
 	}
 
@@ -649,13 +649,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 			return slottools.ErrNotOnCurve
 		}
 	}
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
 			return slottools.ErrNotOnCurve
 		}
 	}
-	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), pos.SlotCount, epochID)
+	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
 	if err != nil {
 		log.Error("generateSlotLeadsGroup", "error", err.Error())
 		return err
@@ -739,7 +739,7 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 	if err != nil {
 		return slottools.ErrCollectTxData
 	}
-	for i := 0; i < pos.EpochLeaderCount; i++ {
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 
 		if !indexesSentTran[i] {
 			s.validEpochLeadersIndex[i] = false
@@ -753,11 +753,11 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			continue
 		}
 
-		if (len(alphaPki) != pos.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
+		if (len(alphaPki) != posconfig.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
 			log.Warn("GetStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
-			for j := 0; j < pos.EpochLeaderCount; j++ {
+			for j := 0; j < posconfig.EpochLeaderCount; j++ {
 				s.stageTwoAlphaPKi[i][j] = alphaPki[j]
 			}
 
@@ -831,7 +831,7 @@ func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) 
 func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, error) {
 	var selfPk *ecdsa.PublicKey
 	var err error
-	if pos.SelfTestMode {
+	if posconfig.SelfTestMode {
 		selfPk = s.epochLeadersPtrArray[selfIndex]
 	} else {
 		selfPk, err = s.getLocalPublicKey()

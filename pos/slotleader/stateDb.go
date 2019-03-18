@@ -5,7 +5,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/log"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 
 const (
 	// SafeBack2k is use to get a static safe block in 1k slots before
-	SafeBack2k = uint64(pos.SlotCount * 1 / 10)
+	SafeBack2k = uint64(posconfig.SlotCount * 1 / 10)
 )
 
 // GetCurrentStateDb use to get statedb instance of current state.
@@ -51,7 +51,7 @@ func (s *SlotLeaderSelection) updateStateDB() {
 	curNumber := s.blockChain.CurrentBlock().NumberU64()
 	curSlotID := uint64((s.blockChain.CurrentBlock().Difficulty().Int64() >> 8) & 0x00ffffff)
 
-	if uint64(curSlotID) < pos.Stage4K {
+	if uint64(curSlotID) < posconfig.Stage4K {
 		log.Debug("Current Slot ID is less than SlotStage1 (4k), do not use a SafeBack2k one, use last one")
 		s.updateToLastStateDb()
 		return

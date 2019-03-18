@@ -9,7 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
 
@@ -21,7 +21,7 @@ import (
 
 var (
 	redutionYears            = 5
-	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (pos.SlotTime * pos.SlotCount)) // Epoch count in 5 years
+	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (posconfig.SlotTime * posconfig.SlotCount)) // Epoch count in 5 years
 	percentOfEpochLeader     = 20                                                                         //20%
 	percentOfRandomProposer  = 20                                                                         //20%
 	percentOfSlotLeader      = 60                                                                         //60%
@@ -89,7 +89,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
-	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, pos.SlotCount)
+	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
 
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
@@ -119,7 +119,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, pos.SlotCount, epochID)
+	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount, epochID)
 	if err != nil {
 		log.Error("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
 		return false

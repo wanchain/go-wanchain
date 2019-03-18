@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/state"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 // calcBaseSubsidy calc the base subsidy of slot base on year. input is wei.
@@ -28,13 +28,13 @@ func calcBaseSubsidy(baseValueOfYear *big.Int, slotTime int64) *big.Int {
 func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int {
 	// 2100000 wan coin for first year
 	year := big.NewInt(0).Mul(big.NewInt(2.1e6), big.NewInt(1e18))
-	baseSubsidy := calcBaseSubsidy(year, pos.SlotTime)
+	baseSubsidy := calcBaseSubsidy(year, posconfig.SlotTime)
 	baseSubsidyReduction := big.NewInt(0).SetUint64(baseSubsidy.Uint64() >> (epochID / subsidyReductionInterval))
 	// If 5 years later, need add the remain incentive pool value of last 5 years
 	if (epochID / subsidyReductionInterval) >= 1 {
 		remainLast5Years := getRemainIncentivePool(stateDb, epochID)
 		remainLastPerYears := remainLast5Years.Div(remainLast5Years, big.NewInt(int64(redutionYears)))
-		baseRemain := calcBaseSubsidy(remainLastPerYears, pos.SlotTime)
+		baseRemain := calcBaseSubsidy(remainLastPerYears, posconfig.SlotTime)
 		baseSubsidyReduction.Add(baseSubsidyReduction, baseRemain)
 	}
 
@@ -44,7 +44,7 @@ func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int
 // calcWanFromFoundation returns subsidy Of Epoch from wan foundation by Wei
 func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
 	subsidyOfSlot := getBaseSubsidyTotalForSlot(stateDb, epochID)
-	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(pos.SlotCount))
+	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(posconfig.SlotCount))
 	return subsidyOfEpoch
 }
 

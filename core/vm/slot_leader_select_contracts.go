@@ -10,7 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
 
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
@@ -201,7 +201,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Sma1Start, pos.Sma1End) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx1Range
 	}
@@ -231,7 +231,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, pos.Sma2Start, pos.Sma2End) {
+	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, posconfig.Sma2Start, posconfig.Sma2End) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx2Range
 	}
@@ -311,7 +311,7 @@ func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) er
 	}
 
 	//mi
-	if len(mi) == 0 || len(alphaPkis) != pos.EpochLeaderCount {
+	if len(mi) == 0 || len(alphaPkis) != posconfig.EpochLeaderCount {
 		log.Error("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
 		return slottools.ErrInvalidTxLen
 	}
@@ -371,8 +371,8 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 }
 
 func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes string, index uint64) error {
-	var sendtrans [pos.EpochLeaderCount]bool
-	var sendtransGet [pos.EpochLeaderCount]bool
+	var sendtrans [posconfig.EpochLeaderCount]bool
+	var sendtransGet [posconfig.EpochLeaderCount]bool
 
 	key := getSlotLeaderStageIndexesKeyHash(epochID, slotLeaderStageIndexes)
 	bytes := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, key)

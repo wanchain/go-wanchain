@@ -11,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
@@ -94,7 +94,7 @@ type dummyCtDB struct {
 
 var (
 	nr = 21
-	thres = pos.Cfg().PolymDegree + 1
+	thres = posconfig.Cfg().PolymDegree + 1
 
 	db, _      = ethdb.NewMemDatabase()
 	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
@@ -475,23 +475,23 @@ func TestValidPosTx(t *testing.T) {
 
 func TestGetRBStage(t *testing.T) {
 	datas := [][]int{
-		{0, RbDkg1Stage, 0, int(2*pos.K-1)},
-		{9, RbDkg1Stage, 9, int(2*pos.K-10)},
+		{0, RbDkg1Stage, 0, int(2*posconfig.K-1)},
+		{9, RbDkg1Stage, 9, int(2*posconfig.K-10)},
 		{19, RbDkg1Stage, 19, 0},
-		{20, RbDkg1ConfirmStage, 0, int(2*pos.K-1)},
-		{29, RbDkg1ConfirmStage, 9, int(2*pos.K-10)},
+		{20, RbDkg1ConfirmStage, 0, int(2*posconfig.K-1)},
+		{29, RbDkg1ConfirmStage, 9, int(2*posconfig.K-10)},
 		{39, RbDkg1ConfirmStage, 19, 0},
-		{40, RbDkg2Stage, 0, int(2*pos.K-1)},
-		{49, RbDkg2Stage, 9, int(2*pos.K-10)},
+		{40, RbDkg2Stage, 0, int(2*posconfig.K-1)},
+		{49, RbDkg2Stage, 9, int(2*posconfig.K-10)},
 		{59, RbDkg2Stage, 19, 0},
-		{60, RbDkg2ConfirmStage, 0, int(2*pos.K-1)},
-		{69, RbDkg2ConfirmStage, 9, int(2*pos.K-10)},
+		{60, RbDkg2ConfirmStage, 0, int(2*posconfig.K-1)},
+		{69, RbDkg2ConfirmStage, 9, int(2*posconfig.K-10)},
 		{79, RbDkg2ConfirmStage, 19, 0},
-		{80, RbSignStage, 0, int(2*pos.K-1)},
-		{89, RbSignStage, 9, int(2*pos.K-10)},
+		{80, RbSignStage, 0, int(2*posconfig.K-1)},
+		{89, RbSignStage, 9, int(2*posconfig.K-10)},
 		{99, RbSignStage, 19, 0},
-		{100, RbSignConfirmStage, 0, int(2*pos.K-1)},
-		{109, RbSignConfirmStage, 9, int(2*pos.K-10)},
+		{100, RbSignConfirmStage, 0, int(2*posconfig.K-1)},
+		{109, RbSignConfirmStage, 9, int(2*posconfig.K-10)},
 		{119, RbSignConfirmStage, 19, 0},
 	}
 

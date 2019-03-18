@@ -17,7 +17,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
@@ -121,18 +121,18 @@ var (
 //	elapsed slots number of current stage;
 //	left slots number of current stage;
 func GetRBStage(slotId uint64) (int,int,int) {
-	if slotId <= pos.Cfg().Dkg1End {
-		return RbDkg1Stage, int(slotId), int(pos.Cfg().Dkg1End - slotId)
-	} else if slotId < pos.Cfg().Dkg2Begin {
-		return RbDkg1ConfirmStage, int(slotId - pos.Cfg().Dkg1End - 1), int(pos.Cfg().Dkg2Begin - slotId - 1)
-	} else if slotId <= pos.Cfg().Dkg2End {
-		return RbDkg2Stage, int(slotId - pos.Cfg().Dkg2Begin), int(pos.Cfg().Dkg2End - slotId)
-	} else if slotId < pos.Cfg().SignBegin {
-		return RbDkg2ConfirmStage, int(slotId - pos.Cfg().Dkg2End - 1), int(pos.Cfg().SignBegin - slotId - 1)
-	} else if slotId <= pos.Cfg().SignEnd {
-		return RbSignStage, int(slotId - pos.Cfg().SignBegin), int(pos.Cfg().SignEnd - slotId)
+	if slotId <= posconfig.Cfg().Dkg1End {
+		return RbDkg1Stage, int(slotId), int(posconfig.Cfg().Dkg1End - slotId)
+	} else if slotId < posconfig.Cfg().Dkg2Begin {
+		return RbDkg1ConfirmStage, int(slotId - posconfig.Cfg().Dkg1End - 1), int(posconfig.Cfg().Dkg2Begin - slotId - 1)
+	} else if slotId <= posconfig.Cfg().Dkg2End {
+		return RbDkg2Stage, int(slotId - posconfig.Cfg().Dkg2Begin), int(posconfig.Cfg().Dkg2End - slotId)
+	} else if slotId < posconfig.Cfg().SignBegin {
+		return RbDkg2ConfirmStage, int(slotId - posconfig.Cfg().Dkg2End - 1), int(posconfig.Cfg().SignBegin - slotId - 1)
+	} else if slotId <= posconfig.Cfg().SignEnd {
+		return RbSignStage, int(slotId - posconfig.Cfg().SignBegin), int(posconfig.Cfg().SignEnd - slotId)
 	} else {
-		return RbSignConfirmStage, int(slotId - pos.Cfg().SignEnd - 1), int(pos.SlotCount - slotId - 1)
+		return RbSignConfirmStage, int(slotId - posconfig.Cfg().SignEnd - 1), int(posconfig.SlotCount - slotId - 1)
 	}
 }
 
@@ -294,7 +294,7 @@ func validDkg1(statedb StateDB, time uint64, caller common.Address,
 		temp[j] = *dkg1Param.Commit[j]
 	}
 
-	if !wanpos.RScodeVerify(temp, x, int(pos.Cfg().PolymDegree)) {
+	if !wanpos.RScodeVerify(temp, x, int(posconfig.Cfg().PolymDegree)) {
 		return nil, logError(errRSCode)
 	}
 
@@ -403,7 +403,7 @@ func validSigShare(statedb StateDB, time uint64, caller common.Address,
 		}
 	}
 
-	if uint(len(dkgData)) < pos.Cfg().RBThres {
+	if uint(len(dkgData)) < posconfig.Cfg().RBThres {
 		return nil, nil, nil, logError(buildError("insufficient proposer", eid, pid))
 	}
 
@@ -903,7 +903,7 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 	// calc r if not exist
 	sigNum := getSigsNum(eid, evm) + 1
 	setSigsNum(eid, sigNum, evm)
-	if uint(sigNum) >= pos.Cfg().RBThres {
+	if uint(sigNum) >= posconfig.Cfg().RBThres {
 		r, err := computeRandom(evm.StateDB, eid, dkgData, pks)
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
@@ -940,7 +940,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 		}
 	}
 
-	if uint(len(sigDatas)) < pos.Cfg().RBThres {
+	if uint(len(sigDatas)) < posconfig.Cfg().RBThres {
 		return nil, logError(errors.New("insufficient proposer"))
 	}
 
@@ -952,7 +952,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 	}
 
 	// Compute the Output of Random Beacon
-	gsig := wanpos.LagrangeSig(gSigShare, xSig, int(pos.Cfg().PolymDegree))
+	gsig := wanpos.LagrangeSig(gSigShare, xSig, int(posconfig.Cfg().PolymDegree))
 	random := crypto.Keccak256(gsig.Marshal())
 
 	// Verification Logic for the Output of Random Beacon
@@ -971,7 +971,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 		xAll[i].SetBytes(GetPolynomialX(&pks[i], uint32(i)))
 		xAll[i].Mod(&xAll[i], bn256.Order)
 	}
-	gPub := wanpos.LagrangePub(c, xAll, int(pos.Cfg().PolymDegree))
+	gPub := wanpos.LagrangePub(c, xAll, int(posconfig.Cfg().PolymDegree))
 
 	// mG
 	mBuf, err := getRBMVar(statedb, epochId)
