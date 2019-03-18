@@ -558,7 +558,7 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	}
 
 	ret := make([]byte, 4+len(payloadBytes))
-	copy(ret, vm.GetSigshareId())
+	copy(ret, vm.GetSigShareId())
 	copy(ret[4:], payloadBytes)
 
 	return ret, nil

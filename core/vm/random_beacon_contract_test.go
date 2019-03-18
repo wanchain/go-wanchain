@@ -178,7 +178,7 @@ func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [
 	for i := 0; i < nr; i++ {
 		proof[i] = make([]wanpos.DLEQproof, nr, nr)
 		for j := 0; j < nr; j++ { // proof = (a1, a2, z)
-			proof[i][j] = wanpos.DLEQ(Pubkey[j], *hbase, &sshare[i][j])
+			proof[i][j] = wanpos.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
 		}
 	}
 
@@ -207,11 +207,11 @@ func prepareSig(Prikey []big.Int, enshare [][]*bn256.G1) ([]*bn256.G1)  {
 	m := new(big.Int).SetBytes(M)
 
 	// Compute signature share
-	gsigshare := make([]*bn256.G1, nr)
+	gSigShare := make([]*bn256.G1, nr)
 	for i := 0; i < nr; i++ { // signature share = M * secret key share
-		gsigshare[i] = new(bn256.G1).ScalarMult(&gskshare[i], m)
+		gSigShare[i] = new(bn256.G1).ScalarMult(&gskshare[i], m)
 	}
-	return gsigshare
+	return gSigShare
 }
 
 func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
@@ -299,7 +299,7 @@ func buildDkg2(payloadBytes [] byte) []byte {
 }
 func buildSig(payloadBytes [] byte) []byte {
 	payload := make([]byte, 4+len(payloadBytes))
-	copy(payload, GetSigshareId())
+	copy(payload, GetSigShareId())
 	copy(payload[4:], payloadBytes)
 	return payload
 }
@@ -373,14 +373,14 @@ func TestRBSig(t *testing.T)  {
 	TestRBDkg2(t)
 	gsigshareA := prepareSig(pris, enshareA)
 	for i := 0; i < nr; i++ {
-		var sigshareParam RbSIGTxPayload
-		sigshareParam.EpochId = rbepochId
-		sigshareParam.ProposerId = uint32(i)
-		sigshareParam.Gsigshare = gsigshareA[i]
+		var sigShareParam RbSIGTxPayload
+		sigShareParam.EpochId = rbepochId
+		sigShareParam.ProposerId = uint32(i)
+		sigShareParam.Gsigshare = gsigshareA[i]
 
-		payloadBytes, _ := rlp.EncodeToBytes(sigshareParam)
+		payloadBytes, _ := rlp.EncodeToBytes(sigShareParam)
 		payload := buildSig(payloadBytes)
-		hash := GetRBKeyHash(sigshareId[:], sigshareParam.EpochId, sigshareParam.ProposerId)
+		hash := GetRBKeyHash(sigShareId[:], sigShareParam.EpochId, sigShareParam.ProposerId)
 
 		_, err := rbcontract.Run(payload, rbcontractParam, evm)
 		if err != nil {
@@ -451,12 +451,12 @@ func TestValidPosTx(t *testing.T) {
 
 	gsigshareA := prepareSig(pris, enshareA)
 	for i := 0; i < nr; i++ {
-		var sigshareParam RbSIGTxPayload
-		sigshareParam.EpochId = rbepochId
-		sigshareParam.ProposerId = uint32(i)
-		sigshareParam.Gsigshare = gsigshareA[i]
+		var sigShareParam RbSIGTxPayload
+		sigShareParam.EpochId = rbepochId
+		sigShareParam.ProposerId = uint32(i)
+		sigShareParam.Gsigshare = gsigshareA[i]
 
-		payloadBytes, _ := rlp.EncodeToBytes(sigshareParam)
+		payloadBytes, _ := rlp.EncodeToBytes(sigShareParam)
 		payload := buildSig(payloadBytes)
 
 		intrGas := intrinsicGas(payload, false, true)

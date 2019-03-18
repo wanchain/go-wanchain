@@ -25,7 +25,7 @@
         "type": "bytes32[]"
       }
     ],
-    "name": "sigshare",
+    "name": "sigShare",
     "outputs": [],
     "payable": false,
     "type": "function",
