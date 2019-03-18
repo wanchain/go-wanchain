@@ -121,18 +121,6 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'getSlotErrorCount',
-			call: 'pos_getSlotErrorCount',
-			params: 0
-		}),
-
-		new web3._extend.Method({
-			name: 'getSlotWarnCount',
-			call: 'pos_getSlotWarnCount',
-			params: 0
-		}),
-
-		new web3._extend.Method({
 			name: 'getSlotLeadersByEpochID',
 			call: 'pos_getSlotLeadersByEpochID',
 			params: 1

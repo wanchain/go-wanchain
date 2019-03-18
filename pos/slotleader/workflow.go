@@ -23,10 +23,9 @@ import (
 )
 
 var (
-	ErrInvalidCommitParameter = errors.New("Invalid input parameters")
+	errInvalidCommitParameter = errors.New("Invalid input parameters")
 )
 
-//--------------Workflow functions-------------------------------------------------------------
 // Init can set import info for slotleader at startup
 func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
 	s.blockChain = blockChain
@@ -38,9 +37,9 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 	}
 }
 
-//Loop check work every 10 second. Called by backend loop
-//It's all slotLeaderSelection's main workflow loop
-//It's not loop at all, it is loop called by backend
+//Loop check work every Slot time. Called by backend loop.
+//It's all slotLeaderSelection's main workflow loop.
+//It does not loop at all, it is loop called by the backend.
 func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
 	s.rc = rc
 	s.key = key
@@ -78,7 +77,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		err := s.startStage1Work()
 		if err != nil {
 			log.Error(err.Error())
-			ErrorCountAdd()
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
@@ -93,7 +91,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			break
 		}
 
-		go DoStage2Work(epochID)
+		go doStage2Work(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage3)
 	case slotLeaderSelectionStage3:
 		if slotID < pos.Sma3Start {
@@ -103,7 +101,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		err := s.generateSecurityMsg(epochID, s.key.PrivateKey)
 		if err != nil {
 			log.Warn(err.Error())
-			WarnCountAdd()
 		} else {
 			log.Info("generateSecurityMsg SMA success!")
 		}
@@ -151,12 +148,11 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 	return nil
 }
 
-func DoStage2Work(epochID uint64) {
+func doStage2Work(epochID uint64) {
 	s := GetSlotLeaderSelection()
 	err := s.startStage2Work()
 	if err != nil {
 		log.Error(err.Error())
-		ErrorCountAdd()
 	}
 }
 
@@ -192,7 +188,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
-		return nil, ErrInvalidCommitParameter
+		return nil, errInvalidCommitParameter
 	}
 
 	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {

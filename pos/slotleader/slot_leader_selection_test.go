@@ -316,7 +316,7 @@ func TestArraySave(t *testing.T) {
 
 	fmt.Printf("TestArraySave\n\n\n")
 	var sendtrans [pos.EpochLeaderCount]bool
-	for index, _ := range sendtrans {
+	for index := range sendtrans {
 		sendtrans[index] = false
 	}
 	fmt.Println(sendtrans)
