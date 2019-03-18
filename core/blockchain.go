@@ -27,9 +27,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/golang-lru"
-	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -144,7 +142,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		forkMem:	  NewForkMemBlockChain(BLOCKCHAIN),
+		forkMem:	  NewForkMemBlockChain(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -909,30 +907,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // wrong.
 //
 // After insertion is done, all accumulated events will be fired.
-func (bc *BlockChain) InsertChainWithBuffer(chain types.Blocks) (int, error) {
-
-	chain,err := bc.forkMem.Maxvalid(bc.CurrentBlock())
-	if err != nil || chain == nil {
-		fmt.Println("maxvalid error",err)
-		return 0,err
-	}
-
-	//insert here
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
-
-	if err!=nil {
-		bc.forkMem.PrintAllBffer()
-		fmt.Println("maxValid \n\n")
-		for _,blk := range chain {
-
-			fmt.Println("blkNum=",blk.NumberU64()," hash=",common.ToHex(blk.Hash().Bytes()))
-		}
-	}
-
-	return n, err
-}
-
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
@@ -1259,7 +1233,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	}
 
 
-
 	// Ensure the user sees large reorgs
 	if len(oldChain) > 0 && len(newChain) > 0 {
 		logFn := log.Debug
@@ -1292,7 +1265,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		// insert the block in the canonical way, re-writing history
 		bc.insert(block)
 
-		fmt.Println(block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
+		log.Debug("blockchain reorg",block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 			return err
