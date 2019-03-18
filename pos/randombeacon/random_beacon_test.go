@@ -1,12 +1,14 @@
 package randombeacon
 
 import (
+	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/pos/wanpos_crypto"
+	"math/big"
 	"testing"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/go-wanchain/pos"
 	"github.com/wanchain/go-wanchain/core/vm"
 )
 
@@ -27,9 +29,9 @@ func TestInit(t *testing.T) {
 		t.Error("generate bn256 fail, ", err)
 	}
 
-	rb.Init(&epocher, &key)
+	rb.Init(&epocher)
 
-	if rb.epochStage != vm.RbDkgStage {
+	if rb.epochStage != vm.RbDkg1Stage {
 		t.Error("invalid epoch stage")
 	}
 
@@ -41,10 +43,6 @@ func TestInit(t *testing.T) {
 		t.Error("invalid init statedb")
 	}
 
-	if rb.key != &key {
-		t.Error("invalid rb key")
-	}
-
 	if rb.epocher != &epocher {
 		t.Error("invalid rb epocher")
 	}
@@ -52,16 +50,7 @@ func TestInit(t *testing.T) {
 	if rb.rpcClient != nil {
 		t.Error("invalid rb rpc client")
 	}
-
-	if pos.Cfg().MinerSK.Cmp(key.PrivateKey3.D) != 0 {
-		t.Error("invalid self private key")
-	}
-
-	if pos.Cfg().MinerPK.String() != key.PrivateKey3.PublicKeyBn256.G1.String() {
-		t.Error("invalid self public key")
-	}
 }
-
 
 func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
 	ret := make([]bn256.G1, proposerGroupLen)
@@ -84,12 +73,14 @@ func TestGetMyRBProposerId(t *testing.T) {
 	}
 
 	selfPrivate = key.PrivateKey3
+	pos.Cfg().MinerKey = &key
+
 	commityPrivate, err = accBn256.GenerateBn256()
 	if err != nil {
 		t.Error("generate bn256 fail, ", err)
 	}
 
-	rb.Init(&epocher, &key)
+	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 
 	ids := rb.getMyRBProposerId(0)
@@ -127,12 +118,14 @@ func TestDoGenerateDKG(t *testing.T) {
 
 	selfPrivate = key.PrivateKey3
 	commityPrivate = selfPrivate
-	rb.Init(&epocher, &key)
+	pos.Cfg().MinerKey = &key
+
+	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 
 	epochId := uint64(0)
 	proposerId := uint32(0)
-	payload, err := rb.generateDKG(epochId, proposerId)
+	payload, err := rb.generateDKG1(epochId, proposerId)
 	if err != nil {
 		t.Fatal("rb generate dkg info fail. err:", err)
 	}
@@ -146,11 +139,29 @@ func TestDoGenerateDKG(t *testing.T) {
 		t.Error("invalid epochId proposerId")
 	}
 
-	if len(payload.Enshare) != len(payload.Commit) || len(payload.Enshare) != len(payload.Proof) {
-		t.Fatal("invalid enshare commit and proof len. len enshare:", len(payload.Enshare), ", len commit:", len(payload.Commit), ", len proof:", len(payload.Proof))
+	// Reed-Solomon code verification
+	dkg1Param, err := vm.Dkg1FlatToDkg1(payload)
+	if err != nil {
+		t.Error("trans dkg1flat to dkg1 fail. err:", err)
 	}
 
+	pks := rb.getRBProposerGroup(epochId)
+	nr := len(pks)
 
+	x := make([]big.Int, nr)
+	for i := 0; i < nr; i++ {
+		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		x[i].Mod(&x[i], bn256.Order)
+	}
+
+	temp := make([]bn256.G2, nr)
+	for j := 0; j < nr; j++ {
+		temp[j] = *dkg1Param.Commit[j]
+	}
+
+	if !wanpos.RScodeVerify(temp, x, int(pos.Cfg().PolymDegree)) {
+		t.Error("reed solomon verification fail")
+	}
 }
 
 //func TestGetRBDKGTxPayloadBytes(t *testing.T) {
