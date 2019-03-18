@@ -21,7 +21,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -38,8 +37,6 @@ const (
 	EpochLeaders       = "epochLeaders"
 	SecurityMsg        = "securityMsg"
 	CR                 = "cr"
-	RandFromProposer   = "randFromProposer"
-	RandomSeqs         = "randomSeqs"
 	SlotLeader         = "slotLeader"
 )
 
@@ -58,8 +55,6 @@ const (
 )
 
 var (
-	wanCscPrecompileAddr = common.BytesToAddress(big.NewInt(210).Bytes())
-
 	errorRetry = 3
 	ErrorCount = uint64(0)
 	WarnCount  = uint64(0)
@@ -106,13 +101,9 @@ func init() {
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
 	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
-
 	slottools.SetSlotLeaderInst(slotLeaderSelection)
-
 	s := slotLeaderSelection
-	//genesis random
 	s.randomGenesis = big.NewInt(1)
-	//genesis epoch leaders
 	epoch0Leaders := s.getEpoch0LeadersPK()
 	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
@@ -169,14 +160,10 @@ func init() {
 
 }
 
-//GetSlotLeaderSelection get the SlotLeaderSelection's object
 func GetSlotLeaderSelection() *SlotLeaderSelection {
 	return slotLeaderSelection
 }
 
-//---------------Information get/set functions--------------------------------------------
-
-//getAlpha get alpha of epochID
 func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
 	if pos.SelfTestMode {
 		ret := big.NewInt(123)
@@ -191,7 +178,6 @@ func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.I
 	return alpha, nil
 }
 
-//getLocalPublicKey get local public key from memory keystore
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	if s.key == nil {
 		return nil, slottools.ErrInvalidLocalPublicKey
@@ -226,10 +212,8 @@ func CalEpochSlotID() {
 	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
-//getEpochLeaders get epochLeaders of epochID in StateDB
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 	//test := false
-	//test := true
 	if pos.SelfTestMode {
 		//test: generate test publicKey
 		epochLeaderAllBytes, err := posdb.GetDb().Get(epochID, EpochLeaders)
@@ -308,7 +292,7 @@ func (s *SlotLeaderSelection) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	return pks
 }
 
-// isLocalPkInPreEpochLeaders check if local pk is in pre generate epoch leader.
+// isLocalPkInPreEpochLeaders check if local pk is in pre epoch leader.
 // If get pre epoch leader length is 0, return true,err to use epoch 0 info
 func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
 
@@ -364,10 +348,7 @@ func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error 
 }
 
 func (s *SlotLeaderSelection) clearData() {
-	// s.slotCreateStatus = make(map[uint64]bool)
-	// clear Array
 	s.epochLeadersArray = make([]string, 0)
-	// clear map
 	s.epochLeadersMap = make(map[string][]uint64)
 
 	for i := 0; i < pos.EpochLeaderCount; i++ {
@@ -464,6 +445,11 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Enter()
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
+	if data == nil {
+		log.Error("SlotLeaderSelection", "buildEpochLeaderGroup", "no epoch leaders", "epochID", epochID)
+		panic("No epoch leaders")
+		return
+	}
 	for index, value := range data {
 		s.epochLeadersArray = append(s.epochLeadersArray, hex.EncodeToString(value))
 		s.epochLeadersMap[hex.EncodeToString(value)] = append(s.epochLeadersMap[hex.EncodeToString(value)], uint64(index))
@@ -566,7 +552,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	if err != nil {
 		return slottools.ErrInvalidRandom
 	}
-	log.Info("generateSlotLeadsGroup", "Random got", hex.EncodeToString(random.Bytes()))
+	log.Debug("generateSlotLeadsGroup", "Random got", hex.EncodeToString(random.Bytes()))
 
 	// return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
@@ -783,8 +769,6 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		return err
 	}
 
-	log.Info("generateSecurityMsg", "len(ArrayPiece)", len(ArrayPiece))
-
 	smasPtr := make([]*ecdsa.PublicKey, 0)
 	var smasBytes bytes.Buffer
 
@@ -802,9 +786,6 @@ func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ec
 		log.Warn("generateSecurityMsg:Put", "error", err.Error())
 		return err
 	}
-
-	log.Info("generateSecurityMsg Generate SMA Success.", "epochID+1", epochID+1, "len(SMA)", len(smasPtr))
-
 	return nil
 }
 
