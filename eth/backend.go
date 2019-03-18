@@ -32,6 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/clique"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/bloombits"
@@ -216,11 +217,11 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		return clique.New(chainConfig.Clique, db)
 	}
 	if chainConfig.Pluto != nil {
-		var cliqueCfg params.CliqueConfig
-		chainConfig.Clique = &cliqueCfg
-		chainConfig.Clique.Period = chainConfig.Pluto.Period
-		chainConfig.Clique.Epoch = chainConfig.Pluto.Epoch
-		return clique.New(chainConfig.Clique, db)
+		var plutoCfg params.PlutoConfig
+		chainConfig.Pluto = &plutoCfg
+		chainConfig.Pluto.Period = chainConfig.Pluto.Period
+		chainConfig.Pluto.Epoch = chainConfig.Pluto.Epoch
+		return pluto.New(chainConfig.Pluto, db)
 	}
 	// Otherwise assume proof-of-work
 	switch {
@@ -340,6 +341,14 @@ func (s *Ethereum) StartMining(local bool) error {
 			log.Error("Etherbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
+		clique.Authorize(eb, wallet.SignHash)
+	}
+	if pluto, ok := s.engine.(*pluto.Pluto); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
 		//------------Get local unlock publicKey
 		type getKey interface {
 			GetUnlockedKey(address common.Address) (*keystore.Key, error)
@@ -349,7 +358,7 @@ func (s *Ethereum) StartMining(local bool) error {
 			panic(err)
 		}
 		//------------
-		clique.Authorize(eb, wallet.SignHash, key)
+		pluto.Authorize(eb, wallet.SignHash, key)
 	}
 
 	if ethash, ok := s.engine.(*ethash.Ethash); ok {

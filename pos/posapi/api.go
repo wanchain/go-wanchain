@@ -200,22 +200,23 @@ type stakerInfo struct {
 	totalProbability *big.Int
 }
 
-//func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (stakerInfo, error) {
-//	skInfo := stakerInfo{}
-//	epocherInst := epochLeader.GetEpocher()
-//	if epocherInst == nil {
-//		return skInfo, errors.New("epocher instance do not exist")
-//	}
-//	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
-//	if err != nil {
-//		return skInfo, err
-//	}
-//	skInfo.totalProbability = total
-//	skInfo.feeRate = feeRate
-//	skInfo.infors = infors
-//	return skInfo, nil
-//}
+func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (stakerInfo, error) {
+	skInfo := stakerInfo{}
+	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return skInfo, errors.New("epocher instance do not exist")
+	}
+	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
+	if err != nil {
+		return skInfo, err
+	}
+	skInfo.totalProbability = total
+	skInfo.feeRate = feeRate
+	skInfo.infors = infors
+	return skInfo, nil
+}
 
+// this is the static snap of stekers by the block Number.
 func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
 	stakers := make([]vm.StakerInfo, 0)
 	epocherInst := epochLeader.GetEpocher()
@@ -227,7 +228,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
 	if err != nil {
 		return stakers, err
 	}
-	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr,  func(key common.Hash, value []byte) bool {
+	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
 
 		staker := vm.StakerInfo{}
 		err := json.Unmarshal(value, &staker)
