@@ -1,20 +1,20 @@
 package randombeacon
 
 import (
-	"github.com/wanchain/go-wanchain/pos"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
+	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"
 	"math/big"
 	"testing"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/go-wanchain/core/vm"
 )
 
-var(
-	selfPrivate *accBn256.PrivateKeyBn256
-	commityPrivate *accBn256.PrivateKeyBn256
+var (
+	selfPrivate      *accBn256.PrivateKeyBn256
+	commityPrivate   *accBn256.PrivateKeyBn256
 	proposerGroupLen = 10
 )
 
@@ -177,14 +177,3 @@ func TestDoGenerateDKG(t *testing.T) {
 //
 //
 //}
-
-
-
-
-
-
-
-
-
-
-

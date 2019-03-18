@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 // calcBaseSubsidy calc the base subsidy of slot base on year. input is wei.

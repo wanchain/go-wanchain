@@ -8,7 +8,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {

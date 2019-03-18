@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/vm"

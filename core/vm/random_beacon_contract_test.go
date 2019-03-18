@@ -11,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/cloudflare"
 	"github.com/wanchain/pos/wanpos_crypto"

@@ -9,7 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 
-	"github.com/wanchain/go-wanchain/pos"
+	pos "github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/pos/postools"
 
