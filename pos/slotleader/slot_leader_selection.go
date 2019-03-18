@@ -5,10 +5,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/postools"
 	"math/big"
 	"time"
-
-	"github.com/wanchain/go-wanchain/pos/postools"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -29,9 +28,7 @@ import (
 )
 
 //CompressedPubKeyLen means a compressed public key byte len.
-const CompressedPubKeyLen = 33
 const lengthPublicKeyBytes = 65
-
 const (
 	StageTwoProofCount = 2
 	EpochLeaders       = "epochLeaders"
@@ -39,23 +36,22 @@ const (
 	CR                 = "cr"
 	SlotLeader         = "slotLeader"
 )
-
 const (
 	slotLeaderSelectionInit = iota + 1 //1
 	//Ready to start slot leader selection stage1
 	slotLeaderSelectionStage1 = iota + 1 //2
-
 	//Slot leader selection stage1 finish
-	slotLeaderSelectionStage2 = iota + 1 //3
-
-	slotLeaderSelectionStage3 = iota + 1 //4
-
+	slotLeaderSelectionStage2        = iota + 1 //3
+	slotLeaderSelectionStage3        = iota + 1 //4
 	slotLeaderSelectionStageFinished = iota + 1 //5
-
 )
 
 var (
 	errorRetry = 3
+)
+var (
+	curEpochId = uint64(0)
+	curSlotId  = uint64(0)
 )
 
 //SlotLeaderSelection use to select unique slot leader
@@ -86,13 +82,154 @@ type SlotLeaderSelection struct {
 	smaGenesis                  [pos.EpochLeaderCount]*ecdsa.PublicKey
 }
 
+var slotLeaderSelection *SlotLeaderSelection
+
 // Pack is use to pack info for slot proof
 type Pack struct {
 	Proof    [][]byte
 	ProofMeg [][]byte
 }
 
-var slotLeaderSelection *SlotLeaderSelection
+func GetSlotLeaderSelection() *SlotLeaderSelection {
+	return slotLeaderSelection
+}
+func (s *SlotLeaderSelection) GetLocalPublicKey() (*ecdsa.PublicKey, error) {
+	return s.getLocalPublicKey()
+}
+
+func GetEpochSlotID() (uint64, uint64) {
+	return curEpochId, curSlotId
+}
+func CalEpochSlotID() {
+	if pos.EpochBaseTime == 0 {
+		return
+	}
+	timeUnix := uint64(time.Now().Unix())
+	epochTimeSpan := uint64(pos.SlotTime * pos.SlotCount)
+	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimeSpan)
+	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
+	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
+}
+func (s *SlotLeaderSelection) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
+	return s.getEpochLeadersPK(epochID)
+}
+
+func (s *SlotLeaderSelection) GetSlotCreateStatusByEpochID(epochID uint64) bool {
+	_, ok := s.slotCreateStatus[epochID]
+	return ok
+}
+
+func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
+	if epochID == 0 {
+		b, err := hex.DecodeString(pos.GenesisPK)
+		if err != nil {
+			return nil, slottools.ErrInvalidGenesisPk
+		}
+		return crypto.ToECDSAPub(b), nil
+	}
+	_, ok := s.slotCreateStatus[epochID]
+	if !ok {
+		return nil, slottools.ErrSlotLeaderGroupNotReady
+	}
+	if len(s.slotLeadersPtrArray) != pos.SlotCount {
+		return nil, slottools.ErrSlotLeaderGroupNotReady
+	}
+	if slotID >= pos.SlotCount {
+		return nil, slottools.ErrSlotIDOutOfRange
+	}
+	return s.slotLeadersPtrArray[slotID], nil
+}
+
+// GetSma uses to get SMA information of the epoch.
+func (s *SlotLeaderSelection) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
+	return s.getSMAPieces(epochID)
+}
+
+func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
+	stateDb, err := s.getCurrentStateDb()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
+
+	keyHash := vm.GetSlotLeaderStage2KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(selfIndex))
+
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if data == nil {
+		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+		return nil, nil, slottools.ErrNoTx2TransInDB
+	}
+
+	epID, slfIndex, _, alphaPki, proof, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if epID != epochID || slfIndex != selfIndex {
+		return nil, nil, slottools.ErrRlpUnpackErr
+	}
+
+	return alphaPki, proof, nil
+}
+
+func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
+	var ret [pos.EpochLeaderCount]bool
+	stateDb, err := s.getCurrentStateDb()
+	if err != nil {
+		return ret[:], err
+	}
+
+	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
+
+	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(posdb.Uint64ToBytes(epochID))
+
+	log.Debug(fmt.Sprintf("GetSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+
+	if data == nil {
+		return ret[:], slottools.ErrNoTx2TransInDB
+	}
+
+	err = rlp.DecodeBytes(data, &ret)
+	if err != nil {
+		return ret[:], slottools.ErrNoTx2TransInDB
+	}
+	return ret[:], nil
+}
+
+// GetStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length un compress format
+func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
+	stateDb, err := s.getCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
+	keyHash := vm.GetSlotLeaderStage1KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(index))
+
+	// Read and Verify
+	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if readBuf == nil {
+		return nil, slottools.ErrNoTx1TransInDB
+	}
+
+	epID, idxID, miPoint, err := slottools.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
+	if err != nil {
+		return nil, slottools.ErrRlpUnpackErr
+	}
+	mi = crypto.FromECDSAPub(miPoint)
+	//pk and mi is 65 bytes length
+
+	if epID == epochID &&
+		idxID == index &&
+		err == nil {
+		return
+	}
+
+	return nil, slottools.ErrVerifyStg1Data
+}
 
 func init() {
 	slotLeaderSelection = &SlotLeaderSelection{}
@@ -158,10 +295,6 @@ func init() {
 
 }
 
-func GetSlotLeaderSelection() *SlotLeaderSelection {
-	return slotLeaderSelection
-}
-
 func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
 	if pos.SelfTestMode {
 		ret := big.NewInt(123)
@@ -183,31 +316,8 @@ func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	return &s.key.PrivateKey.PublicKey, nil
 }
 
-func (s *SlotLeaderSelection) GetLocalPublicKey() (*ecdsa.PublicKey, error) {
-	return s.getLocalPublicKey()
-}
-
 func (s *SlotLeaderSelection) getLocalPrivateKey() (*ecdsa.PrivateKey, error) {
 	return s.key.PrivateKey, nil
-}
-
-var (
-	curEpochId = uint64(0)
-	curSlotId  = uint64(0)
-)
-
-func GetEpochSlotID() (uint64, uint64) {
-	return curEpochId, curSlotId
-}
-func CalEpochSlotID() {
-	if pos.EpochBaseTime == 0 {
-		return
-	}
-	timeUnix := uint64(time.Now().Unix())
-	epochTimespan := uint64(pos.SlotTime * pos.SlotCount)
-	curEpochId = uint64((timeUnix - pos.EpochBaseTime) / epochTimespan)
-	curSlotId = uint64((timeUnix - pos.EpochBaseTime) / pos.SlotTime % pos.SlotCount)
-	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
 func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
@@ -258,10 +368,6 @@ func (s *SlotLeaderSelection) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicK
 	}
 
 	return pks
-}
-
-func (s *SlotLeaderSelection) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
-	return s.getEpochLeadersPK(epochID)
 }
 
 func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
@@ -455,32 +561,6 @@ func (s *SlotLeaderSelection) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Exit()
 }
 
-func (s *SlotLeaderSelection) GetSlotCreateStatusByEpochID(epochID uint64) bool {
-	_, ok := s.slotCreateStatus[epochID]
-	return ok
-}
-
-func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	if epochID == 0 {
-		b, err := hex.DecodeString(pos.GenesisPK)
-		if err != nil {
-			return nil, slottools.ErrInvalidGenesisPk
-		}
-		return crypto.ToECDSAPub(b), nil
-	}
-	_, ok := s.slotCreateStatus[epochID]
-	if !ok {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
-	}
-	if len(s.slotLeadersPtrArray) != pos.SlotCount {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
-	}
-	if slotID >= pos.SlotCount {
-		return nil, slottools.ErrSlotIDOutOfRange
-	}
-	return s.slotLeadersPtrArray[slotID], nil
-}
-
 // from random proposer
 func (s *SlotLeaderSelection) getRandom(epochID uint64) (ret *big.Int, err error) {
 	stateDb, err := s.getCurrentStateDb()
@@ -524,11 +604,6 @@ func (s *SlotLeaderSelection) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicK
 		}
 		return piecesPtr, false, nil
 	}
-}
-
-// GetSma uses to get SMA information of the epoch.
-func (s *SlotLeaderSelection) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
-	return s.getSMAPieces(epochID)
 }
 
 func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
@@ -656,60 +731,6 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 	}
 	// the value in selfPk Received Pieces Map should be same,so we can return the first one.
 	return piece, nil
-}
-
-func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-
-	keyHash := vm.GetSlotLeaderStage2KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(selfIndex))
-
-	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
-	if data == nil {
-		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
-		return nil, nil, slottools.ErrNoTx2TransInDB
-	}
-
-	epID, slfIndex, _, alphaPki, proof, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if epID != epochID || slfIndex != selfIndex {
-		return nil, nil, slottools.ErrRlpUnpackErr
-	}
-
-	return alphaPki, proof, nil
-}
-
-func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
-	var ret [pos.EpochLeaderCount]bool
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		return ret[:], err
-	}
-
-	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-
-	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(posdb.Uint64ToBytes(epochID))
-
-	log.Debug(fmt.Sprintf("GetSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
-
-	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
-
-	if data == nil {
-		return ret[:], slottools.ErrNoTx2TransInDB
-	}
-
-	err = rlp.DecodeBytes(data, &ret)
-	if err != nil {
-		return ret[:], slottools.ErrNoTx2TransInDB
-	}
-	return ret[:], nil
 }
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
@@ -849,36 +870,4 @@ func (s *SlotLeaderSelection) getWorkingEpochID() uint64 {
 func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
 	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", posdb.Uint64ToBytes(workingEpochID))
 	return err
-}
-
-// GetStg1StateDbInfo can get data from StateDB the pk and mi are in 65 bytes length uncompress format
-func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		return nil, err
-	}
-
-	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-	keyHash := vm.GetSlotLeaderStage1KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(index))
-
-	// Read and Verify
-	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
-	if readBuf == nil {
-		return nil, slottools.ErrNoTx1TransInDB
-	}
-
-	epID, idxID, miPoint, err := slottools.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		return nil, slottools.ErrRlpUnpackErr
-	}
-	mi = crypto.FromECDSAPub(miPoint)
-	//pk and mi is 65 bytes length
-
-	if epID == epochID &&
-		idxID == index &&
-		err == nil {
-		return
-	}
-
-	return nil, slottools.ErrVerifyStg1Data
 }
