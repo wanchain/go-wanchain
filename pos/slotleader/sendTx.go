@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrRCNotReady = errors.New("rc is not ready")
+	errRCNotReady = errors.New("rc is not ready")
 )
 
 //--------------Transacton create / send --------------------------------------------
@@ -23,7 +23,7 @@ type SendTxFn func(rc *rpc.Client, tx map[string]interface{}) (common.Hash, erro
 
 func (s *SlotLeaderSelection) sendStage1Tx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
-		return ErrRCNotReady
+		return errRCNotReady
 	}
 
 	arg := map[string]interface{}{}
@@ -41,7 +41,7 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte, posSender SendTxFn) erro
 
 func (s *SlotLeaderSelection) sendStage2Tx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
-		return ErrRCNotReady
+		return errRCNotReady
 	}
 
 	arg := map[string]interface{}{}
