@@ -203,6 +203,14 @@ type BlockChain interface {
 
 	// InsertReceiptChain inserts a batch of receipts into the local chain.
 	InsertReceiptChain(types.Blocks, []types.Receipts) (int, error)
+
+	//check if current epoch genesis is same with work chain
+	VerifyEpochGenesis(blk *types.Block) bool
+
+	SetEpochGenesis(epochgen *types.EpochGenesis) error
+
+	GetBlockEpochIdAndSlotId(header *types.Block) (uint64, uint64)
+
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -232,6 +240,8 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		stateCh:        make(chan dataPack),
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
+
+		epochGenesisCh: make(chan dataPack,1),
 	}
 	go dl.qosTuner()
 	go dl.stateFetcher()
@@ -429,6 +439,13 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if err != nil {
 		return err
 	}
+
+	/////////////get max genesis epochid////////////
+	blk := types.NewBlockWithHeader(latest)
+	lastEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(blk)
+	lastEpid = lastEpid
+	////////////////////////////////////////////////
+
 	height := latest.Number.Uint64()
 
 	origin, err := d.findAncestor(p, height)
@@ -481,7 +498,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		func() error { return d.fetchBodies(origin + 1) },   // Bodies are retrieved during normal and fast sync
 		func() error { return d.fetchReceipts(origin + 1) }, // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
+		//func() error { return d.fetchEpochGenesis(p,lastEpid) },
 	}
+
 	if d.mode == FastSync {
 		fetchers = append(fetchers, func() error { return d.processFastSyncContent(latest) })
 	} else if d.mode == FullSync {
@@ -736,11 +755,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 				arrived = true
 
+
 				// Modify the search interval based on the response
 				if (d.mode == FullSync && !d.blockchain.HasBlockAndState(headers[0].Hash())) || (d.mode != FullSync && !d.lightchain.HasHeader(headers[0].Hash(), headers[0].Number.Uint64())) {
 					end = check
 					break
 				}
+
 				header := d.lightchain.GetHeaderByHash(headers[0].Hash()) // Independent of sync mode, header surely exists
 				if header.Number.Uint64() != check {
 					p.log.Debug("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
@@ -880,6 +901,62 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 	}
 }
 
+
+
+
+func (d *Downloader) fetchEpochGenesis(p *peerConnection, epochid uint64) error {
+	p.log.Debug("get epoch genesis", "origin", epochid)
+	defer p.log.Debug("epoch genesis download terminated")
+
+	// Create a timeout timer, and the associated header fetcher
+	request := time.Now()       // time of the last skeleton fetch request
+	timeout := time.NewTimer(0) // timer to dump a non-responsive active peer
+	<-timeout.C                 // timeout channel should be initially empty
+	defer timeout.Stop()
+
+	var ttl time.Duration
+
+	go p.peer.RequestEpochGenesis(epochid)
+
+	for {
+
+		epochid = epochid -1
+		if epochid == 0 {
+			break
+		}
+
+		select {
+		case <-d.cancelCh:
+			return errCancelHeaderFetch
+
+		case packet := <-d.epochGenesisCh:
+			// Make sure the active peer is giving us the skeleton headers
+			if packet.PeerId() != p.id {
+				log.Debug("Received skeleton from incorrect peer", "peer", packet.PeerId())
+				break
+			}
+
+			epochGenesisReqTimer.UpdateSince(request)
+			timeout.Stop()
+
+			d.blockchain.SetEpochGenesis(packet.(*epochGenesisPack).epochGenesis)
+
+			go p.peer.RequestEpochGenesis(epochid)
+
+		case <-timeout.C:
+			// Header retrieval timed out, consider the peer bad and drop
+			p.log.Debug("epochGenesis request timed out", "elapsed", ttl)
+			epochGenesisTimeoutMeter.Mark(1)
+			d.dropPeer(p.id)
+
+			return errBadPeer
+		}
+	}
+
+	p.log.Debug("epochGenesis request finished", "elapsed", ttl)
+
+	return nil
+}
 // fillHeaderSkeleton concurrently retrieves headers from all our available peers
 // and maps them to the provided skeleton header chain.
 //
@@ -1358,10 +1435,12 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			"firstnum", first.Number, "firsthash", first.Hash(),
 			"lastnum", last.Number, "lasthash", last.Hash(),
 		)
+
 		blocks := make([]*types.Block, items)
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
+
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
 			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
@@ -1495,13 +1574,10 @@ func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 	return d.deliver(id, d.stateCh, &statePack{id, data}, stateInMeter, stateDropMeter)
 }
 
-
 // DeliverNodeData injects a new batch of node state data received from a remote node.
-func (d *Downloader) DeliverEpochGenesis(id string,epochBody *types.EpochGenesis) (err error) {
-	return d.deliver(id, d.epochGenesisCh,&epochGenesisPack{peerId:id,epochGenesis:epochBody},epochGenesisInMeter ,epochGenesisDropMeter)
+func (d *Downloader) DeliverEpochGenesis(id string, epGenesis *types.EpochGenesis) (err error) {
+	return d.deliver(id, d.epochGenesisCh, &epochGenesisPack{id,epGenesis}, epochGenesisInMeter,epochGenesisDropMeter)
 }
-
-
 
 // deliver injects a new batch of data received from a remote node.
 func (d *Downloader) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
