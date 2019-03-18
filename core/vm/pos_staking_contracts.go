@@ -29,7 +29,7 @@ contract stake {
 */
 
 var (
-
+	// pos staking contract abi definition
 	cscDefinition = `
 [
 	{
@@ -74,10 +74,12 @@ var (
 	}
 ]
 `
+	// pos staking contract abi object
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
+	// function "stakeIn" "delegateIn" 's solidity binary id
 	stakeInId  [4]byte
-	stakeOutId [4]byte
+	//stakeOutId [4]byte
 	delegateId [4]byte
 
 	maxEpochNum = uint64(1000)
@@ -128,7 +130,7 @@ type ClientInfo struct {
 }
 
 //
-// helper structures
+// public helper structures
 //
 type Leader struct {
 	PubSec256     []byte
@@ -147,6 +149,7 @@ type ClientIncentive struct {
 	Addr      common.Address
 	Incentive *big.Int
 }
+
 //
 // package initialize
 //
@@ -156,10 +159,11 @@ func init() {
 	}
 
 	copy(stakeInId[:], cscAbi.Methods["stakeIn"].Id())
-	copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
+	//copy(stakeOutId[:], cscAbi.Methods["stakeOut"].Id())
 	copy(delegateId[:], cscAbi.Methods["delegateIn"].Id())
 }
 
+/////////////////////////////
 //
 // pos staking contract
 //
