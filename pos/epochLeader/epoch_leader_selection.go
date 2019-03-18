@@ -200,7 +200,8 @@ lockEpoch是要锁定的时长(epoch数), maxEpoch是运行锁定的最长时长
 这样, 锁定时长对应的权重在[10,20]之间.
 t是锁定时间剩余时长的百分比,取值(1,0)之间, (2-exp(t-1))对应的权重在(1, 1.64)之间.
  */
-func (e *Epocher) calProbability2(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+const Accuracy float64 = 1024.0 //accuracy to magnificate
+func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
@@ -226,35 +227,13 @@ func (e *Epocher) calProbability2(epochId uint64, amountWin *big.Int, lockTime u
 	return pb
 }
 
-const Accuracy float64 = 1024.0 //accuracy to magnificate
-//wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
-	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
-	pb := big.NewInt(0)
-	var leftTimePercent float64
-	leftTimePercent = (float64(lockTime-(epochId-startEpochId)) / float64(lockTime))
-	if leftTimePercent > 0 {
-		leftTimePercent = Round(leftTimePercent, 32)
-	} else {
-		return pb
-	}
-	fpercent := Round(math.Exp(-leftTimePercent), 4)
 
-	epercent := big.NewInt(int64(fpercent * Accuracy))
-
-	timeBig := big.NewInt(int64(lockTime))
-
-	pb.Mul(amount, epercent)
-	pb.Mul(pb, timeBig)
-	fmt.Print("calProbability,pb:", pb)
-	return pb
-}
 
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
 func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
 
-	pb := e.calProbability2(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
+	pb := e.calProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
 	for i:=0; i<len(pstaker.Clients); i++ {
 		lockEpoch := pstaker.LockEpochs-(pstaker.Clients[i].StakingEpoch-pstaker.StakingEpoch)
 		pb.Add(pb, e.calProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
