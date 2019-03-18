@@ -23,11 +23,6 @@ type SlLeadersSelInt interface {
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
 
-const (
-	BLOCKCHAIN  = iota //0
-	HEADERCHAIN        //1
-)
-
 type ForkMemBlockChain struct {
 	useEpochGenesis    bool
 	rbLeaderSelector   RbLeadersSelInt
@@ -128,7 +123,6 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 
 
 func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) (*types.EpochGenesis,error){
-
 
 	if blk==nil {
 		return nil, errors.New("blk is nil")
