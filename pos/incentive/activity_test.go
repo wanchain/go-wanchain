@@ -117,7 +117,7 @@ func testGetRBAddress(epochID uint64) []vm.Leader {
 }
 
 func testSimulateData(epochID uint64, index uint32) {
-	sig := []byte{157, 214, 103, 45}
+	sig := []byte{13, 7, 16, 93}
 	hash := vm.GetRBKeyHash(sig, epochID, index)
 	randomBeaconPrecompileAddr := common.BytesToAddress(big.NewInt(610).Bytes())
 	statedb.SetStateByteArray(randomBeaconPrecompileAddr, *hash, []byte{1, 2, 3})
