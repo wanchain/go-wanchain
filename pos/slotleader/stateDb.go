@@ -5,16 +5,10 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 var (
 	errNoStateDbInstance = errors.New("Do not have stateDb instance now")
-)
-
-const (
-	// SafeBack2k is use to get a static safe block in 1k slots before
-	SafeBack2k = uint64(posconfig.SlotCount * 1 / 10)
 )
 
 // GetCurrentStateDb use to get statedb instance of current state.
