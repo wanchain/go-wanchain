@@ -82,9 +82,10 @@ var (
 	maxEpochNum         = big.NewInt(1000)
 	minEpochNum         = big.NewInt(5)
 	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
-	minDelegateStake    = new(big.Int).Mul(big.NewInt(10000), ether)
-	minFeeRate          = big.NewInt(0)
-	maxFeeRate          = big.NewInt(100)
+	minDelegateStake = new(big.Int).Mul(big.NewInt(10000), ether)
+	minFeeRate = big.NewInt(0)
+	maxFeeRate = big.NewInt(100)
+	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(700).Bytes())
 )
 
 //
@@ -475,15 +476,14 @@ func GetStakersSnap(stateDb *state.StateDB) []StakerInfo {
 	return stakeHolders
 }
 
-var StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(700).Bytes())
 
-func StakeoutSetEpoch(stateDb *state.StateDB, epochID uint64) {
+func StakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
 	b := big.NewInt(int64(epochID))
-	StoreInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash, b.Bytes())
+	StoreInfo(stateDb, StakingCommonAddr, StakersInfoStakeOutKeyHash, b.Bytes())
 }
 
-func StakeoutIsFinished(stateDb *state.StateDB, epochID uint64) bool {
-	epochByte, err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
+func StakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
+	epochByte,err := GetInfo(stateDb, StakingCommonAddr, StakersInfoStakeOutKeyHash)
 	if err != nil {
 		return false
 	}

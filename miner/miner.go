@@ -88,7 +88,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 }
 
 func PosInit(s Backend) *epochLeader.Epocher {
-	log.Info("BackendTimerLoop is running!!!!!!")
+	log.Info("backendTimerLoop is running!!!!!!")
 
 	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -97,26 +97,26 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		}
 	}
 
-	epocher := epochLeader.NewEpocher(s.BlockChain())
+	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
-	randombeacon.GetRandonBeaconInst().Init(epocher)
+	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 
-	eerr := epocher.SelectLeadersLoop(0)
-	eerr1 := epocher.SelectLeadersLoop(1)
+	eerr := epochSelector.SelectLeadersLoop(0)
+	//eerr1 := epochSelector.SelectLeadersLoop(1)
 
 	sls := slotleader.GetSlotLeaderSelection()
-	sls.Init(s.BlockChain(), nil, nil, epocher)
+	sls.Init(s.BlockChain(), nil, nil, epochSelector)
 
-	incentive.Init(epocher.GetEpochProbability, epocher.SetEpochIncentive, epocher.GetRBProposerGroup)
-	fmt.Println("posInit: ", eerr, eerr1)
+	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
+	fmt.Println("posInit: ", eerr)
 
 	s.BlockChain().SetSlSelector(sls)
-	s.BlockChain().SetRbSelector(epocher)
+	s.BlockChain().SetRbSelector(epochSelector)
 
-	return epocher
+	return epochSelector
 }
-func PosInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
-	log.Info("timer BackendTimerLoop is running!!!!!!")
+func posInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
+	log.Info("timer backendTimerLoop is running!!!!!!")
 
 	// config
 	if key != nil {
@@ -129,13 +129,13 @@ func PosInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
 	}
-	epocher := epochLeader.NewEpocher(s.BlockChain())
-	return epocher
+	epochSelector := epochLeader.NewEpocher(s.BlockChain())
+	return epochSelector
 }
 
-// BackendTimerLoop is pos main time loop
-func (self *Miner) BackendTimerLoop(s Backend) {
-	log.Info("BackendTimerLoop is running!!!!!!")
+// backendTimerLoop is pos main time loop
+func (self *Miner) backendTimerLoop(s Backend) {
+	log.Info("backendTimerLoop is running!!!!!!")
 	// get wallet
 	eb, errb := s.Etherbase()
 	if errb != nil {
@@ -154,7 +154,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
-	epocher := PosInitMiner(s, key)
+	epocher := posInitMiner(s, key)
 	// get rpcClient
 	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
@@ -167,7 +167,13 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil == h {
-			time.Sleep(posconfig.SlotTime * time.Second)
+			select {
+			case <-self.timerStop:
+				return
+			case <-time.After(time.Duration(time.Second) ):
+				continue
+			}
+
 			continue
 		} else {
 			posconfig.EpochBaseTime = h.Time.Uint64()
@@ -179,7 +185,7 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 
 		slotleader.CalEpochSlotID()
 		epochid, slotid := slotleader.GetEpochSlotID()
-		fmt.Println("epochid, slotid", epochid, slotid)
+		log.Debug("epochid, slotid", epochid, slotid)
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 
@@ -208,7 +214,10 @@ func (self *Miner) BackendTimerLoop(s Backend) {
 		}
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
-		fmt.Println("timeloop sleep: ", sleepTime)
+		log.Debug("timeloop sleep: ", sleepTime)
+		if sleepTime < 0 {
+			sleepTime = 0
+		}
 		select {
 		case <-self.timerStop:
 			return
@@ -266,7 +275,7 @@ func (self *Miner) Start(coinbase common.Address) {
 	self.worker.start()
 	self.worker.commitNewWork()
 	if self.worker.config.Pluto != nil {
-		go self.BackendTimerLoop(self.eth)
+		go self.backendTimerLoop(self.eth)
 	}
 }
 

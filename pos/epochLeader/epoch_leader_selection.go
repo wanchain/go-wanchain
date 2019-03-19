@@ -200,10 +200,10 @@ func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime ui
 	var leftTimePercent float64
 	if epochId < 2 {
 		leftTimePercent = 1
-	} else if epochId < startEpochId+2 || epochId >= startEpochId+2+lockTime {
+	} else if epochId < startEpochId+2 || epochId >= startEpochId+2+(lockTime-1) {
 		leftTimePercent = 0
 	} else {
-		leftTimePercent = (float64(lockTime-(epochId-startEpochId-2)) / float64(lockTime))
+		leftTimePercent = (float64(startEpochId+2 +(lockTime-1)-epochId) / float64(lockTime-1))
 	}
 	fpercent := 2 - Round(math.Exp(leftTimePercent-1), 4)
 
@@ -269,7 +269,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return true
 		}
 
-		if staker.Amount.Cmp(Big0) > 0 && (*pitem).Probabilities.Cmp(Big0) > 0 {
+		if  pitem.Probabilities.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
 			log.Debug(common.ToHex((*pitem).Probabilities.Bytes()))
 		}
@@ -522,7 +522,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if epochID < staker.StakingEpoch+staker.LockEpochs+3 { // TODO: check with design
+		if epochID < staker.StakingEpoch+staker.LockEpochs+2 { // TODO: check with design
 			continue
 		}
 		for j := 0; j < len(staker.Clients); j++ {
