@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"math/big"
-	"time"
 
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
@@ -822,10 +824,14 @@ func (s *SlotLeaderSelection) buildArrayPiece(epochID uint64, selfIndex uint64) 
 		return nil, nil, err
 	}
 
-	publicKeys := make([]*ecdsa.PublicKey, 0)
-	publicKeys = s.epochLeadersPtrArray[:]
+	publicKeys := s.epochLeadersPtrArray[:]
+	for i := 0; i < len(publicKeys); i++ {
+		if publicKeys[i] == nil {
+			log.Error("epochLeader is not ready")
+			return nil, nil, errors.New("epochLeader is not ready")
+		}
+	}
 	_, ArrayPiece, proof, err := uleaderselection.GenerateArrayPiece(publicKeys, alpha)
-	functrace.Exit()
 	return ArrayPiece, proof, err
 }
 
