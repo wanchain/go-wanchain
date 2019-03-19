@@ -62,6 +62,13 @@ var (
 	rbranddb = make(map[uint64]*big.Int)
 )
 
+func clearDB() {
+	rbepochId = uint64(0)
+	rbdb = make(map[common.Hash][]byte)
+	rbgroupdb = make(map[uint64][]bn256.G1)
+	rbranddb = make(map[uint64]*big.Int)
+}
+
 func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
 	return rbdb[hs]
 }
@@ -222,7 +229,9 @@ func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
 func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
 	nextEpochId := big.NewInt(int64(epochId + 1))
 	preRandom := rbranddb[epochId]
-	if preRandom == nil {
+	if epochId == 0 {
+		preRandom = new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
+	} else if preRandom == nil {
 		return nil, errors.New("getRBMMock")
 	}
 
@@ -278,6 +287,7 @@ func TestMain(m *testing.M) {
 	isInRandomGroupVar = isInRandomGroupMock
 	//println("rb test begin")
 	m.Run()
+	// clear db
 	println("rb test end")
 }
 
@@ -336,6 +346,7 @@ func TestRBDkg1(t *testing.T) {
 	}
 }
 func TestRBDkg2(t *testing.T) {
+	clearDB()
 	rbgroupdb[rbepochId] = pubs
 	TestRBDkg1(t)
 
@@ -370,6 +381,7 @@ func TestRBDkg2(t *testing.T) {
 }
 
 func TestRBSig(t *testing.T)  {
+	clearDB()
 	TestRBDkg2(t)
 	gsigshareA := prepareSig(pris, enshareA)
 	for i := 0; i < nr; i++ {

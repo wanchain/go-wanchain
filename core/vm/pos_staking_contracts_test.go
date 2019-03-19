@@ -1,13 +1,17 @@
 package vm
 
 import (
+	"errors"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -67,14 +71,40 @@ func (StakerStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, [
 
 var (
 	stakerdb = make(map[common.Address]big.Int)
+	dirname, _ = ioutil.TempDir(os.TempDir(), "pos_staking")
+	posStakingDB *ethdb.LDBDatabase = nil
 )
 
+func clearDb() {
+	if posStakingDB != nil {
+		posStakingDB.Close()
+		posStakingDB = nil
+	}
+	os.RemoveAll(dirname)
+}
+
+func initDb() bool {
+	dbTmp, err := ethdb.NewLDBDatabase(dirname, 0, 0)
+	if err != nil {
+		println(err.Error())
+		return false
+	}
+	posStakingDB = dbTmp
+	return true
+}
+
+func reset() bool {
+	clearDb()
+	return initDb()
+}
+
 func (StakerStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
-	return rbdb[hs]
+	ret, _ := posStakingDB.Get(hs[:])
+	return ret
 }
 
 func (StakerStateDB) SetStateByteArray(addr common.Address, hs common.Hash, data []byte) {
-	rbdb[hs] = data
+	posStakingDB.Put(hs[:], data)
 }
 
 type dummyStakerRef struct {
@@ -112,6 +142,62 @@ var (
 )
 
 func TestStakeIn(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err := doStakeIn()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	clearDb()
+}
+
+func TestDelegateIn(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err := doStakeIn()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	clearDb()
+}
+
+// go test -test.bench=“.×”
+func TestMultiDelegateIn(b *testing.T) {
+	if !reset() {
+		b.Fatal("pos staking db init error")
+	}
+	err := doStakeIn()
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	begin := time.Now()
+	begin1 := time.Now()
+	for i:=0; i<10005; i++ {
+		if i== 10000 {
+			begin1 = time.Now()
+		}
+		key,_ := crypto.GenerateKey()
+		address := crypto.PubkeyToAddress(key.PublicKey)
+		err = doDelegateOne(address)
+		if err != nil {
+			b.Fatal(err.Error())
+		}
+	}
+	t10005 := time.Since(begin)
+	tLast5 := time.Since(begin1)
+	println("10005 delegate need time:", t10005)
+	println("10000~10004 delegate need time:", tLast5)
+	clearDb()
+}
+
+func doStakeIn() error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(200000), ether)
@@ -127,78 +213,78 @@ func TestStakeIn(t *testing.T) {
 
 	bytes, err := cscAbi.Pack("stakeIn", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate)
 	if err != nil {
-		t.Fatal("stakeIn pack failed:", err)
+		return errors.New("stakeIn pack failed")
 	}
 
 	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
-		t.Fatal("stakeIn called failed")
+		return errors.New("stakeIn called failed")
 	}
 
 	// check
 	pub := crypto.ToECDSAPub(input.SecPk)
 	secAddr := crypto.PubkeyToAddress(*pub)
 	key := GetStakeInKeyHash(secAddr)
-	bytes2 := evm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
 	var info StakerInfo
 	err = rlp.DecodeBytes(bytes2, &info)
 	if err != nil {
-		t.Fatal("stakeIn rlp decode failed")
+		return errors.New("stakeIn rlp decode failed")
 	}
 	if info.LockEpochs != input.LockEpochs.Uint64() ||
 		info.FeeRate != input.FeeRate.Uint64() ||
 		!reflect.DeepEqual(info.PubBn256, input.Bn256Pk) ||
 		!reflect.DeepEqual(info.PubSec256, input.SecPk) {
-		t.Fatal("stakeIn parse StakerInfo failed")
+		return errors.New("stakeIn parse StakerInfo failed")
 	}
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
 		info.Amount.Cmp(a) != 0 ||
 		info.StakingEpoch != eidNow {
-		t.Fatal("stakeIn from amount epoch address saved wrong")
+		return errors.New("stakeIn from amount epoch address saved wrong")
 	}
+	return nil
 }
 
-func TestDelegateIn(t *testing.T) {
-	TestStakeIn(t)
-
+func doDelegateOne(from common.Address) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
-	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(20000), ether)
 	contract.Value().Set(a)
 	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
 
 	var input DelegateInParam
-	input.DelegateAddress = contract.CallerAddress
+	input.DelegateAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 
 	bytes, err := cscAbi.Pack("delegateIn", input.DelegateAddress)
 	if err != nil {
-		t.Fatal("delegateIn pack failed")
+		return errors.New("delegateIn pack failed")
 	}
 
 	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
-		t.Fatal("delegateIn called failed")
+		return errors.New("delegateIn called failed")
 	}
 	// check
 	key := GetStakeInKeyHash(input.DelegateAddress)
-	bytes2 := evm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
 	var infoS StakerInfo
 	err = rlp.DecodeBytes(bytes2, &infoS)
 	if err != nil {
-		t.Fatal("delegateIn rlp decode failed")
+		return errors.New("delegateIn rlp decode failed")
 	}
 
 	lenth := len(infoS.Clients)
 	if lenth <= 0 {
-		t.Fatal("delegateIn save error")
+		return errors.New("delegateIn save error")
 	}
 	info := infoS.Clients[lenth-1]
 	if info.StakingEpoch != eidNow ||
 		info.Amount.Cmp(a) != 0 ||
-		info.Address != input.DelegateAddress {
-		t.Fatal("delegateIn fields save error")
+		info.Address != contract.CallerAddress {
+		return errors.New("delegateIn fields save error")
 	}
+	return nil
 }
