@@ -28,11 +28,12 @@ import (
 	"github.com/wanchain/go-wanchain/trie"
 	"math/big"
 	"github.com/wanchain/go-wanchain/core/types"
+	"errors"
 )
 
 
 type epochGenesisReq struct {
-	items    []*big.Int              		// epochid items to download
+	epochid  *big.Int              			// epochid items to download
 	tasks    map[*big.Int]*epochGenesisTask // Download tasks to track previous attempts
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
@@ -97,7 +98,7 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 	defer func() {
 		for _, req := range active {
 			req.timer.Stop()
-			req.peer.SetEpochGenesisDataIdle(len(req.items))
+			req.peer.SetEpochGenesisDataIdle(1)
 		}
 	}()
 
@@ -199,7 +200,7 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 
 
 type epochGenesisSync struct {
-
+	epochid	uint64
 	d *Downloader 							// Downloader instance to access and manage current peerset
 	keccak hash.Hash                  		// Keccak256 hasher to verify deliveries with
 	tasks  map[*big.Int]*epochGenesisTask 	// Set of tasks currently queued for retrieval
@@ -223,6 +224,7 @@ type epochGenesisTask struct {
 
 func newepochGenesisSync(d *Downloader, epochid uint64) *epochGenesisSync {
 	return &epochGenesisSync{
+		epochid: epochid,
 		d:       d,
 		keccak:  sha3.NewKeccak256(),
 		tasks:   make(map[*big.Int]*epochGenesisTask),
@@ -259,14 +261,26 @@ func (s *epochGenesisSync) loop() error {
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)
 	defer peerSub.Unsubscribe()
 
-	// Keep assigning new tasks until the sync completes or aborts
-	for {
+	// {
 
-		//if err := s.commit(false); err != nil {
-		//	return err
-		//}
-		s.assignTasks()
-		// Tasks assigned, wait for something to happen
+		peers, _ := s.d.peers.NodeDataIdlePeers()
+
+		if len(peers) == 0 {
+			return errors.New("failed found peer when send epoch genesis request")
+		}
+
+		p := peers[0]
+
+		req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),peer: p, timeout: s.d.requestTTL()}
+
+		select {
+
+			case s.d.trackEpochGenesisReq <- req:
+				req.peer.FetchEpochGenesisData(s.epochid)
+			case <-s.cancel:
+		}
+
+
 		select {
 		case <-newPeer:
 			// New peer arrived, try to assign it download tasks
@@ -275,89 +289,19 @@ func (s *epochGenesisSync) loop() error {
 			return errCancelEpochGenesisFetch
 
 		case req := <-s.deliver:
-			// Response, disconnect or timeout triggered, drop the peer if stalling
-			log.Trace("Received node data response", "peer", req.peer.id, "count", len(req.response), "dropped", req.dropped, "timeout", !req.dropped && req.timedOut())
-			if len(req.items) <= 2 && !req.dropped && req.timedOut() {
-				// 2 items are the minimum requested, if even that times out, we've no use of
-				// this peer at the moment.
-				log.Warn("Stalling state sync, dropping peer", "peer", req.peer.id)
-				s.d.dropPeer(req.peer.id)
-			}
-			// Process all the received blobs and check for stale delivery
 			stale, err := s.process(req)
 			if err != nil {
 				log.Warn("Node data write error", "err", err)
 				return err
 			}
-			// The the delivery contains requested data, mark the node idle (otherwise it's a timed out delivery)
+
 			if !stale {
 				req.peer.SetNodeDataIdle(len(req.response))
 			}
 		}
-	}
-
-	return s.commit(true)
-}
-
-func (s *epochGenesisSync) commit(force bool) error {
+	//}
 
 	return nil
-}
-
-// assignTasks attempts to assing new tasks to all idle peers, either from the
-// batch currently being retried, or fetching new data from the trie sync itself.
-func (s *epochGenesisSync) assignTasks() {
-	// Iterate over all idle peers and try to assign them state fetches
-	peers, _ := s.d.peers.NodeDataIdlePeers()
-	for _, p := range peers {
-		// Assign a batch of fetches proportional to the estimated latency/bandwidth
-		cap := p.NodeDataCapacity(s.d.requestRTT())
-		req := &epochGenesisReq{peer: p, timeout: s.d.requestTTL()}
-		s.fillTasks(cap, req)
-
-		// If the peer was assigned tasks to fetch, send the network request
-		if len(req.items) > 0 {
-			req.peer.log.Trace("Requesting new batch of data", "type", "state", "count", len(req.items))
-			select {
-			case s.d.trackEpochGenesisReq <- req:
-
-				req.peer.FetchEpochGenesisData(req.items)
-			case <-s.cancel:
-			}
-		}
-	}
-}
-
-// fillTasks fills the given request object with a maximum of n state download
-// tasks to send to the remote peer.
-func (s *epochGenesisSync) fillTasks(n int, req *epochGenesisReq) {
-	// Refill available tasks from the scheduler.
-	//if len(s.tasks) < n {
-	//
-	//	new := big.NewInt(0)//s.sched.Missing(n - len(s.tasks))
-	//	for _, hash := range new {
-	//		s.tasks[hash] = &epochGenesisTask{make(map[string]struct{})}
-	//	}
-	//
-	//}
-	// Find tasks that haven't been tried with the request's peer.
-	req.items = make([]*big.Int, 0, n)
-	req.tasks = make(map[*big.Int]*epochGenesisTask, n)
-	for epid, t := range s.tasks {
-		// Stop when we've gathered enough requests
-		if len(req.items) == n {
-			break
-		}
-		// Skip any requests we've already tried from this peer
-		if _, ok := t.attempts[req.peer.id]; ok {
-			continue
-		}
-		// Assign the request to this peer
-		t.attempts[req.peer.id] = struct{}{}
-		req.items = append(req.items, epid)
-		req.tasks[epid] = t
-		delete(s.tasks, epid)
-	}
 }
 
 
@@ -421,9 +365,7 @@ func (s *epochGenesisSync) process(req *epochGenesisReq) (bool, error) {
 	return stale, nil
 }
 
-// processNodeData tries to inject a trie node data blob delivered from a remote
-// peer into the state trie, returning whether anything useful was written or any
-// error occurred.
+
 func (s *epochGenesisSync) processNodeData(genesis *types.EpochGenesis) (bool, *big.Int, error) {
 
 	return true,nil,nil

@@ -90,7 +90,7 @@ type Peer interface {
 	RequestBodies([]common.Hash) error
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
-	RequestEpochGenesisData([]*big.Int) error
+	RequestEpochGenesisData(uint64) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -118,7 +118,7 @@ func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
-func (w *lightPeerWrapper)RequestEpochGenesisData([]*big.Int) error {
+func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
@@ -233,7 +233,7 @@ func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 }
 
 // FetchNodeData sends a node state data retrieval request to the remote peer.
-func (p *peerConnection) FetchEpochGenesisData(epochid []*big.Int) error {
+func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
 	// Sanity check the protocol version
 	if p.version < 63 {
 		panic(fmt.Sprintf("node data fetch [eth/63+] requested on eth/%d", p.version))
