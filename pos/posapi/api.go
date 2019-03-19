@@ -49,7 +49,7 @@ func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
 	for i := uint64(0); i < posconfig.SlotCount; i++ {
 		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
 		if err != nil {
-			infoMap[fmt.Sprintf("%06d", i)] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", err.Error())
+			infoMap[fmt.Sprintf("%06d", i)] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", epochID, i, err.Error())
 		} else {
 			infoMap[fmt.Sprintf("%06d", i)] = hex.EncodeToString(buf)
 		}

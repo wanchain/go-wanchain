@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/crypto"
