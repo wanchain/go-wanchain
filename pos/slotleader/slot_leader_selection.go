@@ -5,9 +5,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/postools"
 	"math/big"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/postools"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -80,6 +81,7 @@ type SlotLeaderSelection struct {
 	stageTwoProofGenesis        [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	randomGenesis               *big.Int
 	smaGenesis                  [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	sendTransactionFn           SendTxFn
 }
 
 var slotLeaderSelection *SlotLeaderSelection
@@ -310,7 +312,7 @@ func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.I
 }
 
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
-	if s.key == nil {
+	if s.key == nil || s.key.PrivateKey == nil {
 		return nil, slottools.ErrInvalidLocalPublicKey
 	}
 	return &s.key.PrivateKey.PublicKey, nil

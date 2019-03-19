@@ -9,8 +9,8 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/vm"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/poscommon"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -36,6 +36,8 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 	if blockChain != nil {
 		log.Info("SlotLeaderSelecton init success")
 	}
+
+	s.sendTransactionFn = poscommon.SendTx
 }
 
 //Loop check work every Slot time. Called by backend loop.
@@ -120,7 +122,6 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 // startStage1Work start the stage 1 work and send tx
 func (s *SlotLeaderSelection) startStage1Work() error {
-	functrace.Enter("")
 	selfPublicKey, _ := s.getLocalPublicKey()
 
 	selfPublicKeyIndex, inEpochLeaders := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
@@ -135,7 +136,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 				return err
 			}
 
-			err = s.sendStage1Tx(data, poscommon.SendTx)
+			err = s.sendStage1Tx(data, s.sendTransactionFn)
 			if err != nil {
 				log.Error(err.Error())
 				return err
@@ -144,8 +145,6 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 	} else {
 		log.Debug("Local node is not in epoch leaders")
 	}
-
-	functrace.Exit()
 	return nil
 }
 
@@ -173,7 +172,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 				return err
 			}
 
-			err = s.sendStage2Tx(data, poscommon.SendTx)
+			err = s.sendStage2Tx(data, s.sendTransactionFn)
 			if err != nil {
 				return err
 			}
@@ -214,10 +213,6 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
 
 	return buffer, err
-}
-
-func (s *SlotLeaderSelection) checkStageValid(slotID uint64) bool {
-	return true
 }
 
 func (s *SlotLeaderSelection) checkNewEpochStart(epochID uint64) {
