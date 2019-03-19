@@ -134,7 +134,7 @@ type Downloader struct {
 	headerProcCh  chan []*types.Header // [eth/62] Channel to feed the header processor new tasks
 
 	//for epoch genesis
-	epochGenesisCh chan	dataPack
+	epochGenesisSyncStart chan	*epochGenesisSync
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -240,8 +240,6 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		stateCh:        make(chan dataPack),
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
-
-		epochGenesisCh: make(chan dataPack,1),
 	}
 
 	go dl.qosTuner()
@@ -1517,11 +1515,6 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 // DeliverNodeData injects a new batch of node state data received from a remote node.
 func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 	return d.deliver(id, d.stateCh, &statePack{id, data}, stateInMeter, stateDropMeter)
-}
-
-// DeliverNodeData injects a new batch of node state data received from a remote node.
-func (d *Downloader) DeliverEpochGenesis(id string, epGenesis *types.EpochGenesis) (err error) {
-	return d.deliver(id, d.epochGenesisCh, &epochGenesisPack{id,epGenesis}, epochGenesisInMeter,epochGenesisDropMeter)
 }
 
 // deliver injects a new batch of data received from a remote node.
