@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/crypto"
