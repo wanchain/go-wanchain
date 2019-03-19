@@ -271,7 +271,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		if staker.Amount.Cmp(Big0) > 0 && (*pitem).Probabilities.Cmp(Big0) > 0 {
 			ps = append(ps, *pitem)
-			log.Info(common.ToHex((*pitem).Probabilities.Bytes()))
+			log.Debug(common.ToHex((*pitem).Probabilities.Bytes()))
 		}
 
 		return true
@@ -309,7 +309,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
-	log.Info("epochLeaderSelection selecting")
+	log.Debug("epochLeaderSelection selecting")
 	for i := 0; i < nr; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
@@ -319,7 +319,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].Probabilities.Cmp(crBig) > 0 })
 
-		log.Info("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", ps[idx].PubSec256)
+		log.Debug("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", ps[idx].PubSec256)
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].PubSec256)
 		val, err := rlp.EncodeToBytes(&ps[idx])
 		//val,err := json.Marshal(&ps[idx])

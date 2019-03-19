@@ -27,6 +27,9 @@ func testInitSlotleader() {
 	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
 
 	s.Init(bc, rc, &keystore.Key{}, nil)
+
+	s.sendTransactionFn = testSender
+
 }
 
 func TestGetCurrentStateDb(t *testing.T) {

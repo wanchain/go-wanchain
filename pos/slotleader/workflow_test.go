@@ -1,6 +1,7 @@
 package slotleader
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -19,28 +20,44 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
+var (
+	addrsCount = posconfig.EpochLeaderCount
+	epAddrs    = make([]common.Address, addrsCount)
+	epPks      = make([]*ecdsa.PublicKey, addrsCount)
+)
+
 type TestSelectLead struct{}
 
 func (t *TestSelectLead) SelectLeadersLoop(epochID uint64) error { return nil }
 func (t *TestSelectLead) GetEpochLeaders(epochID uint64) [][]byte {
-	// buf := make([][]byte, len(epPks))
-	// for i := 0; i < len(epPks); i++ {
-	// 	buf[i] = crypto.FromECDSAPub(epPks[i])
-	// }
-	return [][]byte{}
+	buf := make([][]byte, len(epPks))
+	for i := 0; i < len(epPks); i++ {
+		buf[i] = crypto.FromECDSAPub(epPks[i])
+	}
+	return buf
 }
 func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return nil
 }
 
+func generateTestAddrs() {
+	for i := 0; i < addrsCount; i++ {
+		key, _ := crypto.GenerateKey()
+		epAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
+		epPks[i] = &key.PublicKey
+	}
+}
+
 func TestLoop(t *testing.T) {
 	posdb.GetDb().DbInit("test")
 
+	generateTestAddrs()
 	testInitSlotleader()
 	posdb.SetEpocherInst(&TestSelectLead{})
 
 	key := &keystore.Key{}
 	key.PrivateKey, _ = crypto.GenerateKey()
+	key.PrivateKey.PublicKey = *epPks[0]
 
 	epochIDStart := time.Now().Second()
 
@@ -144,8 +161,6 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 
 func TestStartStage1Work(t *testing.T) {
 	TestLoop(t)
-
-	s.sendTransactionFn = testSender
 
 	err := s.startStage1Work()
 	if err != nil {
