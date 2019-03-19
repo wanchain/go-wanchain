@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"math/big"
 	"strings"
 
@@ -78,8 +79,8 @@ var (
 	//stakeOutId [4]byte
 	delegateId [4]byte
 
-	maxEpochNum         = uint64(1000)
-	minEpochNum         = uint64(1)
+	maxEpochNum         = big.NewInt(1000)
+	minEpochNum         = big.NewInt(5)
 	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
 	minDelegateStake    = new(big.Int).Mul(big.NewInt(10000), ether)
 	minFeeRate          = big.NewInt(0)
@@ -235,32 +236,41 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 
 	// 1. SecPk is valid
 	if info.SecPk == nil {
-		return nil, errors.New("wrong parameter for stakeIn")
+		return nil, errors.New("wrong secPk for stakeIn")
 	}
 	pub := crypto.ToECDSAPub(info.SecPk)
 	if nil == pub {
-		return nil, errors.New("secPub is invalid")
+		return nil, errors.New("secPk is invalid")
 	}
 
-	// 2. Lock time >= min epoch, <= max epoch
-	lockTime := info.LockEpochs.Uint64()
-	if lockTime < minEpochNum || lockTime > maxEpochNum {
+	// 2. Bn256Pk is valid
+	if info.Bn256Pk == nil {
+		return nil, errors.New("wrong bn256Pk for stakeIn")
+	}
+	var g1 bn256.G1
+	_, success := g1.Unmarshal(info.Bn256Pk)
+	if !success {
+		return nil, errors.New("wrong point for bn256Pk")
+	}
+
+	// 3. Lock time >= min epoch, <= max epoch
+	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
 		return nil, errors.New("invalid lock time")
 	}
 
-	// 3. 0 <= FeeRate <= 100
+	// 4. 0 <= FeeRate <= 100
 	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
 		return nil, errors.New("fee rate should between 0 to 100")
 	}
 
 	// TODO: need max?
-	// 4. amount >= min, (<= max ------- amount = self + delegate's, not to do)
+	// 5. amount >= min, (<= max ------- amount = self + delegate's, not to do)
 	if contract.value.Cmp(minStakeholderStake) < 0 {
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
 	secAddr := crypto.PubkeyToAddress(*pub)
 
-	// 5. secAddr has not join the pos or has finished
+	// 6. secAddr has not join the pos or has finished
 	key := GetStakeInKeyHash(secAddr)
 	oldInfo, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
 	// a. is secAddr joined?
@@ -275,7 +285,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		PubSec256:    info.SecPk,
 		PubBn256:     info.Bn256Pk,
 		Amount:       contract.value,
-		LockEpochs:   lockTime,
+		LockEpochs:   info.LockEpochs.Uint64(),
 		FeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow,
@@ -304,7 +314,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 
 	// 1. amount is valid
 	if contract.value.Cmp(minDelegateStake) < 0 {
-		return nil, errors.New("")
+		return nil, errors.New("low amount")
 	}
 
 	// 2. mandatory is a valid stakeholder
@@ -443,7 +453,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 // public helper functions
 //
 func CalLocktimeWeight(lockEpoch uint64) uint64 {
-	return 10 + lockEpoch/(maxEpochNum/10)
+	return 10 + lockEpoch/(maxEpochNum.Uint64()/10)
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {

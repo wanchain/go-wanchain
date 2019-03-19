@@ -3,7 +3,7 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"testing"
 )
 
