@@ -16,24 +16,6 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
-// TestLoop use to test main loop
-// func TestLoop(t *testing.T) {
-// 	posconfig.SelfTestMode = true
-// 	posdb.GetDb().DbInit("test")
-// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-
-// 	GetSlotLeaderSelection().setCurrentWorkStage(slotLeaderSelectionStage1)
-
-// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-
-// 	GetSlotLeaderSelection().setWorkingEpochID(1)
-
-// 	GetSlotLeaderSelection().Loop(nil, nil, nil, 0, 0)
-
-// }
-
 func TestGetEpochSlotID(t *testing.T) {
 	epochID, slotID := GetEpochSlotID()
 	fmt.Println("epochID:", epochID, " slotID:", slotID)
