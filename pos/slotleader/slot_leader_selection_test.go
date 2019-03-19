@@ -138,11 +138,11 @@ func TestCompare(t *testing.T) {
 
 	fmt.Println(hex.EncodeToString(epID))
 	fmt.Println(hex.EncodeToString(idxID))
-	fmt.Println(hex.EncodeToString(posdb.Uint64ToBytes(epochID)))
-	fmt.Println(hex.EncodeToString(posdb.Uint64ToBytes(index)))
+	fmt.Println(hex.EncodeToString(convert.Uint64ToBytes(epochID)))
+	fmt.Println(hex.EncodeToString(convert.Uint64ToBytes(index)))
 
-	if hex.EncodeToString(epID) == hex.EncodeToString(posdb.Uint64ToBytes(epochID)) &&
-		hex.EncodeToString(idxID) == hex.EncodeToString(posdb.Uint64ToBytes(index)) {
+	if hex.EncodeToString(epID) == hex.EncodeToString(convert.Uint64ToBytes(epochID)) &&
+		hex.EncodeToString(idxID) == hex.EncodeToString(convert.Uint64ToBytes(index)) {
 		return
 	}
 

@@ -1,17 +1,17 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"crypto/ecdsa"
-	"encoding/json"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 type RbLeadersSelInt interface {
@@ -28,8 +28,7 @@ type ForkMemBlockChain struct {
 	rbLeaderSelector   RbLeadersSelInt
 	slotLeaderSelector SlLeadersSelInt
 
-	epochGens    	   map[uint64]*types.EpochGenesis
-
+	epochGens map[uint64]*types.EpochGenesis
 }
 
 func NewForkMemBlockChain() *ForkMemBlockChain {
@@ -57,7 +56,6 @@ func (s BlockSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-
 func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
 	blkTime := header.Time.Uint64()
 
@@ -66,7 +64,7 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	blkEpochId = (blkTd >> 32)
 	blkSlotId = ((blkTd & 0xffffffff) >> 8)
 
-	calEpochId, calSlotId := postools.CalEpochSlotID(blkTime)
+	calEpochId, calSlotId := util.CalEpochSlotID(blkTime)
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
 
 	if calEpochId != blkEpochId {
@@ -76,7 +74,6 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 
 	return
 }
-
 
 func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
@@ -121,10 +118,9 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64, blk *types.Block) (*types.EpochGenesis, error) {
 
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) (*types.EpochGenesis,error){
-
-	if blk==nil {
+	if blk == nil {
 		return nil, errors.New("blk is nil")
 	}
 	epGen := &types.EpochGenesis{}
@@ -132,17 +128,17 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) (*t
 	epGen.EpochId = epochid
 	epGen.PreEpochLastBlkHash = blk.Hash()
 
-	epGen.RBLeaders = make([][]byte,0)
+	epGen.RBLeaders = make([][]byte, 0)
 	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
-	if len(rbleaders)!=0 {
+	if len(rbleaders) != 0 {
 		for _, rbl := range rbleaders {
 			epGen.RBLeaders = append(epGen.RBLeaders, rbl.PubSec256)
 		}
 	}
 
-	epGen.SlotLeaders = make([][]byte,0)
+	epGen.SlotLeaders = make([][]byte, 0)
 	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
-	if len(pks)!=0 {
+	if len(pks) != 0 {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
 		}
@@ -156,7 +152,7 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64,blk *types.Block) (*t
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
-	return epGen,nil
+	return epGen, nil
 }
 
 func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain, blk *types.Block) bool {
@@ -228,7 +224,7 @@ func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
 	return f.epochGens[epochid] != nil
 }
 
-func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
+func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
 	f.epochGens[epochgen.EpochId] = epochgen
 	return nil
 }

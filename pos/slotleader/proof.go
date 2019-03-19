@@ -10,7 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
 )
@@ -125,8 +125,8 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 
 		var buffer bytes.Buffer
 		buffer.Write(rbBytes[:])
-		buffer.Write(posdb.Uint64ToBytes(epochID))
-		buffer.Write(posdb.Uint64ToBytes(slotID))
+		buffer.Write(convert.Uint64ToBytes(epochID))
+		buffer.Write(convert.Uint64ToBytes(slotID))
 		temp := buffer.Bytes()
 
 		skGt := new(ecdsa.PublicKey)
@@ -168,7 +168,7 @@ func (s *SlotLeaderSelection) PackSlotProof(epochID uint64, slotID uint64, privK
 		return nil, err
 	}
 
-	objToPack := &Pack{Proof: posdb.BigIntArrayToByteArray(proof), ProofMeg: posdb.PkArrayToByteArray(proofMeg)}
+	objToPack := &Pack{Proof: convert.BigIntArrayToByteArray(proof), ProofMeg: convert.PkArrayToByteArray(proofMeg)}
 
 	buf, err := rlp.EncodeToBytes(objToPack)
 
@@ -183,7 +183,7 @@ func (s *SlotLeaderSelection) GetInfoFromHeadExtra(epochID uint64, input []byte)
 		return nil, nil, err
 	}
 
-	return posdb.ByteArrayToBigIntArray(info.Proof), posdb.ByteArrayToPkArray(info.ProofMeg), nil
+	return convert.ByteArrayToBigIntArray(info.Proof), convert.ByteArrayToPkArray(info.ProofMeg), nil
 }
 
 func (s *SlotLeaderSelection) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
@@ -275,8 +275,8 @@ func (s *SlotLeaderSelection) verifySlotProofByGenesis(epochID uint64, slotID ui
 
 		var buffer bytes.Buffer
 		buffer.Write(s.randomGenesis.Bytes())
-		buffer.Write(posdb.Uint64ToBytes(epochID))
-		buffer.Write(posdb.Uint64ToBytes(slotID))
+		buffer.Write(convert.Uint64ToBytes(epochID))
+		buffer.Write(convert.Uint64ToBytes(slotID))
 		temp := buffer.Bytes()
 
 		skGt := new(ecdsa.PublicKey)

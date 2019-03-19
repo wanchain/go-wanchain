@@ -8,10 +8,11 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
+
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/pos/cloudflare"
@@ -25,7 +26,7 @@ var (
 
 type RbEnsDataCollector struct {
 	ens []*bn256.G1
-	pk   *bn256.G1
+	pk  *bn256.G1
 }
 
 type RbSIGDataCollector struct {
@@ -39,14 +40,14 @@ type GetRBMFunc func(db vm.StateDB, epochId uint64) ([]byte, error)
 
 type LoopEvent struct {
 	statedb vm.StateDB
-	rc *rpc.Client
-	eid uint64
-	sid uint64
+	rc      *rpc.Client
+	eid     uint64
+	sid     uint64
 }
 
 type PolyInfo struct {
 	poly wanpos.Polynomial
-	s 	 *big.Int
+	s    *big.Int
 }
 
 type PolyMap map[uint32]PolyInfo
@@ -56,7 +57,7 @@ type RandomBeacon struct {
 
 	epochStage int
 	epochId    uint64
-	polys 		   PolyMap
+	polys      PolyMap
 
 	statedb   vm.StateDB
 	epocher   *epochLeader.Epocher
@@ -64,8 +65,8 @@ type RandomBeacon struct {
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
-	getEns GetEnsFunc
-	getRBM GetRBMFunc
+	getEns              GetEnsFunc
+	getRBM              GetRBMFunc
 }
 
 var (
@@ -102,7 +103,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 	rb.loopEvents <- &LoopEvent{statedb, rc, eid, sid}
 }
 
-func (rb *RandomBeacon) LoopRoutine()  {
+func (rb *RandomBeacon) LoopRoutine() {
 	for {
 		event, ok := <-rb.loopEvents
 		if !ok {
@@ -202,7 +203,6 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 	return nil
 }
-
 
 func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	pks := rb.getRBProposerGroup(epochId)
@@ -308,7 +308,6 @@ func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32) (*vm.RbD
 
 	return &txPayload, nil
 }
-
 
 func (rb *RandomBeacon) doDKG2s(epochId uint64, proposerIds []uint32) error {
 	for _, id := range proposerIds {
@@ -503,7 +502,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["data"] = hexutil.Bytes(payload)
 
 	log.Info("do send rb tx", "payload len", len(payload))
-	_, err := poscommon.SendTx(rb.rpcClient, arg)
+	_, err := util.SendTx(rb.rpcClient, arg)
 	return err
 }
 
@@ -579,4 +578,3 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
-

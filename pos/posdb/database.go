@@ -1,7 +1,6 @@
 package posdb
 
 import (
-	"crypto/ecdsa"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -15,8 +14,8 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/postools"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/wanchain/pos/cloudflare"
 )
 
 //Db is the wanpos leveldb class
@@ -185,7 +184,7 @@ func (s *Db) saveKey(key []byte, epochID uint64) error {
 	}
 
 	keyCount++
-	_, err = s.putNoCount(0, s.getKeyCountName(epochID), Uint64ToBytes(keyCount))
+	_, err = s.putNoCount(0, s.getKeyCountName(epochID), convert.Uint64ToBytes(keyCount))
 	if err != nil {
 		return err
 	}
@@ -198,7 +197,7 @@ func (s *Db) getKeyCount(epochID uint64) uint64 {
 	if err != nil {
 		return 0
 	}
-	return BytesToUint64(ret)
+	return convert.BytesToUint64(ret)
 }
 
 func (s *Db) getAllKeys(epochID uint64) []string {
@@ -221,11 +220,11 @@ func (s *Db) getAllKeys(epochID uint64) []string {
 }
 
 func (s *Db) getKeyName(epochID uint64, keyIndex uint64) string {
-	return "key_" + Uint64ToString(epochID) + "_" + Uint64ToString(keyIndex)
+	return "key_" + convert.Uint64ToString(epochID) + "_" + convert.Uint64ToString(keyIndex)
 }
 
 func (s *Db) getKeyCountName(epochID uint64) string {
-	return "keyCount_" + Uint64ToString(epochID)
+	return "keyCount_" + convert.Uint64ToString(epochID)
 }
 
 func (s *Db) putNoCount(epochID uint64, key string, value []byte) ([]byte, error) {
@@ -260,66 +259,12 @@ func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
 }
 
 func (s *Db) getUniqueKey(epochID uint64, index uint64, key string) string {
-	uskey := Uint64ToString(epochID) + "_" + Uint64ToString(index) + "_" + key
+	uskey := convert.Uint64ToString(epochID) + "_" + convert.Uint64ToString(index) + "_" + key
 	return uskey
 }
 
 func (s *Db) getUniqueKeyBytes(epochID uint64, index uint64, key string) []byte {
 	return []byte(s.getUniqueKey(epochID, index, key))
-}
-
-//-------------common functions---------------------------------------
-
-//PkEqual only can use in same curve. return whether the two points equal
-func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
-	return postools.PkEqual(pk1, pk2)
-}
-
-// Uint64ToBytes use a big.Int to transfer uint64 to bytes
-// Must use big.Int to reverse
-func Uint64ToBytes(input uint64) []byte {
-	return postools.Uint64ToBytes(input)
-}
-
-// BytesToUint64 use a big.Int to transfer uint64 to bytes
-// Must input a big.Int bytes
-func BytesToUint64(input []byte) uint64 {
-	return postools.BytesToUint64(input)
-}
-
-// Uint64ToString can change uint64 to string through a big.Int, output is a 10 base number
-func Uint64ToString(input uint64) string {
-	return postools.Uint64ToString(input)
-}
-
-// Uint64StringToByte can change uint64  string to bytes through a big.Int, Input must be a 10 base number
-func Uint64StringToByte(input string) []byte {
-	return postools.Uint64StringToByte(input)
-}
-
-// StringToUint64 can change string to uint64 through a big.Int, Input must be a 10 base number
-func StringToUint64(input string) uint64 {
-	return postools.StringToUint64(input)
-}
-
-// BigIntArrayToByteArray can change []*big.Int to [][]byte
-func BigIntArrayToByteArray(input []*big.Int) [][]byte {
-	return postools.BigIntArrayToByteArray(input)
-}
-
-// ByteArrayToBigIntArray can change [][]byte to big.Int
-func ByteArrayToBigIntArray(input [][]byte) []*big.Int {
-	return postools.ByteArrayToBigIntArray(input)
-}
-
-// PkArrayToByteArray can change []*ecdsa.PublicKey to [][]byte
-func PkArrayToByteArray(input []*ecdsa.PublicKey) [][]byte {
-	return postools.PkArrayToByteArray(input)
-}
-
-// ByteArrayToPkArray can change [][]byte to []*ecdsa.PublicKey
-func ByteArrayToPkArray(input [][]byte) []*ecdsa.PublicKey {
-	return postools.ByteArrayToPkArray(input)
 }
 
 type SelectLead interface {

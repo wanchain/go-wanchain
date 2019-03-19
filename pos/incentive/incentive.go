@@ -11,7 +11,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -22,11 +22,11 @@ import (
 var (
 	redutionYears            = 5
 	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (posconfig.SlotTime * posconfig.SlotCount)) // Epoch count in 5 years
-	percentOfEpochLeader     = 20                                                                         //20%
-	percentOfRandomProposer  = 20                                                                         //20%
-	percentOfSlotLeader      = 60                                                                         //60%
-	ceilingPercentS0         = 100.0                                                                      //10%
-	openIncentive            = true                                                                       //If the incentive function is open
+	percentOfEpochLeader     = 20                                                                                     //20%
+	percentOfRandomProposer  = 20                                                                                     //20%
+	percentOfSlotLeader      = 60                                                                                     //60%
+	ceilingPercentS0         = 100.0                                                                                  //10%
+	openIncentive            = true                                                                                   //If the incentive function is open
 	// blockNumberRunMap        = make(map[uint64]bool)
 )
 
@@ -153,7 +153,7 @@ func getIncentivePrecompileAddress() common.Address {
 }
 
 func getRunFlagKey(epochID uint64) common.Hash {
-	hash := crypto.Keccak256Hash(postools.Uint64ToBytes(epochID), []byte(dictEpochRun))
+	hash := crypto.Keccak256Hash(convert.Uint64ToBytes(epochID), []byte(dictEpochRun))
 	return hash
 }
 

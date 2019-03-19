@@ -8,7 +8,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
@@ -158,8 +158,8 @@ func RlpGetStage1IDFromTx(input []byte, abiString string) (epochIDBuf []byte, se
 	if err != nil {
 		return
 	}
-	epochIDBuf = postools.Uint64ToBytes(data.EpochID)
-	selfIndexBuf = postools.Uint64ToBytes(data.SelfIndex)
+	epochIDBuf = convert.Uint64ToBytes(data.EpochID)
+	selfIndexBuf = convert.Uint64ToBytes(data.SelfIndex)
 	return
 }
 
@@ -265,8 +265,8 @@ func RlpGetStage2IDFromTx(input []byte, abiString string) (epochIDBuf []byte, se
 		return
 	}
 
-	epochIDBuf = postools.Uint64ToBytes(data.EpochID)
-	selfIndexBuf = postools.Uint64ToBytes(data.SelfIndex)
+	epochIDBuf = convert.Uint64ToBytes(data.EpochID)
+	selfIndexBuf = convert.Uint64ToBytes(data.SelfIndex)
 	return
 }
 

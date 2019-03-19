@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -71,8 +71,8 @@ func TestStage1RlpCompress(t *testing.T) {
 		t.Fail()
 	}
 
-	if postools.Uint64ToString(epochID) != postools.Uint64ToString(epochIDUnpack) ||
-		postools.Uint64ToString(selfIndex) != postools.Uint64ToString(selfIndexUnpack) ||
+	if convert.Uint64ToString(epochID) != convert.Uint64ToString(epochIDUnpack) ||
+		convert.Uint64ToString(selfIndex) != convert.Uint64ToString(selfIndexUnpack) ||
 		hex.EncodeToString(crypto.FromECDSAPub(mi)) != hex.EncodeToString(crypto.FromECDSAPub(miUnpack)) {
 		t.Fail()
 	}
@@ -82,11 +82,11 @@ func TestStage1RlpCompress(t *testing.T) {
 		t.Fail()
 	}
 
-	if postools.Uint64ToString(epochID) != postools.Uint64ToString(postools.BytesToUint64(epochIDBuf)) {
+	if convert.Uint64ToString(epochID) != convert.Uint64ToString(convert.BytesToUint64(epochIDBuf)) {
 		t.Fail()
 	}
 
-	if postools.Uint64ToString(selfIndex) != postools.Uint64ToString(postools.BytesToUint64(selfIndexBuf)) {
+	if convert.Uint64ToString(selfIndex) != convert.Uint64ToString(convert.BytesToUint64(selfIndexBuf)) {
 		t.Fail()
 	}
 }
@@ -132,17 +132,17 @@ func TestStage2RlpCompress(t *testing.T) {
 
 	fmt.Println("time:", time.Since(t1))
 
-	if postools.Uint64ToString(epochID) != postools.Uint64ToString(epochIDUnpack) ||
-		postools.Uint64ToString(selfIndex) != postools.Uint64ToString(selfIndexUnpack) {
+	if convert.Uint64ToString(epochID) != convert.Uint64ToString(epochIDUnpack) ||
+		convert.Uint64ToString(selfIndex) != convert.Uint64ToString(selfIndexUnpack) {
 		t.Fail()
 	}
 
-	if !postools.PkEqual(selfPK, selfPKUnpack) {
+	if !util.PkEqual(selfPK, selfPKUnpack) {
 		t.Fail()
 	}
 
 	for i := 0; i < len(alphaPki); i++ {
-		if !postools.PkEqual(alphaPki[i], alphaPkiUnpack[i]) {
+		if !util.PkEqual(alphaPki[i], alphaPkiUnpack[i]) {
 			t.Fail()
 		}
 	}
@@ -158,11 +158,11 @@ func TestStage2RlpCompress(t *testing.T) {
 		t.Fail()
 	}
 
-	if postools.Uint64ToString(epochID) != postools.Uint64ToString(postools.BytesToUint64(epochIDBuf)) {
+	if convert.Uint64ToString(epochID) != convert.Uint64ToString(convert.BytesToUint64(epochIDBuf)) {
 		t.Fail()
 	}
 
-	if postools.Uint64ToString(selfIndex) != postools.Uint64ToString(postools.BytesToUint64(selfIndexBuf)) {
+	if convert.Uint64ToString(selfIndex) != convert.Uint64ToString(convert.BytesToUint64(selfIndexBuf)) {
 		t.Fail()
 	}
 }

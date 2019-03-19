@@ -9,8 +9,9 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/vm"
 
-	"github.com/wanchain/go-wanchain/pos/poscommon"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -37,7 +38,7 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 		log.Info("SlotLeaderSelecton init success")
 	}
 
-	s.sendTransactionFn = poscommon.SendTx
+	s.sendTransactionFn = util.SendTx
 }
 
 //Loop check work every Slot time. Called by backend loop.
@@ -47,7 +48,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
-	log.Info("Now epchoID and slotID:", "epochID", posdb.Uint64ToString(epochID), "slotID", posdb.Uint64ToString(slotID))
+	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID", convert.Uint64ToString(slotID))
 	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
 	//Check if epoch is new
 	s.checkNewEpochStart(epochID)
@@ -135,8 +136,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 			if err != nil {
 				return err
 			}
-
-			err = s.sendStage1Tx(data, s.sendTransactionFn)
+			err = s.sendStage1Tx(data, util.SendTx)
 			if err != nil {
 				log.Error(err.Error())
 				return err
@@ -171,8 +171,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 			if err != nil {
 				return err
 			}
-
-			err = s.sendStage2Tx(data, s.sendTransactionFn)
+			err = s.sendStage2Tx(data, util.SendTx)
 			if err != nil {
 				return err
 			}

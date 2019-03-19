@@ -12,8 +12,9 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
+	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/functrace"
 
@@ -168,7 +169,7 @@ func GetSlotScCallTimes(epochID uint64) uint64 {
 	if err != nil {
 		return 0
 	} else {
-		return posdb.BytesToUint64(buf)
+		return convert.BytesToUint64(buf)
 	}
 }
 
@@ -201,7 +202,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
+	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx1Range
 	}
@@ -210,16 +211,16 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, in)
 
-	err = updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag1Indexes, posdb.BytesToUint64(selfIndexBuf))
+	err = updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag1Indexes, convert.BytesToUint64(selfIndexBuf))
 
 	if err != nil {
 		return nil, err
 	}
 
-	addSlotScCallTimes(posdb.BytesToUint64(epochIDBuf))
+	addSlotScCallTimes(convert.BytesToUint64(epochIDBuf))
 
 	log.Debug(fmt.Sprintf("-----------------------------------------handleStgOne save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
-	log.Debug("handleStgOne save", "epochID", postools.BytesToUint64(epochIDBuf), "selfIndex", postools.BytesToUint64(selfIndexBuf))
+	log.Debug("handleStgOne save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex", convert.BytesToUint64(selfIndexBuf))
 
 	return nil, nil
 }
@@ -231,7 +232,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	if !isInValidStage(posdb.BytesToUint64(epochIDBuf), evm, posconfig.Sma2Start, posconfig.Sma2End) {
+	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma2Start, posconfig.Sma2End) {
 		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, slottools.ErrInvalidTx2Range
 	}
@@ -240,15 +241,15 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, keyHash, in)
 
-	err = updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag2Indexes, posdb.BytesToUint64(selfIndexBuf))
+	err = updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag2Indexes, convert.BytesToUint64(selfIndexBuf))
 
 	if err != nil {
 		return nil, err
 	}
-	addSlotScCallTimes(posdb.BytesToUint64(epochIDBuf))
+	addSlotScCallTimes(convert.BytesToUint64(epochIDBuf))
 
 	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
-	log.Debug("handleStgTwo save", "epochID", postools.BytesToUint64(epochIDBuf), "selfIndex", postools.BytesToUint64(selfIndexBuf))
+	log.Debug("handleStgTwo save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex", convert.BytesToUint64(selfIndexBuf))
 
 	functrace.Exit()
 	return nil, nil
@@ -271,7 +272,7 @@ func (c *slotLeaderSC) validTxStg1ByData(from common.Address, payload []byte) er
 		return err
 	}
 
-	if !slottools.InEpochLeadersOrNotByAddress(postools.BytesToUint64(epochIDBuf), from) {
+	if !slottools.InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), from) {
 		log.Error("validTxStg1 failed")
 		return slottools.ErrIllegalSender
 	}
@@ -315,7 +316,7 @@ func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) er
 		log.Error("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
 		return slottools.ErrInvalidTxLen
 	}
-	if !postools.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
+	if !util.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
 		log.Error("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
 		return slottools.ErrTx1AndTx2NotConsistent
 	}
@@ -344,17 +345,17 @@ func addSlotScCallTimes(epochID uint64) error {
 			return err
 		}
 	} else {
-		times = posdb.BytesToUint64(buf)
+		times = convert.BytesToUint64(buf)
 	}
 
 	times++
 
-	posdb.GetDb().Put(epochID, scCallTimes, posdb.Uint64ToBytes(times))
+	posdb.GetDb().Put(epochID, scCallTimes, convert.Uint64ToBytes(times))
 	return nil
 }
 
 func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
-	eid, sid := postools.CalEpochSlotID(evm.Time.Uint64())
+	eid, sid := util.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
 		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
 

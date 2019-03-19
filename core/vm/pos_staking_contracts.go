@@ -11,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -269,7 +269,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	}
 
 	// create stakeholder's information
-	eidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	stakeholder := &StakerInfo{
 		Address:      secAddr,
 		PubSec256:    info.SecPk,
@@ -322,7 +322,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	}
 
 	// 3. epoch is valid
-	eidNow, _ := postools.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	//lockEpochs := delegateInParam.LockEpochs.Uint64()
 	//eidEnd := EidNow + lockEpochs + posEpochGap
 	//

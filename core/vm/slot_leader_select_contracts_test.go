@@ -10,7 +10,7 @@ import (
 func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
-		epochIDBuf := posdb.Uint64ToBytes(uint64(i))
+		epochIDBuf := convert.Uint64ToBytes(uint64(i))
 		key := getSlotLeaderStageIndexesKeyHash(epochIDBuf, SlotLeaderStag1Indexes)
 		fmt.Printf("slot leader stage indexes stage1,epoch %v\n", epochIDBuf)
 		fmt.Println(hex.EncodeToString(key.Bytes()))

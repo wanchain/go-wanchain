@@ -5,7 +5,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
 	"reflect"
@@ -19,25 +19,25 @@ type StakerStateDB struct {
 func (StakerStateDB) CreateAccount(common.Address) {}
 
 func (StakerStateDB) SubBalance(addr common.Address, pval *big.Int) {
-	val,ok :=stakerdb[addr]
-	if ok && (&val).Cmp(pval) >= 0{
-		restVal := big.NewInt(0).Sub(&val,pval)
+	val, ok := stakerdb[addr]
+	if ok && (&val).Cmp(pval) >= 0 {
+		restVal := big.NewInt(0).Sub(&val, pval)
 		stakerdb[addr] = *restVal
 	}
 }
 
 func (StakerStateDB) AddBalance(addr common.Address, pval *big.Int) {
-	val,ok :=stakerdb[addr]
+	val, ok := stakerdb[addr]
 	if !ok {
 		stakerdb[addr] = *pval
 	} else {
-		total := big.NewInt(0).Add(&val,pval)
+		total := big.NewInt(0).Add(&val, pval)
 		stakerdb[addr] = *total
 	}
 }
 func (StakerStateDB) GetBalance(addr common.Address) *big.Int {
 	defaulVal, _ := new(big.Int).SetString("00000000000000000000", 10)
-	val,ok :=stakerdb[addr]
+	val, ok := stakerdb[addr]
 	if ok {
 		return &val
 	} else {
@@ -102,24 +102,21 @@ type dummyStakerDB struct {
 var (
 	pb = crypto.ToECDSAPub(common.FromHex("0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"))
 
-	stakerAddr =crypto.PubkeyToAddress(*pb)
-
+	stakerAddr = crypto.PubkeyToAddress(*pb)
 
 	stakerref = &dummyStakerRef{}
 	stakerevm = NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
-	contract = &Contract{value:big.NewInt(0).Mul(big.NewInt(10),ether),CallerAddress:stakerAddr}
+	contract       = &Contract{value: big.NewInt(0).Mul(big.NewInt(10), ether), CallerAddress: stakerAddr}
 	stakercontract = &PosStaking{}
-
 )
-
 
 func TestStakeIn(t *testing.T) {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(200000), ether)
 	contract.Value().Set(a)
-	eidNow, _ := postools.CalEpochSlotID(stakerevm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
 
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -133,7 +130,7 @@ func TestStakeIn(t *testing.T) {
 		t.Fatal("stakeIn pack failed:", err)
 	}
 
-	_, err = stakercontract.Run(bytes,contract,stakerevm)
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
 		t.Fatal("stakeIn called failed")
@@ -153,13 +150,13 @@ func TestStakeIn(t *testing.T) {
 		info.FeeRate != input.FeeRate.Uint64() ||
 		!reflect.DeepEqual(info.PubBn256, input.Bn256Pk) ||
 		!reflect.DeepEqual(info.PubSec256, input.SecPk) {
-			t.Fatal("stakeIn parse StakerInfo failed")
+		t.Fatal("stakeIn parse StakerInfo failed")
 	}
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
 		info.Amount.Cmp(a) != 0 ||
 		info.StakingEpoch != eidNow {
-			t.Fatal("stakeIn from amount epoch address saved wrong")
+		t.Fatal("stakeIn from amount epoch address saved wrong")
 	}
 }
 
@@ -170,7 +167,7 @@ func TestDelegateIn(t *testing.T) {
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(20000), ether)
 	contract.Value().Set(a)
-	eidNow, _ := postools.CalEpochSlotID(stakerevm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
 
 	var input DelegateInParam
 	input.DelegateAddress = contract.CallerAddress
@@ -180,7 +177,7 @@ func TestDelegateIn(t *testing.T) {
 		t.Fatal("delegateIn pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes,contract,stakerevm)
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
 		t.Fatal("delegateIn called failed")
@@ -198,13 +195,10 @@ func TestDelegateIn(t *testing.T) {
 	if lenth <= 0 {
 		t.Fatal("delegateIn save error")
 	}
-	info := infoS.Clients[lenth -1]
+	info := infoS.Clients[lenth-1]
 	if info.StakingEpoch != eidNow ||
 		info.Amount.Cmp(a) != 0 ||
 		info.Address != input.DelegateAddress {
-			t.Fatal("delegateIn fields save error")
+		t.Fatal("delegateIn fields save error")
 	}
 }
-
-
-

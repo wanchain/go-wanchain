@@ -7,8 +7,8 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
@@ -26,8 +26,8 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 	}
 
 	for i := 0; i < len(addrs); i++ {
-		epochIDBuf := postools.Uint64ToBytes(epochID)
-		selfIndexBuf := postools.Uint64ToBytes(uint64(i))
+		epochIDBuf := convert.Uint64ToBytes(epochID)
+		selfIndexBuf := convert.Uint64ToBytes(uint64(i))
 		keyHash := vm.GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
 
 		data := stateDb.GetStateByteArray(vm.GetSlotLeaderSCAddress(), keyHash)

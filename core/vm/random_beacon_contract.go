@@ -6,12 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/wanchain/go-wanchain/pos/postools"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
@@ -95,32 +94,32 @@ var (
 	sigShareId [4]byte
 
 	// prefix for the key hash
-	kindCij   = []byte{100}
-	kindEns   = []byte{101}
-	kindR     = []byte{102}
+	kindCij = []byte{100}
+	kindEns = []byte{101}
+	kindR   = []byte{102}
 
 	// bn256 curve's hBase
 	hBase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
 	// errors
-	errDkg1Parse 			= errors.New("dkg1 payload parse failed")
-	errDkg2Parse 			= errors.New("dkg2 payload parse failed")
-	errSigParse 			= errors.New("sig payload parse failed")
-	errRSCode				= errors.New("rs code verify failed")
-	errDLEQ					= errors.New("dleq verify failed")
-	errRlpCij				= errors.New("rlp encode cij failed")
-	errRlpEns				= errors.New("rlp encode ens failed")
-	errUnRlpCij				= errors.New("rlp decode cij failed")
-	errUnRlpEns				= errors.New("rlp decode ens failed")
-	errInvalidCommitBytes	= errors.New("invalid dkg commit bytes")
-	errInvalidEnshareBytes	= errors.New("invalid dkg enshare bytes")
+	errDkg1Parse           = errors.New("dkg1 payload parse failed")
+	errDkg2Parse           = errors.New("dkg2 payload parse failed")
+	errSigParse            = errors.New("sig payload parse failed")
+	errRSCode              = errors.New("rs code verify failed")
+	errDLEQ                = errors.New("dleq verify failed")
+	errRlpCij              = errors.New("rlp encode cij failed")
+	errRlpEns              = errors.New("rlp encode ens failed")
+	errUnRlpCij            = errors.New("rlp decode cij failed")
+	errUnRlpEns            = errors.New("rlp decode ens failed")
+	errInvalidCommitBytes  = errors.New("invalid dkg commit bytes")
+	errInvalidEnshareBytes = errors.New("invalid dkg enshare bytes")
 )
 
 // return:
 // 	current stage index;
 //	elapsed slots number of current stage;
 //	left slots number of current stage;
-func GetRBStage(slotId uint64) (int,int,int) {
+func GetRBStage(slotId uint64) (int, int, int) {
 	if slotId <= posconfig.Cfg().Dkg1End {
 		return RbDkg1Stage, int(slotId), int(posconfig.Cfg().Dkg1End - slotId)
 	} else if slotId < posconfig.Cfg().Dkg2Begin {
@@ -359,7 +358,6 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 	return &dkg2FlatParam, nil
 }
 
-
 func validSigShare(statedb StateDB, time uint64, caller common.Address,
 	payload []byte) (*RbSIGTxPayload, []bn256.G1, []RbCijDataCollector, error) {
 
@@ -434,7 +432,7 @@ func GetSigShareId() []byte {
 
 // get key hash
 func GetRBKeyHash(kind []byte, epochId uint64, proposerId uint32) *common.Hash {
-	keyBytes := make([]byte, 12 + len(kind))
+	keyBytes := make([]byte, 12+len(kind))
 	copy(keyBytes, kind)
 	copy(keyBytes[4:], UIntToByteSlice(epochId))
 	copy(keyBytes[12:], UInt32ToByteSlice(proposerId))
@@ -596,15 +594,15 @@ type RbDKG1FlatTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
 	// 128 --
-	Commit     [][]byte
+	Commit [][]byte
 }
 
 type RbDKG2FlatTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
 	// 64
-	Enshare    [][]byte
-	Proof      []wanpos.DLEQproofFlat
+	Enshare [][]byte
+	Proof   []wanpos.DLEQproofFlat
 }
 
 type RbSIGTxPayload struct {
@@ -622,13 +620,14 @@ type RbDKGTxPayloadPure struct {
 
 type RbCijDataCollector struct {
 	cij []*bn256.G2
-	pk   *bn256.G1
+	pk  *bn256.G1
 }
 
 type RbSIGDataCollector struct {
 	data *RbSIGTxPayload
 	pk   *bn256.G1
 }
+
 //
 // param parse functions
 //
@@ -636,7 +635,7 @@ func BytesToCij(d *[][]byte) ([]*bn256.G2, error) {
 	l := len(*d)
 	cij := make([]*bn256.G2, l, l)
 	g2s := make([]bn256.G2, l, l)
-	for i := 0; i<l; i++ {
+	for i := 0; i < l; i++ {
 		//var g2 bn256.G2
 		left, err := g2s[i].UnmarshalPure((*d)[i])
 		if err != nil {
@@ -657,7 +656,7 @@ func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
 	l := len(*d)
 	ens := make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
-	for i := 0; i<l; i++ {
+	for i := 0; i < l; i++ {
 		left, err := g1s[i].UnmarshalPure((*d)[i])
 		if err != nil {
 			return nil, err
@@ -673,7 +672,7 @@ func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
 	return ens, nil
 }
 
-func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
+func Dkg1FlatToDkg1(d *RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
 	var dkgParam RbDKG1TxPayload
 	dkgParam.EpochId = d.EpochId
 	dkgParam.ProposerId = d.ProposerId
@@ -681,7 +680,7 @@ func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
 	l := len(d.Commit)
 	dkgParam.Commit = make([]*bn256.G2, l, l)
 	g2s := make([]bn256.G2, l, l)
-	for i := 0; i<l; i++ {
+	for i := 0; i < l; i++ {
 		//var g2 bn256.G2
 		left, err := g2s[i].Unmarshal(d.Commit[i])
 		if err != nil {
@@ -698,7 +697,7 @@ func Dkg1FlatToDkg1(d * RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
 	return &dkgParam, nil
 }
 
-func Dkg1ToDkg1Flat(d * RbDKG1TxPayload) *RbDKG1FlatTxPayload {
+func Dkg1ToDkg1Flat(d *RbDKG1TxPayload) *RbDKG1FlatTxPayload {
 	var df RbDKG1FlatTxPayload
 	df.EpochId = d.EpochId
 	df.ProposerId = d.ProposerId
@@ -713,7 +712,7 @@ func Dkg1ToDkg1Flat(d * RbDKG1TxPayload) *RbDKG1FlatTxPayload {
 	return &df
 }
 
-func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
+func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	var dkg2Param RbDKG2TxPayload
 	dkg2Param.EpochId = d.EpochId
 	dkg2Param.ProposerId = d.ProposerId
@@ -721,7 +720,7 @@ func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	l := len(d.Enshare)
 	dkg2Param.Enshare = make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
-	for i := 0; i<l; i++ {
+	for i := 0; i < l; i++ {
 		left, err := g1s[i].Unmarshal(d.Enshare[i])
 		if err != nil {
 			return nil, err
@@ -736,13 +735,13 @@ func Dkg2FlatToDkg2(d * RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 
 	l = len(d.Proof)
 	dkg2Param.Proof = make([]wanpos.DLEQproof, l, l)
-	for i := 0; i<l; i++ {
+	for i := 0; i < l; i++ {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
 	return &dkg2Param, nil
 }
 
-func Dkg2ToDkg2Flat(d * RbDKG2TxPayload) *RbDKG2FlatTxPayload {
+func Dkg2ToDkg2Flat(d *RbDKG2TxPayload) *RbDKG2FlatTxPayload {
 	var df RbDKG2FlatTxPayload
 	df.EpochId = d.EpochId
 	df.ProposerId = d.ProposerId
@@ -767,7 +766,7 @@ func Dkg2ToDkg2Flat(d * RbDKG2TxPayload) *RbDKG2FlatTxPayload {
 //
 // check time in the right stage, dkg1 --- 1k,2k slot, dkg2 --- 5k,6k slot, sig --- 8k,9k slot
 func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
-	eid, sid := postools.CalEpochSlotID(time)
+	eid, sid := util.CalEpochSlotID(time)
 	if epochId != eid {
 		return false
 	}

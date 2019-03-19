@@ -7,7 +7,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/postools"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 // AddEpochGas is used for every block's gas fee collection in each epoch
@@ -31,6 +31,6 @@ func getEpochGas(stateDb vm.StateDB, epochID uint64) *big.Int {
 }
 
 func getGasHashKey(epochID uint64) common.Hash {
-	hash := crypto.Keccak256Hash(postools.Uint64ToBytes(epochID), []byte(dictGasCollection))
+	hash := crypto.Keccak256Hash(convert.Uint64ToBytes(epochID), []byte(dictGasCollection))
 	return hash
 }

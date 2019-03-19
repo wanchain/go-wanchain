@@ -5,16 +5,14 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"math/big"
-	"time"
-
-	"github.com/wanchain/go-wanchain/pos/postools"
-
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"math/big"
+	"time"
 
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
@@ -24,6 +22,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/pos/uleaderselection"
 )
@@ -155,7 +154,7 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
 
-	keyHash := vm.GetSlotLeaderStage2KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(selfIndex))
+	keyHash := vm.GetSlotLeaderStage2KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(selfIndex))
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
@@ -184,7 +183,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (inde
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
 
-	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(posdb.Uint64ToBytes(epochID))
+	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(convert.Uint64ToBytes(epochID))
 
 	log.Debug(fmt.Sprintf("GetSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 
@@ -209,7 +208,7 @@ func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (
 	}
 
 	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-	keyHash := vm.GetSlotLeaderStage1KeyHash(posdb.Uint64ToBytes(epochID), posdb.Uint64ToBytes(index))
+	keyHash := vm.GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(index))
 
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
@@ -410,7 +409,7 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 
 	if epochID == 0 {
 		for _, value := range s.epochLeadersPtrArrayGenesis {
-			if posdb.PkEqual(localPk, value) {
+			if util.PkEqual(localPk, value) {
 				return true, nil
 			}
 		}
@@ -423,7 +422,7 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 	}
 
 	for i := 0; i < len(prePks); i++ {
-		if posdb.PkEqual(localPk, prePks[i]) {
+		if util.PkEqual(localPk, prePks[i]) {
 			return true, nil
 		}
 	}
@@ -441,7 +440,7 @@ func (s *SlotLeaderSelection) getWorkStage(epochID uint64) int {
 		log.Error("getWorkStage error: " + err.Error())
 		panic("getWorkStage error")
 	}
-	workStageUint64 := posdb.BytesToUint64(ret)
+	workStageUint64 := convert.BytesToUint64(ret)
 	return int(workStageUint64)
 }
 
@@ -861,15 +860,15 @@ func (s *SlotLeaderSelection) getWorkingEpochID() uint64 {
 	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
 	if err != nil {
 		if err.Error() == "leveldb: not found" {
-			posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", postools.Uint64ToBytes(0))
+			posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(0))
 			return 0
 		}
 	}
-	retUint64 := postools.BytesToUint64(ret)
+	retUint64 := convert.BytesToUint64(ret)
 	return retUint64
 }
 
 func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
-	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", posdb.Uint64ToBytes(workingEpochID))
+	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(workingEpochID))
 	return err
 }
