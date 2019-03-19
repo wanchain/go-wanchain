@@ -659,6 +659,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	epochSlotId += curSlotId << 8
 	epochSlotId += curEpochId << 32
 
+	// TODO: the Difficulty is duplicated with time. should delete it?
 	header.Difficulty.SetUint64(epochSlotId)
 	return nil
 }
@@ -852,7 +853,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		log.Warn("Verify error", "error", err.Error())
 		return nil, err
 	}
-	posdb.UpdateEpochBlock(epochIDPack, number)
+	posdb.UpdateEpochBlock(epochIDPack, slotIDPack, number)
 	return block.WithSeal(header), nil
 }
 

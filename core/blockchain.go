@@ -1088,10 +1088,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.report(chain, i)
 		// TODO: update epoch ->blockNumber
 		epochID := block.Header().Difficulty.Uint64() >> 32
+		slotID := (block.Header().Difficulty.Uint64() >> 8) & 0x00FFFFFF
 		if block.NumberU64() == 1 {
 			posconfig.EpochBaseTime = block.Time().Uint64()
 		}
-		posdb.UpdateEpochBlock(epochID, block.Number().Uint64())
+		posdb.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {

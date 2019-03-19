@@ -351,13 +351,15 @@ var (
 )
 
 var lastEpochId = uint64(0)
+var selectedEpochId = uint64(0)
 
-func UpdateEpochBlock(epochID uint64, blockNumber uint64) {
+func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64) {
 	if epochID != lastEpochId {
-		if epochID > lastEpochId {
-			GetEpocherInst().SelectLeadersLoop(epochID + 1)
-		}
 		lastEpochId = epochID
+	}
+	if slotID >= 2*posconfig.K +1 && selectedEpochId != epochID+1 {
+		GetEpocherInst().SelectLeadersLoop(epochID + 1)
+		selectedEpochId = epochID+1
 	}
 	lastBlockEpoch[epochID] = blockNumber
 }

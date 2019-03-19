@@ -27,7 +27,7 @@ var (
 
 	WanCscPrecompileAddr = common.BytesToAddress([]byte{210})
 	StakersInfoAddr      = common.BytesToAddress(big.NewInt(400).Bytes())
-
+	StakingCommonAddr      = common.BytesToAddress(big.NewInt(401).Bytes())
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
