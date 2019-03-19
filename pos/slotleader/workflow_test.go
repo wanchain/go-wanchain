@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
@@ -33,18 +34,22 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 }
 
 func TestLoop(t *testing.T) {
+	posdb.GetDb().DbInit("test")
+
 	testInitSlotleader()
 	posdb.SetEpocherInst(&TestSelectLead{})
 
 	key := &keystore.Key{}
 	key.PrivateKey, _ = crypto.GenerateKey()
 
+	epochIDStart := time.Now().Second()
+
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), 0, uint64(i))
+		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), uint64(epochIDStart+0), uint64(i))
 	}
 
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), uint64(1), uint64(i))
+		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), uint64(epochIDStart+1), uint64(i))
 	}
 }
 
