@@ -230,6 +230,10 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
+func (p *peer) RequestEpochGenesisData(epochids []*big.Int) error {
+	p.Log().Debug("Fetching batch of state data", "count", len(epochids))
+	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
+}
 
 //send epoch genesis
 func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {

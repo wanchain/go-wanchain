@@ -88,6 +88,7 @@ var (
 	errCancelBodyFetch         = errors.New("block body download canceled (requested)")
 	errCancelReceiptFetch      = errors.New("receipt download canceled (requested)")
 	errCancelStateFetch        = errors.New("state data download canceled (requested)")
+	errCancelEpochGenesisFetch = errors.New("Epoch Genesis data download canceled (requested)")
 	errCancelHeaderProcessing  = errors.New("header processing canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errNoSyncActive            = errors.New("no sync active")
@@ -135,11 +136,13 @@ type Downloader struct {
 
 	//for epoch genesis
 	epochGenesisSyncStart chan	*epochGenesisSync
+	epochGenesisCh        chan  dataPack
+	trackEpochGenesisReq  chan  *epochGenesisReq
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
 	trackStateReq  chan *stateReq
-	stateCh        chan dataPack // [eth/63] Channel receiving inbound node state data
+	stateCh        chan  dataPack // [eth/63] Channel receiving inbound node state data
 
 
 
@@ -244,6 +247,9 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 	go dl.qosTuner()
 	go dl.stateFetcher()
+
+	//go dl.epochGenesisFetcher()
+
 	return dl
 }
 

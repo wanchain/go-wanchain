@@ -23,23 +23,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
-	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/trie"
+	"math/big"
+	"github.com/wanchain/go-wanchain/core/types"
 )
 
-// stateReq represents a batch of state fetch requests groupped together into
-// a single data retrieval network packet.
+
 type epochGenesisReq struct {
-	items    []uint64              		// epochid items to download
-	tasks    map[common.Hash]*stateTask // Download tasks to track previous attempts
-	timeout  time.Duration              // Maximum round trip time for this to complete
-	timer    *time.Timer                // Timer to fire when the RTT timeout expires
-	peer     *peerConnection            // Peer that we're requesting from
-	response [][]byte                   // Response data of the peer (nil for timeouts)
-	dropped  bool                       // Flag whether the peer dropped off early
+	items    []*big.Int              		// epochid items to download
+	tasks    map[*big.Int]*epochGenesisTask // Download tasks to track previous attempts
+	timeout  time.Duration              	// Maximum round trip time for this to complete
+	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
+	peer     *peerConnection            	// Peer that we're requesting from
+	response []*types.EpochGenesis                   	// Response data of the peer (nil for timeouts)
+	dropped  bool                       	// Flag whether the peer dropped off early
 }
 
 // timedOut returns if this request timed out.
@@ -47,8 +46,6 @@ func (req *epochGenesisReq) timedOut() bool {
 	return req.response == nil
 }
 
-// stateSyncStats is a collection of progress stats to report during a state trie
-// sync to RPC requests as well as to display in user logs.
 type epochGenesisSyncStats struct {
 	processed  uint64 // Number of state entries processed
 	duplicate  uint64 // Number of state entries downloaded twice
@@ -56,52 +53,54 @@ type epochGenesisSyncStats struct {
 	pending    uint64 // Number of still pending state entries
 }
 
-// syncState starts downloading state with the given root hash.
+
 func (d *Downloader) syncEpochGenesis(epochid uint64) *epochGenesisSync {
+
 	s := newepochGenesisSync(d, epochid)
+
 	select {
+
 	case d.epochGenesisSyncStart <- s:
+
 	case <-d.quitCh:
-		s.err = errCancelStateFetch
+		s.err = errCancelEpochGenesisFetch
 		close(s.done)
 	}
+
 	return s
 }
 
-// stateFetcher manages the active state sync and accepts requests
-// on its behalf.
 func (d *Downloader) epochGenesisFetcher() {
 	for {
 		select {
-		case s := <-d.stateSyncStart:
+		case s := <-d.epochGenesisSyncStart:
 			for next := s; next != nil; {
-				next = d.runStateSync(next)
+				next = d.runEpochGenesisSync(next)
 			}
-		case <-d.stateCh:
-			// Ignore state responses while no sync is running.
+		case <-d.epochGenesisCh:
+
 		case <-d.quitCh:
 			return
 		}
 	}
 }
 
-// runStateSync runs a state synchronisation until it completes or another root
-// hash is requested to be switched over to.
-func (d *Downloader) runepochGenesisSync(s *stateSync) *stateSync {
+
+func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync {
+
 	var (
 		active   = make(map[string]*epochGenesisReq) // Currently in-flight requests
 		finished []*epochGenesisReq                  // Completed or failed requests
 		timeout  = make(chan *epochGenesisReq)       // Timed out active requests
 	)
+
 	defer func() {
-		// Cancel active request timers on exit. Also set peers to idle so they're
-		// available for the next sync.
 		for _, req := range active {
 			req.timer.Stop()
-			req.peer.SetNodeDataIdle(len(req.items))
+			req.peer.SetEpochGenesisDataIdle(len(req.items))
 		}
 	}()
-	// Run the state sync.
+
 	go s.run()
 	defer s.Cancel()
 
@@ -116,36 +115,36 @@ func (d *Downloader) runepochGenesisSync(s *stateSync) *stateSync {
 			deliverReq   *epochGenesisReq
 			deliverReqCh chan *epochGenesisReq
 		)
+
 		if len(finished) > 0 {
 			deliverReq = finished[0]
-			//deliverReqCh = s.deliver
+			deliverReqCh = s.deliver
 		}
 
 		select {
-		// The stateSync lifecycle:
-		case next := <-d.stateSyncStart:
+
+		case next := <-d.epochGenesisSyncStart:
 			return next
 
 		case <-s.done:
 			return nil
 
-		// Send the next finished request to the current sync:
 		case deliverReqCh <- deliverReq:
 			finished = append(finished[:0], finished[1:]...)
 
-		// Handle incoming state packs:
-		case pack := <-d.stateCh:
-			// Discard any data not requested (or previsouly timed out)
+		case pack := <-d.epochGenesisCh:
+
 			req := active[pack.PeerId()]
 			if req == nil {
-				log.Debug("Unrequested node data", "peer", pack.PeerId(), "len", pack.Items())
+				log.Debug("Unrequested epoch genesis data", "peer", pack.PeerId(), "len", pack.Items())
 				continue
 			}
 			// Finalize the request and queue up for processing
 			req.timer.Stop()
-			req.response = pack.(*statePack).states
+			req.response = pack.(*epochGenesisPack).epochGenesis
 
 			finished = append(finished, req)
+
 			delete(active, pack.PeerId())
 
 			// Handle dropped peer connections:
@@ -174,14 +173,7 @@ func (d *Downloader) runepochGenesisSync(s *stateSync) *stateSync {
 			finished = append(finished, req)
 			delete(active, req.peer.id)
 
-		// Track outgoing state requests:
-		case req := <-d.trackStateReq:
-			// If an active request already exists for this peer, we have a problem. In
-			// theory the trie node schedule must never assign two requests to the same
-			// peer. In practive however, a peer might receive a request, disconnect and
-			// immediately reconnect before the previous times out. In this case the first
-			// request is never honored, alas we must not silently overwrite it, as that
-			// causes valid requests to go missing and sync to get stuck.
+		case req := <-d.trackEpochGenesisReq:
 			if old := active[req.peer.id]; old != nil {
 				log.Warn("Busy peer assigned new state fetch", "peer", old.peer.id)
 
@@ -191,13 +183,13 @@ func (d *Downloader) runepochGenesisSync(s *stateSync) *stateSync {
 
 				finished = append(finished, old)
 			}
+
 			// Start a timer to notify the sync loop if the peer stalled.
 			req.timer = time.AfterFunc(req.timeout, func() {
 				select {
 				//case timeout <- req:
 				case <-s.done:
-					// Prevent leaking of timer goroutines in the unlikely case where a
-					// timer is fired just before exiting runStateSync.
+
 				}
 			})
 			//active[req.peer.id] = req
@@ -205,40 +197,36 @@ func (d *Downloader) runepochGenesisSync(s *stateSync) *stateSync {
 	}
 }
 
-// stateSync schedules requests for downloading a particular state trie defined
-// by a given state root.
-type epochGenesisSync struct {
-	d *Downloader // Downloader instance to access and manage current peerset
 
-	sched  *trie.TrieSync             // State trie sync scheduler defining the tasks
-	keccak hash.Hash                  // Keccak256 hasher to verify deliveries with
-	tasks  map[common.Hash]*stateTask // Set of tasks currently queued for retrieval
+type epochGenesisSync struct {
+
+	d *Downloader 							// Downloader instance to access and manage current peerset
+	keccak hash.Hash                  		// Keccak256 hasher to verify deliveries with
+	tasks  map[*big.Int]*epochGenesisTask 	// Set of tasks currently queued for retrieval
 
 	numUncommitted   int
 	bytesUncommitted int
 
-	deliver    chan *stateReq // Delivery channel multiplexing peer responses
+	deliver    chan *epochGenesisReq // Delivery channel multiplexing peer responses
+
 	cancel     chan struct{}  // Channel to signal a termination request
 	cancelOnce sync.Once      // Ensures cancel only ever gets called once
 	done       chan struct{}  // Channel to signal termination completion
 	err        error          // Any error hit during sync (set before completion)
 }
 
-// stateTask represents a single trie node download taks, containing a set of
-// peers already attempted retrieval from to detect stalled syncs and abort.
+
 type epochGenesisTask struct {
 	attempts map[string]struct{}
 }
 
-// newStateSync creates a new state trie download scheduler. This method does not
-// yet start the sync. The user needs to call run to initiate.
+
 func newepochGenesisSync(d *Downloader, epochid uint64) *epochGenesisSync {
 	return &epochGenesisSync{
 		d:       d,
-		sched:   nil,
 		keccak:  sha3.NewKeccak256(),
-		tasks:   make(map[common.Hash]*stateTask),
-		deliver: make(chan *stateReq),
+		tasks:   make(map[*big.Int]*epochGenesisTask),
+		deliver: make(chan *epochGenesisReq),
 		cancel:  make(chan struct{}),
 		done:    make(chan struct{}),
 	}
@@ -264,12 +252,7 @@ func (s *epochGenesisSync) Cancel() error {
 	return s.Wait()
 }
 
-// loop is the main event loop of a state trie sync. It it responsible for the
-// assignment of new tasks to peers (including sending it to them) as well as
-// for the processing of inbound data. Note, that the loop does not directly
-// receive data from peers, rather those are buffered up in the downloader and
-// pushed here async. The reason is to decouple processing from data receipt
-// and timeouts.
+
 func (s *epochGenesisSync) loop() error {
 	// Listen for new peer events to assign tasks to them
 	newPeer := make(chan *peerConnection, 1024)
@@ -277,10 +260,11 @@ func (s *epochGenesisSync) loop() error {
 	defer peerSub.Unsubscribe()
 
 	// Keep assigning new tasks until the sync completes or aborts
-	for s.sched.Pending() > 0 {
-		if err := s.commit(false); err != nil {
-			return err
-		}
+	for {
+
+		//if err := s.commit(false); err != nil {
+		//	return err
+		//}
 		s.assignTasks()
 		// Tasks assigned, wait for something to happen
 		select {
@@ -288,7 +272,7 @@ func (s *epochGenesisSync) loop() error {
 			// New peer arrived, try to assign it download tasks
 
 		case <-s.cancel:
-			return errCancelStateFetch
+			return errCancelEpochGenesisFetch
 
 		case req := <-s.deliver:
 			// Response, disconnect or timeout triggered, drop the peer if stalling
@@ -311,22 +295,12 @@ func (s *epochGenesisSync) loop() error {
 			}
 		}
 	}
+
 	return s.commit(true)
 }
 
 func (s *epochGenesisSync) commit(force bool) error {
-	if !force && s.bytesUncommitted < ethdb.IdealBatchSize {
-		return nil
-	}
-	start := time.Now()
-	b := s.d.stateDB.NewBatch()
-	s.sched.Commit(b)
-	if err := b.Write(); err != nil {
-		return fmt.Errorf("DB write error: %v", err)
-	}
-	s.updateStats(s.numUncommitted, 0, 0, time.Since(start))
-	s.numUncommitted = 0
-	s.bytesUncommitted = 0
+
 	return nil
 }
 
@@ -338,15 +312,16 @@ func (s *epochGenesisSync) assignTasks() {
 	for _, p := range peers {
 		// Assign a batch of fetches proportional to the estimated latency/bandwidth
 		cap := p.NodeDataCapacity(s.d.requestRTT())
-		req := &stateReq{peer: p, timeout: s.d.requestTTL()}
+		req := &epochGenesisReq{peer: p, timeout: s.d.requestTTL()}
 		s.fillTasks(cap, req)
 
 		// If the peer was assigned tasks to fetch, send the network request
 		if len(req.items) > 0 {
 			req.peer.log.Trace("Requesting new batch of data", "type", "state", "count", len(req.items))
 			select {
-			case s.d.trackStateReq <- req:
-				req.peer.FetchNodeData(req.items)
+			case s.d.trackEpochGenesisReq <- req:
+
+				req.peer.FetchEpochGenesisData(req.items)
 			case <-s.cancel:
 			}
 		}
@@ -355,18 +330,20 @@ func (s *epochGenesisSync) assignTasks() {
 
 // fillTasks fills the given request object with a maximum of n state download
 // tasks to send to the remote peer.
-func (s *epochGenesisSync) fillTasks(n int, req *stateReq) {
+func (s *epochGenesisSync) fillTasks(n int, req *epochGenesisReq) {
 	// Refill available tasks from the scheduler.
-	if len(s.tasks) < n {
-		new := s.sched.Missing(n - len(s.tasks))
-		for _, hash := range new {
-			s.tasks[hash] = &stateTask{make(map[string]struct{})}
-		}
-	}
+	//if len(s.tasks) < n {
+	//
+	//	new := big.NewInt(0)//s.sched.Missing(n - len(s.tasks))
+	//	for _, hash := range new {
+	//		s.tasks[hash] = &epochGenesisTask{make(map[string]struct{})}
+	//	}
+	//
+	//}
 	// Find tasks that haven't been tried with the request's peer.
-	req.items = make([]common.Hash, 0, n)
-	req.tasks = make(map[common.Hash]*stateTask, n)
-	for hash, t := range s.tasks {
+	req.items = make([]*big.Int, 0, n)
+	req.tasks = make(map[*big.Int]*epochGenesisTask, n)
+	for epid, t := range s.tasks {
 		// Stop when we've gathered enough requests
 		if len(req.items) == n {
 			break
@@ -377,16 +354,14 @@ func (s *epochGenesisSync) fillTasks(n int, req *stateReq) {
 		}
 		// Assign the request to this peer
 		t.attempts[req.peer.id] = struct{}{}
-		req.items = append(req.items, hash)
-		req.tasks[hash] = t
-		delete(s.tasks, hash)
+		req.items = append(req.items, epid)
+		req.tasks[epid] = t
+		delete(s.tasks, epid)
 	}
 }
 
-// process iterates over a batch of delivered state data, injecting each item
-// into a running state sync, re-queuing any items that were requested but not
-// delivered.
-func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
+
+func (s *epochGenesisSync) process(req *epochGenesisReq) (bool, error) {
 	// Collect processing stats and update progress if valid data was received
 	duplicate, unexpected := 0, 0
 
@@ -404,14 +379,14 @@ func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
 		switch err {
 		case nil:
 			s.numUncommitted++
-			s.bytesUncommitted += len(blob)
+			s.bytesUncommitted += 1//len(blob)
 			progress = progress || prog
 		case trie.ErrNotRequested:
 			unexpected++
 		case trie.ErrAlreadyProcessed:
 			duplicate++
 		default:
-			return stale, fmt.Errorf("invalid state node %s: %v", hash.String(), err)
+			return stale, fmt.Errorf("invalid epoch node %s: %v", hash.String(), err)
 		}
 		// If the node delivered a requested item, mark the delivery non-stale
 		if _, ok := req.tasks[hash]; ok {
@@ -419,6 +394,7 @@ func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
 			stale = false
 		}
 	}
+
 	// If we're inside the critical section, reset fail counter since we progressed.
 	if progress && atomic.LoadUint32(&s.d.fsPivotFails) > 1 {
 		log.Trace("Fast-sync progressed, resetting fail counter", "previous", atomic.LoadUint32(&s.d.fsPivotFails))
@@ -427,7 +403,7 @@ func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
 
 	// Put unfulfilled tasks back into the retry queue
 	npeers := s.d.peers.Len()
-	for hash, task := range req.tasks {
+	for epid, task := range req.tasks {
 		// If the node did deliver something, missing items may be due to a protocol
 		// limit or a previous timeout + delayed delivery. Both cases should permit
 		// the node to retry the missing items (to avoid single-peer stalls).
@@ -437,10 +413,10 @@ func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
 		// If we've requested the node too many times already, it may be a malicious
 		// sync where nobody has the right data. Abort.
 		if len(task.attempts) >= npeers {
-			return stale, fmt.Errorf("state node %s failed with all peers (%d tries, %d peers)", hash.String(), len(task.attempts), npeers)
+			return stale, fmt.Errorf("epoch node %s failed with all peers (%d tries, %d peers)", len(task.attempts), npeers)
 		}
 		// Missing item, place into the retry queue.
-		s.tasks[hash] = task
+		s.tasks[epid] = task
 	}
 	return stale, nil
 }
@@ -448,27 +424,13 @@ func (s *epochGenesisSync) process(req *stateReq) (bool, error) {
 // processNodeData tries to inject a trie node data blob delivered from a remote
 // peer into the state trie, returning whether anything useful was written or any
 // error occurred.
-func (s *epochGenesisSync) processNodeData(blob []byte) (bool, common.Hash, error) {
-	res := trie.SyncResult{Data: blob}
-	s.keccak.Reset()
-	s.keccak.Write(blob)
-	s.keccak.Sum(res.Hash[:0])
-	committed, _, err := s.sched.Process([]trie.SyncResult{res})
-	return committed, res.Hash, err
+func (s *epochGenesisSync) processNodeData(genesis *types.EpochGenesis) (bool, *big.Int, error) {
+
+	return true,nil,nil
 }
 
-// updateStats bumps the various state sync progress counters and displays a log
-// message for the user to see.
+
+
 func (s *epochGenesisSync) updateStats(written, duplicate, unexpected int, duration time.Duration) {
-	s.d.syncStatsLock.Lock()
-	defer s.d.syncStatsLock.Unlock()
 
-	s.d.syncStatsState.pending = uint64(s.sched.Pending())
-	s.d.syncStatsState.processed += uint64(written)
-	s.d.syncStatsState.duplicate += uint64(duplicate)
-	s.d.syncStatsState.unexpected += uint64(unexpected)
-
-	if written > 0 || duplicate > 0 || unexpected > 0 {
-		log.Info("Imported new state entries", "count", written, "elapsed", common.PrettyDuration(duration), "processed", s.d.syncStatsState.processed, "pending", s.d.syncStatsState.pending, "retry", len(s.tasks), "duplicate", s.d.syncStatsState.duplicate, "unexpected", s.d.syncStatsState.unexpected)
-	}
 }

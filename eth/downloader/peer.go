@@ -66,6 +66,8 @@ type peerConnection struct {
 	receiptStarted time.Time // Time instance when the last receipt fetch was started
 	stateStarted   time.Time // Time instance when the last node data fetch was started
 
+	epochGenesisStarted   time.Time
+
 	lacking map[common.Hash]struct{} // Set of hashes not to request (didn't have previously)
 
 	peer Peer
@@ -88,6 +90,7 @@ type Peer interface {
 	RequestBodies([]common.Hash) error
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
+	RequestEpochGenesisData([]*big.Int) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -112,6 +115,10 @@ func (w *lightPeerWrapper) RequestReceipts([]common.Hash) error {
 	panic("RequestReceipts not supported in light client mode sync")
 }
 func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
+	panic("RequestNodeData not supported in light client mode sync")
+}
+
+func (w *lightPeerWrapper)RequestEpochGenesisData([]*big.Int) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
@@ -225,6 +232,24 @@ func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 	return nil
 }
 
+// FetchNodeData sends a node state data retrieval request to the remote peer.
+func (p *peerConnection) FetchEpochGenesisData(epochid []*big.Int) error {
+	// Sanity check the protocol version
+	if p.version < 63 {
+		panic(fmt.Sprintf("node data fetch [eth/63+] requested on eth/%d", p.version))
+	}
+	// Short circuit if the peer is already fetching
+	if !atomic.CompareAndSwapInt32(&p.stateIdle, 0, 1) {
+		return errAlreadyFetching
+	}
+	p.stateStarted = time.Now()
+
+	go p.peer.RequestEpochGenesisData(epochid)
+
+	return nil
+}
+
+
 // SetHeadersIdle sets the peer to idle, allowing it to execute new header retrieval
 // requests. Its estimated header retrieval throughput is updated with that measured
 // just now.
@@ -258,6 +283,11 @@ func (p *peerConnection) SetReceiptsIdle(delivered int) {
 // with that measured just now.
 func (p *peerConnection) SetNodeDataIdle(delivered int) {
 	p.setIdle(p.stateStarted, delivered, &p.stateThroughput, &p.stateIdle)
+}
+
+
+func (p *peerConnection) SetEpochGenesisDataIdle(delivered int) {
+	p.setIdle(p.epochGenesisStarted, delivered, &p.stateThroughput, &p.stateIdle)
 }
 
 // setIdle sets the peer to idle, allowing it to execute new retrieval requests.
