@@ -231,28 +231,6 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 }
 
 
-func (p *peer) CheckEpochBoundary(bc *core.BlockChain,headers []*types.Header) error {
-	for _,header := range headers {
-		headBlk := types.NewBlockWithHeader(header)
-		epochid,_:= bc.GetBlockEpochIdAndSlotId(headBlk)
-
-		bc.IsExistEpochGenesis(epochid)
-
-		if !bc.IsExistEpochGenesis(epochid) {
-			p.RequestEpochGenesis(epochid)
-		}
-
-	}
-
-	return nil
-}
-
-//get epoch genesis
-func (p *peer) RequestEpochGenesis(epochid uint64) error {
-	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, &getEpochGenesisData{Epochid:epochid})
-}
-
 //send epoch genesis
 func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)

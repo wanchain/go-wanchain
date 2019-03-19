@@ -80,9 +80,6 @@ type LightPeer interface {
 	Head() (common.Hash, *big.Int)
 	RequestHeadersByHash(common.Hash, int, int, bool) error
 	RequestHeadersByNumber(uint64, int, int, bool) error
-
-	RequestEpochGenesis(epochid uint64) error
-
 }
 
 // Peer encapsulates the methods required to synchronise with a remote full peer.
@@ -91,7 +88,6 @@ type Peer interface {
 	RequestBodies([]common.Hash) error
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
-
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -102,9 +98,6 @@ type lightPeerWrapper struct {
 func (w *lightPeerWrapper) Head() (common.Hash, *big.Int) { return w.peer.Head() }
 func (w *lightPeerWrapper) RequestHeadersByHash(h common.Hash, amount int, skip int, reverse bool) error {
 	return w.peer.RequestHeadersByHash(h, amount, skip, reverse)
-}
-func (w *lightPeerWrapper) RequestEpochGenesis(epochid uint64) error {
-	return w.peer.RequestEpochGenesis(epochid)
 }
 
 func (w *lightPeerWrapper) RequestHeadersByNumber(i uint64, amount int, skip int, reverse bool) error {

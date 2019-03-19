@@ -892,11 +892,6 @@ func (pc *peerConnection) RequestHeadersByNumber(origin uint64, amount int, skip
 
 
 
-func (pc *peerConnection)  RequestEpochGenesis(epochid uint64) error {
-	return nil
-}
-
-
 func (d *downloaderPeerNotify) registerPeer(p *peer) {
 	pm := (*ProtocolManager)(d)
 	pc := &peerConnection{

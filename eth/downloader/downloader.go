@@ -243,6 +243,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 		epochGenesisCh: make(chan dataPack,1),
 	}
+
 	go dl.qosTuner()
 	go dl.stateFetcher()
 	return dl
@@ -498,7 +499,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		func() error { return d.fetchBodies(origin + 1) },   // Bodies are retrieved during normal and fast sync
 		func() error { return d.fetchReceipts(origin + 1) }, // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
-		//func() error { return d.fetchEpochGenesis(p,lastEpid) },
 	}
 
 	if d.mode == FastSync {
@@ -902,61 +902,6 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 }
 
 
-
-
-func (d *Downloader) fetchEpochGenesis(p *peerConnection, epochid uint64) error {
-	p.log.Debug("get epoch genesis", "origin", epochid)
-	defer p.log.Debug("epoch genesis download terminated")
-
-	// Create a timeout timer, and the associated header fetcher
-	request := time.Now()       // time of the last skeleton fetch request
-	timeout := time.NewTimer(0) // timer to dump a non-responsive active peer
-	<-timeout.C                 // timeout channel should be initially empty
-	defer timeout.Stop()
-
-	var ttl time.Duration
-
-	go p.peer.RequestEpochGenesis(epochid)
-
-	for {
-
-		epochid = epochid -1
-		if epochid == 0 {
-			break
-		}
-
-		select {
-		case <-d.cancelCh:
-			return errCancelHeaderFetch
-
-		case packet := <-d.epochGenesisCh:
-			// Make sure the active peer is giving us the skeleton headers
-			if packet.PeerId() != p.id {
-				log.Debug("Received skeleton from incorrect peer", "peer", packet.PeerId())
-				break
-			}
-
-			epochGenesisReqTimer.UpdateSince(request)
-			timeout.Stop()
-
-			d.blockchain.SetEpochGenesis(packet.(*epochGenesisPack).epochGenesis)
-
-			go p.peer.RequestEpochGenesis(epochid)
-
-		case <-timeout.C:
-			// Header retrieval timed out, consider the peer bad and drop
-			p.log.Debug("epochGenesis request timed out", "elapsed", ttl)
-			epochGenesisTimeoutMeter.Mark(1)
-			d.dropPeer(p.id)
-
-			return errBadPeer
-		}
-	}
-
-	p.log.Debug("epochGenesis request finished", "elapsed", ttl)
-
-	return nil
-}
 // fillHeaderSkeleton concurrently retrieves headers from all our available peers
 // and maps them to the provided skeleton header chain.
 //
