@@ -19,8 +19,8 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/internal/ethapi"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -225,7 +225,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
 		staker := vm.StakerInfo{}
 		err := json.Unmarshal(value, &staker)
 		if err != nil {
-			log.Info(err.Error())
+			log.Error(err.Error())
 			return true
 		}
 		stakers = append(stakers, staker)

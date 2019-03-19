@@ -2,6 +2,9 @@ package vm
 
 import (
 	"errors"
+	"math/big"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -10,8 +13,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/postools"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math/big"
-	"strings"
 )
 
 /* the contract interface described by solidity.
@@ -73,17 +74,16 @@ var (
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	// function "stakeIn" "delegateIn" 's solidity binary id
-	stakeInId  [4]byte
+	stakeInId [4]byte
 	//stakeOutId [4]byte
 	delegateId [4]byte
 
-	maxEpochNum = uint64(1000)
-	minEpochNum = uint64(1)
+	maxEpochNum         = uint64(1000)
+	minEpochNum         = uint64(1)
 	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
-	minDelegateStake = new(big.Int).Mul(big.NewInt(10000), ether)
-	minFeeRate = big.NewInt(0)
-	maxFeeRate = big.NewInt(100)
-
+	minDelegateStake    = new(big.Int).Mul(big.NewInt(10000), ether)
+	minFeeRate          = big.NewInt(0)
+	maxFeeRate          = big.NewInt(100)
 )
 
 //
@@ -97,7 +97,7 @@ type StakeInParam struct {
 }
 
 type DelegateInParam struct {
-	DelegateAddress common.Address   //delegation’s address
+	DelegateAddress common.Address //delegation’s address
 	//LockEpochs    *big.Int //lock time which is input by user
 }
 
@@ -105,22 +105,22 @@ type DelegateInParam struct {
 // storage structures
 //
 type StakerInfo struct {
-	Address	    common.Address
-	PubSec256   []byte //stakeholder’s wan public key
-	PubBn256    []byte //stakeholder’s bn256 public key
+	Address   common.Address
+	PubSec256 []byte //stakeholder’s wan public key
+	PubBn256  []byte //stakeholder’s bn256 public key
 
-	Amount      *big.Int //staking wan value
-	LockEpochs   uint64   //lock time which is input by user
-	From        common.Address
+	Amount     *big.Int //staking wan value
+	LockEpochs uint64   //lock time which is input by user
+	From       common.Address
 
 	StakingEpoch uint64 //the user’s staking time
-	FeeRate     uint64
+	FeeRate      uint64
 	Clients      []ClientInfo
 }
 
 type ClientInfo struct {
-	Address common.Address
-	Amount   *big.Int
+	Address      common.Address
+	Amount       *big.Int
 	StakingEpoch uint64
 }
 
@@ -276,7 +276,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		PubBn256:     info.Bn256Pk,
 		Amount:       contract.value,
 		LockEpochs:   lockTime,
-		FeeRate: 	  info.FeeRate.Uint64(),
+		FeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow,
 	}
@@ -333,16 +333,16 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 
 	// 4. sender has not delegated by this
 	length := len(stakerInfo.Clients)
-	for i:=0; i<length; i++ {
+	for i := 0; i < length; i++ {
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
 			return nil, errors.New("duplicate delegate")
 		}
 	}
 
 	// save
-	info := &ClientInfo {
-		Address: contract.CallerAddress,
-		Amount: contract.value,
+	info := &ClientInfo{
+		Address:      contract.CallerAddress,
+		Amount:       contract.value,
 		StakingEpoch: eidNow,
 		//LockEpochs: uint64(0),
 	}
@@ -442,21 +442,21 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 //
 // public helper functions
 //
-func CalLocktimeWeight(lockEpoch uint64) (uint64) {
-	return 10 + lockEpoch / (maxEpochNum / 10)
+func CalLocktimeWeight(lockEpoch uint64) uint64 {
+	return 10 + lockEpoch/(maxEpochNum/10)
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {
 	return common.BytesToHash(address[:])
 }
 
-func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
-	stakeHolders := make([]StakerInfo,0)
+func GetStakersSnap(stateDb *state.StateDB) []StakerInfo {
+	stakeHolders := make([]StakerInfo, 0)
 	stateDb.ForEachStorageByteArray(StakersInfoAddr, func(key common.Hash, value []byte) bool {
 		var stakerInfo StakerInfo
 		err := rlp.DecodeBytes(value, &stakerInfo)
 		if err != nil {
-			log.Info(err.Error())
+			log.Error(err.Error())
 			return true
 		}
 		stakeHolders = append(stakeHolders, stakerInfo)
@@ -466,20 +466,20 @@ func GetStakersSnap(stateDb *state.StateDB) ([]StakerInfo) {
 }
 
 var StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(700).Bytes())
-func StakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
+
+func StakeoutSetEpoch(stateDb *state.StateDB, epochID uint64) {
 	b := big.NewInt(int64(epochID))
 	StoreInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash, b.Bytes())
 }
 
-func StakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
-	epochByte,err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
+func StakeoutIsFinished(stateDb *state.StateDB, epochID uint64) bool {
+	epochByte, err := GetInfo(stateDb, StakersInfoAddr, StakersInfoStakeOutKeyHash)
 	if err != nil {
 		return false
 	}
 	finishedEpochId := big.NewInt(0).SetBytes(epochByte).Uint64()
 	return finishedEpochId >= epochID
 }
-
 
 //
 // package param check helper functions

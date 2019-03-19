@@ -254,7 +254,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		staker := vm.StakerInfo{}
 		err := json.Unmarshal(value, &staker)
 		if err != nil {
-			log.Info(err.Error())
+			log.Error(err.Error())
 			return true
 		}
 
@@ -265,7 +265,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		pitem, err := e.generateProblility(&staker, epochId)
 		if err != nil {
-			log.Info(err.Error())
+			log.Error(err.Error())
 			return true
 		}
 
