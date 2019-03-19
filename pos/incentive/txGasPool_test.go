@@ -2,21 +2,22 @@ package incentive
 
 import (
 	"math/big"
+	"math/rand"
 	"testing"
 
-	"github.com/dedis/kyber/util/random"
 	"github.com/wanchain/go-wanchain/common"
 )
 
 func TestAddEpochGas(t *testing.T) {
 
 	testTimes := 100
-	testMaxWan := int64(1)
 	randNums := make([]*big.Int, 0)
+
+	random := rand.NewSource(0)
 
 	for index := 0; index < testTimes; index++ {
 		for i := 0; i < testTimes; i++ {
-			gas := random.Int(big.NewInt(0).Mul(big.NewInt(testMaxWan), big.NewInt(1e18)), random.New()) //1000 WAN
+			gas := big.NewInt(random.Int63())
 			AddEpochGas(statedb, gas, uint64(index))
 			randNums = append(randNums, gas)
 		}
@@ -38,12 +39,12 @@ func TestAddEpochGas(t *testing.T) {
 func TestAddEpochGasFail(t *testing.T) {
 	statedb.Reset(common.Hash{})
 	testTimes := 100
-	testMaxWan := int64(1)
 	randNums := make([]*big.Int, 0)
+	random := rand.NewSource(0)
 
 	for index := 0; index < testTimes; index++ {
 		for i := 0; i < testTimes; i++ {
-			gas := random.Int(big.NewInt(0).Mul(big.NewInt(testMaxWan), big.NewInt(1e18)), random.New()) //1000 WAN
+			gas := big.NewInt(random.Int63())
 			AddEpochGas(nil, gas, uint64(index))
 			randNums = append(randNums, gas)
 		}
