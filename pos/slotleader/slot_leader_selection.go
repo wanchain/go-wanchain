@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -16,7 +18,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"math/big"
 
 	"github.com/wanchain/go-wanchain/rpc"
 
@@ -103,19 +104,19 @@ func (s *SlotLeaderSelection) GetSlotLeader(epochID uint64, slotID uint64) (slot
 	if epochID == 0 {
 		b, err := hex.DecodeString(posconfig.GenesisPK)
 		if err != nil {
-			return nil, slottools.ErrInvalidGenesisPk
+			return nil, vm.ErrInvalidGenesisPk
 		}
 		return crypto.ToECDSAPub(b), nil
 	}
 	_, ok := s.slotCreateStatus[epochID]
 	if !ok {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
+		return nil, vm.ErrSlotLeaderGroupNotReady
 	}
 	if len(s.slotLeadersPtrArray) != posconfig.SlotCount {
-		return nil, slottools.ErrSlotLeaderGroupNotReady
+		return nil, vm.ErrSlotLeaderGroupNotReady
 	}
 	if slotID >= posconfig.SlotCount {
-		return nil, slottools.ErrSlotIDOutOfRange
+		return nil, vm.ErrSlotIDOutOfRange
 	}
 	return s.slotLeadersPtrArray[slotID], nil
 }
@@ -137,16 +138,16 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
 		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
-		return nil, nil, slottools.ErrNoTx2TransInDB
+		return nil, nil, vm.ErrNoTx2TransInDB
 	}
 
-	epID, slfIndex, _, alphaPki, proof, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
+	epID, slfIndex, _, alphaPki, proof, err := vm.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if epID != epochID || slfIndex != selfIndex {
-		return nil, nil, slottools.ErrRlpUnpackErr
+		return nil, nil, vm.ErrRlpUnpackErr
 	}
 
 	return alphaPki, proof, nil
@@ -164,12 +165,12 @@ func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if readBuf == nil {
-		return nil, slottools.ErrNoTx1TransInDB
+		return nil, vm.ErrNoTx1TransInDB
 	}
 
-	epID, idxID, miPoint, err := slottools.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
+	epID, idxID, miPoint, err := vm.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
 	if err != nil {
-		return nil, slottools.ErrRlpUnpackErr
+		return nil, vm.ErrRlpUnpackErr
 	}
 	mi = crypto.FromECDSAPub(miPoint)
 	//pk and mi is 65 bytes length
@@ -180,7 +181,7 @@ func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (
 		return
 	}
 
-	return nil, slottools.ErrVerifyStg1Data
+	return nil, vm.ErrVerifyStg1Data
 }
 
 func init() {
@@ -263,12 +264,12 @@ func (s *SlotLeaderSelection) getSlotLeaderStage2TxIndexes(epochID uint64) (inde
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 
 	if data == nil {
-		return ret[:], slottools.ErrNoTx2TransInDB
+		return ret[:], vm.ErrNoTx2TransInDB
 	}
 
 	err = rlp.DecodeBytes(data, &ret)
 	if err != nil {
-		return ret[:], slottools.ErrNoTx2TransInDB
+		return ret[:], vm.ErrNoTx2TransInDB
 	}
 	return ret[:], nil
 }
@@ -289,7 +290,7 @@ func (s *SlotLeaderSelection) getAlpha(epochID uint64, selfIndex uint64) (*big.I
 
 func (s *SlotLeaderSelection) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	if s.key == nil || s.key.PrivateKey == nil {
-		return nil, slottools.ErrInvalidLocalPublicKey
+		return nil, vm.ErrInvalidLocalPublicKey
 	}
 	return &s.key.PrivateKey.PublicKey, nil
 }
@@ -356,7 +357,7 @@ func (s *SlotLeaderSelection) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.Pub
 	pks := s.getEpochLeadersPK(epochID - 1)
 	if len(pks) == 0 {
 		log.Warn("Can not found pre epoch leaders return epoch 0", "epochIDPre", epochID-1)
-		return s.getEpoch0LeadersPK(), slottools.ErrInvalidPreEpochLeaders
+		return s.getEpoch0LeadersPK(), vm.ErrInvalidPreEpochLeaders
 	}
 
 	return pks, nil
@@ -395,7 +396,7 @@ func (s *SlotLeaderSelection) isLocalPkInPreEpochLeaders(epochID uint64) (canBeC
 
 	prePks, err := s.getPreEpochLeadersPK(epochID)
 	if err != nil {
-		return true, slottools.ErrInvalidPreEpochLeaders
+		return true, vm.ErrInvalidPreEpochLeaders
 	}
 
 	for i := 0; i < len(prePks); i++ {
@@ -598,7 +599,7 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	// get random
 	random, err := s.getRandom(epochIDGet)
 	if err != nil {
-		return slottools.ErrInvalidRandom
+		return vm.ErrInvalidRandom
 	}
 	log.Debug("generateSlotLeadsGroup", "Random got", hex.EncodeToString(random.Bytes()))
 
@@ -621,13 +622,13 @@ func (s *SlotLeaderSelection) generateSlotLeadsGroup(epochID uint64) error {
 	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
-			return slottools.ErrNotOnCurve
+			return vm.ErrNotOnCurve
 		}
 	}
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
-			return slottools.ErrNotOnCurve
+			return vm.ErrNotOnCurve
 		}
 	}
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
@@ -712,7 +713,7 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID)
 	log.Debug("collectStagesData", "indexesSentTran", indexesSentTran)
 	if err != nil {
-		return slottools.ErrCollectTxData
+		return vm.ErrCollectTxData
 	}
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 
@@ -747,12 +748,12 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 func (s *SlotLeaderSelection) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
 	if !s.isLocalPkInCurrentEpochLeaders() {
 		log.Debug("generateSecurityMsg", "input public key", hex.EncodeToString(crypto.FromECDSAPub(&PrivateKey.PublicKey)))
-		return slottools.ErrPkNotInCurrentEpochLeadersGroup
+		return vm.ErrPkNotInCurrentEpochLeadersGroup
 	}
 	// collect data
 	err := s.collectStagesData(epochID)
 	if err != nil {
-		return slottools.ErrCollectTxData
+		return vm.ErrCollectTxData
 	}
 
 	// build security self pieces. alpha1*pki, alpha2*pk2, alpha3*pk3....
@@ -823,7 +824,7 @@ func (s *SlotLeaderSelection) buildStage2TxPayload(epochID uint64, selfIndex uin
 		return nil, err
 	}
 
-	buf, err := slottools.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
+	buf, err := vm.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
 
 	return buf, err
 }

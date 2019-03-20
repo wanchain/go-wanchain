@@ -12,7 +12,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -89,7 +88,7 @@ func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 		selfIndexBuf := convert.Uint64ToBytes(uint64(i))
 		keyHash := vm.GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
 
-		buf, err := slottools.RlpPackStage2DataForTx(epochID, uint64(i), epPks[i], epPks, []*big.Int{big.NewInt(100), big.NewInt(100), big.NewInt(100)}, vm.GetSlotLeaderScAbiString())
+		buf, err := vm.RlpPackStage2DataForTx(epochID, uint64(i), epPks[i], epPks, []*big.Int{big.NewInt(100), big.NewInt(100), big.NewInt(100)}, vm.GetSlotLeaderScAbiString())
 		if err != nil {
 			t.FailNow()
 		}

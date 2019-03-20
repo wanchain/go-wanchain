@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -54,132 +53,18 @@ var (
 		]`
 )
 
-func TestStage1RlpCompress(t *testing.T) {
-	epochID := uint64(88665544)
-	selfIndex := uint64(789012)
-	key, _ := crypto.GenerateKey()
-	mi := &key.PublicKey
-
-	buf, err := RlpPackStage1DataForTx(epochID, selfIndex, mi, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	fmt.Println("len(buf):", len(buf))
-
-	epochIDUnpack, selfIndexUnpack, miUnpack, err := RlpUnpackStage1DataForTx(buf, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	if convert.Uint64ToString(epochID) != convert.Uint64ToString(epochIDUnpack) ||
-		convert.Uint64ToString(selfIndex) != convert.Uint64ToString(selfIndexUnpack) ||
-		hex.EncodeToString(crypto.FromECDSAPub(mi)) != hex.EncodeToString(crypto.FromECDSAPub(miUnpack)) {
-		t.Fail()
-	}
-
-	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(buf, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	if convert.Uint64ToString(epochID) != convert.Uint64ToString(convert.BytesToUint64(epochIDBuf)) {
-		t.Fail()
-	}
-
-	if convert.Uint64ToString(selfIndex) != convert.Uint64ToString(convert.BytesToUint64(selfIndexBuf)) {
-		t.Fail()
-	}
-}
-
-func TestStage2RlpCompress(t *testing.T) {
-	epochID := uint64(88665544)
-	selfIndex := uint64(789012)
-	key, _ := crypto.GenerateKey()
-	selfPK := &key.PublicKey
-
-	alphaPki := make([]*ecdsa.PublicKey, 50)
-	proof := make([]*big.Int, 2)
-
-	for i := 0; i < len(alphaPki); i++ {
-		k, _ := crypto.GenerateKey()
-		alphaPki[i] = &k.PublicKey
-	}
-
-	for i := 0; i < len(proof); i++ {
-		k, _ := crypto.GenerateKey()
-		proof[i] = k.D
-	}
-
-	buf, err := RlpPackStage2DataForTx(epochID, selfIndex, selfPK, alphaPki, proof, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	fmt.Println("len(buf):", len(buf))
-
-	t1 := time.Now()
-	epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err := RlpUnpackStage2DataForTx(buf, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	for index := 0; index < 49; index++ {
-		epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err = RlpUnpackStage2DataForTx(buf, slotLeaderSCDef)
-		if err != nil {
-			t.Fail()
-		}
-	}
-
-	fmt.Println("time:", time.Since(t1))
-
-	if convert.Uint64ToString(epochID) != convert.Uint64ToString(epochIDUnpack) ||
-		convert.Uint64ToString(selfIndex) != convert.Uint64ToString(selfIndexUnpack) {
-		t.Fail()
-	}
-
-	if !util.PkEqual(selfPK, selfPKUnpack) {
-		t.Fail()
-	}
-
-	for i := 0; i < len(alphaPki); i++ {
-		if !util.PkEqual(alphaPki[i], alphaPkiUnpack[i]) {
-			t.Fail()
-		}
-	}
-
-	for i := 0; i < len(proof); i++ {
-		if proof[i].String() != proofUnpack[i].String() {
-			t.Fail()
-		}
-	}
-
-	epochIDBuf, selfIndexBuf, err := RlpGetStage2IDFromTx(buf, slotLeaderSCDef)
-	if err != nil {
-		t.Fail()
-	}
-
-	if convert.Uint64ToString(epochID) != convert.Uint64ToString(convert.BytesToUint64(epochIDBuf)) {
-		t.Fail()
-	}
-
-	if convert.Uint64ToString(selfIndex) != convert.Uint64ToString(convert.BytesToUint64(selfIndexBuf)) {
-		t.Fail()
-	}
-}
-
 func TestPkCompress(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	pk := &key.PublicKey
 
-	buf, err := CompressPk(pk)
+	buf, err := util.CompressPk(pk)
 	if err != nil {
 		t.Fail()
 	}
 
 	fmt.Println("len(pk):", len(buf))
 
-	pkUncompress, err := UncompressPk(buf)
+	pkUncompress, err := util.UncompressPk(buf)
 	if err != nil {
 		t.Fail()
 	}

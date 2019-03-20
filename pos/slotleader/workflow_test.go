@@ -16,7 +16,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
 )
@@ -104,7 +103,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 		t.Fail()
 	}
 
-	epID, selfIndex, _, err := slottools.RlpUnpackStage1DataForTx(payload, vm.GetSlotLeaderScAbiString())
+	epID, selfIndex, _, err := vm.RlpUnpackStage1DataForTx(payload, vm.GetSlotLeaderScAbiString())
 	if err != nil {
 		t.Fail()
 	}

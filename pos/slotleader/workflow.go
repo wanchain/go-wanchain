@@ -19,7 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/pos/uleaderselection"
 )
@@ -192,7 +191,7 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	}
 
 	if !crypto.S256().IsOnCurve(publicKey.X, publicKey.Y) {
-		return nil, slottools.ErrNotOnCurve
+		return nil, vm.ErrNotOnCurve
 	}
 
 	alpha, err := uleaderselection.RandFieldElement(Rand.Reader)
@@ -206,7 +205,7 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 		return nil, err
 	}
 
-	buffer, err := slottools.RlpPackStage1DataForTx(epochID, selfIndexInEpochLeader, commitment[1], vm.GetSlotLeaderScAbiString())
+	buffer, err := vm.RlpPackStage1DataForTx(epochID, selfIndexInEpochLeader, commitment[1], vm.GetSlotLeaderScAbiString())
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
