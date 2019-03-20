@@ -48,8 +48,6 @@ var (
 	ErrInvalidTx2Range = errors.New("slot leader tx2 is not in invalid range")
 )
 
-var selecter SlotLeader
-
 func GetStage1FunctionID(abiString string) ([4]byte, error) {
 	var slotStage1ID [4]byte
 
@@ -113,7 +111,7 @@ type stage1Data struct {
 
 // RlpPackStage1DataForTx
 func RlpPackStage1DataForTx(epochID uint64, selfIndex uint64, mi *ecdsa.PublicKey, abiString string) ([]byte, error) {
-	pkBuf, err := PkCompress(mi)
+	pkBuf, err := CompressPk(mi)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +142,7 @@ func RlpUnpackStage1DataForTx(input []byte, abiString string) (epochID uint64, s
 
 	epochID = data.EpochID
 	selfIndex = data.SelfIndex
-	mi, err = PkUncompress(data.MiCompress)
+	mi, err = UncompressPk(data.MiCompress)
 	return
 }
 
@@ -163,8 +161,8 @@ func RlpGetStage1IDFromTx(input []byte, abiString string) (epochIDBuf []byte, se
 	return
 }
 
-// PkCompress
-func PkCompress(pk *ecdsa.PublicKey) ([]byte, error) {
+// CompressPk
+func CompressPk(pk *ecdsa.PublicKey) ([]byte, error) {
 	if !crypto.S256().IsOnCurve(pk.X, pk.Y) {
 		return nil, errors.New("Pk point is not on S256 curve")
 	}
@@ -172,8 +170,8 @@ func PkCompress(pk *ecdsa.PublicKey) ([]byte, error) {
 	return pkBtc.SerializeCompressed(), nil
 }
 
-// PkUncompress
-func PkUncompress(buf []byte) (*ecdsa.PublicKey, error) {
+// UncompressPk
+func UncompressPk(buf []byte) (*ecdsa.PublicKey, error) {
 	key, err := btcec.ParsePubKey(buf, btcec.S256())
 	if err != nil {
 		return nil, err
@@ -190,14 +188,14 @@ type stage2Data struct {
 }
 
 func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey, proof []*big.Int, abiString string) ([]byte, error) {
-	pk, err := PkCompress(selfPK)
+	pk, err := CompressPk(selfPK)
 	if err != nil {
 		return nil, err
 	}
 
 	pks := make([][]byte, len(alphaPki))
 	for i := 0; i < len(alphaPki); i++ {
-		pks[i], err = PkCompress(alphaPki[i])
+		pks[i], err = CompressPk(alphaPki[i])
 		if err != nil {
 			return nil, err
 		}
@@ -239,14 +237,14 @@ func RlpUnpackStage2DataForTx(input []byte, abiString string) (epochID uint64, s
 
 	epochID = data.EpochID
 	selfIndex = data.SelfIndex
-	selfPK, err = PkUncompress(data.SelfPk)
+	selfPK, err = UncompressPk(data.SelfPk)
 	if err != nil {
 		return
 	}
 
 	alphaPki = make([]*ecdsa.PublicKey, len(data.AlphaPki))
 	for i := 0; i < len(data.AlphaPki); i++ {
-		alphaPki[i], err = PkUncompress(data.AlphaPki[i])
+		alphaPki[i], err = UncompressPk(data.AlphaPki[i])
 		if err != nil {
 			return
 		}
@@ -276,13 +274,14 @@ type SlotLeader interface {
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
 
-func SetSlotLeaderInst(sor SlotLeader) {
-	selecter = sor
-}
+var slotLeaderBridge SlotLeader
 
+func SetSlotLeaderInst(sor SlotLeader) {
+	slotLeaderBridge = sor
+}
 func GetSlotLeaderInst() SlotLeader {
-	if selecter == nil {
+	if slotLeaderBridge == nil {
 		panic("GetSlotLeaderInst")
 	}
-	return selecter
+	return slotLeaderBridge
 }

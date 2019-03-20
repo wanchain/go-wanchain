@@ -172,14 +172,14 @@ func TestPkCompress(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	pk := &key.PublicKey
 
-	buf, err := PkCompress(pk)
+	buf, err := CompressPk(pk)
 	if err != nil {
 		t.Fail()
 	}
 
 	fmt.Println("len(pk):", len(buf))
 
-	pkUncompress, err := PkUncompress(buf)
+	pkUncompress, err := UncompressPk(buf)
 	if err != nil {
 		t.Fail()
 	}
