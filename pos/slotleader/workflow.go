@@ -25,17 +25,16 @@ import (
 )
 
 var (
-	errInvalidCommitParameter = errors.New("Invalid input parameters")
+	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
 
-// Init can set import info for slotleader at startup
 func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
 	s.blockChain = blockChain
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
 	if blockChain != nil {
-		log.Info("SlotLeaderSelecton init success")
+		log.Info("SlotLeaderSelection init success")
 	}
 
 	s.sendTransactionFn = util.SendTx
@@ -86,7 +85,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 			break
 		}
 
-		go doStage2Work(epochID)
+		go doStage2Work()
 		s.setWorkStage(epochID, slotLeaderSelectionStage3)
 	case slotLeaderSelectionStage3:
 		if slotID < posconfig.Sma3Start {
@@ -125,7 +124,6 @@ func (s *SlotLeaderSelection) doInit(epochID uint64) {
 	}
 }
 
-// startStage1Work start the stage 1 work and send tx
 func (s *SlotLeaderSelection) startStage1Work() error {
 	selfPublicKey, _ := s.getLocalPublicKey()
 
@@ -152,7 +150,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 	return nil
 }
 
-func doStage2Work(epochID uint64) {
+func doStage2Work() {
 	s := GetSlotLeaderSelection()
 	err := s.startStage2Work()
 	if err != nil {
@@ -160,7 +158,6 @@ func doStage2Work(epochID uint64) {
 	}
 }
 
-// startStage2Work start the stage 2 work and send tx
 func (s *SlotLeaderSelection) startStage2Work() error {
 	functrace.Enter("startStage2Work")
 	s.getWorkingEpochID()
