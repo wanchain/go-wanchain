@@ -112,7 +112,7 @@ type StakerInfo struct {
 	PubBn256  []byte //stakeholder’s bn256 public key
 
 	Amount     *big.Int //staking wan value
-	LockEpochs uint64   //lock time which is input by user
+	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
 	From       common.Address
 
 	StakingEpoch uint64 //the user’s staking time

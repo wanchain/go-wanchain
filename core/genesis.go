@@ -251,12 +251,12 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				PubSec256:   account.Staking.S256pk,
 				PubBn256:    account.Staking.Bn256pk,
 				Amount:      account.Staking.Amount,
-				LockEpochs:    10000,//10000 epochs
+				LockEpochs:    0, // never expired
 				StakingEpoch: uint64(0),
 				FeeRate:	 uint64(100),
 			}
 
-			infoArray, err := json.Marshal(staker)
+			infoArray, err := rlp.EncodeToBytes(staker)
 			if err != nil {
 				panic(err)
 			}

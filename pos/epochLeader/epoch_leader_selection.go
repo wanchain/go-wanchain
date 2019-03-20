@@ -2,7 +2,6 @@ package epochLeader
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -202,7 +201,7 @@ func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime ui
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
-	if epochId < 2 {
+	if lockTime == 0 || epochId < 2 {
 		leftTimePercent = 1
 
 	} else if epochId <= startEpochId+1 || epochId >= startEpochId+2+(lockTime-1) {
@@ -260,7 +259,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 
 		staker := vm.StakerInfo{}
 		// TODO RLP?
-		err := json.Unmarshal(value, &staker)
+		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
 			log.Error(err.Error())
 			return true
@@ -330,7 +329,6 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 		log.Debug("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", ps[idx].PubSec256)
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].PubSec256)
 		val, err := rlp.EncodeToBytes(&ps[idx])
-		//val,err := json.Marshal(&ps[idx])
 		if err != nil {
 			continue
 		}
@@ -369,7 +367,6 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].Probabilities.Cmp(crBig) > 0 })
 
 		val, err := rlp.EncodeToBytes(ps[idx])
-		//val,err := json.Marshal(&ps[idx])
 
 		if err != nil {
 			continue
@@ -467,7 +464,7 @@ func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) 
 	}
 
 	var staker vm.StakerInfo
-	err = json.Unmarshal(infoArray, &staker)
+	err = rlp.DecodeBytes(infoArray, &staker)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +501,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	stakerBytes := stateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
 
 	staker := vm.StakerInfo{}
-	err = json.Unmarshal(stakerBytes, &staker)
+	err = rlp.DecodeBytes(stakerBytes, &staker)
 	if nil != err {
 		return nil, 0, nil, err
 	}
@@ -530,7 +527,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if epochID < staker.StakingEpoch+staker.LockEpochs+2 { // TODO: check with design
+		if staker.LockEpochs==0 || epochID < staker.StakingEpoch+staker.LockEpochs+2 {
 			continue
 		}
 		for j := 0; j < len(staker.Clients); j++ {
