@@ -24,6 +24,15 @@ contract stake {
 }
 
 */
+const (
+	PSMaxEpochNum = 1000
+	PSMinEpochNum = 5
+	PSMinStakeholderStake = 100000
+	PSMinDelegateStake = 10000
+	PSMinFeeRate = 0
+	PSMaxFeeRate = 100
+	PSOutKeyHash = 700
+)
 
 var (
 	// pos staking contract abi definition
@@ -79,13 +88,13 @@ var (
 	//stakeOutId [4]byte
 	delegateId [4]byte
 
-	maxEpochNum         = big.NewInt(1000)
-	minEpochNum         = big.NewInt(5)
-	minStakeholderStake = new(big.Int).Mul(big.NewInt(100000), ether)
-	minDelegateStake = new(big.Int).Mul(big.NewInt(10000), ether)
-	minFeeRate = big.NewInt(0)
-	maxFeeRate = big.NewInt(100)
-	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(700).Bytes())
+	maxEpochNum         = big.NewInt(PSMaxEpochNum)
+	minEpochNum         = big.NewInt(PSMinEpochNum)
+	minStakeholderStake = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
+	minDelegateStake = new(big.Int).Mul(big.NewInt(PSMinDelegateStake), ether)
+	minFeeRate = big.NewInt(PSMinFeeRate)
+	maxFeeRate = big.NewInt(PSMaxFeeRate)
+	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(PSOutKeyHash).Bytes())
 )
 
 //
