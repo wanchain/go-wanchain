@@ -13,12 +13,12 @@ import (
 	"testing"
 )
 
-var(
-	selfPrivate *accBn256.PrivateKeyBn256
-	commityPrivate *accBn256.PrivateKeyBn256
+var (
+	selfPrivate      *accBn256.PrivateKeyBn256
+	commityPrivate   *accBn256.PrivateKeyBn256
 	proposerGroupLen = 10
-	hbase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
-	ens = make([][]*bn256.G1, 0)
+	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
+	ens              = make([][]*bn256.G1, 0)
 )
 
 func TestInit(t *testing.T) {
@@ -128,7 +128,6 @@ func TestDoGenerateDKG1(t *testing.T) {
 
 	epochId := uint64(0)
 
-
 	// pks
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
@@ -141,7 +140,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 	}
 
 	// generate every dkg1 and verify it
-	for proposerId := 0; proposerId < nr; proposerId++  {
+	for proposerId := 0; proposerId < nr; proposerId++ {
 		payload, err := rb.generateDKG1(epochId, uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg info fail. err:", err)
@@ -197,7 +196,6 @@ func TestGenerateDKG2(t *testing.T) {
 
 	epochId := uint64(0)
 
-
 	// pks
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
@@ -210,7 +208,7 @@ func TestGenerateDKG2(t *testing.T) {
 	}
 
 	// generate every dkg1 and verify it
-	for proposerId := 0; proposerId < nr; proposerId++  {
+	for proposerId := 0; proposerId < nr; proposerId++ {
 		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
@@ -250,7 +248,6 @@ func TestGenerateDKG2(t *testing.T) {
 			t.Fatal("transf dkg2flat to dkg2 fail, err:", err)
 		}
 
-
 		// proof verification
 		for j := 0; j < nr; j++ {
 			// get send public Key
@@ -286,7 +283,6 @@ func TestGenerateSIG(t *testing.T) {
 
 	epochId := uint64(0)
 
-
 	// pks
 	pks := rb.getRBProposerGroup(epochId)
 	nr := len(pks)
@@ -299,7 +295,7 @@ func TestGenerateSIG(t *testing.T) {
 	}
 
 	// generate every dkg1 and verify it
-	for proposerId := 0; proposerId < nr; proposerId++  {
+	for proposerId := 0; proposerId < nr; proposerId++ {
 		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
@@ -364,26 +360,12 @@ func TestGenerateSIG(t *testing.T) {
 	}
 }
 
-
 func tmpGetEnsFunc(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
 	return ens[proposerId], nil
 }
-
 
 func tmpGetRBM(db vm.StateDB, epochId uint64) ([]byte, error) {
 	epochIdBigInt := big.NewInt(int64(epochId + 1))
 	buf := epochIdBigInt.Bytes()
 	return crypto.Keccak256(buf), nil
 }
-
-
-
-
-
-
-
-
-
-
-
-
