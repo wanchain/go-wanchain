@@ -20,10 +20,6 @@ import (
 	"math/big"
 )
 
-var (
-	maxUint64 = uint64(1<<64 - 1)
-)
-
 type RbEnsDataCollector struct {
 	ens []*bn256.G1
 	pk  *bn256.G1
@@ -70,6 +66,8 @@ type RandomBeacon struct {
 }
 
 var (
+	maxUint64 = uint64(1<<64 - 1)
+	loopEventCount = 1000
 	randomBeacon RandomBeacon
 )
 
@@ -90,7 +88,7 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.getEns = vm.GetEns
 	rb.getRBM = vm.GetRBM
 
-	rb.loopEvents = make(chan *LoopEvent, 1000)
+	rb.loopEvents = make(chan *LoopEvent, loopEventCount)
 
 	go rb.LoopRoutine()
 }
@@ -163,6 +161,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					return err
 				}
 			}
+
 			rb.epochStage = vm.RbDkg2Stage
 		case vm.RbDkg2Stage:
 			if rbStage < vm.RbDkg2Stage {
@@ -178,6 +177,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					return err
 				}
 			}
+
 			rb.epochStage = vm.RbSignStage
 		case vm.RbSignStage:
 			if rbStage < vm.RbSignStage {
