@@ -11,7 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/util"
+	 posUtil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 type RbLeadersSelInt interface {
@@ -24,13 +24,15 @@ type SlLeadersSelInt interface {
 }
 
 type ForkMemBlockChain struct {
-	useEpochGenesis    bool
-	rbLeaderSelector   RbLeadersSelInt
-	slotLeaderSelector SlLeadersSelInt
+	useEpochGenesis    		bool
+	rbLeaderSelector   		RbLeadersSelInt
+	slotLeaderSelector 		SlLeadersSelInt
 
-	epochGens map[uint64]*types.EpochGenesis
+	epochGens map[uint64]	*types.EpochGenesis
 
-	epochGenesisCh chan uint64
+	epochGenesisCh 			chan uint64
+
+	lastEpochId				uint64
 }
 
 func NewForkMemBlockChain() *ForkMemBlockChain {
@@ -39,23 +41,8 @@ func NewForkMemBlockChain() *ForkMemBlockChain {
 	f.useEpochGenesis = false
 	f.epochGens = make(map[uint64]*types.EpochGenesis)
 	f.epochGenesisCh = make(chan uint64,1)
+	f.lastEpochId = 0
 	return f
-}
-
-type BlockSorter []*types.Block
-
-//Len()
-func (s BlockSorter) Len() int {
-	return len(s)
-}
-
-func (s BlockSorter) Less(i, j int) bool {
-	return s[i].NumberU64() < s[j].NumberU64()
-}
-
-//Swap()
-func (s BlockSorter) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
 }
 
 func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -66,7 +53,7 @@ func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	blkEpochId = (blkTd >> 32)
 	blkSlotId = ((blkTd & 0xffffffff) >> 8)
 
-	calEpochId, calSlotId := util.CalEpochSlotID(blkTime)
+	calEpochId, calSlotId := posUtil.CalEpochSlotID(blkTime)
 	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
 
 	if calEpochId != blkEpochId {
@@ -110,7 +97,6 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 
 	num := uint64(0)
 	if numberBytes != nil {
-
 		num = binary.BigEndian.Uint64(numberBytes) + 1
 	}
 
@@ -218,8 +204,17 @@ func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 	return false
 }
 
-func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, firstBlk *types.Block) *types.Block {
-	return nil
+func (f *ForkMemBlockChain) UpdateEpochGenesis(epochID uint64) {
+	if epochID != f.lastEpochId && epochID > 0{
+		f.lastEpochId = epochID
+		f.epochGenesisCh <- 1
+	}
+}
+
+func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Block) *types.Block {
+	epochID := blk.Header().Difficulty.Uint64() >> 32
+	blkNUm := posUtil.GetEpochBlock(epochID - 1)
+	return bc.GetBlockByNumber(blkNUm)
 }
 
 func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
