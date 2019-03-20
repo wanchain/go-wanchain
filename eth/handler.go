@@ -521,18 +521,23 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == GetEpochGenesisMsg:
-		var query getEpochGenesisData
-		if err := msg.Decode(&query); err != nil {
+		var epochid uint64
+		if err := msg.Decode(&epochid); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		p.SendEpochGenesis(pm.blockchain,query.Epochid)
+		p.SendEpochGenesis(pm.blockchain,epochid)
 
 	case msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
 		if err := msg.Decode(&epBody); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
+
+		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
+			log.Debug("Failed to deliver node state data", "err", err)
+		}
+
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message

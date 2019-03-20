@@ -38,7 +38,7 @@ type epochGenesisReq struct {
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
 	peer     *peerConnection            	// Peer that we're requesting from
-	response []*types.EpochGenesis                   	// Response data of the peer (nil for timeouts)
+	response *types.EpochGenesis                   	// Response data of the peer (nil for timeouts)
 	dropped  bool                       	// Flag whether the peer dropped off early
 }
 
@@ -296,7 +296,7 @@ func (s *epochGenesisSync) loop() error {
 			}
 
 			if !stale {
-				req.peer.SetNodeDataIdle(len(req.response))
+				req.peer.SetNodeDataIdle(1)
 			}
 		}
 	//}
@@ -316,10 +316,11 @@ func (s *epochGenesisSync) process(req *epochGenesisReq) (bool, error) {
 	}(time.Now())
 
 	// Iterate over all the delivered data and inject one-by-one into the trie
-	progress, stale := false, len(req.response) > 0
+	progress, stale := false, true
 
-	for _, blob := range req.response {
-		prog, hash, err := s.processNodeData(blob)
+	if req.response!=nil {
+
+		prog, hash, err := s.processNodeData(req.response)
 		switch err {
 		case nil:
 			s.numUncommitted++
@@ -351,7 +352,7 @@ func (s *epochGenesisSync) process(req *epochGenesisReq) (bool, error) {
 		// If the node did deliver something, missing items may be due to a protocol
 		// limit or a previous timeout + delayed delivery. Both cases should permit
 		// the node to retry the missing items (to avoid single-peer stalls).
-		if len(req.response) > 0 || req.timedOut() {
+		if req.response!=nil || req.timedOut() {
 			delete(task.attempts, req.peer.id)
 		}
 		// If we've requested the node too many times already, it may be a malicious
