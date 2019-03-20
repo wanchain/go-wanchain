@@ -45,7 +45,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 		validEpochLeadersIndex[i] = true
 	}
 
-	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID - 1)
+	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID - 1)
 	log.Debug("VerifySlotProof", "indexesSentTran", indexesSentTran)
 	if err != nil {
 		log.Error("VerifySlotProof", "indexesSentTran error", err.Error())

@@ -176,7 +176,7 @@ func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint
 	return alphaPki, proof, nil
 }
 
-func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
+func (s *SlotLeaderSelection) getSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
 	var ret [posconfig.EpochLeaderCount]bool
 	stateDb, err := s.getCurrentStateDb()
 	if err != nil {
@@ -187,7 +187,7 @@ func (s *SlotLeaderSelection) GetSlotLeaderStage2TxIndexes(epochID uint64) (inde
 
 	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(convert.Uint64ToBytes(epochID))
 
-	log.Debug(fmt.Sprintf("GetSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+	log.Debug(fmt.Sprintf("getSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 
@@ -737,7 +737,7 @@ func (s *SlotLeaderSelection) buildSecurityPieces(epochID uint64) (pieces []*ecd
 }
 
 func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
-	indexesSentTran, err := s.GetSlotLeaderStage2TxIndexes(epochID)
+	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID)
 	log.Debug("collectStagesData", "indexesSentTran", indexesSentTran)
 	if err != nil {
 		return slottools.ErrCollectTxData
