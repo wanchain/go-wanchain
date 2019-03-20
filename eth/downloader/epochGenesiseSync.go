@@ -17,24 +17,19 @@
 package downloader
 
 import (
-	"fmt"
-	"hash"
 	"sync"
-	"sync/atomic"
 	"time"
-
-	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/trie"
 	"math/big"
 	"github.com/wanchain/go-wanchain/core/types"
 	"errors"
+	"math/rand"
 )
 
 
 type epochGenesisReq struct {
 	epochid  *big.Int              			// epochid items to download
-	tasks    map[*big.Int]*epochGenesisTask // Download tasks to track previous attempts
+	tasks    map[*big.Int]uint64 // Download tasks to track previous attempts
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
 	peer     *peerConnection            	// Peer that we're requesting from
@@ -46,14 +41,6 @@ type epochGenesisReq struct {
 func (req *epochGenesisReq) timedOut() bool {
 	return req.response == nil
 }
-
-type epochGenesisSyncStats struct {
-	processed  uint64 // Number of state entries processed
-	duplicate  uint64 // Number of state entries downloaded twice
-	unexpected uint64 // Number of non-requested state entries received
-	pending    uint64 // Number of still pending state entries
-}
-
 
 func (d *Downloader) syncEpochGenesis(epochid uint64) *epochGenesisSync {
 
@@ -188,12 +175,13 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 			// Start a timer to notify the sync loop if the peer stalled.
 			req.timer = time.AfterFunc(req.timeout, func() {
 				select {
-				//case timeout <- req:
-				case <-s.done:
+					case timeout <- req:
+					case <-s.done:
 
 				}
 			})
-			//active[req.peer.id] = req
+
+			active[req.peer.id] = req
 		}
 	}
 }
@@ -202,35 +190,19 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 type epochGenesisSync struct {
 	epochid	uint64
 	d *Downloader 							// Downloader instance to access and manage current peerset
-	keccak hash.Hash                  		// Keccak256 hasher to verify deliveries with
-	tasks  map[*big.Int]*epochGenesisTask 	// Set of tasks currently queued for retrieval
-
-	numUncommitted   int
-	bytesUncommitted int
-
-	deliver    chan *epochGenesisReq // Delivery channel multiplexing peer responses
-
-	cancel     chan struct{}  // Channel to signal a termination request
-	cancelOnce sync.Once      // Ensures cancel only ever gets called once
-	done       chan struct{}  // Channel to signal termination completion
-	err        error          // Any error hit during sync (set before completion)
+	deliver    chan *epochGenesisReq 		// Delivery channel multiplexing peer responses
+	cancel     chan struct{}  				// Channel to signal a termination request
+	cancelOnce sync.Once      				// Ensures cancel only ever gets called once
+	done       chan struct{}  				// Channel to signal termination completion
+	err        error          				// Any error hit during sync (set before completion)
 }
-
-
-type epochGenesisTask struct {
-	attempts map[string]struct{}
-}
-
 
 func newepochGenesisSync(d *Downloader, epochid uint64) *epochGenesisSync {
 	return &epochGenesisSync{
 		epochid: epochid,
 		d:       d,
-		keccak:  sha3.NewKeccak256(),
-		tasks:   make(map[*big.Int]*epochGenesisTask),
 		deliver: make(chan *epochGenesisReq),
 		cancel:  make(chan struct{}),
-		done:    make(chan struct{}),
 	}
 }
 
@@ -261,119 +233,47 @@ func (s *epochGenesisSync) loop() error {
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)
 	defer peerSub.Unsubscribe()
 
-	// {
+	peers, _ := s.d.peers.NodeDataIdlePeers()
 
-		peers, _ := s.d.peers.NodeDataIdlePeers()
+	if len(peers) == 0 {
+		return errors.New("failed found peer when send epoch genesis request")
+	}
 
-		if len(peers) == 0 {
-			return errors.New("failed found peer when send epoch genesis request")
-		}
+	idx := rand.Intn(len(peers)-1)
+	p := peers[idx]
 
-		p := peers[0]
+	req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),peer: p, timeout: s.d.requestTTL()}
 
-		req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),peer: p, timeout: s.d.requestTTL()}
+	select {
 
-		select {
-
-			case s.d.trackEpochGenesisReq <- req:
-				req.peer.FetchEpochGenesisData(s.epochid)
-			case <-s.cancel:
-		}
-
-
-		select {
-		case <-newPeer:
-			// New peer arrived, try to assign it download tasks
-
+		case s.d.trackEpochGenesisReq <- req:
+			req.peer.FetchEpochGenesisData(s.epochid)
 		case <-s.cancel:
-			return errCancelEpochGenesisFetch
+	}
 
-		case req := <-s.deliver:
-			stale, err := s.process(req)
-			if err != nil {
-				log.Warn("Node data write error", "err", err)
-				return err
+
+	select {
+	case <-newPeer:
+		// New peer arrived, try to assign it download tasks
+
+	case <-s.cancel:
+		return errCancelEpochGenesisFetch
+
+	case req := <-s.deliver:
+		err := s.d.blockchain.SetEpochGenesis(req.response)
+		if err != nil {
+			log.Warn("get epoch genesis data write error", "err", err)
+			if req.tasks == nil {
+				req.tasks = make(map[*big.Int]uint64, 0)
 			}
 
-			if !stale {
-				req.peer.SetNodeDataIdle(1)
-			}
+			req.tasks[big.NewInt(req.epochid.Int64())] = req.epochid.Uint64()
+			return err
 		}
-	//}
+
+		req.peer.SetNodeDataIdle(1)
+	}
+
 
 	return nil
-}
-
-
-func (s *epochGenesisSync) process(req *epochGenesisReq) (bool, error) {
-	// Collect processing stats and update progress if valid data was received
-	duplicate, unexpected := 0, 0
-
-	defer func(start time.Time) {
-		if duplicate > 0 || unexpected > 0 {
-			s.updateStats(0, duplicate, unexpected, time.Since(start))
-		}
-	}(time.Now())
-
-	// Iterate over all the delivered data and inject one-by-one into the trie
-	progress, stale := false, true
-
-	if req.response!=nil {
-
-		prog, hash, err := s.processNodeData(req.response)
-		switch err {
-		case nil:
-			s.numUncommitted++
-			s.bytesUncommitted += 1//len(blob)
-			progress = progress || prog
-		case trie.ErrNotRequested:
-			unexpected++
-		case trie.ErrAlreadyProcessed:
-			duplicate++
-		default:
-			return stale, fmt.Errorf("invalid epoch node %s: %v", hash.String(), err)
-		}
-		// If the node delivered a requested item, mark the delivery non-stale
-		if _, ok := req.tasks[hash]; ok {
-			delete(req.tasks, hash)
-			stale = false
-		}
-	}
-
-	// If we're inside the critical section, reset fail counter since we progressed.
-	if progress && atomic.LoadUint32(&s.d.fsPivotFails) > 1 {
-		log.Trace("Fast-sync progressed, resetting fail counter", "previous", atomic.LoadUint32(&s.d.fsPivotFails))
-		atomic.StoreUint32(&s.d.fsPivotFails, 1) // Don't ever reset to 0, as that will unlock the pivot block
-	}
-
-	// Put unfulfilled tasks back into the retry queue
-	npeers := s.d.peers.Len()
-	for epid, task := range req.tasks {
-		// If the node did deliver something, missing items may be due to a protocol
-		// limit or a previous timeout + delayed delivery. Both cases should permit
-		// the node to retry the missing items (to avoid single-peer stalls).
-		if req.response!=nil || req.timedOut() {
-			delete(task.attempts, req.peer.id)
-		}
-		// If we've requested the node too many times already, it may be a malicious
-		// sync where nobody has the right data. Abort.
-		if len(task.attempts) >= npeers {
-			return stale, fmt.Errorf("epoch node %s failed with all peers (%d tries, %d peers)", len(task.attempts), npeers)
-		}
-		// Missing item, place into the retry queue.
-		s.tasks[epid] = task
-	}
-	return stale, nil
-}
-
-
-func (s *epochGenesisSync) processNodeData(genesis *types.EpochGenesis) (bool, *big.Int, error) {
-
-	return true,nil,nil
-}
-
-
-
-func (s *epochGenesisSync) updateStats(written, duplicate, unexpected int, duration time.Duration) {
-
 }
