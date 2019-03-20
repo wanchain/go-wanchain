@@ -135,6 +135,7 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64, blk *types.Block) (*
 	byteVal, err := json.Marshal(epGen)
 
 	if err != nil {
+		log.Debug("Failed to marshal epoch genesis data", "err", err)
 		return nil, err
 	}
 
