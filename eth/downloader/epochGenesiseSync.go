@@ -251,6 +251,5 @@ func (s *epochGenesisSync) run() error {
 		req.peer.SetNodeDataIdle(1)
 	}
 
-
 	return nil
 }

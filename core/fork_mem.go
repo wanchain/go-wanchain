@@ -42,22 +42,6 @@ func NewForkMemBlockChain() *ForkMemBlockChain {
 	return f
 }
 
-type BlockSorter []*types.Block
-
-//Len()
-func (s BlockSorter) Len() int {
-	return len(s)
-}
-
-func (s BlockSorter) Less(i, j int) bool {
-	return s[i].NumberU64() < s[j].NumberU64()
-}
-
-//Swap()
-func (s BlockSorter) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
 	blkTime := header.Time.Uint64()
 
