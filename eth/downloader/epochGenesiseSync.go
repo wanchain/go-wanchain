@@ -29,7 +29,7 @@ import (
 
 type epochGenesisReq struct {
 	epochid  *big.Int              			// epochid items to download
-	tasks    map[*big.Int]uint64 // Download tasks to track previous attempts
+	tasks    map[*big.Int]*epochGenesisReq 			// Download tasks to track previous attempts
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
 	peer     *peerConnection            	// Peer that we're requesting from
@@ -208,48 +208,48 @@ func (s *epochGenesisSync) run() error {
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)
 	defer peerSub.Unsubscribe()
 
-	peers, _ := s.d.peers.NodeDataIdlePeers()
+	req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),timeout: s.d.requestTTL()}
+	req.tasks = make( map[*big.Int]*epochGenesisReq)
+	req.tasks[req.epochid] = req
 
-	if len(peers) == 0 {
+	for _,request :=range req.tasks {
 
-		return errors.New("failed found peer when send epoch genesis request")
-	}
+		peers, _ := s.d.peers.NodeDataIdlePeers()
 
-	idx := rand.Intn(len(peers))
-	p := peers[idx]
-
-	req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),peer: p, timeout: s.d.requestTTL()}
-
-	select {
-
-		case s.d.trackEpochGenesisReq <- req:
-
-			req.peer.FetchEpochGenesisData(s.epochid)
-
-		case <-s.cancel:
-	}
-
-
-	select {
-	case <-newPeer:
-		// New peer arrived, try to assign it download tasks
-
-	case <-s.cancel:
-		return errCancelEpochGenesisFetch
-
-	case req := <-s.deliver:
-		err := s.d.blockchain.SetEpochGenesis(req.response)
-		if err != nil {
-			log.Warn("get epoch genesis data write error", "err", err)
-			if req.tasks == nil {
-				req.tasks = make(map[*big.Int]uint64, 0)
-			}
-
-			req.tasks[big.NewInt(req.epochid.Int64())] = req.epochid.Uint64()
-			return err
+		if len(peers) == 0 {
+			return errors.New("failed found peer when send epoch genesis request")
 		}
 
-		req.peer.SetNodeDataIdle(1)
+		idx := rand.Intn(len(peers))
+		request.peer = peers[idx]
+
+		select {
+
+			case s.d.trackEpochGenesisReq <- req:
+				err := req.peer.FetchEpochGenesisData(s.epochid)
+				if err == nil {
+					delete(req.tasks,big.NewInt(int64(s.epochid)))
+				}
+
+			case <-s.cancel:
+		}
+
+		select {
+		case <-newPeer:
+			// New peer arrived, try to assign it download tasks
+
+		case <-s.cancel:
+			return errCancelEpochGenesisFetch
+
+		case req := <-s.deliver:
+			err := s.d.blockchain.SetEpochGenesis(req.response)
+			if err != nil {
+				log.Warn("get epoch genesis data write error", "err", err)
+				return err
+			}
+
+			req.peer.SetNodeDataIdle(1)
+		}
 	}
 
 	return nil

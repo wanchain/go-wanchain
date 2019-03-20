@@ -531,11 +531,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	case msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
 		if err := msg.Decode(&epBody); err != nil {
+			log.Debug("Failed to decode epoch genesis data", "err", err)
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
 		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
-			log.Debug("Failed to deliver node state data", "err", err)
+			log.Debug("Failed to deliver epoch genesis data", "err", err)
 		}
 
 
