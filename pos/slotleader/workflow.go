@@ -140,7 +140,7 @@ func (s *SlotLeaderSelection) startStage1Work() error {
 			if err != nil {
 				return err
 			}
-			err = s.sendStage1Tx(data, s.sendTransactionFn)
+			err = s.sendSlotTx(data, s.sendTransactionFn)
 			if err != nil {
 				log.Error(err.Error())
 				return err
@@ -175,7 +175,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 			if err != nil {
 				return err
 			}
-			err = s.sendStage2Tx(data, s.sendTransactionFn)
+			err = s.sendSlotTx(data, s.sendTransactionFn)
 			if err != nil {
 				return err
 			}

@@ -15,8 +15,8 @@ import (
 	"github.com/wanchain/pos/uleaderselection"
 )
 
-//ProofMes = [PK, Gt, skGt] []*PublicKey
-//Proof = [e,z] []*big.Int
+//ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
+//Proof 	= [e,z] 			[]*big.Int
 func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	_, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
@@ -161,7 +161,6 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
 
-// PackSlotProof can make a pack info for header seal
 func (s *SlotLeaderSelection) PackSlotProof(epochID uint64, slotID uint64, privKey *ecdsa.PrivateKey) ([]byte, error) {
 	proofMeg, proof, err := s.getSlotLeaderProof(privKey, epochID, slotID)
 	if err != nil {

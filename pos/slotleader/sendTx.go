@@ -16,12 +16,9 @@ var (
 	errRCNotReady = errors.New("rc is not ready")
 )
 
-//--------------Transacton create / send --------------------------------------------
-
-// SendTxFn is a founction type of send tx function
 type SendTxFn func(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error)
 
-func (s *SlotLeaderSelection) sendStage1Tx(data []byte, posSender SendTxFn) error {
+func (s *SlotLeaderSelection) sendSlotTx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
 		return errRCNotReady
 	}
@@ -31,24 +28,6 @@ func (s *SlotLeaderSelection) sendStage1Tx(data []byte, posSender SendTxFn) erro
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
 	//arg["gas"] = (*hexutil.Big)(big.NewInt(1500000)) //use default gas
-	arg["txType"] = types.POS_TX
-	arg["data"] = hexutil.Bytes(data)
-	log.Debug("Write data of payload", "length", len(data))
-
-	_, err := posSender(s.rc, arg)
-	return err
-}
-
-func (s *SlotLeaderSelection) sendStage2Tx(data []byte, posSender SendTxFn) error {
-	if s.rc == nil {
-		return errRCNotReady
-	}
-
-	arg := map[string]interface{}{}
-	arg["from"] = s.key.Address
-	arg["to"] = vm.GetSlotLeaderSCAddress()
-	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000))
 	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))

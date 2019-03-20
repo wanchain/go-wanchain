@@ -19,7 +19,7 @@ func testSender(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) 
 
 func TestSendStage1Tx(t *testing.T) {
 	testInit()
-	err := GetSlotLeaderSelection().sendStage1Tx(nil, testSender)
+	err := GetSlotLeaderSelection().sendSlotTx(nil, testSender)
 	if err != nil {
 		t.FailNow()
 	}
@@ -27,7 +27,7 @@ func TestSendStage1Tx(t *testing.T) {
 
 func TestSendStage2Tx(t *testing.T) {
 	testInit()
-	err := GetSlotLeaderSelection().sendStage2Tx(nil, testSender)
+	err := GetSlotLeaderSelection().sendSlotTx(nil, testSender)
 	if err != nil {
 		t.FailNow()
 	}
