@@ -135,7 +135,7 @@ type Downloader struct {
 	headerProcCh  chan []*types.Header // [eth/62] Channel to feed the header processor new tasks
 
 	//for epoch genesis
-	epochGenesisSyncStart chan	*epochGenesisSync
+	epochGenesisSyncStart chan	uint64
 	epochGenesisCh        chan  dataPack
 	trackEpochGenesisReq  chan  *epochGenesisReq
 
@@ -214,6 +214,8 @@ type BlockChain interface {
 
 	GetBlockEpochIdAndSlotId(header *types.Block) (uint64, uint64)
 
+	GetEpochStartCh() (chan	uint64)
+
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -241,8 +243,11 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		headerProcCh:   make(chan []*types.Header, 1),
 		quitCh:         make(chan struct{}),
 		stateCh:        make(chan dataPack),
+
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
+
+		epochGenesisSyncStart : chain.GetEpochStartCh(),
 	}
 
 	go dl.qosTuner()

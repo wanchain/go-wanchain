@@ -1545,3 +1545,7 @@ func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool{
 func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
 	return bc.forkMem.SetEpochGenesis(epochgen)
 }
+
+func (bc *BlockChain) GetEpochStartCh() (chan uint64) {
+	return bc.forkMem.epochGenesisCh
+}

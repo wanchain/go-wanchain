@@ -29,6 +29,8 @@ type ForkMemBlockChain struct {
 	slotLeaderSelector SlLeadersSelInt
 
 	epochGens map[uint64]*types.EpochGenesis
+
+	epochGenesisCh chan uint64
 }
 
 func NewForkMemBlockChain() *ForkMemBlockChain {
@@ -36,7 +38,7 @@ func NewForkMemBlockChain() *ForkMemBlockChain {
 	f := &ForkMemBlockChain{}
 	f.useEpochGenesis = false
 	f.epochGens = make(map[uint64]*types.EpochGenesis)
-
+	f.epochGenesisCh = make(chan uint64,1)
 	return f
 }
 

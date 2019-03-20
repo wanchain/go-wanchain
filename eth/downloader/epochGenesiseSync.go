@@ -42,30 +42,14 @@ func (req *epochGenesisReq) timedOut() bool {
 	return req.response == nil
 }
 
-func (d *Downloader) syncEpochGenesis(epochid uint64) *epochGenesisSync {
-
-	s := newepochGenesisSync(d, epochid)
-
-	select {
-
-	case d.epochGenesisSyncStart <- s:
-
-	case <-d.quitCh:
-		s.err = errCancelEpochGenesisFetch
-		close(s.done)
-	}
-
-	return s
-}
-
 func (d *Downloader) epochGenesisFetcher() {
 	for {
 		select {
-		case s := <-d.epochGenesisSyncStart:
-			for next := s; next != nil; {
-				next = d.runEpochGenesisSync(next)
-			}
-		case <-d.epochGenesisCh:
+
+		case epochid := <-d.epochGenesisSyncStart:
+
+			s := newepochGenesisSync(d, epochid)
+			d.runEpochGenesisSync(s)
 
 		case <-d.quitCh:
 			return
@@ -110,9 +94,6 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 		}
 
 		select {
-
-		case next := <-d.epochGenesisSyncStart:
-			return next
 
 		case <-s.done:
 			return nil
@@ -206,13 +187,6 @@ func newepochGenesisSync(d *Downloader, epochid uint64) *epochGenesisSync {
 	}
 }
 
-// run starts the task assignment and response processing loop, blocking until
-// it finishes, and finally notifying any goroutines waiting for the loop to
-// finish.
-func (s *epochGenesisSync) run() {
-	s.err = s.loop()
-	close(s.done)
-}
 
 // Wait blocks until the sync is done or canceled.
 func (s *epochGenesisSync) Wait() error {
@@ -227,7 +201,9 @@ func (s *epochGenesisSync) Cancel() error {
 }
 
 
-func (s *epochGenesisSync) loop() error {
+func (s *epochGenesisSync) run() error {
+
+	defer close(s.done)
 	// Listen for new peer events to assign tasks to them
 	newPeer := make(chan *peerConnection, 1024)
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)
@@ -248,6 +224,7 @@ func (s *epochGenesisSync) loop() error {
 
 		case s.d.trackEpochGenesisReq <- req:
 			req.peer.FetchEpochGenesisData(s.epochid)
+
 		case <-s.cancel:
 	}
 
