@@ -189,11 +189,11 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 }
 
 //
-// params check functions
+// params or gas check functions
 //
 func ValidPosTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *big.Int,
-	intrGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
-	if intrGas == nil || intrGas.BitLen() > 64 || gasLimit == nil || intrGas.Cmp(gasLimit) > 0 {
+	intrinsicGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
+	if intrinsicGas == nil || intrinsicGas.BitLen() > 64 || gasLimit == nil || intrinsicGas.Cmp(gasLimit) > 0 {
 		return ErrOutOfGas
 	}
 
@@ -575,21 +575,8 @@ func ByteSliceToUInt32(bs []byte) uint32 {
 }
 
 //
-// structures for param
+// structures for params
 //
-type RbDKG1TxPayload struct {
-	EpochId    uint64
-	ProposerId uint32
-	Commit     []*bn256.G2
-}
-
-type RbDKG2TxPayload struct {
-	EpochId    uint64
-	ProposerId uint32
-	Enshare    []*bn256.G1
-	Proof      []wanpos.DLEQproof
-}
-
 type RbDKG1FlatTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
@@ -611,6 +598,25 @@ type RbSIGTxPayload struct {
 	Gsigshare  *bn256.G1
 }
 
+//
+// params bytes fields to object
+//
+type RbDKG1TxPayload struct {
+	EpochId    uint64
+	ProposerId uint32
+	Commit     []*bn256.G2
+}
+
+type RbDKG2TxPayload struct {
+	EpochId    uint64
+	ProposerId uint32
+	Enshare    []*bn256.G1
+	Proof      []wanpos.DLEQproof
+}
+
+//
+// storage structures
+//
 type RbDKGTxPayloadPure struct {
 	EpochId    uint64
 	ProposerId uint32
@@ -629,7 +635,7 @@ type RbSIGDataCollector struct {
 }
 
 //
-// param parse functions
+// storage parse functions
 //
 func BytesToCij(d *[][]byte) ([]*bn256.G2, error) {
 	l := len(*d)
@@ -672,6 +678,9 @@ func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
 	return ens, nil
 }
 
+//
+// params bytes fields convert functions
+//
 func Dkg1FlatToDkg1(d *RbDKG1FlatTxPayload) (*RbDKG1TxPayload, error) {
 	var dkgParam RbDKG1TxPayload
 	dkgParam.EpochId = d.EpochId
@@ -762,7 +771,7 @@ func Dkg2ToDkg2Flat(d *RbDKG2TxPayload) *RbDKG2FlatTxPayload {
 }
 
 //
-// help functions
+// in file help functions
 //
 // check time in the right stage, dkg1 --- 1k,2k slot, dkg2 --- 5k,6k slot, sig --- 8k,9k slot
 func isValidEpochStage(epochId uint64, stage int, time uint64) bool {

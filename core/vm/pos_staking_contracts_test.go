@@ -179,8 +179,8 @@ func TestMultiDelegateIn(b *testing.T) {
 
 	begin := time.Now()
 	begin1 := time.Now()
-	for i:=0; i<10005; i++ {
-		if i== 10000 {
+	for i:=0; i<15; i++ {
+		if i== 10 {
 			begin1 = time.Now()
 		}
 		key,_ := crypto.GenerateKey()
@@ -190,10 +190,10 @@ func TestMultiDelegateIn(b *testing.T) {
 			b.Fatal(err.Error())
 		}
 	}
-	t10005 := time.Since(begin)
+	tAll := time.Since(begin)
 	tLast5 := time.Since(begin1)
-	println("10005 delegate need time:", t10005)
-	println("10000~10004 delegate need time:", tLast5)
+	println("15 delegate need time:", tAll)
+	println("10~14 delegate need time:", tLast5)
 	clearDb()
 }
 
