@@ -127,12 +127,6 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 }
 
 func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// 0. verify pk and whether in Epoch group list.
-	// 1. get transaction data
-	// 2. parse data to get the Pie[i] and A[i]
-	// 3. verify A[i]
-	// 4. verify Pie[i]
-	// 5. epochID verify
 	var methodId [4]byte
 	copy(methodId[:], tx.Data()[:4])
 
@@ -140,6 +134,8 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 		return c.validTxStg1(signer, tx)
 	} else if methodId == stgTwoIdArr {
 		return c.validTxStg2(signer, tx)
+	} else {
+		return errMethodId
 	}
 	return nil
 }

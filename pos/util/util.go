@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"time"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -19,6 +20,25 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	slotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
 	fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
+}
+
+var (
+	curEpochId = uint64(0)
+	curSlotId  = uint64(0)
+)
+
+func GetEpochSlotID() (uint64, uint64) {
+	return curEpochId, curSlotId
+}
+func CalEpochSlotIDByNow() {
+	if posconfig.EpochBaseTime == 0 {
+		return
+	}
+	timeUnix := uint64(time.Now().Unix())
+	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
+	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
+	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
 //PkEqual only can use in same curve. return whether the two points equal

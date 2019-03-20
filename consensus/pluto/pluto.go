@@ -218,7 +218,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 // Ethereum testnet following the Ropsten attacks.
 type Pluto struct {
 	config *params.PlutoConfig // Consensus engine configuration parameters
-	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
+	db     ethdb.Database      // Database to store and retrieve snapshot checkpoints
 
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
@@ -644,7 +644,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
-	curEpochId, curSlotId := slotleader.GetEpochSlotID()
+	curEpochId, curSlotId := util.GetEpochSlotID()
 
 	if posconfig.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
@@ -731,7 +731,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	epochSlotId := uint64(1)
 	var epochIDPack uint64
 	var slotIDPack uint64
-	epochId, slotId := slotleader.GetEpochSlotID()
+	epochId, slotId := util.GetEpochSlotID()
 	fmt.Println("Pluto Seal: epochId:", epochId, "slotId:", slotId)
 
 	var leader string

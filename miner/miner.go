@@ -20,6 +20,7 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -170,7 +171,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			select {
 			case <-self.timerStop:
 				return
-			case <-time.After(time.Duration(time.Second) ):
+			case <-time.After(time.Duration(time.Second)):
 				continue
 			}
 
@@ -183,8 +184,8 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			}
 		}
 
-		slotleader.CalEpochSlotID()
-		epochid, slotid := slotleader.GetEpochSlotID()
+		util.CalEpochSlotIDByNow()
+		epochid, slotid := util.GetEpochSlotID()
 		log.Debug("epochid, slotid", epochid, slotid)
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
