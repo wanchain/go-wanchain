@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
@@ -82,7 +82,7 @@ func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 	generateTestStaker()
 
 	epochID := uint64(0)
-	posdb.SetEpocherInst(&TestSelectLead{})
+	util.SetEpocherInst(&TestSelectLead{})
 
 	for i := 0; i < len(epAddrs); i++ {
 		epochIDBuf := convert.Uint64ToBytes(epochID)

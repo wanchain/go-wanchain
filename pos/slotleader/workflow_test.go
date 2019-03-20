@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -53,7 +54,7 @@ func TestLoop(t *testing.T) {
 
 	generateTestAddrs()
 	testInitSlotleader()
-	posdb.SetEpocherInst(&TestSelectLead{})
+	util.SetEpocherInst(&TestSelectLead{})
 
 	key := &keystore.Key{}
 	key.PrivateKey, _ = crypto.GenerateKey()
@@ -62,11 +63,11 @@ func TestLoop(t *testing.T) {
 	epochIDStart := time.Now().Second()
 
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), uint64(epochIDStart+0), uint64(i))
+		s.Loop(&rpc.Client{}, key, util.GetEpocherInst(), uint64(epochIDStart+0), uint64(i))
 	}
 
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, posdb.GetEpocherInst(), uint64(epochIDStart+1), uint64(i))
+		s.Loop(&rpc.Client{}, key, util.GetEpocherInst(), uint64(epochIDStart+1), uint64(i))
 	}
 }
 

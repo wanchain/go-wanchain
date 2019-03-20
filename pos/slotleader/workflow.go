@@ -56,16 +56,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 
 	switch workStage {
 	case slotLeaderSelectionInit:
-		s.clearData()
-		s.buildEpochLeaderGroup(epochID)
-		s.setWorkingEpochID(epochID)
-
-		err := s.generateSlotLeadsGroup(epochID)
-		if err != nil {
-			log.Error(err.Error())
-			panic("generateSlotLeadsGroup error")
-		}
-
+		s.doInit(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage1)
 	case slotLeaderSelectionStage1:
 		if slotID > (posconfig.Sma1End - 1) {
@@ -118,6 +109,19 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
 	default:
+	}
+}
+
+// doInit is used for init in each epoch
+func (s *SlotLeaderSelection) doInit(epochID uint64) {
+	s.clearData()
+	s.buildEpochLeaderGroup(epochID)
+	s.setWorkingEpochID(epochID)
+
+	err := s.generateSlotLeadsGroup(epochID)
+	if err != nil {
+		log.Error(err.Error())
+		panic("generateSlotLeadsGroup error")
 	}
 }
 
