@@ -66,9 +66,9 @@ type RandomBeacon struct {
 }
 
 var (
-	maxUint64 = uint64(1<<64 - 1)
+	maxUint64      = uint64(1<<64 - 1)
 	loopEventCount = 1000
-	randomBeacon RandomBeacon
+	randomBeacon   RandomBeacon
 )
 
 func GetRandonBeaconInst() *RandomBeacon {
