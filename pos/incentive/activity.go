@@ -6,13 +6,13 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
-	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
+	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if epochLeaders == nil || len(epochLeaders) == 0 {
 		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
 		return []common.Address{}, []int{}

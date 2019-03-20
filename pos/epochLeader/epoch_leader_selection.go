@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math"
 	"math/big"
 	"sort"
@@ -45,7 +46,6 @@ var (
 
 type Epocher struct {
 	rbLeadersDb     *posdb.Db
-	rbLeadersAddrDb *posdb.Db
 	epochLeadersDb  *posdb.Db
 	blkChain        *core.BlockChain
 }
@@ -77,13 +77,10 @@ func GetEpocher() *Epocher {
 func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher {
 
 	rbdb := posdb.NewDb(rbn)
-	rbldAddrDb := posdb.NewDb(rbn + "address")
-
 	epdb := posdb.NewDb(epdbn)
-	inst := &Epocher{rbdb, rbldAddrDb, epdb, blc}
+	inst := &Epocher{rbdb,  epdb, blc}
 
-	posdb.SetEpocherInst(inst)
-
+	util.SetEpocherInst(inst)
 	return inst
 }
 
@@ -97,7 +94,7 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 		return uint64(0)
 	}
 	targetEpochId := epochId - 2
-	targetBlkNum := posdb.GetEpochBlock(targetEpochId)
+	targetBlkNum := util.GetEpochBlock(targetEpochId)
 	if targetBlkNum == 0 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
@@ -109,7 +106,7 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 			curNum--
 		}
 		targetBlkNum = curNum
-		posdb.SetEpochBlock(targetEpochId, targetBlkNum)
+		util.SetEpochBlock(targetEpochId, targetBlkNum)
 	}
 	return targetBlkNum
 
@@ -136,15 +133,14 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	r := rb.Bytes()
 
-	err = e.SelectLeaders(r, Ne, Nr, stateDb, epochId)
+	err = e.selectLeaders(r, Ne, Nr, stateDb, epochId)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-
-func (e *Epocher) SelectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
+func (e *Epocher) selectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
 	log.Debug("select randoms", epochId, common.ToHex(r))
 
@@ -194,14 +190,25 @@ func Round(f float64, n int) float64 {
 }
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
+/*
+A stakeHolder register in epoch startEpochId,
+it will be included in epochLeader/RbGroup selection at Epoch startEpochId+1
+if selected, it could send pos tx at Epoch startEpochId +2
+if selected as slot Leader, it could seal block at Epoch startEpochId +3
+A stakeHolder register N epoch, means it could receive max to N time incentive, and send max to N-1 pos tx, and seal blocks in max to N-1 epochs
+Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
+*/
 func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
 	if epochId < 2 {
 		leftTimePercent = 1
-	} else if epochId < startEpochId+2 || epochId >= startEpochId+2+(lockTime-1) {
+
+	} else if epochId <= startEpochId+1 || epochId >= startEpochId+2+(lockTime-1) {
+		// A stakeholder register at Epoch startEpochId,  luckiest he could send pos tx at startEpochId+2 ~ startEpochId+1+(lockTime-1), total lockTime-1 epochs
 		leftTimePercent = 0
+		return pb
 	} else {
 		leftTimePercent = (float64(startEpochId+2 +(lockTime-1)-epochId) / float64(lockTime-1))
 	}
@@ -252,6 +259,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
 
 		staker := vm.StakerInfo{}
+		// TODO RLP?
 		err := json.Unmarshal(value, &staker)
 		if err != nil {
 			log.Error(err.Error())
@@ -277,7 +285,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		return true
 	})
 
-	sort.Sort(ProposerSorter(ps))
+	sort.Stable(ProposerSorter(ps))
 
 	for idx, _ := range ps {
 		if idx == 0 {

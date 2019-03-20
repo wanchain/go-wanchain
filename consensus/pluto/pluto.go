@@ -21,15 +21,14 @@ import (
 	"bytes"
 	"errors"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/incentive"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
@@ -853,7 +852,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		log.Warn("Verify error", "error", err.Error())
 		return nil, err
 	}
-	posdb.UpdateEpochBlock(epochIDPack, slotIDPack, number)
+	util.UpdateEpochBlock(epochIDPack, slotIDPack, number)
 	return block.WithSeal(header), nil
 }
 

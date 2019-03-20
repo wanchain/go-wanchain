@@ -792,7 +792,7 @@ func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address 
 	if len(pks) <= int(proposerId) {
 		return false
 	}
-	pk1 := posdb.GetProposerBn256PK(epochId, uint64(proposerId), address)
+	pk1 := util.GetEpocherInst().GetProposerBn256PK(epochId, uint64(proposerId), address)
 	if pk1 != nil {
 		return bytes.Equal(pk1, pks[proposerId].Marshal())
 	}

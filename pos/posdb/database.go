@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/ethdb"
@@ -26,7 +25,7 @@ type Db struct {
 var (
 	dbInstMap = make(map[string]*Db)
 	//RANDOMBEACON_DB_KEY = "PosRandomBeacon"
-	selecter SelectLead
+
 	mu       sync.RWMutex
 )
 
@@ -267,23 +266,7 @@ func (s *Db) getUniqueKeyBytes(epochID uint64, index uint64, key string) []byte 
 	return []byte(s.getUniqueKey(epochID, index, key))
 }
 
-type SelectLead interface {
-	SelectLeadersLoop(epochId uint64) error
-	GetEpochLeaders(epochID uint64) [][]byte
-	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
-}
 
-func SetEpocherInst(sor SelectLead) {
-	selecter = sor
-}
-
-func GetEpocherInst() SelectLead {
-	// TODO: can't be nil
-	if selecter == nil {
-		panic("GetEpocherInst")
-	}
-	return selecter
-}
 
 // TODO duplicated with epochLeader
 type Proposer struct {
@@ -340,32 +323,7 @@ func GetEpochLeaderGroup(epochId uint64) [][]byte {
 
 }
 
-func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
-	return selecter.GetProposerBn256PK(epochID, idx, addr)
-}
 
 //-------------------------------------------------------------------
 
-var (
-	lastBlockEpoch = make(map[uint64]uint64)
-)
 
-var lastEpochId = uint64(0)
-var selectedEpochId = uint64(0)
-
-func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64) {
-	if epochID != lastEpochId {
-		lastEpochId = epochID
-	}
-	if slotID >= 2*posconfig.K +1 && selectedEpochId != epochID+1 {
-		GetEpocherInst().SelectLeadersLoop(epochID + 1)
-		selectedEpochId = epochID+1
-	}
-	lastBlockEpoch[epochID] = blockNumber
-}
-func SetEpochBlock(epochID uint64, blockNumber uint64) {
-	lastBlockEpoch[epochID] = blockNumber
-}
-func GetEpochBlock(epochID uint64) uint64 {
-	return lastBlockEpoch[epochID]
-}

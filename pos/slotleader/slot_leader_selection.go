@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
 	"time"
 
@@ -348,13 +349,14 @@ func (s *SlotLeaderSelection) getEpochLeaders(epochID uint64) [][]byte {
 			GetEpochLeaders(epochID uint64) [][]byte
 		}
 
-		selector := posdb.GetEpocherInst()
+		selector := epochLeader.GetEpocher()
+		//selector := posdb.GetEpocherInst()
 
 		if selector == nil {
 			return nil
 		}
 
-		epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
+		epochLeaders := selector.GetEpochLeaders(epochID)
 		if epochLeaders != nil {
 			log.Debug(fmt.Sprintf("getEpochLeaders called return len(epochLeaders):%d", len(epochLeaders)))
 		}

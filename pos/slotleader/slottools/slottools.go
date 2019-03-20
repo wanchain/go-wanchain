@@ -16,7 +16,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -90,10 +90,10 @@ func PackStage1Data(input []byte, abiString string) ([]byte, error) {
 }
 
 func InEpochLeadersOrNotByAddress(epochID uint64, senderAddress common.Address) bool {
-	epochLeaders := posdb.GetEpocherInst().GetEpochLeaders(epochID)
+	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
 		log.Warn("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
-		epochLeaders = posdb.GetEpocherInst().GetEpochLeaders(0)
+		epochLeaders = util.GetEpocherInst().GetEpochLeaders(0)
 	}
 
 	for i := 0; i < len(epochLeaders); i++ {

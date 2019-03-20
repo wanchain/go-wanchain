@@ -65,13 +65,15 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, err
 		GetEpochLeaders(epochID uint64) [][]byte
 	}
 
-	selector := posdb.GetEpocherInst()
+//	selector := posdb.GetEpocherInst()
+	selector := epochLeader.GetEpocher()
 
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
 	}
 
-	epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
+	epochLeaders := selector.GetEpochLeaders(epochID)
+	//epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
 
 	for i := 0; i < len(epochLeaders); i++ {
 		infoMap[fmt.Sprintf("%06d", i)] = hex.EncodeToString(epochLeaders[i])

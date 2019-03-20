@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -31,4 +32,54 @@ func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 		return true
 	}
 	return false
+}
+
+type SelectLead interface {
+	SelectLeadersLoop(epochId uint64) error
+	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
+	GetEpochLeaders(epochID uint64) [][]byte
+}
+var (
+	lastBlockEpoch = make(map[uint64]uint64)
+	selecter SelectLead
+	lastEpochId = uint64(0)
+	selectedEpochId = uint64(0)
+
+)
+
+
+
+
+func SetEpocherInst(sor SelectLead) {
+	selecter = sor
+}
+
+func GetEpocherInst() SelectLead {
+	// TODO: can't be nil
+	if selecter == nil {
+		panic("GetEpocherInst")
+	}
+	return selecter
+}
+
+
+func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64) {
+	if epochID != lastEpochId {
+		lastEpochId = epochID
+	}
+	// there is 2K slot, so need not think about reorg
+	if slotID >= 2*posconfig.K +1 && selectedEpochId != epochID+1 {
+		GetEpocherInst().SelectLeadersLoop(epochID + 1)
+		selectedEpochId = epochID+1
+	}
+	lastBlockEpoch[epochID] = blockNumber
+}
+func SetEpochBlock(epochID uint64, blockNumber uint64) {
+	lastBlockEpoch[epochID] = blockNumber
+}
+func GetEpochBlock(epochID uint64) uint64 {
+	return lastBlockEpoch[epochID]
+}
+func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
+	return GetEpocherInst().GetProposerBn256PK(epochID, idx, addr)
 }

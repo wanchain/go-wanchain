@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -41,6 +40,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/params"
+	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 
@@ -1092,7 +1092,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.NumberU64() == 1 {
 			posconfig.EpochBaseTime = block.Time().Uint64()
 		}
-		posdb.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
+		posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
