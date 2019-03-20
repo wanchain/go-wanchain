@@ -222,6 +222,10 @@ func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
 }
 
 func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
+	if epochgen == nil {
+		return errors.New("inputing epoch genesis is nil")
+	}
+
 	f.epochGens[epochgen.EpochId] = epochgen
 	return nil
 }

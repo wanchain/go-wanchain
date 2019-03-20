@@ -1092,6 +1092,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.NumberU64() == 1 {
 			posconfig.EpochBaseTime = block.Time().Uint64()
 		}
+
+		bc.forkMem.UpdateEpochGenesis(epochID)
+
 		posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 	}
 	// Append a single chain head event if we've progressed the chain

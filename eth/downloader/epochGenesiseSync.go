@@ -203,7 +203,6 @@ func (s *epochGenesisSync) Cancel() error {
 
 func (s *epochGenesisSync) run() error {
 
-	defer close(s.done)
 	// Listen for new peer events to assign tasks to them
 	newPeer := make(chan *peerConnection, 1024)
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)
@@ -212,10 +211,11 @@ func (s *epochGenesisSync) run() error {
 	peers, _ := s.d.peers.NodeDataIdlePeers()
 
 	if len(peers) == 0 {
+
 		return errors.New("failed found peer when send epoch genesis request")
 	}
 
-	idx := rand.Intn(len(peers)-1)
+	idx := rand.Intn(len(peers))
 	p := peers[idx]
 
 	req := &epochGenesisReq{epochid:big.NewInt(int64(s.epochid)),peer: p, timeout: s.d.requestTTL()}
@@ -223,6 +223,7 @@ func (s *epochGenesisSync) run() error {
 	select {
 
 		case s.d.trackEpochGenesisReq <- req:
+
 			req.peer.FetchEpochGenesisData(s.epochid)
 
 		case <-s.cancel:
