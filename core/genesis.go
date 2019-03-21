@@ -246,11 +246,19 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
 		statedb.SetNonce(addr, account.Nonce)
+
 		if account.Staking.S256pk != nil {
+			pub := crypto.ToECDSAPub(account.Staking.S256pk)
+			if nil == pub {
+				panic("Invalid genesis.")
+			}
+			secAddr := crypto.PubkeyToAddress(*pub)
 			staker := &vm.StakerInfo{
 				PubSec256:   account.Staking.S256pk,
 				PubBn256:    account.Staking.Bn256pk,
 				Amount:      account.Staking.Amount,
+				From:		 secAddr,
+				Address:	 secAddr,
 				LockEpochs:    0, // never expired
 				StakingEpoch: uint64(0),
 				FeeRate:	 uint64(100),
