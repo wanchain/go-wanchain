@@ -2,8 +2,9 @@ package posapi
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
@@ -209,10 +210,22 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (stakerI
 	skInfo.infors = infors
 	return skInfo, nil
 }
+type StakerJson struct {
+	Address   common.Address
+	PubSec256 string //stakeholder’s wan public key
+	PubBn256  string //stakeholder’s bn256 public key
 
+	Amount     *big.Int //staking wan value
+	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
+	From       common.Address
+
+	StakingEpoch uint64 //the user’s staking time
+	FeeRate      uint64
+	Clients      []vm.ClientInfo
+}
 // this is the static snap of stekers by the block Number.
-func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
-	stakers := make([]vm.StakerInfo, 0)
+func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
+	stakers := make([]StakerJson, 0)
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
 		return stakers, errors.New("epocher instance do not exist")
@@ -225,12 +238,22 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]vm.StakerInfo, error) {
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
 
 		staker := vm.StakerInfo{}
-		err := json.Unmarshal(value, &staker)
+		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
 			log.Error(err.Error())
 			return true
 		}
-		stakers = append(stakers, staker)
+		stakeJson := StakerJson{}
+		stakeJson.Address = staker.Address
+		stakeJson.Amount = staker.Amount
+		stakeJson.LockEpochs = staker.LockEpochs
+		stakeJson.From = staker.From
+		stakeJson.StakingEpoch = staker.StakingEpoch
+		stakeJson.FeeRate = staker.FeeRate
+		stakeJson.Clients = staker.Clients
+		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
+		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
+		stakers = append(stakers, stakeJson)
 		return true
 	})
 	return stakers, nil
