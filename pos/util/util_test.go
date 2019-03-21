@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 func TestGetEpochSlotID(t *testing.T) {
@@ -18,14 +17,14 @@ func TestPkCompress(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	pk := &key.PublicKey
 
-	buf, err := util.CompressPk(pk)
+	buf, err := CompressPk(pk)
 	if err != nil {
 		t.Fail()
 	}
 
 	fmt.Println("len(pk):", len(buf))
 
-	pkUncompress, err := util.UncompressPk(buf)
+	pkUncompress, err := UncompressPk(buf)
 	if err != nil {
 		t.Fail()
 	}
