@@ -20,8 +20,9 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"sync/atomic"
+
+	"github.com/wanchain/go-wanchain/pos/util"
 
 	"github.com/wanchain/go-wanchain/crypto"
 
@@ -200,7 +201,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		// get state of k blocks ahead the last block
 		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
-		log.Info("get state ahead k blocks", "last block numer", lastBlockNum)
+		log.Debug("get state ahead k blocks", "last block numer", lastBlockNum)
 		if lastBlockNum < uint64(posconfig.Cfg().K) {
 			lastBlockNum = uint64(posconfig.Cfg().K)
 		}

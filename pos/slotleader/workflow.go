@@ -47,8 +47,8 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{},
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
-	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID", convert.Uint64ToString(slotID))
-	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
+	log.Debug("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID", convert.Uint64ToString(slotID))
+	log.Debug("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
 	//Check if epoch is new
 	s.checkNewEpochStart(epochID)
 	workStage := s.getWorkStage(epochID)
