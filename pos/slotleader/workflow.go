@@ -28,13 +28,13 @@ var (
 	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
 
-func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
+func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
 	s.blockChain = blockChain
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
 	if blockChain != nil {
-		log.Info("SlotLeaderSelection init success")
+		log.Info("SLS init success")
 	}
 
 	s.sendTransactionFn = util.SendTx
@@ -43,7 +43,7 @@ func (s *SlotLeaderSelection) Init(blockChain *core.BlockChain, rc *rpc.Client, 
 //Loop check work every Slot time. Called by backend loop.
 //It's all slotLeaderSelection's main workflow loop.
 //It does not loop at all, it is loop called by the backend.
-func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
+func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
@@ -112,7 +112,7 @@ func (s *SlotLeaderSelection) Loop(rc *rpc.Client, key *keystore.Key, epochInsta
 }
 
 // doInit is used for init in each epoch
-func (s *SlotLeaderSelection) doInit(epochID uint64) {
+func (s *SLS) doInit(epochID uint64) {
 	s.clearData()
 	s.buildEpochLeaderGroup(epochID)
 	s.setWorkingEpochID(epochID)
@@ -124,7 +124,7 @@ func (s *SlotLeaderSelection) doInit(epochID uint64) {
 	}
 }
 
-func (s *SlotLeaderSelection) startStage1Work() error {
+func (s *SLS) startStage1Work() error {
 	selfPublicKey, _ := s.getLocalPublicKey()
 
 	selfPublicKeyIndex, inEpochLeaders := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
@@ -158,7 +158,7 @@ func doStage2Work() {
 	}
 }
 
-func (s *SlotLeaderSelection) startStage2Work() error {
+func (s *SLS) startStage2Work() error {
 	functrace.Enter("startStage2Work")
 	s.getWorkingEpochID()
 	selfPublicKey, _ := s.getLocalPublicKey()
@@ -185,7 +185,7 @@ func (s *SlotLeaderSelection) startStage2Work() error {
 //generateCommitment generate a commitment and send it by tx message
 //Returns the commitment buffer []byte which is publicKey and alpha * publicKey
 //payload should be send with tx.
-func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
+func (s *SLS) generateCommitment(publicKey *ecdsa.PublicKey,
 	epochID uint64, selfIndexInEpochLeader uint64) ([]byte, error) {
 	if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
 		return nil, errInvalidCommitParameter
@@ -215,7 +215,7 @@ func (s *SlotLeaderSelection) generateCommitment(publicKey *ecdsa.PublicKey,
 	return buffer, err
 }
 
-func (s *SlotLeaderSelection) checkNewEpochStart(epochID uint64) {
+func (s *SLS) checkNewEpochStart(epochID uint64) {
 	//If New epoch start
 	workingEpochID := s.getWorkingEpochID()
 	if epochID > workingEpochID {
@@ -223,12 +223,12 @@ func (s *SlotLeaderSelection) checkNewEpochStart(epochID uint64) {
 	}
 }
 
-func (s *SlotLeaderSelection) setCurrentWorkStage(workStage int) {
+func (s *SLS) setCurrentWorkStage(workStage int) {
 	currentEpochID := s.getWorkingEpochID()
 	s.setWorkStage(currentEpochID, workStage)
 }
 
-func (s *SlotLeaderSelection) getWorkingEpochID() uint64 {
+func (s *SLS) getWorkingEpochID() uint64 {
 	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
 	if err != nil {
 		if err.Error() == "leveldb: not found" {
@@ -240,12 +240,12 @@ func (s *SlotLeaderSelection) getWorkingEpochID() uint64 {
 	return retUint64
 }
 
-func (s *SlotLeaderSelection) setWorkingEpochID(workingEpochID uint64) error {
+func (s *SLS) setWorkingEpochID(workingEpochID uint64) error {
 	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(workingEpochID))
 	return err
 }
 
-func (s *SlotLeaderSelection) getWorkStage(epochID uint64) int {
+func (s *SLS) getWorkStage(epochID uint64) int {
 	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
 	if err != nil {
 		if err.Error() == "leveldb: not found" {
@@ -259,7 +259,7 @@ func (s *SlotLeaderSelection) getWorkStage(epochID uint64) int {
 	return int(workStageUint64)
 }
 
-func (s *SlotLeaderSelection) setWorkStage(epochID uint64, workStage int) error {
+func (s *SLS) setWorkStage(epochID uint64, workStage int) error {
 	workStageBig := big.NewInt(int64(workStage))
 	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
 	return err
