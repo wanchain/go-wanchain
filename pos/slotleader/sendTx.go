@@ -18,7 +18,7 @@ var (
 
 type SendTxFn func(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error)
 
-func (s *SlotLeaderSelection) sendSlotTx(data []byte, posSender SendTxFn) error {
+func (s *SLS) sendSlotTx(data []byte, posSender SendTxFn) error {
 	if s.rc == nil {
 		return errRCNotReady
 	}

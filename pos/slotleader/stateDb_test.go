@@ -12,7 +12,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
-var s *SlotLeaderSelection
+var s *SLS
 
 func testInitSlotleader() {
 	s = GetSlotLeaderSelection()
