@@ -148,21 +148,3 @@ func TestVerifyDleqProof(t *testing.T) {
 
 	fmt.Println("TestVerifyDleqProof total:", time.Since(t0))
 }
-
-type TestSlotLeader struct{}
-
-func (t *TestSlotLeader) GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
-	return nil, nil
-}
-func (t *TestSlotLeader) GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
-	return nil, nil, nil
-}
-func (t *TestSlotLeader) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey { return nil }
-func TestGetSlotLeaderInst(t *testing.T) {
-	setValue := &TestSlotLeader{}
-	SetSlotLeaderInst(setValue)
-	ret := GetSlotLeaderInst()
-	if ret == nil {
-		t.FailNow()
-	}
-}
