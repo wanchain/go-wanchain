@@ -6,7 +6,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -35,7 +34,7 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 			continue
 		}
 
-		epID, slfIndex, selfPk, _, _, err := slottools.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
+		epID, slfIndex, selfPk, _, _, err := vm.RlpUnpackStage2DataForTx(data)
 		if err != nil {
 			continue
 		}

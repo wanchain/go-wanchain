@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -17,7 +18,7 @@ import (
 
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
 //Proof 	= [e,z] 			[]*big.Int
-func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+func (s *SLS) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	_, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
@@ -57,7 +58,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			validEpochLeadersIndex[i] = false
 			continue
 		}
-		alphaPki, proof, err := s.GetStage2TxAlphaPki(epochID-1, uint64(i))
+		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
 		if err != nil {
 			log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
@@ -161,7 +162,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], epochLeadersPtrPre[:], rbBytes[:])
 }
 
-func (s *SlotLeaderSelection) PackSlotProof(epochID uint64, slotID uint64, privKey *ecdsa.PrivateKey) ([]byte, error) {
+func (s *SLS) PackSlotProof(epochID uint64, slotID uint64, privKey *ecdsa.PrivateKey) ([]byte, error) {
 	proofMeg, proof, err := s.getSlotLeaderProof(privKey, epochID, slotID)
 	if err != nil {
 		return nil, err
@@ -174,7 +175,7 @@ func (s *SlotLeaderSelection) PackSlotProof(epochID uint64, slotID uint64, privK
 	return buf, err
 }
 
-func (s *SlotLeaderSelection) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error) {
+func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error) {
 	var info Pack
 	err := rlp.DecodeBytes(input, &info)
 	if err != nil {
@@ -185,7 +186,7 @@ func (s *SlotLeaderSelection) GetInfoFromHeadExtra(epochID uint64, input []byte)
 	return convert.ByteArrayToBigIntArray(info.Proof), convert.ByteArrayToPkArray(info.ProofMeg), nil
 }
 
-func (s *SlotLeaderSelection) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis
 	epochLeadersPtrPre := s.epochLeadersPtrArrayGenesis
@@ -197,7 +198,7 @@ func (s *SlotLeaderSelection) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.Priv
 	return profMeg, proof, err
 }
 
-func (s *SlotLeaderSelection) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64, slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
 	if epochID == uint64(0) || err != nil {
@@ -243,7 +244,7 @@ func (s *SlotLeaderSelection) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, e
 	return profMeg, proof, err
 }
 
-func (s *SlotLeaderSelection) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 
 	var publicKey *ecdsa.PublicKey
 	publicKey = ProofMeg[0]
