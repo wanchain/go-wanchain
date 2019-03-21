@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -24,7 +23,7 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
 	epochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimespan)
 	slotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
-	fmt.Println("CalEpochSlotID:", epochId, slotId)
+	//fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
 }
 
@@ -44,7 +43,7 @@ func CalEpochSlotIDByNow() {
 	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
 	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
 	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
-	fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
+	//fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
 //PkEqual only can use in same curve. return whether the two points equal

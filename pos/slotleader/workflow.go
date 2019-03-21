@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/vm"
 
@@ -46,10 +47,12 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{},
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
+
 	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID",
 		convert.Uint64ToString(slotID))
 	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID",
 		s.getLastSlotIDFromChain())
+
 	//Check if epoch is new
 	s.checkNewEpochStart(epochID)
 	workStage := s.getWorkStage(epochID)
@@ -226,4 +229,46 @@ func (s *SLS) checkNewEpochStart(epochID uint64) {
 	if epochID > workingEpochID {
 		s.setWorkStage(epochID, slotLeaderSelectionInit)
 	}
+}
+
+func (s *SLS) setCurrentWorkStage(workStage int) {
+	currentEpochID := s.getWorkingEpochID()
+	s.setWorkStage(currentEpochID, workStage)
+}
+
+func (s *SLS) getWorkingEpochID() uint64 {
+	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
+	if err != nil {
+		if err.Error() == "leveldb: not found" {
+			posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(0))
+			return 0
+		}
+	}
+	retUint64 := convert.BytesToUint64(ret)
+	return retUint64
+}
+
+func (s *SLS) setWorkingEpochID(workingEpochID uint64) error {
+	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(workingEpochID))
+	return err
+}
+
+func (s *SLS) getWorkStage(epochID uint64) int {
+	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
+	if err != nil {
+		if err.Error() == "leveldb: not found" {
+			s.setWorkStage(epochID, slotLeaderSelectionInit)
+			return slotLeaderSelectionInit
+		}
+		log.Error("getWorkStage error: " + err.Error())
+		panic("getWorkStage error")
+	}
+	workStageUint64 := convert.BytesToUint64(ret)
+	return int(workStageUint64)
+}
+
+func (s *SLS) setWorkStage(epochID uint64, workStage int) error {
+	workStageBig := big.NewInt(int64(workStage))
+	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
+	return err
 }

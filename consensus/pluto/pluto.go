@@ -20,17 +20,18 @@ package pluto
 import (
 	"bytes"
 	"errors"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/util"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -732,7 +733,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	var epochIDPack uint64
 	var slotIDPack uint64
 	epochId, slotId := util.GetEpochSlotID()
-	fmt.Println("Pluto Seal: epochId:", epochId, "slotId:", slotId)
+	log.Info(fmt.Sprintln("Pluto Seal: epochId:", epochId, "slotId:", slotId))
 
 	var leader string
 	//if epochId != 0 {

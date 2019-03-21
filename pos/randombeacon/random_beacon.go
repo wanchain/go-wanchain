@@ -3,11 +3,14 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
+
+	"math/big"
 
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -15,9 +18,8 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/pos/wanpos_crypto"
-	"math/big"
+	bn256 "github.com/wanchain/pos/cloudflare"
+	wanpos "github.com/wanchain/pos/wanpos_crypto"
 )
 
 type RbEnsDataCollector struct {
@@ -139,7 +141,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 	// rb.epochId == epochId
 	myProposerIds := rb.getMyRBProposerId(epochId)
-	log.Info("get my RB proposer id", "id", myProposerIds)
+	log.Debug("get my RB proposer id", "id", myProposerIds)
 	if len(myProposerIds) == 0 {
 		return nil
 	}

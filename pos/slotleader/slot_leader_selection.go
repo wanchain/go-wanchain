@@ -355,26 +355,6 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 	return false, nil
 }
 
-func (s *SLS) getWorkStage(epochID uint64) int {
-	ret, err := posdb.GetDb().Get(epochID, "slotLeaderWorkStage")
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			s.setWorkStage(epochID, slotLeaderSelectionInit)
-			return slotLeaderSelectionInit
-		}
-		log.Error("getWorkStage error: " + err.Error())
-		panic("getWorkStage error")
-	}
-	workStageUint64 := convert.BytesToUint64(ret)
-	return int(workStageUint64)
-}
-
-func (s *SLS) setWorkStage(epochID uint64, workStage int) error {
-	workStageBig := big.NewInt(int64(workStage))
-	_, err := posdb.GetDb().Put(epochID, "slotLeaderWorkStage", workStageBig.Bytes())
-	return err
-}
-
 func (s *SLS) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
@@ -785,26 +765,4 @@ func (s *SLS) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, er
 	buf, err := vm.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
 
 	return buf, err
-}
-
-func (s *SLS) setCurrentWorkStage(workStage int) {
-	currentEpochID := s.getWorkingEpochID()
-	s.setWorkStage(currentEpochID, workStage)
-}
-
-func (s *SLS) getWorkingEpochID() uint64 {
-	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(0))
-			return 0
-		}
-	}
-	retUint64 := convert.BytesToUint64(ret)
-	return retUint64
-}
-
-func (s *SLS) setWorkingEpochID(workingEpochID uint64) error {
-	_, err := posdb.GetDb().Put(0, "slotLeaderCurrentSlotID", convert.Uint64ToBytes(workingEpochID))
-	return err
 }
