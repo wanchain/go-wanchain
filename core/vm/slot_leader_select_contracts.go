@@ -13,7 +13,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
@@ -132,14 +131,14 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	from = contract.CallerAddress
 
 	if methodId == stgOneIdArr {
-		err := c.validTxStg1ByData(from, in[:])
+		err := c.validTxStg1ByData(evm.StateDB, from, in[:])
 		if err != nil {
 			log.Error("slotLeaderSC:Run:validTxStg1ByData", "from", from)
 			return nil, err
 		}
 		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
-		err := c.validTxStg2ByData(from, in[:])
+		err := c.validTxStg2ByData(evm.StateDB, from, in[:])
 		if err != nil {
 			log.Error("slotLeaderSC:Run:validTxStg2ByData", "from", from)
 			return nil, err
@@ -156,9 +155,9 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	copy(methodId[:], tx.Data()[:4])
 
 	if methodId == stgOneIdArr {
-		return c.validTxStg1(signer, tx)
+		return c.validTxStg1(stateDB, signer, tx)
 	} else if methodId == stgTwoIdArr {
-		return c.validTxStg2(signer, tx)
+		return c.validTxStg2(stateDB, signer, tx)
 	} else {
 		return errMethodId
 	}
@@ -276,16 +275,16 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	return nil, nil
 }
 
-func (c *slotLeaderSC) validTxStg1(signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) validTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
 
-	return c.validTxStg1ByData(sender, tx.Data())
+	return c.validTxStg1ByData(stateDB, sender, tx.Data())
 }
 
-func (c *slotLeaderSC) validTxStg1ByData(from common.Address, payload []byte) error {
+func (c *slotLeaderSC) validTxStg1ByData(stateDB StateDB, from common.Address, payload []byte) error {
 
 	epochIDBuf, _, err := RlpGetStage1IDFromTx(payload[:], slotLeaderSCDef)
 	if err != nil {
@@ -302,7 +301,7 @@ func (c *slotLeaderSC) validTxStg1ByData(from common.Address, payload []byte) er
 	return nil
 }
 
-func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) error {
+func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, payload []byte) error {
 	epochID, selfIndex, _, alphaPkis, proofs, err := RlpUnpackStage2DataForTx(payload[:], slotLeaderSCDef)
 	if err != nil {
 		log.Error("validTxStg2:RlpUnpackStage2DataForTx failed")
@@ -315,18 +314,8 @@ func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) er
 	}
 
 	//log.Info("validTxStg2 success")
-	type slot interface {
-		GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error)
-		GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error)
-		GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
-	}
 
-	selector := slottools.GetSlotLeaderInst()
-
-	if selector == nil {
-		return nil
-	}
-	mi, err := selector.(slot).GetStg1StateDbInfo(epochID, selfIndex)
+	mi, err := GetStg1StateDbInfo(stateDB, epochID, selfIndex)
 	if err != nil {
 		log.Error("validTxStg2", "GetStg1StateDbInfo error", err.Error())
 		return err
@@ -342,7 +331,13 @@ func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) er
 		return ErrTx1AndTx2NotConsistent
 	}
 	//Dleq
-	epochLeaders := selector.(slot).GetEpochLeadersPK(epochID)
+
+	buff := util.GetEpocherInst().GetEpochLeaders(epochID)
+	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
+	for i := 0; i < len(buff); i++ {
+		epochLeaders[i] = crypto.ToECDSAPub(buff[i])
+	}
+
 	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
 		log.Error("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
 		return ErrDleqProof
@@ -350,12 +345,12 @@ func (c *slotLeaderSC) validTxStg2ByData(from common.Address, payload []byte) er
 	return nil
 }
 
-func (c *slotLeaderSC) validTxStg2(signer types.Signer, tx *types.Transaction) error {
+func (c *slotLeaderSC) validTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
-	return c.validTxStg2ByData(sender, tx.Data())
+	return c.validTxStg2ByData(stateDB, sender, tx.Data())
 }
 
 func addSlotScCallTimes(epochID uint64) error {
@@ -621,4 +616,54 @@ func RlpGetStage2IDFromTx(input []byte, abiString string) (epochIDBuf []byte, se
 	epochIDBuf = convert.Uint64ToBytes(data.EpochID)
 	selfIndexBuf = convert.Uint64ToBytes(data.SelfIndex)
 	return
+}
+
+func GetStage2TxAlphaPki(stateDb StateDB, epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
+
+	slotLeaderPrecompileAddr := GetSlotLeaderSCAddress()
+
+	keyHash := GetSlotLeaderStage2KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(selfIndex))
+
+	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if data == nil {
+		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+		return nil, nil, ErrNoTx2TransInDB
+	}
+
+	epID, slfIndex, _, alphaPki, proof, err := RlpUnpackStage2DataForTx(data, GetSlotLeaderScAbiString())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if epID != epochID || slfIndex != selfIndex {
+		return nil, nil, ErrRlpUnpackErr
+	}
+
+	return alphaPki, proof, nil
+}
+
+func GetStg1StateDbInfo(stateDb StateDB, epochID uint64, index uint64) (mi []byte, err error) {
+	slotLeaderPrecompileAddr := GetSlotLeaderSCAddress()
+	keyHash := GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(index))
+
+	// Read and Verify
+	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+	if readBuf == nil {
+		return nil, ErrNoTx1TransInDB
+	}
+
+	epID, idxID, miPoint, err := RlpUnpackStage1DataForTx(readBuf, GetSlotLeaderScAbiString())
+	if err != nil {
+		return nil, ErrRlpUnpackErr
+	}
+	mi = crypto.FromECDSAPub(miPoint)
+	//pk and mi is 65 bytes length
+
+	if epID == epochID &&
+		idxID == index &&
+		err == nil {
+		return
+	}
+
+	return nil, ErrVerifyStg1Data
 }

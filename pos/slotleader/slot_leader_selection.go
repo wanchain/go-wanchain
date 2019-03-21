@@ -16,7 +16,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader/slottools"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/rpc"
@@ -125,71 +124,11 @@ func (s *SlotLeaderSelection) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, is
 	return s.getSMAPieces(epochID)
 }
 
-func (s *SlotLeaderSelection) GetStage2TxAlphaPki(epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-
-	keyHash := vm.GetSlotLeaderStage2KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(selfIndex))
-
-	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
-	if data == nil {
-		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
-		return nil, nil, vm.ErrNoTx2TransInDB
-	}
-
-	epID, slfIndex, _, alphaPki, proof, err := vm.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if epID != epochID || slfIndex != selfIndex {
-		return nil, nil, vm.ErrRlpUnpackErr
-	}
-
-	return alphaPki, proof, nil
-}
-
-func (s *SlotLeaderSelection) GetStg1StateDbInfo(epochID uint64, index uint64) (mi []byte, err error) {
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		return nil, err
-	}
-
-	slotLeaderPrecompileAddr := vm.GetSlotLeaderSCAddress()
-	keyHash := vm.GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(index))
-
-	// Read and Verify
-	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
-	if readBuf == nil {
-		return nil, vm.ErrNoTx1TransInDB
-	}
-
-	epID, idxID, miPoint, err := vm.RlpUnpackStage1DataForTx(readBuf, vm.GetSlotLeaderScAbiString())
-	if err != nil {
-		return nil, vm.ErrRlpUnpackErr
-	}
-	mi = crypto.FromECDSAPub(miPoint)
-	//pk and mi is 65 bytes length
-
-	if epID == epochID &&
-		idxID == index &&
-		err == nil {
-		return
-	}
-
-	return nil, vm.ErrVerifyStg1Data
-}
-
 func init() {
 	slotLeaderSelection = &SlotLeaderSelection{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
 	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
-	slottools.SetSlotLeaderInst(slotLeaderSelection)
 	s := slotLeaderSelection
 	s.randomGenesis = big.NewInt(1)
 	epoch0Leaders := s.getEpoch0LeadersPK()
@@ -701,8 +640,8 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
-
-		alphaPki, proof, err := s.GetStage2TxAlphaPki(epochID, uint64(i))
+		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in s.stateDb.
+		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID, uint64(i))
 		if err != nil {
 			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -57,7 +58,7 @@ func (s *SlotLeaderSelection) VerifySlotProof(epochID uint64, slotID uint64, Pro
 			validEpochLeadersIndex[i] = false
 			continue
 		}
-		alphaPki, proof, err := s.GetStage2TxAlphaPki(epochID-1, uint64(i))
+		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
 		if err != nil {
 			log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
 			validEpochLeadersIndex[i] = false
