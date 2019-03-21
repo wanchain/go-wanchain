@@ -660,7 +660,7 @@ func (s *SlotLeaderSelection) collectStagesData(epochID uint64) (err error) {
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
-
+		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in s.stateDb.
 		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID, uint64(i))
 		if err != nil {
 			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
