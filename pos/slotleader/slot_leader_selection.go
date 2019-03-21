@@ -49,23 +49,28 @@ var (
 )
 
 type SLS struct {
-	workingEpochID         uint64
-	workStage              int
-	rc                     *rpc.Client
-	epochLeadersArray      []string            // len(pki)=65 hex.EncodeToString
-	epochLeadersMap        map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
-	key                    *keystore.Key
-	stateDb                *state.StateDB
-	epochInstance          interface{}
-	slotLeadersPtrArray    [posconfig.SlotCount]*ecdsa.PublicKey
-	slotLeadersIndex       [posconfig.SlotCount]uint64
-	epochLeadersPtrArray   [posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	validEpochLeadersIndex [posconfig.EpochLeaderCount]bool // true: can be used to slot leader false: can not be used to slot leader
-	stageOneMi             [posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoAlphaPKi       [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	stageTwoProof          [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
-	slotCreateStatus       map[uint64]bool
-	blockChain             *core.BlockChain
+	workingEpochID uint64
+	workStage      int
+	rc             *rpc.Client
+	key            *keystore.Key
+	stateDb        *state.StateDB
+	epochInstance  interface{}
+
+	epochLeadersArray []string            // len(pki)=65 hex.EncodeToString
+	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
+
+	slotLeadersPtrArray  [posconfig.SlotCount]*ecdsa.PublicKey
+	slotLeadersIndex     [posconfig.SlotCount]uint64
+	epochLeadersPtrArray [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	// true: can be used to slot leader false: can not be used to slot leader
+	validEpochLeadersIndex [posconfig.EpochLeaderCount]bool
+
+	stageOneMi       [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoAlphaPKi [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	stageTwoProof    [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
+
+	slotCreateStatus map[uint64]bool
+	blockChain       *core.BlockChain
 
 	epochLeadersPtrArrayGenesis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
 	stageOneMiGenesis           [posconfig.EpochLeaderCount]*ecdsa.PublicKey
@@ -73,7 +78,8 @@ type SLS struct {
 	stageTwoProofGenesis        [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 	randomGenesis               *big.Int
 	smaGenesis                  [posconfig.EpochLeaderCount]*ecdsa.PublicKey
-	sendTransactionFn           SendTxFn
+
+	sendTransactionFn SendTxFn
 }
 
 var slotLeaderSelection *SLS
@@ -148,7 +154,8 @@ func init() {
 		// AlphaPK  stage1Genesis
 		mi0 := new(ecdsa.PublicKey)
 		mi0.Curve = crypto.S256()
-		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y, alphas[i].Bytes())
+		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
+			alphas[i].Bytes())
 		s.stageOneMiGenesis[i] = mi0
 
 		// G
@@ -166,7 +173,8 @@ func init() {
 			// AlphaIPki stage2Genesis
 			alphaIPkj := new(ecdsa.PublicKey)
 			alphaIPkj.Curve = crypto.S256()
-			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X, s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+				s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
 
 			s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
 		}
@@ -198,7 +206,8 @@ func (s *SLS) getSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bo
 
 	keyHash := vm.GetSlotLeaderStage2IndexesKeyHash(convert.Uint64ToBytes(epochID))
 
-	log.Debug(fmt.Sprintf("getSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+	log.Debug(fmt.Sprintf("getSlotLeaderStage2TxIndexes:try to get stateDB addr:%s, key:%s",
+		slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 
@@ -426,7 +435,8 @@ func (s *SLS) dumpCurrentEpochLeaders() {
 	}
 
 	for index, value := range s.epochLeadersPtrArray {
-		log.Debug("dumpCurrentEpochLeaders", "index", index, "curEpochLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Debug("dumpCurrentEpochLeaders", "index", index, "curEpochLeader",
+			hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 
 }
@@ -440,7 +450,8 @@ func (s *SLS) dumpSlotLeaders() {
 	}
 
 	for index, value := range s.slotLeadersPtrArray {
-		log.Debug("dumpSlotLeaders", "index", s.slotLeadersIndex[index], "curSlotLeader", hex.EncodeToString(crypto.FromECDSAPub(value)))
+		log.Debug("dumpSlotLeaders", "index", s.slotLeadersIndex[index], "curSlotLeader",
+			hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 
 }
@@ -456,7 +467,8 @@ func (s *SLS) dumpLocalPublicKeyIndex() {
 	log.Debug("\n")
 	localPublicKey, _ := s.getLocalPublicKey()
 	localPublicKeyByte := crypto.FromECDSAPub(localPublicKey)
-	log.Debug("current Local publickey", "indexes in current epochLeaders", s.epochLeadersMap[hex.EncodeToString(localPublicKeyByte)])
+	log.Debug("current Local publickey", "indexes in current epochLeaders",
+		s.epochLeadersMap[hex.EncodeToString(localPublicKeyByte)])
 
 }
 
@@ -471,7 +483,8 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	}
 	for index, value := range data {
 		s.epochLeadersArray = append(s.epochLeadersArray, hex.EncodeToString(value))
-		s.epochLeadersMap[hex.EncodeToString(value)] = append(s.epochLeadersMap[hex.EncodeToString(value)], uint64(index))
+		s.epochLeadersMap[hex.EncodeToString(value)] = append(s.epochLeadersMap[hex.EncodeToString(value)],
+			uint64(index))
 		s.epochLeadersPtrArray[index] = crypto.ToECDSAPub(value)
 	}
 	functrace.Exit()
@@ -531,7 +544,8 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 	if (err != nil && epochID > 1) || isGenesis {
-		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID, "preEpochID", epochID-1)
+		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID,
+			"preEpochID", epochID-1)
 		epochIDGet = 0
 
 	}
@@ -570,7 +584,8 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 			return vm.ErrNotOnCurve
 		}
 	}
-	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:], epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
+	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
+		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
 	if err != nil {
 		log.Error("generateSlotLeadsGroup", "error", err.Error())
 		return err
@@ -611,7 +626,8 @@ func (s *SLS) isLocalPkInCurrentEpochLeaders() bool {
 	if inEpochLeaders {
 		return true
 	}
-	log.Debug("isLocalPkInCurrentEpochLeaders", "local public key:", hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
+	log.Debug("isLocalPkInCurrentEpochLeaders", "local public key:",
+		hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
 	log.Debug("isLocalPkInCurrentEpochLeaders", "s.epochLeadersMap:", s.epochLeadersMap)
 	return false
 }
@@ -635,7 +651,8 @@ func (s *SLS) buildSecurityPieces(epochID uint64) (pieces []*ecdsa.PublicKey, er
 	for _, selfIndex := range indexes {
 		for i := 0; i < len(s.epochLeadersArray); i++ {
 			if (s.stageTwoAlphaPKi[i][selfIndex] != nil) && (s.validEpochLeadersIndex[i]) {
-				selfPkReceivePiecesMap[selfIndex] = append(selfPkReceivePiecesMap[selfIndex], s.stageTwoAlphaPKi[i][selfIndex])
+				selfPkReceivePiecesMap[selfIndex] = append(selfPkReceivePiecesMap[selfIndex],
+					s.stageTwoAlphaPKi[i][selfIndex])
 			}
 		}
 	}
@@ -686,7 +703,8 @@ func (s *SLS) collectStagesData(epochID uint64) (err error) {
 
 func (s *SLS) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) error {
 	if !s.isLocalPkInCurrentEpochLeaders() {
-		log.Debug("generateSecurityMsg", "input public key", hex.EncodeToString(crypto.FromECDSAPub(&PrivateKey.PublicKey)))
+		log.Debug("generateSecurityMsg", "input public key",
+			hex.EncodeToString(crypto.FromECDSAPub(&PrivateKey.PublicKey)))
 		return vm.ErrPkNotInCurrentEpochLeadersGroup
 	}
 	// collect data
@@ -712,7 +730,8 @@ func (s *SLS) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) 
 	}
 	for _, value := range smasPtr {
 		smasBytes.Write(crypto.FromECDSAPub(value))
-		log.Debug(fmt.Sprintf("epochID+1 = %d set security message is %v\n", epochID+1, hex.EncodeToString(crypto.FromECDSAPub(value))))
+		log.Debug(fmt.Sprintf("epochID+1 = %d set security message is %v\n", epochID+1,
+			hex.EncodeToString(crypto.FromECDSAPub(value))))
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {

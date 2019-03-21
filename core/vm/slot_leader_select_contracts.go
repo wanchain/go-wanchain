@@ -189,8 +189,10 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	addSlotScCallTimes(convert.BytesToUint64(epochIDBuf))
 
-	log.Debug(fmt.Sprintf("-----------------------------------------handleStgOne save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
-	log.Debug("handleStgOne save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex", convert.BytesToUint64(selfIndexBuf))
+	log.Debug(fmt.Sprintf("handleStgOne save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(),
+		keyHash.Hex(), len(in)))
+	log.Debug("handleStgOne save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex",
+		convert.BytesToUint64(selfIndexBuf))
 
 	return nil, nil
 }
@@ -218,8 +220,10 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	}
 	addSlotScCallTimes(convert.BytesToUint64(epochIDBuf))
 
-	log.Debug(fmt.Sprintf("-----------------------------------------handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(), keyHash.Hex(), len(in)))
-	log.Debug("handleStgTwo save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex", convert.BytesToUint64(selfIndexBuf))
+	log.Debug(fmt.Sprintf("handleStgTwo save data addr:%s, key:%s, data len:%d", slotLeaderPrecompileAddr.Hex(),
+		keyHash.Hex(), len(in)))
+	log.Debug("handleStgTwo save", "epochID", convert.BytesToUint64(epochIDBuf), "selfIndex",
+		convert.BytesToUint64(selfIndexBuf))
 
 	functrace.Exit()
 	return nil, nil
@@ -455,7 +459,8 @@ type stage2Data struct {
 	Proof     []*big.Int
 }
 
-func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey, proof []*big.Int, abiString string) ([]byte, error) {
+func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey,
+	proof []*big.Int, abiString string) ([]byte, error) {
 	pk, err := util.CompressPk(selfPK)
 	if err != nil {
 		return nil, err
@@ -494,7 +499,8 @@ func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.Publ
 	return outBuf, nil
 }
 
-func RlpUnpackStage2DataForTx(input []byte) (epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey, alphaPki []*ecdsa.PublicKey, proof []*big.Int, err error) {
+func RlpUnpackStage2DataForTx(input []byte) (epochID uint64, selfIndex uint64, selfPK *ecdsa.PublicKey,
+	alphaPki []*ecdsa.PublicKey, proof []*big.Int, err error) {
 	inputBuf := input[4:]
 
 	var data stage2Data
@@ -536,7 +542,8 @@ func RlpGetStage2IDFromTx(input []byte) (epochIDBuf []byte, selfIndexBuf []byte,
 	return
 }
 
-func GetStage2TxAlphaPki(stateDb StateDB, epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey, proofs []*big.Int, err error) {
+func GetStage2TxAlphaPki(stateDb StateDB, epochID uint64, selfIndex uint64) (alphaPkis []*ecdsa.PublicKey,
+	proofs []*big.Int, err error) {
 
 	slotLeaderPrecompileAddr := GetSlotLeaderSCAddress()
 
@@ -627,7 +634,8 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	}
 
 	if sid > kEnd || sid < kStart {
-		log.Warn("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart, "rangeEnd", kEnd)
+		log.Warn("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart,
+			"rangeEnd", kEnd)
 
 		return false
 	}

@@ -46,8 +46,10 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{},
 	s.rc = rc
 	s.key = key
 	s.epochInstance = epochInstance
-	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID", convert.Uint64ToString(slotID))
-	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID", s.getLastSlotIDFromChain())
+	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID",
+		convert.Uint64ToString(slotID))
+	log.Info("Last on chain epchoID and slotID:", "epochID", s.getLastEpochIDFromChain(), "slotID",
+		s.getLastSlotIDFromChain())
 	//Check if epoch is new
 	s.checkNewEpochStart(epochID)
 	workStage := s.getWorkStage(epochID)
@@ -59,7 +61,8 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{},
 	case slotLeaderSelectionStage1:
 		if slotID > (posconfig.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
-			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID", epochID, "slotID", slotID)
+			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID",
+				epochID, "slotID", slotID)
 			break
 		}
 
@@ -205,11 +208,14 @@ func (s *SLS) generateCommitment(publicKey *ecdsa.PublicKey,
 		return nil, err
 	}
 
-	buffer, err := vm.RlpPackStage1DataForTx(epochID, selfIndexInEpochLeader, commitment[1], vm.GetSlotLeaderScAbiString())
+	buffer, err := vm.RlpPackStage1DataForTx(epochID, selfIndexInEpochLeader, commitment[1],
+		vm.GetSlotLeaderScAbiString())
 
 	posdb.GetDb().PutWithIndex(epochID, selfIndexInEpochLeader, "alpha", alpha.Bytes())
 
-	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID, selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])), hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
+	log.Debug(fmt.Sprintf("----Put alpha epochID:%d, selfIndex:%d, alpha:%s, mi:%s, pk:%s", epochID,
+		selfIndexInEpochLeader, alpha.String(), hex.EncodeToString(crypto.FromECDSAPub(commitment[1])),
+		hex.EncodeToString(crypto.FromECDSAPub(commitment[0]))))
 
 	return buffer, err
 }
