@@ -187,7 +187,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		util.CalEpochSlotIDByNow()
 		epochid, slotid := util.GetEpochSlotID()
-		log.Debug("epochid, slotid", epochid, slotid)
+		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
 
@@ -288,6 +288,8 @@ func (self *Miner) Stop() {
 	if self.worker.config.Pluto != nil {
 		self.timerStop <- nil
 	}
+
+	randombeacon.GetRandonBeaconInst().Stop()
 }
 
 func (self *Miner) Register(agent Agent) {
