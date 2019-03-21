@@ -103,7 +103,7 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 		t.Fail()
 	}
 
-	epID, selfIndex, _, err := vm.RlpUnpackStage1DataForTx(payload, vm.GetSlotLeaderScAbiString())
+	epID, selfIndex, _, err := vm.RlpUnpackStage1DataForTx(payload)
 	if err != nil {
 		t.Fail()
 	}
