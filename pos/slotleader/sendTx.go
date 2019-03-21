@@ -27,7 +27,7 @@ func (s *SlotLeaderSelection) sendSlotTx(data []byte, posSender SendTxFn) error 
 	arg["from"] = s.key.Address
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	//arg["gas"] = (*hexutil.Big)(big.NewInt(1500000)) //use default gas
+	arg["gas"] = (*hexutil.Big)(big.NewInt(1500000)) //use default gas
 	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(data)
 	log.Debug("Write data of payload", "length", len(data))
