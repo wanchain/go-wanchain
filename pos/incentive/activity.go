@@ -34,7 +34,7 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 			continue
 		}
 
-		epID, slfIndex, selfPk, _, _, err := vm.RlpUnpackStage2DataForTx(data, vm.GetSlotLeaderScAbiString())
+		epID, slfIndex, selfPk, _, _, err := vm.RlpUnpackStage2DataForTx(data)
 		if err != nil {
 			continue
 		}
