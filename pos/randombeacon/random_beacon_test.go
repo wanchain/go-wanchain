@@ -19,6 +19,7 @@ var (
 	proposerGroupLen = 10
 	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 	ens              = make([][]*bn256.G1, 0)
+	commit			 [][]bn256.G2
 )
 
 func TestInit(t *testing.T) {
@@ -125,6 +126,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+	rb.getCji = tmpGetCji
 
 	epochId := uint64(0)
 
@@ -139,9 +141,10 @@ func TestDoGenerateDKG1(t *testing.T) {
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
+	commit = make([][]bn256.G2, nr)
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		payload, err := rb.generateDKG1(epochId, uint32(proposerId))
+		payload, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("rb generate dkg info fail. err:", err)
 		}
@@ -156,17 +159,17 @@ func TestDoGenerateDKG1(t *testing.T) {
 		}
 
 		// Reed-Solomon code verification
-		dkg1Param, err := vm.Dkg1FlatToDkg1(payload)
+		dkg1, err := vm.Dkg1FlatToDkg1(payload)
 		if err != nil {
 			t.Error("trans dkg1flat to dkg1 fail. err:", err)
 		}
 
-		temp := make([]bn256.G2, nr)
+		commit[proposerId] = make([]bn256.G2, nr)
 		for j := 0; j < nr; j++ {
-			temp[j] = *dkg1Param.Commit[j]
+			commit[proposerId][j] = *dkg1.Commit[j]
 		}
 
-		if !wanpos.RScodeVerify(temp, x, int(posconfig.Cfg().PolymDegree)) {
+		if !wanpos.RScodeVerify(commit[proposerId], x, int(posconfig.Cfg().PolymDegree)) {
 			t.Error("reed solomon verification fail")
 		}
 
@@ -193,6 +196,7 @@ func TestGenerateDKG2(t *testing.T) {
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+	rb.getCji = tmpGetCji
 
 	epochId := uint64(0)
 
@@ -207,9 +211,11 @@ func TestGenerateDKG2(t *testing.T) {
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
+	commit = make([][]bn256.G2, nr)
+
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId))
+		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
 		}
@@ -223,11 +229,17 @@ func TestGenerateDKG2(t *testing.T) {
 			t.Fatal("trans dkg1flat to dkg1 fail. err:", err)
 		}
 
+		commit[proposerId] = make([]bn256.G2, nr)
+		for j := 0; j < nr; j++ {
+			commit[proposerId][j] = *dkg1.Commit[j]
+		}
+
+
 		dkg1s = append(dkg1s, dkg1)
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId))
+		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("rb generate dkg2 fail. err:", err)
 		}
@@ -280,6 +292,7 @@ func TestGenerateSIG(t *testing.T) {
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 	rb.getEns = tmpGetEnsFunc
 	rb.getRBM = tmpGetRBM
+	rb.getCji = tmpGetCji
 
 	epochId := uint64(0)
 
@@ -294,9 +307,11 @@ func TestGenerateSIG(t *testing.T) {
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
+	commit = make([][]bn256.G2, nr)
+
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId))
+		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
 		}
@@ -310,11 +325,17 @@ func TestGenerateSIG(t *testing.T) {
 			t.Fatal("trans dkg1flat to dkg1 fail. err:", err)
 		}
 
+		commit[proposerId] = make([]bn256.G2, nr)
+		for j := 0; j < nr; j++ {
+			commit[proposerId][j] = *dkg1.Commit[j]
+		}
+
+
 		dkg1s = append(dkg1s, dkg1)
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId))
+		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("rb generate dkg2 fail. err:", err)
 		}
@@ -333,7 +354,7 @@ func TestGenerateSIG(t *testing.T) {
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		sig, err := rb.generateSIG(epochId, uint32(proposerId))
+		sig, err := rb.generateSIG(epochId, uint32(proposerId), pks)
 		if err != nil {
 			t.Fatal("generate sig fail. err:", err)
 		}
@@ -368,4 +389,14 @@ func tmpGetRBM(db vm.StateDB, epochId uint64) ([]byte, error) {
 	epochIdBigInt := big.NewInt(int64(epochId + 1))
 	buf := epochIdBigInt.Bytes()
 	return crypto.Keccak256(buf), nil
+}
+
+
+func tmpGetCji(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
+	ret := make([]*bn256.G2, len(commit[proposerId]))
+	for i, _ := range commit[proposerId] {
+		ret[i] = &commit[proposerId][i]
+	}
+
+	return ret, nil
 }
