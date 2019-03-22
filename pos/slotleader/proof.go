@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -225,7 +226,7 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 			hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("verifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
 		skGt := s.getSkGtFromTrans(s.epochLeadersPtrArrayGenesis[:], epochID, slotID, s.randomGenesis.Bytes()[:],
-			s.smaGenesis[:])
+			smaPieces[:])
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true
 			break
