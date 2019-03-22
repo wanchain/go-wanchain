@@ -14,7 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"github.com/wanchain/pos/cloudflare"
+	bn256 "github.com/wanchain/pos/cloudflare"
 )
 
 //Db is the wanpos leveldb class
@@ -26,7 +26,7 @@ var (
 	dbInstMap = make(map[string]*Db)
 	//RANDOMBEACON_DB_KEY = "PosRandomBeacon"
 
-	mu       sync.RWMutex
+	mu sync.RWMutex
 )
 
 func NewDb(fileName string) *Db {
@@ -68,28 +68,6 @@ func GetDb() *Db {
 func GetDbByName(name string) *Db {
 	return dbInstMap[name]
 }
-
-//func GetGenesisRandon() *big.Int {
-//	return big.NewInt(1)
-//}
-//
-//func GetRandom(epochId uint64) (*big.Int, error) {
-//	bt, err := GetDb().Get(epochId, RANDOMBEACON_DB_KEY)
-//	if err != nil {
-//		if epochId == 0 {
-//			return GetGenesisRandon(), nil
-//		}
-//
-//		return nil, err
-//	}
-//
-//	return new(big.Int).SetBytes(bt), nil
-//}
-//
-//func SetRandom(epochId uint64, random *big.Int) error {
-//	_, err := GetDb().Put(epochId, RANDOMBEACON_DB_KEY, random.Bytes())
-//	return err
-//}
 
 //DbInit use to init leveldb in this object, user should not use this. It is automate called in init().
 func (s *Db) DbInit(dbPath string) {
@@ -237,9 +215,6 @@ func (s *Db) DbClose() {
 
 // GetStorageByteArray : cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (s *Db) GetStorageByteArray(epochID uint64) [][]byte {
-	//searchKey := s.getUniqueKey(epochID, 0, "")
-	//
-	//searchKey = strings.Split(searchKey, "_")[0]
 
 	keys := s.getAllKeys(epochID)
 
@@ -265,8 +240,6 @@ func (s *Db) getUniqueKey(epochID uint64, index uint64, key string) string {
 func (s *Db) getUniqueKeyBytes(epochID uint64, index uint64, key string) []byte {
 	return []byte(s.getUniqueKey(epochID, index, key))
 }
-
-
 
 // TODO duplicated with epochLeader
 type Proposer struct {
@@ -323,7 +296,4 @@ func GetEpochLeaderGroup(epochId uint64) [][]byte {
 
 }
 
-
 //-------------------------------------------------------------------
-
-

@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
 func testInit() {
-	rc := &rpc.Client{}
-	GetSlotLeaderSelection().Init(nil, rc, &keystore.Key{}, nil)
+	GetSlotLeaderSelection().Init(nil, &rpc.Client{}, &keystore.Key{})
 }
 
 func testSender(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
