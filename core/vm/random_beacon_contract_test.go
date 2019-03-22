@@ -426,7 +426,7 @@ func TestValidPosTx(t *testing.T) {
 		payload := buildDkg1(payloadBytes)
 
 		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}
@@ -449,7 +449,7 @@ func TestValidPosTx(t *testing.T) {
 		payload := buildDkg2(payloadBytes)
 
 		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}
@@ -472,7 +472,7 @@ func TestValidPosTx(t *testing.T) {
 		payload := buildSig(payloadBytes)
 
 		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}

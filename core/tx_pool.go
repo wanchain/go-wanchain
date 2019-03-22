@@ -953,6 +953,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			queuedNofundsCounter.Inc(1)
 		}
 
+		// Remove all invalid pos transactions
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		for _, tx := range invalidPos {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()

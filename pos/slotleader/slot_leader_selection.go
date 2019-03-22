@@ -112,16 +112,25 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 		}
 		return crypto.ToECDSAPub(b), nil
 	}
-	_, ok := s.slotCreateStatus[epochID]
-	if !ok {
-		return nil, vm.ErrSlotLeaderGroupNotReady
-	}
-	if len(s.slotLeadersPtrArray) != posconfig.SlotCount {
-		return nil, vm.ErrSlotLeaderGroupNotReady
-	}
+
 	if slotID >= posconfig.SlotCount {
 		return nil, vm.ErrSlotIDOutOfRange
 	}
+
+	// read from memory
+	created, ok := s.slotCreateStatus[epochID]
+	if ok && created {
+		return s.slotLeadersPtrArray[slotID], nil
+	}
+	// read from local db
+	for i := 0; i < posconfig.SlotCount; i++ {
+		pkByte, err := posdb.GetDb().GetWithIndex(epochID, uint64(i), SlotLeader)
+		if err != nil {
+			return nil, vm.ErrSlotLeaderGroupNotReady
+		}
+		s.slotLeadersPtrArray[i] = crypto.ToECDSAPub(pkByte)
+	}
+	s.slotCreateStatus[epochID] = true
 	return s.slotLeadersPtrArray[slotID], nil
 }
 
@@ -169,7 +178,7 @@ func init() {
 		s.smaGenesis[i] = smaPiece
 
 		for j := 0; j < posconfig.EpochLeaderCount; j++ {
-			// AlphaIPki stage2Genesis
+			// AlphaIPki stage2Genesis, used to verify genesis proof
 			alphaIPkj := new(ecdsa.PublicKey)
 			alphaIPkj.Curve = crypto.S256()
 			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
@@ -357,6 +366,7 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 func (s *SLS) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
+	s.slotCreateStatus = make(map[uint64]bool)
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArray[i] = nil
