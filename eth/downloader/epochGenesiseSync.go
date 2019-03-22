@@ -82,23 +82,16 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 
 	for {
 		// Enable sending of the first buffered element if there is one.
-		var (
-			deliverReq   *epochGenesisReq
-			deliverReqCh chan *epochGenesisReq
-		)
 
 		if len(finished) > 0 {
-			deliverReq = finished[0]
-			deliverReqCh = s.deliver
+			s.deliver <- finished[0]
+			finished = append(finished[:0], finished[1:]...)
 		}
 
 		select {
 
 		case <-s.done:
 			return nil
-
-		case deliverReqCh <- deliverReq:
-			finished = append(finished[:0], finished[1:]...)
 
 		case pack := <-d.epochGenesisCh:
 
