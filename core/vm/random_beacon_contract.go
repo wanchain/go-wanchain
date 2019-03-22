@@ -191,7 +191,7 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 //
 // params or gas check functions
 //
-func ValidPosTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *big.Int,
+func ValidPosRBTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *big.Int,
 	intrinsicGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
 	if intrinsicGas == nil || intrinsicGas.BitLen() > 64 || gasLimit == nil || intrinsicGas.Cmp(gasLimit) > 0 {
 		return ErrOutOfGas

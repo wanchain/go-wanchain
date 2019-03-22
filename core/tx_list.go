@@ -363,7 +363,7 @@ func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer, gasLimi
 		}
 
 		intrGas := IntrinsicGas(tx.Data(), tx.To(), true)
-		err = vm.ValidPosTx(stateDB, from, tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
+		err = vm.ValidPosRBTx(stateDB, from, tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
 
 		return err != nil
 	})
