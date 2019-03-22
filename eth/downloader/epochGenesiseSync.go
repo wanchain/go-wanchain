@@ -22,7 +22,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"github.com/wanchain/go-wanchain/core/types"
-	"errors"
 	"math/rand"
 )
 
@@ -215,9 +214,8 @@ func (s *epochGenesisSync) run() error {
 	for _,request :=range req.tasks {
 
 		peers, _ := s.d.peers.NodeDataIdlePeers()
-
 		if len(peers) == 0 {
-			return errors.New("failed found peer when send epoch genesis request")
+			continue
 		}
 
 		idx := rand.Intn(len(peers))
@@ -229,6 +227,8 @@ func (s *epochGenesisSync) run() error {
 				err := req.peer.FetchEpochGenesisData(s.epochid)
 				if err == nil {
 					delete(req.tasks,big.NewInt(int64(s.epochid)))
+				} else {
+					continue
 				}
 
 			case <-s.cancel:
