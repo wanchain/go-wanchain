@@ -249,12 +249,13 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
 		trackEpochGenesisReq:  make(chan *epochGenesisReq),
+		epochGenesisCh: make(chan  dataPack),
 	}
 
 	go dl.qosTuner()
 	go dl.stateFetcher()
 
-	//go dl.epochGenesisFetcher()
+	go dl.epochGenesisFetcher()
 
 	return dl
 }
@@ -1530,7 +1531,7 @@ func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 }
 
 func (d *Downloader) DeliverEpochGenesisData(id string,data *types.EpochGenesis ) (err error) {
-	d.epochGenesisCh = make(chan  dataPack)
+
 	return d.deliver(id, d.epochGenesisCh, &epochGenesisPack{id, data}, stateInMeter, stateDropMeter)
 }
 

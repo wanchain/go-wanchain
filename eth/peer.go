@@ -231,7 +231,7 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 }
 
 func (p *peer) RequestEpochGenesisData(epochids uint64) error {
-	p.Log().Debug("Fetching batch of state data", "count", 1)
+	p.Log().Debug("Fetching epoch genesis data", "count", 1)
 	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
 }
 
