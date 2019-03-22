@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -16,7 +17,6 @@ var s *SLS
 
 func testInitSlotleader() {
 	s = GetSlotLeaderSelection()
-	rc := &rpc.Client{}
 
 	// Create the database in memory or in a temporary directory.
 	db, _ := ethdb.NewMemDatabase()
@@ -26,7 +26,7 @@ func testInitSlotleader() {
 	ce := ethash.NewFaker(db)
 	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
 
-	s.Init(bc, rc, &keystore.Key{}, nil)
+	s.Init(bc, &rpc.Client{}, &keystore.Key{})
 
 	s.sendTransactionFn = testSender
 

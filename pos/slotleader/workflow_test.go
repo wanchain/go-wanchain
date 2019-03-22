@@ -62,11 +62,11 @@ func TestLoop(t *testing.T) {
 	epochIDStart := time.Now().Second()
 
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, util.GetEpocherInst(), uint64(epochIDStart+0), uint64(i))
+		s.Loop(&rpc.Client{}, key, uint64(epochIDStart+0), uint64(i))
 	}
 
 	for i := 0; i < posconfig.SlotCount; i++ {
-		s.Loop(&rpc.Client{}, key, util.GetEpocherInst(), uint64(epochIDStart+1), uint64(i))
+		s.Loop(&rpc.Client{}, key, uint64(epochIDStart+1), uint64(i))
 	}
 }
 

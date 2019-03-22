@@ -54,7 +54,6 @@ type SLS struct {
 	rc             *rpc.Client
 	key            *keystore.Key
 	stateDb        *state.StateDB
-	epochInstance  interface{}
 
 	epochLeadersArray []string            // len(pki)=65 hex.EncodeToString
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
@@ -272,7 +271,7 @@ func (s *SLS) getEpochLeaders(epochID uint64) [][]byte {
 			GetEpochLeaders(epochID uint64) [][]byte
 		}
 
-		selector := util.GetEpocherInst()
+		selector := util.GetEpocherInst() //TODO:CHECK INIT
 
 		if selector == nil {
 			return nil
@@ -588,6 +587,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		s.slotLeadersIndex[index] = value
 	}
 
+	//TODO: clear map check
 	s.slotCreateStatus[epochID] = true
 	log.Info("generateSlotLeadsGroup success")
 

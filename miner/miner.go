@@ -107,7 +107,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	//eerr1 := epochSelector.SelectLeadersLoop(1)
 
 	sls := slotleader.GetSlotLeaderSelection()
-	sls.Init(s.BlockChain(), nil, nil, epochSelector)
+	sls.Init(s.BlockChain(), nil, nil)
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
 	fmt.Println("posInit: ", eerr)
@@ -117,7 +117,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	return epochSelector
 }
-func posInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
+func posInitMiner(s Backend, key *keystore.Key) {
 	log.Info("timer backendTimerLoop is running!!!!!!")
 
 	// config
@@ -131,8 +131,6 @@ func posInitMiner(s Backend, key *keystore.Key) *epochLeader.Epocher {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
 	}
-	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-	return epochSelector
 }
 
 // backendTimerLoop is pos main time loop
@@ -156,7 +154,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
-	epocher := posInitMiner(s, key)
+	posInitMiner(s, key)
 	// get rpcClient
 	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
 	rc, err := rpc.Dial(url)
@@ -189,7 +187,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		epochid, slotid := util.GetEpochSlotID()
 		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
 
-		slotleader.GetSlotLeaderSelection().Loop(rc, key, epocher, epochid, slotid)
+		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochid, slotid)
 
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
 		if err == nil {

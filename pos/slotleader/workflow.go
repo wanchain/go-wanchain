@@ -28,11 +28,11 @@ var (
 	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
 
-func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key, epochInstance interface{}) {
+// Init use to initial slotleader module and input some params.
+func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key) {
 	s.blockChain = blockChain
 	s.rc = rc
 	s.key = key
-	s.epochInstance = epochInstance
 	if blockChain != nil {
 		log.Info("SLS init success")
 	}
@@ -43,10 +43,9 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 //Loop check work every Slot time. Called by backend loop.
 //It's all slotLeaderSelection's main workflow loop.
 //It does not loop at all, it is loop called by the backend.
-func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochInstance interface{}, epochID uint64, slotID uint64) {
+func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uint64) {
 	s.rc = rc
 	s.key = key
-	s.epochInstance = epochInstance
 
 	log.Info("Now epchoID and slotID:", "epochID", convert.Uint64ToString(epochID), "slotID",
 		convert.Uint64ToString(slotID))
@@ -130,7 +129,10 @@ func (s *SLS) doInit(epochID uint64) {
 }
 
 func (s *SLS) startStage1Work() error {
-	selfPublicKey, _ := s.getLocalPublicKey()
+	selfPublicKey, err := s.getLocalPublicKey()
+	if err != nil {
+		return err
+	}
 
 	selfPublicKeyIndex, inEpochLeaders := s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
 	if inEpochLeaders {
@@ -141,12 +143,13 @@ func (s *SLS) startStage1Work() error {
 		for i := 0; i < len(selfPublicKeyIndex); i++ {
 			data, err := s.generateCommitment(selfPublicKey, workingEpochID, selfPublicKeyIndex[i])
 			if err != nil {
-				return err
+				log.Error("generateCommitment error", "error", err.Error())
+				continue
 			}
 			err = s.sendSlotTx(data, s.sendTransactionFn)
 			if err != nil {
-				log.Error(err.Error())
-				return err
+				log.Error("sendSlotTx error", "error", err.Error())
+				continue
 			}
 		}
 	} else {
@@ -166,7 +169,10 @@ func doStage2Work() {
 func (s *SLS) startStage2Work() error {
 	functrace.Enter("startStage2Work")
 	s.getWorkingEpochID()
-	selfPublicKey, _ := s.getLocalPublicKey()
+	selfPublicKey, err := s.getLocalPublicKey()
+	if err != nil {
+		return err
+	}
 	selfPublicKeyIndex := make([]uint64, 0)
 	var inEpochLeaders bool
 	selfPublicKeyIndex, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
@@ -175,11 +181,13 @@ func (s *SLS) startStage2Work() error {
 			workingEpochID := s.getWorkingEpochID()
 			data, err := s.buildStage2TxPayload(workingEpochID, uint64(selfPublicKeyIndex[i]))
 			if err != nil {
-				return err
+				log.Error("buildStage2TxPayload error", "error", err.Error())
+				continue
 			}
 			err = s.sendSlotTx(data, s.sendTransactionFn)
 			if err != nil {
-				return err
+				log.Error("sendSlotTx error", "error", err.Error())
+				continue
 			}
 		}
 	}
