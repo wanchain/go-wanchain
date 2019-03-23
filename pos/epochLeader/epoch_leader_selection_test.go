@@ -1,7 +1,9 @@
 package epochLeader
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
@@ -10,7 +12,11 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
+	"testing"
+	"time"
+
 	//"github.com/wanchain/go-wanchain/log"
 	//"crypto/rand"
 	//"github.com/wanchain/pos/cloudflare"
@@ -105,9 +111,9 @@ func jsonPrealloc(data string) core.GenesisAlloc {
 	}
 	return ga
 }
-func testPlutoGenesisBlock() *core.Genesis {
-	return core.DefaultPlutoGenesisBlock()
-}
+// func testPlutoGenesisBlock() *core.Genesis {
+// 	return core.DefaultPlutoGenesisBlock()
+// }
 func testGenesisBlock1() *core.Genesis {
 	return &core.Genesis{
 		Config:     params.PlutoChainConfig,
@@ -150,111 +156,51 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 	return blockchain, chainEnv
 }
 
-//func TestGetEpochLeaders(t *testing.T) {
-//
-//	epochID, slotID := slotleader.GetEpochSlotID()
-//	fmt.Println("epochID:", epochID, " slotID:", slotID)
-//
-//    blkChain,_ := newTestBlockChain(true)
-//
-//	epocher1 := NewEpocherWithLBN(blkChain,"rb1","leader1","epdb1")
-//	epocher2 := NewEpocherWithLBN(blkChain,"rb2","leader2","epdb2")
-//
-//	epocher1.SelectLeadersLoop(0)
-//
-//	time.Sleep(30*time.Second)
-//	epocher2.SelectLeadersLoop(0)
-//
-//	epl1 := epocher1.GetEpochLeaders(0)
-//	epl2 := epocher2.GetEpochLeaders(0)
-//
-//	if len(epl1) != len(epl2) {
-//		t.Fail()
-//	}
-//
-//	for idx,val := range epl1 {
-//		if !bytes.Equal(val,epl2[idx]) {
-//			t.Fail()
-//		}
-//	}
-//
-//	rbl1 := epocher1.GetRBProposerGroup(0)
-//	rbl2 := epocher2.GetRBProposerGroup(0)
-//
-//	if len(epl1) != len(epl2) {
-//		t.Fail()
-//	}
-//
-//	for idx,val := range rbl1 {
-//		if !bytes.Equal(val.Marshal(),rbl2[idx].Marshal()) {
-//			t.Fail()
-//		}
-//	}
-//
-//}
-//
-//
-//func TestGetGetEpochLeadersWithDirrentRand(t *testing.T) {
-//
-//
-//	blkChain,_ := newTestBlockChain(true)
-//
-//	stateDb, err := blkChain.StateAt(blkChain.GetBlockByNumber(0).Root())
-//	if err != nil {
-//		t.Fail()
-//	}
-//
-//
-//	epocher1 := NewEpocherWithLBN(blkChain,"rb1","leader1","epdb1")
-//	epocher2 := NewEpocherWithLBN(blkChain,"rb2","leader1","epdb2")
-//
-//	r1 := []byte{byte(1)}
-//	epocher1.SelectLeaders_bak(r1,10,10,stateDb,0)
-//
-//
-//	r2 := []byte{byte(10)}
-//	epocher2.SelectLeaders(r2,10,10,stateDb,0)
-//
-//	epl1 := epocher1.GetEpochLeaders(0)
-//	epl2 := epocher2.GetEpochLeaders(0)
-//
-//
-//	isSame := true;
-//	notCount := 0
-//	for idx,val := range epl1 {
-//		if !bytes.Equal(val,epl2[idx]) {
-//			isSame = false
-//			notCount++
-//		}
-//	}
-//
-//	if isSame {
-//		t.Fail()
-//	}
-//	log.Info("epoch leader not same count%v",notCount)
-//
-//
-//	rbl1 := epocher1.GetRBProposerGroup(0)
-//	rbl2 := epocher2.GetRBProposerGroup(0)
-//
-//	isSame = true;
-//	notCount = 0
-//
-//	for idx,val := range rbl1 {
-//		if !bytes.Equal(val.Marshal(),rbl2[idx].Marshal()) {
-//			isSame = false
-//			notCount++
-//		}
-//	}
-//
-//	if isSame {
-//		t.Fail()
-//	}
-//
-//	log.Info("rb proposer not same count%v",notCount)
-//
-//}
-//
+func TestGetEpochLeaders(t *testing.T) {
+
+	epochID, slotID := util.GetEpochSlotID()
+	fmt.Println("epochID:", epochID, " slotID:", slotID)
+
+   blkChain,_ := newTestBlockChain(true)
+
+	epocher1 := NewEpocherWithLBN(blkChain,"rb1","epdb1")
+	epocher2 := NewEpocherWithLBN(blkChain,"rb2","epdb2")
+
+	epocher1.SelectLeadersLoop(0)
+
+	time.Sleep(30*time.Second)
+	epocher2.SelectLeadersLoop(0)
+
+	epl1 := epocher1.GetEpochLeaders(0)
+	epl2 := epocher2.GetEpochLeaders(0)
+
+	if len(epl1) != len(epl2) {
+		t.Fail()
+	}
+
+	for idx,val := range epl1 {
+		if !bytes.Equal(val,epl2[idx]) {
+			t.Fail()
+		}
+	}
+
+	rbl1 := epocher1.GetRBProposerGroup(0)
+	rbl2 := epocher2.GetRBProposerGroup(0)
+
+	if len(epl1) != len(epl2) {
+		t.Fail()
+	}
+
+	for idx,val := range rbl1 {
+		if !bytes.Equal(val.PubBn256,rbl2[idx].PubBn256) {
+			t.Fail()
+		}
+	}
+
+}
+
+
+
 //func TestGetGetEpochLeadersCapability(t *testing.T) {
 //
 //	blkChain, _ := newTestBlockChain(true)
@@ -360,22 +306,7 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 //	}
 //}
 
-//func TestGetGetStakerIfo(t *testing.T) {
-//
-//	blkChain, _ := newTestBlockChain(true)
-//
-//	epocher1 := NewEpocherWithLBN(blkChain, "countrb1", "leaderdb", "countepdb1")
-//
-//	userPubk := "0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
-//
-//	info,err:=epocher1.GetEpochStakers(0,userPubk)
-//
-//	if err!= nil {
-//		t.Fail()
-//	}
-//
-//	fmt.Println(info)
-//}
+
 //
 //func TestGenerateLeader(t *testing.T) {
 //	blkChain, _ := newTestBlockChain(true)

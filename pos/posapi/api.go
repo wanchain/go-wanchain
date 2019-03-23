@@ -231,7 +231,11 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		return stakers, errors.New("epocher instance do not exist")
 	}
 
-	stateDb, err := epocherInst.GetBlkChain().StateAt(epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum).Root())
+	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	if block == nil {
+		return nil, errors.New("Unkown block")
+	}
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
 	if err != nil {
 		return stakers, err
 	}

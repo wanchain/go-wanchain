@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/rlp"
 	"math"
 	"math/big"
 	"sort"
-	"strings"
-
-	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
@@ -410,7 +408,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		}
 
 		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
-		g1s[i].Probabilities = proposer.Probabilities
+		//g1s[i].Probabilities = proposer.Probabilities
 	}
 
 	return g1s
@@ -444,48 +442,6 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	} else {
 		return nil
 	}
-}
-
-func (e *Epocher) GetEpochStakers(epochId uint64, puk string) ([]string, error) {
-
-	targetBlkNum := e.GetTargetBlkNumber(epochId)
-
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
-	if err != nil {
-		return nil, err
-	}
-
-	sec256 := common.FromHex(strings.ToLower(puk))
-	pubHash := common.BytesToHash(sec256)
-
-	infoArray, err := vm.GetInfo(stateDb, vm.StakersInfoAddr, pubHash)
-	if infoArray == nil {
-		return nil, errors.New("not find staker staking info")
-	}
-
-	var staker vm.StakerInfo
-	err = rlp.DecodeBytes(infoArray, &staker)
-	if err != nil {
-		return nil, err
-	}
-
-	if staker.PubSec256 == nil {
-		return nil, errors.New("staker has unregistered already")
-	}
-	//blkTime := epochId*(posconfig.SlotTime*posconfig.SlotCount) + posconfig.EpochBaseTime
-	pitem, err := e.generateProblility(&staker, epochId)
-	if err != nil {
-		return nil, err
-	}
-	strArray := make([]string, 0)
-	val := staker.Amount.Div(staker.Amount, big.NewInt(int64(params.Wan)))
-
-	strArray = append(strArray, fmt.Sprint("amount:", val.Text(10)))
-	strArray = append(strArray, fmt.Sprint("lockTime:", staker.LockEpochs))
-	strArray = append(strArray, fmt.Sprint("probability:", pitem.Probabilities.Text(10)))
-
-	return strArray, nil
-
 }
 
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
