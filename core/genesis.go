@@ -34,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"strings"
 )
@@ -408,15 +409,22 @@ func DefaultInternalGenesisBlock() *Genesis {
 // DefaultPlutoGenesisBlock returns the Pluto network genesis block.
 
 func DefaultPlutoGenesisBlock() *Genesis {
-	return &Genesis{
+	g := &Genesis{
 		Config:     params.PlutoChainConfig,
 		Timestamp:  0x59f83144,
-		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		ExtraData:  hexutil.MustDecode("0xcf696d8eea08a311780fb89b20d4f0895198a489"),
+		//ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000cf696d8eea08a311780fb89b20d4f0895198a4890000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   0x47b760,	// 4700000
 		//GasLimit:   0x2cd29c0,	// 47000000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
+	firstAddr := common.Address{}
+	firstAddr.SetBytes(g.ExtraData)
+	firstPub := g.Alloc[firstAddr].Staking.S256pk
+	GenesisPK := hexutil.Encode(firstPub)
+	posconfig.GenesisPK = GenesisPK[2:]
+	return g
 }
 
 // DevGenesisBlock returns the 'geth --dev' genesis block.
