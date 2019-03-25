@@ -249,7 +249,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
 		trackEpochGenesisReq:  make(chan *epochGenesisReq),
-		epochGenesisCh: make(chan  dataPack),
+		epochGenesisCh: make(chan  dataPack,1),
 	}
 
 	go dl.qosTuner()

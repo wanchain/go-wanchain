@@ -27,7 +27,7 @@ func (d *Downloader) epochGenesisFetcher() {
 
 		case epochid := <-d.epochGenesisSyncStart:
 			s := newepochGenesisSync(d, epochid)
-			d.runEpochGenesisSync(s)
+			go d.runEpochGenesisSync(s)
 		case <-d.quitCh:
 			return
 		}
@@ -35,7 +35,7 @@ func (d *Downloader) epochGenesisFetcher() {
 }
 
 
-func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync {
+func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) {
 
 	var (
 		active   = make(map[string]*epochGenesisReq) // Currently in-flight requests
@@ -82,6 +82,10 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 			delete(active, pack.PeerId())
 			req.peer.SetEpochGenesisDataIdle(1)
 
+			//if all active request is finished,tthen return
+			if len(active) == 0 {
+				return
+			}
 			// Handle dropped peer connections:
 		case p := <-peerDrop:
 			// Skip if no request is currently pending
@@ -125,6 +129,8 @@ func (d *Downloader) runEpochGenesisSync(s *epochGenesisSync) *epochGenesisSync 
 			})
 
 			active[req.peer.id] = req
+
+
 		}
 	}
 }

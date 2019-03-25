@@ -206,11 +206,12 @@ func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 }
 
 func (f *ForkMemBlockChain) UpdateEpochGenesis(epochID uint64) {
-
-	//if epochID != f.lastEpochId && epochID > 0{
-	//	f.lastEpochId = epochID
-	//	f.epochGenesisCh <- 1
-	//}
+	if epochID != f.lastEpochId && epochID > 0{
+		f.lastEpochId = epochID
+		{
+			//f.epochGenesisCh <- 1
+		}
+	}
 }
 
 func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Block) *types.Block {
