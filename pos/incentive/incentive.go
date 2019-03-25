@@ -169,7 +169,8 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 }
 
 // protocalRunerAllocate use to calc the subsidy of protocal Participant (Epoch leader and Random proposer)
-func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
+func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int,
+	epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
 	count := len(addrs)
 	if count == 0 {
@@ -207,17 +208,20 @@ func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, e
 }
 
 // epochLeaderAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
+func epochLeaderAllocate(funds *big.Int, addrs []common.Address, acts []int,
+	epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //randomProposerAllocate input funds, address and activity returns address and its amount allocate and remaining funds.
-func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
+func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int,
+	epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	return protocalRunerAllocate(funds, addrs, acts, epochID)
 }
 
 //slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
-func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int, act float64, slotCount int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
+func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
+	act float64, slotCount int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
 
 	scale := 100000.0
