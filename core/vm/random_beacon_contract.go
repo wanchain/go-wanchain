@@ -103,7 +103,7 @@ var (
 	errDkg2Parse           = errors.New("dkg2 payload parse failed")
 	errSigParse            = errors.New("sig payload parse failed")
 	errRSCode              = errors.New("rs code verify failed")
-	errDLEQ                = errors.New("dleq verify failed")
+	errDiscreteLogarithmsEQ = errors.New("the equality of discrete logarithms verify failed")
 	errRlpCij              = errors.New("rlp encode cij failed")
 	errRlpEncryptShare     = errors.New("rlp encode encrypt share failed")
 	errUnRlpCij            = errors.New("rlp decode cij failed")
@@ -340,15 +340,15 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	// 3. EncryptShare, Commit, Proof has the same size
 	// check same size
 	nr := len(pks)
-	if nr != len(dkg2Param.Enshare) || nr != len(dkg2Param.Proof) || nr != len(commit) {
+	if nr != len(dkg2Param.EnShare) || nr != len(dkg2Param.Proof) || nr != len(commit) {
 		return nil, logError(buildError("error in dkg2 params have different length", eid, pid))
 	}
 
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
 		// get send public Key
-		if !wanpos.VerifyDLEQ(dkg2Param.Proof[j], pks[j], *hBase, *dkg2Param.Enshare[j], *commit[j]) {
-			return nil, logError(errDLEQ)
+		if !wanpos.VerifyDLEQ(dkg2Param.Proof[j], pks[j], *hBase, *dkg2Param.EnShare[j], *commit[j]) {
+			return nil, logError(errDiscreteLogarithmsEQ)
 		}
 	}
 
@@ -403,7 +403,7 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	}
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
-	pair1 := bn256.Pair(sigShareParam.Gsigshare, hBase)
+	pair1 := bn256.Pair(sigShareParam.GSignShare, hBase)
 	pair2 := bn256.Pair(mG, &gPKShare)
 	if pair1.String() != pair2.String() {
 		return nil, nil, nil, logError(buildError("unequal si gi", eid, pid))
@@ -550,14 +550,18 @@ func IsJoinDKG2(db StateDB, epochId uint64, proposerId uint32) bool {
 //
 // more public functions
 //
+// active： participate in all stages --- dkg1 dkg2 sign
 func IsRBActive(db StateDB, epochId uint64, proposerId uint32) bool {
 	hash := GetRBKeyHash(sigShareId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if payloadBytes == nil || len(payloadBytes) == 0 {
 		return false
 	}
+	if IsJoinDKG2(db, epochId, proposerId) {
+		return true
+	}
 
-	return true
+	return false
 }
 
 //
@@ -595,14 +599,14 @@ type RbDKG2FlatTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
 	// encrypt share
-	Enshare [][]byte
+	EnShare [][]byte
 	Proof   []wanpos.DLEQproofFlat
 }
 
 type RbSIGTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
-	Gsigshare  *bn256.G1
+	GSignShare  *bn256.G1
 }
 
 //
@@ -618,7 +622,7 @@ type RbDKG2TxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
 	// encrypt share
-	Enshare    []*bn256.G1
+	EnShare    []*bn256.G1
 	Proof      []wanpos.DLEQproof
 }
 
@@ -628,7 +632,7 @@ type RbDKG2TxPayload struct {
 type RbDKGTxPayloadPure struct {
 	EpochId    uint64
 	ProposerId uint32
-	Enshare    []*bn256.G1
+	EnShare    []*bn256.G1
 	Commit     []*bn256.G2
 }
 
@@ -734,11 +738,11 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	dkg2Param.EpochId = d.EpochId
 	dkg2Param.ProposerId = d.ProposerId
 
-	l := len(d.Enshare)
-	dkg2Param.Enshare = make([]*bn256.G1, l, l)
+	l := len(d.EnShare)
+	dkg2Param.EnShare = make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
 	for i := 0; i < l; i++ {
-		left, err := g1s[i].Unmarshal(d.Enshare[i])
+		left, err := g1s[i].Unmarshal(d.EnShare[i])
 		if err != nil {
 			return nil, err
 		}
@@ -747,7 +751,7 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 			return nil, errInvalidEncryptShareBytes
 		}
 
-		dkg2Param.Enshare[i] = &g1s[i]
+		dkg2Param.EnShare[i] = &g1s[i]
 	}
 
 	l = len(d.Proof)
@@ -763,10 +767,10 @@ func Dkg2ToDkg2Flat(d *RbDKG2TxPayload) *RbDKG2FlatTxPayload {
 	df.EpochId = d.EpochId
 	df.ProposerId = d.ProposerId
 
-	l := len(d.Enshare)
-	df.Enshare = make([][]byte, l)
+	l := len(d.EnShare)
+	df.EnShare = make([][]byte, l)
 	for i := 0; i < l; i++ {
-		df.Enshare[i] = d.Enshare[i].Marshal()
+		df.EnShare[i] = d.EnShare[i].Marshal()
 	}
 
 	l = len(d.Proof)
@@ -793,15 +797,6 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 		return false
 	}
 
-	return true
-}
-
-func isCjiValid(db StateDB, epochId uint64, proposerId uint32) bool {
-	hash := GetRBKeyHash(kindEns, epochId, proposerId)
-	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-	if dkgBytes == nil || len(dkgBytes) == 0 {
-		return false
-	}
 	return true
 }
 
@@ -891,7 +886,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 
 	// save encrypt share
 	hash := GetRBKeyHash(kindEns, eid, pid)
-	encryptShareBytes, err := rlp.EncodeToBytes(dkg2FlatParam.Enshare)
+	encryptShareBytes, err := rlp.EncodeToBytes(dkg2FlatParam.EnShare)
 	if err != nil {
 		return nil, logError(errRlpEncryptShare)
 	}
@@ -963,7 +958,7 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 	gSignatureShare := make([]bn256.G1, len(sigData))
 	xSig := make([]big.Int, len(sigData))
 	for i, data := range sigData {
-		gSignatureShare[i] = *data.data.Gsigshare
+		gSignatureShare[i] = *data.data.GSignShare
 		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
