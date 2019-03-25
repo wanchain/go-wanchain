@@ -1,7 +1,7 @@
 
 personal.unlockAccount(eth.accounts[0],"wanglu",600);
 
-var tranValue = 10
+var tranValue = 100000
 
 var secpub  = '0x04a5946c1968bbe53bfd897c06d53555292bef6e71a4c8ed92b9c1de1b1b94f797c3984581307788ff0c2a564548901f83000b1aa65a1532dacca01214e1f3fa6c'
 var secAddr = '0x23Fc2eDa99667fD3df3CAa7cE7e798d94Eec06eb'
@@ -40,10 +40,6 @@ var cscDefinition = [
 			{
 				"name": "delegateAddress",
 				"type": "address"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
 			}
 		],
 		"name": "delegateIn",
@@ -62,14 +58,14 @@ var cscContractAddr = "0x00000000000000000000000000000000000000d2";
 var coinContract = contractDef.at(cscContractAddr);
 
 var lockTime = 30
-var feeRate = 100
+var feeRate = 79
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
 console.log("payload: ", payload)
 var tx = eth.sendTransaction({from:eth.accounts[0], to:cscContractAddr, value:web3.toWin(tranValue), data:payload, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
 console.log("tx=" + tx)
 
-var payloadDelegate = coinContract.delegateIn.getData(secAddr, lockTime)
+var payloadDelegate = coinContract.delegateIn.getData(secAddr)
 var tx2 = eth.sendTransaction({from:eth.accounts[0], to:cscContractAddr, value:web3.toWin(tranValue), data:payloadDelegate, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
 console.log("tx2=" + tx2)
 

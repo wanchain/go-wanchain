@@ -142,8 +142,8 @@ type Leader struct {
 	PubSec256     []byte
 	PubBn256      []byte
 	SecAddr       common.Address
-	FromAddr      common.Address
-	Probabilities *big.Int
+	//FromAddr      common.Address
+	//Probabilities *big.Int
 }
 
 type ClientProbability struct {
