@@ -63,7 +63,7 @@ var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
 var coinContract = contractDef.at(cscContractAddr);
 
-var lockTime = 30
+var lockTime = 11
 var feeRate = 79
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)

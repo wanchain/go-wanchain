@@ -463,15 +463,14 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	}
 	infors = make([]vm.ClientProbability, 1)
 	infors[0].Addr = addr
-	infors[0].Probability = e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
-	totalProbability = big.NewInt(0)
-	totalProbability = infors[0].Probability
+	infors[0].Probability = big.NewInt(0).Set(e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch))
+	totalProbability = big.NewInt(0).Set(infors[0].Probability)
 	for i:=0; i<len(staker.Clients); i++ {
 		c := staker.Clients[i]
 		info := vm.ClientProbability{}
 		info.Addr = c.Address
 		lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
-		info.Probability = e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch)
+		info.Probability = big.NewInt(0).Set(e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch))
 		totalProbability = totalProbability.Add(totalProbability, info.Probability)
 		infors = append(infors, info)
 	}

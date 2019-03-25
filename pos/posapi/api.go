@@ -289,16 +289,18 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 			return true
 		}
 		es := StakerInfo{}
-		es.Infors = make([]vm.ClientProbability, 0)
+		es.Infors = make([]vm.ClientProbability, 1)
 		pb := epocherInst.CalProbability(epochID, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
+		es.Infors[0].Probability = big.NewInt(0).Set(pb)
+		es.Infors[0].Addr = staker.Address
 		for i := 0; i < len(staker.Clients); i++ {
 			lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
 			pc := epocherInst.CalProbability(epochID, staker.Clients[i].Amount, lockEpoch, staker.Clients[i].StakingEpoch)
 			vc := vm.ClientProbability{}
-			vc.Probability = pc
+			vc.Probability = big.NewInt(0).Set(pc)
 			vc.Addr = 	staker.Clients[i].Address
 			es.Infors = append(es.Infors, vc)
-			pb.Add(pb, pc)
+			pb = pb.Add(pb, pc)
 		}
 		es.TotalProbability = pb
 		es.FeeRate = staker.FeeRate
