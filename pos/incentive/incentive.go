@@ -176,6 +176,14 @@ func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int, e
 		return nil, nil, errors.New("protocalRunerAllocate addrs length == 0")
 	}
 
+	if count != len(acts) {
+		return nil, nil, errors.New("protocalRunerAllocate addrs length != acts length")
+	}
+
+	if funds == nil {
+		return nil, nil, errors.New("protocalRunerAllocate funds == nil")
+	}
+
 	fundOne := funds.Div(funds, big.NewInt(int64(count)))
 	fundAddrs := make([]common.Address, 0)
 	fundValues := make([]*big.Int, 0)
