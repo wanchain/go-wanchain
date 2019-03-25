@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/go-wanchain/core/vm"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"

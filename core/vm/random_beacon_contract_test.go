@@ -112,8 +112,7 @@ var (
 	rbcontractParam = &Contract{}
 
 	pubs, pris, hpubs = generateKeyPairs()
-	//s, sshare, enshare, commit, proof := prepareDkg(pubs, pris, hpubs)
-	_, _, enshareA, commitA, proofA = prepareDkg(pubs, pris, hpubs)
+	_, _, enshareA, commitA, proofA = prepareDkg(pubs, hpubs)
 )
 
 // pubs,pris,hashPubs
@@ -138,7 +137,7 @@ func generateKeyPairs() ([]bn256.G1, []big.Int, []big.Int) {
 	return Pubkey, Prikey, x
 }
 
-func prepareDkg(Pubkey []bn256.G1, Prikey []big.Int, x []big.Int) ([]*big.Int, [][]big.Int, [][]*bn256.G1, [][]*bn256.G2, [][]wanpos.DLEQproof) {
+func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*bn256.G1, [][]*bn256.G2, [][]wanpos.DLEQproof) {
 	// Each of random propoer generates a random si
 	s := make([]*big.Int, nr)
 
@@ -226,7 +225,7 @@ func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
 }
 
 
-func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
+func getRBMMock(_ StateDB, epochId uint64) ([]byte, error) {
 	nextEpochId := big.NewInt(int64(epochId + 1))
 	preRandom := rbranddb[epochId]
 	if epochId == 0 {
@@ -246,10 +245,10 @@ func getRBMMock(db StateDB, epochId uint64) ([]byte, error) {
 }
 
 
-func isValidEpochStageMock(epochId uint64, stage int, time uint64) bool {
+func isValidEpochStageMock(_ uint64, _ int, _ uint64) bool {
 	return true
 }
-func isInRandomGroupMock(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
+func isInRandomGroupMock(_ []bn256.G1, _ uint64, _ uint32, _ common.Address) bool {
 	return true
 }
 
@@ -279,20 +278,12 @@ func intrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 }
 
 // test cases runs in testMain
-func TestMain(m *testing.M) {
+func init() {
 	rbranddb[0] = big.NewInt(1)
 	getRBProposerGroupVar = getRBProposerGroupMock
 	getRBMVar = getRBMMock
 	isValidEpochStageVar = isValidEpochStageMock
 	isInRandomGroupVar = isInRandomGroupMock
-	//println("rb test begin")
-	m.Run()
-	// clear db
-	println("rb test end")
-}
-
-func show(v interface{}) {
-	println(fmt.Sprintf("%v", v))
 }
 
 func buildDkg1(payloadBytes [] byte) []byte {
@@ -354,11 +345,11 @@ func TestRBDkg2(t *testing.T) {
 		var dkgParam RbDKG2TxPayload
 		dkgParam.EpochId = rbepochId
 		dkgParam.ProposerId = uint32(i)
-		dkgParam.Enshare = enshareA[i]
+		dkgParam.EnShare = enshareA[i]
 		dkgParam.Proof = proofA[i]
 
 		dkg1 := Dkg2ToDkg2Flat(&dkgParam)
-		ensBytes1, _ := rlp.EncodeToBytes(dkg1.Enshare)
+		ensBytes1, _ := rlp.EncodeToBytes(dkg1.EnShare)
 
 		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
 
@@ -388,7 +379,7 @@ func TestRBSig(t *testing.T)  {
 		var sigShareParam RbSIGTxPayload
 		sigShareParam.EpochId = rbepochId
 		sigShareParam.ProposerId = uint32(i)
-		sigShareParam.Gsigshare = gsigshareA[i]
+		sigShareParam.GSignShare = gsigshareA[i]
 
 		payloadBytes, _ := rlp.EncodeToBytes(sigShareParam)
 		payload := buildSig(payloadBytes)
@@ -404,11 +395,21 @@ func TestRBSig(t *testing.T)  {
 			println("error")
 		}
 		sigshareParam2, err := GetSig(evm.StateDB, rbepochId, uint32(i))
-		println (sigshareParam2)
+		if err != nil {
+			t.Error(err)
+		}
+		if sigshareParam2.EpochId != sigShareParam.EpochId ||
+			sigshareParam2.ProposerId != sigShareParam.ProposerId ||
+			!bytes.Equal(sigshareParam2.GSignShare.Marshal(), sigShareParam.GSignShare.Marshal()) {
+			println("rb sign error")
+		}
+
+
 	}
 }
 
 func TestValidPosTx(t *testing.T) {
+	clearDB()
 	rbgroupdb[rbepochId] = pubs
 
 	gasPrice := big.NewInt(1800000000000)
@@ -441,7 +442,7 @@ func TestValidPosTx(t *testing.T) {
 		var dkgParam RbDKG2TxPayload
 		dkgParam.EpochId = rbepochId
 		dkgParam.ProposerId = uint32(i)
-		dkgParam.Enshare = enshareA[i]
+		dkgParam.EnShare = enshareA[i]
 		dkgParam.Proof = proofA[i]
 
 		dkg1 := Dkg2ToDkg2Flat(&dkgParam)
@@ -466,7 +467,7 @@ func TestValidPosTx(t *testing.T) {
 		var sigShareParam RbSIGTxPayload
 		sigShareParam.EpochId = rbepochId
 		sigShareParam.ProposerId = uint32(i)
-		sigShareParam.Gsigshare = gsigshareA[i]
+		sigShareParam.GSignShare = gsigshareA[i]
 
 		payloadBytes, _ := rlp.EncodeToBytes(sigShareParam)
 		payload := buildSig(payloadBytes)
@@ -486,7 +487,7 @@ func TestValidPosTx(t *testing.T) {
 }
 
 func TestGetRBStage(t *testing.T) {
-	datas := [][]int{
+	data := [][]int{
 		{0, RbDkg1Stage, 0, int(2*posconfig.K-1)},
 		{9, RbDkg1Stage, 9, int(2*posconfig.K-10)},
 		{19, RbDkg1Stage, 19, 0},
@@ -507,11 +508,11 @@ func TestGetRBStage(t *testing.T) {
 		{119, RbSignConfirmStage, 19, 0},
 	}
 
-	for i, _ := range datas {
-		stage, elapsed, left := GetRBStage(uint64(datas[i][0]))
-		if datas[i][1] != stage || datas[i][2] != elapsed || datas[i][3] != left {
-			t.Error("expect(stage:", datas[i][1], ", elapsed:", datas[i][2], ", left:", datas[i][3],
-				")    acture(stage:", stage, ", elapsed:", elapsed, ", left:", left, ")")
+	for i := range data {
+		stage, elapsed, left := GetRBStage(uint64(data[i][0]))
+		if data[i][1] != stage || data[i][2] != elapsed || data[i][3] != left {
+			t.Error("expect(stage:", data[i][1], ", elapsed:", data[i][2], ", left:", data[i][3],
+				")    actual(stage:", stage, ", elapsed:", elapsed, ", left:", left, ")")
 		}
 	}
 }

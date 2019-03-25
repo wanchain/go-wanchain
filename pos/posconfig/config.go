@@ -26,7 +26,7 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 9
+	RandomProperCount = 21
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
 	// GenesisPK is the epoch0 pk
@@ -81,9 +81,9 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	1,
+	11,
 	K,
-	3,
+	11,
 	0,
 	0,
 	nil,

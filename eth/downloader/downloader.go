@@ -137,7 +137,7 @@ type Downloader struct {
 	//for epoch genesis
 	epochGenesisSyncStart chan	uint64
 	epochGenesisCh        chan  dataPack
-	trackEpochGenesisReq  chan  *epochGenesisReq
+	//trackEpochGenesisReq  chan  *epochGenesisReq
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -248,7 +248,6 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		trackStateReq:  make(chan *stateReq),
 
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
-		trackEpochGenesisReq:  make(chan *epochGenesisReq),
 		epochGenesisCh: make(chan  dataPack),
 	}
 

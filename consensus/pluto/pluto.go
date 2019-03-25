@@ -539,7 +539,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
 				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-				//return errUnauthorized
+				return errUnauthorized
 			} else {
 				//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
 			}

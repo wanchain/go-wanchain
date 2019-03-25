@@ -68,7 +68,7 @@ func TestStage1RlpCompress(t *testing.T) {
 
 	fmt.Println("len(buf):", len(buf))
 
-	epochIDUnpack, selfIndexUnpack, miUnpack, err := RlpUnpackStage1DataForTx(buf, slotLeaderSCDef)
+	epochIDUnpack, selfIndexUnpack, miUnpack, err := RlpUnpackStage1DataForTx(buf)
 	if err != nil {
 		t.Fail()
 	}
@@ -79,7 +79,7 @@ func TestStage1RlpCompress(t *testing.T) {
 		t.Fail()
 	}
 
-	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(buf, slotLeaderSCDef)
+	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(buf)
 	if err != nil {
 		t.Fail()
 	}
@@ -120,13 +120,13 @@ func TestStage2RlpCompress(t *testing.T) {
 	fmt.Println("len(buf):", len(buf))
 
 	t1 := time.Now()
-	epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err := RlpUnpackStage2DataForTx(buf, slotLeaderSCDef)
+	epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err := RlpUnpackStage2DataForTx(buf)
 	if err != nil {
 		t.Fail()
 	}
 
 	for index := 0; index < 49; index++ {
-		epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err = RlpUnpackStage2DataForTx(buf, slotLeaderSCDef)
+		epochIDUnpack, selfIndexUnpack, selfPKUnpack, alphaPkiUnpack, proofUnpack, err = RlpUnpackStage2DataForTx(buf)
 		if err != nil {
 			t.Fail()
 		}
@@ -155,7 +155,7 @@ func TestStage2RlpCompress(t *testing.T) {
 		}
 	}
 
-	epochIDBuf, selfIndexBuf, err := RlpGetStage2IDFromTx(buf, slotLeaderSCDef)
+	epochIDBuf, selfIndexBuf, err := RlpGetStage2IDFromTx(buf)
 	if err != nil {
 		t.Fail()
 	}

@@ -206,11 +206,12 @@ func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 }
 
 func (f *ForkMemBlockChain) UpdateEpochGenesis(epochID uint64) {
-
-	//if epochID != f.lastEpochId && epochID > 0{
-	//	f.lastEpochId = epochID
-	//	f.epochGenesisCh <- 1
-	//}
+	if epochID != f.lastEpochId && epochID > 0{
+		f.lastEpochId = epochID
+		{
+			f.epochGenesisCh <- epochID
+		}
+	}
 }
 
 func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Block) *types.Block {
@@ -228,6 +229,6 @@ func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("inputing epoch genesis is nil")
 	}
 
-	f.epochGens[epochgen.EpochId] = epochgen
+	//f.epochGens[epochgen.EpochId] = epochgen
 	return nil
 }

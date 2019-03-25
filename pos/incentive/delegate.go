@@ -81,7 +81,8 @@ func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 	return sumValue
 }
 
-func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientProbability, divisionPercent uint64, totalProbility *big.Int) ([]vm.ClientIncentive, *big.Int) {
+func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientProbability,
+	divisionPercent uint64, totalProbility *big.Int) ([]vm.ClientIncentive, *big.Int) {
 	totalPercent := calcTotalPercent(stakers, totalProbility)
 	valueCeiling := ceilingCalc(value, totalPercent)
 
