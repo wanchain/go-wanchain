@@ -49,7 +49,6 @@ var (
       
     ],
     "payable": false,
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -65,7 +64,6 @@ var (
       
     ],
     "payable": false,
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -81,7 +79,6 @@ var (
       
     ],
     "payable": false,
-    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]`
@@ -112,7 +109,7 @@ var (
 	errUnRlpCij            = errors.New("rlp decode cij failed")
 	errUnRlpEncryptShare   = errors.New("rlp decode encrypt share failed")
 	errInvalidCommitBytes  = errors.New("invalid dkg commit bytes")
-	errInvalidEncryptShareBytes = errors.New("invalid dkg enshare bytes")
+	errInvalidEncryptShareBytes = errors.New("invalid dkg encrypt share bytes")
 )
 
 // return:
@@ -235,12 +232,12 @@ func ValidPosRBTx(stateDB StateDB, from common.Address, payload []byte, gasPrice
 // 'time' is the time when tx is sealed into block,
 // 'time' should be block timestamp when the method is called by sealing
 // block and block verify.
-// 'time' should be current system time when the method is called by txpool.
+// 'time' should be current system time when the method is called by tx pool.
 //
 // 'caller' is the caller of DKG1. It should be set as Contract.CallerAddress
 // when called by precompiled contract. And should be set as tx's sender when
-// called by txpool.
-func validDkg1(statedb StateDB, time uint64, caller common.Address,
+// called by tx pool.
+func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	payload []byte) (*RbDKG1FlatTxPayload, error) {
 
 	var dkg1FlatParam RbDKG1FlatTxPayload
@@ -270,12 +267,12 @@ func validDkg1(statedb StateDB, time uint64, caller common.Address,
 	}
 
 	// prevent reset
-	existC, err := GetCji(statedb, eid, pid)
+	existC, err := GetCji(stateDB, eid, pid)
 	if err == nil && len(existC) != 0 {
 		return nil, logError(errors.New("dkg1 commit exist already, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
-	// 3. Enshare, Commit, Proof has the same size
+	// 3.Commit has the same size
 	// check same size
 	nr := len(pks)
 	if nr != len(dkg1Param.Commit) {
@@ -301,7 +298,7 @@ func validDkg1(statedb StateDB, time uint64, caller common.Address,
 	return &dkg1FlatParam, nil
 }
 
-func validDkg2(statedb StateDB, time uint64, caller common.Address,
+func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	payload []byte) (*RbDKG2FlatTxPayload, error) {
 
 	var dkg2FlatParam RbDKG2FlatTxPayload
@@ -330,21 +327,20 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 	}
 
 	// prevent reset
-	existE, err := GetEncryptShare(statedb, eid, pid)
+	existE, err := GetEncryptShare(stateDB, eid, pid)
 	if err == nil && len(existE) != 0 {
-		return nil, logError(errors.New("dkg2 enshare exist already, proposerId " + strconv.FormatUint(uint64(pid), 10)))
+		return nil, logError(errors.New("dkg2 encrypt share exist already, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
-	commit, err := GetCji(statedb, eid, pid)
+	commit, err := GetCji(stateDB, eid, pid)
 	if err != nil || len(commit) == 0 {
-		log.Error("get commit for dkg2 fail", "eid", eid, "pid", pid, "err", err)
 		return nil, logError(buildError("error in dkg2 can't get commit data", eid, pid))
 	}
 
 	// 3. EncryptShare, Commit, Proof has the same size
 	// check same size
 	nr := len(pks)
-	if nr != len(dkg2Param.Enshare) || nr != len(commit) {
+	if nr != len(dkg2Param.Enshare) || nr != len(dkg2Param.Proof) || nr != len(commit) {
 		return nil, logError(buildError("error in dkg2 params have different length", eid, pid))
 	}
 
@@ -359,7 +355,7 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 	return &dkg2FlatParam, nil
 }
 
-func validSigShare(statedb StateDB, time uint64, caller common.Address,
+func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	payload []byte) (*RbSIGTxPayload, []bn256.G1, []RbCijDataCollector, error) {
 
 	var sigShareParam RbSIGTxPayload
@@ -383,21 +379,21 @@ func validSigShare(statedb StateDB, time uint64, caller common.Address,
 	}
 
 	// 3. Verification
-	M, err := getRBMVar(statedb, eid)
+	M, err := getRBMVar(stateDB, eid)
 	if err != nil {
 		return nil, nil, nil, logError(buildError("getRBM error", eid, pid))
 	}
 	m := new(big.Int).SetBytes(M)
 
-	var gpkshare bn256.G2
+	var gPKShare bn256.G2
 
 	dkgData := make([]RbCijDataCollector, 0)
 	for id := range pks {
-		if isCjiValid(statedb, eid, uint32(id)) {
-			dkgDataOne, err := GetCji(statedb, eid, uint32(id))
-			if err == nil && dkgDataOne != nil {
-				dkgData = append(dkgData, RbCijDataCollector{dkgDataOne, &pks[id]})
-				gpkshare.Add(&gpkshare, dkgDataOne[pid])
+		if IsJoinDKG2(stateDB, eid, uint32(id)) {
+			dkgDatum, err := GetCji(stateDB, eid, uint32(id))
+			if err == nil && dkgDatum != nil {
+				dkgData = append(dkgData, RbCijDataCollector{dkgDatum, &pks[id]})
+				gPKShare.Add(&gPKShare, dkgDatum[pid])
 			}
 		}
 	}
@@ -408,7 +404,7 @@ func validSigShare(statedb StateDB, time uint64, caller common.Address,
 
 	mG := new(bn256.G1).ScalarBaseMult(m)
 	pair1 := bn256.Pair(sigShareParam.Gsigshare, hBase)
-	pair2 := bn256.Pair(mG, &gpkshare)
+	pair2 := bn256.Pair(mG, &gPKShare)
 	if pair1.String() != pair2.String() {
 		return nil, nil, nil, logError(buildError("unequal si gi", eid, pid))
 	}
@@ -540,6 +536,15 @@ func GetEncryptShare(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1
 	}
 
 	return BytesToEncryptShare(&enShare)
+}
+
+func IsJoinDKG2(db StateDB, epochId uint64, proposerId uint32) bool {
+	hash := GetRBKeyHash(kindEns, epochId, proposerId)
+	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
+	if len(dkgBytes) == 0 {
+		return false
+	}
+	return true
 }
 
 //
@@ -820,7 +825,7 @@ func logError(err error) error {
 	return err
 }
 
-func getSigsNum(epochId uint64, evm *EVM) uint32 {
+func getSignorsNum(epochId uint64, evm *EVM) uint32 {
 	tmpKey := common.Hash{0}
 	bs := evm.StateDB.GetStateByteArray(randomBeaconPrecompileAddr, tmpKey)
 	if bs != nil {
@@ -833,7 +838,7 @@ func getSigsNum(epochId uint64, evm *EVM) uint32 {
 	return 0
 }
 
-func setSigsNum(epochId uint64, num uint32, evm *EVM) {
+func setSignorsNum(epochId uint64, num uint32, evm *EVM) {
 	tmpKey := common.Hash{0}
 	dataBytes := make([]byte, 12)
 	copy(dataBytes[0:], UIntToByteSlice(epochId))
@@ -896,7 +901,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 	return nil, nil
 }
 
-// sigShare: happens in 8k~10k-1 slots, send the proof, enShare to chain
+// sigShare: sign, happens in 8k~10k-1 slots, send the proof, enShare to chain
 func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
@@ -912,8 +917,8 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 
 	/////////////////
 	// calc r if not exist
-	sigNum := getSigsNum(eid, evm) + 1
-	setSigsNum(eid, sigNum, evm)
+	sigNum := getSignorsNum(eid, evm) + 1
+	setSignorsNum(eid, sigNum, evm)
 	if uint(sigNum) >= posconfig.Cfg().RBThres {
 		r, err := computeRandom(evm.StateDB, eid, dkgData, pks)
 		if r != nil && err == nil {
@@ -931,11 +936,11 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 //
 // calc random
 //
-// compute random[epochid+1] by data of epoch[epochid]
-func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollector, pks []bn256.G1) (*big.Int, error) {
-	randomInt := GetStateR(statedb, epochId+1)
+// compute random[epochId+1] by data of epoch[epochId]
+func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector, pks []bn256.G1) (*big.Int, error) {
+	randomInt := GetStateR(stateDB, epochId+1)
 	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
-		return randomInt, errors.New("random exist already")
+		return randomInt, logError(errors.New("random exist already"))
 	}
 
 	if len(pks) == 0 {
@@ -943,28 +948,28 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 	}
 
 	// collect DKG SIG
-	sigDatas := make([]RbSIGDataCollector, 0)
+	sigData := make([]RbSIGDataCollector, 0)
 	for id := range pks {
-		sigData, err := GetSig(statedb, epochId, uint32(id))
-		if err == nil && sigData != nil {
-			sigDatas = append(sigDatas, RbSIGDataCollector{sigData, &pks[id]})
+		sigDatum, err := GetSig(stateDB, epochId, uint32(id))
+		if err == nil && sigDatum != nil {
+			sigData = append(sigData, RbSIGDataCollector{sigDatum, &pks[id]})
 		}
 	}
 
-	if uint(len(sigDatas)) < posconfig.Cfg().RBThres {
-		return nil, logError(errors.New("insufficient proposer"))
+	if uint(len(sigData)) < posconfig.Cfg().RBThres {
+		return nil, logError(errors.New("insufficient sign proposer"))
 	}
 
-	gSigShare := make([]bn256.G1, len(sigDatas))
-	xSig := make([]big.Int, len(sigDatas))
-	for i, data := range sigDatas {
-		gSigShare[i] = *data.data.Gsigshare
+	gSignatureShare := make([]bn256.G1, len(sigData))
+	xSig := make([]big.Int, len(sigData))
+	for i, data := range sigData {
+		gSignatureShare[i] = *data.data.Gsigshare
 		xSig[i].SetBytes(GetPolynomialX(data.pk, data.data.ProposerId))
 	}
 
 	// Compute the Output of Random Beacon
-	gsig := wanpos.LagrangeSig(gSigShare, xSig, int(posconfig.Cfg().PolymDegree))
-	random := crypto.Keccak256(gsig.Marshal())
+	gSignature := wanpos.LagrangeSig(gSignatureShare, xSig, int(posconfig.Cfg().PolymDegree))
+	random := crypto.Keccak256(gSignature.Marshal())
 
 	// Verification Logic for the Output of Random Beacon
 	// Computation of group public key
@@ -972,8 +977,8 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 	c := make([]bn256.G2, nr)
 	for i := 0; i < nr; i++ {
 		c[i].ScalarBaseMult(big.NewInt(int64(0)))
-		for j := 0; j < len(dkgDatas); j++ {
-			c[i].Add(&c[i], dkgDatas[j].cij[i])
+		for j := 0; j < len(dkgData); j++ {
+			c[i].Add(&c[i], dkgData[j].cij[i])
 		}
 	}
 
@@ -985,7 +990,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 	gPub := wanpos.LagrangePub(c, xAll, int(posconfig.Cfg().PolymDegree))
 
 	// mG
-	mBuf, err := getRBMVar(statedb, epochId)
+	mBuf, err := getRBMVar(stateDB, epochId)
 	if err != nil {
 		return nil, logError(err)
 	}
@@ -994,7 +999,7 @@ func computeRandom(statedb StateDB, epochId uint64, dkgDatas []RbCijDataCollecto
 	mG := new(bn256.G1).ScalarBaseMult(m)
 
 	// Verify using pairing
-	pair1 := bn256.Pair(&gsig, wanpos.Hbase)
+	pair1 := bn256.Pair(&gSignature, wanpos.Hbase)
 	pair2 := bn256.Pair(mG, &gPub)
 	if pair1.String() != pair2.String() {
 		return nil, logError(errors.New("final pairing check failed"))
