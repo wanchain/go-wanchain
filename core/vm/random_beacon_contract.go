@@ -108,11 +108,11 @@ var (
 	errRSCode              = errors.New("rs code verify failed")
 	errDLEQ                = errors.New("dleq verify failed")
 	errRlpCij              = errors.New("rlp encode cij failed")
-	errRlpEns              = errors.New("rlp encode ens failed")
+	errRlpEncryptShare     = errors.New("rlp encode encrypt share failed")
 	errUnRlpCij            = errors.New("rlp decode cij failed")
-	errUnRlpEns            = errors.New("rlp decode ens failed")
+	errUnRlpEncryptShare   = errors.New("rlp decode encrypt share failed")
 	errInvalidCommitBytes  = errors.New("invalid dkg commit bytes")
-	errInvalidEnshareBytes = errors.New("invalid dkg enshare bytes")
+	errInvalidEncryptShareBytes = errors.New("invalid dkg enshare bytes")
 )
 
 // return:
@@ -178,6 +178,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 		return c.sigShare(input[4:], contract, evm)
 	} else {
 		log.Debug("No match id found")
+		return nil, errors.New("no function")
 	}
 
 	return nil, nil
@@ -329,7 +330,7 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 	}
 
 	// prevent reset
-	existE, err := GetEns(statedb, eid, pid)
+	existE, err := GetEncryptShare(statedb, eid, pid)
 	if err == nil && len(existE) != 0 {
 		return nil, logError(errors.New("dkg2 enshare exist already, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
@@ -340,7 +341,7 @@ func validDkg2(statedb StateDB, time uint64, caller common.Address,
 		return nil, logError(buildError("error in dkg2 can't get commit data", eid, pid))
 	}
 
-	// 3. Enshare, Commit, Proof has the same size
+	// 3. EncryptShare, Commit, Proof has the same size
 	// check same size
 	nr := len(pks)
 	if nr != len(dkg2Param.Enshare) || nr != len(commit) {
@@ -525,19 +526,20 @@ func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) 
 	return BytesToCij(&cij)
 }
 
-func GetEns(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
+// get encrypt share
+func GetEncryptShare(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
 	hash := GetRBKeyHash(kindEns, epochId, proposerId)
 	dkgBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
-	ens := make([][]byte, 0)
-	err := rlp.DecodeBytes(dkgBytes, &ens)
+	enShare := make([][]byte, 0)
+	err := rlp.DecodeBytes(dkgBytes, &enShare)
 	if err != nil {
-		return nil, errUnRlpEns
+		return nil, errUnRlpEncryptShare
 	}
 
-	return BytesToEns(&ens)
+	return BytesToEncryptShare(&enShare)
 }
 
 //
@@ -587,7 +589,7 @@ type RbDKG1FlatTxPayload struct {
 type RbDKG2FlatTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
-	// 64
+	// encrypt share
 	Enshare [][]byte
 	Proof   []wanpos.DLEQproofFlat
 }
@@ -610,6 +612,7 @@ type RbDKG1TxPayload struct {
 type RbDKG2TxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
+	// encrypt share
 	Enshare    []*bn256.G1
 	Proof      []wanpos.DLEQproof
 }
@@ -658,7 +661,7 @@ func BytesToCij(d *[][]byte) ([]*bn256.G2, error) {
 	return cij, nil
 }
 
-func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
+func BytesToEncryptShare(d *[][]byte) ([]*bn256.G1, error) {
 	l := len(*d)
 	ens := make([]*bn256.G1, l, l)
 	g1s := make([]bn256.G1, l, l)
@@ -669,7 +672,7 @@ func BytesToEns(d *[][]byte) ([]*bn256.G1, error) {
 		}
 
 		if len(left) != 0 {
-			return nil, errInvalidEnshareBytes
+			return nil, errInvalidEncryptShareBytes
 		}
 
 		ens[i] = &g1s[i]
@@ -736,7 +739,7 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 		}
 
 		if len(left) != 0 {
-			return nil, errInvalidEnshareBytes
+			return nil, errInvalidEncryptShareBytes
 		}
 
 		dkg2Param.Enshare[i] = &g1s[i]
@@ -881,13 +884,13 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 	eid := dkg2FlatParam.EpochId
 	pid := dkg2FlatParam.ProposerId
 
-	// save ens
+	// save encrypt share
 	hash := GetRBKeyHash(kindEns, eid, pid)
-	ensBytes, err := rlp.EncodeToBytes(dkg2FlatParam.Enshare)
+	encryptShareBytes, err := rlp.EncodeToBytes(dkg2FlatParam.Enshare)
 	if err != nil {
-		return nil, logError(errRlpEns)
+		return nil, logError(errRlpEncryptShare)
 	}
-	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, ensBytes)
+	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, encryptShareBytes)
 
 	log.Debug("vm.dkg2", "dkgId", dkg2Id, "epochID", eid, "proposerId", pid, "hash", hash.Hex())
 	return nil, nil

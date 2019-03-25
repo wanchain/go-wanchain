@@ -90,7 +90,7 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	// function
 	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
 	rb.getCji = vm.GetCji
-	rb.getEns = vm.GetEns
+	rb.getEns = vm.GetEncryptShare
 	rb.getRBM = vm.GetRBM
 
 	rb.loopEvents = make(chan *LoopEvent, loopEventCount)
