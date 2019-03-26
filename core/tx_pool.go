@@ -1115,7 +1115,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			if types.IsNormalTransaction(tx.Txtype()) {
+			if types.IsNormalTransaction(tx.Txtype()) || types.IsPosTransaction(tx.Txtype()) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable pending transaction", "hash", hash)
 				delete(pool.all, hash)
