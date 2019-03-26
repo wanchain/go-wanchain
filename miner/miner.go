@@ -101,10 +101,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
-	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 
 	eerr := epochSelector.SelectLeadersLoop(0)
-	//eerr1 := epochSelector.SelectLeadersLoop(1)
 
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
@@ -124,7 +122,8 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	if key != nil {
 		posconfig.Cfg().MinerKey = key
 	}
-
+	epochSelector := epochLeader.NewEpocher(s.BlockChain())
+	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil != h {
@@ -169,6 +168,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		if nil == h {
 			select {
 			case <-self.timerStop:
+				randombeacon.GetRandonBeaconInst().Stop()
 				return
 			case <-time.After(time.Duration(time.Second)):
 				continue
@@ -216,6 +216,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		}
 		select {
 		case <-self.timerStop:
+			randombeacon.GetRandonBeaconInst().Stop()
 			return
 		case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 			continue
@@ -282,8 +283,6 @@ func (self *Miner) Stop() {
 	if self.worker.config.Pluto != nil {
 		self.timerStop <- nil
 	}
-
-	randombeacon.GetRandonBeaconInst().Stop()
 }
 
 func (self *Miner) Register(agent Agent) {
