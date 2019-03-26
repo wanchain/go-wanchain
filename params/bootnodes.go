@@ -54,11 +54,11 @@ var InternalBootnodes = []string{
 var PlutoBootnodes = []string{
 	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717",
 }
-var PlutoV5Bootnodes = []string{
+var PlutoV5ootnodes = []string{
 	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717?discport=17718",
 }
 
-var InternalV5ootnodes = []string{
+var InternalV5Bootnodes = []string{
 	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717",
 }
 
