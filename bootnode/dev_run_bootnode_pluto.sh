@@ -8,12 +8,5 @@
 #                                                                     
 
 echo "run gwan in pluto bootnode testnet"
-mkdir -p ~/.wanchain/pluto/keystore
-mkdir -p ~/.wanchain/pluto/gwan
-dir=$(dirname $0)
-# cp ${dir}/nodekey ~/.wanchain/pluto/gwan/
-cp ${dir}/UTC* ~/.wanchain/pluto/keystore
-echo -n 'wanglu' > /tmp/pw.txt
-# rm -rf ~/.wanchain/pluto/gwan/chaindata
-build/bin/gwan --pluto --ipcpath ~/.wanchain/gwan.ipc --nodiscover --etherbase  "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"  --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 $@
+build/bin/gwan --pluto --nodiscover --etherbase  "0xcf696d8eea08a311780fb89b20d4f0895198a489"  --unlock "0xcf696d8eea08a311780fb89b20d4f0895198a489" --password ./pw.txt  --mine --minerthreads=1 $@
 

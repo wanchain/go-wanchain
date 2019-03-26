@@ -53,6 +53,7 @@ type peerConnection struct {
 	blockIdle   int32 // Current block activity state of the peer (idle = 0, active = 1)
 	receiptIdle int32 // Current receipt activity state of the peer (idle = 0, active = 1)
 	stateIdle   int32 // Current node data activity state of the peer (idle = 0, active = 1)
+	epochGenesisIdle int32
 
 	headerThroughput  float64 // Number of headers measured to be retrievable per second
 	blockThroughput   float64 // Number of blocks (bodies) measured to be retrievable per second
@@ -144,6 +145,7 @@ func (p *peerConnection) Reset() {
 	atomic.StoreInt32(&p.blockIdle, 0)
 	atomic.StoreInt32(&p.receiptIdle, 0)
 	atomic.StoreInt32(&p.stateIdle, 0)
+	atomic.StoreInt32(&p.epochGenesisIdle, 0)
 
 	p.headerThroughput = 0
 	p.blockThroughput = 0
@@ -239,10 +241,10 @@ func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
 		panic(fmt.Sprintf("node data fetch [eth/63+] requested on eth/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
-	if !atomic.CompareAndSwapInt32(&p.stateIdle, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&p.epochGenesisIdle, 0, 1) {
 		return errAlreadyFetching
 	}
-	p.stateStarted = time.Now()
+	p.epochGenesisStarted = time.Now()
 
 	go p.peer.RequestEpochGenesisData(epochid)
 
@@ -287,7 +289,7 @@ func (p *peerConnection) SetNodeDataIdle(delivered int) {
 
 
 func (p *peerConnection) SetEpochGenesisDataIdle(delivered int) {
-	p.setIdle(p.epochGenesisStarted, delivered, &p.stateThroughput, &p.stateIdle)
+	p.setIdle(p.epochGenesisStarted, delivered, &p.stateThroughput, &p.epochGenesisIdle)
 }
 
 // setIdle sets the peer to idle, allowing it to execute new retrieval requests.
@@ -546,6 +548,18 @@ func (ps *peerSet) ReceiptIdlePeers() ([]*peerConnection, int) {
 func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 	idle := func(p *peerConnection) bool {
 		return atomic.LoadInt32(&p.stateIdle) == 0
+	}
+	throughput := func(p *peerConnection) float64 {
+		p.lock.RLock()
+		defer p.lock.RUnlock()
+		return p.stateThroughput
+	}
+	return ps.idlePeers(63, 64, idle, throughput)
+}
+
+func (ps *peerSet) EpochGenesisIdlePeers() ([]*peerConnection, int) {
+	idle := func(p *peerConnection) bool {
+		return atomic.LoadInt32(&p.epochGenesisIdle) == 0
 	}
 	throughput := func(p *peerConnection) float64 {
 		p.lock.RLock()

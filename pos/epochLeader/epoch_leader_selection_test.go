@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -355,3 +357,42 @@ func TestGetEpochLeaders(t *testing.T) {
 //	log.Println(feeRate)
 //	log.Println(total)
 //}
+func TestCalProbability(t *testing.T) {
+	blkChain, _ := newTestBlockChain(true)
+	epocherInst := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
+	addr := common.Address{}
+	addr.SetString("0xd1d1079cdb7249eee955ce34d90f215571c0781d")
+	amount := math.MustParseBig256("1000000000000000000000000")
+	t.Log("amount: ", amount)
+	item := vm.StakerInfo{
+		Address:      addr,
+		Amount:       amount,
+		Clients:      make([]vm.ClientInfo, 0),
+		FeeRate:      100,
+		From:         addr,
+		LockEpochs:   6,
+		PubBn256:     hexutil.MustDecode("0x2c9a9b8dfb23dfd62c3abb3de1be1ff9c3495edc7ec40d6a816643f1d561f0f81fd29a3218ccd8fcae7996f390b91b71b77195e31a09608aa67f9c33243abfff"),
+		PubSec256:    hexutil.MustDecode("0x04e78171373e7d4671fe7a0ab7c3983f46874fab1db2cce81ce512059e5b7e94373abf9875a1dd339aca8d36bdaad6d7542f3243f488155fc12e3a26c6e2f753cd"),
+		StakingEpoch: uint64(1),
+	}
+	c := vm.ClientInfo{}
+	addrc := common.Address{}
+	addrc.SetString("0x6e6f37b8463b541fd6d07082f30f0296c5ac2118")
+	c.Address = addrc
+	c.Amount = math.MustParseBig256("1000000000000000000000000")
+	c.StakingEpoch = item.StakingEpoch+1
+	item.Clients = append(item.Clients, c)
+	for epochid := uint64(1); epochid < 11; epochid++ {
+		pb := epocherInst.CalProbability(epochid, item.Amount, item.LockEpochs, item.StakingEpoch)
+		t.Log("pb: ", epochid, pb)
+		for i := 0; i < len(item.Clients); i++ {
+			lockEpoch := item.LockEpochs - (item.Clients[i].StakingEpoch - item.StakingEpoch)
+			cp := epocherInst.CalProbability(epochid, item.Clients[i].Amount, lockEpoch, item.Clients[i].StakingEpoch)
+			t.Log("cp: ", epochid, cp)
+			pb.Add(pb, cp)
+		}
+
+		t.Log("total:", epochid, pb)
+		t.Log("===========")
+	}
+}

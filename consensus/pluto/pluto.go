@@ -18,7 +18,6 @@
 package pluto
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
 	"math/rand"
@@ -31,7 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -69,7 +68,7 @@ var (
 	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
 	blockPeriod = uint64(15)    // Default minimum difference between two consecutive block's timestamps
 
-	extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraVanity = 0// Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signer seal
 
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
@@ -428,9 +427,9 @@ func (c *Pluto) snapshot(chain consensus.ChainReader, number uint64, hash common
 			if err := c.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
-			signers := make([]common.Address, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
+			signers := make([]common.Address, (len(genesis.Extra))/common.AddressLength)
 			for i := 0; i < len(signers); i++ {
-				copy(signers[i][:], genesis.Extra[extraVanity+i*common.AddressLength:])
+				copy(signers[i][:], genesis.Extra[i*common.AddressLength:])
 			}
 			snap = newSnapshot(c.config, c.signatures, 0, genesis.Hash(), signers)
 			if err := snap.store(c.db); err != nil {
@@ -621,10 +620,10 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	header.Difficulty = big.NewInt(1)
 
 	// Ensure the extra data has all it's components
-	if len(header.Extra) < extraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
-	}
-	header.Extra = header.Extra[:extraVanity]
+	//if len(header.Extra) < extraVanity {
+	//	header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
+	//}
+	//header.Extra = header.Extra[:extraVanity]
 
 	if number%c.config.Epoch == 0 {
 		for _, signer := range snap.signers() {

@@ -249,9 +249,9 @@ func TestGenerateDKG2(t *testing.T) {
 		}
 
 		// verify
-		// Enshare, Commit, Proof has the same size
+		// EnShare, Commit, Proof has the same size
 		// check same size
-		if nr != len(dkg2Flat.Enshare) {
+		if nr != len(dkg2Flat.EnShare) {
 			t.Fatal("dkg2 params have different length")
 		}
 
@@ -263,7 +263,7 @@ func TestGenerateDKG2(t *testing.T) {
 		// proof verification
 		for j := 0; j < nr; j++ {
 			// get send public Key
-			if !wanpos.VerifyDLEQ(dkg2.Proof[j], pks[j], *hbase, *dkg2.Enshare[j], *(dkg1s[proposerId].Commit[j])) {
+			if !wanpos.VerifyDLEQ(dkg2.Proof[j], pks[j], *hbase, *dkg2.EnShare[j], *(dkg1s[proposerId].Commit[j])) {
 				t.Fatal("dkg2 DLEQ verify fail")
 			}
 		}
@@ -350,7 +350,7 @@ func TestGenerateSIG(t *testing.T) {
 		}
 
 		dkg2s = append(dkg2s, dkg2)
-		ens = append(ens, dkg2.Enshare)
+		ens = append(ens, dkg2.EnShare)
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
@@ -373,7 +373,7 @@ func TestGenerateSIG(t *testing.T) {
 		}
 
 		mG := new(bn256.G1).ScalarBaseMult(m)
-		pair1 := bn256.Pair(sig.Gsigshare, hbase)
+		pair1 := bn256.Pair(sig.GSignShare, hbase)
 		pair2 := bn256.Pair(mG, &gpkshare)
 		if pair1.String() != pair2.String() {
 			t.Fatal("verify sig result pair fail")

@@ -176,7 +176,11 @@ web3._extend({
 			call: 'pos_getEpochStakerInfo',
 			params: 2
 		}),
-
+		new web3._extend.Method({
+			name: 'getEpochStakerInfoAll',
+			call: 'pos_getEpochStakerInfoAll',
+			params: 1
+		}),
 		new web3._extend.Method({
 			name: 'getLocalPK',
 			call: 'pos_getLocalPK',

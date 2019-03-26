@@ -189,25 +189,28 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 	return j, nil
 }
 
-type stakerInfo struct {
-	infors           []vm.ClientProbability
-	feeRate          uint64
-	totalProbability *big.Int
+type StakerInfo struct {
+	Addr      		 common.Address
+	Infors           []vm.ClientProbability
+	FeeRate          uint64
+	TotalProbability *big.Int
 }
 
-func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (stakerInfo, error) {
-	skInfo := stakerInfo{}
+
+func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerInfo, error) {
+	skInfo := StakerInfo{}
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
-		return skInfo, errors.New("epocher instance do not exist")
+		return skInfo, errors.New("epocher instance does not exist")
 	}
 	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
 	if err != nil {
 		return skInfo, err
 	}
-	skInfo.totalProbability = total
-	skInfo.feeRate = feeRate
-	skInfo.infors = infors
+	skInfo.TotalProbability = total
+	skInfo.FeeRate = feeRate
+	skInfo.Infors = infors
+	skInfo.Addr = addr
 	return skInfo, nil
 }
 type StakerJson struct {
@@ -261,6 +264,51 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		return true
 	})
 	return stakers, nil
+}
+
+func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
+	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
+	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return nil, errors.New("epocher instance do not exist")
+	}
+	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	if block == nil {
+		return nil, errors.New("Unkown block")
+	}
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	if err != nil {
+		return nil, err
+	}
+	ess := make([]StakerInfo,0)
+	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
+		staker := vm.StakerInfo{}
+		err := rlp.DecodeBytes(value, &staker)
+		if err != nil {
+			log.Error(err.Error())
+			return true
+		}
+		es := StakerInfo{}
+		es.Infors = make([]vm.ClientProbability, 1)
+		pb := epocherInst.CalProbability(epochID, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
+		es.Infors[0].Probability = big.NewInt(0).Set(pb)
+		es.Infors[0].Addr = staker.Address
+		for i := 0; i < len(staker.Clients); i++ {
+			lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
+			pc := epocherInst.CalProbability(epochID, staker.Clients[i].Amount, lockEpoch, staker.Clients[i].StakingEpoch)
+			vc := vm.ClientProbability{}
+			vc.Probability = big.NewInt(0).Set(pc)
+			vc.Addr = 	staker.Clients[i].Address
+			es.Infors = append(es.Infors, vc)
+			pb = pb.Add(pb, pc)
+		}
+		es.TotalProbability = pb
+		es.FeeRate = staker.FeeRate
+		es.Addr = staker.Address
+		ess = append(ess, es)
+		return true
+	})
+	return ess, nil
 }
 
 func biToString(value *big.Int, err error) (string, error) {

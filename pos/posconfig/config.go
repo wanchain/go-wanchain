@@ -26,11 +26,11 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 9
+	RandomProperCount = 21
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
 	// GenesisPK is the epoch0 pk
-	GenesisPK = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -63,7 +63,7 @@ const (
 	Sma3Start = Stage10K
 	Sma3End   = Stage12K
 )
-
+var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
 type Config struct {
 	PolymDegree   uint
 	K             uint
@@ -81,9 +81,9 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	1,
+	11,
 	K,
-	3,
+	11,
 	0,
 	0,
 	nil,

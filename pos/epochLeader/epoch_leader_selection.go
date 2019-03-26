@@ -195,11 +195,11 @@ if selected as slot Leader, it could seal block at Epoch startEpochId +3
 A stakeHolder register N epoch, means it could receive max to N time incentive, and send max to N-1 pos tx, and seal blocks in max to N-1 epochs
 Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
 */
-func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+func (e *Epocher) CalProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
 	var leftTimePercent float64
-	if lockTime == 0 || epochId < 2 {
+	if lockTime == 0  {
 		leftTimePercent = 1
 
 	} else if epochId <= startEpochId+1 || epochId >= startEpochId+2+(lockTime-1) {
@@ -219,18 +219,18 @@ func (e *Epocher) calProbability(epochId uint64, amountWin *big.Int, lockTime ui
 	pb.Mul(amount, epercent)
 	pb.Mul(pb, timeBig)
 
-	log.Debug("calProbability,pb:", pb)
+	log.Debug("CalProbability,pb:", pb)
 
 	return pb
 }
 
 //wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) generateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
+func (e *Epocher) GenerateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
-	pb := e.calProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
+	pb := e.CalProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
 	for i := 0; i < len(pstaker.Clients); i++ {
 		lockEpoch := pstaker.LockEpochs - (pstaker.Clients[i].StakingEpoch - pstaker.StakingEpoch)
-		pb.Add(pb, e.calProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
+		pb.Add(pb, e.CalProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
 	}
 	p := &Proposer{
 		PubSec256:     pstaker.PubSec256,
@@ -268,7 +268,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 			return true
 		}
 
-		pitem, err := e.generateProblility(&staker, epochId)
+		pitem, err := e.GenerateProblility(&staker, epochId)
 		if err != nil {
 			log.Error(err.Error())
 			return true
@@ -461,11 +461,20 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	if nil != err {
 		return nil, 0, nil, err
 	}
-	infors = make([]vm.ClientProbability, 1) // TODO: the array length?
+	infors = make([]vm.ClientProbability, 1)
 	infors[0].Addr = addr
-	infors[0].Probability = e.calProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
+	infors[0].Probability = big.NewInt(0).Set(e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch))
+	totalProbability = big.NewInt(0).Set(infors[0].Probability)
+	for i:=0; i<len(staker.Clients); i++ {
+		c := staker.Clients[i]
+		info := vm.ClientProbability{}
+		info.Addr = c.Address
+		lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
+		info.Probability = big.NewInt(0).Set(e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch))
+		totalProbability = totalProbability.Add(totalProbability, info.Probability)
+		infors = append(infors, info)
+	}
 	feeRate = staker.FeeRate
-	totalProbability = infors[0].Probability //TODO: add all client
 	return infors, feeRate, totalProbability, nil
 }
 
