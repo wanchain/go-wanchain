@@ -297,7 +297,8 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		return types.IsNormalTransaction(tx.Txtype()) && (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)
+		txType := tx.Txtype()
+		return (types.IsNormalTransaction(txType) || types.IsPosTransaction(txType)) && (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)
 	})
 
 	// If the list was strict, filter anything above the lowest nonce
@@ -351,7 +352,7 @@ func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLi
 }
 
 // InvalidPosTx remove invalidate pos transactions
-func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer, gasLimit *big.Int) types.Transactions {
+func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer) types.Transactions {
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
 		if !types.IsPosTransaction(tx.Txtype()) || (*tx.To()) != vm.GetRBAddress() {
 			return false
@@ -362,9 +363,7 @@ func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer, gasLimi
 			return true
 		}
 
-		intrGas := IntrinsicGas(tx.Data(), tx.To(), true)
-		err = vm.ValidPosRBTx(stateDB, from, tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
-
+		err = vm.ValidPosRBTx(stateDB, from, tx.Data())
 		return err != nil
 	})
 

@@ -189,26 +189,7 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 //
 // params or gas check functions
 //
-func ValidPosRBTx(stateDB StateDB, from common.Address, payload []byte, gasPrice *big.Int,
-	intrinsicGas *big.Int, txValue *big.Int, gasLimit *big.Int) error {
-	if intrinsicGas == nil || intrinsicGas.BitLen() > 64 || gasLimit == nil || intrinsicGas.Cmp(gasLimit) > 0 {
-		return ErrOutOfGas
-	}
-
-	if txValue.Sign() != 0 {
-		return ErrInvalidPosValue
-	}
-
-	if gasPrice == nil || gasPrice.Sign() != 1 {
-		return ErrInvalidGasPrice
-	}
-
-	totalCost := new(big.Int).Mul(gasPrice, gasLimit)
-	totalCost.Add(totalCost, txValue)
-	if stateDB.GetBalance(from).Cmp(totalCost) < 0 {
-		return ErrOutOfGas
-	}
-
+func ValidPosRBTx(stateDB StateDB, from common.Address, payload []byte) error {
 	var methodId [4]byte
 	copy(methodId[:], payload[:4])
 

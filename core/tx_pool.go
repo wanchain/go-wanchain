@@ -954,7 +954,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Remove all invalid pos transactions
-		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer)
 		for _, tx := range invalidPos {
 			hash := tx.Hash()
 			log.Trace("Removed invalid pos transaction", "hash", hash)
@@ -1140,7 +1140,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		}
 
 		// Remove all invalid pos transactions
-		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer)
 		for _, tx := range invalidPos {
 			hash := tx.Hash()
 			log.Trace("Removed invalid pos transaction", "hash", hash)
