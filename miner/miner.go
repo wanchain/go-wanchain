@@ -199,22 +199,18 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		// get state of k blocks ahead the last block
 		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
-		log.Debug("get state ahead k blocks", "last block numer", lastBlockNum)
-		if lastBlockNum < uint64(posconfig.Cfg().K) {
-			lastBlockNum = uint64(posconfig.Cfg().K)
-		}
-
-		root := s.BlockChain().GetBlockByNumber(lastBlockNum - uint64(posconfig.Cfg().K)).Root()
+		root := s.BlockChain().GetBlockByNumber(lastBlockNum).Root()
 		stateDb, err2 := s.BlockChain().StateAt(root)
 		if err2 != nil {
-			log.Error("Failed to get stateDb: ", err2)
+			log.Error("Failed to get stateDb", "err", err2)
 		}
+
 		if stateDb != nil {
 			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
 		}
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
-		log.Debug("timeloop sleep: ", sleepTime)
+		log.Debug("timeloop sleep", "sleepTime", sleepTime)
 		if sleepTime < 0 {
 			sleepTime = 0
 		}

@@ -81,7 +81,7 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	11,
+	10,
 	K,
 	11,
 	0,
