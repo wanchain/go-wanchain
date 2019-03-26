@@ -3,6 +3,7 @@ package incentive
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"
@@ -227,8 +228,8 @@ func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
 	scale := 100000.0
 
 	incentiveOfSlot := big.NewInt(0).Div(funds, big.NewInt(int64(slotCount)))
-	incentiveScale := big.NewInt(0).Mul(incentiveOfSlot, big.NewInt(int64(act*scale)))
-	incentiveActive := incentiveScale.Div(incentiveScale, big.NewInt(int64(scale))) // get incentive after activity calc.
+	incentiveScale := big.NewInt(0).Mul(incentiveOfSlot, big.NewInt(int64(math.Floor(act*scale))))
+	incentiveActive := incentiveScale.Div(incentiveScale, big.NewInt(int64(math.Floor(scale)))) // get incentive after activity calc.
 	singleRemain := big.NewInt(0).Sub(incentiveOfSlot, incentiveActive)
 
 	remains.Add(remains, big.NewInt(0).Mul(singleRemain, big.NewInt(int64(slotCount))))

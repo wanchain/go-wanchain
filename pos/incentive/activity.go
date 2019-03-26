@@ -42,12 +42,10 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 		if epID != epochID || uint64(i) != slfIndex {
 			continue
 		}
-
+		//TODO: CHECK
 		addr := crypto.PubkeyToAddress(*selfPk)
-		for m := 0; m < len(addrs); m++ {
-			if addr.Hex() == addrs[m].Hex() {
-				activity[m] = 1
-			}
+		if addr.Hex() == addrs[i].Hex() {
+			activity[i] = 1
 		}
 	}
 

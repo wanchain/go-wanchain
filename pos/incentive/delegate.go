@@ -102,6 +102,11 @@ func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientPr
 		if stakers[i].Addr.String() == addr.String() {
 			result[i].Incentive.Add(result[i].Incentive, commission)
 		}
+
+		//Add check of incentive positive
+		if result[i].Incentive.Cmp(big.NewInt(0)) == -1 {
+			result[i].Incentive.SetUint64(0)
+		}
 	}
 	return result, remain
 }

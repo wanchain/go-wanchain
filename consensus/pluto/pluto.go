@@ -672,11 +672,16 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
+		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs, header.Number.Uint64()) {
 			log.Error("incentive.Run failed")
+			state.RevertToSnapshot(snap)
 		}
+
+		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {
 			log.Error("Stake Out failed.")
+			state.RevertToSnapshot(snap)
 		}
 	}
 
