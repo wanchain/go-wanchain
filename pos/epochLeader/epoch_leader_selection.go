@@ -496,10 +496,10 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			continue
 		}
 		for j := 0; j < len(staker.Clients); j++ {
-			core.Transfer(stateDb, vm.StakersInfoAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 		}
 
-		core.Transfer(stateDb, vm.StakersInfoAddr, staker.From, staker.Amount)
+		core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 
 		vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
 	}
