@@ -1007,10 +1007,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			err = bc.Validator().ValidateBody(block)
 		}
 
-		if err == nil {
-			err = bc.SlotValidator().ValidateBody(block)
-		}
-
 		if err != nil {
 			if err == ErrKnownBlock {
 				stats.ignored++
@@ -1067,6 +1063,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
+		err = bc.SlotValidator().ValidateBody(block)
+		if err == nil {
+			bc.reportBlock(block, receipts, err)
+			return i, events, coalescedLogs, err
+		}
 
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockAndState(block, receipts, state)
@@ -1076,6 +1077,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		switch status {
 		case CanonStatTy:
+
 			log.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(), "uncles", len(block.Uncles()),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
@@ -1084,6 +1086,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			events = append(events, ChainEvent{block, block.Hash(), logs})
 			lastCanon = block
 
+
 		case SideStatTy:
 			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
@@ -1091,6 +1094,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainSideEvent{block})
 		}
+
+
+
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)

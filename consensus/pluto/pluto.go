@@ -397,7 +397,7 @@ func (c *Pluto) verifyCascadingFields(chain consensus.ChainReader, header *types
 	// 	}
 	// }
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(chain, header, parents)
+	return c.verifySeal(chain, header, parents,false)
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -489,14 +489,16 @@ func (c *Pluto) VerifyUncles(chain consensus.ChainReader, block *types.Block) er
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Pluto) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	return c.verifySeal(chain, header, nil)
+	return c.verifySeal(chain, header, nil,true)
 }
 
 // verifySeal checks whether the signature contained in the header satisfies the
 // consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
-func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+
+
+func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header,isSlotVerify bool) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -513,7 +515,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		return errUnauthorized
 
 	} else {
-		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+		proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 		if err != nil {
 			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
@@ -533,16 +535,19 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				return errUnauthorized
 			}
 
-			//if epochID == 0 {
-			//	return nil
-			//}
+			if isSlotVerify {
 
-			//if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
-			//	log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-			//	return errUnauthorized
-			//} else {
-			//	//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
-			//}
+				if epochID == 0 {
+					return nil
+				}
+
+				if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+					log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+					return errUnauthorized
+				} else {
+					//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+				}
+			}
 		}
 	}
 
@@ -852,7 +857,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 
 	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 
-	err = c.verifySeal(nil, header, nil)
+	err = c.verifySeal(nil, header, nil,true)
 	if err != nil {
 		log.Warn("Verify error", "error", err.Error())
 		return nil, err
