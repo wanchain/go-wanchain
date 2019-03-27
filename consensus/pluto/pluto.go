@@ -68,7 +68,7 @@ var (
 	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
 	blockPeriod = uint64(15)    // Default minimum difference between two consecutive block's timestamps
 
-	extraVanity = 0// Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraVanity = 0  // Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signer seal
 
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
@@ -492,6 +492,37 @@ func (c *Pluto) VerifySeal(chain consensus.ChainReader, header *types.Header) er
 	return c.verifySeal(chain, header, nil,true)
 }
 
+func (c *Pluto) verifyProof(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	// Verifying the genesis block is not supported
+	number := header.Number.Uint64()
+	if number == 0 {
+		return errUnknownBlock
+	}
+
+	epochID := header.Difficulty.Uint64() >> 32
+	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+
+	s := slotleader.GetSlotLeaderSelection()
+
+	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+
+	if err != nil {
+		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+		return err
+	} else {
+		log.Debug("verifyProof GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
+
+		if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+			log.Error("verifyProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+			return errUnauthorized
+		} else {
+			//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+		}
+	}
+
+	return nil
+}
+
 // verifySeal checks whether the signature contained in the header satisfies the
 // consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
@@ -859,9 +890,16 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 
 	err = c.verifySeal(nil, header, nil,true)
 	if err != nil {
-		log.Warn("Verify error", "error", err.Error())
+		log.Warn("Seal error", "error", err.Error())
 		return nil, err
 	}
+
+	err = c.verifyProof(nil, header, nil)
+	if err != nil {
+		log.Warn("Seal error", "error", err.Error())
+		return nil, err
+	}
+
 	util.UpdateEpochBlock(epochIDPack, slotIDPack, number)
 	return block.WithSeal(header), nil
 }
