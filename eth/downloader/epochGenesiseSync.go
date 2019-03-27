@@ -59,6 +59,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				req := active[pack.PeerId()]
 				if req == nil {
 					log.Debug("Unrequested epoch genesis data", "peer", pack.PeerId(), "len", pack.Items())
+					continue
 				}
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
@@ -84,7 +85,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				// If the peer is already requesting something else, ignore the stale timeout.
 				// This can happen when the timeout and the delivery happens simultaneously,
 				// causing both pathways to trigger.
-				if active[req.peer.id] != req {
+				if active[req.peer.id] != req || req==nil {
 					continue
 				}
 
@@ -93,6 +94,8 @@ func (d *Downloader) epochGenesisFetcher() {
 				d.epochGenesisSyncStart <- req.epochid.Uint64()
 
 			case <-d.quitCh:
+				return
+			case <-d.cancelCh:
 				return
 
 		}
