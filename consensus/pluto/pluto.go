@@ -546,7 +546,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		return errUnauthorized
 
 	} else {
-		proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 		if err != nil {
 			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
