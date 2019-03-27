@@ -513,7 +513,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		return errUnauthorized
 
 	} else {
-		proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 		if err != nil {
 			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
@@ -537,12 +537,12 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			//	return nil
 			//}
 
-			if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
-				log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-				return errUnauthorized
-			} else {
-				//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
-			}
+			//if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+			//	log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
+			//	return errUnauthorized
+			//} else {
+			//	//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+			//}
 		}
 	}
 

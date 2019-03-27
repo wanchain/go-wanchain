@@ -146,6 +146,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
 	}
 
+
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
 	if err != nil {
@@ -160,6 +161,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	eth.bloomIndexer.Start(eth.blockchain.CurrentHeader(), eth.blockchain.SubscribeChainEvent)
 
 	miner.PosInit(eth)
+
+
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}

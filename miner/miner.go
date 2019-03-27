@@ -117,6 +117,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	s.BlockChain().SetSlSelector(sls)
 	s.BlockChain().SetRbSelector(epochSelector)
 
+	s.BlockChain().SetValidator(sls)
+
 	return epochSelector
 }
 func posInitMiner(s Backend, key *keystore.Key) {
