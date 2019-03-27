@@ -567,16 +567,9 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			}
 
 			if isSlotVerify {
-
-				if epochID == 0 {
-					return nil
-				}
-
-				if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
-					log.Error("VerifyPackedSlotProof failed", "number", number, "epochID", epochID, "slotID", slotID)
-					return errUnauthorized
-				} else {
-					//log.Info("VerifyPackedSlotProof success", "number", number, "epochID", epochID, "slotID", slotID)
+				err := s.ValidateBody(types.NewBlockWithHeader(header))
+				if err!= nil {
+					return err
 				}
 			}
 		}
