@@ -916,7 +916,7 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector, pks []bn256.G1) (*big.Int, error) {
 	randomInt := GetStateR(stateDB, epochId+1)
 	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
-		return randomInt, logError(errors.New("random exist already"))
+		return randomInt, errors.New("random exist already")
 	}
 
 	if len(pks) == 0 {
