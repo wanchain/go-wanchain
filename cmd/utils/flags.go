@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -54,7 +53,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -284,7 +283,7 @@ var (
 	MinerThreadsFlag = cli.IntFlag{
 		Name:  "minerthreads",
 		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
 	}
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",

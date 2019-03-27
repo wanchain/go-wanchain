@@ -138,7 +138,7 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 	return s.getSMAPieces(epochID)
 }
 
-func init() {
+func SlsInit() {
 	slotLeaderSelection = &SLS{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)

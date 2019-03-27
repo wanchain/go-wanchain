@@ -20,6 +20,7 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -91,6 +92,9 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Info("backendTimerLoop is running!!!!!!")
+	g := s.BlockChain().GetHeaderByNumber(0)
+	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+	slotleader.SlsInit()
 
 	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
