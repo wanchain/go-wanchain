@@ -37,7 +37,8 @@ func (s *SLS) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, P
 	validEpochLeadersIndex, stageTwoAlphaPKi, err := s.getStageTwoFromTrans(epochID)
 	if err != nil {
 		log.Error(err.Error())
-		return false
+		// no stage2 trans on the block chain.
+		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
 	var hasValidTx bool
