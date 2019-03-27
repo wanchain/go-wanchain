@@ -344,7 +344,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			unknown bool
 		)
 
-		lastEpochid := int64(-1)
 		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 			// Retrieve the next header satisfying the query
 			var origin *types.Header
@@ -357,16 +356,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				break
 			}
 
-			//added by jia
-			epochid := int64(origin.Difficulty.Int64() >> 32)
-			if lastEpochid == -1 {
-				lastEpochid = epochid
-			}
-
-			if epochid != lastEpochid {
-				break
-			}
-			//added end
 
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
