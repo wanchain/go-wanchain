@@ -1064,7 +1064,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		err = bc.SlotValidator().ValidateBody(block)
-		if err == nil {
+		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
