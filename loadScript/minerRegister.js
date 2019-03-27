@@ -2,23 +2,28 @@
 
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
+
 // tranValue is the value you want to stake in minValue is 100000 
 var tranValue = 100000
 
-// passwd is the amount come from account's password.
-var passwd = ""
-
 // secpub is the miner node's secpub value
-var secpub  = ""
+var secpub    = ""
 
 // g1pub is the miner node's g1pub value
-var g1pub   = ""
+var g1pub     = ""
 
 // feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
-var feeRate = 100
+var feeRate   = 100
 
 // lockTime do not use in POC
-var lockTime = 10
+var lockTime  = 10
+
+// baseAddr is the fund source account.
+var baseAddr  = ""
+
+// passwd is the fund source account password.
+var passwd    = ""
+
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
 
