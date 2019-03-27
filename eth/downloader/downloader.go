@@ -252,9 +252,10 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 	}
 
 	go dl.qosTuner()
+
 	go dl.stateFetcher()
 
-	go dl.epochGenesisFetcher()
+	//go dl.epochGenesisFetcher()
 
 	return dl
 }
