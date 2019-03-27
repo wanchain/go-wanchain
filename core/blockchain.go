@@ -119,6 +119,8 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	forkMem 	  *ForkMemBlockChain
+
+	slotValidator   Validator
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -380,6 +382,8 @@ func (bc *BlockChain) Processor() Processor {
 	defer bc.procmu.RUnlock()
 	return bc.processor
 }
+
+
 
 // State returns a new mutable state based on the current HEAD block.
 func (bc *BlockChain) State() (*state.StateDB, error) {
@@ -1003,6 +1007,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			err = bc.Validator().ValidateBody(block)
 		}
 
+		if err == nil {
+			err = bc.SlotValidator().ValidateBody(block)
+		}
+
 		if err != nil {
 			if err == ErrKnownBlock {
 				stats.ignored++
@@ -1552,4 +1560,17 @@ func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
 
 func (bc *BlockChain) GetEpochStartCh() (chan uint64) {
 	return bc.forkMem.epochGenesisCh
+}
+
+func (bc *BlockChain) SetSlotValidator(validator Validator) {
+	bc.procmu.Lock()
+	defer bc.procmu.Unlock()
+	bc.slotValidator = validator
+}
+
+// Validator returns the current validator.
+func (bc *BlockChain) SlotValidator() Validator {
+	bc.procmu.RLock()
+	defer bc.procmu.RUnlock()
+	return bc.slotValidator
 }

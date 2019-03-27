@@ -117,7 +117,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	s.BlockChain().SetSlSelector(sls)
 	s.BlockChain().SetRbSelector(epochSelector)
 
-	s.BlockChain().SetValidator(sls)
+	s.BlockChain().SetSlotValidator(sls)
 
 	return epochSelector
 }
