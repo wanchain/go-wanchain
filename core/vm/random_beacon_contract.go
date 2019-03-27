@@ -174,7 +174,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		log.Debug("No match id found")
+		log.Error("No match id found")
 		return nil, errors.New("no function")
 	}
 
@@ -851,7 +851,7 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 	}
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, cijBytes)
 
-	log.Debug("vm.dkg1", "dkg1Id", dkg1Id, "epochID", eid, "proposerId", pid, "hash", hash.Hex())
+	log.Info("vm.dkg1", "dkg1Id", dkg1Id, "epochID", eid, "proposerId", pid, "hash", hash.Hex())
 	return nil, nil
 }
 
@@ -873,7 +873,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 	}
 	evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hash, encryptShareBytes)
 
-	log.Debug("vm.dkg2", "dkgId", dkg2Id, "epochID", eid, "proposerId", pid, "hash", hash.Hex())
+	log.Info("vm.dkg2", "dkgId", dkg2Id, "epochID", eid, "proposerId", pid, "hash", hash.Hex())
 	return nil, nil
 }
 
@@ -900,11 +900,11 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.Debug("generate random", "epochId", eid+1, "r", r)
+			log.Info("generate random", "epochId", eid+1, "r", r)
 		}
 	}
 
-	log.Debug("contract do sig end", "epochId", eid, "proposerId", pid)
+	log.Info("contract do sig end", "epochId", eid, "proposerId", pid)
 
 	return nil, nil
 }
@@ -916,7 +916,6 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector, pks []bn256.G1) (*big.Int, error) {
 	randomInt := GetStateR(stateDB, epochId+1)
 	if randomInt != nil && randomInt.Cmp(big.NewInt(0)) != 0 {
-		log.Debug("random exist already")
 		return randomInt, errors.New("random exist already")
 	}
 
@@ -982,6 +981,6 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 		return nil, logError(errors.New("final pairing check failed"))
 	}
 
-	log.Debug("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
+	log.Info("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
 	return big.NewInt(0).SetBytes(random), nil
 }
