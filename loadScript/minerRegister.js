@@ -6,6 +6,9 @@
 // tranValue is the value you want to stake in minValue is 100000 
 var tranValue = 200000
 
+// gasValue is the value you send to miner for protocal run's gas usage.
+var gasValue = 100
+
 // minerAddr is the miner accounts which create nearly.
 var minerAddr = ""
 
@@ -32,7 +35,7 @@ var passwd    = ""
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var pay = eth.sendTransaction({from:baseAddr, to:minerAddr, value:web3.toWin(100)})
+var pay = eth.sendTransaction({from:baseAddr, to:minerAddr, value:web3.toWin(gasValue)})
 var cscDefinition = [{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
