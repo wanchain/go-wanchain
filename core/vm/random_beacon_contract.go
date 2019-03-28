@@ -190,6 +190,7 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 // params or gas check functions
 //
 func ValidPosRBTx(stateDB StateDB, from common.Address, payload []byte) error {
+	log.Info("ValidPosRBTx")
 	var methodId [4]byte
 	copy(methodId[:], payload[:4])
 
@@ -835,6 +836,7 @@ var isInRandomGroupVar = isInRandomGroup
 //
 // dkg1: happens in 0~2k-1 slots, send the commits to chain
 func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	log.Info("dkg1")
 	dkg1FlatParam, err := validDkg1(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
@@ -857,6 +859,7 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 
 // dkg2: happens in 5k~7k-1 slots, send the proof, enShare to chain
 func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	log.Info("dkg2")
 	dkg2FlatParam, err := validDkg2(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
@@ -879,6 +882,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 
 // sigShare: sign, happens in 8k~10k-1 slots, send the proof, enShare to chain
 func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	log.Info("sigShare")
 	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err

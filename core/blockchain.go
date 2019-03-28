@@ -43,7 +43,6 @@ import (
 	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
-
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -1063,10 +1062,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		err = bc.SlotValidator().ValidateBody(block)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return i, events, coalescedLogs, err
+		if bc.config.Pluto != nil {
+			err = bc.SlotValidator().ValidateBody(block)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return i, events, coalescedLogs, err
+			}
 		}
 
 		// Write the block to the chain and get the status.
@@ -1101,16 +1102,16 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)
 		// TODO: update epoch ->blockNumber
-		epochID := block.Header().Difficulty.Uint64() >> 32
-		slotID := (block.Header().Difficulty.Uint64() >> 8) & 0x00FFFFFF
-		if block.NumberU64() == 1 {
-			posconfig.EpochBaseTime = block.Time().Uint64()
+		if bc.config.Pluto != nil {
+			epochID := block.Header().Difficulty.Uint64() >> 32
+			slotID := (block.Header().Difficulty.Uint64() >> 8) & 0x00FFFFFF
+			if block.NumberU64() == 1 {
+				posconfig.EpochBaseTime = block.Time().Uint64()
+			}
+
+			bc.forkMem.UpdateEpochGenesis(epochID)
+			posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 		}
-
-		bc.forkMem.UpdateEpochGenesis(epochID)
-
-
-		posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
