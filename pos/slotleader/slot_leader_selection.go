@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
@@ -479,15 +480,26 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Exit()
 }
 
-func (s *SLS) getRandom(epochID uint64) (ret *big.Int, err error) {
-	stateDb, err := s.getCurrentStateDb()
-	if err != nil {
-		log.Error("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
-		rb := big.NewInt(1)
-		return rb, nil
+func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+	// If db is nil, use current stateDB
+	var db *state.StateDB
+	if block == nil {
+		db, err = s.getCurrentStateDb()
+		if err != nil {
+			log.Error("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
+			rb := big.NewInt(1)
+			return rb, nil
+		}
+	} else {
+		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+		if err != nil {
+			log.Error("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
+			rb := big.NewInt(1)
+			return rb, nil
+		}
 	}
 
-	rb := vm.GetR(stateDb, epochID)
+	rb := vm.GetR(db, epochID)
 	if rb == nil {
 		log.Error("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = big.NewInt(1)
@@ -539,7 +551,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 
 	}
 	// get random
-	random, err := s.getRandom(epochIDGet)
+	random, err := s.getRandom(nil, epochIDGet)
 	if err != nil {
 		return vm.ErrInvalidRandom
 	}

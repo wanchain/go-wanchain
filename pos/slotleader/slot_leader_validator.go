@@ -1,16 +1,17 @@
 package slotleader
 
 import (
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/state"
-	"math/big"
-	"github.com/wanchain/go-wanchain/log"
 	"errors"
+	"math/big"
+
+	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 func (s *SLS) ValidateBody(block *types.Block) error {
 
-	extraSeal   := 65
+	extraSeal := 65
 	header := block.Header()
 	blkTd := block.Difficulty().Uint64()
 	epochID := (blkTd >> 32)
@@ -25,10 +26,9 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	if err != nil {
 		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
 		return errors.New("Can not GetInfoFromHeadExtra, verify failed")
-
 	}
 
-	if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+	if !s.VerifySlotProof(block, epochID, slotID, proof, proofMeg) {
 		log.Error("VerifyPackedSlotProof failed", "number", block.NumberU64(), "epochID", epochID, "slotID", slotID)
 		return errors.New("VerifyPackedSlotProof failed")
 	}
@@ -39,6 +39,3 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 func (s *SLS) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	return nil
 }
-
-
-

@@ -10,6 +10,7 @@ import (
 )
 
 func testInit() {
+	SlsInit()
 	GetSlotLeaderSelection().Init(nil, &rpc.Client{}, &keystore.Key{})
 }
 

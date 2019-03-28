@@ -30,7 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -397,7 +397,7 @@ func (c *Pluto) verifyCascadingFields(chain consensus.ChainReader, header *types
 	// 	}
 	// }
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(chain, header, parents,false)
+	return c.verifySeal(chain, header, parents, false)
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -489,10 +489,10 @@ func (c *Pluto) VerifyUncles(chain consensus.ChainReader, block *types.Block) er
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Pluto) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	return c.verifySeal(chain, header, nil,true)
+	return c.verifySeal(chain, header, nil, true)
 }
 
-func (c *Pluto) verifyProof(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (c *Pluto) verifyProof(block *types.Block, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -512,7 +512,7 @@ func (c *Pluto) verifyProof(chain consensus.ChainReader, header *types.Header, p
 	} else {
 		log.Debug("verifyProof GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 
-		if !s.VerifySlotProof(epochID, slotID, proof, proofMeg) {
+		if !s.VerifySlotProof(block, epochID, slotID, proof, proofMeg) {
 			log.Error("verifyProof failed", "number", number, "epochID", epochID, "slotID", slotID)
 			return errUnauthorized
 		} else {
@@ -528,8 +528,7 @@ func (c *Pluto) verifyProof(chain consensus.ChainReader, header *types.Header, p
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
 
-
-func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header,isSlotVerify bool) error {
+func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, isSlotVerify bool) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -568,7 +567,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 			if isSlotVerify {
 				err := s.ValidateBody(types.NewBlockWithHeader(header))
-				if err!= nil {
+				if err != nil {
 					return err
 				}
 			}
@@ -881,13 +880,13 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 
 	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 
-	err = c.verifySeal(nil, header, nil,true)
+	err = c.verifySeal(nil, header, nil, true)
 	if err != nil {
 		log.Warn("Seal error", "error", err.Error())
 		return nil, err
 	}
 
-	err = c.verifyProof(nil, header, nil)
+	err = c.verifyProof(block.WithSeal(header), header, nil)
 	if err != nil {
 		log.Warn("Seal error", "error", err.Error())
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -19,14 +20,14 @@ import (
 
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
 //Proof 	= [e,z] 			[]*big.Int
-func (s *SLS) VerifySlotProof(epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
+func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
-	rbPtr, err := s.getRandom(epochID)
+	rbPtr, err := s.getRandom(block, epochID)
 	if err != nil {
 		log.Error(err.Error())
 		return false
@@ -167,7 +168,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 
 	//RB PRE
 	var rbPtr *big.Int
-	rbPtr, err = s.getRandom(epochID)
+	rbPtr, err = s.getRandom(nil, epochID)
 	if err != nil {
 		log.Error("getSlotLeaderProof", "getRandom error", err.Error())
 		return nil, nil, err
