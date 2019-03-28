@@ -219,7 +219,7 @@ func (e *Epocher) CalProbability(epochId uint64, amountWin *big.Int, lockTime ui
 	pb.Mul(amount, epercent)
 	pb.Mul(pb, timeBig)
 
-	log.Debug("CalProbability,pb:", pb)
+	log.Debug("CalProbability ", "pb: ", pb)
 
 	return pb
 }
