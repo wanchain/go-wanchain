@@ -25,7 +25,6 @@ var (
 	safeK = uint64(1)
 	Nr    = posconfig.RandomProperCount //num of random proposers
 	Ne    = posconfig.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
-	EpochTotalProbaKey = uint64(Nr+Ne)
 
 	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
@@ -158,7 +157,7 @@ func (e *Epocher) selectLeaders(r []byte, ne int, nr int, statedb *state.StateDB
 type Proposer struct {
 	PubSec256     []byte
 	PubBn256      []byte
-	Probabilities *big.Int // will be changed by selector
+	Probabilities *big.Int
 }
 
 type ProposerSorter []Proposer
@@ -284,9 +283,8 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	})
 
 	sort.Stable(ProposerSorter(ps))
-	totalEpochProbabilities := big.NewInt(0)
+
 	for idx, _ := range ps {
-		totalEpochProbabilities.Add(totalEpochProbabilities, ps[idx].Probabilities)
 		if idx == 0 {
 			continue
 		}
@@ -295,7 +293,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	}
 
 	log.Debug("get createStakerProbabilityArray len=", len(ps))
-	e.epochLeadersDb.PutWithIndex(epochId, EpochTotalProbaKey, "", totalEpochProbabilities.Bytes())
+
 	return ps, nil
 }
 
@@ -466,20 +464,17 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	infors = make([]vm.ClientProbability, 1)
 	infors[0].Addr = addr
 	infors[0].Probability = big.NewInt(0).Set(e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch))
-	totalProbability = big.NewInt(0) // all staker probability, now current one. TODO: the incentive changed.
+	totalProbability = big.NewInt(0).Set(infors[0].Probability)
 	for i:=0; i<len(staker.Clients); i++ {
 		c := staker.Clients[i]
 		info := vm.ClientProbability{}
 		info.Addr = c.Address
 		lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
 		info.Probability = big.NewInt(0).Set(e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch))
+		totalProbability = totalProbability.Add(totalProbability, info.Probability)
 		infors = append(infors, info)
 	}
 	feeRate = staker.FeeRate
-	totalProbabilityBytes,err := e.epochLeadersDb.GetWithIndex(epochId, EpochTotalProbaKey, "")
-	if err != nil {
-		totalProbability = totalProbability.SetBytes(totalProbabilityBytes)
-	}
 	return infors, feeRate, totalProbability, nil
 }
 
