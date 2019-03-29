@@ -42,10 +42,10 @@ func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProb
 		return nil, 0, nil, errors.New("getStakerInfo get division error")
 	}
 
-	if totalProbility.Uint64() == 0 {
-		log.Error("getStakerInfo get totalProbility error")
-		return nil, 0, nil, errors.New("getStakerInfo get totalProbility error")
-	}
+	// if totalProbility.Uint64() == 0 {
+	// 	log.Error("getStakerInfo get totalProbility error")
+	// 	return nil, 0, nil, errors.New("getStakerInfo get totalProbility error")
+	// }
 
 	return stakers, division, totalProbility, err
 }
@@ -83,8 +83,9 @@ func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 
 func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientProbability,
 	divisionPercent uint64, totalProbility *big.Int) ([]vm.ClientIncentive, *big.Int) {
-	totalPercent := calcTotalPercent(stakers, totalProbility)
-	valueCeiling := ceilingCalc(value, totalPercent)
+	//totalPercent := calcTotalPercent(stakers, totalProbility)
+	//valueCeiling := ceilingCalc(value, totalPercent)
+	valueCeiling := value
 
 	remain := big.NewInt(0).Sub(value, valueCeiling)
 
