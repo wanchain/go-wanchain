@@ -18,6 +18,7 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 		if err != nil {
 			return nil, nil, err
 		}
+
 		var subRemain *big.Int
 		finalIncentive[i], subRemain = delegateDivision(addrs[i], values[i], stakers, division, totalProbility)
 		remain.Add(remain, subRemain)
@@ -98,7 +99,10 @@ func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientPr
 	for i := 0; i < len(stakers); i++ {
 		result[i].Addr = stakers[i].Addr
 		result[i].Incentive = big.NewInt(0).Mul(lastValue, stakers[i].Probability)
-		result[i].Incentive.Div(result[i].Incentive, tp)
+
+		if result[i].Incentive.Cmp(big.NewInt(0)) != 0 {
+			result[i].Incentive.Div(result[i].Incentive, tp)
+		}
 
 		if stakers[i].Addr.String() == addr.String() {
 			result[i].Incentive.Add(result[i].Incentive, commission)
