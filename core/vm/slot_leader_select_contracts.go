@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"

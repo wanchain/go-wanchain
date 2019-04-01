@@ -3,7 +3,7 @@ package bn256
 import (
 	"crypto/rand"
 	"errors"
-	"github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math/big"
 )
 

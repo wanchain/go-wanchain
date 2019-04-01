@@ -2,7 +2,7 @@ package vm
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/crypto/bn256/google" // this is not match with other
 	"math/big"
 	"strings"
 

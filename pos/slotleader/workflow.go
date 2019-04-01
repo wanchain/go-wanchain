@@ -21,7 +21,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 var (

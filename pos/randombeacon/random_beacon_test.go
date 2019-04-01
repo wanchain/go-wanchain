@@ -7,8 +7,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/pos/wanpos_crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"math/big"
 	"testing"
 )

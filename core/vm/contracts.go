@@ -32,7 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/google"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"

@@ -15,7 +15,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey

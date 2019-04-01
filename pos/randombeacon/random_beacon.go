@@ -3,6 +3,7 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -18,8 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	bn256 "github.com/wanchain/pos/cloudflare"
-	wanpos "github.com/wanchain/pos/wanpos_crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 )
 
 type RbEnsDataCollector struct {
@@ -45,7 +45,7 @@ type LoopEvent struct {
 }
 
 type PolyInfo struct {
-	poly wanpos.Polynomial
+	poly rbselection.Polynomial
 	s    *big.Int
 }
 
@@ -280,11 +280,11 @@ func (rb *RandomBeacon) generateDKG1(epochId uint64, proposerId uint32, groupPks
 		return nil, err
 	}
 
-	poly := wanpos.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
+	poly := rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
 	rb.polys[proposerId] = PolyInfo{poly, s}
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
-		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
+		sshare[i], _ = rbselection.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
 	}
 
 	// make commitment for the secret share, i.e. multiply with the generator of G2
@@ -365,7 +365,7 @@ func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32, groupPks
 	poly := rb.polys[proposerId].poly
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
-		sshare[i], _ = wanpos.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
+		sshare[i], _ = rbselection.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
 	}
 
 	// encrypt the secret share, i.e. multiply with the receiver's public key
@@ -376,17 +376,17 @@ func (rb *RandomBeacon) generateDKG2(epochId uint64, proposerId uint32, groupPks
 	}
 
 	// generate DLEQ proof
-	proof := make([]wanpos.DLEQproof, nr)
+	proof := make([]rbselection.DLEQproof, nr)
 	for i := 0; i < nr; i++ {
 		// proof = (a1, a2, z)
-		proof[i] = wanpos.DLEQ(groupPks[i], *wanpos.Hbase, &sshare[i])
+		proof[i] = rbselection.DLEQ(groupPks[i], *rbselection.Hbase, &sshare[i])
 	}
 
 	enshareBytes := make([][]byte, nr)
-	proofBytes := make([]wanpos.DLEQproofFlat, nr)
+	proofBytes := make([]rbselection.DLEQproofFlat, nr)
 	for i := 0; i < nr; i++ {
 		enshareBytes[i] = enshare[i].Marshal()
-		proofBytes[i] = wanpos.ProofToProofFlat(&proof[i])
+		proofBytes[i] = rbselection.ProofToProofFlat(&proof[i])
 	}
 
 	txPayload := vm.RbDKG2FlatTxPayload{epochId, proposerId, enshareBytes, proofBytes}

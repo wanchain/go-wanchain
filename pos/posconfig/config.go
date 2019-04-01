@@ -6,7 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/node"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256"
 )
 
 var (

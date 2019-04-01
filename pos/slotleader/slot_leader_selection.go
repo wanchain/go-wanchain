@@ -24,7 +24,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 const lengthPublicKeyBytes = 65

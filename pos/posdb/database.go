@@ -14,7 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	bn256 "github.com/wanchain/pos/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 )
 
 //Db is the wanpos leveldb class

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"strconv"
@@ -15,12 +16,11 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/cloudflare"
-	"github.com/wanchain/pos/wanpos_crypto"
 )
 
 const (
@@ -273,7 +273,7 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 		temp[j] = *dkg1Param.Commit[j]
 	}
 
-	if !wanpos.RScodeVerify(temp, x, int(posconfig.Cfg().PolymDegree)) {
+	if !rbselection.RScodeVerify(temp, x, int(posconfig.Cfg().PolymDegree)) {
 		return nil, logError(errRSCode)
 	}
 
@@ -329,7 +329,7 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	// 4. proof verification
 	for j := 0; j < nr; j++ {
 		// get send public Key
-		if !wanpos.VerifyDLEQ(dkg2Param.Proof[j], pks[j], *hBase, *dkg2Param.EnShare[j], *commit[j]) {
+		if !rbselection.VerifyDLEQ(dkg2Param.Proof[j], pks[j], *hBase, *dkg2Param.EnShare[j], *commit[j]) {
 			return nil, logError(errDiscreteLogarithmsEQ)
 		}
 	}
@@ -582,7 +582,7 @@ type RbDKG2FlatTxPayload struct {
 	ProposerId uint32
 	// encrypt share
 	EnShare [][]byte
-	Proof   []wanpos.DLEQproofFlat
+	Proof   []rbselection.DLEQproofFlat
 }
 
 type RbSIGTxPayload struct {
@@ -605,7 +605,7 @@ type RbDKG2TxPayload struct {
 	ProposerId uint32
 	// encrypt share
 	EnShare    []*bn256.G1
-	Proof      []wanpos.DLEQproof
+	Proof      []rbselection.DLEQproof
 }
 
 //
@@ -737,7 +737,7 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	}
 
 	l = len(d.Proof)
-	dkg2Param.Proof = make([]wanpos.DLEQproof, l, l)
+	dkg2Param.Proof = make([]rbselection.DLEQproof, l, l)
 	for i := 0; i < l; i++ {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
@@ -756,9 +756,9 @@ func Dkg2ToDkg2Flat(d *RbDKG2TxPayload) *RbDKG2FlatTxPayload {
 	}
 
 	l = len(d.Proof)
-	df.Proof = make([]wanpos.DLEQproofFlat, l)
+	df.Proof = make([]rbselection.DLEQproofFlat, l)
 	for i := 0; i < l; i++ {
-		df.Proof[i] = wanpos.ProofToProofFlat(&d.Proof[i])
+		df.Proof[i] = rbselection.ProofToProofFlat(&d.Proof[i])
 	}
 
 	return &df
@@ -948,7 +948,7 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 	}
 
 	// Compute the Output of Random Beacon
-	gSignature := wanpos.LagrangeSig(gSignatureShare, xSig, int(posconfig.Cfg().PolymDegree))
+	gSignature := rbselection.LagrangeSig(gSignatureShare, xSig, int(posconfig.Cfg().PolymDegree))
 	random := crypto.Keccak256(gSignature.Marshal())
 
 	// Verification Logic for the Output of Random Beacon
@@ -967,7 +967,7 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 		xAll[i].SetBytes(GetPolynomialX(&pks[i], uint32(i)))
 		xAll[i].Mod(&xAll[i], bn256.Order)
 	}
-	gPub := wanpos.LagrangePub(c, xAll, int(posconfig.Cfg().PolymDegree))
+	gPub := rbselection.LagrangePub(c, xAll, int(posconfig.Cfg().PolymDegree))
 
 	// mG
 	mBuf, err := getRBMVar(stateDB, epochId)
@@ -979,7 +979,7 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 	mG := new(bn256.G1).ScalarBaseMult(m)
 
 	// Verify using pairing
-	pair1 := bn256.Pair(&gSignature, wanpos.Hbase)
+	pair1 := bn256.Pair(&gSignature, rbselection.Hbase)
 	pair2 := bn256.Pair(mG, &gPub)
 	if pair1.String() != pair2.String() {
 		return nil, logError(errors.New("final pairing check failed"))
