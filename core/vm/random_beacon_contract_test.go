@@ -253,29 +253,29 @@ func isInRandomGroupMock(_ []bn256.G1, _ uint64, _ uint32, _ common.Address) boo
 }
 
 
-func intrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
-	igas := new(big.Int)
-	if contractCreation && homestead {
-		igas.SetUint64(params.TxGasContractCreation)
-	} else {
-		igas.SetUint64(params.TxGas)
-	}
-	if len(data) > 0 {
-		var nz int64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		m := big.NewInt(nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
-		igas.Add(igas, m)
-		m.SetInt64(int64(len(data)) - nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
-		igas.Add(igas, m)
-	}
-	return igas
-}
+//func intrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+//	igas := new(big.Int)
+//	if contractCreation && homestead {
+//		igas.SetUint64(params.TxGasContractCreation)
+//	} else {
+//		igas.SetUint64(params.TxGas)
+//	}
+//	if len(data) > 0 {
+//		var nz int64
+//		for _, byt := range data {
+//			if byt != 0 {
+//				nz++
+//			}
+//		}
+//		m := big.NewInt(nz)
+//		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
+//		igas.Add(igas, m)
+//		m.SetInt64(int64(len(data)) - nz)
+//		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
+//		igas.Add(igas, m)
+//	}
+//	return igas
+//}
 
 // test cases runs in testMain
 func init() {
@@ -412,10 +412,6 @@ func TestValidPosTx(t *testing.T) {
 	clearDB()
 	rbgroupdb[rbepochId] = pubs
 
-	gasPrice := big.NewInt(1800000000000)
-	txAmount := big.NewInt(0)
-	gasLimit := big.NewInt(1000000)
-
 	for i := 0; i < nr; i++ {
 		var dkgParam RbDKG1TxPayload
 		dkgParam.EpochId = rbepochId
@@ -426,8 +422,7 @@ func TestValidPosTx(t *testing.T) {
 		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
 		payload := buildDkg1(payloadBytes)
 
-		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}
@@ -449,8 +444,7 @@ func TestValidPosTx(t *testing.T) {
 		payloadBytes, _ := rlp.EncodeToBytes(dkg1)
 		payload := buildDkg2(payloadBytes)
 
-		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}
@@ -472,8 +466,7 @@ func TestValidPosTx(t *testing.T) {
 		payloadBytes, _ := rlp.EncodeToBytes(sigShareParam)
 		payload := buildSig(payloadBytes)
 
-		intrinsicGas := intrinsicGas(payload, false, true)
-		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload, gasPrice, intrinsicGas, txAmount, gasLimit)
+		err := ValidPosRBTx(evm.StateDB, contract.CallerAddress, payload)
 		if err != nil {
 			t.Error("verify pos tx fail. err:", err)
 		}
