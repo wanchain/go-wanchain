@@ -120,6 +120,9 @@ func testSimulateData(epochID uint64, index uint32) {
 	hash := vm.GetRBKeyHash(sig, epochID, index)
 	randomBeaconPrecompileAddr := common.BytesToAddress(big.NewInt(610).Bytes())
 	statedb.SetStateByteArray(randomBeaconPrecompileAddr, *hash, []byte{1, 2, 3})
+
+	hash = vm.GetRBKeyHash([]byte{101}, epochID, index)
+	statedb.SetStateByteArray(randomBeaconPrecompileAddr, *hash, []byte{1, 2, 3})
 }
 
 func TestGetRandomProposerActivity(t *testing.T) {

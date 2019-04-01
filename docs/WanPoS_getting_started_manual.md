@@ -31,6 +31,7 @@ You can follow the getting started manual to experience the POC version of WanPO
   - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)
   - [6.5. Check Incentive](#65-check-incentive)
   - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)
+- [7. Test result of incentive](#7-test-result-of-incentive)
 
 <!-- /TOC -->
 
@@ -49,6 +50,8 @@ $ exit
 
 Step 2 start gwan with docker and create account:
 ```
+$ docker pull molin0000/wanpos_poc_node
+
 $ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
 
 YourContainerID
@@ -67,12 +70,23 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 
 ["YourPK1", "YourPK2"]
 
-> miner.setEtherbase("YourAccountAddress")
+> exit
 
-> miner.start()
+root> echo "YourPassword" > /root/.wanchain/pw.txt
+
+root> exit
+
 ```
 
-Step 3 get some test wan coins for "YourAccountAddress", such as 200000.
+![img](./img_get_start/1.png)
+
+Step 3 get some test wan coins for "YourAccountAddress", such as 100100.
+
+You can follow the descript in [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test coins.
+
+And after you received the test coins, you can do step 4.
+
+![img](./img_get_start/4.png)
 
 Step 4 create a script file in path: `/home/YourUserName/.wanchain/minerRegister.js`
 
@@ -96,7 +110,7 @@ var g1pub     = "YourPK2"
 // feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
 var feeRate   = 100
 
-// lockTime for work in epoch count.
+// lockTime is the time for miner works which measures in epoch count. And must larger than 5.
 var lockTime  = 30
 
 // baseAddr is the fund source account.
@@ -121,16 +135,34 @@ console.log("tx=" + tx)
 //------------------RUN CODE DO NOT MODIFY------------------
 
 ```
+![img](./img_get_start/2.png)
+
+
+![img](./img_get_start/3.png)
 
 Step 5 run the register script in gwan
 
 Follow the step 2's command line: 
+
 ```
 > loadScript("/root/.wanchain/minerRegister.js")
+
+> exit
+
+root> exit
+
+$ docker stop YourContainerID
+
+$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
 Finish!
+
+![img](./img_get_start/5.png)
+
+
+![img](./img_get_start/6.png)
 
 ## 4.2. Step by step to delegate wan coins
 
@@ -177,6 +209,8 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 You get `YourAccountAddress` and a good delegate `DelegateAddress` from above step which is selected by a nice `FeeRate`.
 
 Step 3 get some test wan coins for "YourAccountAddress", such as 100100.
+
+You can follow the descript in [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test coins.
 
 Step 4 create a script file in path: `/home/YourUserName/.wanchain/sendDelegate.js`
 
@@ -272,6 +306,8 @@ You can download a binary file or code to perform a node.
 ### 5.2.1. Download BIN
 
 You can download the compiled binary file to run. The download link is in below:
+
+(Not ready now, please use docker)
 
 | OS            | URL            | MD5             | SHA256
 | --------------  | :------------  | :-------------: | :--: |
@@ -394,18 +430,19 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 ## 6.3. Get test wan coins of PoS
 
-If you want to get some test wan coins to experient WanPoS, you can send an email with your wan pos account address to emails shown below. And we will pay to you in three work days. 
+If you want to get some test wan coins to experient WanPoS, you can send an email with your wan pos account test address to emails shown below to tell us. And we will pay to you in three work days. 
 
 | Index            | Email         | 
 | --------------  | :------------  | 
-|1| xxxxxxxx@wanchain.org| 
+|1| techsupport@wanchain.org| 
+
 
 
 ## 6.4. Stake register and Delegate
 
 If you have an account with WAN coins and you want to create a WanPoS miner, you should do it like the diagram below:
 
-![img](./img/getstart1.png)
+![img](./img_get_start/99.png)
 
 You can register as a mining node through Stake register.
 
@@ -512,3 +549,30 @@ $ pos.getEpochIncentivePayDetail(123)
 Your locked wan coins will automate send back when time up. 
 
 Do not need any manual operation.
+
+# 7. Test result of incentive
+
+We depolyed some pos miner nodes to mine.
+
+Use different stake value and different locktime to test.
+
+The locktime is measured by epoch count.
+
+The epoch time is 20 minutes of one epoch. So 6 epoch means 120 minutes.
+
+And the total stake is about 6000000 ~ 8000000 wan coins on the test blockchain.
+
+The incentive reward to the address is shown below:
+
+| Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
+| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
+|0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
+|0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
+|0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
+|0x52eee1ccb29adc742449a3e87fe7acaad605bd4c| 200000 | 12 |1.93 |4.81 |1.08 |1.17 |0.32 |9.31 |
+
+
+If the epoch incentive is 0, means it has not been selected by its probility.
+
+
+![img](./img_get_start/7.png)
