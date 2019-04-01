@@ -565,7 +565,7 @@ And the total stake is about 6000000 ~ 8000000 wan coins on the test blockchain.
 The incentive reward to the address is shown below:
 
 | Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
-| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | ---- | ---- | ---- |
+| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
 |0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
 |0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
 |0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
