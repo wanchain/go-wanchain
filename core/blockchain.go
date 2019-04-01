@@ -1034,7 +1034,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
-		// TODO: varify pos header proof
+		// TODO: verify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
 
