@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"crypto/rand"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"fmt"
 )
 func TestRandomBeacon(t *testing.T) {

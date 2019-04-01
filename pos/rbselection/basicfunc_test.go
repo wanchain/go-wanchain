@@ -4,7 +4,7 @@ import (
 	"testing"
 	"math/big"
 	"crypto/rand"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 )
 
 func TestCompareG1(t *testing.T){

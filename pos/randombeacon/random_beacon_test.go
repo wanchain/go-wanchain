@@ -6,8 +6,9 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math/big"
 	"testing"
 )
@@ -168,7 +169,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 			commit[proposerId][j] = *dkg1.Commit[j]
 		}
 
-		if !wanpos.RScodeVerify(commit[proposerId], x, int(posconfig.Cfg().PolymDegree)) {
+		if !rbselection.RScodeVerify(commit[proposerId], x, int(posconfig.Cfg().PolymDegree)) {
 			t.Error("reed solomon verification fail")
 		}
 
@@ -262,7 +263,7 @@ func TestGenerateDKG2(t *testing.T) {
 		// proof verification
 		for j := 0; j < nr; j++ {
 			// get send public Key
-			if !wanpos.VerifyDLEQ(dkg2.Proof[j], pks[j], *hbase, *dkg2.EnShare[j], *(dkg1s[proposerId].Commit[j])) {
+			if !rbselection.VerifyDLEQ(dkg2.Proof[j], pks[j], *hbase, *dkg2.EnShare[j], *(dkg1s[proposerId].Commit[j])) {
 				t.Fatal("dkg2 DLEQ verify fail")
 			}
 		}
