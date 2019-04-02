@@ -2,7 +2,7 @@ package vm
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256/google" // this is not match with other
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare" // this is not match with other
 	"math/big"
 	"strings"
 
@@ -258,8 +258,8 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		return nil, errors.New("wrong bn256Pk for stakeIn")
 	}
 	var g1 bn256.G1
-	_, success := g1.Unmarshal(info.Bn256Pk)
-	if !success {
+	_, err = g1.Unmarshal(info.Bn256Pk)
+	if err != nil {
 		return nil, errors.New("wrong point for bn256Pk")
 	}
 

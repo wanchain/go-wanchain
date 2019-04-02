@@ -248,20 +248,20 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 		return nil, logError(errors.New("invalid proposer, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
-	// prevent reset
+	// 3. prevent reset
 	existC, err := GetCji(stateDB, eid, pid)
 	if err == nil && len(existC) != 0 {
 		return nil, logError(errors.New("dkg1 commit exist already, proposerId " + strconv.FormatUint(uint64(pid), 10)))
 	}
 
-	// 3.Commit has the same size
+	// 4.Commit has the same size
 	// check same size
 	nr := len(pks)
 	if nr != len(dkg1Param.Commit) {
 		return nil, logError(buildError("error in dkg1 params have invalid commits length", eid, pid))
 	}
 
-	// 4. Reed-Solomon code verification
+	// 5. Reed-Solomon code verification
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
 		x[i].SetBytes(GetPolynomialX(&pks[i], uint32(i)))
