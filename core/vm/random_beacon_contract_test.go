@@ -12,8 +12,9 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math/big"
 	mrand "math/rand"
 	"testing"
@@ -136,7 +137,7 @@ func generateKeyPairs() ([]bn256.G1, []big.Int, []big.Int) {
 	return Pubkey, Prikey, x
 }
 
-func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*bn256.G1, [][]*bn256.G2, [][]wanpos.DLEQproof) {
+func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*bn256.G1, [][]*bn256.G2, [][]rbselection.DLEQproof) {
 	// Each of random propoer generates a random si
 	s := make([]*big.Int, nr)
 
@@ -148,15 +149,15 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 	}
 
 	// Each random propoer conducts the shamir secret sharing process
-	poly := make([]wanpos.Polynomial, nr)
+	poly := make([]rbselection.Polynomial, nr)
 
 	sshare := make([][]big.Int, nr, nr)
 
 	for i := 0; i < nr; i++ {
 		sshare[i] = make([]big.Int, nr, nr)
-		poly[i] = wanpos.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
+		poly[i] = rbselection.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
 		for j := 0; j < nr; j++ {
-			sshare[i][j], _ = wanpos.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			sshare[i][j], _ = rbselection.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
 	}
 
@@ -179,11 +180,11 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 	}
 
 	// generate DLEQ proof
-	proof := make([][]wanpos.DLEQproof, nr, nr)
+	proof := make([][]rbselection.DLEQproof, nr, nr)
 	for i := 0; i < nr; i++ {
-		proof[i] = make([]wanpos.DLEQproof, nr, nr)
+		proof[i] = make([]rbselection.DLEQproof, nr, nr)
 		for j := 0; j < nr; j++ { // proof = (a1, a2, z)
-			proof[i][j] = wanpos.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
+			proof[i][j] = rbselection.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
 		}
 	}
 
