@@ -22,9 +22,9 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 const lengthPublicKeyBytes = 65
@@ -364,6 +364,19 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 	return false, nil
 }
 
+func (s *SLS) isLocalPkInCurrentEpochLeaders() bool {
+	selfPublicKey, _ := s.getLocalPublicKey()
+	var inEpochLeaders bool
+	_, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
+	if inEpochLeaders {
+		return true
+	}
+	log.Debug("isLocalPkInCurrentEpochLeaders", "local public key:",
+		hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
+	log.Debug("isLocalPkInCurrentEpochLeaders", "s.epochLeadersMap:", s.epochLeadersMap)
+	return false
+}
+
 func (s *SLS) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
@@ -615,23 +628,6 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 
 	s.dumpData()
 	return nil
-}
-
-func (s *SLS) inEpochLeadersOrNot(pkIndex uint64, pkBytes []byte) bool {
-	return (pkIndex < uint64(len(s.epochLeadersArray))) && (hex.EncodeToString(pkBytes) == s.epochLeadersArray[pkIndex])
-}
-
-func (s *SLS) isLocalPkInCurrentEpochLeaders() bool {
-	selfPublicKey, _ := s.getLocalPublicKey()
-	var inEpochLeaders bool
-	_, inEpochLeaders = s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey))]
-	if inEpochLeaders {
-		return true
-	}
-	log.Debug("isLocalPkInCurrentEpochLeaders", "local public key:",
-		hex.EncodeToString(crypto.FromECDSAPub(selfPublicKey)))
-	log.Debug("isLocalPkInCurrentEpochLeaders", "s.epochLeadersMap:", s.epochLeadersMap)
-	return false
 }
 
 // create alpha1*pki,alpha1*PKi,alphaN*PKi,...
