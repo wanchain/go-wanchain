@@ -296,3 +296,4 @@ When the remaining nodes verify the block, the execution of the bonus is calcula
 
 The Coinbase transaction triggers statistics and cost-effectiveness and collects information to complete the processing flow. The process can be referred to in [5.2. Transaction fee collection interface](#52-transaction-fee-collection-interface)
 
+![img](./incentive_en_img/4.png)
