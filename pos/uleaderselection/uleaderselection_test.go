@@ -293,45 +293,6 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 // 		}
 // 	}
 // }
-func TestGenerateSlotLeaderSeqWithStake(t *testing.T) {
-	SMA, _ := genPublicKeys(20)
-	pks, _ := genPublicKeys(50)
-
-	fmt.Println("TestGenerateSlotLeaderSeqWithStake:epochLeaders")
-	for _, value := range pks {
-		fmt.Printf("%p\t", value)
-	}
-	epochLeaders := make(PkWithStakeArr, 0)
-
-	for index, value := range pks {
-		var stake int
-		if index == 0 {
-			stake = 1
-		} else {
-			stake = 1 * index
-		}
-		pkWithStake := PkWithStake{value, big.NewInt(0).SetInt64(int64(stake))}
-		epochLeaders = append(epochLeaders, pkWithStake)
-	}
-
-	rb := Big1.Bytes()
-	selectedPK, _, _ := GenerateSlotLeaderSeqWithStake(SMA, epochLeaders, rb, 1225, 1)
-	fmt.Println("\nTestGenerateSlotLeaderSeqWithStake:selectedPK")
-
-	mapcounter := make(map[*ecdsa.PublicKey]int, 0)
-	for _, value := range selectedPK {
-		_, ok := mapcounter[value]
-		if ok {
-			mapcounter[value]++
-		} else {
-			mapcounter[value] = 1
-		}
-	}
-	for k, v := range mapcounter {
-		fmt.Printf("publicKey=%p, counter=%v\n", k, v)
-	}
-	fmt.Print("\n")
-}
 
 // Whole Flow Test
 func TestGenerateSlotLeaderProof(t *testing.T) {
@@ -466,41 +427,6 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestGenerateSlotLeaderProofWithStake(t *testing.T) {
-	SMA, _ := genPublicKeys(20)
-	pks, _ := genPublicKeys(50)
-
-	fmt.Println("TestGenerateSlotLeaderProofWithStake:epochLeaders")
-	for _, value := range pks {
-		fmt.Printf("%p\t", value)
-	}
-	epochLeaders := make(PkWithStakeArr, 0)
-
-	for index, value := range pks {
-		var stake int
-		if index == 0 {
-			stake = 1
-		} else {
-			stake = 1 * index
-		}
-		pkWithStake := PkWithStake{value, big.NewInt(0).SetInt64(int64(stake))}
-		epochLeaders = append(epochLeaders, pkWithStake)
-	}
-
-	rb := Big1.Bytes()
-	var epochID uint64
-	var slotID uint64
-	epochID = 1
-	slotID = 1
-	privateKeys, _ := genPrivateKeys(1)
-	ProofMeg, Proof, error := GenerateSlotLeaderProofWithStake(privateKeys[0], SMA, epochLeaders, rb, slotID, epochID)
-	if error != nil {
-		fmt.Println(error.Error())
-	}
-	fmt.Printf("\n ProofMeg=%v,Proof=%v\n", ProofMeg, Proof)
-	fmt.Print("\n")
 }
 
 //Test Sample Functions below
