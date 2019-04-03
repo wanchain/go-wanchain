@@ -3,6 +3,10 @@ package incentive
 import (
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/consensus"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
 	"github.com/wanchain/go-wanchain/core/state"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -188,4 +192,9 @@ func GetEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 // GetEpochRBLeaderActivity can get the address and activity of RB leaders
 func GetEpochRBLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	return getRandomProposerActivity(stateDb, epochID)
+}
+
+// GetSlotLeaderActivity can get the address, blockCnt, and activity of slotleader
+func GetSlotLeaderActivity(chain consensus.ChainReader, epochID uint64) ([]common.Address, []int, float64) {
+	return getSlotLeaderActivity(chain, epochID, posconfig.SlotCount)
 }

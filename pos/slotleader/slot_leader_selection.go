@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/consensus"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -783,4 +785,9 @@ func (s *SLS) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, er
 	buf, err := vm.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
 
 	return buf, err
+}
+
+// GetChainReader can get a simple reader interface of blockchain
+func (s *SLS) GetChainReader() consensus.ChainReader {
+	return s.blockChain
 }

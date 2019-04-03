@@ -241,6 +241,37 @@ web3._extend({
 			call: 'pos_getIncentivePool',
 			params: 1
 		}),
+
+		new web3._extend.Method({
+			name: 'getActivity',
+			call: 'pos_getActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochID',
+			call: 'pos_getEpochID',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotID',
+			call: 'pos_getSlotID',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotCount',
+			call: 'pos_getSlotCount',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotTime',
+			call: 'pos_getSlotTime',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'calProbability',
+			call: 'pos_calProbability',
+			params: 4
+		}),
 	]
 });
 `
