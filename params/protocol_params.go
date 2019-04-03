@@ -74,20 +74,20 @@ const (
 	GetOTAMixSetMaxSize  uint64 = 20   // Max number of mix ota set size from once getting
 
 	//SlsStgOnePerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
-	SlsStgTwoPerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
+	SlsStgTwoPerByteGas uint64 = 20 // per byte gas for SlsStgOnePerByteGas
 )
 
 var (
-	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
+	GasLimitBoundDivisor = big.NewInt(1024) // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          = big.NewInt(5000) // Minimum the gas limit may ever be.
 	//GenesisGasLimit        = big.NewInt(4712388)               // Gas limit of the Genesis block.
-	GenesisGasLimit        = big.NewInt(47123880)               // Gas limit of the Genesis block.
+	GenesisGasLimit        = big.NewInt(21000 * 6000)          // Gas limit of the Genesis block.
 	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
 	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	WanGasTimesFactor	   = big.NewInt(10)
+	WanGasTimesFactor      = big.NewInt(10)
 	//WanGasTimesFactor	   = big.NewInt(1)
 
 )

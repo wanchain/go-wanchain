@@ -254,14 +254,14 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			}
 			secAddr := crypto.PubkeyToAddress(*pub)
 			staker := &vm.StakerInfo{
-				PubSec256:   account.Staking.S256pk,
-				PubBn256:    account.Staking.Bn256pk,
-				Amount:      account.Staking.Amount,
-				From:		 secAddr,
-				Address:	 secAddr,
-				LockEpochs:    0, // never expired
+				PubSec256:    account.Staking.S256pk,
+				PubBn256:     account.Staking.Bn256pk,
+				Amount:       account.Staking.Amount,
+				From:         secAddr,
+				Address:      secAddr,
+				LockEpochs:   0, // never expired
 				StakingEpoch: uint64(0),
-				FeeRate:	 uint64(100),
+				FeeRate:      uint64(100),
 			}
 
 			infoArray, err := rlp.EncodeToBytes(staker)
@@ -270,7 +270,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			}
 			addr := crypto.PubkeyToAddress(*crypto.ToECDSAPub(account.Staking.S256pk))
 			addrHash := common.BytesToHash(addr[:])
-			statedb.AddBalance(vm.WanCscPrecompileAddr,staker.Amount)
+			statedb.AddBalance(vm.WanCscPrecompileAddr, staker.Amount)
 
 			statedb.SetStateByteArray(vm.StakersInfoAddr, addrHash, infoArray)
 		}
@@ -409,11 +409,11 @@ func DefaultInternalGenesisBlock() *Genesis {
 
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.PlutoChainConfig,
-		Timestamp:  0x59f83144,
-		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
+		Config:    params.PlutoChainConfig,
+		Timestamp: 0x59f83144,
+		ExtraData: hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
 		//GasLimit:   0x47b760,	// 4700000
-		GasLimit:   0x2cd29c0,	// 47000000
+		GasLimit:   0x7829b80,
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
