@@ -187,8 +187,9 @@ func (m *Matcher) Start(begin, end uint64, results chan uint64) (*MatcherSession
 					// Skip the entire byte if no matches are found inside
 					next := res.bitset[(i-sectionStart)/8]
 					if next == 0 {
-						i += 7
-						continue
+						if i%8 == 0 {
+							i += 7
+						}
 					}
 					// Some bit it set, do the actual submatching
 					if bit := 7 - i%8; next&(1<<bit) != 0 {
