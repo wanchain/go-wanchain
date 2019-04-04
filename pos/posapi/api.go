@@ -3,12 +3,17 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
+
+	"github.com/wanchain/go-wanchain/params"
+
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/util"
 
 	"context"
 	"errors"
@@ -66,7 +71,7 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, err
 		GetEpochLeaders(epochID uint64) [][]byte
 	}
 
-//	selector := posdb.GetEpocherInst()
+	//	selector := posdb.GetEpocherInst()
 	selector := epochLeader.GetEpocher()
 
 	if selector == nil {
@@ -190,12 +195,11 @@ func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
 }
 
 type StakerInfo struct {
-	Addr      		 common.Address
+	Addr             common.Address
 	Infors           []vm.ClientProbability
 	FeeRate          uint64
 	TotalProbability *big.Int
 }
-
 
 func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerInfo, error) {
 	skInfo := StakerInfo{}
@@ -213,6 +217,7 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerI
 	skInfo.Addr = addr
 	return skInfo, nil
 }
+
 type StakerJson struct {
 	Address   common.Address
 	PubSec256 string //stakeholder’s wan public key
@@ -226,6 +231,7 @@ type StakerJson struct {
 	FeeRate      uint64
 	Clients      []vm.ClientInfo
 }
+
 // this is the static snap of stekers by the block Number.
 func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 	stakers := make([]StakerJson, 0)
@@ -280,7 +286,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	ess := make([]StakerInfo,0)
+	ess := make([]StakerInfo, 0)
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
@@ -298,7 +304,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 			pc := epocherInst.CalProbability(epochID, staker.Clients[i].Amount, lockEpoch, staker.Clients[i].StakingEpoch)
 			vc := vm.ClientProbability{}
 			vc.Probability = big.NewInt(0).Set(pc)
-			vc.Addr = 	staker.Clients[i].Address
+			vc.Addr = staker.Clients[i].Address
 			es.Infors = append(es.Infors, vc)
 			pb = pb.Add(pb, pc)
 		}
@@ -362,4 +368,53 @@ func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
 	}
 	total, foundation, gasPool := incentive.GetIncentivePool(db, epochID)
 	return []string{total.String(), foundation.String(), gasPool.String()}, nil
+}
+
+// GetActivity get epoch leader, random proposer, slot leader 's addresses and activity
+func (a PosApi) GetActivity(epochID uint64) (*incentive.Activity, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := incentive.Activity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
+	activity.SltLeader, activity.SlBlocks, activity.SlActivity = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+func (a PosApi) GetEpochID() uint64 {
+	ep, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
+	return ep
+}
+
+func (a PosApi) GetSlotID() uint64 {
+	_, sl := util.CalEpochSlotID(uint64(time.Now().Unix()))
+	return sl
+}
+
+func (a PosApi) GetSlotCount() int {
+	return posconfig.SlotCount
+}
+
+func (a PosApi) GetSlotTime() int {
+	return posconfig.SlotTime
+}
+
+// CalProbability use to calc the probability of a staker with amount by stake wan coins.
+// The probability is different in different time, so you should input each epoch ID you want to calc
+// Such as CalProbability(390, 10000, 60, 360) means begin from epoch 360 lock 60 epochs stake 10000 to calc 390's probability.
+func (a PosApi) CalProbability(epochId uint64, amountCoin uint64, lockTime uint64, startEpochId uint64) (string, error) {
+	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return "", errors.New("epocher instance do not exist")
+	}
+
+	amountWin := big.NewInt(0).SetUint64(amountCoin)
+	amountWin.Mul(amountWin, big.NewInt(params.Wan))
+
+	probablity := epocherInst.CalProbability(epochId, amountWin, lockTime, startEpochId)
+	return biToString(probablity, nil)
 }
