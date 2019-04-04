@@ -190,6 +190,7 @@ func (m *Matcher) Start(begin, end uint64, results chan uint64) (*MatcherSession
 						if i%8 == 0 {
 							i += 7
 						}
+						continue
 					}
 					// Some bit it set, do the actual submatching
 					if bit := 7 - i%8; next&(1<<bit) != 0 {
