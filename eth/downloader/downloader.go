@@ -1441,6 +1441,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 				return err
 			}
 		}
+
 		if err := d.importBlockResults(afterP); err != nil {
 			return err
 		}

@@ -100,6 +100,8 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	defer p.lock.RUnlock()
 
 	copy(hash[:], p.head[:])
+
+
 	return hash, new(big.Int).Set(p.td)
 }
 
