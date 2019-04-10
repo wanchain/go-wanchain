@@ -6,6 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
+	"sync"
 )
 
 
@@ -17,7 +18,32 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
+// fetchHeight retrieves the head header of the remote peer to aid in estimating
+// the total time a pending synchronisation would take.
+func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) (error) {
 
+	var pend sync.WaitGroup
+	fbchan  := make(chan uint64)
+
+	d.epochGenesisFbCh = fbchan
+
+	for i := startEpochid;i <= endEpochid;i++ {
+		pend.Add(1)
+		d.epochGenesisSyncStart <- i
+	}
+
+	for {
+		select {
+			case <- fbchan:
+				pend.Done()
+
+		}
+	}
+
+	pend.Wait()
+
+	return nil
+}
 
 func (d *Downloader) epochGenesisFetcher() {
 
@@ -66,6 +92,10 @@ func (d *Downloader) epochGenesisFetcher() {
 				req.peer.SetEpochGenesisDataIdle(1)
 
 				delete(active, pack.PeerId())
+
+				if d.epochGenesisFbCh != nil {
+					d.epochGenesisFbCh <- response.EpochId
+				}
 
 				// Handle dropped peer connections:
 			case p := <-peerDrop:

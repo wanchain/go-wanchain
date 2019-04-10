@@ -139,6 +139,7 @@ type Downloader struct {
 	//for epoch genesis
 	epochGenesisSyncStart chan	uint64
 	epochGenesisCh        chan  dataPack
+	epochGenesisFbCh 	  chan uint64
 	//trackEpochGenesisReq  chan  *epochGenesisReq
 
 	// for stateFetcher
