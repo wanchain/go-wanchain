@@ -12,26 +12,26 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	 posUtil "github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/rlp"
 )
 
 type RbLeadersSelInt interface {
 	GetTargetBlkNumber(epochId uint64) uint64
 	GetRBProposerGroup(epochID uint64) []vm.Leader
+	GetEpochLeaders(epochID uint64) [][]byte
 }
 
 type SlLeadersSelInt interface {
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
 
+
+
 type ForkMemBlockChain struct {
 	useEpochGenesis    		bool
 	rbLeaderSelector   		RbLeadersSelInt
 	slotLeaderSelector 		SlLeadersSelInt
-
-	epochGens map[uint64]	*types.EpochGenesis
-
 	epochGenesisCh 			chan uint64
-
 	lastEpochId				uint64
 }
 
@@ -39,7 +39,6 @@ func NewForkMemBlockChain() *ForkMemBlockChain {
 
 	f := &ForkMemBlockChain{}
 	f.useEpochGenesis = false
-	f.epochGens = make(map[uint64]*types.EpochGenesis)
 	f.epochGenesisCh = make(chan uint64,1)
 	f.lastEpochId = 0
 	return f
@@ -106,15 +105,20 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64, blk *types.Block) (*types.EpochGenesis, error) {
+func (f *ForkMemBlockChain) GenerateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
 
-	if blk == nil {
+	if lastblk == nil {
 		return nil, errors.New("blk is nil")
 	}
 	epGen := &types.EpochGenesis{}
+
 	epGen.ProtocolMagic = []byte("wanchainpos")
+
 	epGen.EpochId = epochid
-	epGen.PreEpochLastBlkHash = blk.Hash()
+
+	epGen.PreEpochLastBlkHash = lastblk.Hash()
+
+	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
 
 	epGen.RBLeaders = make([][]byte, 0)
 	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
@@ -133,7 +137,6 @@ func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64, blk *types.Block) (*
 	}
 
 	byteVal, err := json.Marshal(epGen)
-
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
 		return nil, err
@@ -163,9 +166,13 @@ func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain, blk *types.Block)
 	lastBlk := bc.GetBlockByNumber(blk.NumberU64() - 1)
 	epGen.PreEpochLastBlkHash = lastBlk.Hash()
 
+
+	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
+
+
 	epGen.RBLeaders = make([][]byte, 0)
-	leaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
-	for _, ldr := range leaders {
+	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
+	for _, ldr := range rbleaders {
 		epGen.RBLeaders = append(epGen.RBLeaders, ldr.PubSec256)
 	}
 
@@ -221,7 +228,18 @@ func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Bloc
 }
 
 func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
-	return f.epochGens[epochid] != nil
+	epochGenDb := posdb.GetDbByName("epochGendb")
+	if epochGenDb == nil {
+		return false
+	}
+
+	val, err := epochGenDb.Get(epochid, "epochgenesis")
+	if err != nil || val == nil {
+		return false
+	}
+
+	return true
+
 }
 
 func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
@@ -229,6 +247,42 @@ func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("inputing epoch genesis is nil")
 	}
 
-	//f.epochGens[epochgen.EpochId] = epochgen
+	epochGenDb := posdb.GetDbByName("epochGendb")
+	if epochGenDb == nil {
+		epochGenDb = posdb.NewDb("epochGendb")
+	}
+
+	val,err := rlp.EncodeToBytes(epochgen)
+	if err != nil {
+		return err
+	}
+
+	_,err = epochGenDb.Put(epochgen.EpochId,"epochgenesis",val)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
+
+func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
+	epochGenDb := posdb.GetDbByName("epochGendb")
+	if epochGenDb == nil {
+		return nil
+	}
+
+	val, err := epochGenDb.Get(epochid, "epochgenesis")
+	if err != nil {
+		return nil
+	}
+
+	epochGen := new(types.EpochGenesis)
+	err = rlp.DecodeBytes(val,epochGen)
+	if err != nil {
+		return nil
+	}
+
+	return epochGen
+}
+
+

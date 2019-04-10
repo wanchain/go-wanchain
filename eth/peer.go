@@ -240,7 +240,7 @@ func (p *peer) RequestEpochGenesisData(epochids uint64) error {
 //send epoch genesis
 func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis,_ := bc.GetEpochGenesis(epochid)
+	epochGenesis,_ := bc.GenerateEpochGenesis(epochid)
 	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
 }
 

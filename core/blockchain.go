@@ -1546,10 +1546,20 @@ func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
 	return bc.forkMem.VerifyEpochGenesis(bc,blk)
 }
 
-func (bc *BlockChain) GetEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
+func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
 	blkNum := bc.forkMem.rbLeaderSelector.GetTargetBlkNumber(epochid)
-	blk := bc.GetBlockByNumber(blkNum)
-	return bc.forkMem.GetEpochGenesis(epochid,blk)
+	epochBlk0 := bc.GetBlockByNumber(blkNum)
+
+	stateDb, err := bc.StateAt(epochBlk0.Root())
+	if err != nil {
+		return nil,err
+	}
+
+	rb := vm.GetR(stateDb, epochid)
+
+	preblk := bc.GetBlockByNumber(blkNum - 1)
+
+	return bc.forkMem.GenerateEpochGenesis(epochid,preblk,rb.Bytes())
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {

@@ -505,3 +505,12 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	}
 	return true
 }
+
+func (e *Epocher) SetEpochLeader(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
+	return nil
+}
+
+
+
+
+
