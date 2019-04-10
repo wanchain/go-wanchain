@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/ecdsa"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,57 +12,11 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	 posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
+	"encoding/binary"
 )
 
-type RbLeadersSelInt interface {
-	GetTargetBlkNumber(epochId uint64) uint64
-	GetRBProposerGroup(epochID uint64) []vm.Leader
-	GetEpochLeaders(epochID uint64) [][]byte
-}
 
-type SlLeadersSelInt interface {
-	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
-}
-
-
-
-type ForkMemBlockChain struct {
-	useEpochGenesis    		bool
-	rbLeaderSelector   		RbLeadersSelInt
-	slotLeaderSelector 		SlLeadersSelInt
-	epochGenesisCh 			chan uint64
-	lastEpochId				uint64
-}
-
-func NewForkMemBlockChain() *ForkMemBlockChain {
-
-	f := &ForkMemBlockChain{}
-	f.useEpochGenesis = false
-	f.epochGenesisCh = make(chan uint64,1)
-	f.lastEpochId = 0
-	return f
-}
-
-func (f *ForkMemBlockChain) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := header.Time.Uint64()
-
-	blkTd := header.Difficulty.Uint64()
-
-	blkEpochId = (blkTd >> 32)
-	blkSlotId = ((blkTd & 0xffffffff) >> 8)
-
-	calEpochId, calSlotId := posUtil.CalEpochSlotID(blkTime)
-	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
-
-	if calEpochId != blkEpochId {
-		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
-		return 0, 0, errors.New("epochid and slotid is not match with blk time")
-	}
-
-	return
-}
-
-func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
+func (bc *BlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
@@ -86,7 +39,7 @@ func (f *ForkMemBlockChain) updateReOrg(epochId uint64, length uint64) {
 	reOrgDb.Put(epochId, "reorgLength", b)
 }
 
-func (f *ForkMemBlockChain) updateFork(epochId uint64) {
+func (bc *BlockChain) updateFork(epochId uint64) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
@@ -105,7 +58,55 @@ func (f *ForkMemBlockChain) updateFork(epochId uint64) {
 	reOrgDb.Put(epochId, "forkNumber", b)
 }
 
-func (f *ForkMemBlockChain) GenerateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
+
+type RbLeadersSelInt interface {
+	GetTargetBlkNumber(epochId uint64) uint64
+	GetRBProposerGroup(epochID uint64) []vm.Leader
+	GetEpochLeaders(epochID uint64) [][]byte
+}
+
+type SlLeadersSelInt interface {
+	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
+}
+
+type EpochGenesisBlock struct {
+	useEpochGenesis    		bool
+	rbLeaderSelector   		RbLeadersSelInt
+	slotLeaderSelector 		SlLeadersSelInt
+	epochGenesisCh 			chan uint64
+	lastEpochId				uint64
+}
+
+func NewEpochGenesisBlock() *EpochGenesisBlock {
+
+	f := &EpochGenesisBlock{}
+	f.useEpochGenesis = false
+	f.epochGenesisCh = make(chan uint64,1)
+	f.lastEpochId = 0
+	return f
+}
+
+func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
+	blkTime := header.Time.Uint64()
+
+	blkTd := header.Difficulty.Uint64()
+
+	blkEpochId = (blkTd >> 32)
+	blkSlotId = ((blkTd & 0xffffffff) >> 8)
+
+	calEpochId, calSlotId := posUtil.CalEpochSlotID(blkTime)
+	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
+
+	if calEpochId != blkEpochId {
+		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
+		return 0, 0, errors.New("epochid and slotid is not match with blk time")
+	}
+
+	return
+}
+
+
+func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
 
 	if lastblk == nil {
 		return nil, errors.New("blk is nil")
@@ -147,7 +148,7 @@ func (f *ForkMemBlockChain) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 	return epGen, nil
 }
 
-func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain, blk *types.Block) bool {
+func (f *EpochGenesisBlock) VerifyEpochGenesis(bc *BlockChain, blk *types.Block) bool {
 
 	if !f.useEpochGenesis {
 		return true
@@ -198,7 +199,7 @@ func (f *ForkMemBlockChain) VerifyEpochGenesis(bc *BlockChain, blk *types.Block)
 	return res
 }
 
-func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
+func (f *EpochGenesisBlock) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 	_, slotid, err := f.GetBlockEpochIdAndSlotId(firstBlk.Header())
 	if err != nil {
 		log.Info("verify genesis failed because of wrong epochid or slotid")
@@ -212,7 +213,7 @@ func (f *ForkMemBlockChain) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 	return false
 }
 
-func (f *ForkMemBlockChain) UpdateEpochGenesis(epochID uint64) {
+func (f *EpochGenesisBlock) UpdateEpochGenesis(epochID uint64) {
 	if epochID != f.lastEpochId && epochID > 0{
 		//f.lastEpochId = epochID
 		//{
@@ -221,13 +222,13 @@ func (f *ForkMemBlockChain) UpdateEpochGenesis(epochID uint64) {
 	}
 }
 
-func (f *ForkMemBlockChain) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Block) *types.Block {
+func (f *EpochGenesisBlock) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Block) *types.Block {
 	epochID := blk.Header().Difficulty.Uint64() >> 32
 	blkNUm := posUtil.GetEpochBlock(epochID - 1)
 	return bc.GetBlockByNumber(blkNUm)
 }
 
-func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
+func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 	epochGenDb := posdb.GetDbByName("epochGendb")
 	if epochGenDb == nil {
 		return false
@@ -242,7 +243,7 @@ func (f *ForkMemBlockChain) IsExistEpochGenesis(epochid uint64) bool {
 
 }
 
-func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
+func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error {
 	if epochgen == nil {
 		return errors.New("inputing epoch genesis is nil")
 	}
@@ -265,7 +266,7 @@ func (f *ForkMemBlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 	return nil
 }
 
-func (f *ForkMemBlockChain) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
+func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
 	epochGenDb := posdb.GetDbByName("epochGendb")
 	if epochGenDb == nil {
 		return nil

@@ -117,7 +117,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-	forkMem 	  *ForkMemBlockChain
+	epochGene 	  *EpochGenesisBlock
 
 	slotValidator   Validator
 }
@@ -144,7 +144,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		forkMem:	  NewForkMemBlockChain(),
+		epochGene:	  NewEpochGenesisBlock(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -851,11 +851,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	 if bc.currentBlock.NumberU64() == 0||block.NumberU64() > bc.currentBlock.NumberU64() {
 
 		 //if use epochgeneis,they use this branch
-		 if bc.forkMem.useEpochGenesis {
-			 if bc.forkMem.IsFirstBlockInEpoch(block) {
-				 verifyRes := bc.forkMem.VerifyEpochGenesis(bc,block)
+		 if bc.epochGene.useEpochGenesis {
+			 if bc.epochGene.IsFirstBlockInEpoch(block) {
+				 verifyRes := bc.epochGene.VerifyEpochGenesis(bc,block)
 				 if !verifyRes {
-					 lastBlkPreEpoch := bc.forkMem.GetLastBlkInPreEpoch(bc,block)
+					 lastBlkPreEpoch := bc.epochGene.GetLastBlkInPreEpoch(bc,block)
 					 err := bc.reorg(bc.currentBlock,lastBlkPreEpoch)
 					 if err!=nil {
 						 return NonStatTy, err
@@ -927,9 +927,9 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 
-	if bc.forkMem.useEpochGenesis {
+	if bc.epochGene.useEpochGenesis {
 		for i := 1; i < len(chain); i++ {
-			isFirstBlk := bc.forkMem.IsFirstBlockInEpoch(chain[i])
+			isFirstBlk := bc.epochGene.IsFirstBlockInEpoch(chain[i])
 			if  (!isFirstBlk)&&
 				(chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
 				 chain[i].ParentHash() != chain[i-1].Hash()) {
@@ -1109,7 +1109,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
 
-			bc.forkMem.UpdateEpochGenesis(epochID)
+			bc.epochGene.UpdateEpochGenesis(epochID)
 			posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
 		}
 	}
@@ -1271,14 +1271,14 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	newChainLen := len(newChain)
-	newEpochId, _, err := bc.forkMem.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
+	newEpochId, _, err := bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-	bc.forkMem.updateFork(newEpochId)
-	bc.forkMem.updateReOrg(newEpochId,uint64(len(newChain)))
+	bc.updateFork(newEpochId)
+	bc.updateReOrg(newEpochId,uint64(len(newChain)))
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
@@ -1535,19 +1535,19 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 //for epoch genesis
 //////////////////////////////////////////////////////////////////
 func (bc *BlockChain)SetRbSelector(rbs RbLeadersSelInt){
-	bc.forkMem.rbLeaderSelector = rbs
+	bc.epochGene.rbLeaderSelector = rbs
 }
 
 func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
-	bc.forkMem.slotLeaderSelector = sls
+	bc.epochGene.slotLeaderSelector = sls
 }
 
 func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
-	return bc.forkMem.VerifyEpochGenesis(bc,blk)
+	return bc.epochGene.VerifyEpochGenesis(bc,blk)
 }
 
 func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
-	blkNum := bc.forkMem.rbLeaderSelector.GetTargetBlkNumber(epochid)
+	blkNum := bc.epochGene.rbLeaderSelector.GetTargetBlkNumber(epochid)
 	epochBlk0 := bc.GetBlockByNumber(blkNum)
 
 	stateDb, err := bc.StateAt(epochBlk0.Root())
@@ -1559,24 +1559,24 @@ func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,
 
 	preblk := bc.GetBlockByNumber(blkNum - 1)
 
-	return bc.forkMem.GenerateEpochGenesis(epochid,preblk,rb.Bytes())
+	return bc.epochGene.GenerateEpochGenesis(epochid,preblk,rb.Bytes())
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
-	blkEpochId,blkSlotId,_ := bc.forkMem.GetBlockEpochIdAndSlotId(blk.Header())
+	blkEpochId,blkSlotId,_ := bc.epochGene.GetBlockEpochIdAndSlotId(blk.Header())
 	return blkEpochId,blkSlotId
 }
 
 func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool{
-	return bc.forkMem.IsExistEpochGenesis(epochid)
+	return bc.epochGene.IsExistEpochGenesis(epochid)
 }
 
 func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
-	return bc.forkMem.SetEpochGenesis(epochgen)
+	return bc.epochGene.SetEpochGenesis(epochgen)
 }
 
 func (bc *BlockChain) GetEpochStartCh() (chan uint64) {
-	return bc.forkMem.epochGenesisCh
+	return bc.epochGene.epochGenesisCh
 }
 
 func (bc *BlockChain) SetSlotValidator(validator Validator) {

@@ -63,7 +63,7 @@ type HeaderChain struct {
 	rand   *mrand.Rand
 	engine consensus.Engine
 
-	forkMem  *ForkMemBlockChain
+	forkMem  *EpochGenesisBlock
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
@@ -90,7 +90,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
-		forkMem:	  NewForkMemBlockChain(),
+		forkMem:	  NewEpochGenesisBlock(),
 	}
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
