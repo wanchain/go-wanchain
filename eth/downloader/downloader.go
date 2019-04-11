@@ -219,6 +219,7 @@ type BlockChain interface {
 
 	GetEpochStartCh() (chan	uint64)
 
+	IsExistEpochGenesis(epochid uint64) bool
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.

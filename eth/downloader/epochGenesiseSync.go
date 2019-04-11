@@ -28,7 +28,13 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 	d.epochGenesisFbCh = fbchan
 
 	for i := startEpochid;i <= endEpochid;i++ {
+
+		if d.blockchain.IsExistEpochGenesis(i) {
+			continue
+		}
+
 		pend.Add(1)
+
 		d.epochGenesisSyncStart <- i
 	}
 
@@ -41,6 +47,8 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 	}
 
 	pend.Wait()
+
+	d.epochGenesisFbCh = nil
 
 	return nil
 }
@@ -110,6 +118,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				delete(active, req.peer.id)
 				req.peer.SetEpochGenesisDataIdle(1)
 
+				d.epochGenesisSyncStart <- req.epochid.Uint64()
 				// Handle timed-out requests:
 			case req := <-timeout:
 				// If the peer is already requesting something else, ignore the stale timeout.
