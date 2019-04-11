@@ -796,6 +796,9 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		if cur < sealTime {
 			sleepTime = sealTime - cur
 		}
+
+		sleepTime = 0
+
 		fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
 			"sleepTime:", sleepTime, "header.Time:", header.Time.Uint64())
 		select {

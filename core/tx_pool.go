@@ -144,10 +144,10 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	AccountSlots: 16*100,
-	GlobalSlots:  4096*100,
-	AccountQueue: 64*100,
-	GlobalQueue:  1024*100,
+	AccountSlots: 16 * 100,
+	GlobalSlots:  4096 * 100,
+	AccountQueue: 64 * 100,
+	GlobalQueue:  1024 * 100,
 
 	Lifetime: 3 * time.Hour,
 }
@@ -525,10 +525,14 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
+	totalTxPending := 0
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
+		totalTxPending += len(pending[addr])
 	}
+
+	log.Info("Total pending txs", "txs", totalTxPending)
 	return pending, nil
 }
 

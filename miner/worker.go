@@ -26,6 +26,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -94,15 +95,15 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent
-	txSub        event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
-	chainSideSub event.Subscription
-	chainSlotTimer  chan struct{}
-	wg           sync.WaitGroup
+	mux            *event.TypeMux
+	txCh           chan core.TxPreEvent
+	txSub          event.Subscription
+	chainHeadCh    chan core.ChainHeadEvent
+	chainHeadSub   event.Subscription
+	chainSideCh    chan core.ChainSideEvent
+	chainSideSub   event.Subscription
+	chainSlotTimer chan struct{}
+	wg             sync.WaitGroup
 
 	agents map[Agent]struct{}
 	recv   chan *Result
@@ -473,6 +474,7 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 	// compute uncles for the new block.
@@ -531,7 +533,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	var coalescedLogs []*types.Log
 
-	var rbCount  = 0
+	var rbCount = 0
 	var slotCount = 0
 	for {
 		// Retrieve the next transaction and abort if all done
@@ -541,12 +543,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		//fmt.Println(tx.To().String())
 		//fmt.Println(vm.RandomBeaconPrecompileAddr.String())
-		if tx.To()!=nil&&tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
+		if tx.To() != nil && tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
 			rbCount++
 			if rbCount > 10 {
 				break
 			}
-		} else  if tx.To()!=nil&&tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
+		} else if tx.To() != nil && tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
 			slotCount++
 			if slotCount > 20 {
 				break
