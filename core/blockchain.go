@@ -850,29 +850,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//if externTd.Cmp(localTd) > 0 {
 	 if bc.currentBlock.NumberU64() == 0||block.NumberU64() > bc.currentBlock.NumberU64() {
 
-		 //if use epochgeneis,they use this branch
-		 if bc.epochGene.useEpochGenesis {
-			 if bc.epochGene.IsFirstBlockInEpoch(block) {
-				 verifyRes := bc.epochGene.VerifyEpochGenesis(bc,block)
-				 if !verifyRes {
-					 lastBlkPreEpoch := bc.epochGene.GetLastBlkInPreEpoch(bc,block)
-					 err := bc.reorg(bc.currentBlock,lastBlkPreEpoch)
-					 if err!=nil {
-						 return NonStatTy, err
-					 }
-				 }
-
-			 }
-
-		 }
-
 		 // Reorganise the chain if the parent is not the head block
 		 if block.ParentHash() != bc.currentBlock.Hash() {
 			 if err := bc.reorg(bc.currentBlock, block); err != nil {
 				 return NonStatTy, err
 			 }
 		 }
-
 
 		// Write the positional metadata for transaction and receipt lookups
 		if err := WriteTxLookupEntries(batch, block); err != nil {
@@ -1543,10 +1526,16 @@ func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 }
 
 func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
-	return bc.epochGene.VerifyEpochGenesis(bc,blk)
+	return true
 }
 
 func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
+	curEpid,_,err := bc.epochGene.GetBlockEpochIdAndSlotId(bc.currentBlock.Header())
+
+	if curEpid < epochid || err!=nil {
+		return nil , errors.New("error epochid")
+	}
+
 	blkNum := bc.epochGene.rbLeaderSelector.GetTargetBlkNumber(epochid)
 	epochBlk0 := bc.GetBlockByNumber(blkNum)
 

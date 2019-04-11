@@ -13,6 +13,8 @@ import (
 	 posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"encoding/binary"
+	"bytes"
+	"github.com/wanchain/go-wanchain/common"
 )
 
 
@@ -113,6 +115,8 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 	}
 	epGen := &types.EpochGenesis{}
 
+
+
 	epGen.ProtocolMagic = []byte("wanchainpos")
 
 	epGen.EpochId = epochid
@@ -137,6 +141,8 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 		}
 	}
 
+	epGen.GenesisBlkHash = common.Hash{}
+
 	byteVal, err := json.Marshal(epGen)
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
@@ -148,53 +154,33 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 	return epGen, nil
 }
 
-func (f *EpochGenesisBlock) VerifyEpochGenesis(bc *BlockChain, blk *types.Block) bool {
+func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
 
 	if !f.useEpochGenesis {
 		return true
 	}
 
-	epGen := &types.EpochGenesis{}
-	epGen.ProtocolMagic = []byte("wanchainpos")
-
-	epochid, _, err := f.GetBlockEpochIdAndSlotId(blk.Header())
-	if err != nil {
-		log.Info("verify genesis failed because of wrong epochid or slotid")
+	res := bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
+	if !res {
 		return false
 	}
-	epGen.EpochId = epochid
 
-	lastBlk := bc.GetBlockByNumber(blk.NumberU64() - 1)
-	epGen.PreEpochLastBlkHash = lastBlk.Hash()
-
-
-	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
-
-
-	epGen.RBLeaders = make([][]byte, 0)
-	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
-	for _, ldr := range rbleaders {
-		epGen.RBLeaders = append(epGen.RBLeaders, ldr.PubSec256)
+	if len(epGen.RBLeaders)==0 || len(epGen.SlotLeaders)==0 || len(epGen.EpochLeaders)==0 {
+		return false
 	}
 
-	epGen.SlotLeaders = make([][]byte, 0)
-	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
-	if pks != nil {
-		for _, slpk := range pks {
-			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
-		}
-	}
+	genesisHash := epGen.GenesisBlkHash
 
+	epGen.GenesisBlkHash = common.Hash{}
 	byteVal, err := json.Marshal(epGen)
-
 	if err != nil {
-		log.Info("verify genesis marshal failed")
+		log.Debug("Failed to marshal epoch genesis data", "err", err)
 		return false
 	}
 
-	genesisBlkHash := crypto.Keccak256Hash(byteVal)
+	calHash := crypto.Keccak256Hash(byteVal)
 
-	res := (genesisBlkHash == blk.ParentHash())
+	res = (genesisHash == calHash)
 
 	return res
 }
@@ -246,6 +232,10 @@ func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error {
 	if epochgen == nil {
 		return errors.New("inputing epoch genesis is nil")
+	}
+	res := f.preVerifyEpochGenesis(epochgen)
+	if !res {
+		return errors.New("epoch genesis preverify is failed")
 	}
 
 	epochGenDb := posdb.GetDbByName("epochGendb")

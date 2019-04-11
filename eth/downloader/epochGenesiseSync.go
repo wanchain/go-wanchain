@@ -71,31 +71,31 @@ func (d *Downloader) epochGenesisFetcher() {
 
 			case pack := <-d.epochGenesisCh:
 
-
-				response := pack.(*epochGenesisPack).epochGenesis
-
-				err := d.blockchain.SetEpochGenesis(response)
-				log.Debug("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
-
-				if err != nil {
-					log.Warn("get epoch genesis data write error", "err", err)
-					continue
-				}
-
 				req := active[pack.PeerId()]
 				if req == nil {
 					log.Debug("Unrequested epoch genesis data", "peer", pack.PeerId(), "len", pack.Items())
 					continue
 				}
+
+				response := pack.(*epochGenesisPack).epochGenesis
+				log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
+
+				err := d.blockchain.SetEpochGenesis(response)
+
+				if err != nil {
+					log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
+					d.epochGenesisSyncStart <- req.epochid.Uint64()
+				} else {
+					if d.epochGenesisFbCh != nil {
+						d.epochGenesisFbCh <- response.EpochId
+					}
+				}
+
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
 				req.peer.SetEpochGenesisDataIdle(1)
 
 				delete(active, pack.PeerId())
-
-				if d.epochGenesisFbCh != nil {
-					d.epochGenesisFbCh <- response.EpochId
-				}
 
 				// Handle dropped peer connections:
 			case p := <-peerDrop:
