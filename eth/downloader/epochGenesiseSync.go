@@ -29,7 +29,7 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 
 	for i := startEpochid;i <= endEpochid;i++ {
 
-		if d.blockchain.IsExistEpochGenesis(i) {
+		if i==0 || d.blockchain.IsExistEpochGenesis(i) {
 			continue
 		}
 
