@@ -138,7 +138,7 @@ type TxPoolConfig struct {
 // DefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
-	Journal:   "transactions.rlp",
+	//Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
 	PriceLimit: 1,
@@ -682,7 +682,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		pool.priced.Put(tx)
 		pool.journalTx(from, tx)
 
-		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
+		//log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 		return old != nil, nil
 	}
 	// New transaction isn't replacing a pending one, push into queue
@@ -696,7 +696,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	}
 	pool.journalTx(from, tx)
 
-	log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
+	//log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
 	return replace, nil
 }
 
