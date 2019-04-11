@@ -23,6 +23,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -34,8 +37,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math/big"
-	"strings"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -413,7 +414,7 @@ func DefaultPlutoGenesisBlock() *Genesis {
 		Timestamp: 0x59f83144,
 		ExtraData: hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
 		//GasLimit:   0x47b760,	// 4700000
-		GasLimit:   0x7829b80,
+		GasLimit:   0x4B1A1300, //0x7829b80,
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}

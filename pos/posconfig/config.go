@@ -5,8 +5,8 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/node"
 	bn256 "github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/node"
 )
 
 var (
@@ -31,14 +31,13 @@ const (
 	SlotTime = 10
 	// GenesisPK is the epoch0 pk
 
-
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
 	IncentiveStartStage  = Stage2K
 
 	// K count of each epoch
 	KCount = 12
-	K      = 2400		// 8 hours each epoch
+	K      = 2400 // 8 hours each epoch
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -63,7 +62,9 @@ const (
 	Sma3Start = Stage10K
 	Sma3End   = Stage12K
 )
+
 var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+
 type Config struct {
 	PolymDegree   uint
 	K             uint
