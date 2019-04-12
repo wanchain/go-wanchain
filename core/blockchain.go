@@ -1536,23 +1536,27 @@ func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,
 		return nil , errors.New("error epochid")
 	}
 
-	blkNum := bc.epochGene.rbLeaderSelector.GetTargetBlkNumber(epochid)
-	epochBlk0 := bc.GetBlockByNumber(blkNum)
+	//it is the first block of this epoch
+	blkNum := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
 
-	stateDb, err := bc.StateAt(epochBlk0.Root())
+	preblk := bc.GetBlockByNumber(blkNum - 1 )
+
+	stateDb, err := bc.StateAt(preblk.Root())
 	if err != nil {
 		return nil,err
 	}
 
 	rb := vm.GetR(stateDb, epochid)
 
-	preblk := bc.GetBlockByNumber(blkNum - 1)
 
 	return bc.epochGene.GenerateEpochGenesis(epochid,preblk,rb.Bytes())
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
-	blkEpochId,blkSlotId,_ := bc.epochGene.GetBlockEpochIdAndSlotId(blk.Header())
+	blkEpochId,blkSlotId,err := bc.epochGene.GetBlockEpochIdAndSlotId(blk.Header())
+	if err != nil {
+		return 0,0
+	}
 	return blkEpochId,blkSlotId
 }
 

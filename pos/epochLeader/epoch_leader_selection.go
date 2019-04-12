@@ -90,7 +90,17 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	if epochId < 2 {
 		return uint64(0)
 	}
+
 	targetEpochId := epochId - 2
+
+
+	return e.GetEpochLastBlkNumber(targetEpochId)
+}
+
+
+func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
+	// TODO how to get thee target blockNumber
+
 	targetBlkNum := util.GetEpochBlock(targetEpochId)
 	if targetBlkNum == 0 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
@@ -105,9 +115,10 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 		targetBlkNum = curNum
 		util.SetEpochBlock(targetEpochId, targetBlkNum)
 	}
-	return targetBlkNum
 
+	return targetBlkNum
 }
+
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)

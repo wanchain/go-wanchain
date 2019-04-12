@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -62,7 +61,7 @@ func (bc *BlockChain) updateFork(epochId uint64) {
 
 
 type RbLeadersSelInt interface {
-	GetTargetBlkNumber(epochId uint64) uint64
+	GetEpochLastBlkNumber(epochId uint64) uint64
 	GetRBProposerGroup(epochID uint64) []vm.Leader
 	GetEpochLeaders(epochID uint64) [][]byte
 }
@@ -89,20 +88,11 @@ func NewEpochGenesisBlock() *EpochGenesisBlock {
 }
 
 func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
-	blkTime := header.Time.Uint64()
 
 	blkTd := header.Difficulty.Uint64()
 
 	blkEpochId = (blkTd >> 32)
 	blkSlotId = ((blkTd & 0xffffffff) >> 8)
-
-	calEpochId, calSlotId := posUtil.CalEpochSlotID(blkTime)
-	//calEpochId,calSlotId := uint64(blkTime),uint64(blkTime)
-
-	if calEpochId != blkEpochId {
-		fmt.Println(calEpochId, blkEpochId, calSlotId, blkSlotId)
-		return 0, 0, errors.New("epochid and slotid is not match with blk time")
-	}
 
 	return
 }
@@ -110,18 +100,18 @@ func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 
 func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
 
-	if lastblk == nil {
-		return nil, errors.New("blk is nil")
-	}
+
 	epGen := &types.EpochGenesis{}
-
-
 
 	epGen.ProtocolMagic = []byte("wanchainpos")
 
 	epGen.EpochId = epochid
 
-	epGen.PreEpochLastBlkHash = lastblk.Hash()
+	if lastblk == nil {
+		epGen.PreEpochLastBlkHash = common.Hash{}
+	} else {
+		epGen.PreEpochLastBlkHash = lastblk.Hash()
+	}
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
 

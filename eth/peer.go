@@ -29,6 +29,7 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 	set "gopkg.in/fatih/set.v0"
 	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
@@ -240,7 +241,18 @@ func (p *peer) RequestEpochGenesisData(epochids uint64) error {
 //send epoch genesis
 func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis,_ := bc.GenerateEpochGenesis(epochid)
+	epochGenesis,err := bc.GenerateEpochGenesis(epochid)
+	if err != nil {
+		log.Info("error to generate epoch genesis")
+		return err
+	}
+
+	fmt.Println("----------------------------------------")
+
+	epochGenTxt := fmt.Sprintf("\t%v\n", epochGenesis)
+	fmt.Println("send epoch",epochGenTxt)
+
+	fmt.Println("----------------------------------------")
 	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
 }
 
