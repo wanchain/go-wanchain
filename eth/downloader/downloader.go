@@ -464,9 +464,11 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	endblk := types.NewBlockWithHeader(latest)
 	endEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
 
-	err = d.fetchEpochGenesises(beginEpid,endEpid)
-	if err != nil {
-		return err
+	if d.mode == FastSync || d.mode == LightSync {
+		err = d.fetchEpochGenesises(beginEpid, endEpid)
+		if err != nil {
+			return err
+		}
 	}
 	////////////////////////////////////////////////
 
