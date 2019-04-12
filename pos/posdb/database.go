@@ -14,7 +14,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
 )
 
 //Db is the wanpos leveldb class
@@ -248,7 +247,7 @@ type Proposer struct {
 	Probabilities *big.Int
 }
 
-func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+func GetRBProposerGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.RbLocalDB)
 	if db == nil {
 		log.Error("GetRBProposerGroup create db error")
@@ -257,7 +256,7 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 
 	proposersArray := db.GetStorageByteArray(epochId)
 	length := len(proposersArray)
-	g1s := make([]bn256.G1, length, length)
+	g1s := make([][]byte, length, length)
 
 	for i := 0; i < length; i++ {
 		proposer := Proposer{}
@@ -265,8 +264,7 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 		if err != nil {
 			log.Error("can't rlp decode:", err)
 		}
-		g1s[i] = *new(bn256.G1)
-		g1s[i].Unmarshal(proposer.PubBn256)
+		g1s[i] = proposer.PubBn256
 	}
 
 	return g1s

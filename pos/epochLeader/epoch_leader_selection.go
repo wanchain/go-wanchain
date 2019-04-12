@@ -15,6 +15,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -49,10 +50,6 @@ type Epocher struct {
 
 var epocherInst *Epocher = nil
 
-type puksInfo struct {
-	PubSec256 []byte //staker’s ethereum public key
-	PubBn256  []byte //staker’s bn256 public key
-}
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
 
@@ -130,14 +127,14 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	r := rb.Bytes()
 
-	err = e.selectLeaders(r, Ne, Nr, stateDb, epochId)
+	err = e.selectLeaders(r, stateDb, epochId)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-func (e *Epocher) selectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
+func (e *Epocher) selectLeaders(r []byte,  statedb *state.StateDB, epochId uint64) error {
 
 	log.Debug("select randoms", epochId, common.ToHex(r))
 
@@ -146,9 +143,9 @@ func (e *Epocher) selectLeaders(r []byte, ne int, nr int, statedb *state.StateDB
 		return err
 	}
 
-	e.epochLeaderSelection(r, ne, pa, epochId)
+	e.epochLeaderSelection(r, pa, epochId)
 
-	e.randomProposerSelection(r, nr, pa, epochId)
+	e.randomProposerSelection(r, pa, epochId)
 
 	return nil
 
@@ -297,9 +294,9 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	return ps, nil
 }
 
-//samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
-func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epochId uint64) error {
-	if r == nil || nr <= 0 || len(ps) == 0 {
+//select epoch leader from PublicKeys based on proportion of Probabilities
+func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint64) error {
+	if r == nil || len(ps) == 0 {
 		return ErrInvalidRandomProposerSelection
 	}
 
@@ -315,7 +312,12 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
 	log.Debug("epochLeaderSelection selecting")
-	for i := 0; i < nr; i++ {
+	selectionCount := posconfig.EpochLeaderCount
+	info, err := e.GepWhiteInfo(epochId)
+	if err == nil {
+		selectionCount = posconfig.EpochLeaderCount-int(info.WlCount.Uint64())
+	}
+	for i := 0; i < selectionCount; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
@@ -338,10 +340,74 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	return nil
 }
 
+type WhiteInfos []vm.UpgradeWhiteEpochLeaderParam
+
+func (s WhiteInfos) Len() int {
+	return len(s)
+}
+
+func (s WhiteInfos) Less(i, j int) bool {
+	return s[i].EpochId.Cmp(s[j].EpochId) < 0
+}
+
+func (s WhiteInfos) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+
+func (e * Epocher) GepWhiteInfo(epochId uint64)(*vm.UpgradeWhiteEpochLeaderParam, error) {
+	targetBlkNum := e.GetTargetBlkNumber(epochId)
+	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	if block == nil {
+		return nil, errors.New("Unkown block")
+	}
+	stateDb, err := e.GetBlkChain().StateAt(block.Root())
+	if err != nil {
+		return nil, err
+	}
+	infos := make(WhiteInfos, 0)
+	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
+	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
+		info := vm.UpgradeWhiteEpochLeaderParam{}
+		err := rlp.DecodeBytes(value, &info)
+		if err == nil {
+			infos = append(infos, info)
+		}
+		return true
+	})
+	// sort
+	sort.Stable(infos)
+	index := len(infos)-1
+	for i:=0; i<len(infos); i++ {
+		if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) == 0 {
+			index = i
+			break
+		} else if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) > 0 {
+			index = i-1
+			break
+		}
+	}
+	return  &infos[index], err
+}
+func (e * Epocher) GetWhiteByEpochId(epochId uint64)([]string, error){
+	info,err := e.GepWhiteInfo(epochId)
+	if err != nil {
+		return nil, err
+	}
+	return posconfig.WhiteList[info.WlIndex.Uint64():info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+}
+func (e * Epocher) GetWhiteArrayByEpochId(epochId uint64)([][]byte, error){
+	info,err := e.GepWhiteInfo(epochId)
+	if err != nil {
+		return nil, err
+	}
+	return posconfig.EpochLeadersHold[info.WlIndex.Uint64():info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+
+}
 //*bn256.G1
 //samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, epochId uint64) error {
-	if r == nil || nr <= 0 || len(ps) == 0 {
+func (e *Epocher) randomProposerSelection(r []byte, ps ProposerSorter, epochId uint64) error {
+	if r == nil || len(ps) == 0 {
 		return ErrInvalidEpochProposerSelection
 	}
 
@@ -356,7 +422,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	cr := crypto.Keccak256(r1) //cr = hash(r1)
 
 	log.Info("random proposer selecting...\n")
-	for i := 0; i < nr; i++ {
+	for i := 0; i < posconfig.RandomProperCount; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
@@ -382,13 +448,42 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
 	// TODO: how to cache these
-	ksarray := posdb.GetEpochLeaderGroup(epochID)
-
-	return ksarray
+	epArray := posdb.GetEpochLeaderGroup(epochID)
+	wa, err := e.GetWhiteArrayByEpochId(epochID)
+	if err == nil {
+		if len(epArray) == posconfig.EpochLeaderCount-len(wa) {
+			epArray = append(epArray, wa...)
+		}
+	}
+	return epArray
 
 }
+func (e *Epocher) GetRBProposer(epochID uint64) [][]byte {
+	// TODO: how to cache these
+	rbArray := posdb.GetRBProposerGroup(epochID)
+	return rbArray
 
-//get rbLeaders of epochID in localdb only for incentive.
+}
+func (e *Epocher) GetRBProposerG1(epochID uint64) []bn256.G1 {
+
+	rbArray := e.GetRBProposer(epochID)
+	length := len(rbArray)
+
+	g1s := make([]bn256.G1, length, length)
+
+	for i := 0; i < length; i++ {
+		g1s[i] = *new(bn256.G1)
+		_, err := g1s[i].Unmarshal(rbArray[i])
+		if err != nil {
+			log.Error("G1 unmarshal failed: ", "err",  err)
+		}
+	}
+
+
+	return g1s
+
+}
+//get rbLeaders of epochID in localdb only for incentive. for incentive.
 func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 	proposersArray := e.rbLeadersDb.GetStorageByteArray(epochID)
 	length := len(proposersArray)
@@ -398,7 +493,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		proposer := Proposer{}
 		err := rlp.DecodeBytes(proposersArray[i], &proposer)
 		if err != nil {
-			log.Error("can't rlp decode:", err)
+			log.Error("can't rlp decode:", "err",  err)
 		}
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
@@ -426,7 +521,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	proposer := Proposer{}
 	err := rlp.DecodeBytes(psValue, &proposer)
 	if err != nil {
-		log.Error("can't rlp decode:", err)
+		log.Error("can't rlp decode:", "err",  err)
 	}
 
 	pub := crypto.ToECDSAPub(proposer.PubSec256)

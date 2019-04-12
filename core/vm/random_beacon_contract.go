@@ -19,7 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -236,7 +235,7 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
+	pks := util.GetEpocherInst().GetRBProposerG1(eid)
 
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
@@ -297,7 +296,7 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
+	pks := util.GetEpocherInst().GetRBProposerG1(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -349,7 +348,7 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
+	pks := util.GetEpocherInst().GetRBProposerG1(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
 		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -826,7 +825,6 @@ func setSignorsNum(epochId uint64, num uint32, evm *EVM) {
 //
 // variables for mock
 //
-var getRBProposerGroupVar = posdb.GetRBProposerGroup
 var getRBMVar = GetRBM
 var isValidEpochStageVar = isValidEpochStage
 var isInRandomGroupVar = isInRandomGroup

@@ -63,6 +63,7 @@ var (
 	incentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
 
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
+	PosControlPrecompileAddr = common.BytesToAddress(big.NewInt(612).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
@@ -107,6 +108,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 	//pos
 	WanCscPrecompileAddr:       &PosStaking{},
+	PosControlPrecompileAddr:	&PosControl{},
 	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }

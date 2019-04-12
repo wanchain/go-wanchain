@@ -192,6 +192,16 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'getWhiteListConfig',
+			call: 'pos_getWhiteListConfig',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getWhiteListbyEpochID',
+			call: 'pos_getWhiteListbyEpochID',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getEpochIncentivePayDetail',
 			call: 'pos_getEpochIncentivePayDetail',
 			params: 1

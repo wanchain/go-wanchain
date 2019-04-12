@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/wanchain/go-wanchain/params"
@@ -67,11 +68,6 @@ func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
 func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, error) {
 	infoMap := make(map[string]string, 0)
 
-	type epoch interface {
-		GetEpochLeaders(epochID uint64) [][]byte
-	}
-
-	//	selector := posdb.GetEpocherInst()
 	selector := epochLeader.GetEpocher()
 
 	if selector == nil {
@@ -79,7 +75,6 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, err
 	}
 
 	epochLeaders := selector.GetEpochLeaders(epochID)
-	//epochLeaders := selector.(epoch).GetEpochLeaders(epochID)
 
 	for i := 0; i < len(epochLeaders); i++ {
 		infoMap[fmt.Sprintf("%06d", i)] = hex.EncodeToString(epochLeaders[i])
@@ -121,10 +116,11 @@ func (a PosApi) GetSmaByEpochID(epochID uint64) (map[string]string, error) {
 }
 
 func (a PosApi) GetRandomProposersByEpochID(epochID uint64) map[string]string {
-	leaders := posdb.GetRBProposerGroup(epochID)
+	//leaders := posdb.GetRBProposerGroup(epochID)
+	leaders := epochLeader.GetEpocher().GetRBProposer(epochID)
 	info := make(map[string]string, 0)
 	for i := 0; i < len(leaders); i++ {
-		info[fmt.Sprintf("%06d", i)] = hex.EncodeToString(leaders[i].Marshal())
+		info[fmt.Sprintf("%06d", i)] = hex.EncodeToString(leaders[i])
 	}
 	return info
 }
@@ -338,7 +334,33 @@ func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 func (a PosApi) GetEpochRemain(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochRemain(epochID))
 }
-
+func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) {
+	epocherInst := epochLeader.GetEpocher()
+	block := epocherInst.GetBlkChain().CurrentBlock()
+	if block == nil {
+		return nil, errors.New("Unkown block")
+	}
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	if err != nil {
+		return nil, err
+	}
+	infos := make(epochLeader.WhiteInfos, 0)
+	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
+	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
+		info := vm.UpgradeWhiteEpochLeaderParam{}
+		err := rlp.DecodeBytes(value, &info)
+		if err == nil {
+			infos = append(infos, info)
+		}
+ 		return true
+	})
+	sort.Stable(infos)
+	return infos, nil
+}
+func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
+	epocherInst := epochLeader.GetEpocher()
+	return epocherInst.GetWhiteByEpochId(epochID)
+}
 func (a PosApi) GetTotalRemain() (string, error) {
 	return biToString(incentive.GetTotalRemain())
 }
