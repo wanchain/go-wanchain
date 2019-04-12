@@ -554,9 +554,9 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
-func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Address, error) {
 	if !types.IsValidTransactionType(tx.Txtype()) {
-		return ErrInvalidTxType
+		return nil, ErrInvalidTxType
 	}
 
 	// type must match to des address
@@ -564,53 +564,53 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	isPosType := types.IsPosTransaction(tx.Txtype())
 	isPosAddr := vm.IsPosPrecompiledAddr(tx.To())
 	if isPosType != isPosAddr {
-		return ErrInvalidTxType
+		return nil, ErrInvalidTxType
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 320*1024 {
-		return ErrOversizedData
+		return nil, ErrOversizedData
 	}
 
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {
-		return ErrNegativeValue
+		return nil, ErrNegativeValue
 	}
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
-		return ErrGasLimit
+		return nil, ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
-		return ErrInvalidSender
+		return nil, ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
-		return ErrUnderpriced
+		return nil, ErrUnderpriced
 	}
 	// Ensure the transaction adheres to nonce ordering
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
-		return ErrNonceTooLow
+		return nil, ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if (isNormalType || isPosType) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+		return nil, ErrInsufficientFunds
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To(), pool.homestead)
 	if isNormalType || isPosType {
 		if tx.Gas().Cmp(intrGas) < 0 {
-			return ErrIntrinsicGas
+			return nil, ErrIntrinsicGas
 		}
 
 	} else {
 		err := ValidPrivacyTx(pool.currentState, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas, tx.Value(), pool.currentMaxGas)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -618,12 +618,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.To() != nil {
 		if p := vm.PrecompiledContractsByzantium[*tx.To()]; p != nil {
 			if err = p.ValidTx(pool.currentState, pool.signer, tx); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return &from, nil
 }
 
 // add validates a transaction and inserts it into the non-executable queue for
@@ -641,8 +641,11 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
+
+	var senderFrom *common.Address
+	var err error
 	// If the transaction fails basic validation, discard it
-	if err := pool.validateTx(tx, local); err != nil {
+	if senderFrom, err = pool.validateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err
@@ -664,7 +667,8 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 	}
 	// If the transaction is replacing an already pending one, do directly
-	from, _ := types.Sender(pool.signer, tx) // already validated
+	//from, _ := types.Sender(pool.signer, tx) // already validated
+	from := *senderFrom
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
 		inserted, old := list.Add(tx, pool.config.PriceBump)

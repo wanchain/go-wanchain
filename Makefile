@@ -17,7 +17,7 @@ windowsDir=$(shell echo gwan-windows-amd64-`cat ./VERSION`-`git rev-parse --shor
 darwinDir=$(shell echo gwan-mac-amd64-`cat ./VERSION`-`git rev-parse --short=8 HEAD`)
 # The gwan target build gwan binary
 gwan:
-	build/env.sh  go run   -gcflags "-N -l"    build/ci.go   install ./cmd/gwan
+	build/env.sh  go run       build/ci.go   install ./cmd/gwan
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/gwan\" to launch gwan."
 
