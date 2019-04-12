@@ -427,6 +427,8 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	err := rlp.DecodeBytes(psValue, &proposer)
 	if err != nil {
 		log.Error("can't rlp decode:", err)
+
+		// todo : return ??
 	}
 
 	pub := crypto.ToECDSAPub(proposer.PubSec256)

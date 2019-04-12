@@ -251,6 +251,7 @@ type Proposer struct {
 func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 	db := NewDb(posconfig.RbLocalDB)
 	if db == nil {
+		// todo : os.Exit ??
 		log.Error("GetRBProposerGroup create db error")
 		return nil
 	}
@@ -266,6 +267,8 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 			log.Error("can't rlp decode:", err)
 		}
 		g1s[i] = *new(bn256.G1)
+
+		// todo : error handling ??
 		g1s[i].Unmarshal(proposer.PubBn256)
 	}
 

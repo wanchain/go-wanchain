@@ -170,11 +170,6 @@ func (rb *RandomBeacon) updateStage(stage int) {
 
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
-	if statedb == nil || rc == nil {
-		log.Error("invalid RB doLoop input param")
-		return errInvalidInParam
-	}
-
 	log.Info("rb doLoop begin", "epochId", epochId, "slotId", slotId, "self epochId", rb.epochId)
 	rb.statedb = statedb
 	rb.rpcClient = rc
