@@ -236,6 +236,7 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
+	// todo : check pks element validity
 	pks := getRBProposerGroupVar(eid)
 
 	// 1. EpochId: weather in a wrong time
@@ -297,6 +298,7 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
+	// todo : check pks element validity
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
@@ -349,6 +351,7 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
+	// todo : check pks element validity
 	pks := getRBProposerGroupVar(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
@@ -456,14 +459,12 @@ func GetStateR(db StateDB, epochId uint64) *big.Int {
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(sigShareId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-
 	if len(payloadBytes) == 0 {
 		return nil, nil
 	}
 
 	var sigParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &sigParam)
-
 	if err != nil {
 		return nil, errSigParse
 	}
@@ -495,6 +496,7 @@ func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) 
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
+
 	cij := make([][]byte, 0)
 	err := rlp.DecodeBytes(dkgBytes, &cij)
 	if err != nil {
@@ -511,6 +513,7 @@ func GetEncryptShare(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
+
 	enShare := make([][]byte, 0)
 	err := rlp.DecodeBytes(dkgBytes, &enShare)
 	if err != nil {
@@ -526,6 +529,7 @@ func IsJoinDKG2(db StateDB, epochId uint64, proposerId uint32) bool {
 	if len(dkgBytes) == 0 {
 		return false
 	}
+
 	return true
 }
 
@@ -741,6 +745,7 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	for i := 0; i < l; i++ {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
+
 	return &dkg2Param, nil
 }
 
