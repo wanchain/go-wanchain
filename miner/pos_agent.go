@@ -101,6 +101,17 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
+	// if there is no block at all
+	h := s.BlockChain().GetHeaderByNumber(1)
+	if nil == h {
+		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0,0)
+		if err == nil {
+			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+			if leader == localPublicKey {
+				self.worker.chainSlotTimer <- struct{}{}
+			}
+		}
+	}
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
