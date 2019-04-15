@@ -259,7 +259,9 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 	go dl.stateFetcher()
 
-	go dl.epochGenesisFetcher()
+	if dl.mode == FastSync || dl.mode == LightSync {
+		go dl.epochGenesisFetcher()
+	}
 
 	return dl
 }
