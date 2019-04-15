@@ -19,9 +19,9 @@ $$ StakeRate = Amount*(10+lockEpoch/(maxLockEpoch/10)) * (2-e^{(t-1)} ) $$
 用户注册wancoin的时候可以指定是否成为代理  
 注册成为代理也有最低持币量要求， 数值与注册成为独立pos节点相同  
 几个参数:
-参与节点或者代理, 最低投入10万
-参加矿池, 最低投入1万
-独立节点锁定epoch的范围是1 ~ 100
+参与节点或者代理, 最低投入 ??
+参加矿池, 最低投入 ??
+独立节点锁定epoch的范围是 ?? ~ ??
 参加矿池不能指定锁定时间, 与矿池节点一起到期.
 
 
@@ -91,24 +91,11 @@ func (p *Pos_staking) DelegateIn(payload []byte, contract *Contract, evm *EVM) (
 ## Epoch leader random beacon group selection
 
 ### 选择算法.
-Epoch leader直接选择权重前50名. 共50个
-Random beacon group 直接选择权重51到72. 共21个
-如果总注册人数不足, 则从前向后循环再选择一遍.  
+same to yellow paper.
 
 ### wan对应到wanStake算法
 1. 函数
-```
-/*
-新的wancoin到stake的权重计算公式
-Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
-其中, Amount是注册进来的wan数量
-lockEpoch是要锁定的时长(epoch数), maxEpoch是运行锁定的最长时长, 目前是1000
-这样, 锁定时长对应的权重在[10,20]之间.
-t是锁定时间剩余时长的百分比,取值(1,0)之间, (2-exp(t-1))对应的权重在(1, 1.64)之间.
- */
-```
-2. 一个表格展示1000000wan锁定5,10,20个epoch分别每个epoch对应的wanstake值.
-
+// 待定.
 
 
 ### Functions for leader selection

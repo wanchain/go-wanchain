@@ -15,9 +15,9 @@ the t is the left percentage of locking time
 
 At the same time, for decreasing the scale of pos node, we introduced in the delegate mechanism.
 User can specify if he want to be a delegate when he register into pos.
-to be a delegate, you must register at least 100000 wancoin.
-to delegate your coin to another one, you must have at lease 10000 wancoin.
-to register to pos, the locked epoch is 5 ~ 1000.
+to be a delegate, you must register at least ?? wancoin.
+to delegate your coin to another one, you must have at lease ?? wancoin.
+to register to pos, the locked epoch is ?? ~ ??.
 
 * the incentive is paied automatic and wancoin refund is automatic too.
 * currently, the same publickey cann't join 2 times.
@@ -92,15 +92,7 @@ refer to the Glaxy paper.
 ### wancoin to wanStake
 1. formula
 
-```
-/*
-the formula that wancoin to wanstake
-Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
-there, Amount is the wancoin amount registed in.
-lockEpoch is the number of locking epoch, maxEpoch is 1000
-*/
-```
-2. wancoin to wanstake table.
+// TODO
 
 
 
