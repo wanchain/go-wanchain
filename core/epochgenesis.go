@@ -14,6 +14,7 @@ import (
 	"encoding/binary"
 	"bytes"
 	"github.com/wanchain/go-wanchain/common"
+	"sync"
 )
 
 
@@ -76,6 +77,8 @@ type EpochGenesisBlock struct {
 	slotLeaderSelector 		SlLeadersSelInt
 	epochGenesisCh 			chan uint64
 	lastEpochId				uint64
+
+	epsetmu  				sync.RWMutex // block processor lock
 }
 
 func NewEpochGenesisBlock() *EpochGenesisBlock {
@@ -220,9 +223,13 @@ func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 }
 
 func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error {
+	f.epsetmu.Lock()
+	defer f.epsetmu.Unlock()
+
 	if epochgen == nil {
 		return errors.New("inputing epoch genesis is nil")
 	}
+
 	res := f.preVerifyEpochGenesis(epochgen)
 	if !res {
 		return errors.New("epoch genesis preverify is failed")
