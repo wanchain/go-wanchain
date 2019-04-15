@@ -248,6 +248,8 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return err
 	}
 
+	log.Info("successfully input epochGenesis","",epochgen.EpochId)
+
 	return nil
 }
 

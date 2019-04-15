@@ -36,7 +36,7 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 
 		select {
 		case epid := <- fbchan:
-			log.Info("got epoch data",epid)
+			log.Info("got epoch data","",epid)
 		}
 	}
 
