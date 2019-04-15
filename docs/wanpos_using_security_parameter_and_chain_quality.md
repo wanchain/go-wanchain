@@ -22,6 +22,9 @@ according our security model, a honest node had a valid chain prefix should neve
 ## Chain quality monitor
 
 chainQualityK : latest  K block chain quality
+
 overallChainQuality: 
+
 fixedTimeChainQuality:
+
 EpochChainQuality:
