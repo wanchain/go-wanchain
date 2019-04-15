@@ -11,7 +11,6 @@ import (
 
 type epochGenesisReq struct {
 	epochid  *big.Int              			// epochid items to download
-//	tasks    map[*big.Int]*epochGenesisReq 			// Download tasks to track previous attempts
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
 	peer     *peerConnection            	// Peer that we're requesting from

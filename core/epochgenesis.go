@@ -192,12 +192,10 @@ func (f *EpochGenesisBlock) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
 	return false
 }
 
+//updated specified epoch genesis
 func (f *EpochGenesisBlock) UpdateEpochGenesis(epochID uint64) {
 	if epochID != f.lastEpochId && epochID > 0{
-		//f.lastEpochId = epochID
-		//{
-		//	f.epochGenesisCh <- epochID
-		//}
+		f.epochGenesisCh <- epochID
 	}
 }
 
