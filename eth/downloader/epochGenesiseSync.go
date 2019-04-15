@@ -16,53 +16,6 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
-// fetchHeight retrieves the head header of the remote peer to aid in estimating
-// the total time a pending synchronisation would take.
-func (d *Downloader) fetchEpochGenesises__(startEpochid uint64,endEpochid uint64) (error) {
-
-	ttl := d.requestTTL()
-	timeout := time.After(ttl)
-
-	for reqEpid := startEpochid;reqEpid<=endEpochid; {
-
-		if endEpochid == 0 {
-			continue
-		}
-
-		d.sendEpochGenesisReq(reqEpid,nil)
-
-		select {
-		case <-d.cancelCh:
-			return errCancelBlockFetch
-
-		case pack := <-d.epochGenesisCh:
-
-			response := pack.(*epochGenesisPack).epochGenesis
-			log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
-			err := d.blockchain.SetEpochGenesis(response)
-
-			if err != nil {
-				log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
-				d.epochGenesisSyncStart <- endEpochid
-			}
-
-			reqEpid++
-
-		case <-timeout:
-
-			log.Debug("Waiting for epoch genesis timed out", "elapsed", ttl)
-			return errTimeout
-
-		case <-d.bodyCh:
-		case <-d.receiptCh:
-			// Out of bounds delivery, ignore
-		}
-	}
-
-
-	return nil
-}
-
 
 func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) (error) {
 
