@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -62,6 +63,7 @@ func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 type SelectLead interface {
 	SelectLeadersLoop(epochId uint64) error
 	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
+	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
 }
 

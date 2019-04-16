@@ -1,14 +1,13 @@
 package posconfig
 
 import (
-	"math/big"
-
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/node"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256"
+	"math/big"
 )
-
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
 	EpochBaseTime = uint64(0)
@@ -22,14 +21,21 @@ const (
 	PosLocalDB = "pos"
 )
 
+var EpochLeadersHold  [][]byte
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCount = 50
+	EpochLeaderCountHold = 26 //len(EpochLeadersHold)
+	EpochLeaderCountOpen = 24
+	EpochLeaderCount = EpochLeaderCountHold+EpochLeaderCountOpen
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 21
+	PposUpgradeEpochID = 2
+	MaxEpHold			= 30
+	MinEpHold			= 10
+)
+const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
-	// GenesisPK is the epoch0 pk
 
 
 	//Incentive should perform delay some epochs.
@@ -123,3 +129,12 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 
 	return new(big.Int).Set(c.MinerKey.PrivateKey3.D)
 }
+
+func Init(nodeCfg *node.Config) {
+	EpochLeadersHold = make([][]byte, len(WhiteList))
+	for i:=0; i<len(WhiteList); i++ {
+		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
+	}
+	DefaultConfig.NodeCfg = nodeCfg
+}
+

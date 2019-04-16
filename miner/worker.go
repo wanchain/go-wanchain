@@ -160,7 +160,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	worker.commitNewWork()
+	//worker.commitNewWork()
 
 	return worker
 }

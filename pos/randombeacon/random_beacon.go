@@ -15,7 +15,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
@@ -105,7 +104,7 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.epocher = epocher
 
 	// function
-	rb.getRBProposerGroupF = posdb.GetRBProposerGroup
+	rb.getRBProposerGroupF = epochLeader.GetEpocher().GetRBProposerG1
 	rb.getCji = vm.GetCji
 	rb.getEns = vm.GetEncryptShare
 	rb.getRBM = vm.GetRBM
