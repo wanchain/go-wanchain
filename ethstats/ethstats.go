@@ -715,3 +715,30 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	}
 	return websocket.JSON.Send(conn, report)
 }
+
+
+// posStats is the information to report about the pos.
+type posStats struct {
+	EpochId  uint64	`json:"epochId"`
+	SlotId	 uint64 `json:"slotId"`
+	RB   	 string `json:"rb"`
+	// todo : append more itam
+}
+
+
+func (s *Service) reportPosStats(conn *websocket.Conn) error {
+	// Assemble the node stats and send it to the server
+	log.Trace("Sending pos states to ethstats")
+
+	stats := map[string]interface{}{
+		"id": s.node,
+		"posStats": &posStats{
+			// todo : init pos states
+		},
+	}
+
+	report := map[string][]interface{}{
+		"emit": {"posStats", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
