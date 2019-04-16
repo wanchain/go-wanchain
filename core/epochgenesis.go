@@ -78,6 +78,7 @@ type EpochGenesisBlock struct {
 	epochGenesisCh 			chan uint64
 	lastEpochId				uint64
 
+	epochGenDb 				*posdb.Db
 	epsetmu  				sync.RWMutex // block processor lock
 }
 
@@ -87,6 +88,9 @@ func NewEpochGenesisBlock() *EpochGenesisBlock {
 	f.useEpochGenesis = false
 	f.epochGenesisCh = make(chan uint64,1)
 	f.lastEpochId = 0
+
+	f.epochGenDb = posdb.NewDb("epochGendb")
+
 	return f
 }
 
@@ -206,12 +210,8 @@ func (f *EpochGenesisBlock) GetLastBlkInPreEpoch(bc *BlockChain, blk *types.Bloc
 }
 
 func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
-	epochGenDb := posdb.GetDbByName("epochGendb")
-	if epochGenDb == nil {
-		return false
-	}
 
-	val, err := epochGenDb.Get(epochid, "epochgenesis")
+	val, err := f.epochGenDb.Get(epochid, "epochgenesis")
 	if err != nil || val == nil {
 		return false
 	}
@@ -233,17 +233,12 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("epoch genesis preverify is failed")
 	}
 
-	epochGenDb := posdb.GetDbByName("epochGendb")
-	if epochGenDb == nil {
-		epochGenDb = posdb.NewDb("epochGendb")
-	}
-
 	val,err := rlp.EncodeToBytes(epochgen)
 	if err != nil {
 		return err
 	}
 
-	_,err = epochGenDb.Put(epochgen.EpochId,"epochgenesis",val)
+	_,err = f.epochGenDb.Put(epochgen.EpochId,"epochgenesis",val)
 	if err != nil {
 		return err
 	}
@@ -254,12 +249,8 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 }
 
 func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
-	epochGenDb := posdb.GetDbByName("epochGendb")
-	if epochGenDb == nil {
-		return nil
-	}
 
-	val, err := epochGenDb.Get(epochid, "epochgenesis")
+	val, err := f.epochGenDb.Get(epochid, "epochgenesis")
 	if err != nil {
 		return nil
 	}
