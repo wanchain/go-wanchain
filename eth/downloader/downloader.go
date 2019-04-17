@@ -211,7 +211,9 @@ type BlockChain interface {
 	InsertReceiptChain(types.Blocks, []types.Receipts) (int, error)
 
 	//check if current epoch genesis is same with work chain
-	VerifyEpochGenesis(blk *types.Block) bool
+	SetFastSynchValidator()
+
+	SetFullSynchValidator()
 
 	SetEpochGenesis(epochgen *types.EpochGenesis) error
 
@@ -260,6 +262,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 	go dl.stateFetcher()
 
 	if dl.mode == FastSync || dl.mode == LightSync {
+		dl.blockchain.SetFastSynchValidator()
 		go dl.epochGenesisFetcher()
 	}
 
@@ -420,6 +423,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	// Set the requested sync mode, unless it's forbidden
 	d.mode = mode
 	if d.mode == FastSync && atomic.LoadUint32(&d.fsPivotFails) >= fsCriticalTrials {
+		d.blockchain.SetFullSynchValidator()
 		d.mode = FullSync
 	}
 	// Retrieve the origin peer and initiate the downloading process

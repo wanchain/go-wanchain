@@ -1586,10 +1586,6 @@ func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) VerifyEpochGenesis(blk *types.Block) bool{
-	return true
-}
-
 func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
 	curEpid,_,err := bc.epochGene.GetBlockEpochIdAndSlotId(bc.currentBlock.Header())
 
@@ -1634,14 +1630,18 @@ func (bc *BlockChain) GetEpochStartCh() (chan uint64) {
 }
 
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
-	bc.procmu.Lock()
-	defer bc.procmu.Unlock()
 	bc.slotValidator = validator
 }
 
 // Validator returns the current validator.
 func (bc *BlockChain) SlotValidator() Validator {
-	bc.procmu.RLock()
-	defer bc.procmu.RUnlock()
 	return bc.slotValidator
+}
+
+func (bc *BlockChain) SetFastSynchValidator() {
+	bc.slotValidator = bc.epochGene
+}
+
+func (bc *BlockChain) SetFullSynchValidator() {
+	bc.slotValidator = bc.epochGene.slotLeaderSelector
 }

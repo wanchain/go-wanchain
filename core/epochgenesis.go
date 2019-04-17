@@ -15,6 +15,8 @@ import (
 	"bytes"
 	"github.com/wanchain/go-wanchain/common"
 	"sync"
+	"github.com/wanchain/go-wanchain/core/state"
+	"math/big"
 )
 
 
@@ -68,6 +70,11 @@ type RbLeadersSelInt interface {
 }
 
 type SlLeadersSelInt interface {
+
+	ValidateBody(block *types.Block) error
+
+	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error
+
 	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
 }
 
@@ -280,6 +287,14 @@ func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
 	}
 
 	return epochGen
+}
+
+func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
+	return nil
+}
+
+func (f *EpochGenesisBlock) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+	return nil
 }
 
 
