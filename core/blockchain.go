@@ -50,6 +50,8 @@ var (
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
 
 	ErrNoGenesis = errors.New("Genesis not found in chain")
+	ErrSecurityViolated = errors.New("reorg length more than BlockSecurityParam")
+	ErrInsufficientCQ = errors.New("chain quality is too low")
 )
 
 const (
@@ -802,10 +804,67 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+// Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
+// pos block number begin with 1, epoc and slot index begin from 0
+func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block) (int){
+	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+	endFlatSlotId := epochId * posconfig.SlotCount + slotId
+
+	if endFlatSlotId == 0 {
+		return 0
+	}
+
+	startFlatSlotId := uint64(0)
+	if endFlatSlotId >= posconfig.SlotSecurityParam {
+		startFlatSlotId = endFlatSlotId - posconfig.SlotSecurityParam
+	}
+
+	n := 0
+	for {
+		blockHash := block.ParentHash()
+		block = bc.GetBlockByHash(blockHash)
+		if nil == block{
+			break
+		}
+
+		epochId, slotId = posUtil.CalEpochSlotID(block.Time().Uint64())
+		flatSlotId := epochId * posconfig.SlotCount + slotId
+		if flatSlotId < startFlatSlotId || flatSlotId >= endFlatSlotId{
+			break
+		}
+		n = n + 1
+
+		if flatSlotId == uint64(0) {
+			break
+		}
+	}
+
+	return n
+}
+
+func (bc *BlockChain) isWriteBlockSecure(block *types.Block) (bool){
+	blocksIn2K := bc.getBlocksCountIn2KSlots(block)
+	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+	//because slot index starts from 0
+	totalSlots := epochId * posconfig.SlotCount + slotId + 1
+	if  totalSlots >= posconfig.SlotSecurityParam {
+		return blocksIn2K > posconfig.K
+	} else if totalSlots >= posconfig.K {
+		return blocksIn2K > (int)(totalSlots - posconfig.K)
+	}
+
+	return true
+}
+
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
+
+	//confirm chain quality confirm security
+	if !bc.isWriteBlockSecure(block){
+		return NonStatTy, ErrSecurityViolated
+	}
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)

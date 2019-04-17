@@ -68,6 +68,15 @@ const (
 	Sma2End   = Stage8K
 	Sma3Start = Stage10K
 	Sma3End   = Stage12K
+
+	// parameters for security and chain quality
+	BlockSecurityParam = K
+	SlotSecurityParam = 2 * K
+
+	MinimumChainQuality = 0.5//BlockSecurityParam / SlotSecurityParam
+	CriticalReorgThreshold = 3
+	CriticalChainQuality = 0.618
+	NonCriticalChainQuality = 0.8
 )
 var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
 type Config struct {
