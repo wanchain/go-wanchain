@@ -72,7 +72,7 @@ type SlLeadersSelInt interface {
 }
 
 type EpochGenesisBlock struct {
-	useEpochGenesis    		bool
+	//useEpochGenesis    		bool
 	rbLeaderSelector   		RbLeadersSelInt
 	slotLeaderSelector 		SlLeadersSelInt
 	epochGenesisCh 			chan uint64
@@ -85,7 +85,7 @@ type EpochGenesisBlock struct {
 func NewEpochGenesisBlock() *EpochGenesisBlock {
 
 	f := &EpochGenesisBlock{}
-	f.useEpochGenesis = false
+	//f.useEpochGenesis = false
 	f.epochGenesisCh = make(chan uint64,1)
 	f.lastEpochId = 0
 
@@ -140,22 +140,27 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 
 	epGen.GenesisBlkHash = common.Hash{}
 
+	//fmt.Println(epGen)
+
 	byteVal, err := json.Marshal(epGen)
+
+	log.Info("generated hash data","",common.ToHex(byteVal))
+
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
 		return nil, err
 	}
+
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
 	return epGen, nil
 }
 
+
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
 
-	if !f.useEpochGenesis {
-		return true
-	}
+
 
 	res := bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
 	if !res {
@@ -166,18 +171,31 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 		return false
 	}
 
-	genesisHash := epGen.GenesisBlkHash
+	epGenNew := &types.EpochGenesis{}
 
-	epGen.GenesisBlkHash = common.Hash{}
-	byteVal, err := json.Marshal(epGen)
+	epGenNew.ProtocolMagic = []byte("wanchainpos")
+	epGenNew.PreEpochLastBlkHash = epGen.PreEpochLastBlkHash
+	epGenNew.EpochId = epGen.EpochId
+	epGenNew.RBLeaders = epGen.RBLeaders
+	epGenNew.EpochLeaders = epGen.EpochLeaders
+	epGenNew.SlotLeaders = epGen.SlotLeaders
+
+	epGenNew.GenesisBlkHash = common.Hash{}
+
+
+	//fmt.Println(epGen)
+
+	byteVal, err := json.Marshal(epGenNew)
+	log.Info("verify hash data","",common.ToHex(byteVal))
+
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
 		return false
 	}
 
-	calHash := crypto.Keccak256Hash(byteVal)
+	epGenNew.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
-	res = (genesisHash == calHash)
+	res = (epGenNew.GenesisBlkHash == epGen.GenesisBlkHash)
 
 	return res
 }
