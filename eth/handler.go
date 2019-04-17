@@ -47,7 +47,7 @@ const (
 
 	// txChanSize is the size of channel listening to TxPreEvent.
 	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
+	txChanSize = 4096 * 1024
 )
 
 var (
@@ -356,7 +356,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				break
 			}
 
-
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
 			bytes += estHeaderRlpSize
@@ -461,7 +460,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		//p.CheckEpochBoundary(pm.blockchain,headers)
 
-
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -517,7 +515,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
 		}
 
-
 		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
 			if err != nil {
@@ -531,7 +528,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		p.SendEpochGenesis(pm.blockchain,epochid)
+		p.SendEpochGenesis(pm.blockchain, epochid)
 
 	case msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
@@ -540,10 +537,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
+		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis); err != nil {
 			log.Debug("Failed to deliver epoch genesis data", "err", err)
 		}
-
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
@@ -707,8 +703,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	}
 	return nil
 }
-
-
 
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).

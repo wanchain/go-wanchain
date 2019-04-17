@@ -24,10 +24,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -1351,7 +1352,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		log.Debug("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
 }
@@ -1850,7 +1851,7 @@ func (s *PrivateAccountAPI) GetOTABalance(ctx context.Context, blockNr rpc.Block
 
 }
 
-func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string,error) {
+func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string, error) {
 
 	if len(addr) == 0 {
 		return nil, errors.New("address must be given as argument")
@@ -1863,7 +1864,7 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 	all := ks.Accounts()
 	lenth := len(all)
 
-	pubs := make([]string,0)
+	pubs := make([]string, 0)
 	for i := 0; i < lenth; i++ {
 		if all[i].Address == addr {
 			key, err := ks.GetKey(all[i], passwd)
@@ -1872,7 +1873,7 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 			}
 
 			if key.PrivateKey != nil {
-				pubs =append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+				pubs = append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
 
 			if key.PrivateKey3 != nil {
@@ -1883,6 +1884,5 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 		}
 	}
 
-	return pubs,nil
+	return pubs, nil
 }
-
