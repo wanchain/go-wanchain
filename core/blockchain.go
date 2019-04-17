@@ -862,7 +862,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 	//confirm chain quality confirm security
-	if !bc.isWriteBlockSecure(block){
+	if !bc.isWriteBlockSecure(block) {
 		return NonStatTy, ErrSecurityViolated
 	}
 

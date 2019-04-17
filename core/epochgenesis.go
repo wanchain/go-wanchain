@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"encoding/hex"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 
@@ -177,7 +178,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 		return false
 	}
 
-	if len(epGen.RBLeaders)==0 || len(epGen.SlotLeaders)==0 || len(epGen.EpochLeaders)==0 {
+	if len(epGen.RBLeaders)==0 || len(epGen.SlotLeaders)< posconfig.SlotCount || len(epGen.EpochLeaders)==0 {
 		return false
 	}
 
