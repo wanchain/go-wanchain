@@ -17,6 +17,8 @@ import (
 	"sync"
 	"github.com/wanchain/go-wanchain/core/state"
 	"math/big"
+	"encoding/hex"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
 )
 
 
@@ -75,7 +77,9 @@ type SlLeadersSelInt interface {
 
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error
 
-	GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey
+	GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error)
+
+	GetAllSlotLeaders(epochID uint64) (slotLeader []*ecdsa.PublicKey)
 }
 
 type EpochGenesisBlock struct {
@@ -138,7 +142,7 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 	}
 
 	epGen.SlotLeaders = make([][]byte, 0)
-	pks := f.slotLeaderSelector.GetEpochLeadersPK(epochid)
+	pks := f.slotLeaderSelector.GetAllSlotLeaders(epochid)
 	if len(pks) != 0 {
 		for _, slpk := range pks {
 			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
@@ -166,7 +170,6 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
-
 
 
 	res := bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
@@ -290,11 +293,105 @@ func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
 }
 
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
+
+	extraSeal := 65
+	header := block.Header()
+	blkTd := block.Difficulty().Uint64()
+	epochID := (blkTd >> 32)
+	slotID := ((blkTd & 0xffffffff) >> 8)
+
+	if epochID == 0 {
+		return nil
+	}
+
+
+	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+
+	if err != nil {
+		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+		return errors.New("Can not GetInfoFromHeadExtra, verify failed")
+	}
+
+	log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
+	pk := proofMeg[0]
+
+	signer, err := f.recoverSigner(header)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
+		log.Error("Pk signer verify failed in verifySeal", "number", block.NumberU64(),
+			"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+		return errors.New("failed to verify signer for fast synch verify")
+	}
+
+	epg := f.GetEpochGenesis(epochID)
+
+	headerPkval := crypto.FromECDSAPub(pk)
+
+
+	if !bytes.Equal(epg.SlotLeaders[slotID],headerPkval) {
+		log.Error("Pk signer verify with epoch genesis", "number", block.NumberU64(),
+			"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+		return errors.New("failed to verify signer with epoch genesis")
+	}
+
 	return nil
+
+
 }
 
 func (f *EpochGenesisBlock) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	return nil
 }
 
+func (f *EpochGenesisBlock) recoverSigner(header *types.Header) (common.Address,error) {
+	signature := header.Extra[len(header.Extra)-extraSeal:]
+
+	log.Debug("signature", "hex", hex.EncodeToString(signature))
+
+	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
+
+	// Recover the public key and the Ethereum address
+	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	log.Debug("pubkey in ecrecover", "pk", hex.EncodeToString(pubkey))
+	// pubkey := signature
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer,nil
+
+}
+
+func sigHash(header *types.Header) (hash common.Hash) {
+
+	hasher := sha3.NewKeccak256()
+
+	rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
+		header.MixDigest,
+		header.Nonce,
+	})
+
+	hasher.Sum(hash[:0])
+	return hash
+}
 
