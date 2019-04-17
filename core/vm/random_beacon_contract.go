@@ -173,7 +173,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		log.Error("No match id found")
+		log.SyslogErr("random beacon contract no match id found")
 		return nil, errors.New("no function")
 	}
 
@@ -434,7 +434,7 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 func GetR(db StateDB, epochId uint64) *big.Int {
 	r := GetStateR(db, epochId)
 	if r == nil {
-		log.Warn("***Can not found random r just use epoch 0 R", "epochID", epochId)
+		log.SyslogWarning("***Can not found random r just use epoch 0 R, epochId:%d", epochId)
 		r = GetStateR(db, 0)
 	}
 	return r
@@ -802,7 +802,7 @@ func buildError(err string, epochId uint64, proposerId uint32) error {
 }
 
 func logError(err error) error {
-	log.Error(err.Error())
+	log.SyslogErr(err.Error())
 	return err
 }
 
@@ -907,7 +907,7 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.Debug("generate random", "epochId", eid+1, "r", r)
+			log.SyslogInfo("generate random, epochId:%d, r:%s", eid+1, common.ToHex(r.Bytes()))
 		}
 	}
 

@@ -500,6 +500,31 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	// syslog
+	SysLogFlag = cli.BoolFlag{
+		Name:  "syslog",
+		Usage: "Enable the syslog",
+	}
+	SyslogNetFlag = cli.StringFlag{
+		Name:  "syslognet",
+		Usage: "syslog net protocol",
+		Value: "tcp",
+	}
+	SyslogSvrFlag = cli.StringFlag{
+		Name:  "syslogsvr",
+		Usage: "syslog server address",
+	}
+	SyslogLevelFlag = cli.StringFlag{
+		Name:  "sysloglevel",
+		Usage: "syslog level",
+		Value: "INFO",
+	}
+	SyslogTagFlag = cli.StringFlag{
+		Name:  "syslogtag",
+		Usage: "syslog tag",
+		Value: "gwan_pos",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
