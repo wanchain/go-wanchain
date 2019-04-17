@@ -451,7 +451,7 @@ type EpochGenesis struct {
 	EpochId             uint64      //current epochId
 	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
 	Random              []byte
-	EpochLeaders			[][]byte
+	EpochLeaders		[][]byte
 	SlotLeaders         [][]byte    //current epoch slotleaders
 	RBLeaders           [][]byte    //current epoch slotleaders
 	GenesisBlkHash      common.Hash //the hash of this block

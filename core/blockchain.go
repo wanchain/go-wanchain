@@ -910,21 +910,23 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 
-	if bc.epochGene.useEpochGenesis {
-		for i := 1; i < len(chain); i++ {
-			isFirstBlk := bc.epochGene.IsFirstBlockInEpoch(chain[i])
-			if  (!isFirstBlk)&&
-				(chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
-				 chain[i].ParentHash() != chain[i-1].Hash()) {
-				// Chain broke ancestry, log a messge (programming error) and skip insertion
-				log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
-					"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
+	//if bc.epochGene.useEpochGenesis {
+	//	for i := 1; i < len(chain); i++ {
+	//		isFirstBlk := bc.epochGene.IsFirstBlockInEpoch(chain[i])
+	//		if  (!isFirstBlk)&&
+	//			(chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
+	//			 chain[i].ParentHash() != chain[i-1].Hash()) {
+	//			// Chain broke ancestry, log a messge (programming error) and skip insertion
+	//			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
+	//				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
+	//
+	//			return 0, nil, nil, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
+	//				chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
+	//		}
+	//	}
+	//} else
 
-				return 0, nil, nil, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
-					chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
-			}
-		}
-	} else {
+	{
 		for i := 1; i < len(chain); i++ {
 			if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
 				chain[i].ParentHash() != chain[i-1].Hash() {
