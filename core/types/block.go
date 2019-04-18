@@ -457,4 +457,5 @@ type EpochGenesis struct {
 	RBLeadersBn256	    [][]byte
 	GenesisBlkHash      common.Hash //the hash of this block
 	Extra               []byte      //empty
+	PreEpochGenHash 	common.Hash
 }

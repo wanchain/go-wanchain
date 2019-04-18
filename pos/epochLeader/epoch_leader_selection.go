@@ -353,20 +353,6 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	return nil
 }
 
-type WhiteInfos []vm.UpgradeWhiteEpochLeaderParam
-
-func (s WhiteInfos) Len() int {
-	return len(s)
-}
-
-func (s WhiteInfos) Less(i, j int) bool {
-	return s[i].EpochId.Cmp(s[j].EpochId) < 0
-}
-
-func (s WhiteInfos) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 
 func (e * Epocher) GepWhiteInfo(epochId uint64)(*vm.UpgradeWhiteEpochLeaderParam, error) {
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
@@ -378,29 +364,9 @@ func (e * Epocher) GepWhiteInfo(epochId uint64)(*vm.UpgradeWhiteEpochLeaderParam
 	if err != nil {
 		return nil, err
 	}
-	infos := make(WhiteInfos, 0)
-	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
-	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
-		info := vm.UpgradeWhiteEpochLeaderParam{}
-		err := rlp.DecodeBytes(value, &info)
-		if err == nil {
-			infos = append(infos, info)
-		}
-		return true
-	})
-	// sort
-	sort.Stable(infos)
-	index := len(infos)-1
-	for i:=0; i<len(infos); i++ {
-		if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) == 0 {
-			index = i
-			break
-		} else if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) > 0 {
-			index = i-1
-			break
-		}
-	}
-	return  &infos[index], err
+	info := vm.GetEpochWLInfo(stateDb, epochId)
+	return info, nil
+
 }
 func (e * Epocher) GetWhiteByEpochId(epochId uint64)([]string, error){
 	info,err := e.GepWhiteInfo(epochId)

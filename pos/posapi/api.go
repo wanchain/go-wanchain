@@ -344,7 +344,10 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 	if err != nil {
 		return nil, err
 	}
-	infos := make(epochLeader.WhiteInfos, 0)
+
+
+
+	infos := make(vm.WhiteInfos, 0)
 	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
 	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
 		info := vm.UpgradeWhiteEpochLeaderParam{}

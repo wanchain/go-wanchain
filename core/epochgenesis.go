@@ -116,8 +116,68 @@ func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	return
 }
 
+func (f *EpochGenesisBlock) GenerateEpochGenesis(bc *BlockChain,epochid uint64) (*types.EpochGenesis,error) {
+	return f.generateChainedEpochGenesis(bc,epochid)
+}
 
-func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
+
+func (f *EpochGenesisBlock) generateChainedEpochGenesis(bc *BlockChain,epochid uint64) (*types.EpochGenesis,error){
+	//it is the first block of this epoch
+	var rb 		*big.Int
+	var blk 	*types.Block
+	var epPre	*types.EpochGenesis
+	var ep		*types.EpochGenesis
+
+	curEpid,_,err := bc.epochGene.GetBlockEpochIdAndSlotId(bc.currentBlock.Header())
+
+	if curEpid < epochid || err !=nil {
+		return nil , errors.New("error epochid")
+	}
+
+	if epochid < 2 {
+		rb = big.NewInt(1)
+		epPre,err = f.generateEpochGenesis(0,nil,rb.Bytes())
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		rb,blk = f.getEpochRAndPreEpLastBlk(bc,epochid - 1)
+		epPre,err = f.generateEpochGenesis(epochid - 1,blk,rb.Bytes())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	rb,blk = f.getEpochRAndPreEpLastBlk(bc,epochid)
+	ep,err = f.generateEpochGenesis(epochid,blk,rb.Bytes())
+	if err != nil {
+		return nil,err
+	}
+
+	ep.PreEpochGenHash = epPre.GenesisBlkHash
+
+
+	return ep,nil
+}
+
+func (f *EpochGenesisBlock) getEpochRAndPreEpLastBlk(bc *BlockChain,epochid uint64)(*big.Int,*types.Block){
+	blkNum := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
+
+	preEpLastblk := bc.GetBlockByNumber(blkNum - 1)
+
+	stateDb, err := bc.StateAt(preEpLastblk.Root())
+	if err != nil {
+		return nil, nil
+	}
+
+	rb := vm.GetR(stateDb, epochid)
+
+	return rb,preEpLastblk
+}
+
+
+func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte) (*types.EpochGenesis, error) {
 
 
 	epGen := &types.EpochGenesis{}
@@ -154,12 +214,12 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 	}
 
 	epGen.GenesisBlkHash = common.Hash{}
-
+	epGen.PreEpochGenHash = common.Hash{}
 	//fmt.Println(epGen)
 
 	byteVal, err := json.Marshal(epGen)
 
-	log.Info("generated hash data","",common.ToHex(byteVal))
+	log.Info("generated epochGenesis data","",common.ToHex(byteVal))
 
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
@@ -173,8 +233,25 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
+	var epPre	*types.EpochGenesis
+	var err 	error
 
-	res := bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
+	if epGen.EpochId == 1 {
+		epPre,err = f.generateEpochGenesis(0,nil,big.NewInt(1).Bytes())
+		if err != nil {
+			return false
+		}
+
+	} else {
+		epPre = f.GetEpochGenesis(epGen.EpochId - 1)
+	}
+
+	res := (epGen.PreEpochGenHash == epPre.GenesisBlkHash)
+	if !res {
+		return false
+	}
+
+	res = bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
 	if !res {
 		return false
 	}
@@ -194,9 +271,10 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew.SlotLeaders = epGen.SlotLeaders
 
 	epGenNew.GenesisBlkHash = common.Hash{}
+	epGenNew.PreEpochGenHash = common.Hash{}
 
 	byteVal, err := json.Marshal(epGenNew)
-	log.Info("verify hash data","",common.ToHex(byteVal))
+	log.Info("verify genesis data","",common.ToHex(byteVal))
 
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
@@ -409,29 +487,26 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
 	count := len(epochgen.EpochLeaders)
 	// TODO: 1. check valid public key, 2. check exist? 3. put failed? 4. how to rollback
 	for i := 0; i < count; i++ {
-		v, _ := rlp.EncodeToBytes(&epochgen.EpochLeaders[i])
+		tmp := posdb.Proposer{
+		//PubSec256:make([]byte,0),
+		//PubBn256:nil,
+		//Probabilities: big.NewInt(0),
+		}
+		tmp.PubSec256 = epochgen.EpochLeaders[i]
+		v, _ := rlp.EncodeToBytes(&tmp)
 		elDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
 	}
 	rbDb := posdb.NewDb(posconfig.RbLocalDB)
 	if rbDb == nil {
 		return errors.New("create rb local db error")
 	}
-
 	count = len(epochgen.RBLeadersSec256)
 	for i := 0; i < count; i++ {
-		tmp := posdb.Proposer{
-		  PubSec256:make([]byte,0),
-		  PubBn256:nil,
-		  Probabilities: big.NewInt(0),
-		}
-
+		tmp := posdb.Proposer{}
 		tmp.PubBn256 = epochgen.RBLeadersBn256[i]
 		tmp.PubSec256 = epochgen.RBLeadersSec256[i]
-
 		v, _ := rlp.EncodeToBytes(&tmp)
 		rbDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
 	}
-
 	return nil
 }
-
