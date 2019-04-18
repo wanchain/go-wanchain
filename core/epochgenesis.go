@@ -134,11 +134,14 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
 
-	epGen.RBLeaders = make([][]byte, 0)
+	epGen.RBLeadersSec256 = make([][]byte, 0)
+	epGen.RBLeadersBn256 = make([][]byte, 0)
 	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
+
 	if len(rbleaders) != 0 {
 		for _, rbl := range rbleaders {
-			epGen.RBLeaders = append(epGen.RBLeaders, rbl.PubSec256)
+			epGen.RBLeadersSec256 = append(epGen.RBLeadersSec256, rbl.PubSec256)
+			epGen.RBLeadersBn256 = append(epGen.RBLeadersBn256,rbl.PubBn256)
 		}
 	}
 
@@ -163,7 +166,6 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 		return nil, err
 	}
 
-
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
 
 	return epGen, nil
@@ -172,13 +174,12 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64,lastblk *types.B
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
 
-
 	res := bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
 	if !res {
 		return false
 	}
 
-	if len(epGen.RBLeaders)==0 || len(epGen.SlotLeaders)< posconfig.SlotCount || len(epGen.EpochLeaders)==0 {
+	if len(epGen.RBLeadersSec256)==0 || len(epGen.SlotLeaders)< posconfig.SlotCount || len(epGen.EpochLeaders)==0 {
 		return false
 	}
 
@@ -187,14 +188,12 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew.ProtocolMagic = []byte("wanchainpos")
 	epGenNew.PreEpochLastBlkHash = epGen.PreEpochLastBlkHash
 	epGenNew.EpochId = epGen.EpochId
-	epGenNew.RBLeaders = epGen.RBLeaders
+	epGenNew.RBLeadersSec256 = epGen.RBLeadersSec256
+	epGenNew.RBLeadersBn256 = epGen.RBLeadersBn256
 	epGenNew.EpochLeaders = epGen.EpochLeaders
 	epGenNew.SlotLeaders = epGen.SlotLeaders
 
 	epGenNew.GenesisBlkHash = common.Hash{}
-
-
-	//fmt.Println(epGen)
 
 	byteVal, err := json.Marshal(epGenNew)
 	log.Info("verify hash data","",common.ToHex(byteVal))
@@ -262,12 +261,18 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("epoch genesis preverify is failed")
 	}
 
+
 	val,err := rlp.EncodeToBytes(epochgen)
 	if err != nil {
 		return err
 	}
 
 	_,err = f.epochGenDb.Put(epochgen.EpochId,"epochgenesis",val)
+	if err != nil {
+		return err
+	}
+
+	err = f.saveToPosDb(epochgen)
 	if err != nil {
 		return err
 	}
@@ -394,5 +399,39 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 	hasher.Sum(hash[:0])
 	return hash
+}
+
+func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
+	elDb := posdb.NewDb(posconfig.EpLocalDB)
+	if elDb == nil {
+		return errors.New("create epoch local db error")
+	}
+	count := len(epochgen.EpochLeaders)
+	// TODO: 1. check valid public key, 2. check exist? 3. put failed? 4. how to rollback
+	for i := 0; i < count; i++ {
+		v, _ := rlp.EncodeToBytes(&epochgen.EpochLeaders[i])
+		elDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
+	}
+	rbDb := posdb.NewDb(posconfig.RbLocalDB)
+	if rbDb == nil {
+		return errors.New("create rb local db error")
+	}
+
+	count = len(epochgen.RBLeadersSec256)
+	for i := 0; i < count; i++ {
+		tmp := posdb.Proposer{
+		  PubSec256:make([]byte,0),
+		  PubBn256:nil,
+		  Probabilities: big.NewInt(0),
+		}
+
+		tmp.PubBn256 = epochgen.RBLeadersBn256[i]
+		tmp.PubSec256 = epochgen.RBLeadersSec256[i]
+
+		v, _ := rlp.EncodeToBytes(&tmp)
+		rbDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
+	}
+
+	return nil
 }
 

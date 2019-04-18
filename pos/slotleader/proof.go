@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/types"
@@ -13,9 +14,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
@@ -293,16 +294,31 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 			validEpochLeadersIndex[i] = false
 			continue
 		}
-		alphaPki, _, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
-		if err != nil {
-			log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
-			validEpochLeadersIndex[i] = false
-			continue
-		} else {
-			for j := 0; j < posconfig.EpochLeaderCount; j++ {
-				stageTwoAlphaPKi[i][j] = alphaPki[j]
+		// TODO:
+		hash := util.GetEpochBlockHash(epochID)
+		bkey := make([]byte, 0)
+		bkey = append(bkey, hash[:]...)
+		bkey = append(bkey, big.NewInt(int64(i)).Bytes()...)
+		ckey := crypto.Keccak256Hash(bkey)
+
+		var alphaPki []*ecdsa.PublicKey
+		alphaPkiCached, ok := APkiCache.Get(ckey)
+		if !ok {
+			var err error
+			alphaPki, _, err = vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
+			if err != nil {
+				log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
+				validEpochLeadersIndex[i] = false
+				continue
 			}
+			APkiCache.Add(ckey, alphaPki)
+		} else {
+			alphaPki = alphaPkiCached.([]*ecdsa.PublicKey)
 		}
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+			stageTwoAlphaPKi[i][j] = alphaPki[j]
+		}
+
 	}
 	return validEpochLeadersIndex, stageTwoAlphaPKi, nil
 }

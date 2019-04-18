@@ -115,19 +115,19 @@ Currently adopting C. It is decided to use A or B before the formal launch.
 ## 5.6. Participation time plan
 
 ```
-Users can choose to participate in the implementation: 14 days, 1 month, 3 months, 6 months.
+Users can choose to participate in the implementation: XXX days, XXX month, XXX months, XXX months.
 
-Or custom choice: any value between 14 days and 180 days.
+Or custom choice: any value between XXX days and XXX days.
 
 The time selected by the user is the real benefit time. In addition, there is a certain waiting time before and after, which is used to ensure information stability.
 ```
 
 ```
-There is a 2 to 4 day waiting time before the user officially begins to calculate the return.
+There is a XXX to XXX day waiting time before the user officially begins to calculate the return.
 
-There is a 1-day refund waiting time after the user expires.
+There is a XXX-day refund waiting time after the user expires.
 
-For users who want to quit early (client), there is a 5-7 day exit waiting time.
+For users who want to quit early (client), there is a XXX day exit waiting time.
 
 No gains are calculated for all waiting times.
 ```
@@ -136,11 +136,11 @@ No gains are calculated for all waiting times.
 
 1. Minimum lock amount limit
 ```
-Become a normal miner node: 10,000 wan
+Become a normal miner node: XXX wan
 
-Become a proxy miner node: 100,000 wan
+Become a proxy miner node: XXX wan
 
-Principal Investment Agent: 100 wan
+Principal Investment Agent: XXX wan
 
 ```
 
@@ -148,17 +148,17 @@ Principal Investment Agent: 100 wan
 ```
 Investors can invest in the same miner node through multiple accounts to meet the minimum threshold for miners or agents.
 
-When investing in multiple accounts, there should also be a minimum amount limit, such as 500 wan.
+When investing in multiple accounts, there should also be a minimum amount limit, such as XXX wan.
 ```
 
 3. Proxy dividend ratio limit
 ```
-The dividend ratio of the agent must be: ≤ 20%
+The dividend ratio of the agent must be: 0~100%
 ```
 
 4. Agent receives bet maximum amount limit
 ```
-Proxy node maximum proxy ratio: 1:5
+Proxy node maximum proxy ratio: 1:XXX
 
 That is, the principal is 10W, and it can accept up to 50W from others, for a total of 60W.
 ```
