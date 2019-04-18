@@ -453,7 +453,8 @@ type EpochGenesis struct {
 	Random              []byte
 	EpochLeaders		[][]byte
 	SlotLeaders         [][]byte    //current epoch slotleaders
-	RBLeaders           [][]byte    //current epoch slotleaders
+	RBLeadersSec256     [][]byte    //current epoch slotleaders
+	RBLeadersBn256	    [][]byte
 	GenesisBlkHash      common.Hash //the hash of this block
 	Extra               []byte      //empty
 }
