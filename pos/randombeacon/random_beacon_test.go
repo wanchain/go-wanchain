@@ -131,7 +131,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 	epochId := uint64(0)
 
 	// pks
-	pks := rb.getRBProposerGroup(epochId)
+	pks := rb.getRBProposerGroupF(epochId)
 	nr := len(pks)
 
 	// x
@@ -144,7 +144,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 	commit = make([][]bn256.G2, nr)
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		payload, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
+		payload, err := rb.generateDKG1(uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg info fail. err:", err)
 		}
@@ -174,7 +174,6 @@ func TestDoGenerateDKG1(t *testing.T) {
 		}
 
 	}
-
 }
 
 func TestGenerateDKG2(t *testing.T) {
@@ -201,7 +200,7 @@ func TestGenerateDKG2(t *testing.T) {
 	epochId := uint64(0)
 
 	// pks
-	pks := rb.getRBProposerGroup(epochId)
+	pks := rb.getRBProposerGroupF(epochId)
 	nr := len(pks)
 
 	// x
@@ -215,7 +214,7 @@ func TestGenerateDKG2(t *testing.T) {
 
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
+		dkg1Flat, err := rb.generateDKG1(uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
 		}
@@ -297,7 +296,7 @@ func TestGenerateSIG(t *testing.T) {
 	epochId := uint64(0)
 
 	// pks
-	pks := rb.getRBProposerGroup(epochId)
+	pks := rb.getRBProposerGroupF(epochId)
 	nr := len(pks)
 
 	// x
@@ -311,7 +310,7 @@ func TestGenerateSIG(t *testing.T) {
 
 	// generate every dkg1 and verify it
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg1Flat, err := rb.generateDKG1(epochId, uint32(proposerId), pks)
+		dkg1Flat, err := rb.generateDKG1(uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg1 info fail. err:", err)
 		}

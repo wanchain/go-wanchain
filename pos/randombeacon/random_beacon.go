@@ -127,12 +127,12 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 	defer func() {
 		if e := recover(); e != nil {
 			err = e.(error)
-			log.Error("RB loop panic", "err", err.Error())
+			log.SyslogErr("RB loop panic, err:%s", err.Error())
 		}
 	}()
 
 	if statedb == nil || rc == nil {
-		log.Error("invalid RB loop input param")
+		log.SyslogErr("invalid RB loop input param")
 		return errInvalidInParam
 	}
 
@@ -152,7 +152,7 @@ func (rb *RandomBeacon) LoopRoutine() {
 }
 
 func (rb *RandomBeacon) updateEpochId(epochId uint64) {
-	log.Info("rb update epochId", "epochId", epochId)
+	log.SyslogInfo("rb update epochId, epochId:%d", epochId)
 	rb.epochId = epochId
 	rb.myPropserIds = rb.getMyRBProposerId(epochId)
 
@@ -169,12 +169,12 @@ func (rb *RandomBeacon) updateStage(stage int) {
 
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
-	log.Info("rb doLoop begin", "epochId", epochId, "slotId", slotId, "self epochId", rb.epochId)
+	log.SyslogInfo("rb doLoop begin, epochId:%d, slotId:%d, self epochId:%d", epochId, slotId, rb.epochId)
 	rb.statedb = statedb
 	rb.rpcClient = rc
 
 	if rb.epochId != maxUint64 && rb.epochId > epochId {
-		log.Error("RB doloop fail", "err", errEpochIdRollback.Error())
+		log.SyslogErr("RB doloop fail, err:%s", errEpochIdRollback.Error())
 		return errEpochIdRollback
 	}
 
@@ -189,8 +189,8 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 	rbStage, elapsedNum, leftNum := vm.GetRBStage(slotId)
 
-	log.Info("get my RB proposer id", "id", rb.myPropserIds)
-	log.Info("get RB stage", "rbStage", rbStage, "elapsedNum", elapsedNum, "leftNum", leftNum)
+	log.SyslogInfo("get my RB proposer id, ids:%v", rb.myPropserIds)
+	log.SyslogInfo("get RB stage, rbStage:%d, elapsedNum:%d, leftNum:%d", rbStage, elapsedNum, leftNum)
 
 	// belong to RB proposer group
 	for {
@@ -266,7 +266,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 }
 
 func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
-	pks := rb.getRBProposerGroup(epochId)
+	pks := rb.getRBProposerGroupF(epochId)
 	rb.proposerPks = pks
 	if len(pks) == 0 {
 		return nil
@@ -305,7 +305,7 @@ func (rb *RandomBeacon) doDKG1s() error {
 }
 
 func (rb *RandomBeacon) doDKG1(proposerId uint32) error {
-	log.Info("begin do dkg1", "proposerId", proposerId)
+	log.SyslogInfo("begin do dkg1, proposerId:%d", proposerId)
 	txPayload, err := rb.generateDKG1(proposerId)
 	if err != nil {
 		return err
@@ -329,7 +329,7 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 	// fi(x)
 	s, err := rand.Int(rand.Reader, bn256.Order)
 	if err != nil {
-		log.Error("get rand fail", "err", err)
+		log.SyslogErr("dkg1, get rand fail, err:%s", err.Error())
 		return nil, err
 	}
 
@@ -376,7 +376,7 @@ func (rb *RandomBeacon) doDKG2s() error {
 }
 
 func (rb *RandomBeacon) doDKG2(proposerId uint32) error {
-	log.Info("begin do dkg2", "proposerId", proposerId)
+	log.SyslogInfo("begin do dkg2, proposerId:%d", proposerId)
 	txPayload, err := rb.generateDKG2(proposerId)
 	if err != nil {
 		return err
@@ -391,7 +391,7 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 	// check dkg1
 	commit, err := rb.getCji(rb.statedb, rb.epochId, proposerId)
 	if err != nil || len(commit) == 0 {
-		log.Error("generate DKG2 payload fail", "err", errNoDKG1Data)
+		log.SyslogErr("generate DKG2 payload fail, err:%s", errNoDKG1Data.Error())
 		return nil, errNoDKG1Data
 	}
 
@@ -406,7 +406,7 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 
 	// fi(x)
 	if rb.polys[proposerId].s == nil || rb.polys[proposerId].poly == nil {
-		log.Error("generate DKG2 payload fail", "err", errNoDKG1Poly)
+		log.SyslogErr("generate DKG2 payload fail, err:%s", errNoDKG1Poly.Error())
 		return nil, errNoDKG1Poly
 	}
 
@@ -461,7 +461,7 @@ func (rb *RandomBeacon) doSIGs() error {
 }
 
 func (rb *RandomBeacon) doSIG(proposerId uint32) error {
-	log.Info("do sig begin", "proposerId", proposerId)
+	log.SyslogInfo("do sig begin, proposerId:%d", proposerId)
 	sig, err := rb.generateSIG(proposerId)
 	if err != nil {
 		return err
@@ -484,9 +484,10 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 	}
 
 	dkgCount := len(datas)
-	log.Info("collecte dkg", "count", dkgCount)
+	log.SyslogInfo("collecte dkg, count:%d", dkgCount)
+
 	if uint(dkgCount) < posconfig.Cfg().RBThres {
-		log.Error("generate sig fail", "err", errInsufficient)
+		log.SyslogErr("generate sig fail, err:%s", errInsufficient.Error())
 		return nil, errInsufficient
 	}
 
@@ -520,7 +521,7 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 }
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
-	log.Info("begin send dkg1")
+	log.SyslogInfo("begin send dkg1")
 	payload, err := getRBDKG1TxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -530,7 +531,7 @@ func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
 }
 
 func (rb *RandomBeacon) sendDKG2(payloadObj *vm.RbDKG2FlatTxPayload) error {
-	log.Info("begin send dkg2")
+	log.SyslogInfo("begin send dkg2")
 	payload, err := getRBDKG2TxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -540,7 +541,7 @@ func (rb *RandomBeacon) sendDKG2(payloadObj *vm.RbDKG2FlatTxPayload) error {
 }
 
 func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
-	log.Info("begin send sig")
+	log.SyslogInfo("begin send sig")
 	payload, err := getRBSIGTxPayloadBytes(payloadObj)
 	if err != nil {
 		return err
@@ -558,7 +559,7 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["txType"] = types.POS_TX
 	arg["data"] = hexutil.Bytes(payload)
 
-	log.Info("do send rb tx", "payload len", len(payload))
+	log.SyslogInfo("do send rb tx, payload len:%d", len(payload))
 	_, err := util.SendTx(rb.rpcClient, arg)
 	return err
 }
@@ -567,28 +568,28 @@ func (rb *RandomBeacon) getTxFrom() common.Address {
 	return posconfig.Cfg().GetMinerAddr()
 }
 
-func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
-	pks := rb.getRBProposerGroupF(epochId)
-
-	// debug code
-	//pksStr := ""
-	//for _, pk := range pks {
-	//	pksStr += common.ToHex(pk.Marshal()) + ", "
-	//}
-
-	return pks
-}
+//func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
+//	pks := rb.getRBProposerGroupF(epochId)
+//
+//	// debug code
+//	//pksStr := ""
+//	//for _, pk := range pks {
+//	//	pksStr += common.ToHex(pk.Marshal()) + ", "
+//	//}
+//
+//	return pks
+//}
 
 func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	if payload == nil {
-		err := errors.New("invalid DKG payload object")
-		log.Error(err.Error())
+		err := errors.New("invalid dkg1 payload object")
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.Error("rlp encode fail", "err", err)
+		log.SyslogErr("rlp encode dkg1 fail, err:%s", err.Error())
 		return nil, err
 	}
 
@@ -601,14 +602,14 @@ func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 
 func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 	if payload == nil {
-		err := errors.New("invalid DKG payload object")
-		log.Error(err.Error())
+		err := errors.New("invalid dkg2 payload object")
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.Error("rlp encode fail", "err", err)
+		log.SyslogErr("rlp encode dkg2 fail, err:%s", err.Error())
 		return nil, err
 	}
 
@@ -621,14 +622,14 @@ func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 
 func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	if payload == nil {
-		err := errors.New("invalid DKG payload object")
-		log.Error(err.Error())
+		err := errors.New("invalid sig payload object")
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.Error("rlp encode sig payload", "err", err)
+		log.SyslogErr("rlp encode sig payload, err:%s", err.Error())
 		return nil, err
 	}
 
