@@ -22,6 +22,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/rpc"
+	lru "github.com/hashicorp/golang-lru"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
@@ -85,6 +86,7 @@ type SLS struct {
 }
 
 var slotLeaderSelection *SLS
+var APkiCache  *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -142,6 +144,11 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 }
 
 func SlsInit() {
+	var err error
+	APkiCache, err = lru.NewARC(1000)
+	if err != nil || APkiCache==nil {
+		panic("APkiCache failed")
+	}
 	slotLeaderSelection = &SLS{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
@@ -781,7 +788,6 @@ func (s *SLS) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, er
 	if err != nil {
 		return nil, err
 	}
-
 	buf, err := vm.RlpPackStage2DataForTx(epochID, selfIndex, selfPk, alphaPki, proof, vm.GetSlotLeaderScAbiString())
 
 	return buf, err

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"math"
@@ -99,10 +100,11 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	// TODO how to get thee target blockNumber
 
 	targetBlkNum := util.GetEpochBlock(targetEpochId)
+	var curBlock *types.Block
 	if targetBlkNum == 0 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
-			curBlock := e.blkChain.GetBlockByNumber(curNum)
+			curBlock = e.blkChain.GetBlockByNumber(curNum)
 			curEpochId := curBlock.Header().Difficulty.Uint64() >> 32
 			if curEpochId <= targetEpochId {
 				break
@@ -110,7 +112,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 			curNum--
 		}
 		targetBlkNum = curNum
-		util.SetEpochBlock(targetEpochId, targetBlkNum)
+		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
 
 	return targetBlkNum

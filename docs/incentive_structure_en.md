@@ -17,9 +17,7 @@
   - [5.6. Participation time plan](#56-participation-time-plan)
   - [5.7. Funding plan](#57-funding-plan)
   - [5.8. Benefits change over time](#58-benefits-change-over-time)
-  - [5.9. Capital access restrictions](#59-capital-access-restrictions)
-  - [5.10. Additional funds restrictions](#510-additional-funds-restrictions)
-  - [5.11. Multi-account support](#511-multi-account-support)
+  - [5.9. Multi-account support](#59-multi-account-support)
 - [6. Functional module](#6-functional-module)
 - [7. Interface design](#7-interface-design)
   - [7.1. Foundation funding interface](#71-foundation-funding-interface)
@@ -71,7 +69,7 @@ The EL reward will be further 1:1 assigned to the SL. After combining the SL in 
 ```
 Rewards are automatically calculated and issued by consensus codes.
 
-In the first year, the total prize money is 2.5 million Wan, and the annual decline is 88.8888% (40/45).
+In the first year, the total prize money is 2.5 million Wan, and the annual decline is 88%.
 
 In the 2k slot position of each Epoch, rewards are awarded and distributed, and the bonus is immediately paid.
 ```
@@ -117,19 +115,19 @@ Currently adopting C. It is decided to use A or B before the formal launch.
 ## 5.6. Participation time plan
 
 ```
-Users can choose to participate in the implementation: 14 days, 1 month, 3 months, 6 months.
+Users can choose to participate in the implementation: XXX days, XXX month, XXX months, XXX months.
 
-Or custom choice: any value between 14 days and 180 days.
+Or custom choice: any value between XXX days and XXX days.
 
 The time selected by the user is the real benefit time. In addition, there is a certain waiting time before and after, which is used to ensure information stability.
 ```
 
 ```
-There is a 2 to 4 day waiting time before the user officially begins to calculate the return.
+There is a XXX to XXX day waiting time before the user officially begins to calculate the return.
 
-There is a 1-day refund waiting time after the user expires.
+There is a XXX-day refund waiting time after the user expires.
 
-For users who want to quit early (client), there is a 5-7 day exit waiting time.
+For users who want to quit early (client), there is a XXX day exit waiting time.
 
 No gains are calculated for all waiting times.
 ```
@@ -138,11 +136,11 @@ No gains are calculated for all waiting times.
 
 1. Minimum lock amount limit
 ```
-Become a normal miner node: 10,000 wan
+Become a normal miner node: XXX wan
 
-Become a proxy miner node: 100,000 wan
+Become a proxy miner node: XXX wan
 
-Principal Investment Agent: 100 wan
+Principal Investment Agent: XXX wan
 
 ```
 
@@ -150,28 +148,22 @@ Principal Investment Agent: 100 wan
 ```
 Investors can invest in the same miner node through multiple accounts to meet the minimum threshold for miners or agents.
 
-When investing in multiple accounts, there should also be a minimum amount limit, such as 500 wan.
+When investing in multiple accounts, there should also be a minimum amount limit, such as XXX wan.
 ```
 
 3. Proxy dividend ratio limit
 ```
-The dividend ratio of the agent must be: ≤ 20%
+The dividend ratio of the agent must be: 0~100%
 ```
 
 4. Agent receives bet maximum amount limit
 ```
-Proxy node maximum proxy ratio: 1:5
+Proxy node maximum proxy ratio: 1:XXX
 
 That is, the principal is 10W, and it can accept up to 50W from others, for a total of 60W.
 ```
 
-## 5.8. Benefits change over time
-
-```
-The rate of return does not change dynamically over time, but is fixed.
-```
-
-## 5.9. Capital access restrictions
+5. Capital access restrictions
 ```
 Miners and agents are not allowed to withdraw at any time;
 
@@ -180,14 +172,21 @@ Ordinary betting users can enter and exit at any time;
 Automatic renewal is not supported;
 ```
 
-## 5.10. Additional funds restrictions
+6. Additional restrictions on funds
 ```
-Ordinary miners and agent nodes cannot add funds;
+Ordinary miners, agent nodes, and commissioned users can add funds;
 
-Investment users can increase the amount of investment at any time;
+However, when appending, you cannot specify an append period. The default has the same end time as the first investment;
+
 ```
 
-## 5.11. Multi-account support
+## 5.8. Benefits change over time
+
+```
+The rate of return does not change dynamically over time, but is fixed.
+```
+
+## 5.9. Multi-account support
 
 ```
 The primary node and the delegation node need to support multiple accounts. (P.S. multiple accounts should also have a minimum threshold for each account, such as 2000 wan)
@@ -318,16 +317,16 @@ The first address of each line is the proxy address.
 
 The bonus pool of the reward mechanism is mainly divided into two parts: the 10% mining award fund reserved by the Foundation and the Gas Fee transaction fee for all transactions executed on the chain.
 
-Among them, the foundation part of the first year is 2.5 million, which is reduced to 88.8888% in the previous year.
+Among them, the foundation part of the first year is 2.5 million, which is reduced to 88% in the previous year.
 
 
 The total prize money is:
 
-![img](./img/incentive3.png)
+![img](./incentive_en_img/2.png)
 
 a is the first year reward: a = 2.5 million
 
-b = 88.888%
+b = 88%
 
 From the second year onwards, in addition to the original prize pool, the remaining amount that was not issued in the previous year was added.
 

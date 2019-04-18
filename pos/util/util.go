@@ -69,6 +69,7 @@ type SelectLead interface {
 
 var (
 	lastBlockEpoch  = make(map[uint64]uint64)
+	lastBlockHashEpoch  = make(map[uint64]common.Hash)
 	selecter        SelectLead
 	lastEpochId     = uint64(0)
 	selectedEpochId = uint64(0)
@@ -86,7 +87,7 @@ func GetEpocherInst() SelectLead {
 	return selecter
 }
 
-func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64) {
+func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash common.Hash) {
 	if epochID != lastEpochId {
 		lastEpochId = epochID
 	}
@@ -96,12 +97,17 @@ func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64) {
 		selectedEpochId = epochID + 1
 	}
 	lastBlockEpoch[epochID] = blockNumber
+	lastBlockHashEpoch[epochID] = hash
 }
-func SetEpochBlock(epochID uint64, blockNumber uint64) {
+func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lastBlockEpoch[epochID] = blockNumber
+	lastBlockHashEpoch[epochID] = hash
 }
 func GetEpochBlock(epochID uint64) uint64 {
 	return lastBlockEpoch[epochID]
+}
+func GetEpochBlockHash(epochID uint64) common.Hash {
+	return lastBlockHashEpoch[epochID]
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return GetEpocherInst().GetProposerBn256PK(epochID, idx, addr)
