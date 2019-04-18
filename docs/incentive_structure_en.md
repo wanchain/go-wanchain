@@ -158,7 +158,7 @@ The dividend ratio of the agent must be: 0~100%
 
 4. Agent receives bet maximum amount limit
 ```
-Proxy node maximum proxy ratio: 1:5
+Proxy node maximum proxy ratio: 1:XXX
 
 That is, the principal is 10W, and it can accept up to 50W from others, for a total of 60W.
 ```
