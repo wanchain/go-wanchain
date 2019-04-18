@@ -115,19 +115,19 @@ Currently adopting C. It is decided to use A or B before the formal launch.
 ## 5.6. Participation time plan
 
 ```
-Users can choose to participate in the implementation: 14 days, 1 month, 3 months, 6 months.
+Users can choose to participate in the implementation: XXX days, XXX month, XXX months, XXX months.
 
-Or custom choice: any value between 14 days and 180 days.
+Or custom choice: any value between XXX days and XXX days.
 
 The time selected by the user is the real benefit time. In addition, there is a certain waiting time before and after, which is used to ensure information stability.
 ```
 
 ```
-There is a 2 to 4 day waiting time before the user officially begins to calculate the return.
+There is a XXX to XXX day waiting time before the user officially begins to calculate the return.
 
-There is a 1-day refund waiting time after the user expires.
+There is a XXX-day refund waiting time after the user expires.
 
-For users who want to quit early (client), there is a 5-7 day exit waiting time.
+For users who want to quit early (client), there is a XXX day exit waiting time.
 
 No gains are calculated for all waiting times.
 ```
