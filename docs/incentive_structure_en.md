@@ -71,7 +71,7 @@ The EL reward will be further 1:1 assigned to the SL. After combining the SL in 
 ```
 Rewards are automatically calculated and issued by consensus codes.
 
-In the first year, the total prize money is 2.5 million Wan, and the annual decline is 88.8888% (40/45).
+In the first year, the total prize money is 2.5 million Wan, and the annual decline is 88%.
 
 In the 2k slot position of each Epoch, rewards are awarded and distributed, and the bonus is immediately paid.
 ```
@@ -318,16 +318,16 @@ The first address of each line is the proxy address.
 
 The bonus pool of the reward mechanism is mainly divided into two parts: the 10% mining award fund reserved by the Foundation and the Gas Fee transaction fee for all transactions executed on the chain.
 
-Among them, the foundation part of the first year is 2.5 million, which is reduced to 88.8888% in the previous year.
+Among them, the foundation part of the first year is 2.5 million, which is reduced to 88% in the previous year.
 
 
 The total prize money is:
 
-![img](./img/incentive3.png)
+![img](./incentive_en_img/2.png)
 
 a is the first year reward: a = 2.5 million
 
-b = 88.888%
+b = 88%
 
 From the second year onwards, in addition to the original prize pool, the remaining amount that was not issued in the previous year was added.
 
