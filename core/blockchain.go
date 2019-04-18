@@ -1587,26 +1587,7 @@ func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 }
 
 func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
-	curEpid,_,err := bc.epochGene.GetBlockEpochIdAndSlotId(bc.currentBlock.Header())
-
-	if curEpid < epochid || err!=nil {
-		return nil , errors.New("error epochid")
-	}
-
-	//it is the first block of this epoch
-	blkNum := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
-
-	preblk := bc.GetBlockByNumber(blkNum - 1 )
-
-	stateDb, err := bc.StateAt(preblk.Root())
-	if err != nil {
-		return nil,err
-	}
-
-	rb := vm.GetR(stateDb, epochid)
-
-
-	return bc.epochGene.GenerateEpochGenesis(epochid,preblk,rb.Bytes())
+	return bc.epochGene.GenerateEpochGenesis(bc,epochid)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {

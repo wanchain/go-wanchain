@@ -247,12 +247,6 @@ func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 		return err
 	}
 
-	fmt.Println("----------------------------------------")
-
-	epochGenTxt := fmt.Sprintf("\t%v\n", epochGenesis)
-	fmt.Println("send epoch",epochGenTxt)
-
-	fmt.Println("----------------------------------------")
 	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
 }
 
