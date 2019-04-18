@@ -17,9 +17,7 @@
   - [5.6. Participation time plan](#56-participation-time-plan)
   - [5.7. Funding plan](#57-funding-plan)
   - [5.8. Benefits change over time](#58-benefits-change-over-time)
-  - [5.9. Capital access restrictions](#59-capital-access-restrictions)
-  - [5.10. Additional funds restrictions](#510-additional-funds-restrictions)
-  - [5.11. Multi-account support](#511-multi-account-support)
+  - [5.9. Multi-account support](#59-multi-account-support)
 - [6. Functional module](#6-functional-module)
 - [7. Interface design](#7-interface-design)
   - [7.1. Foundation funding interface](#71-foundation-funding-interface)
@@ -165,13 +163,7 @@ Proxy node maximum proxy ratio: 1:5
 That is, the principal is 10W, and it can accept up to 50W from others, for a total of 60W.
 ```
 
-## 5.8. Benefits change over time
-
-```
-The rate of return does not change dynamically over time, but is fixed.
-```
-
-## 5.9. Capital access restrictions
+5. Capital access restrictions
 ```
 Miners and agents are not allowed to withdraw at any time;
 
@@ -180,14 +172,21 @@ Ordinary betting users can enter and exit at any time;
 Automatic renewal is not supported;
 ```
 
-## 5.10. Additional funds restrictions
+6. Additional restrictions on funds
 ```
-Ordinary miners and agent nodes cannot add funds;
+Ordinary miners, agent nodes, and commissioned users can add funds;
 
-Investment users can increase the amount of investment at any time;
+However, when appending, you cannot specify an append period. The default has the same end time as the first investment;
+
 ```
 
-## 5.11. Multi-account support
+## 5.8. Benefits change over time
+
+```
+The rate of return does not change dynamically over time, but is fixed.
+```
+
+## 5.9. Multi-account support
 
 ```
 The primary node and the delegation node need to support multiple accounts. (P.S. multiple accounts should also have a minimum threshold for each account, such as 2000 wan)
