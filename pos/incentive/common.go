@@ -9,8 +9,10 @@ import (
 )
 
 func calcPercent(total *big.Int, percent float64) *big.Int {
-	value := big.NewInt(0).Mul(total, big.NewInt(round(percent)))
-	value.Div(value, big.NewInt(100))
+	scale := 10000000.0
+	percentRound := round(percent * scale)
+	value := big.NewInt(0).Mul(total, big.NewInt(percentRound))
+	value.Div(value, big.NewInt(round(100.0*scale)))
 	return value
 }
 
