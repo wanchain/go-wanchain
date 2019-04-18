@@ -24,9 +24,7 @@ const (
 var EpochLeadersHold  [][]byte
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCountHold = 26 //len(EpochLeadersHold)
-	EpochLeaderCountOpen = 24
-	EpochLeaderCount = EpochLeaderCountHold+EpochLeaderCountOpen
+	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 21
 	PposUpgradeEpochID = 2

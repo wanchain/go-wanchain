@@ -1154,7 +1154,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			}
 
 			bc.epochGene.UpdateEpochGenesis(epochID)
-			posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64())
+			posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64(), block.Header().Hash())
 		}
 	}
 	// Append a single chain head event if we've progressed the chain

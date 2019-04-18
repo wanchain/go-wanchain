@@ -68,7 +68,7 @@ type UpgradeWhiteEpochLeaderParam struct {
 var UpgradeWhiteEpochLeaderDefault = UpgradeWhiteEpochLeaderParam{
 	EpochId: big.NewInt(0),
 	WlIndex: big.NewInt(0),
-	WlCount: big.NewInt(26),
+	WlCount: big.NewInt(0),
 }
 //
 // package initialize
