@@ -6,7 +6,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -19,8 +18,12 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 	}
 
 	// Only the first 24 person have incentive, other 26 do not have incentive.
-	if len(epochLeaders) > posconfig.EpochLeaderCountOpen {
-		epochLeaders = epochLeaders[0:posconfig.EpochLeaderCountOpen]
+	wlInfo := vm.GetEpochWLInfo(stateDb, epochID)
+
+	lenRaw := uint64(len(epochLeaders))
+	wlLen := wlInfo.WlCount.Uint64()
+	if lenRaw > wlLen {
+		epochLeaders = epochLeaders[0 : lenRaw-wlLen]
 	}
 
 	addrs := make([]common.Address, len(epochLeaders))

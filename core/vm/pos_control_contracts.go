@@ -2,13 +2,13 @@ package vm
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -24,7 +24,6 @@ contract posControl {
 	function upgradeWhiteEpochLeader(uint256 EpochId, uint256 wlIndex, uint256 wlCount ) public  {}
 }
 */
-
 
 var (
 	posControlDefinition = `
@@ -54,24 +53,25 @@ var (
 ]
 `
 
-	posControlAbi abi.ABI
+	posControlAbi             abi.ABI
 	upgradeWhiteEpochLeaderId [4]byte
 
-	maxWlindex          = len(posconfig.WhiteList)
-	minWlIndex          = 0
-
+	maxWlindex = len(posconfig.WhiteList)
+	minWlIndex = 0
 )
 
 type UpgradeWhiteEpochLeaderParam struct {
-	EpochId    *big.Int
-	WlIndex    *big.Int
-	WlCount    *big.Int
+	EpochId *big.Int
+	WlIndex *big.Int
+	WlCount *big.Int
 }
+
 var UpgradeWhiteEpochLeaderDefault = UpgradeWhiteEpochLeaderParam{
 	EpochId: big.NewInt(0),
 	WlIndex: big.NewInt(0),
 	WlCount: big.NewInt(0),
 }
+
 //
 // package initialize
 //
@@ -83,7 +83,6 @@ func init() {
 
 	copy(upgradeWhiteEpochLeaderId[:], posControlAbi.Methods["upgradeWhiteEpochLeader"].Id())
 }
-
 
 type PosControl struct {
 }
@@ -134,9 +133,9 @@ func (p *PosControl) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	return nil
 }
 
-func posControlCheckEpoch(epochId uint64,  time uint64) bool {
+func posControlCheckEpoch(epochId uint64, time uint64) bool {
 	eid, _ := util.CalEpochSlotID(time)
-	if  eid+posconfig.PposUpgradeEpochID >  epochId { // must send tx some epochs in advance.
+	if eid+posconfig.PposUpgradeEpochID > epochId { // must send tx some epochs in advance.
 		return false
 	}
 	return true
@@ -156,8 +155,7 @@ func (p *PosControl) upgradeWhiteEpochLeader(info *UpgradeWhiteEpochLeaderParam,
 	return nil, nil
 }
 
-
-func (p *PosControl) upgradeWhiteEpochLeaderParseAndValid(payload []byte, time uint64 ) (*UpgradeWhiteEpochLeaderParam, error) {
+func (p *PosControl) upgradeWhiteEpochLeaderParseAndValid(payload []byte, time uint64) (*UpgradeWhiteEpochLeaderParam, error) {
 	var info UpgradeWhiteEpochLeaderParam
 	err := posControlAbi.UnpackInput(&info, "upgradeWhiteEpochLeader", payload)
 	if err != nil {
@@ -168,13 +166,13 @@ func (p *PosControl) upgradeWhiteEpochLeaderParseAndValid(payload []byte, time u
 	wlIndex := info.WlIndex.Uint64()
 	wlCount := info.WlCount.Uint64()
 	if wlIndex+wlCount >= uint64(len(posconfig.WhiteList)) {
-		return  nil, errors.New("wlIndex out of range")
+		return nil, errors.New("wlIndex out of range")
 	}
-	if wlCount < posconfig.MinEpHold ||  wlCount > posconfig.MaxEpHold{
-		return  nil, errors.New("wlCount out of range")
+	if wlCount < posconfig.MinEpHold || wlCount > posconfig.MaxEpHold {
+		return nil, errors.New("wlCount out of range")
 	}
-	if ! posControlCheckEpoch(info.EpochId.Uint64(), time) {
-		return  nil, errors.New("wrong epoch for upgradeWhiteEpochLeader")
+	if !posControlCheckEpoch(info.EpochId.Uint64(), time) {
+		return nil, errors.New("wrong epoch for upgradeWhiteEpochLeader")
 	}
 	return &info, nil
 }
@@ -193,8 +191,7 @@ func (s WhiteInfos) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-
-func GetWlConfig(stateDb *state.StateDB) WhiteInfos {
+func GetWlConfig(stateDb StateDB) WhiteInfos {
 	infos := make(WhiteInfos, 0)
 	infos = append(infos, UpgradeWhiteEpochLeaderDefault)
 	stateDb.ForEachStorageByteArray(PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
@@ -209,17 +206,17 @@ func GetWlConfig(stateDb *state.StateDB) WhiteInfos {
 	sort.Stable(infos)
 	return infos
 }
-func GetEpochWLInfo(stateDb *state.StateDB, epochId uint64)(*UpgradeWhiteEpochLeaderParam) {
+func GetEpochWLInfo(stateDb StateDB, epochId uint64) *UpgradeWhiteEpochLeaderParam {
 	infos := GetWlConfig(stateDb)
-	index := len(infos)-1
-	for i:=0; i<len(infos); i++ {
+	index := len(infos) - 1
+	for i := 0; i < len(infos); i++ {
 		if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) == 0 {
 			index = i
 			break
 		} else if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) > 0 {
-			index = i-1
+			index = i - 1
 			break
 		}
 	}
-	return  &infos[index]
+	return &infos[index]
 }
