@@ -21,8 +21,8 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
-	"github.com/wanchain/go-wanchain/rpc"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
@@ -86,7 +86,7 @@ type SLS struct {
 }
 
 var slotLeaderSelection *SLS
-var APkiCache  *lru.ARCCache
+var APkiCache *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -146,7 +146,7 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 func SlsInit() {
 	var err error
 	APkiCache, err = lru.NewARC(1000)
-	if err != nil || APkiCache==nil {
+	if err != nil || APkiCache == nil {
 		panic("APkiCache failed")
 	}
 	slotLeaderSelection = &SLS{}
@@ -684,8 +684,9 @@ func (s *SLS) collectStagesData(epochID uint64) (err error) {
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
-		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in s.stateDb.
-		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID, uint64(i))
+		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in stateDb.
+		statedb, _ := s.getCurrentStateDb()
+		alphaPki, proof, err := vm.GetStage2TxAlphaPki(statedb, epochID, uint64(i))
 		if err != nil {
 			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
