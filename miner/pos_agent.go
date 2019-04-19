@@ -149,9 +149,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		}
 
 		// get state of k blocks ahead the last block
-		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
-		root := s.BlockChain().GetBlockByNumber(lastBlockNum).Root()
-		stateDb, err2 := s.BlockChain().StateAt(root)
+		stateDb, err2 := s.BlockChain().State()
 		if err2 != nil {
 			log.Error("Failed to get stateDb", "err", err2)
 		}
