@@ -940,6 +940,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)
+		// TODO: update epoch ->blockNumber
+		if bc.config.Pluto != nil {
+			if block.NumberU64() == 1 {
+				posconfig.EpochBaseTime = block.Time().Uint64()
+			}
+			posUtil.UpdateEpochBlock(block)
+		}
 	}
 
 	bc.futureBlocks.Remove(block.Hash())
@@ -1145,17 +1152,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)
-		// TODO: update epoch ->blockNumber
-		if bc.config.Pluto != nil {
-			epochID := block.Header().Difficulty.Uint64() >> 32
-			slotID := (block.Header().Difficulty.Uint64() >> 8) & 0x00FFFFFF
-			if block.NumberU64() == 1 {
-				posconfig.EpochBaseTime = block.Time().Uint64()
-			}
-
-			bc.epochGene.UpdateEpochGenesis(epochID)
-			posUtil.UpdateEpochBlock(epochID, slotID, block.Number().Uint64(), block.Header().Hash())
-		}
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
