@@ -173,6 +173,8 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
+
+		log.Warn("epid cal","",convert.BytesToUint64(epochIDBuf))
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, ErrInvalidTx1Range
 	}
