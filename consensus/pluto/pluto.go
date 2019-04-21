@@ -901,7 +901,6 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		return nil, err
 	}
 
-	util.UpdateEpochBlock(epochIDPack, slotIDPack, number, header.Hash())
 	return block.WithSeal(header), nil
 }
 

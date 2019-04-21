@@ -3,8 +3,10 @@ package vm
 import (
 	"errors"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
@@ -177,3 +179,47 @@ func (p *PosControl) upgradeWhiteEpochLeaderParseAndValid(payload []byte, time u
 	return &info, nil
 }
 
+type WhiteInfos []UpgradeWhiteEpochLeaderParam
+
+func (s WhiteInfos) Len() int {
+	return len(s)
+}
+
+func (s WhiteInfos) Less(i, j int) bool {
+	return s[i].EpochId.Cmp(s[j].EpochId) < 0
+}
+
+func (s WhiteInfos) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+
+func GetWlConfig(stateDb *state.StateDB) WhiteInfos {
+	infos := make(WhiteInfos, 0)
+	infos = append(infos, UpgradeWhiteEpochLeaderDefault)
+	stateDb.ForEachStorageByteArray(PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
+		info := UpgradeWhiteEpochLeaderParam{}
+		err := rlp.DecodeBytes(value, &info)
+		if err == nil {
+			infos = append(infos, info)
+		}
+		return true
+	})
+	// sort
+	sort.Stable(infos)
+	return infos
+}
+func GetEpochWLInfo(stateDb *state.StateDB, epochId uint64)(*UpgradeWhiteEpochLeaderParam) {
+	infos := GetWlConfig(stateDb)
+	index := len(infos)-1
+	for i:=0; i<len(infos); i++ {
+		if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) == 0 {
+			index = i
+			break
+		} else if infos[i].EpochId.Cmp(big.NewInt(int64(epochId))) > 0 {
+			index = i-1
+			break
+		}
+	}
+	return  &infos[index]
+}
