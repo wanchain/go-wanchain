@@ -252,7 +252,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 
 	res := (epGen.PreEpochGenHash == epPre.GenesisBlkHash)
 	if !res {
-		//return false
+		return false
 	}
 
 	res = bytes.Equal(epGen.ProtocolMagic,[]byte("wanchainpos"))
