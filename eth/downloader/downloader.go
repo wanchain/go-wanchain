@@ -425,7 +425,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	// Set the requested sync mode, unless it's forbidden
 	d.mode = mode
 	if d.mode == FastSync && atomic.LoadUint32(&d.fsPivotFails) >= fsCriticalTrials {
-		d.blockchain.SetFullSynchValidator()
+		//d.blockchain.SetFullSynchValidator()
 		d.mode = FullSync
 	}
 	// Retrieve the origin peer and initiate the downloading process
@@ -557,6 +557,36 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 // spawnSync runs d.process and all given fetcher functions to completion in
 // separate goroutines, returning the first error that appears.
 func (d *Downloader) spawnSync(fetchers []func() error) error {
+	var wg sync.WaitGroup
+	errc := make(chan error, len(fetchers))
+	wg.Add(len(fetchers))
+	for _, fn := range fetchers {
+		fn := fn
+		go func() { defer wg.Done(); errc <- fn() }()
+	}
+	// Wait for the first error, then terminate the others.
+	var err error
+	for i := 0; i < len(fetchers); i++ {
+		if i == len(fetchers)-1 {
+			// Close the queue when all fetchers have exited.
+			// This will cause the block processor to end when
+			// it has processed the queue.
+			d.queue.Close()
+		}
+		if err = <-errc; err != nil {
+			break
+		}
+	}
+	d.queue.Close()
+	d.Cancel()
+	wg.Wait()
+	return err
+}
+
+
+// spawnSync runs d.process and all given fetcher functions to completion in
+// separate goroutines, returning the first error that appears.
+func (d *Downloader) spawnSyncQ(fetchers []func() error) error {
 	var wg sync.WaitGroup
 	//errc := make(chan error, len(fetchers))
 	errc := make(chan error, 1)
