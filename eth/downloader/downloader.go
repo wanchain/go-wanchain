@@ -1497,6 +1497,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
+	log.Debug("===fast sync block", "num", latest.Number.Uint64())
 	stateSync := d.syncState(latest.Root)
 	defer stateSync.Cancel()
 	go func() {
@@ -1506,6 +1507,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	}()
 
 	pivot := d.queue.FastSyncPivot()
+	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
 
 		fmt.Println("WaitResults")
