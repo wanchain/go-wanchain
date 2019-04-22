@@ -415,10 +415,12 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return errors.New("failed to verify signer for fast synch verify")
 	}
 
-	epg := f.GetEpochGenesis(epochID)
-
 	headerPkval := crypto.FromECDSAPub(pk)
 
+	epg := f.GetEpochGenesis(epochID)
+	if epg == nil {
+		return errors.New("failed to get epoch genesis")
+	}
 
 	if !bytes.Equal(epg.SlotLeaders[slotID],headerPkval) {
 		log.Error("Pk signer verify with epoch genesis", "number", block.NumberU64(),
