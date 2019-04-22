@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -75,6 +76,8 @@ func (t *TestSelectLead) GetEpochLeaders(epochID uint64) [][]byte {
 func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return nil
 }
+
+func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 	generateTestAddrs()

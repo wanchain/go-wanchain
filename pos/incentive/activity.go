@@ -17,6 +17,15 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 		return []common.Address{}, []int{}
 	}
 
+	// Only the first 24 person have incentive, other 26 do not have incentive.
+	wlInfo := vm.GetEpochWLInfo(stateDb, epochID)
+
+	lenRaw := uint64(len(epochLeaders))
+	wlLen := wlInfo.WlCount.Uint64()
+	if lenRaw > wlLen {
+		epochLeaders = epochLeaders[0 : lenRaw-wlLen]
+	}
+
 	addrs := make([]common.Address, len(epochLeaders))
 	activity := make([]int, len(addrs))
 	for i := 0; i < len(addrs); i++ {
