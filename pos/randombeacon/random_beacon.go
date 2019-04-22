@@ -13,12 +13,12 @@ import (
 
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 )
 
 type RbEnsDataCollector struct {
@@ -52,7 +52,7 @@ type PolyMap map[uint32]PolyInfo
 type TaskTags []bool
 
 type RandomBeacon struct {
-	loopEvents  chan *LoopEvent
+	loopEvents chan *LoopEvent
 
 	epochStage   int
 	epochId      uint64
@@ -78,13 +78,12 @@ var (
 	randomBeacon   RandomBeacon
 )
 
-
 var (
-	errInvalidInParam = errors.New("invalid input param")
+	errInvalidInParam  = errors.New("invalid input param")
 	errEpochIdRollback = errors.New("epoch id rollback")
-	errNoDKG1Data = errors.New("no dkg1 data")
-	errNoDKG1Poly = errors.New("no dkg1 random polynomial")
-	errInsufficient = errors.New("insufficient proposer")
+	errNoDKG1Data      = errors.New("no dkg1 data")
+	errNoDKG1Poly      = errors.New("no dkg1 random polynomial")
+	errInsufficient    = errors.New("insufficient proposer")
 )
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -166,7 +165,6 @@ func (rb *RandomBeacon) updateStage(stage int) {
 	rb.epochStage = stage
 	rb.taskTags = nil
 }
-
 
 func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint64, slotId uint64) error {
 	log.SyslogInfo("rb doLoop begin, epochId:%d, slotId:%d, self epochId:%d", epochId, slotId, rb.epochId)
@@ -567,18 +565,6 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 func (rb *RandomBeacon) getTxFrom() common.Address {
 	return posconfig.Cfg().GetMinerAddr()
 }
-
-//func (rb *RandomBeacon) getRBProposerGroup(epochId uint64) []bn256.G1 {
-//	pks := rb.getRBProposerGroupF(epochId)
-//
-//	// debug code
-//	//pksStr := ""
-//	//for _, pk := range pks {
-//	//	pksStr += common.ToHex(pk.Marshal()) + ", "
-//	//}
-//
-//	return pks
-//}
 
 func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	if payload == nil {
