@@ -20,8 +20,8 @@ import (
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 var (
@@ -61,6 +61,10 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		s.doInit(epochID)
 		s.setWorkStage(epochID, slotLeaderSelectionStage1)
 	case slotLeaderSelectionStage1:
+		if slotID < (posconfig.Sma1Start + 1) {
+			break
+		}
+
 		if slotID > (posconfig.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID",

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/wanchain/go-wanchain/consensus"
 
@@ -21,8 +22,8 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
-	"github.com/wanchain/go-wanchain/rpc"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
@@ -72,8 +73,10 @@ type SLS struct {
 	stageTwoAlphaPKi [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
 	stageTwoProof    [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 
-	slotCreateStatus map[uint64]bool
-	blockChain       *core.BlockChain
+	slotCreateStatus     map[uint64]bool
+	slotCreateStatusLock sync.RWMutex
+
+	blockChain *core.BlockChain
 
 	epochLeadersPtrArrayGenesis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
 	stageOneMiGenesis           [posconfig.EpochLeaderCount]*ecdsa.PublicKey
@@ -86,7 +89,7 @@ type SLS struct {
 }
 
 var slotLeaderSelection *SLS
-var APkiCache  *lru.ARCCache
+var APkiCache *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -105,7 +108,9 @@ func (s *SLS) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 
 func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
+	s.slotCreateStatusLock.RLock()
 	_, ok := s.slotCreateStatus[epochID]
+	s.slotCreateStatusLock.RUnlock()
 	return ok
 }
 
@@ -123,7 +128,9 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 	}
 
 	// read from memory
+	s.slotCreateStatusLock.RLock()
 	created, ok := s.slotCreateStatus[epochID]
+	s.slotCreateStatusLock.RUnlock()
 	if ok && created {
 		return s.slotLeadersPtrArray[slotID], nil
 	}
@@ -135,7 +142,10 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 		}
 		s.slotLeadersPtrArray[i] = crypto.ToECDSAPub(pkByte)
 	}
+	s.slotCreateStatusLock.Lock()
 	s.slotCreateStatus[epochID] = true
+	s.slotCreateStatusLock.Unlock()
+
 	return s.slotLeadersPtrArray[slotID], nil
 }
 
@@ -146,7 +156,7 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 func SlsInit() {
 	var err error
 	APkiCache, err = lru.NewARC(1000)
-	if err != nil || APkiCache==nil {
+	if err != nil || APkiCache == nil {
 		panic("APkiCache failed")
 	}
 	slotLeaderSelection = &SLS{}
@@ -389,7 +399,10 @@ func (s *SLS) isLocalPkInCurrentEpochLeaders() bool {
 func (s *SLS) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
+
+	s.slotCreateStatusLock.Lock()
 	s.slotCreateStatus = make(map[uint64]bool)
+	s.slotCreateStatusLock.Unlock()
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArray[i] = nil
@@ -631,8 +644,9 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		s.slotLeadersIndex[index] = value
 	}
 
-	//TODO: clear map check
+	s.slotCreateStatusLock.Lock()
 	s.slotCreateStatus[epochID] = true
+	s.slotCreateStatusLock.Unlock()
 	log.Info("generateSlotLeadsGroup success")
 
 	s.dumpData()
@@ -684,8 +698,9 @@ func (s *SLS) collectStagesData(epochID uint64) (err error) {
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
-		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in s.stateDb.
-		alphaPki, proof, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID, uint64(i))
+		// no need get current stateDB, because in getSlotLeaderStage2TxIndexes, have got the current db in stateDb.
+		statedb, _ := s.getCurrentStateDb()
+		alphaPki, proof, err := vm.GetStage2TxAlphaPki(statedb, epochID, uint64(i))
 		if err != nil {
 			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
