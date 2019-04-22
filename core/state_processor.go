@@ -18,6 +18,7 @@
 package core
 
 import (
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -71,6 +72,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	//	misc.ApplyDAOHardFork(statedb)
 	//}
 	// Iterate over and process the individual transactions
+	log.Debug("***process", "block", block.Number().Uint64())
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas, cfg)

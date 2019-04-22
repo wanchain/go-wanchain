@@ -117,6 +117,16 @@ func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	return
 }
 
+func tryAppendStakerInfoBytes(infos *[][]byte, pub []byte, epochid uint64)  error {
+	addr := common.BytesToAddress(crypto.Keccak256(pub[1:])[12:])
+	stakerBytes, err := posUtil.TryGetAndSaveStakerInfo(epochid, addr)
+	if err != nil {
+		return err
+	}
+	*infos = append(*infos, *stakerBytes)
+	return nil
+}
+
 func (f *EpochGenesisBlock) GenerateEpochGenesis(bc *BlockChain,epochid uint64) (*types.EpochGenesis,error) {
 	return f.generateChainedEpochGenesis(bc,epochid)
 }
@@ -195,6 +205,13 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
 
+	epGen.StakerInfos = make([][]byte, 0)
+	for _, epLeader := range epGen.EpochLeaders {
+		err := tryAppendStakerInfoBytes(&epGen.StakerInfos, epLeader, epochid)
+		if err != nil {
+			return nil, err
+		}
+	}
 	epGen.RBLeadersSec256 = make([][]byte, 0)
 	epGen.RBLeadersBn256 = make([][]byte, 0)
 	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
@@ -203,6 +220,10 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 		for _, rbl := range rbleaders {
 			epGen.RBLeadersSec256 = append(epGen.RBLeadersSec256, rbl.PubSec256)
 			epGen.RBLeadersBn256 = append(epGen.RBLeadersBn256,rbl.PubBn256)
+			err := tryAppendStakerInfoBytes(&epGen.StakerInfos, rbl.PubSec256, epochid)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -210,7 +231,12 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	pks := f.slotLeaderSelector.GetAllSlotLeaders(epochid)
 	if len(pks) != 0 {
 		for _, slpk := range pks {
-			epGen.SlotLeaders = append(epGen.SlotLeaders, crypto.FromECDSAPub(slpk))
+			pkBytes := crypto.FromECDSAPub(slpk)
+			epGen.SlotLeaders = append(epGen.SlotLeaders, pkBytes)
+			err := tryAppendStakerInfoBytes(&epGen.StakerInfos, pkBytes, epochid)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -512,5 +538,17 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
 		v, _ := rlp.EncodeToBytes(&tmp)
 		rbDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
 	}
+
+	stDb := posdb.NewDb(posconfig.StakerLocalDB)
+	if stDb == nil {
+		return errors.New("create stakeholder local db error")
+	}
+	count = len(epochgen.StakerInfos)
+	for _, pkBytes := range epochgen.StakerInfos {
+		staker := vm.StakerInfo{}
+		_ = rlp.DecodeBytes(pkBytes, &staker)
+		stDb.PutWithIndex(epochgen.EpochId, 0, common.ToHex(staker.Address[:]), pkBytes)
+	}
+
 	return nil
 }

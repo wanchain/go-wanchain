@@ -455,6 +455,7 @@ type EpochGenesis struct {
 	SlotLeaders         [][]byte    //current epoch slotleaders
 	RBLeadersSec256     [][]byte    //current epoch slotleaders
 	RBLeadersBn256	    [][]byte
+	StakerInfos         [][]byte    // StakerInfo
 	GenesisBlkHash      common.Hash //the hash of this block
 	Extra               []byte      //empty
 	PreEpochGenHash 	common.Hash

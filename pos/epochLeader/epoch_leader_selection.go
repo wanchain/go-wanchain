@@ -428,12 +428,13 @@ func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
 	// TODO: how to cache these
 	epArray := posdb.GetEpochLeaderGroup(epochID)
-	wa, err := e.GetWhiteArrayByEpochId(epochID)
-	if err == nil {
-		if len(epArray) == posconfig.EpochLeaderCount-len(wa) {
-			epArray = append(epArray, wa...)
-		}
-	}
+	// TODO: how to fast sync
+	//wa, err := e.GetWhiteArrayByEpochId(epochID)
+	//if err == nil {
+	//	if len(epArray) == posconfig.EpochLeaderCount-len(wa) {
+	//		epArray = append(epArray, wa...)
+	//	}
+	//}
 	return epArray
 
 }
@@ -520,20 +521,37 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 }
 
-func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
-
+func (e *Epocher) TryGetAndSaveStakerInfo(epochId uint64, addr common.Address) (*[]byte, error) {
+	stakerBytes := posdb.GetStakerInfo(epochId, addr)
+	if stakerBytes != nil {
+		return &stakerBytes, nil
+	}
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
-
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, err
+	}
+	addrHash := common.BytesToHash(addr[:])
+	stakerBytes = stateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
+	db := posdb.NewDb(posconfig.StakerLocalDB)
+	if db == nil {
+		return nil, errors.New("SaveStakerInfo create db error")
+	}
+	_, err = db.PutWithIndex(epochId, 0, common.ToHex(addr[:]), stakerBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	addrHash := common.BytesToHash(addr[:])
-	stakerBytes := stateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
+	return &stakerBytes, nil
+}
 
+func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
+	stakerBytes, err := e.TryGetAndSaveStakerInfo(epochId, addr)
+	if nil != err {
+		return nil, 0, nil, err
+	}
 	staker := vm.StakerInfo{}
-	err = rlp.DecodeBytes(stakerBytes, &staker)
+	err = rlp.DecodeBytes(*stakerBytes, &staker)
 	if nil != err {
 		return nil, 0, nil, err
 	}

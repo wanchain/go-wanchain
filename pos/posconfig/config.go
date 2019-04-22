@@ -20,6 +20,7 @@ var (
 const (
 	RbLocalDB  = "rblocaldb"
 	EpLocalDB  = "eplocaldb"
+	StakerLocalDB  = "stlocaldb"
 	PosLocalDB = "pos"
 )
 
