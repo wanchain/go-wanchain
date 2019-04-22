@@ -298,6 +298,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew.RBLeadersSec256 = epGen.RBLeadersSec256
 	epGenNew.RBLeadersBn256 = epGen.RBLeadersBn256
 	epGenNew.EpochLeaders = epGen.EpochLeaders
+	epGenNew.StakerInfos = epGen.StakerInfos	
 	epGenNew.SlotLeaders = epGen.SlotLeaders
 
 	epGenNew.GenesisBlkHash = common.Hash{}
