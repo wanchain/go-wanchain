@@ -1,13 +1,15 @@
 package posconfig
 
 import (
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/node"
-	"math/big"
 )
+
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
 	EpochBaseTime = uint64(0)
@@ -21,20 +23,20 @@ const (
 	PosLocalDB = "pos"
 )
 
-var EpochLeadersHold  [][]byte
+var EpochLeadersHold [][]byte
+
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 25
+	RandomProperCount  = 25
 	PposUpgradeEpochID = 2
-	MaxEpHold			= 30
-	MinEpHold			= 10
+	MaxEpHold          = 30
+	MinEpHold          = 10
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
 	SlotTime = 10
-
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -60,8 +62,8 @@ const (
 	Stage11K = Stage1K * 11
 	Stage12K = Stage1K * 12
 
-	Sma1Start = 0
-	Sma1End   = Stage3K
+	Sma1Start = Stage2K
+	Sma1End   = Stage4K
 	Sma2Start = Stage6K
 	Sma2End   = Stage8K
 	Sma3Start = Stage10K
@@ -69,14 +71,16 @@ const (
 
 	// parameters for security and chain quality
 	BlockSecurityParam = K
-	SlotSecurityParam = 2 * K
+	SlotSecurityParam  = 2 * K
 
-	MinimumChainQuality = 0.5//BlockSecurityParam / SlotSecurityParam
-	CriticalReorgThreshold = 3
-	CriticalChainQuality = 0.618
+	MinimumChainQuality     = 0.5 //BlockSecurityParam / SlotSecurityParam
+	CriticalReorgThreshold  = 3
+	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
 )
+
 var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+
 type Config struct {
 	PolymDegree   uint
 	K             uint
@@ -139,9 +143,8 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 
 func Init(nodeCfg *node.Config) {
 	EpochLeadersHold = make([][]byte, len(WhiteList))
-	for i:=0; i<len(WhiteList); i++ {
+	for i := 0; i < len(WhiteList); i++ {
 		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
 	}
 	DefaultConfig.NodeCfg = nodeCfg
 }
-
