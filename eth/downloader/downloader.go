@@ -1451,10 +1451,8 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
-	fmt.Println("enter importBlockResults")
 
 	for len(results) != 0 {
-		fmt.Println("for len(results) != 0")
 		// Check for any termination requests. This makes clean shutdown faster.
 		select {
 		case <-d.quitCh:
@@ -1470,19 +1468,17 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		)
 
 		blocks := make([]*types.Block, items)
-		fmt.Println("types.NewBlockWithHeader")
+
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
 
-		fmt.Println("d.blockchain.InsertChain")
 
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
 			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 
-		fmt.Println("shift")
 		// Shift the results to the next batch
 		results = results[items:]
 	}
