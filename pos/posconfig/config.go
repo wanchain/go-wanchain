@@ -29,7 +29,7 @@ const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount  = 21
+	RandomProperCount  = 25
 	PposUpgradeEpochID = 2
 	MaxEpHold          = 30
 	MinEpHold          = 10
@@ -98,9 +98,9 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	10,
+	12,
 	K,
-	11,
+	13,
 	0,
 	0,
 	nil,

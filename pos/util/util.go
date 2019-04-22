@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
@@ -87,7 +88,17 @@ func GetEpocherInst() SelectLead {
 	return selecter
 }
 
-func UpdateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash common.Hash) {
+func CalEpSlbyTd(blkTd uint64)(epochID uint64, slotID uint64) {
+	epochID = (blkTd >> 32)
+	slotID = ((blkTd & 0xffffffff) >> 8)
+	return epochID,slotID
+}
+func UpdateEpochBlock( block *types.Block) {
+	blkTd := block.Difficulty().Uint64()
+	epochID,slotID := CalEpSlbyTd(blkTd)
+	updateEpochBlock(epochID, slotID, block.Header().Number.Uint64(), block.Header().Hash())
+}
+func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash common.Hash) {
 	if epochID != lastEpochId {
 		lastEpochId = epochID
 	}

@@ -59,6 +59,7 @@ type peerConnection struct {
 	blockThroughput   float64 // Number of blocks (bodies) measured to be retrievable per second
 	receiptThroughput float64 // Number of receipts measured to be retrievable per second
 	stateThroughput   float64 // Number of node data pieces measured to be retrievable per second
+	epochGenesisThroughput   float64
 
 	rtt time.Duration // Request round trip time to track responsiveness (QoS)
 
@@ -151,6 +152,7 @@ func (p *peerConnection) Reset() {
 	p.blockThroughput = 0
 	p.receiptThroughput = 0
 	p.stateThroughput = 0
+	p.epochGenesisThroughput = 0
 
 	p.lacking = make(map[common.Hash]struct{})
 }
@@ -289,7 +291,7 @@ func (p *peerConnection) SetNodeDataIdle(delivered int) {
 
 
 func (p *peerConnection) SetEpochGenesisDataIdle(delivered int) {
-	p.setIdle(p.epochGenesisStarted, delivered, &p.stateThroughput, &p.epochGenesisIdle)
+	p.setIdle(p.epochGenesisStarted, delivered, &p.epochGenesisThroughput, &p.epochGenesisIdle)
 }
 
 // setIdle sets the peer to idle, allowing it to execute new retrieval requests.
@@ -564,7 +566,7 @@ func (ps *peerSet) EpochGenesisIdlePeers() ([]*peerConnection, int) {
 	throughput := func(p *peerConnection) float64 {
 		p.lock.RLock()
 		defer p.lock.RUnlock()
-		return p.stateThroughput
+		return p.epochGenesisThroughput
 	}
 	return ps.idlePeers(63, 64, idle, throughput)
 }

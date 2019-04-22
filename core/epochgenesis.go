@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"fmt"
 )
 
 
@@ -238,12 +239,15 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 
 	if epGen.EpochId == 1 {
 		epPre,err = f.generateEpochGenesis(0,nil,big.NewInt(1).Bytes())
-		if err != nil {
+		if err != nil || epPre == nil {
 			return false
 		}
 
 	} else {
 		epPre = f.GetEpochGenesis(epGen.EpochId - 1)
+		if epPre == nil {
+			return false
+		}
 	}
 
 	res := (epGen.PreEpochGenHash == epPre.GenesisBlkHash)
@@ -377,7 +381,7 @@ func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
 }
 
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
-
+    fmt.Println("begin EpochGenesisBlock ValidateBody")
 	extraSeal := 65
 	header := block.Header()
 	blkTd := block.Difficulty().Uint64()
@@ -422,8 +426,8 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return errors.New("failed to verify signer with epoch genesis")
 	}
 
+	fmt.Println("end EpochGenesisBlock ValidateBody")
 	return nil
-
 
 }
 
