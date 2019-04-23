@@ -1,8 +1,8 @@
 package cfm
 
 import (
-	"encoding/hex"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -33,10 +33,7 @@ func InitCFM(bc *core.BlockChain) {
 	c.whiteList = make(map[common.Address]int, 0)
 	for _, value := range posconfig.WhiteList {
 
-		b, err := hex.DecodeString(value)
-		if err != nil {
-			panic("InitCFM error!")
-		}
+		b := hexutil.MustDecode(value)
 		address := crypto.PubkeyToAddress(*crypto.ToECDSAPub(b))
 		c.whiteList[address] = 1
 	}

@@ -118,16 +118,6 @@ func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkE
 	return
 }
 
-func (f *EpochGenesisBlock) tryAppendStakerInfoBytes(infos *[][]byte, pub []byte, epochid uint64)  error {
-	addr := common.BytesToAddress(crypto.Keccak256(pub[1:])[12:])
-	stakerBytes, err := posUtil.TryGetAndSaveStakerInfo(epochid, addr)
-	if err != nil {
-		return err
-	}
-	*infos = append(*infos, *stakerBytes)
-	return nil
-}
-
 func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block){
 
 	curEpid,_,err := f.GetBlockEpochIdAndSlotId(blk.Header())
@@ -261,13 +251,7 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
 
-	epGen.StakerInfos = make([][]byte, 0)
-	for _, epLeader := range epGen.EpochLeaders {
-		err := f.tryAppendStakerInfoBytes(&epGen.StakerInfos, epLeader, epochid)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	epGen.RBLeadersSec256 = make([][]byte, 0)
 	epGen.RBLeadersBn256 = make([][]byte, 0)
 	rbleaders := f.rbLeaderSelector.GetRBProposerGroup(epochid)
@@ -276,23 +260,21 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 		for _, rbl := range rbleaders {
 			epGen.RBLeadersSec256 = append(epGen.RBLeadersSec256, rbl.PubSec256)
 			epGen.RBLeadersBn256 = append(epGen.RBLeadersBn256,rbl.PubBn256)
-			err := f.tryAppendStakerInfoBytes(&epGen.StakerInfos, rbl.PubSec256, epochid)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 
 	epGen.SlotLeaders = f.getAllSlotLeaders(epochid)
-	if len(epGen.SlotLeaders) != 0 {
-		for _, pkBytes := range epGen.SlotLeaders  {
-			err := f.tryAppendStakerInfoBytes(&epGen.StakerInfos, pkBytes, epochid)
-			if err != nil {
-				return nil, err
-			}
 
-		}
+	// TODO: save WhiteInfos --- func GetWlConfig(stateDb StateDB) WhiteInfos
+	// TODO: SelectLeadersLoop ---
+	stakersBytes, err := posUtil.TryGetAndSaveAllStakerInfoBytes(epochid)
+	if err != nil {
+		log.Debug("fail to get staker")
+		return nil, err
 	}
+	epGen.StakerInfos = *stakersBytes
+
+	// TODO: save R? no need
 
 	epGen.PreEpochGenHash = preHash
 
