@@ -16,7 +16,6 @@ import (
 var (
 	selfPrivate      *accBn256.PrivateKeyBn256
 	commityPrivate   *accBn256.PrivateKeyBn256
-	proposerGroupLen = 10
 	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 	ens              = make([][]*bn256.G1, 0)
 	commit           [][]bn256.G2
@@ -57,8 +56,8 @@ func TestInit(t *testing.T) {
 }
 
 func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
-	ret := make([]bn256.G1, proposerGroupLen)
-	for i := 0; i < proposerGroupLen; i++ {
+	ret := make([]bn256.G1, posconfig.RandomProperCount)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
 		ret[i] = *commityPrivate.PublicKeyBn256.G1
 	}
 
@@ -87,23 +86,23 @@ func TestGetMyRBProposerId(t *testing.T) {
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 
-	ids := rb.getMyRBProposerId(0)
-	println("ids len:", len(ids))
-	if len(ids) != 0 {
+	rb.myPropserIds = rb.getMyRBProposerId(0)
+	println("ids len:", len(rb.myPropserIds))
+	if len(rb.myPropserIds) != 0 {
 		t.Error("invalid my proposer id")
 	}
 
 	commityPrivate = key.PrivateKey3
-	ids = rb.getMyRBProposerId(0)
-	println("ids len:", len(ids))
-	if len(ids) != proposerGroupLen {
-		t.Error("invalid my proposer id group len. expect len:", proposerGroupLen, ", acture:", len(ids))
+	rb.myPropserIds = rb.getMyRBProposerId(0)
+	println("ids len:", len(rb.myPropserIds))
+	if len(rb.myPropserIds) != posconfig.RandomProperCount {
+		t.Error("invalid my proposer id group len. expect len:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
 	}
 
-	for i := 0; i < len(ids); i++ {
-		println("ids[", i, "]:", ids[i])
-		if ids[i] != uint32(i) {
-			t.Error("invalid my proposer id. expect:", i, ", acture:", ids[i])
+	for i := 0; i < len(rb.myPropserIds); i++ {
+		println("ids[", i, "]:", rb.myPropserIds[i])
+		if rb.myPropserIds[i] != uint32(i) {
+			t.Error("invalid my proposer id. expect:", i, ", acture:", rb.myPropserIds[i])
 			break
 		}
 	}
@@ -128,16 +127,17 @@ func TestDoGenerateDKG1(t *testing.T) {
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 	rb.getCji = tmpGetCji
 
-	epochId := uint64(0)
+	rb.epochId = uint64(0)
 
 	// pks
-	pks := rb.getRBProposerGroupF(epochId)
-	nr := len(pks)
+	rb.proposerPks = rb.getRBProposerGroupF(rb.epochId)
+	nr := len(rb.proposerPks)
+	rb.myPropserIds = rb.getMyRBProposerId(rb.epochId)
 
 	// x
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&rb.proposerPks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -154,7 +154,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 		}
 
 		// verify
-		if payload.EpochId != epochId || payload.ProposerId != uint32(proposerId) {
+		if payload.EpochId != rb.epochId || payload.ProposerId != uint32(proposerId) {
 			t.Error("invalid epochId proposerId")
 		}
 
@@ -198,15 +198,16 @@ func TestGenerateDKG2(t *testing.T) {
 	rb.getCji = tmpGetCji
 
 	epochId := uint64(0)
+	rb.epochId = epochId
 
 	// pks
-	pks := rb.getRBProposerGroupF(epochId)
-	nr := len(pks)
+	rb.proposerPks = rb.getRBProposerGroupF(epochId)
+	nr := len(rb.proposerPks)
 
 	// x
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&rb.proposerPks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -237,7 +238,7 @@ func TestGenerateDKG2(t *testing.T) {
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId), pks)
+		dkg2Flat, err := rb.generateDKG2(uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg2 fail. err:", err)
 		}
@@ -261,7 +262,7 @@ func TestGenerateDKG2(t *testing.T) {
 		// proof verification
 		for j := 0; j < nr; j++ {
 			// get send public Key
-			if !rbselection.VerifyDLEQ(dkg2.Proof[j], pks[j], *hbase, *dkg2.EnShare[j], *(dkg1s[proposerId].Commit[j])) {
+			if !rbselection.VerifyDLEQ(dkg2.Proof[j], rb.proposerPks[j], *hbase, *dkg2.EnShare[j], *(dkg1s[proposerId].Commit[j])) {
 				t.Fatal("dkg2 DLEQ verify fail")
 			}
 		}
@@ -292,16 +293,16 @@ func TestGenerateSIG(t *testing.T) {
 	rb.getRBM = tmpGetRBM
 	rb.getCji = tmpGetCji
 
-	epochId := uint64(0)
+	rb.epochId = uint64(0)
 
 	// pks
-	pks := rb.getRBProposerGroupF(epochId)
-	nr := len(pks)
+	rb.proposerPks = rb.getRBProposerGroupF(rb.epochId)
+	nr := len(rb.proposerPks)
 
 	// x
 	x := make([]big.Int, nr)
 	for i := 0; i < nr; i++ {
-		x[i].SetBytes(vm.GetPolynomialX(&pks[i], uint32(i)))
+		x[i].SetBytes(vm.GetPolynomialX(&rb.proposerPks[i], uint32(i)))
 		x[i].Mod(&x[i], bn256.Order)
 	}
 
@@ -332,7 +333,7 @@ func TestGenerateSIG(t *testing.T) {
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		dkg2Flat, err := rb.generateDKG2(epochId, uint32(proposerId), pks)
+		dkg2Flat, err := rb.generateDKG2(uint32(proposerId))
 		if err != nil {
 			t.Fatal("rb generate dkg2 fail. err:", err)
 		}
@@ -351,13 +352,13 @@ func TestGenerateSIG(t *testing.T) {
 	}
 
 	for proposerId := 0; proposerId < nr; proposerId++ {
-		sig, err := rb.generateSIG(epochId, uint32(proposerId), pks)
+		sig, err := rb.generateSIG(uint32(proposerId))
 		if err != nil {
 			t.Fatal("generate sig fail. err:", err)
 		}
 
 		// Verification
-		M, err := tmpGetRBM(rb.statedb, epochId)
+		M, err := tmpGetRBM(rb.statedb, rb.epochId)
 		if err != nil {
 			t.Fatal("getRBM error, err:", err)
 		}

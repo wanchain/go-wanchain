@@ -66,7 +66,7 @@ type SelectLead interface {
 	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
-	TryGetAndSaveStakerInfo(epochId uint64, addr common.Address) (*[]byte, error)
+	TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
 }
 
 var (
@@ -125,8 +125,8 @@ func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte 
 	return GetEpocherInst().GetProposerBn256PK(epochID, idx, addr)
 }
 
-func TryGetAndSaveStakerInfo(epochId uint64, addr common.Address) (*[]byte, error) {
-	return GetEpocherInst().TryGetAndSaveStakerInfo(epochId, addr)
+func TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error) {
+	return GetEpocherInst().TryGetAndSaveAllStakerInfoBytes(epochId)
 }
 
 // CompressPk
