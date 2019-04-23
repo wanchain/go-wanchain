@@ -337,7 +337,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 		return false
 	}
 
-	if len(epGen.RBLeadersSec256)==0 || len(epGen.SlotLeaders)< posconfig.SlotCount || len(epGen.EpochLeaders)==0 {
+	if len(epGen.RBLeadersSec256)==0 || len(epGen.SlotLeaders) == 0 || len(epGen.EpochLeaders)==0 {
 		return false
 	}
 
@@ -481,12 +481,14 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 	header := block.Header()
 	blkTd := block.Difficulty().Uint64()
 	epochID := (blkTd >> 32)
-	slotID := ((blkTd & 0xffffffff) >> 8)
 
 	if epochID == 0 {
 		return nil
 	}
 
+	blKBegin := posUtil.GetEpochBlock(epochID - 1) + 1
+
+	idx := block.NumberU64() - blKBegin
 
 	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
@@ -506,7 +508,7 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 
 	if bytes.Equal(signer,crypto.FromECDSAPub(pk)) {
 		log.Error("Pk signer verify failed in verifySeal", "number", block.NumberU64(),
-			"epochID", epochID, "slotID", slotID, "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 		return errors.New("failed to verify signer for fast synch verify")
 	}
 
@@ -517,9 +519,9 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return errors.New("failed to get epoch genesis")
 	}
 
-	if !bytes.Equal(epg.SlotLeaders[slotID],headerPkval) {
+	if !bytes.Equal(epg.SlotLeaders[idx],headerPkval) {
 		log.Error("Pk signer verify with epoch genesis", "number", block.NumberU64(),
-			"epochID", epochID, "slotID", slotID, "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 		return errors.New("failed to verify signer with epoch genesis")
 	}
 
