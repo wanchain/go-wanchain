@@ -345,8 +345,6 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 		return nil, err
 	}
 
-
-
 	infos := make(vm.WhiteInfos, 0)
 	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
 	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
@@ -355,7 +353,7 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 		if err == nil {
 			infos = append(infos, info)
 		}
- 		return true
+		return true
 	})
 	sort.Stable(infos)
 	return infos, nil
@@ -442,4 +440,16 @@ func (a PosApi) CalProbability(epochId uint64, amountCoin uint64, lockTime uint6
 
 	probablity := epocherInst.CalProbability(epochId, amountWin, lockTime, startEpochId)
 	return biToString(probablity, nil)
+}
+
+//GetEpochIDByTime can get Epoch ID by input time second Unix.
+func (a PosApi) GetEpochIDByTime(timeUnix uint64) uint64 {
+	ep, _ := util.CalEpochSlotID(timeUnix)
+	return ep
+}
+
+//GetSlotIDByTime can get Slot ID by input time second Unix.
+func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {
+	_, sl := util.CalEpochSlotID(timeUnix)
+	return sl
 }
