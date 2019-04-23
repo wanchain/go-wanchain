@@ -5,10 +5,10 @@ import (
 	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/rbselection"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"math/big"
 	"testing"
 )
@@ -19,7 +19,7 @@ var (
 	proposerGroupLen = 10
 	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 	ens              = make([][]*bn256.G1, 0)
-	commit			 [][]bn256.G2
+	commit           [][]bn256.G2
 )
 
 func TestInit(t *testing.T) {
@@ -233,7 +233,6 @@ func TestGenerateDKG2(t *testing.T) {
 			commit[proposerId][j] = *dkg1.Commit[j]
 		}
 
-
 		dkg1s = append(dkg1s, dkg1)
 	}
 
@@ -329,7 +328,6 @@ func TestGenerateSIG(t *testing.T) {
 			commit[proposerId][j] = *dkg1.Commit[j]
 		}
 
-
 		dkg1s = append(dkg1s, dkg1)
 	}
 
@@ -389,7 +387,6 @@ func tmpGetRBM(db vm.StateDB, epochId uint64) ([]byte, error) {
 	buf := epochIdBigInt.Bytes()
 	return crypto.Keccak256(buf), nil
 }
-
 
 func tmpGetCji(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
 	ret := make([]*bn256.G2, len(commit[proposerId]))

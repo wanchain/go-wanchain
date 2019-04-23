@@ -551,14 +551,10 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
 		} else {
 
-			fmt.Println("begin c *Pluto ValidateBody")
-
 			log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 
 			pk := proofMeg[0]
 			log.Debug("ecrecover(header, c.signatures)")
-
-			fmt.Println("ecrecover(header, c.signatures)")
 			signer, err := ecrecover(header, c.signatures)
 			if err != nil {
 				log.Error(err.Error())
@@ -579,7 +575,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				}
 			}
 
-			fmt.Println("end c *Pluto ValidateBody")
+			log.Debug("end c *Pluto ValidateBody")
 		}
 	}
 

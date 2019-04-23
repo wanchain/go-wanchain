@@ -139,7 +139,7 @@ type Downloader struct {
 	//for epoch genesis
 	epochGenesisSyncStart chan	uint64
 	epochGenesisCh        chan  dataPack
-	epochGenesisFbCh 	  chan uint64
+	epochGenesisFbCh 	  chan 	int64
 	//trackEpochGenesisReq  chan  *epochGenesisReq
 
 	// for stateFetcher
@@ -554,8 +554,8 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	return err
 }
 
-// spawnSync runs d.process and all given fetcher functions to completion in
-// separate goroutines, returning the first error that appears.
+//spawnSync runs d.process and all given fetcher functions to completion in
+//separate goroutines, returning the first error that appears.
 func (d *Downloader) spawnSync(fetchers []func() error) error {
 	var wg sync.WaitGroup
 	errc := make(chan error, len(fetchers))
@@ -573,9 +573,13 @@ func (d *Downloader) spawnSync(fetchers []func() error) error {
 			// it has processed the queue.
 			d.queue.Close()
 		}
+
+		log.Debug("spawnSync finished","",i)
+
 		if err = <-errc; err != nil {
 			break
 		}
+
 	}
 	d.queue.Close()
 	d.Cancel()
@@ -606,18 +610,18 @@ func (d *Downloader) spawnSyncQ(fetchers []func() error) error {
 			break
 		}
 
-		fmt.Println("finished",i)
+		log.Debug("spawnSync finished","",i)
 	}
 
-	fmt.Println("fast syn finishing, wating processFastSyncContent")
-
+	log.Debug("spawnSync finishing, wating processFastSyncContent")
+	d.queue.Close()
 
 	wg.Wait()
 
 	d.queue.Close()
 	d.Cancel()
 
-	fmt.Println("fast syn finished ")
+	log.Debug("spawnSync finished","")
 
 	return err
 
@@ -1451,10 +1455,8 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
-	fmt.Println("enter importBlockResults")
 
 	for len(results) != 0 {
-		fmt.Println("for len(results) != 0")
 		// Check for any termination requests. This makes clean shutdown faster.
 		select {
 		case <-d.quitCh:
@@ -1470,19 +1472,17 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		)
 
 		blocks := make([]*types.Block, items)
-		fmt.Println("types.NewBlockWithHeader")
+
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
 
-		fmt.Println("d.blockchain.InsertChain")
 
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
 			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 
-		fmt.Println("shift")
 		// Shift the results to the next batch
 		results = results[items:]
 	}
@@ -1497,6 +1497,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
+	log.Debug("===fast sync block", "num", latest.Number.Uint64())
 	stateSync := d.syncState(latest.Root)
 	defer stateSync.Cancel()
 	go func() {
@@ -1506,6 +1507,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	}()
 
 	pivot := d.queue.FastSyncPivot()
+	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
 
 		fmt.Println("WaitResults")
