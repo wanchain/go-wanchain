@@ -375,7 +375,7 @@ func (f *EpochGenesisBlock) UpdateEpochGenesis(epochID uint64) {
 	if epochID != f.lastEpochId {
 
 		if epochID > 2 {
-			go f.GenerateEpochGenesis(epochID - 1)
+			f.GenerateEpochGenesis(epochID - 1)
 		}
 
 		f.lastEpochId = epochID
@@ -430,9 +430,11 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("inputing epoch genesis is nil")
 	}
 
-	res := f.preVerifyEpochGenesis(epochgen)
-	if !res {
-		return errors.New("epoch genesis preverify is failed")
+	if epochgen.EpochId > 0 {
+		res := f.preVerifyEpochGenesis(epochgen)
+		if !res {
+			return errors.New("epoch genesis preverify is failed")
+		}
 	}
 
 
