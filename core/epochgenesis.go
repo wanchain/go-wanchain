@@ -81,7 +81,6 @@ type SlLeadersSelInt interface {
 
 	GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error)
 
-	GetAllSlotLeaders(epochID uint64) (slotLeader []*ecdsa.PublicKey)
 }
 
 type EpochGenesisBlock struct {
@@ -161,7 +160,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 				continue
 			}
 
-			if i < 2 {
+			if i == 1 {
 				rb = big.NewInt(1)
 				epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(),common.Hash{})
 				if err != nil {
@@ -177,6 +176,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 			if err != nil {
 				return nil, err
 			}
+			
 			err = f.saveToPosDb(epg)
 			if err != nil {
 				return nil, err
@@ -383,7 +383,7 @@ func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) ([][]byte){
 		signer, err := f.recoverSigner(header)
 		if err != nil {
 			log.Error(err.Error())
-			return nil
+			break
 		}
 
 		slotLeaders = append(slotLeaders,signer[:])
