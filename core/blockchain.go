@@ -146,8 +146,10 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		epochGene:	  NewEpochGenesisBlock(),
 	}
+
+	bc.epochGene = NewEpochGenesisBlock(bc)
+
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
 
@@ -1569,7 +1571,7 @@ func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 }
 
 func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
-	return bc.epochGene.GenerateEpochGenesis(bc,epochid)
+	return bc.epochGene.GenerateEpochGenesis(epochid)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
