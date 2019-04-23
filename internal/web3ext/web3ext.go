@@ -278,6 +278,11 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'isBlockConfirmed',
+			call: 'pos_isBlockConfirmed',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'calProbability',
 			call: 'pos_calProbability',
 			params: 4

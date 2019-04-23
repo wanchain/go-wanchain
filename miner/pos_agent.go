@@ -1,25 +1,25 @@
-
-
 package miner
 
 import (
 	"encoding/hex"
 	"fmt"
-	"time"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/cfm"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
+	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/randombeacon"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rpc"
+	"time"
 )
+
 func posWhiteList() {
 
 }
@@ -27,6 +27,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	log.Info("backendTimerLoop is running!!!!!!")
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+	cfm.InitCFM(s.BlockChain())
 	slotleader.SlsInit()
 
 	if posconfig.EpochBaseTime == 0 {
@@ -37,7 +38,6 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	}
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-
 
 	eerr := epochSelector.SelectLeadersLoop(0)
 
@@ -51,7 +51,6 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	s.BlockChain().SetRbSelector(epochSelector)
 
 	s.BlockChain().SetSlotValidator(sls)
-
 
 	return epochSelector
 }
@@ -105,7 +104,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	// if there is no block at all
 	h := s.BlockChain().GetHeaderByNumber(1)
 	if nil == h {
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0,0)
+		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
 		if err == nil {
 			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 			if leader == localPublicKey {

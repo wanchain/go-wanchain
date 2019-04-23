@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/cfm"
 	"sort"
 	"time"
 
@@ -424,6 +425,10 @@ func (a PosApi) GetSlotCount() int {
 
 func (a PosApi) GetSlotTime() int {
 	return posconfig.SlotTime
+}
+
+func (a PosApi) IsBlockConfirmed(blockNumber uint64) bool {
+	return cfm.GetCFM().IsBlkCfm(blockNumber)
 }
 
 // CalProbability use to calc the probability of a staker with amount by stake wan coins.
