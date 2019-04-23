@@ -132,17 +132,17 @@ func writeSyslog(level syslog.Priority, format string, a ...interface{}) {
 		if syslogger.writer != nil {
 			sfunc = syslogger.writer.Crit
 		}
-		lfunc = Crit
+		lfunc = Error
 	case syslog.LOG_ALERT:
 		if syslogger.writer != nil {
 			sfunc = syslogger.writer.Alert
 		}
-		lfunc = Crit
+		lfunc = Error
 	case syslog.LOG_EMERG:
 		if syslogger.writer != nil {
 			sfunc = syslogger.writer.Emerg
 		}
-		lfunc = Crit
+		lfunc = Error
 	}
 
 	logStr := fmt.Sprintf(format, a...)
