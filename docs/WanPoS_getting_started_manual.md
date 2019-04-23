@@ -157,6 +157,8 @@ $ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain m
 
 Finish!
 
+And your mining work will begin after sync block to the last one.
+
 ![img](./img_get_start/5.png)
 
 
