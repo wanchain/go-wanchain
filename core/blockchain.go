@@ -948,7 +948,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
 
-			go bc.epochGene.SelfGenerateEpochGenesis(block)
+			bc.epochGene.SelfGenerateEpochGenesis(block)
 
 			posUtil.UpdateEpochBlock(block)
 		}
