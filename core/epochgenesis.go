@@ -327,6 +327,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew.EpochLeaders = epGen.EpochLeaders
 	epGenNew.StakerInfos = epGen.StakerInfos	
 	epGenNew.SlotLeaders = epGen.SlotLeaders
+	epGenNew.PreEpochGenHash = epGen.PreEpochGenHash
 	epGenNew.GenesisBlkHash = common.Hash{}
 
 
@@ -343,20 +344,6 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	res = (epGenNew.GenesisBlkHash == epGen.GenesisBlkHash)
 
 	return res
-}
-
-func (f *EpochGenesisBlock) IsFirstBlockInEpoch(firstBlk *types.Block) bool {
-	_, slotid, err := f.GetBlockEpochIdAndSlotId(firstBlk.Header())
-	if err != nil {
-		log.Info("verify genesis failed because of wrong epochid or slotid")
-		return false
-	}
-
-	if slotid == 0 {
-		return true
-	}
-
-	return false
 }
 
 //updated specified epoch genesis
