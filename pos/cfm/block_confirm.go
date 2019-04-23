@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"time"
@@ -16,7 +17,7 @@ const (
 
 type CFM struct {
 	bc        *core.BlockChain
-	whiteList map[string]string
+	whiteList map[common.Address]int
 }
 
 type SuffixBlkStatic struct {
@@ -29,9 +30,15 @@ var c *CFM
 func InitCFM(bc *core.BlockChain) {
 	c = &CFM{}
 	c.bc = bc
-	c.whiteList = make(map[string]string, 0)
+	c.whiteList = make(map[common.Address]int, 0)
 	for _, value := range posconfig.WhiteList {
-		c.whiteList[value] = value
+
+		b, err := hex.DecodeString(value)
+		if err != nil {
+			panic("InitCFM error!")
+		}
+		address := crypto.PubkeyToAddress(*crypto.ToECDSAPub(b))
+		c.whiteList[address] = 1
 	}
 }
 
@@ -95,7 +102,7 @@ func (c *CFM) scanAndCheck(blkNumber, timeNow uint64) bool {
 }
 
 func (c *CFM) isInWhiteList(coinBase common.Address) bool {
-	if _, ok := c.whiteList[hex.EncodeToString(coinBase[:])]; ok {
+	if _, ok := c.whiteList[coinBase]; ok {
 		return true
 	} else {
 		return false
