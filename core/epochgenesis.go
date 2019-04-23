@@ -271,8 +271,6 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	epGen.GenesisBlkHash = common.Hash{}
 
-	//fmt.Println(epGen)
-
 	byteVal, err := json.Marshal(epGen)
 
 	log.Info("generated epochGenesis data","",common.ToHex(byteVal))
