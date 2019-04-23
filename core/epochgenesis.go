@@ -127,6 +127,18 @@ func (f *EpochGenesisBlock) tryAppendStakerInfoBytes(infos *[][]byte, pub []byte
 	return nil
 }
 
+func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block){
+
+	curEpid,_,err := f.GetBlockEpochIdAndSlotId(blk.Header())
+	if err != nil {
+		return
+	}
+
+	f.GenerateEpochGenesis(curEpid)
+}
+
+
+
 func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error) {
 	epg := f.GetEpochGenesis(epochid)
 	if epg != nil {
@@ -146,9 +158,11 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 
 	curEpid,_,err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
-	if curEpid < epochid || err !=nil {
+	if curEpid < epochid || err !=nil || epochid == 0{
 		return nil , errors.New("error epochid")
 	}
+
+
 
 	epgPre = f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
@@ -167,6 +181,11 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 					return nil, err
 				}
 
+				err = f.saveToPosDb(epgPre)
+				if err != nil {
+					return nil, err
+				}
+
 			} else {
 				epgPre = f.GetEpochGenesis(i - 1)
 			}
@@ -176,7 +195,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 			if err != nil {
 				return nil, err
 			}
-			
+
 			err = f.saveToPosDb(epg)
 			if err != nil {
 				return nil, err
