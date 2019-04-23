@@ -282,6 +282,16 @@ web3._extend({
 			call: 'pos_calProbability',
 			params: 4
 		}),
+		new web3._extend.Method({
+			name: 'getEpochIDByTime',
+			call: 'pos_getEpochIDByTime',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSlotIDByTime',
+			call: 'pos_getSlotIDByTime',
+			params: 1
+		}),
 	]
 });
 `
