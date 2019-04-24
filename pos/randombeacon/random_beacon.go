@@ -9,6 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/log"
 
 	"math/big"
@@ -549,13 +550,18 @@ func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
 }
 
 func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
+	to := vm.GetRBAddress()
+	data := hexutil.Bytes(payload)
+	gas := core.IntrinsicGas(data, &to, true)
+
 	arg := map[string]interface{}{}
 	arg["from"] = rb.getTxFrom()
-	arg["to"] = vm.GetRBAddress()
+	arg["to"] = to
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(big.NewInt(4500000)) // todo: should optimize
+	arg["gas"] = (*hexutil.Big)(gas)
 	arg["txType"] = types.POS_TX
-	arg["data"] = hexutil.Bytes(payload)
+	arg["data"] = data
+
 
 	log.SyslogInfo("do send rb tx, payload len:%d", len(payload))
 	_, err := util.SendTx(rb.rpcClient, arg)
