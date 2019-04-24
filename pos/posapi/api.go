@@ -3,9 +3,10 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/cfm"
 	"sort"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/cfm"
 
 	"github.com/wanchain/go-wanchain/params"
 
@@ -462,4 +463,31 @@ func (a PosApi) GetEpochIDByTime(timeUnix uint64) uint64 {
 func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {
 	_, sl := util.CalEpochSlotID(timeUnix)
 	return sl
+}
+
+//GetTimeByEpochID can get time second Unix by epoch ID.
+func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
+	if posconfig.EpochBaseTime == 0 {
+		return 0
+	}
+
+	time := posconfig.EpochBaseTime + epochID*posconfig.SlotCount*posconfig.SlotTime
+
+	epochIDGet := a.GetEpochIDByTime(time)
+	if epochIDGet < epochID {
+		for {
+			time += posconfig.SlotTime
+			epochIDNew := a.GetEpochIDByTime(time)
+			if epochIDNew == epochID {
+				return time
+			}
+
+			if epochIDNew > epochID {
+				log.Error("GetTimeByEpochID error: epochIDNew > epochID", "epochIDNew", epochIDNew, "epochID", epochID)
+				return 0
+			}
+		}
+	}
+
+	return time
 }
