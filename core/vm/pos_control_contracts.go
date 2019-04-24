@@ -110,7 +110,7 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return p.upgradeWhiteEpochLeader(info, contract, evm)
 	}
 
-	return nil, nil
+	return nil, errMethodId
 }
 
 func (p *PosControl) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
@@ -127,15 +127,14 @@ func (p *PosControl) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 		if err != nil {
 			return errors.New("upgradeWhiteEpochLeaderParseAndValid verify failed")
 		}
-	} else {
-		return errMethodId
+		return nil
 	}
-	return nil
+	return errParameters
 }
 
 func posControlCheckEpoch(epochId uint64, time uint64) bool {
 	eid, _ := util.CalEpochSlotID(time)
-	if eid+posconfig.PposUpgradeEpochID > epochId { // must send tx some epochs in advance.
+	if  eid+posconfig.PosUpgradeEpochID >  epochId { // must send tx some epochs in advance.
 		return false
 	}
 	return true

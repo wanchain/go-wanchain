@@ -7,7 +7,6 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math"
 	"math/big"
 	"sort"
 
@@ -24,11 +23,6 @@ import (
 )
 
 var (
-	safeK = uint64(1)
-	Nr    = posconfig.RandomProperCount //num of random proposers
-	Ne    = posconfig.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
-
-	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
 	ErrInvalidRandomProposerSelection      = errors.New("Invalid Random Proposer Selection")                  //Invalid Random Proposer Selection
 	ErrInvalidEpochProposerSelection       = errors.New("Invalid Epoch Proposer Selection")                   //Invalid Random Proposer Selection
@@ -84,7 +78,6 @@ func (e *Epocher) GetBlkChain() *core.BlockChain {
 }
 
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
-	// TODO how to get thee target blockNumber
 	if epochId < 2 {
 		return uint64(0)
 	}
@@ -97,8 +90,6 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 
 
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
-	// TODO how to get thee target blockNumber
-
 	targetBlkNum := util.GetEpochBlock(targetEpochId)
 	var curBlock *types.Block
 	if targetBlkNum == 0 {
@@ -151,7 +142,7 @@ func (e *Epocher) selectLeaders(r []byte,  statedb *state.StateDB, epochId uint6
 
 	log.Debug("select randoms", epochId, common.ToHex(r))
 
-	pa, err := e.createStakerProbabilityArray(statedb, epochId)
+	pa, err := e.createStakerProbabilityArray(statedb)
 	if pa == nil || err != nil {
 		return err
 	}
@@ -191,69 +182,24 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func Round(f float64, n int) float64 {
-	n10 := math.Pow10(n)
-	return math.Trunc((f+0.5/n10)*n10) / n10
-}
 
-const Accuracy float64 = 1024.0 //accuracy to magnificate
-/*
-A stakeHolder register in epoch startEpochId,
-it will be included in epochLeader/RbGroup selection at Epoch startEpochId+1
-if selected, it could send pos tx at Epoch startEpochId +2
-if selected as slot Leader, it could seal block at Epoch startEpochId +3
-A stakeHolder register N epoch, means it could receive max to N time incentive, and send max to N-1 pos tx, and seal blocks in max to N-1 epochs
-Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
-*/
-func (e *Epocher) CalProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
+func (e *Epocher) CalProbability(amountWin *big.Int, lockTime uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
-	var leftTimePercent float64
-	if lockTime == 0  {
-		leftTimePercent = 1
-
-	} else if epochId <= startEpochId+1 || epochId >= startEpochId+2+(lockTime-1) {
-		// A stakeholder register at Epoch startEpochId,  luckiest he could send pos tx at startEpochId+2 ~ startEpochId+1+(lockTime-1), total lockTime-1 epochs
-		leftTimePercent = 0
-		return pb
-	} else {
-		leftTimePercent = (float64(startEpochId+2 +(lockTime-1)-epochId) / float64(lockTime-1))
-	}
-	fpercent := 2 - Round(math.Exp(leftTimePercent-1), 4)
-
-	epercent := big.NewInt(int64(fpercent * Accuracy))
 
 	lockWeight := vm.CalLocktimeWeight(lockTime)
 	timeBig := big.NewInt(int64(lockWeight))
 
-	pb.Mul(amount, epercent)
-	pb.Mul(pb, timeBig)
+	pb.Mul(amount, timeBig)
 
 	log.Debug("CalProbability ", "pb: ", pb)
 
 	return pb
 }
 
-//wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) GenerateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
 
-	pb := e.CalProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
-	for i := 0; i < len(pstaker.Clients); i++ {
-		lockEpoch := pstaker.LockEpochs - (pstaker.Clients[i].StakingEpoch - pstaker.StakingEpoch)
-		pb.Add(pb, e.CalProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
-	}
-	p := &Proposer{
-		PubSec256:     pstaker.PubSec256,
-		PubBn256:      pstaker.PubBn256,
-		Probabilities: pb,
-	}
 
-	return p, nil
-
-}
-
-func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId uint64) (ProposerSorter, error) {
-
+func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (ProposerSorter, error) {
 	if statedb == nil {
 		return nil, vm.ErrUnknown
 	}
@@ -261,34 +207,24 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	//blkTime := epochId*(posconfig.SlotTime*posconfig.SlotCount) + posconfig.EpochBaseTime
-
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
-
 		staker := vm.StakerInfo{}
-		// TODO RLP?
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
 			log.Error(err.Error())
 			return true
 		}
-
-		if staker.Amount.Cmp(Big0) == 0 {
-			//log.Info("staker ",common.ToHex(staker.PubSec256),"stake out already")
-			return true
+		p := staker.StakeAmount
+		for i:=0; i<len(staker.Clients); i++ {
+			p.Add(p, staker.Clients[i].StakeAmount)
 		}
-
-		pitem, err := e.GenerateProblility(&staker, epochId)
-		if err != nil {
-			log.Error(err.Error())
-			return true
+		item := Proposer{
+			PubSec256:     staker.PubSec256,
+			PubBn256:      staker.PubBn256,
+			Probabilities: p,
 		}
-
-		if  pitem.Probabilities.Cmp(Big0) > 0 {
-			ps = append(ps, *pitem)
-			log.Debug(common.ToHex((*pitem).Probabilities.Bytes()))
-		}
-
+		ps = append(ps, item)
+		log.Debug(common.ToHex(item.Probabilities.Bytes()))
 		return true
 	})
 
@@ -520,6 +456,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 }
 
+// TODO new suanfa
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
@@ -539,14 +476,13 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	}
 	infors = make([]vm.ClientProbability, 1)
 	infors[0].Addr = addr
-	infors[0].Probability = big.NewInt(0).Set(e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch))
+	infors[0].Probability = staker.StakeAmount
 	totalProbability = big.NewInt(0).Set(infors[0].Probability)
 	for i:=0; i<len(staker.Clients); i++ {
 		c := staker.Clients[i]
 		info := vm.ClientProbability{}
 		info.Addr = c.Address
-		lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
-		info.Probability = big.NewInt(0).Set(e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch))
+		info.Probability = c.StakeAmount
 		totalProbability = totalProbability.Add(totalProbability, info.Probability)
 		infors = append(infors, info)
 	}
@@ -568,16 +504,52 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if staker.LockEpochs==0 || epochID < staker.StakingEpoch+staker.LockEpochs+2 {
+		var changed = false
+		// LockEpochs==0 means NO expire
+		if staker.LockEpochs==0 {
 			continue
 		}
-		for j := 0; j < len(staker.Clients); j++ {
-			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+		if epochID >= staker.StakingEpoch+staker.LockEpochs {
+			for j := 0; j < len(staker.Clients); j++ {
+					core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+			}
+			// quit the validator
+			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+			continue
 		}
 
-		core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 
-		vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+		newClients := make([]vm.ClientInfo, 0)
+		// check if delegator want to quit.
+		for j := 0; j < len(staker.Clients); j++ {
+			// edit the validator Amount
+			if staker.Clients[j].QuitEpoch >= epochID {
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				changed = true
+			}else {
+				newClients = append(newClients, staker.Clients[j])
+			}
+		}
+
+		// check the renew
+		if epochID+2 >= staker.StakingEpoch+staker.LockEpochs {
+			if staker.NextLockEpochs != 0 {
+				staker.LockEpochs = staker.NextLockEpochs
+				staker.FeeRate = staker.NextFeeRate
+				staker.StakingEpoch = epochID+2
+				changed = true
+			}
+		}
+		if changed {
+			staker.Clients = newClients
+			stakerBytes, err := rlp.EncodeToBytes(staker)
+			if err != nil {
+				log.Error("StakeOutRun Failed: ", "err", err)
+				continue
+			}
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
+		}
 	}
 	return true
 }
