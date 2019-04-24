@@ -476,7 +476,7 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 
 	blKBegin := posUtil.GetEpochBlock(epochID - 1) + 1
 
-	idx := block.NumberU64() - blKBegin
+	idx := int(block.NumberU64() - blKBegin)
 
 	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
@@ -505,6 +505,10 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 	epg := f.GetEpochGenesis(epochID)
 	if epg == nil {
 		return errors.New("failed to get epoch genesis")
+	}
+	if idx >= len(epg.SlotLeaders){
+		fmt.Println("idx=", idx, "len=", len(epg.SlotLeaders))
+		return errors.New("blokc index is beyong slotleader")
 	}
 
 	if !bytes.Equal(epg.SlotLeaders[idx],headerPkval) {
