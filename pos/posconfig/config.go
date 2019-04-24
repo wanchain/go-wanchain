@@ -81,7 +81,7 @@ const (
 )
 
 var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
-
+var posOwnerAddr = "0xcf696d8eea08a311780fb89b20d4f0895198a489"
 type Config struct {
 	PolymDegree   uint
 	K             uint
