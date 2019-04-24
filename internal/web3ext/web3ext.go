@@ -297,6 +297,11 @@ web3._extend({
 			call: 'pos_getSlotIDByTime',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getTimeByEpochID',
+			call: 'pos_getTimeByEpochID',
+			params: 1
+		}),
 	]
 });
 `
