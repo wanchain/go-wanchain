@@ -173,11 +173,6 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 					return nil, err
 				}
 
-				err = f.SetEpochGenesis(epgPre)
-				if err != nil {
-					return nil, err
-				}
-
 			} else {
 				epgPre = f.GetEpochGenesis(i - 1)
 
@@ -297,22 +292,30 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
-	var epPre	*types.EpochGenesis
+	var epgPre	*types.EpochGenesis
 	var err 	error
 
-	if epGen.EpochId < 1{
+	if epGen.EpochId <= 0{
 		return false
 	}
 
-	epPre = f.GetEpochGenesis(epGen.EpochId - 1)
-	if epPre == nil {
-		return false
+	if epGen.EpochId == 1 {
+		rb := big.NewInt(1)
+		epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(),common.Hash{})
+		if err != nil {
+			return false
+		}
+	} else {
+		epgPre = f.GetEpochGenesis(epGen.EpochId - 1)
+		if epgPre == nil {
+			return false
+		}
 	}
 
 
-	res := (epGen.PreEpochGenHash == epPre.GenesisBlkHash)
+	res := (epGen.PreEpochGenHash == epgPre.GenesisBlkHash)
 	if !res {
-		log.Debug("Failed to verify preEpoch hash","",common.ToHex(epGen.PreEpochGenHash[:]),common.ToHex(epPre.GenesisBlkHash[:]))
+		log.Debug("Failed to verify preEpoch hash","",common.ToHex(epGen.PreEpochGenHash[:]),common.ToHex(epgPre.GenesisBlkHash[:]))
 		return false
 	}
 
@@ -411,16 +414,16 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 	f.epgSetmu.Lock()
 	defer f.epgSetmu.Unlock()
 
-	if epochgen == nil {
+	if epochgen == nil || epochgen.EpochId <= 0{
 		return errors.New("inputing epoch genesis is nil")
 	}
 
-	if epochgen.EpochId > 0 {
-		res := f.preVerifyEpochGenesis(epochgen)
-		if !res {
-			return errors.New("epoch genesis preverify is failed")
-		}
+
+	res := f.preVerifyEpochGenesis(epochgen)
+	if !res {
+		return errors.New("epoch genesis preverify is failed")
 	}
+
 
 
 	val,err := rlp.EncodeToBytes(epochgen)
