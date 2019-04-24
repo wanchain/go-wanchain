@@ -30,15 +30,11 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
-
-	//"github.com/wanchain/go-wanchain/consensus/misc"
-	//"encoding/hex"
-	"fmt"
 
 	"encoding/hex"
 
@@ -755,7 +751,6 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	c.lock.RLock()
 	signer, signFn, key := c.signer, c.signFn, c.key
 	c.lock.RUnlock()
-	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 
 	// Bail out if we're unauthorized to sign a block
 	// snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
@@ -767,103 +762,32 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	// }
 	// check if our trun
 	epochSlotId := uint64(1)
-	var epochIDPack uint64
-	var slotIDPack uint64
 	epochId, slotId := util.GetEpochSlotID()
-	log.Info(fmt.Sprintln("Pluto Seal: epochId:", epochId, "slotId:", slotId))
+	epochSlotId += slotId << 8
+	epochSlotId += epochId << 32
+	log.Info("Generate a new block", "number", number, "epochID", epochId, "slotId", slotId, "curTime", time.Now(),
+		"header.Time", header.Time)
 
-	var leader string
-	//if epochId != 0 {
-	//	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-	//	if err != nil  {
-	//		return nil, err
-	//	}
-	//	leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	//	fmt.Println("leaderPK:", leader)
+	//leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+	//localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
+	//if leader == localPublicKey {
+	//	log.Info("Generate a new block", "number", number, "epochID", epochId, "slotId", slotId, "curTime", time.Now(),
+	//		"header.Time", header.Time)
 	//} else {
-	//	//genesis block miner publicKey
-	//	leader = posconfig.GenesisPK
-	//}
-	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
-	if err != nil {
-		return nil, err
-	}
-	leader = hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	if leader == localPublicKey {
-		cur := uint64(time.Now().Unix())
-		sleepTime := uint64(0)
-		sealTime := uint64(0)
-		if posconfig.EpochBaseTime == 0 {
-			sealTime = header.Time.Uint64() + posconfig.SlotTime/2
-		} else {
-			sealTime = posconfig.EpochBaseTime + posconfig.SlotTime/2 + (epochId*posconfig.SlotCount+slotId)*posconfig.SlotTime
-		}
-		if cur < sealTime {
-			sleepTime = sealTime - cur
-		}
-		fmt.Println("Our turn, number:", number, "epochID:", epochId, "slotId:", slotId, "cur: ", cur,
-			"sleepTime:", sleepTime, "header.Time:", header.Time.Uint64())
-		select {
-		case <-stop:
-			return nil, nil
-		case <-time.After(time.Duration(sleepTime) * time.Second): // TODO when generate new block
-			epochSlotId += slotId << 8
-			epochSlotId += epochId << 32
-
-			epochIDPack = epochId
-			slotIDPack = slotId
-		}
-	} else {
-		return nil, nil
-	}
-
-	//// If we're amongst the recent signers, wait for the next block
-	//for seen, recent := range snap.Recents {
-	//	if recent == signer {
-	//		// Signer is among recents, only wait if the current block doesn't shift it out
-	//		if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-	//			log.Info("Signed recently, must wait for others")
-	//			<-stop
-	//			return nil, nil
-	//		}
-	//	}
-	//}
-	// Sweet, the protocol permits us to sign the block, wait for our time
-	//delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
-	//if header.Difficulty.Cmp(diffNoTurn) == 0 {
-	//	// It's not our turn explicitly to sign, delay it a bit
-	//	wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-	//	delay += time.Duration(rand.Int63n(int64(wiggle)))
-	//
-	//	log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-	//}
-	//log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
-	//
-	//select {
-	//case <-stop:
 	//	return nil, nil
-	//case <-time.After(delay):
 	//}
-	// Sign all the things!
-	// sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-
-	// ppk, err := hex.DecodeString(localPublicKey)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// copy(header.Extra[len(header.Extra)-extraSeal:], ppk)
 
 	header.Difficulty.SetUint64(epochSlotId)
 	header.Coinbase = signer
 
 	s := slotleader.GetSlotLeaderSelection()
-	buf, err := s.PackSlotProof(epochIDPack, slotIDPack, key.PrivateKey)
+	buf, err := s.PackSlotProof(epochId, slotId, key.PrivateKey)
 	if err != nil {
-		log.Warn("PackSlotProof failed in Seal", "epochID", epochIDPack, "slotID", slotIDPack, "error", err.Error())
+		log.Warn("PackSlotProof failed in Seal", "epochID", epochId, "slotID", slotId, "error", err.Error())
 		return nil, err
 	}
 
@@ -880,10 +804,8 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 
 	log.Debug("signature", "hex", hex.EncodeToString(sighash))
-
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
-
-	log.Debug("Packed slotleader proof info success", "epochID", epochIDPack, "slotID", slotIDPack, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+	log.Debug("Packed slotleader proof info success", "epochID", epochId, "slotID", slotId, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 
 	err = c.verifySeal(nil, header, nil, true)
 	if err != nil {
