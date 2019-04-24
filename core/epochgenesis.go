@@ -125,7 +125,7 @@ func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block){
 		return
 	}
 
-	f.UpdateEpochGenesis(curEpid)
+	go f.UpdateEpochGenesis(curEpid)
 }
 
 
