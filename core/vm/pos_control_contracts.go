@@ -100,7 +100,7 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 
 	// check only the owner could run it.
-	if contract.caller  != posconfig.posOwnerAddr {
+	if contract.Caller()  != posconfig.PosOwnerAddr {
 		return nil, errParameters
 	}
 	var methodId [4]byte
