@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/pos/util"
 
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -305,7 +306,8 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 		alphaPkiCached, ok := APkiCache.Get(ckey)
 		if !ok {
 			var err error
-			alphaPki, _, err = vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
+			statedb, _ := s.getCurrentStateDb()
+			alphaPki, _, err = vm.GetStage2TxAlphaPki(statedb, epochID-1, uint64(i))
 			if err != nil {
 				log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
 				validEpochLeadersIndex[i] = false

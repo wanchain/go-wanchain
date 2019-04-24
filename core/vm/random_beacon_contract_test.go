@@ -9,12 +9,12 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math/big"
 	mrand "math/rand"
 	"testing"
@@ -280,7 +280,7 @@ func isInRandomGroupMock(_ []bn256.G1, _ uint64, _ uint32, _ common.Address) boo
 // test cases runs in testMain
 func init() {
 	rbranddb[0] = big.NewInt(1)
-	getRBProposerGroupVar = getRBProposerGroupMock
+	//getRBProposerGroupVar = getRBProposerGroupMock
 	getRBMVar = getRBMMock
 	isValidEpochStageVar = isValidEpochStageMock
 	isInRandomGroupVar = isInRandomGroupMock
@@ -509,4 +509,3 @@ func TestGetRBStage(t *testing.T) {
 		}
 	}
 }
-

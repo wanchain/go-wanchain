@@ -20,6 +20,7 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	mrand "math/rand"
@@ -63,7 +64,7 @@ type HeaderChain struct {
 	rand   *mrand.Rand
 	engine consensus.Engine
 
-	forkMem  *EpochGenesisBlock
+	epochgen  *EpochGenesisBlock
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
@@ -90,8 +91,8 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
-		forkMem:	  NewEpochGenesisBlock(),
 	}
+
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
 	if hc.genesisHeader == nil {
@@ -275,6 +276,11 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 	// All headers passed verification, import them into the database
 	for i, header := range chain {
 
+		if header.Number.Uint64() == 1 {
+			if posconfig.EpochBaseTime == 0 {
+				posconfig.EpochBaseTime = header.Time.Uint64()
+			}
+		}
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")

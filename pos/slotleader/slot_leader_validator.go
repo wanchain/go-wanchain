@@ -21,9 +21,9 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	epochID := (blkTd >> 32)
 	slotID := ((blkTd & 0xffffffff) >> 8)
 
-	if epochID == 0 {
-		return nil
-	}
+	//if epochID == 0 {
+	//	return nil
+	//}
 
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 

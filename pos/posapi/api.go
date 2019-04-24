@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/cfm"
 	"sort"
 	"time"
 
@@ -350,8 +351,6 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 		return nil, err
 	}
 
-
-
 	infos := make(vm.WhiteInfos, 0)
 	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
 	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
@@ -360,7 +359,7 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 		if err == nil {
 			infos = append(infos, info)
 		}
- 		return true
+		return true
 	})
 	sort.Stable(infos)
 	return infos, nil
@@ -433,6 +432,10 @@ func (a PosApi) GetSlotTime() int {
 	return posconfig.SlotTime
 }
 
+func (a PosApi) IsBlockConfirmed(blockNumber uint64) bool {
+	return cfm.GetCFM().IsBlkCfm(blockNumber)
+}
+
 // CalProbability use to calc the probability of a staker with amount by stake wan coins.
 // The probability is different in different time, so you should input each epoch ID you want to calc
 // Such as CalProbability(390, 10000, 60, 360) means begin from epoch 360 lock 60 epochs stake 10000 to calc 390's probability.
@@ -447,4 +450,16 @@ func (a PosApi) CalProbability(epochId uint64, amountCoin uint64, lockTime uint6
 
 	probablity := epocherInst.CalProbability(amountWin, lockTime)
 	return biToString(probablity, nil)
+}
+
+//GetEpochIDByTime can get Epoch ID by input time second Unix.
+func (a PosApi) GetEpochIDByTime(timeUnix uint64) uint64 {
+	ep, _ := util.CalEpochSlotID(timeUnix)
+	return ep
+}
+
+//GetSlotIDByTime can get Slot ID by input time second Unix.
+func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {
+	_, sl := util.CalEpochSlotID(timeUnix)
+	return sl
 }

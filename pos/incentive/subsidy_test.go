@@ -2,6 +2,7 @@ package incentive
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
@@ -38,18 +39,22 @@ func TestCalcBaseSubsidy(t *testing.T) {
 
 func TestGetBaseSubsidyTotalForSlot(t *testing.T) {
 	statedb.Reset(common.Hash{})
-	year := big.NewInt(0).Mul(big.NewInt(2.1e6), big.NewInt(1e18))
-	base := calcBaseSubsidy(year, posconfig.SlotTime).Uint64()
+	year := big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))
+	base := calcBaseSubsidy(year, posconfig.SlotTime)
+	fmt.Println(subsidyReductionInterval)
+
 	for i := uint64(1); i < uint64(500); i++ {
-		fmt.Println(subsidyReductionInterval)
 		subsidy := getBaseSubsidyTotalForSlot(statedb, subsidyReductionInterval*i)
-		fmt.Println(subsidy.String(), float64(subsidy.Uint64())/float64(1e18))
 		if subsidy.Uint64() == 0 {
 			fmt.Println("finish", i)
 			return
 		}
-		if subsidy.Uint64() != (base >> i) {
-			fmt.Println("error: ", subsidy.Uint64(), base/(i+1))
+
+		reduce := math.Pow(redutionRateBase, float64(i))
+		fmt.Println(i, float64(subsidy.Uint64())/float64(1e18), reduce)
+		base := calcPercent(base, reduce*100.0)
+		if subsidy.Uint64() != base.Uint64() {
+			fmt.Println("error: ", subsidy.Uint64(), base.String())
 			t.FailNow()
 		}
 	}

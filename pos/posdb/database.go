@@ -1,6 +1,7 @@
 package posdb
 
 import (
+	"github.com/wanchain/go-wanchain/common"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -271,6 +272,31 @@ func GetRBProposerGroup(epochId uint64) [][]byte {
 	return g1s
 
 }
+
+func GetStakerInfoBytes(epochId uint64, addr common.Address) []byte {
+	db := NewDb(posconfig.StakerLocalDB)
+	if db == nil {
+		log.Error("GetStakerInfo create db error")
+		return nil
+	}
+	stakerBytes, err := db.GetWithIndex(epochId, 0, common.ToHex(addr[:]))
+	if err != nil {
+		return nil
+	}
+
+	return stakerBytes
+}
+
+func GetAllStakerInfoBytes(epochId uint64) [][]byte {
+	db := NewDb(posconfig.StakerLocalDB)
+	if db == nil {
+		log.Error("GetStakerInfo create db error")
+		return nil
+	}
+	return db.GetStorageByteArray(epochId)
+}
+
+
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.EpLocalDB)
 	if db == nil {

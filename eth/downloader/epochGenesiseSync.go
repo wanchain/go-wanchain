@@ -6,8 +6,10 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
+	"errors"
 )
 
+const repeatLimit  = 10
 
 type epochGenesisReq struct {
 	epochid  *big.Int              			// epochid items to download
@@ -23,7 +25,7 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 		return nil
 	}
 
-	fbchan  := make(chan uint64,1)
+	fbchan  := make(chan int64,1)
 	d.epochGenesisFbCh = fbchan
 
 	for i := startEpochid;i <= endEpochid;i++ {
@@ -36,7 +38,12 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 
 		select {
 		case epid := <- fbchan:
-			log.Info("got epoch data","",epid)
+			if epid >= 0 {
+				log.Info("got epoch data", "", epid)
+			} else {
+				log.Info("failed to get epoch data", "", epid)
+				return errors.New("failed to get epoch data")
+			}
 		}
 	}
 
@@ -50,6 +57,8 @@ func (d *Downloader) epochGenesisFetcher() {
 	var (
 		active   = make(map[string]*epochGenesisReq) // Currently in-flight requests
 		timeout  = make(chan *epochGenesisReq)       // Timed out active requests
+
+		repeatCount   = make(map[uint64]uint64)
 	)
 
 	peerDrop := make(chan *peerConnection, 1024)
@@ -61,6 +70,18 @@ func (d *Downloader) epochGenesisFetcher() {
 		select {
 
 			case epochid := <-d.epochGenesisSyncStart:
+
+				if repeatCount[epochid] > repeatLimit {
+
+					if d.epochGenesisFbCh != nil {
+						d.epochGenesisFbCh <- int64(-1)
+					}
+
+					continue
+				}
+
+				repeatCount[epochid] = repeatCount[epochid] + 1
+
 				req := d.sendEpochGenesisReq(epochid,active)
 				// Start a timer to notify the sync loop if the peer stalled.
 				req.timer = time.AfterFunc(req.timeout, func() {
@@ -68,6 +89,8 @@ func (d *Downloader) epochGenesisFetcher() {
 						case timeout <- req:
 					}
 				})
+
+
 
 			case pack := <-d.epochGenesisCh:
 
@@ -87,7 +110,7 @@ func (d *Downloader) epochGenesisFetcher() {
 					d.epochGenesisSyncStart <- req.epochid.Uint64()
 				} else {
 					if d.epochGenesisFbCh != nil {
-						d.epochGenesisFbCh <- response.EpochId
+						d.epochGenesisFbCh <- int64(response.EpochId)
 					}
 				}
 

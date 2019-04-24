@@ -21,12 +21,13 @@ import (
 )
 
 var (
-	redutionYears            = 5
-	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (posconfig.SlotTime * posconfig.SlotCount)) // Epoch count in 5 years
-	percentOfEpochLeader     = 20                                                                                     //20%
-	percentOfRandomProposer  = 20                                                                                     //20%
-	percentOfSlotLeader      = 60                                                                                     //60%
-	ceilingPercentS0         = 100.0                                                                                  //10%
+	redutionYears            = 1
+	redutionRateBase         = 0.88                                                                                   //88% redution for every year
+	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (posconfig.SlotTime * posconfig.SlotCount)) // Epoch count in 1 years
+	percentOfEpochLeader     = 12.0 / 49.0                                                                            //24.4898%
+	percentOfRandomProposer  = 25.0 / 49.0                                                                            //51.0204%
+	percentOfSlotLeader      = 12.0 / 49.0                                                                            //24.4898%
+	ceilingPercentS0         = 100.0                                                                                  //100% Turn off in current version.
 	openIncentive            = true                                                                                   //If the incentive function is open
 )
 
@@ -91,9 +92,9 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
 	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
 
-	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader))
-	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer))
-	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader))
+	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader*100.0))
+	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer*100.0))
+	slotLeaderSubsidy := calcPercent(total, float64(percentOfSlotLeader*100.0))
 	saveIncentiveDivide(epochLeaderSubsidy, randomProposerSubsidy, slotLeaderSubsidy)
 
 	sum := big.NewInt(0)

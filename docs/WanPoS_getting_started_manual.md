@@ -64,8 +64,6 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 
 "YourAccountAddress"
 
-> personal.unlockAccount(eth.accounts[0], "YourPassword", 3600*24*365)
-
 > personal.showPublicKey("YourAccountAddress", 'YourPassword')
 
 ["YourPK1", "YourPK2"]
@@ -145,11 +143,11 @@ Step 5 run the register script in gwan
 Follow the step 2's command line: 
 
 ```
+$ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
+
 > loadScript("/root/.wanchain/minerRegister.js")
 
 > exit
-
-root> exit
 
 $ docker stop YourContainerID
 
@@ -158,6 +156,8 @@ $ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain m
 ```
 
 Finish!
+
+And your mining work will begin after sync block to the last one.
 
 ![img](./img_get_start/5.png)
 
