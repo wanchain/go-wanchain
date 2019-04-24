@@ -222,11 +222,14 @@ type StakerJson struct {
 	PubBn256  string //stakeholder’s bn256 public key
 
 	Amount     *big.Int //staking wan value
+	StakeAmount     *big.Int //staking wan value
 	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
+	NextLockEpochs uint64   //lock time which is input by user. 0 means unexpired.
 	From       common.Address
 
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
+	NextFeeRate  uint64
 	Clients      []vm.ClientInfo
 }
 
@@ -257,10 +260,13 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		stakeJson := StakerJson{}
 		stakeJson.Address = staker.Address
 		stakeJson.Amount = staker.Amount
+		stakeJson.StakeAmount = staker.StakeAmount
 		stakeJson.LockEpochs = staker.LockEpochs
+		stakeJson.NextLockEpochs = staker.NextLockEpochs
 		stakeJson.From = staker.From
 		stakeJson.StakingEpoch = staker.StakingEpoch
 		stakeJson.FeeRate = staker.FeeRate
+		stakeJson.NextFeeRate = staker.NextFeeRate
 		stakeJson.Clients = staker.Clients
 		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
@@ -294,12 +300,11 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 		}
 		es := StakerInfo{}
 		es.Infors = make([]vm.ClientProbability, 1)
-		pb := epocherInst.CalProbability(epochID, staker.Amount, staker.LockEpochs, staker.StakingEpoch)
+		pb := epocherInst.CalProbability(staker.Amount, staker.LockEpochs)
 		es.Infors[0].Probability = big.NewInt(0).Set(pb)
 		es.Infors[0].Addr = staker.Address
 		for i := 0; i < len(staker.Clients); i++ {
-			lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
-			pc := epocherInst.CalProbability(epochID, staker.Clients[i].Amount, lockEpoch, staker.Clients[i].StakingEpoch)
+			pc := epocherInst.CalProbability(staker.Clients[i].Amount, 0)
 			vc := vm.ClientProbability{}
 			vc.Probability = big.NewInt(0).Set(pc)
 			vc.Addr = staker.Clients[i].Address
@@ -444,7 +449,7 @@ func (a PosApi) CalProbability(epochId uint64, amountCoin uint64, lockTime uint6
 	amountWin := big.NewInt(0).SetUint64(amountCoin)
 	amountWin.Mul(amountWin, big.NewInt(params.Wan))
 
-	probablity := epocherInst.CalProbability(epochId, amountWin, lockTime, startEpochId)
+	probablity := epocherInst.CalProbability(amountWin, lockTime)
 	return biToString(probablity, nil)
 }
 
