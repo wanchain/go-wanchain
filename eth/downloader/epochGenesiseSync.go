@@ -25,10 +25,14 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 		return nil
 	}
 
+	if startEpochid == 0 {
+		startEpochid = 1
+	}
+
 	fbchan  := make(chan int64,1)
 	d.epochGenesisFbCh = fbchan
 
-	for i := startEpochid;i <= endEpochid;i++ {
+	for i := startEpochid;i < endEpochid;i++ {
 
 		if i==0 || d.blockchain.IsExistEpochGenesis(i) {
 			continue

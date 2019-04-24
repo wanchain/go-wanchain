@@ -40,6 +40,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
 	eerr := epochSelector.SelectLeadersLoop(0)
+	//todo system should not startup if there are error,jia
 
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
