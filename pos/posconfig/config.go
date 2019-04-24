@@ -27,7 +27,7 @@ const (
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 21
-	PposUpgradeEpochID = 2
+	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold			= 30
 	MinEpHold			= 10
 )

@@ -253,6 +253,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				panic("Invalid genesis.")
 			}
 			secAddr := crypto.PubkeyToAddress(*pub)
+			weight := vm.CalLocktimeWeight(0)
 			staker := &vm.StakerInfo{
 				PubSec256:   account.Staking.S256pk,
 				PubBn256:    account.Staking.Bn256pk,
@@ -263,7 +264,8 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				StakingEpoch: uint64(0),
 				FeeRate:	 uint64(100),
 			}
-
+			staker.StakeAmount = big.NewInt(0)
+			staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
 			infoArray, err := rlp.EncodeToBytes(staker)
 			if err != nil {
 				panic(err)

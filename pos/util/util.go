@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -71,6 +72,7 @@ type SelectLead interface {
 var (
 	lastBlockEpoch  = make(map[uint64]uint64)
 	lastBlockHashEpoch  = make(map[uint64]common.Hash)
+	lbe	    = sync.RWMutex{}
 	selecter        SelectLead
 	lastEpochId     = uint64(0)
 	selectedEpochId = uint64(0)
@@ -107,18 +109,28 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
+	lbe.Lock()
 	lastBlockEpoch[epochID] = blockNumber
 	lastBlockHashEpoch[epochID] = hash
+	lbe.Unlock()
 }
 func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
+	lbe.Lock()
 	lastBlockEpoch[epochID] = blockNumber
 	lastBlockHashEpoch[epochID] = hash
+	lbe.Unlock()
 }
 func GetEpochBlock(epochID uint64) uint64 {
-	return lastBlockEpoch[epochID]
+	lbe.RLock()
+	b := lastBlockEpoch[epochID]
+	lbe.RUnlock()
+	return b
 }
 func GetEpochBlockHash(epochID uint64) common.Hash {
-	return lastBlockHashEpoch[epochID]
+	lbe.RLock()
+	bh := lastBlockHashEpoch[epochID]
+	lbe.RUnlock()
+	return bh
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return GetEpocherInst().GetProposerBn256PK(epochID, idx, addr)
