@@ -279,7 +279,7 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	byteVal, err := json.Marshal(epGen)
 
-	log.Info("generated epochGenesis data","",common.ToHex(byteVal))
+	//log.Info("generated epochGenesis data","",common.ToHex(byteVal))
 
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
@@ -344,7 +344,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 
 
 	byteVal, err := json.Marshal(epGenNew)
-	log.Info("verify genesis data","",common.ToHex(byteVal))
+	//log.Info("verify genesis data","",common.ToHex(byteVal))
 
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
@@ -494,7 +494,7 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return err
 	}
 
-	if bytes.Equal(signer,crypto.FromECDSAPub(pk)) {
+	if !bytes.Equal(signer,crypto.FromECDSAPub(pk)) {
 		log.Error("Pk signer verify failed in verifySeal", "number", block.NumberU64(),
 			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 		return errors.New("failed to verify signer for fast synch verify")
