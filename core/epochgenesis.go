@@ -183,17 +183,19 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 
 			}
 
+			fmt.Println("getEpochRandomAndPreEpLastBlk")
 			rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
 
 			if epgPre == nil {
 				return nil, errors.New("pre epg is nil")
 			}
-
+			fmt.Println("generateEpochGenesis")
 			epg, err = f.generateEpochGenesis(i, blk, rb.Bytes(),epgPre.GenesisBlkHash)
 			if err != nil {
 				return nil, err
 			}
 
+			fmt.Println("SetEpochGenesis",epg.EpochId)
 			err = f.SetEpochGenesis(epg)
 			if err != nil {
 				return nil, err
@@ -267,12 +269,12 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	// TODO: save WhiteInfos --- func GetWlConfig(stateDb StateDB) WhiteInfos
 	// TODO: SelectLeadersLoop ---
-	stakersBytes, err := posUtil.TryGetAndSaveAllStakerInfoBytes(epochid)
-	if err != nil {
-		log.Debug("fail to get staker")
-		return nil, err
-	}
-	epGen.StakerInfos = *stakersBytes
+	stakersBytes := make([][]byte, 0)//f.TryGetAndSaveAllStakerInfoBytes(epochid)
+	//if err != nil {
+	//	log.Debug("fail to get staker")
+	//	return nil, err
+	//}
+	epGen.StakerInfos = stakersBytes
 
 	// TODO: save R? no need
 
@@ -290,7 +292,6 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	}
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
-
 	return epGen, nil
 }
 
@@ -311,6 +312,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 
 	res := (epGen.PreEpochGenHash == epPre.GenesisBlkHash)
 	if !res {
+		log.Debug("Failed to verify preEpoch hash","",common.ToHex(epGen.PreEpochGenHash[:]),common.ToHex(epPre.GenesisBlkHash[:]))
 		return false
 	}
 
@@ -320,6 +322,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	}
 
 	if len(epGen.RBLeadersSec256)==0 || len(epGen.SlotLeaders) == 0 || len(epGen.EpochLeaders)==0 {
+		log.Debug("Failed to verify leaders")
 		return false
 	}
 

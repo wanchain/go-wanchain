@@ -865,7 +865,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
-		return NonStatTy, ErrSecurityViolated
+		//return NonStatTy, ErrSecurityViolated
 	}
 
 	// Calculate the total difficulty of the block
