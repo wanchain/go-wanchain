@@ -151,7 +151,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 
 	curEpid,_,err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
-	if curEpid < epochid || err !=nil || epochid == 0{
+	if curEpid <= epochid || err !=nil || epochid == 0{
 		return nil , errors.New("error epochid")
 	}
 
