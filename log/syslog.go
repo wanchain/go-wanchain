@@ -11,9 +11,18 @@ import (
 type SyslogFun func(m string) error
 type LocallogFun func(msg string, ctx ...interface{})
 
+type SyslogSetting struct {
+	net string
+	svr string
+	level string
+	tag string
+}
+
 type Syslogger struct {
 	writer *syslog.Writer
 	threshold syslog.Priority
+	setting *SyslogSetting
+	dialTimes uint64
 }
 
 var (
@@ -24,13 +33,6 @@ func InitSyslog(net, svr, level, tag string) error {
 	Info("mpc syslog config", "net", net, "svr", svr, "level", level, "tag", tag)
 	if syslogger.writer != nil {
 		return errors.New("repetitive initialization")
-	}
-
-	var err error
-	syslogger.writer, err = syslog.Dial(net, svr, syslog.LOG_INFO, tag)
-	if err != nil {
-		Error("init syslog fail", "err", err)
-		return err
 	}
 
 	syslogger.threshold = syslog.LOG_INFO
@@ -51,6 +53,31 @@ func InitSyslog(net, svr, level, tag string) error {
 		syslogger.threshold = syslog.LOG_INFO
 	case "DEBUG":
 		syslogger.threshold = syslog.LOG_DEBUG
+	}
+
+	syslogger.setting = &SyslogSetting {
+		net,
+		svr,
+		level,
+		tag,
+	}
+
+	return dialSyslog()
+}
+
+func dialSyslog() error {
+	syslogger.dialTimes++
+	if syslogger.dialTimes%10 != 1 {
+		err := errors.New("delay retry connect.")
+		Error("dial syslog fail", "err", err, "retry times", syslogger.dialTimes)
+		return err
+	}
+
+	var err error
+	syslogger.writer, err = syslog.Dial(syslogger.setting.net, syslogger.setting.svr, syslog.LOG_INFO, syslogger.setting.tag)
+	if err != nil {
+		Error("dial syslog fail", "err", err, "retry times", syslogger.dialTimes)
+		return err
 	}
 
 	return nil
@@ -101,6 +128,10 @@ func SyslogEmerg(format string, a ...interface{}) {
 func writeSyslog(level syslog.Priority, format string, a ...interface{}) {
 	var sfunc SyslogFun
 	var lfunc LocallogFun
+
+	if syslogger.setting != nil && syslogger.writer == nil {
+		dialSyslog()
+	}
 
 	switch level {
 	case syslog.LOG_DEBUG:
