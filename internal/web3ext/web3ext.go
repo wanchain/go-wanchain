@@ -278,11 +278,6 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'isBlockConfirmed',
-			call: 'pos_isBlockConfirmed',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'getMaxStableBlkNumber',
 			call: 'pos_getMaxStableBlkNumber',
 			params: 0

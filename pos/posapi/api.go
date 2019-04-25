@@ -433,10 +433,6 @@ func (a PosApi) GetSlotTime() int {
 	return posconfig.SlotTime
 }
 
-func (a PosApi) IsBlockConfirmed(blockNumber uint64) bool {
-	return cfm.GetCFM().IsBlkCfm(blockNumber)
-}
-
 func (a PosApi) GetMaxStableBlkNumber() uint64 {
 	return cfm.GetCFM().GetMaxStableBlkNumber()
 }

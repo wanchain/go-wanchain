@@ -49,19 +49,6 @@ func GetCFM() *CFM {
 	return c
 }
 
-func (c *CFM) IsBlkCfm(blkNumber uint64) bool {
-
-	if blkNumber == 0 {
-		return true
-	}
-
-	if !(c.isBlkOnLocalChain(blkNumber)) {
-		return false
-	}
-	timeNow := uint64(time.Now().Unix())
-	return c.scanAndCheck(blkNumber, timeNow)
-}
-
 func (c *CFM) GetMaxStableBlkNumber() uint64 {
 
 	timeNow := uint64(time.Now().Unix())
@@ -144,72 +131,12 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 	return blkStatusArr
 }
 
-func (c *CFM) scanAndCheck(blkNumber, timeNow uint64) bool {
-	curBlk := c.bc.CurrentBlock()
-	if curBlk == nil {
-		return false
-	}
-
-	if curBlk.NumberU64() <= blkNumber {
-		return false
-	}
-
-	startNumber := curBlk.NumberU64()
-	stopNumber := startNumber - posconfig.K
-	if stopNumber <= 0 {
-		stopNumber = 0
-	} else {
-		if stopNumber >= blkNumber {
-			stopNumber = blkNumber - 1
-		}
-	}
-
-	sbs := SuffixBlkStatic{0, 0}
-	inWhiteList := c.isInWhiteList(curBlk.Coinbase())
-	parentHash := curBlk.ParentHash()
-	for i := startNumber - 1; i >= stopNumber && i < MaxUint64; i-- {
-		blk := c.bc.GetBlock(parentHash, i)
-		if blk == nil {
-			return false
-		}
-
-		if inWhiteList {
-			sbs.SuffixBlockTrusted = sbs.SuffixBlockTrusted + 1
-		} else {
-			sbs.SuffixBlockNonTrusted = sbs.SuffixBlockNonTrusted + 1
-		}
-
-		if i <= blkNumber && i > 0 {
-			slotsCount := c.getSlotsCount(blk.Time().Uint64(), timeNow, posconfig.SlotTime)
-			//X				= Sx + NHX + Empty
-			//Empty			= X - Sx - NHX
-			//Sx - Empty 	= Sx - (X-Sx-NHX) = Sx -X + Sx +NHX = 2Sx+NHX-X
-			//diffBlk := 2*slotsCount + sbs.SuffixBlockNonTrusted - sbs.SuffixBlockTrusted
-			diffBlk := 2*sbs.SuffixBlockTrusted + sbs.SuffixBlockNonTrusted - slotsCount
-			if diffBlk <= SecBlkDiff {
-				return false
-			}
-		}
-		inWhiteList = c.isInWhiteList(blk.Coinbase())
-		parentHash = blk.ParentHash()
-	}
-	return true
-}
-
 func (c *CFM) isInWhiteList(coinBase common.Address) bool {
 	if _, ok := c.whiteList[coinBase]; ok {
 		return true
 	} else {
 		return false
 	}
-}
-
-func (c *CFM) isBlkOnLocalChain(blkNumber uint64) bool {
-	block := c.bc.GetBlockByNumber(blkNumber)
-	if block == nil {
-		return false
-	}
-	return true
 }
 
 func (c *CFM) getSlotsCount(startTime, stopTime uint64, slotTime uint64) uint64 {
