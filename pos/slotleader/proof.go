@@ -296,7 +296,7 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 			continue
 		}
 		// TODO:
-		hash := util.GetEpochBlockHash(epochID)
+		hash := util.GetEpochBlockHash(epochID-1)
 		bkey := make([]byte, 0)
 		bkey = append(bkey, hash[:]...)
 		bkey = append(bkey, big.NewInt(int64(i)).Bytes()...)
