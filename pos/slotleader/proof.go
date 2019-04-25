@@ -290,13 +290,13 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 		return validEpochLeadersIndex, stageTwoAlphaPKi, err
 	}
 
+	hash := util.GetEpochBlockHash(epochID-1)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		if !indexesSentTran[i] {
 			validEpochLeadersIndex[i] = false
 			continue
 		}
 		// TODO:
-		hash := util.GetEpochBlockHash(epochID-1)
 		bkey := make([]byte, 0)
 		bkey = append(bkey, hash[:]...)
 		bkey = append(bkey, big.NewInt(int64(i)).Bytes()...)
