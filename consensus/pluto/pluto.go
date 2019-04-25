@@ -74,6 +74,7 @@ var (
 
 	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
 	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
+	lastEpochSlotId = uint64(0)
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -765,21 +766,20 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	epochId, slotId := util.GetEpochSlotID()
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
-
+	if epochSlotId <= lastEpochSlotId {
+		return nil, nil
+	}
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 	if err != nil {
 		return nil, err
 	}
 	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	for leader != localPublicKey {
-		select {
-		case <-stop:
-			return nil, nil
-		case <-time.After(time.Duration(1000) * time.Second): // TODO when generate new block
-			break
-		}
+	if leader != localPublicKey {
+		return nil, nil
 	}
+
+
 	log.Info("Generate a new block", "number", number, "epochID", epochId, "slotId", slotId, "curTime", time.Now(),
 		"header.Time", header.Time)
 
@@ -833,7 +833,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		log.Warn("Seal error", "error", err.Error())
 		return nil, err
 	}
-
+	lastEpochSlotId = epochSlotId
 	return block.WithSeal(header), nil
 }
 
