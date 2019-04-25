@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"math/big"
 	"testing"
 	"time"
@@ -84,4 +86,38 @@ func TestVerifyDleqProof(t *testing.T) {
 	fmt.Println("VerifyDleqProof time:", time.Since(t1))
 
 	fmt.Println("TestVerifyDleqProof total:", time.Since(t0))
+}
+
+func TestGetSlotLeaderProof(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	pks, isGenesis, err := s.getSMAPieces(0)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !isGenesis {
+		t.Fail()
+	}
+
+	if len(pks) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		s.epochLeadersPtrArrayGenesis[i] = &prvKey.PublicKey
+	}
+
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(prvKey,
+		s.smaGenesis[:],
+		s.epochLeadersPtrArrayGenesis[:],
+		s.randomGenesis.Bytes(), 0, 0)
+
+	if len(profMeg) != 3 || len(proof) != 2 || err != nil {
+		t.Fail()
+	}
 }
