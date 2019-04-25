@@ -765,6 +765,21 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	epochId, slotId := util.GetEpochSlotID()
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
+
+	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
+	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
+	if err != nil {
+		return nil, err
+	}
+	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+	for leader != localPublicKey {
+		select {
+		case <-stop:
+			return nil, nil
+		case <-time.After(time.Duration(1000) * time.Second): // TODO when generate new block
+			break
+		}
+	}
 	log.Info("Generate a new block", "number", number, "epochID", epochId, "slotId", slotId, "curTime", time.Now(),
 		"header.Time", header.Time)
 

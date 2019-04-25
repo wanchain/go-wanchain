@@ -257,7 +257,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			//self.commitNewWork()
+			self.commitNewWork()
 		case <-self.chainSlotTimer:
 			self.commitNewWork()
 		// Handle ChainSideEvent
