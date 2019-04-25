@@ -99,6 +99,10 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, errors.New("parameter is wrong")
 	}
 
+	// check only the owner could run it.
+	if contract.Caller()  != posconfig.PosOwnerAddr {
+		return nil, errParameters
+	}
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
