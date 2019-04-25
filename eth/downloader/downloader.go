@@ -487,7 +487,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	height := latest.Number.Uint64()
 
-	fmt.Println("the lastest block number",height)
+	log.Info("the lastest block number",height)
 
 	origin, err := d.findAncestor(p, height)
 	if err != nil {
@@ -1490,7 +1490,6 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 // processFastSyncContent takes fetch results from the queue and writes them to the
 // database. It also controls the synchronisation of state nodes of the pivot block.
 func (d *Downloader) processFastSyncContent(latest *types.Header) error {
-	defer fmt.Println("processFastSyncContent terminated")
 
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
