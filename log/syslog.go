@@ -32,7 +32,9 @@ var (
 func InitSyslog(net, svr, level, tag string) error {
 	Info("mpc syslog config", "net", net, "svr", svr, "level", level, "tag", tag)
 	if syslogger.writer != nil {
-		return errors.New("repetitive initialization")
+		err := errors.New("repetitive initialization syslog")
+		Error(err.Error())
+		return err
 	}
 
 	syslogger.threshold = syslog.LOG_INFO
@@ -180,7 +182,9 @@ func writeSyslog(level syslog.Priority, format string, a ...interface{}) {
 	lfunc(logStr)
 
 	if level <= syslogger.threshold && sfunc != nil {
-		sfunc(logStr)
+		if err := sfunc(logStr); err != nil {
+			Error("send syslog fail", "err", err)
+		}
 	}
 }
 
