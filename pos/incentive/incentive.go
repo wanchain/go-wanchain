@@ -38,24 +38,6 @@ const (
 	dictFinished      = "finished"
 )
 
-// Incentive is use for interface export
-type Incentive struct{}
-
-// Init should be called at init time before run
-func (inc *Incentive) Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
-	Init(get, set, getRbAddr)
-}
-
-// Run should be called in consensus finalize.
-func (inc *Incentive) Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) {
-	Run(chain, stateDb, epochID, blockNumber)
-}
-
-// AddEpochGas is called to collect gas fee for every transactions
-func (inc *Incentive) AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
-	AddEpochGas(stateDb, gasValue, epochID)
-}
-
 // Init is use to init the outsides interface of staker.
 // Should be called at the node start
 func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {

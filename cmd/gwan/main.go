@@ -232,14 +232,11 @@ func geth(ctx *cli.Context) error {
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
 	if ctx.GlobalBool(utils.SysLogFlag.Name) {
-		err := log.InitSyslog(
+		log.InitSyslog(
 			ctx.GlobalString(utils.SyslogNetFlag.Name),
 			ctx.GlobalString(utils.SyslogSvrFlag.Name),
 			ctx.GlobalString(utils.SyslogLevelFlag.Name),
 			ctx.GlobalString(utils.SyslogTagFlag.Name))
-		if err != nil {
-			log.Error("start syslog fail", "err", err)
-		}
 	}
 
 	// Start up the node itself
