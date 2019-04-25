@@ -883,7 +883,6 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 	p.log.Debug("Directing header downloads", "origin", from)
 	defer p.log.Debug("Header download terminated")
-	defer fmt.Println("fetchHeaders terminated")
 	// Create a timeout timer, and the associated header fetcher
 	skeleton := true            // Skeleton assembly phase or finishing up
 	request := time.Now()       // time of the last skeleton fetch request
