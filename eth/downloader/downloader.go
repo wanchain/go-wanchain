@@ -1030,7 +1030,6 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchBodies(from uint64) error {
 	log.Debug("Downloading block bodies", "origin", from)
-	defer fmt.Println("fetchBodies terminated")
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*bodyPack)
@@ -1054,7 +1053,6 @@ func (d *Downloader) fetchBodies(from uint64) error {
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchReceipts(from uint64) error {
 	log.Debug("Downloading transaction receipts", "origin", from)
-	defer fmt.Println("fetchReceipts terminated")
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -1259,7 +1257,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 // queue until the stream ends or a failure occurs.
 func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 
-	defer fmt.Println("processHeaders terminated")
+	defer log.Info("processHeaders terminated")
 	// Calculate the pivoting point for switching from fast to slow sync
 	pivot := d.queue.FastSyncPivot()
 
@@ -1509,29 +1507,26 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
 
-		fmt.Println("WaitResults")
 
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
 			return stateSync.Cancel()
 		}
 
-		fmt.Println("chainInsertHook")
+
 
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}
 
-		fmt.Println("splitAroundPivot")
+
 
 		P, beforeP, afterP := splitAroundPivot(pivot, results)
 
-		fmt.Println("commitFastSyncData")
 		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
 			return err
 		}
 
-		fmt.Println("commitPivotBlock")
 		if P != nil {
 			stateSync.Cancel()
 			if err := d.commitPivotBlock(P); err != nil {
@@ -1539,7 +1534,6 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 			}
 		}
 
-		fmt.Println("importBlockResults")
 		if err := d.importBlockResults(afterP); err != nil {
 			return err
 		}
