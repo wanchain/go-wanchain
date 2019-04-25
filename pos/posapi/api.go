@@ -221,11 +221,11 @@ type StakerJson struct {
 	PubSec256 string //stakeholder’s wan public key
 	PubBn256  string //stakeholder’s bn256 public key
 
-	Amount     *big.Int //staking wan value
-	StakeAmount     *big.Int //staking wan value
-	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
+	Amount         *big.Int //staking wan value
+	StakeAmount    *big.Int //staking wan value
+	LockEpochs     uint64   //lock time which is input by user. 0 means unexpired.
 	NextLockEpochs uint64   //lock time which is input by user. 0 means unexpired.
-	From       common.Address
+	From           common.Address
 
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
@@ -435,6 +435,10 @@ func (a PosApi) GetSlotTime() int {
 
 func (a PosApi) IsBlockConfirmed(blockNumber uint64) bool {
 	return cfm.GetCFM().IsBlkCfm(blockNumber)
+}
+
+func (a PosApi) GetMaxStableBlkNumber() uint64 {
+	return cfm.GetCFM().GetMaxStableBlkNumber()
 }
 
 // CalProbability use to calc the probability of a staker with amount by stake wan coins.
