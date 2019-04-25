@@ -229,3 +229,46 @@ func TestArraySave(t *testing.T) {
 	}
 	fmt.Println(sendtransGet)
 }
+
+func TestGetEpoch0LeadersPK(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	leadersPK := s.getEpoch0LeadersPK()
+	if len(leadersPK) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+
+	for _, epLeader := range leadersPK {
+		if !crypto.S256().IsOnCurve(epLeader.X, epLeader.Y) {
+			t.Error("PK not on the S256 curve")
+		}
+	}
+}
+
+func TestGetPreEpochLeadersPK(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	pks, err := s.getPreEpochLeadersPK(0)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(pks) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+}
+
+func TestGetSMAPieces(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	pks, isGenesis, err := s.getSMAPieces(0)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !isGenesis {
+		t.Fail()
+	}
+
+	if len(pks) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+}
