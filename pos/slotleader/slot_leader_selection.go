@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sync"
 
 	"github.com/wanchain/go-wanchain/consensus"
 
@@ -73,8 +72,8 @@ type SLS struct {
 	stageTwoAlphaPKi [posconfig.EpochLeaderCount][posconfig.EpochLeaderCount]*ecdsa.PublicKey
 	stageTwoProof    [posconfig.EpochLeaderCount][StageTwoProofCount]*big.Int //[0]: e; [1]:Z
 
-	slotCreateStatus     map[uint64]bool
-	slotCreateStatusLock sync.RWMutex
+	slotCreateStatus       map[uint64]bool
+	slotCreateStatusLockCh chan int
 
 	blockChain *core.BlockChain
 
@@ -108,9 +107,9 @@ func (s *SLS) GetEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 
 func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
-	s.slotCreateStatusLock.RLock()
+	s.slotCreateStatusLockCh <- 1
 	_, ok := s.slotCreateStatus[epochID]
-	s.slotCreateStatusLock.RUnlock()
+	<-s.slotCreateStatusLockCh
 	return ok
 }
 
@@ -129,9 +128,9 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 	}
 
 	// read from memory
-	s.slotCreateStatusLock.RLock()
+	s.slotCreateStatusLockCh <- 1
 	created, ok := s.slotCreateStatus[epochID]
-	s.slotCreateStatusLock.RUnlock()
+	<-s.slotCreateStatusLockCh
 	if ok && created {
 		return s.slotLeadersPtrArray[slotID], nil
 	}
@@ -143,9 +142,9 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 		}
 		s.slotLeadersPtrArray[i] = crypto.ToECDSAPub(pkByte)
 	}
-	s.slotCreateStatusLock.Lock()
+	s.slotCreateStatusLockCh <- 1
 	s.slotCreateStatus[epochID] = true
-	s.slotCreateStatusLock.Unlock()
+	<-s.slotCreateStatusLockCh
 
 	return s.slotLeadersPtrArray[slotID], nil
 }
@@ -164,6 +163,7 @@ func SlsInit() {
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
 	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
+	slotLeaderSelection.slotCreateStatusLockCh = make(chan int, 1)
 	s := slotLeaderSelection
 	s.randomGenesis = big.NewInt(1)
 	epoch0Leaders := s.getEpoch0LeadersPK()
@@ -401,9 +401,9 @@ func (s *SLS) clearData() {
 	s.epochLeadersArray = make([]string, 0)
 	s.epochLeadersMap = make(map[string][]uint64)
 
-	s.slotCreateStatusLock.Lock()
+	s.slotCreateStatusLockCh <- 1
 	s.slotCreateStatus = make(map[uint64]bool)
-	s.slotCreateStatusLock.Unlock()
+	<-s.slotCreateStatusLockCh
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArray[i] = nil
@@ -645,9 +645,9 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		s.slotLeadersIndex[index] = value
 	}
 
-	s.slotCreateStatusLock.Lock()
+	s.slotCreateStatusLockCh <- 1
 	s.slotCreateStatus[epochID] = true
-	s.slotCreateStatusLock.Unlock()
+	<-s.slotCreateStatusLockCh
 	log.Info("generateSlotLeadsGroup success")
 
 	s.dumpData()

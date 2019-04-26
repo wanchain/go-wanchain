@@ -4,7 +4,7 @@
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
 // tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 200000
+var tranValue = "200000"
 
 // gasValue is the value you send to miner for protocal run's gas usage.
 var gasValue = 100

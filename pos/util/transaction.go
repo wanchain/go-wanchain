@@ -1,11 +1,12 @@
-package	util 
+package util
 
 import (
-	"errors"
 	"context"
-	"github.com/wanchain/go-wanchain/rpc"
+	"errors"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 //type SendTxArgs struct {
@@ -20,7 +21,7 @@ import (
 func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 	log.Info("begin send pos tx")
 	if rc == nil {
-		log.Error("connect rpc fail, rc is nil")
+		log.SyslogErr("connect rpc fail, rc is nil")
 		return common.Hash{}, errors.New("rc is not ready")
 	}
 
@@ -35,4 +36,3 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 	log.Info("send pos tx success", "txHash", txHash)
 	return txHash, nil
 }
-

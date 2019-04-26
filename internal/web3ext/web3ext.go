@@ -285,7 +285,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'calProbability',
 			call: 'pos_calProbability',
-			params: 4
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'getEpochIDByTime',

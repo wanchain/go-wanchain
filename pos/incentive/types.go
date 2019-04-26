@@ -4,6 +4,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 )
 
+// Activity is a struct use for outside api call return
 type Activity struct {
 	EpLeader   []common.Address
 	EpActivity []int
