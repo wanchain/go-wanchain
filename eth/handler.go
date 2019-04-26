@@ -137,7 +137,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 				peer := manager.newPeer(int(version), p, rw)
 				select {
-				case manager.newPeerCh <- peer:
+				case manager.newPeerCh <- pee
 					manager.wg.Add(1)
 					defer manager.wg.Done()
 					return manager.handle(peer)
@@ -258,8 +258,8 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	p.Log().Debug("Wanchain peer connected", "name", p.Name())
 
 	// Execute the Ethereum handshake
-	td, head, genesis := pm.blockchain.Status()
-	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
+	td, head, genesis, posPivot := pm.blockchain.Status()
+	if err := p.Handshake(pm.networkId, td, head, genesis, posPivot); err != nil {
 		p.Log().Debug("Wanchain handshake failed", "err", err)
 		return err
 	}

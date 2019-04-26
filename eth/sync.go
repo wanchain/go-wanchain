@@ -189,7 +189,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
-	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)
+	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode, peer.posPivot)
 
 	if atomic.LoadUint32(&pm.fastSync) == 1 {
 		// Disable fast sync if we indeed have something in our chain

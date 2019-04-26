@@ -67,7 +67,9 @@ const (
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
 
-
+	// Protocol messages belonging to pos
+	GetPosPivotMsg = 0x20
+	PosPivotMsg    = 0x21
 )
 
 type errCode int
@@ -121,6 +123,8 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+
+	PosPivot        uint64
 }
 
 // newBlockHashesData is the network packet for the block announcements.
