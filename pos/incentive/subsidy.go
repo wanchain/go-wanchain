@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -27,6 +28,11 @@ func calcBaseSubsidy(baseValueOfYear *big.Int, slotTime int64) *big.Int {
 // At the target block generation rate for the main network, this is
 // approximately every 5 years.
 func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int {
+	if stateDb == nil {
+		log.Error("getBaseSubsidyTotalForSlot with an empty stateDb")
+		return big.NewInt(0)
+	}
+
 	// 2500000 wan coin for first year
 	year := big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))
 	baseSubsidy := calcBaseSubsidy(year, posconfig.SlotTime)
@@ -47,6 +53,11 @@ func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int
 
 // calcWanFromFoundation returns subsidy Of Epoch from wan foundation by Wei
 func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
+	if stateDb == nil {
+		log.Error("calcWanFromFoundation with an empty stateDb")
+		return big.NewInt(0)
+	}
+
 	subsidyOfSlot := getBaseSubsidyTotalForSlot(stateDb, epochID)
 	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(posconfig.SlotCount))
 	return subsidyOfEpoch
@@ -54,6 +65,11 @@ func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
 
 // calculateIncentivePool returns subsidy of Epoch from all
 func calculateIncentivePool(stateDb *state.StateDB, epochID uint64) (total *big.Int, foundation *big.Int, gasPool *big.Int) {
+	if stateDb == nil {
+		log.Error("calculateIncentivePool with an empty stateDb")
+		return big.NewInt(0), big.NewInt(0), big.NewInt(0)
+	}
+
 	foundation = calcWanFromFoundation(stateDb, epochID)
 	gasPool = getEpochGas(stateDb, epochID)
 	total = big.NewInt(0).Add(foundation, gasPool)

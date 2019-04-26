@@ -97,7 +97,7 @@ Step 4 create a script file in path: `/home/YourUserName/.wanchain/minerRegister
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
 // tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 100000
+var tranValue = "100000"
 
 // secpub is the miner node's secpub value
 var secpub    = "YourPK1"
@@ -223,7 +223,7 @@ Step 4 create a script file in path: `/home/YourUserName/.wanchain/sendDelegate.
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
 // tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 100000
+var tranValue = "100000"
 
 // rewardAddr is the reward receive accounts which create nearly.
 var delegateAddr = "DelegateAddress"

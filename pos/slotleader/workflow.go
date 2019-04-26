@@ -243,11 +243,6 @@ func (s *SLS) checkNewEpochStart(epochID uint64) {
 	}
 }
 
-func (s *SLS) setCurrentWorkStage(workStage int) {
-	currentEpochID := s.getWorkingEpochID()
-	s.setWorkStage(currentEpochID, workStage)
-}
-
 func (s *SLS) getWorkingEpochID() uint64 {
 	ret, err := posdb.GetDb().Get(0, "slotLeaderCurrentSlotID")
 	if err != nil {

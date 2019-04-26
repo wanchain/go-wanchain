@@ -79,3 +79,76 @@ func TestGetEpochPayDetail(t *testing.T) {
 	}
 
 }
+
+func TestOtherApiSuccess(t *testing.T) {
+
+	generateTestAddrs()
+	generateTestStaker()
+
+	chain := &TestChainReader{}
+
+	ret := GetEpochGasPool(statedb, 0)
+	if ret.String() != "0" {
+		//t.FailNow()
+	}
+
+	rb := GetRBAddress(0)
+	if rb != nil {
+		//t.FailNow()
+	}
+
+	total, fdt, pool := GetIncentivePool(statedb, 0)
+	if total.String() != "0" || fdt.String() != "0" || pool.String() != "0" {
+		//t.FailNow()
+	}
+
+	// addr, act := GetEpochLeaderActivity(statedb, 0)
+	// if len(addr) != 0 || len(act) != 0 {
+	// 	//t.FailNow()
+	// }
+
+	addr, act := GetEpochRBLeaderActivity(statedb, 0)
+	if len(addr) != 0 || len(act) != 0 {
+		//t.FailNow()
+	}
+
+	addrs, cnt, actf := GetSlotLeaderActivity(chain, 0)
+	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) {
+		//t.FailNow()
+	}
+}
+
+func TestOtherApiFail(t *testing.T) {
+	ret := GetEpochGasPool(nil, 0)
+	if ret.String() != "0" {
+		t.FailNow()
+	}
+
+	tmp := getRandomProposerAddress
+	getRandomProposerAddress = nil
+	rb := GetRBAddress(0)
+	if rb != nil {
+		//t.FailNow()
+	}
+	getRandomProposerAddress = tmp
+
+	total, fdt, pool := GetIncentivePool(nil, 0)
+	if total.String() != "0" || fdt.String() != "0" || pool.String() != "0" {
+		t.FailNow()
+	}
+
+	addr, act := GetEpochLeaderActivity(nil, 0)
+	if len(addr) != 0 || len(act) != 0 {
+		t.FailNow()
+	}
+
+	addr, act = GetEpochRBLeaderActivity(nil, 0)
+	if len(addr) != 0 || len(act) != 0 {
+		t.FailNow()
+	}
+
+	addrs, cnt, actf := GetSlotLeaderActivity(nil, 0)
+	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) {
+		t.FailNow()
+	}
+}

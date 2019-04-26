@@ -11,6 +11,11 @@ import (
 )
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
+	if stateDb == nil {
+		log.Error("getEpochLeaderActivity with an empty stateDb")
+		return []common.Address{}, []int{}
+	}
+
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if epochLeaders == nil || len(epochLeaders) == 0 {
 		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
@@ -62,6 +67,11 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 }
 
 func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
+	if stateDb == nil {
+		log.Error("getRandomProposerActivity with an empty stateDb")
+		return []common.Address{}, []int{}
+	}
+
 	if getRandomProposerAddress == nil {
 		log.Error("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
 		return []common.Address{}, []int{}
@@ -90,6 +100,11 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 }
 
 func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {
+	if chain == nil {
+		log.Error("getSlotLeaderActivity chain reader is empty.")
+		return []common.Address{}, []int{}, float64(0)
+	}
+
 	currentNumber := chain.CurrentHeader().Number.Uint64()
 	miners := make(map[common.Address]int)
 	for i := currentNumber - 1; i > 0; i-- {

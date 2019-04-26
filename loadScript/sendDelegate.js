@@ -4,7 +4,7 @@
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
 // tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 100000
+var tranValue = "100000"
 
 // rewardAddr is the reward receive accounts which create nearly.
 var delegateAddr = ""

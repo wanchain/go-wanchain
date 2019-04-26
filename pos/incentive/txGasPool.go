@@ -26,6 +26,11 @@ func AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
 }
 
 func getEpochGas(stateDb vm.StateDB, epochID uint64) *big.Int {
+	if stateDb == nil {
+		log.Error("getEpochGas with an empty stateDb")
+		return big.NewInt(0)
+	}
+
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getGasHashKey(epochID))
 	return big.NewInt(0).SetBytes(buf)
 }
