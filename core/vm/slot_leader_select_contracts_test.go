@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/pos/uleaderselection"
 	"math/big"
 	"os"
 	"path"
@@ -146,6 +147,17 @@ func TestGetSlotLeaderStage2KeyHash(t *testing.T) {
 				i, j, hex.EncodeToString(key[:]))
 		}
 	}
+}
+func TestGetSlotLeaderStageKeyHash(t *testing.T) {
+	epochID := convert.Uint64ToBytes(uint64(0))
+	selfIndex := convert.Uint64ToBytes(uint64(1))
+	var hash common.Hash
+	hash = getSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag1)
+	t.Logf("hash:0x%v", hex.EncodeToString(hash[:]))
+
+	hash = getSlotLeaderStageKeyHash(epochID, selfIndex, SlotLeaderStag2)
+	t.Logf("hash:0x%v", hex.EncodeToString(hash[:]))
+
 }
 func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 
@@ -285,4 +297,160 @@ func TestUpdateSlotLeaderStageIndex(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func TestGetSlotLeaderScAbiString(t *testing.T) {
+	if len(GetSlotLeaderScAbiString()) == 0 {
+		t.Fail()
+	}
+}
+
+func TestGetStage1FunctionID(t *testing.T) {
+	slotStage1ID, err := GetStage1FunctionID(GetSlotLeaderScAbiString())
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Println(slotStage1ID)
+	if len(slotStage1ID) != 4 {
+		t.Error("length of contract function error")
+	}
+}
+
+func TestGetStage2FunctionID(t *testing.T) {
+	slotStage2ID, err := GetStage2FunctionID(GetSlotLeaderScAbiString())
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Println(slotStage2ID)
+	if len(slotStage2ID) != 4 {
+		t.Error("length of contract function error")
+	}
+}
+
+func TestGetSlotLeaderSCAddress(t *testing.T) {
+	addr := GetSlotLeaderSCAddress()
+	slotLeaderPrecompileAddr := common.BytesToAddress(big.NewInt(600).Bytes())
+
+	t.Logf("slot leader contract precompile address is :%v ", hex.EncodeToString(addr[:]))
+	if len(addr) != len(slotLeaderPrecompileAddr) {
+		t.Fail()
+	}
+
+	if addr != slotLeaderPrecompileAddr {
+		t.Fail()
+	}
+}
+
+func TestRlpPackStage1DataForTx(t *testing.T) {
+
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	// pack
+	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
+	// unpack
+	epochID, selfIndex, mi, err := RlpUnpackStage1DataForTx(rlpPackBytes)
+	// check
+	if epochID != 0 || selfIndex != 0 || uleaderselection.PublicKeyEqual(&pubKey, mi) {
+		t.Fail()
+	}
+}
+
+func TestRlpPackStage2DataForTx(t *testing.T) {
+
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	// pack
+	var alphaPkis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+
+		key, _ := crypto.GenerateKey()
+		alphaPkis[i] = &key.PublicKey
+	}
+
+	var proof [2]*big.Int
+	proof[0] = big1
+	proof[1] = big4
+
+	stag2Bytes, err := RlpPackStage2DataForTx(0, 0, &pubKey, alphaPkis[:], proof[:], GetSlotLeaderScAbiString())
+	if err != nil {
+		t.Fail()
+	}
+
+	epochID, selfIndex, selfPK, alphaPkisDecoded, proofDecoded, err := RlpUnpackStage2DataForTx(stag2Bytes)
+	if err != nil {
+		t.Fail()
+	}
+
+	if epochID != 0 || selfIndex != 0 || uleaderselection.PublicKeyEqual(selfPK, &pubKey) {
+		t.Fail()
+	}
+
+	for i, pk := range alphaPkisDecoded {
+		if uleaderselection.PublicKeyEqual(alphaPkis[i], pk) {
+			t.Fail()
+		}
+	}
+
+	for j, value := range proofDecoded {
+		if proof[j].Cmp(value) != 0 {
+			t.Fail()
+		}
+	}
+}
+
+func TestHandleStgOne(t *testing.T) {
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	// pack
+	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
+
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	// put data into state db
+	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+
+	nowTime := uint64(time.Now().Unix())
+	baseTime := posconfig.EpochBaseTime
+	posconfig.EpochBaseTime = nowTime
+
+	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
+	evm.Time = big.NewInt(0).SetUint64(testTime)
+
+	c := &slotLeaderSC{}
+	c.handleStgOne(rlpPackBytes, nil, evm)
+
+	keyHash := GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(uint64(0)),
+		convert.Uint64ToBytes(uint64(0)))
+
+	// get data from state db
+	bytesGet := evm.StateDB.GetStateByteArray(GetSlotLeaderSCAddress(), keyHash)
+
+	// unpack
+	epochID, selfIndex, mi, err := RlpUnpackStage1DataForTx(bytesGet)
+	// check
+	if epochID != 0 || selfIndex != 0 || uleaderselection.PublicKeyEqual(&pubKey, mi) {
+		t.Fail()
+	}
+
+	posconfig.EpochBaseTime = baseTime
 }
