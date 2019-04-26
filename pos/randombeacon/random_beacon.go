@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
+	"sync"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -66,6 +67,8 @@ type RandomBeacon struct {
 	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
 
+	wg sync.WaitGroup
+
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
 	getCji              GetCji
@@ -111,6 +114,7 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 
 	rb.loopEvents = make(chan *LoopEvent, loopEventCount)
 
+	rb.wg.Add(1)
 	go rb.LoopRoutine()
 }
 
@@ -120,6 +124,7 @@ func (rb *RandomBeacon) Stop() {
 	}
 
 	close(rb.loopEvents)
+	rb.wg.Wait()
 	rb.loopEvents = nil
 }
 
@@ -141,6 +146,8 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 }
 
 func (rb *RandomBeacon) LoopRoutine() {
+	defer rb.wg.Done()
+
 	for {
 		event, ok := <-rb.loopEvents
 		if !ok {
@@ -226,7 +233,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 				}
 
 				err := rb.doDKG2s()
-				// whilt errNoDKG1Poly, noneed to retry, stop dkg2 work
+				// while errNoDKG1Poly, noneed to retry, stop dkg2 work
 				if err != nil && err != errNoDKG1Poly {
 					return err
 				}

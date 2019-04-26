@@ -73,7 +73,7 @@ type SelectLead interface {
 var (
 	lastBlockEpoch  = make(map[uint64]uint64)
 	lastBlockHashEpoch  = make(map[uint64]common.Hash)
-	lbe	    = sync.RWMutex{}
+	lbe	    = sync.Mutex{}
 	selecter        SelectLead
 	lastEpochId     = uint64(0)
 	selectedEpochId = uint64(0)
@@ -110,10 +110,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
-	lbe.Lock()
-	lastBlockEpoch[epochID] = blockNumber
-	lastBlockHashEpoch[epochID] = hash
-	lbe.Unlock()
+	SetEpochBlock(epochID, blockNumber, hash)
 }
 func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lbe.Lock()
@@ -122,15 +119,15 @@ func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lbe.Unlock()
 }
 func GetEpochBlock(epochID uint64) uint64 {
-	lbe.RLock()
+	lbe.Lock()
 	b := lastBlockEpoch[epochID]
-	lbe.RUnlock()
+	lbe.Unlock()
 	return b
 }
 func GetEpochBlockHash(epochID uint64) common.Hash {
-	lbe.RLock()
+	lbe.Lock()
 	bh := lastBlockHashEpoch[epochID]
-	lbe.RUnlock()
+	lbe.Unlock()
 	return bh
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {

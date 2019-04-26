@@ -948,9 +948,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
 
-			if bc.slotValidator != bc.epochGene {
-				bc.epochGene.SelfGenerateEpochGenesis(block)
-			}
+			//if bc.slotValidator != bc.epochGene {
+			//	bc.epochGene.SelfGenerateEpochGenesis(block)
+			//}
 
 			posUtil.UpdateEpochBlock(block)
 		}
