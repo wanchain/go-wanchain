@@ -94,40 +94,40 @@ func CloseSyslog() {
 	syslogger.writer = nil
 }
 
-func SyslogDebug(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_DEBUG, format, a...)
+func SyslogDebug(a ...interface{}) {
+	writeSyslog(syslog.LOG_DEBUG, a...)
 }
 
-func SyslogInfo(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_INFO, format, a...)
+func SyslogInfo(a ...interface{}) {
+	writeSyslog(syslog.LOG_INFO, a...)
 }
 
-func SyslogNotice(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_NOTICE, format, a...)
+func SyslogNotice(a ...interface{}) {
+	writeSyslog(syslog.LOG_NOTICE, a...)
 }
 
-func SyslogWarning(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_WARNING, format, a...)
+func SyslogWarning(a ...interface{}) {
+	writeSyslog(syslog.LOG_WARNING, a...)
 }
 
-func SyslogErr(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_ERR, format, a...)
+func SyslogErr(a ...interface{}) {
+	writeSyslog(syslog.LOG_ERR, a...)
 }
 
-func SyslogCrit(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_CRIT, format, a...)
+func SyslogCrit(a ...interface{}) {
+	writeSyslog(syslog.LOG_CRIT, a...)
 }
 
-func SyslogAlert(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_ALERT, format, a...)
+func SyslogAlert(a ...interface{}) {
+	writeSyslog(syslog.LOG_ALERT, a...)
 }
 
-func SyslogEmerg(format string, a ...interface{}) {
-	writeSyslog(syslog.LOG_EMERG, format, a...)
+func SyslogEmerg(a ...interface{}) {
+	writeSyslog(syslog.LOG_EMERG, a...)
 }
 
 
-func writeSyslog(level syslog.Priority, format string, a ...interface{}) {
+func writeSyslog(level syslog.Priority, a ...interface{}) {
 	var sfunc SyslogFun
 	var lfunc LocallogFun
 
@@ -178,7 +178,20 @@ func writeSyslog(level syslog.Priority, format string, a ...interface{}) {
 		lfunc = Error
 	}
 
-	logStr := fmt.Sprintf(format, a...)
+	p := make([]interface{}, 0, len(a)*2)
+	for i := range a {
+		if i == 0 {
+			p = append(p, fmt.Sprintf("%-41s", a[i]))
+		} else if i%2 == 1 {
+			p = append(p, a[i])
+			p = append(p, string("="))
+		} else {
+			p = append(p, a[i])
+			p = append(p, string(" "))
+		}
+	}
+
+	logStr := fmt.Sprint(p...)
 	lfunc(logStr)
 
 	if level <= syslogger.threshold && sfunc != nil {
