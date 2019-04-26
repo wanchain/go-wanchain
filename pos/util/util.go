@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -15,6 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"sync"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -77,6 +77,8 @@ var (
 	selecter        SelectLead
 	lastEpochId     = uint64(0)
 	selectedEpochId = uint64(0)
+
+
 )
 
 func SetEpocherInst(sor SelectLead) {
@@ -107,9 +109,10 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 	}
 	// there is 2K slot, so need not think about reorg
 	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 {
-		GetEpocherInst().SelectLeadersLoop(epochID + 1)
+		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
+
 	SetEpochBlock(epochID, blockNumber, hash)
 }
 func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
