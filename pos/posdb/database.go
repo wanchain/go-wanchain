@@ -288,15 +288,6 @@ func GetStakerInfoBytes(epochId uint64, addr common.Address) []byte {
 	return stakerBytes
 }
 
-func GetAllStakerInfoBytes(epochId uint64) [][]byte {
-	db := NewDb(posconfig.StakerLocalDB)
-	if db == nil {
-		log.SyslogErr("GetStakerInfo create db error")
-		return nil
-	}
-	return db.GetStorageByteArray(epochId)
-}
-
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.EpLocalDB)
 	if db == nil {
