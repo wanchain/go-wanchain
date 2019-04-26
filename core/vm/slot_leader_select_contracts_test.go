@@ -4,9 +4,13 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
 	"os"
 	"path"
@@ -222,4 +226,63 @@ func TestAddSlotScCallTimes(t *testing.T) {
 	}
 
 	os.RemoveAll(path.Join(dir, "sl_contract_test"))
+}
+
+func TestUpdateSlotLeaderStageIndex(t *testing.T) {
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	var sendtransGet [posconfig.EpochLeaderCount]bool
+
+	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	epochIDBuf := convert.Uint64ToBytes(uint64(0))
+
+	var index uint64
+	// stage1 index
+	index = 0
+	updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag1Indexes, index)
+
+	key := getSlotLeaderStageIndexesKeyHash(epochIDBuf, SlotLeaderStag1Indexes)
+	bytes := evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, key)
+	rlp.DecodeBytes(bytes, &sendtransGet)
+
+	t.Logf("Index %v, status is :%v", index, sendtransGet[index])
+	if !sendtransGet[index] {
+		t.Error("state of index should be true")
+		t.Fail()
+	}
+
+	t.Logf("Index %v, status is :%v", index+1, sendtransGet[index+1])
+	if sendtransGet[index+1] {
+		t.Error("state of index should be false")
+		t.Fail()
+	}
+
+	// clear
+	for i := 0; i < len(sendtransGet); i++ {
+		sendtransGet[i] = false
+	}
+
+	// stage2 index
+	index = 0
+	updateSlotLeaderStageIndex(evm, epochIDBuf, SlotLeaderStag2Indexes, index)
+
+	key = getSlotLeaderStageIndexesKeyHash(epochIDBuf, SlotLeaderStag2Indexes)
+	bytes = evm.StateDB.GetStateByteArray(slotLeaderPrecompileAddr, key)
+	rlp.DecodeBytes(bytes, &sendtransGet)
+
+	t.Logf("Index %v, status is :%v", index, sendtransGet[index])
+	if !sendtransGet[index] {
+		t.Error("state of index should be true")
+		t.Fail()
+	}
+
+	t.Logf("Index %v, status is :%v", index+1, sendtransGet[index+1])
+	if sendtransGet[index+1] {
+		t.Error("state of index should be false")
+		t.Fail()
+	}
+
 }
