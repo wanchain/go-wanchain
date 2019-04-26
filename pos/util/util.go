@@ -107,7 +107,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 	}
 	// there is 2K slot, so need not think about reorg
 	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 {
-		GetEpocherInst().SelectLeadersLoop(epochID + 1)
+		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
 	lbe.Lock()

@@ -371,7 +371,7 @@ func (bc *BlockChain) getPosPivot() uint64 {
 	for {
 		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from + 1).Time.Uint64())
 		if epochId == eid {
-			return from
+			return from - 1
 		}
 		from ++
 	}

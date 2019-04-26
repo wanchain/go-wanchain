@@ -1461,6 +1461,7 @@ func (d *Downloader) processFullSyncContent() error {
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
 
 	for len(results) != 0 {
+		d.blockchain.SetFullSynchValidator()
 		// Check for any termination requests. This makes clean shutdown faster.
 		select {
 		case <-d.quitCh:

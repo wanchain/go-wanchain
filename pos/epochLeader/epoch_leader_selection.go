@@ -140,7 +140,7 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 }
 func (e *Epocher) selectLeaders(r []byte,  statedb *state.StateDB, epochId uint64) error {
 
-	log.Debug("select randoms", epochId, common.ToHex(r))
+	log.Debug("select randoms", "epochId", epochId, "r", common.ToHex(r))
 
 	pa, err := e.createStakerProbabilityArray(statedb)
 	if pa == nil || err != nil {
@@ -238,7 +238,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (Proposer
 		ps[idx].Probabilities = big.NewInt(0).Add(ps[idx].Probabilities, ps[idx-1].Probabilities)
 	}
 
-	log.Debug("get createStakerProbabilityArray len=", len(ps))
+	log.Debug("get createStakerProbabilityArray", "len", len(ps))
 
 	return ps, nil
 }
