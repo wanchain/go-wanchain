@@ -27,6 +27,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	log.Info("backendTimerLoop is running!!!!!!")
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+
 	cfm.InitCFM(s.BlockChain())
 	slotleader.SlsInit()
 
@@ -39,6 +40,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
+	//todo,maybe init do not need epochid
 	eerr := epochSelector.SelectLeadersLoop(0)
 	//todo system should not startup if there are error,jia
 
@@ -46,7 +48,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	sls.Init(s.BlockChain(), nil, nil)
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
-	fmt.Println("posInit: ", eerr)
+	log.Debug("posInit: ","", eerr)
 
 	s.BlockChain().SetSlSelector(sls)
 	s.BlockChain().SetRbSelector(epochSelector)
@@ -65,6 +67,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 	if posconfig.EpochBaseTime == 0 {
+		//todo:`switch pos from pow,the time is not 1?
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
@@ -102,7 +105,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
-	// if there is no block at all
+	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(1)
 	if nil == h {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
@@ -111,8 +114,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
 			}
-		}
+		} //todo panic if err?
 	}
+
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -124,7 +128,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			case <-time.After(time.Duration(time.Second)):
 				continue
 			}
-
+			//todo,this is unnessessary?
 			continue
 		} else {
 			posconfig.EpochBaseTime = h.Time.Uint64()
