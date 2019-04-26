@@ -78,7 +78,7 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 
 		err := s.startStage1Work()
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)

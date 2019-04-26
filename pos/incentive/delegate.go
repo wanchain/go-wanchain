@@ -34,12 +34,12 @@ func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProb
 	}
 
 	if (stakers == nil) || (len(stakers) == 0) {
-		log.Error("getStakerInfo get stakers error")
+		log.SyslogErr("getStakerInfo get stakers error")
 		return nil, 0, nil, errors.New("getStakerInfo get stakers error")
 	}
 
 	if division > 100 {
-		log.Error("getStakerInfo get division error")
+		log.SyslogErr("getStakerInfo get division error")
 		return nil, 0, nil, errors.New("getStakerInfo get division error")
 	}
 

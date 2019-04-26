@@ -17,7 +17,7 @@ func AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
 	}
 
 	if stateDb == nil || gasValue == nil {
-		log.Error("AddEpochGas input param is nil")
+		log.SyslogErr("AddEpochGas input param is nil")
 		return
 	}
 	nowGas := getEpochGas(stateDb, epochID)
@@ -27,7 +27,7 @@ func AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
 
 func getEpochGas(stateDb vm.StateDB, epochID uint64) *big.Int {
 	if stateDb == nil {
-		log.Error("getEpochGas with an empty stateDb")
+		log.SyslogErr("getEpochGas with an empty stateDb")
 		return big.NewInt(0)
 	}
 

@@ -45,7 +45,7 @@ func saveIncentiveHistory(epochID uint64, payments [][]vm.ClientIncentive) {
 
 	buf, err := rlp.EncodeToBytes(payments)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return
 	}
 	localDb.Put(epochID, dictEpochPayDetail, buf)
@@ -90,7 +90,7 @@ func saveOtherInfomation(epochID uint64, incentives [][]vm.ClientIncentive) {
 func localDbGetValue(epochID uint64, key string) (*big.Int, error) {
 	total, err := localDb.Get(epochID, key)
 	if err != nil && err.Error() != "leveldb: not found" {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
@@ -104,7 +104,7 @@ func localDbGetValue(epochID uint64, key string) (*big.Int, error) {
 func localDbAddValue(epochID uint64, key string, value *big.Int) {
 	total, err := localDb.Get(epochID, key)
 	if err != nil && err.Error() != "leveldb: not found" {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return
 	}
 	totalNum := big.NewInt(0)
@@ -119,7 +119,7 @@ func localDbAddValue(epochID uint64, key string, value *big.Int) {
 func GetEpochPayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
 	buf, err := localDb.Get(epochID, dictEpochPayDetail)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
@@ -127,7 +127,7 @@ func GetEpochPayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
 
 	err = rlp.DecodeBytes(buf, &payment)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 

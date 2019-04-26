@@ -254,7 +254,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			return true
 		}
 		stakeJson := StakerJson{}
@@ -295,7 +295,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			return true
 		}
 		es := StakerInfo{}

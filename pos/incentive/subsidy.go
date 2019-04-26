@@ -29,7 +29,7 @@ func calcBaseSubsidy(baseValueOfYear *big.Int, slotTime int64) *big.Int {
 // approximately every 5 years.
 func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int {
 	if stateDb == nil {
-		log.Error("getBaseSubsidyTotalForSlot with an empty stateDb")
+		log.SyslogErr("getBaseSubsidyTotalForSlot with an empty stateDb")
 		return big.NewInt(0)
 	}
 
@@ -54,7 +54,7 @@ func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int
 // calcWanFromFoundation returns subsidy Of Epoch from wan foundation by Wei
 func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
 	if stateDb == nil {
-		log.Error("calcWanFromFoundation with an empty stateDb")
+		log.SyslogErr("calcWanFromFoundation with an empty stateDb")
 		return big.NewInt(0)
 	}
 
@@ -66,7 +66,7 @@ func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
 // calculateIncentivePool returns subsidy of Epoch from all
 func calculateIncentivePool(stateDb *state.StateDB, epochID uint64) (total *big.Int, foundation *big.Int, gasPool *big.Int) {
 	if stateDb == nil {
-		log.Error("calculateIncentivePool with an empty stateDb")
+		log.SyslogErr("calculateIncentivePool with an empty stateDb")
 		return big.NewInt(0), big.NewInt(0), big.NewInt(0)
 	}
 

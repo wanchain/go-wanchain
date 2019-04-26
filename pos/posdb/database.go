@@ -1,13 +1,14 @@
 package posdb
 
 import (
-	"github.com/wanchain/go-wanchain/common"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"strings"
 	"sync"
+
+	"github.com/wanchain/go-wanchain/common"
 
 	"github.com/wanchain/go-wanchain/rlp"
 
@@ -252,7 +253,7 @@ func GetRBProposerGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.RbLocalDB)
 	if db == nil {
 		// todo : os.Exit ??
-		log.Error("GetRBProposerGroup create db error")
+		log.SyslogErr("GetRBProposerGroup create db error")
 		return nil
 	}
 
@@ -276,7 +277,7 @@ func GetRBProposerGroup(epochId uint64) [][]byte {
 func GetStakerInfoBytes(epochId uint64, addr common.Address) []byte {
 	db := NewDb(posconfig.StakerLocalDB)
 	if db == nil {
-		log.Error("GetStakerInfo create db error")
+		log.SyslogErr("GetStakerInfo create db error")
 		return nil
 	}
 	stakerBytes, err := db.GetWithIndex(epochId, 0, common.ToHex(addr[:]))
@@ -290,17 +291,16 @@ func GetStakerInfoBytes(epochId uint64, addr common.Address) []byte {
 func GetAllStakerInfoBytes(epochId uint64) [][]byte {
 	db := NewDb(posconfig.StakerLocalDB)
 	if db == nil {
-		log.Error("GetStakerInfo create db error")
+		log.SyslogErr("GetStakerInfo create db error")
 		return nil
 	}
 	return db.GetStorageByteArray(epochId)
 }
 
-
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.EpLocalDB)
 	if db == nil {
-		log.Error("GetEpochLeaderGroup create db error")
+		log.SyslogErr("GetEpochLeaderGroup create db error")
 		return nil
 	}
 
