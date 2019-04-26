@@ -24,7 +24,7 @@ func posWhiteList() {
 
 }
 func PosInit(s Backend) *epochLeader.Epocher {
-	log.Info("backendTimerLoop is running!!!!!!")
+	log.Debug("PosInit is running")
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 
@@ -41,14 +41,16 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
 	//todo,maybe init do not need epochid
-	eerr := epochSelector.SelectLeadersLoop(0)
+	err := epochSelector.SelectLeadersLoop(0)
 	//todo system should not startup if there are error,jia
+	if err != nil {
+		panic("PosInit")
+	}
 
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
-	log.Debug("posInit: ","", eerr)
 
 	s.BlockChain().SetSlSelector(sls)
 	s.BlockChain().SetRbSelector(epochSelector)
@@ -58,7 +60,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	return epochSelector
 }
 func posInitMiner(s Backend, key *keystore.Key) {
-	log.Info("timer backendTimerLoop is running!!!!!!")
+	log.Debug("posInitMiner is running")
 
 	// config
 	if key != nil {
@@ -77,7 +79,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 
 // backendTimerLoop is pos main time loop
 func (self *Miner) backendTimerLoop(s Backend) {
-	log.Info("backendTimerLoop is running!!!!!!")
+	log.Debug("backendTimerLoop is running")
 	// get wallet
 	eb, errb := s.Etherbase()
 	if errb != nil {
@@ -114,7 +116,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
 			}
-		} //todo panic if err?
+		} else {//todo panic if err?
+			panic(err)
+		}
 	}
 
 	for {
@@ -154,12 +158,12 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		// get state of k blocks ahead the last block
 		stateDb, err := s.BlockChain().State()
-		if err != nil {
-			log.Error("Failed to get stateDb", "err", err)
+		if err == nil {
+			// random beacon loop
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
+		} else {
+			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
-
-		// random beacon loop
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
 
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
