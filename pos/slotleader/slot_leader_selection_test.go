@@ -1,10 +1,14 @@
 package slotleader
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -271,4 +275,113 @@ func TestGetSMAPieces(t *testing.T) {
 	if len(pks) != posconfig.EpochLeaderCount {
 		t.Fail()
 	}
+}
+
+func TestDump(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	epochID := s.getWorkingEpochID()
+	s.setWorkingEpochID(2)
+
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKeyByes := crypto.FromECDSAPub(&prvKey.PublicKey)
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+	}
+	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+
+	posconfig.SelfTestMode = true
+	s.dumpData()
+
+	s.setWorkingEpochID(epochID)
+	posconfig.SelfTestMode = false
+}
+
+func TestClearData(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	epochID := s.getWorkingEpochID()
+	s.setWorkingEpochID(2)
+
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKeyByes := crypto.FromECDSAPub(&prvKey.PublicKey)
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+	}
+	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+
+	posconfig.SelfTestMode = true
+	s.buildEpochLeaderGroup(1)
+
+	s.dumpData()
+	s.clearData()
+	s.dumpData()
+
+	s.setWorkingEpochID(epochID)
+	posconfig.SelfTestMode = false
+}
+
+func TestGetSlotLeader(t *testing.T) {
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	t.Log("Current dir path ", dir)
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+	//posdb.NewDb(path.Join(dir, "sl_leader_test"))
+
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	pk, err := s.GetSlotLeader(0, 1)
+	if err != nil {
+		t.Fail()
+	}
+
+	if pkBytes, _ := hex.DecodeString(posconfig.GenesisPK); !bytes.Equal(pkBytes, crypto.FromECDSAPub(pk)) {
+		t.Fail()
+	}
+
+	pkGenesisBytes, _ := hex.DecodeString(posconfig.GenesisPK)
+	// ErrSlotIDOutOfRange
+	_, err = s.GetSlotLeader(1, posconfig.SlotCount)
+	if err == nil {
+		t.Logf("should err:%v,but nil", err.Error())
+		t.Fail()
+	}
+
+	//ErrSlotLeaderGroupNotReady
+
+	_, err = s.GetSlotLeader(1, posconfig.SlotCount-1)
+	if err == nil {
+		t.Fail()
+	}
+
+	for i := 0; i < posconfig.SlotCount; i++ {
+		_, err = posdb.GetDb().PutWithIndex(1, uint64(i), SlotLeader, pkGenesisBytes)
+		if err != nil {
+			t.Error(err.Error())
+			t.Fail()
+		}
+	}
+
+	s.slotCreateStatus[1] = false
+
+	pkSelected, err := s.GetSlotLeader(1, uint64(posconfig.SlotCount-1))
+	if err != nil {
+		t.Error(err.Error())
+		t.Fail()
+	}
+
+	if !bytes.Equal(pkGenesisBytes, crypto.FromECDSAPub(pkSelected)) {
+		t.Logf("should pk:%v, now pk:%v", pkGenesisBytes, crypto.FromECDSAPub(pkSelected))
+		t.Fail()
+	} else {
+		t.Logf("\nshould pk:\t%v\nnow pk:\t%v", hex.EncodeToString(pkGenesisBytes),
+			hex.EncodeToString(crypto.FromECDSAPub(pkSelected)))
+	}
+
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+
 }
