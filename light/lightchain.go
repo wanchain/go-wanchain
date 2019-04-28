@@ -177,17 +177,13 @@ func (self *LightChain) LastBlockHash() common.Hash {
 
 // Status returns status information about the current chain such as the HEAD Td,
 // the HEAD hash and the hash of the genesis block.
-func (self *LightChain) Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash, posPivot uint64) {
+func (self *LightChain) Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash) {
 	self.mu.RLock()
 	defer self.mu.RUnlock()
 
 	header := self.hc.CurrentHeader()
 	hash := header.Hash()
-	return self.GetTd(hash, header.Number.Uint64()), hash, self.genesisBlock.Hash(), self.getPosPivot()
-}
-
-func (bc *LightChain) getPosPivot() uint64 {
-	return uint64(0)
+	return self.GetTd(hash, header.Number.Uint64()), hash, self.genesisBlock.Hash()
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.

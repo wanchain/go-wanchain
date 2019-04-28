@@ -243,8 +243,6 @@ for example to get activty of epoch 365:
 ```
 
 ## calProbability
-calProbability() use to calc the probability of a staker with amount by stake wan coins.
+calProbability(amount, locktime) use to calc the probability of a staker with amount by stake wan coins.
 
-The probability is different in different time, so you should input each epoch ID you want to calc
-
-Such as CalProbability(390, 10000, 60, 360) means begin from epoch 360 lock 60 epochs stake 10000 to calc 390's probability.
+Such as CalProbability(10000, 60) means lock amount 10000 wan and lock time 60 epoch's probability.

@@ -454,3 +454,191 @@ func TestHandleStgOne(t *testing.T) {
 
 	posconfig.EpochBaseTime = baseTime
 }
+
+func TestGetStg1StateDbInfo(t *testing.T) {
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	// pack
+	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
+
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	// put data into state db
+	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+
+	nowTime := uint64(time.Now().Unix())
+	baseTime := posconfig.EpochBaseTime
+	posconfig.EpochBaseTime = nowTime
+
+	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
+	evm.Time = big.NewInt(0).SetUint64(testTime)
+
+	c := &slotLeaderSC{}
+	c.handleStgOne(rlpPackBytes, nil, evm)
+
+	// get data from state db
+	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
+	if err != nil {
+		t.Fail()
+	}
+	// len of PK is 65
+	if len(bytesMi) != 65 {
+		t.Fail()
+	}
+
+	posconfig.EpochBaseTime = baseTime
+}
+
+func TestGetStg2TxAlphaPki(t *testing.T) {
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	tempInt := new(big.Int).SetInt64(0)
+	tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(&pubKey)))
+	alpha := tempInt
+
+	mi0 := new(ecdsa.PublicKey)
+	mi0.Curve = crypto.S256()
+	mi0.X, mi0.Y = crypto.S256().ScalarMult(pubKey.X, pubKey.Y, alpha.Bytes())
+
+	// pack
+	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
+
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	// put data into state db
+	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+
+	nowTime := uint64(time.Now().Unix())
+	baseTime := posconfig.EpochBaseTime
+	posconfig.EpochBaseTime = nowTime
+
+	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
+	evm.Time = big.NewInt(0).SetUint64(testTime)
+
+	c := &slotLeaderSC{}
+	c.handleStgOne(rlpPackBytes, nil, evm)
+
+	// get data from state db
+	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
+	if err != nil {
+		t.Fail()
+	}
+	// len of PK is 65
+	if len(bytesMi) != 65 {
+		t.Fail()
+	}
+
+	// build stage2 data
+	var alphaPkis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	alphaPkis[0] = mi0
+	for i := 1; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKey := prvKey.PublicKey
+
+		mi := new(ecdsa.PublicKey)
+		mi.Curve = crypto.S256()
+		mi.X, mi.Y = crypto.S256().ScalarMult(pubKey.X, pubKey.Y, alpha.Bytes())
+
+		alphaPkis[i] = mi
+	}
+	var proof [2]*big.Int
+	proof[0] = big1
+	proof[1] = big4
+	stg2Bytes, _ := RlpPackStage2DataForTx(0, 0, &pubKey, alphaPkis[:], proof[:], GetSlotLeaderScAbiString())
+
+	c.handleStgTwo(stg2Bytes[:], nil, evm)
+
+	posconfig.EpochBaseTime = baseTime
+}
+
+func TestHandleStgTwo(t *testing.T) {
+	prvKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	pubKey := prvKey.PublicKey
+
+	tempInt := new(big.Int).SetInt64(0)
+	tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(&pubKey)))
+	alpha := tempInt
+
+	mi0 := new(ecdsa.PublicKey)
+	mi0.Curve = crypto.S256()
+	mi0.X, mi0.Y = crypto.S256().ScalarMult(pubKey.X, pubKey.Y, alpha.Bytes())
+
+	// pack
+	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
+
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	// put data into state db
+	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+
+	nowTime := uint64(time.Now().Unix())
+	baseTime := posconfig.EpochBaseTime
+	posconfig.EpochBaseTime = nowTime
+
+	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
+	evm.Time = big.NewInt(0).SetUint64(testTime)
+
+	c := &slotLeaderSC{}
+	c.handleStgOne(rlpPackBytes, nil, evm)
+
+	// get data from state db
+	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
+	if err != nil {
+		t.Fail()
+	}
+	// len of PK is 65
+	if len(bytesMi) != 65 {
+		t.Fail()
+	}
+
+	// build stage2 data
+	var alphaPkis [posconfig.EpochLeaderCount]*ecdsa.PublicKey
+	alphaPkis[0] = mi0
+	for i := 1; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKey := prvKey.PublicKey
+
+		mi := new(ecdsa.PublicKey)
+		mi.Curve = crypto.S256()
+		mi.X, mi.Y = crypto.S256().ScalarMult(pubKey.X, pubKey.Y, alpha.Bytes())
+
+		alphaPkis[i] = mi
+	}
+	var proof [2]*big.Int
+	proof[0] = big1
+	proof[1] = big4
+	stg2Bytes, _ := RlpPackStage2DataForTx(0, 0, &pubKey, alphaPkis[:], proof[:], GetSlotLeaderScAbiString())
+
+	testTime = nowTime + (posconfig.Sma2Start+1)*posconfig.SlotTime
+	evm.Time = big.NewInt(0).SetUint64(testTime)
+
+	ret, err := c.handleStgTwo(stg2Bytes[:], nil, evm)
+
+	if err != nil || ret != nil {
+		t.Fail()
+	}
+	posconfig.EpochBaseTime = baseTime
+}

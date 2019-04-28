@@ -167,22 +167,21 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 	tp := &testPeer{app: app, net: net, peer: peer}
 	// Execute any implicitly requested handshakes and return
 	if shake {
-		td, head, genesis, posPivot := pm.blockchain.Status()
-		tp.handshake(nil, td, head, genesis, posPivot)
+		td, head, genesis := pm.blockchain.Status()
+		tp.handshake(nil, td, head, genesis)
 	}
 	return tp, errc
 }
 
 // handshake simulates a trivial handshake that expects the same state from the
 // remote side as we are simulating locally.
-func (p *testPeer) handshake(t *testing.T, td *big.Int, head common.Hash, genesis common.Hash, posPivot uint64) {
+func (p *testPeer) handshake(t *testing.T, td *big.Int, head common.Hash, genesis common.Hash) {
 	msg := &statusData{
 		ProtocolVersion: uint32(p.version),
 		NetworkId:       DefaultConfig.NetworkId,
 		TD:              td,
 		CurrentBlock:    head,
 		GenesisBlock:    genesis,
-		PosPivot:        posPivot,
 	}
 	if err := p2p.ExpectMsg(p.app, StatusMsg, msg); err != nil {
 		t.Fatalf("status recv: %v", err)
