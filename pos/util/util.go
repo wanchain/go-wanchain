@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -15,6 +14,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"sync"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -73,10 +73,12 @@ type SelectLead interface {
 var (
 	lastBlockEpoch  = make(map[uint64]uint64)
 	lastBlockHashEpoch  = make(map[uint64]common.Hash)
-	lbe	    = sync.RWMutex{}
+	lbe	    = sync.Mutex{}
 	selecter        SelectLead
 	lastEpochId     = uint64(0)
 	selectedEpochId = uint64(0)
+
+
 )
 
 func SetEpocherInst(sor SelectLead) {
@@ -110,10 +112,8 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
-	lbe.Lock()
-	lastBlockEpoch[epochID] = blockNumber
-	lastBlockHashEpoch[epochID] = hash
-	lbe.Unlock()
+
+	SetEpochBlock(epochID, blockNumber, hash)
 }
 func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lbe.Lock()
@@ -122,15 +122,15 @@ func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lbe.Unlock()
 }
 func GetEpochBlock(epochID uint64) uint64 {
-	lbe.RLock()
+	lbe.Lock()
 	b := lastBlockEpoch[epochID]
-	lbe.RUnlock()
+	lbe.Unlock()
 	return b
 }
 func GetEpochBlockHash(epochID uint64) common.Hash {
-	lbe.RLock()
+	lbe.Lock()
 	bh := lastBlockHashEpoch[epochID]
-	lbe.RUnlock()
+	lbe.Unlock()
 	return bh
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {

@@ -31,7 +31,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 
 	rbPtr, err := s.getRandom(block, epochID)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return false
 	}
 
@@ -39,7 +39,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	// stage two info from trans
 	validEpochLeadersIndex, stageTwoAlphaPKi, err := s.getStageTwoFromTrans(epochID)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		// no stage2 trans on the block chain.
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
@@ -81,7 +81,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		}
 
 		if len(smaPieces) == 0 {
-			log.Error("len(smaPieces) == 0 in proof.go")
+			log.SyslogErr("len(smaPieces) == 0 in proof.go")
 			return false
 		}
 
@@ -290,13 +290,13 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 		return validEpochLeadersIndex, stageTwoAlphaPKi, err
 	}
 
+	hash := util.GetEpochBlockHash(epochID - 1)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		if !indexesSentTran[i] {
 			validEpochLeadersIndex[i] = false
 			continue
 		}
 		// TODO:
-		hash := util.GetEpochBlockHash(epochID)
 		bkey := make([]byte, 0)
 		bkey = append(bkey, hash[:]...)
 		bkey = append(bkey, big.NewInt(int64(i)).Bytes()...)

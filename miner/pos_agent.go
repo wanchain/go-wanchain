@@ -24,9 +24,10 @@ func posWhiteList() {
 
 }
 func PosInit(s Backend) *epochLeader.Epocher {
-	log.Info("backendTimerLoop is running!!!!!!")
+	log.Debug("PosInit is running")
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+
 	cfm.InitCFM(s.BlockChain())
 	slotleader.SlsInit()
 
@@ -39,14 +40,17 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
-	eerr := epochSelector.SelectLeadersLoop(0)
+	//todo,maybe init do not need epochid
+	err := epochSelector.SelectLeadersLoop(0)
 	//todo system should not startup if there are error,jia
+	if err != nil {
+		panic("PosInit")
+	}
 
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
-	fmt.Println("posInit: ", eerr)
 
 	s.BlockChain().SetSlSelector(sls)
 	s.BlockChain().SetRbSelector(epochSelector)
@@ -56,7 +60,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	return epochSelector
 }
 func posInitMiner(s Backend, key *keystore.Key) {
-	log.Info("timer backendTimerLoop is running!!!!!!")
+	log.Debug("posInitMiner is running")
 
 	// config
 	if key != nil {
@@ -65,6 +69,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 	if posconfig.EpochBaseTime == 0 {
+		//todo:`switch pos from pow,the time is not 1?
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
@@ -74,7 +79,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 
 // backendTimerLoop is pos main time loop
 func (self *Miner) backendTimerLoop(s Backend) {
-	log.Info("backendTimerLoop is running!!!!!!")
+	log.Debug("backendTimerLoop is running")
 	// get wallet
 	eb, errb := s.Etherbase()
 	if errb != nil {
@@ -102,7 +107,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
-	// if there is no block at all
+	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(1)
 	if nil == h {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
@@ -111,8 +116,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
 			}
+		} else {//todo panic if err?
+			panic(err)
 		}
 	}
+
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -124,7 +132,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			case <-time.After(time.Duration(time.Second)):
 				continue
 			}
-
+			//todo,this is unnessessary?
 			continue
 		} else {
 			posconfig.EpochBaseTime = h.Time.Uint64()
@@ -150,12 +158,12 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		// get state of k blocks ahead the last block
 		stateDb, err := s.BlockChain().State()
-		if err != nil {
-			log.Error("Failed to get stateDb", "err", err)
+		if err == nil {
+			// random beacon loop
+			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
+		} else {
+			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
-
-		// random beacon loop
-		randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
 
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)

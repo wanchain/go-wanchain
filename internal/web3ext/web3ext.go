@@ -278,14 +278,14 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'isBlockConfirmed',
-			call: 'pos_isBlockConfirmed',
-			params: 1
+			name: 'getMaxStableBlkNumber',
+			call: 'pos_getMaxStableBlkNumber',
+			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'calProbability',
 			call: 'pos_calProbability',
-			params: 4
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'getEpochIDByTime',

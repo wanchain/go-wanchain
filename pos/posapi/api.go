@@ -221,11 +221,11 @@ type StakerJson struct {
 	PubSec256 string //stakeholder’s wan public key
 	PubBn256  string //stakeholder’s bn256 public key
 
-	Amount     *big.Int //staking wan value
-	StakeAmount     *big.Int //staking wan value
-	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
+	Amount         *big.Int //staking wan value
+	StakeAmount    *big.Int //staking wan value
+	LockEpochs     uint64   //lock time which is input by user. 0 means unexpired.
 	NextLockEpochs uint64   //lock time which is input by user. 0 means unexpired.
-	From       common.Address
+	From           common.Address
 
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
@@ -254,7 +254,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			return true
 		}
 		stakeJson := StakerJson{}
@@ -295,7 +295,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			return true
 		}
 		es := StakerInfo{}
@@ -433,14 +433,14 @@ func (a PosApi) GetSlotTime() int {
 	return posconfig.SlotTime
 }
 
-func (a PosApi) IsBlockConfirmed(blockNumber uint64) bool {
-	return cfm.GetCFM().IsBlkCfm(blockNumber)
+func (a PosApi) GetMaxStableBlkNumber() uint64 {
+	return cfm.GetCFM().GetMaxStableBlkNumber()
 }
 
 // CalProbability use to calc the probability of a staker with amount by stake wan coins.
 // The probability is different in different time, so you should input each epoch ID you want to calc
 // Such as CalProbability(390, 10000, 60, 360) means begin from epoch 360 lock 60 epochs stake 10000 to calc 390's probability.
-func (a PosApi) CalProbability(epochId uint64, amountCoin uint64, lockTime uint64, startEpochId uint64) (string, error) {
+func (a PosApi) CalProbability(amountCoin uint64, lockTime uint64) (string, error) {
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
 		return "", errors.New("epocher instance do not exist")

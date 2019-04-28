@@ -38,29 +38,11 @@ const (
 	dictFinished      = "finished"
 )
 
-// Incentive is use for interface export
-type Incentive struct{}
-
-// Init should be called at init time before run
-func (inc *Incentive) Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
-	Init(get, set, getRbAddr)
-}
-
-// Run should be called in consensus finalize.
-func (inc *Incentive) Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) {
-	Run(chain, stateDb, epochID, blockNumber)
-}
-
-// AddEpochGas is called to collect gas fee for every transactions
-func (inc *Incentive) AddEpochGas(stateDb vm.StateDB, gasValue *big.Int, epochID uint64) {
-	AddEpochGas(stateDb, gasValue, epochID)
-}
-
 // Init is use to init the outsides interface of staker.
 // Should be called at the node start
 func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
 	if get == nil || set == nil || getRbAddr == nil {
-		log.Error("incentive Init input param error (get == nil || set == nil || getRbAddr == nil)")
+		log.SyslogErr("incentive Init input param error (get == nil || set == nil || getRbAddr == nil)")
 	}
 
 	setStakerInterface(get, set)
@@ -74,7 +56,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 // Run is use to run the incentive should be called in Finalize of consensus
 func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
 	if chain == nil || stateDb == nil {
-		log.Error("incentive Run input param error (chain == nil || stateDb == nil)")
+		log.SyslogErr("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false
 	}
 
@@ -107,6 +89,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	if err != nil {
 		log.Error("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
+		log.SyslogErr("Incentive epochLeaderAllocate error")
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -115,6 +98,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
 	if err != nil {
 		log.Error("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
+		log.SyslogErr("Incentive randomProposerAllocate error")
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -123,6 +107,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount, epochID)
 	if err != nil {
 		log.Error("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
+		log.SyslogErr("Incentive slotLeaderAllocate error")
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -133,6 +118,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, bl
 	remainsAll.Add(remainsAll, extraRemain)
 	if !checkTotalValue(total, sumPay, remainsAll) {
 		log.Error("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
+		log.SyslogErr("Incentive checkTotalValue error")
 		return false
 	}
 

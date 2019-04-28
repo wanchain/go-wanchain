@@ -2,9 +2,10 @@ package convert
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
-	"math/big"
 )
 
 // ---------------------------------------------------------------------------
