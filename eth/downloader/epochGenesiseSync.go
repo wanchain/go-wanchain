@@ -75,6 +75,7 @@ func (d *Downloader) epochGenesisFetcher() {
 
 			case epochid := <-d.epochGenesisSyncStart:
 
+				log.Debug("****fetching", "epochId", epochid)
 				if repeatCount[epochid] > repeatLimit {
 
 					if d.epochGenesisFbCh != nil {
