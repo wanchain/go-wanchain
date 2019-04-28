@@ -145,33 +145,27 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
-func (a PosApi) GetReorg(epochID uint64) ([]uint64, error) {
+func (a PosApi) GetReorg(epochid uint64,slotid uint64) ([]uint64, error) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		return nil, errors.New("not find db")
 	}
 
-	var forkNum, reOrgNum, reOrgLen uint64
+	var reOrgNum, reOrgLen uint64
 
-	forkNum = 0
 	reOrgNum = 0
 
-	forkBytes, err := reOrgDb.Get(epochID, "forkNumber")
-	if err == nil && forkBytes != nil {
-		forkNum = binary.BigEndian.Uint64(forkBytes)
-	}
-
-	reorBytes, err := reOrgDb.Get(epochID, "reorgNumber")
+	reorBytes, err := reOrgDb.Get((epochid <<16)|slotid, "reorgNumber")
 	if err == nil && reorBytes != nil {
 		reOrgNum = binary.BigEndian.Uint64(reorBytes)
 	}
 
-	lenBytes, err := reOrgDb.Get(epochID, "reorgLength")
+	lenBytes, err := reOrgDb.Get(slotid, "reorgLength")
 	if err == nil && reorBytes != nil {
 		reOrgLen = binary.BigEndian.Uint64(lenBytes)
 	}
 
-	return []uint64{forkNum, reOrgNum, reOrgLen}, nil
+	return []uint64{reOrgNum, reOrgLen}, nil
 }
 
 func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {

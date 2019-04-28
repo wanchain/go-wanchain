@@ -63,6 +63,7 @@ type peer struct {
 
 	head common.Hash
 	td   *big.Int
+	posPivot uint64
 	lock sync.RWMutex
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer

@@ -483,6 +483,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			return err
 		}
 	}
+
 	////////////////////////////////////////////////
 
 	height := latest.Number.Uint64()

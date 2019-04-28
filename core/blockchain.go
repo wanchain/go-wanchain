@@ -332,8 +332,9 @@ func (bc *BlockChain) LastBlockHash() common.Hash {
 }
 
 // CurrentBlock retrieves the current head block of the canonical chain. The
-// block is retrieved from the blockchain's internal cache.
+
 func (bc *BlockChain) CurrentBlock() *types.Block {
+
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
 
@@ -1304,14 +1305,13 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	newChainLen := len(newChain)
-	newEpochId, _, err := bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
+	epochId,slotid, err := bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	if err != nil {
 		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
 	}
 
-	bc.updateFork(newEpochId)
-	bc.updateReOrg(newEpochId,uint64(len(newChain)))
+	bc.updateReOrg(epochId,slotid,uint64(len(oldChain)))
 
 	log.Info("reorg happended")
 	for _, block := range newChain {
