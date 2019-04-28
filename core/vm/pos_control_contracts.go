@@ -107,7 +107,7 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	copy(methodId[:], input[:4])
 
 	if methodId == upgradeWhiteEpochLeaderId {
-		info, err := p.upgradeWhiteEpochLeaderParseAndValid(input[4:], uint64(time.Now().Unix()))
+		info, err := p.upgradeWhiteEpochLeaderParseAndValid(input[4:], evm.Time.Uint64())
 		if err != nil {
 			return nil, err
 		}

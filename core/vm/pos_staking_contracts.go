@@ -153,9 +153,11 @@ var (
 	maxEpochNum         = big.NewInt(PSMaxEpochNum)
 	minEpochNum         = big.NewInt(PSMinEpochNum)
 	minStakeholderStake = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
+	minValidatorStake 	= new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
 	minDelegatorStake = new(big.Int).Mul(big.NewInt(PSMinDelegatorStake), ether)
 	minFeeRate = big.NewInt(PSMinFeeRate)
 	maxFeeRate = big.NewInt(PSMaxFeeRate)
+	noDelegateFeeRate = big.NewInt(PSNodeleFeeRate)
 	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(PSOutKeyHash).Bytes())
 )
 
@@ -261,7 +263,11 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	copy(methodId[:], input[:4])
 
 	if methodId == stakeInId {
-		return p.StakeIn(input[4:], contract, evm)
+		ret,err :=  p.StakeIn(input[4:], contract, evm)
+		if err != nil {
+			log.Info("stakein failed", "err", err)
+		}
+		return ret, err
 	} else if methodId == stakeUpdateId {
 		return p.StakeUpdate(input[4:], contract, evm)
 	} else if methodId == stakeAppendId {
@@ -426,10 +432,15 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	}
 
 	// TODO: need max?
-	// 5. amount >= min, (<= max ------- amount = self + delegate's, not to do)
+	// 5. amount >= PSMinStakeholderStake,
 	if contract.value.Cmp(minStakeholderStake) < 0 {
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
+
+	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(minValidatorStake) < 0 {
+		return nil, errors.New("need more Wan to be a validator")
+	}
+
 	secAddr := crypto.PubkeyToAddress(*pub)
 
 	// 6. secAddr has not join the pos or has finished
@@ -437,7 +448,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	oldInfo, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
 	// a. is secAddr joined?
 	if oldInfo != nil {
-		return nil, errors.New("public Sec address is waiting for settlement")
+		return nil, errors.New("public Sec address has exist")
 	}
 
 	// create stakeholder's information
