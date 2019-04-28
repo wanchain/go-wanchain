@@ -24,13 +24,15 @@ import (
 )
 
 
-func (bc *BlockChain) updateReOrg(epochId uint64, length uint64) {
+func (bc *BlockChain) updateReOrg(epochid uint64,slotid uint64,length uint64) {
+
+
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		reOrgDb = posdb.NewDb("forkdb")
 	}
 
-	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
+	numberBytes, _ := reOrgDb.Get((epochid <<16)|slotid, "reorgNumber")
 
 	num := uint64(0)
 	if numberBytes != nil {
@@ -40,31 +42,13 @@ func (bc *BlockChain) updateReOrg(epochId uint64, length uint64) {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
 
-	reOrgDb.Put(epochId, "reorgNumber", b)
+	reOrgDb.Put(epochid, "reorgNumber", b)
 
 	b = make([]byte, 8)
 	binary.BigEndian.PutUint64(b, length)
-	reOrgDb.Put(epochId, "reorgLength", b)
+	reOrgDb.Put(epochid, "reorgLength", b)
 }
 
-func (bc *BlockChain) updateFork(epochId uint64) {
-	reOrgDb := posdb.GetDbByName("forkdb")
-	if reOrgDb == nil {
-		reOrgDb = posdb.NewDb("forkdb")
-	}
-
-	numberBytes, _ := reOrgDb.Get(0, "forkNumber")
-
-	num := uint64(0)
-	if numberBytes != nil {
-		num = binary.BigEndian.Uint64(numberBytes) + 1
-	}
-
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, num)
-
-	reOrgDb.Put(epochId, "forkNumber", b)
-}
 
 
 type RbLeadersSelInt interface {
