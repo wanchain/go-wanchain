@@ -524,7 +524,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		// check if delegator want to quit.
 		for j := 0; j < len(staker.Clients); j++ {
 			// edit the validator Amount
-			if epochID >= staker.Clients[j].QuitEpoch  {
+			if epochID >= staker.Clients[j].QuitEpoch &&  staker.Clients[j].QuitEpoch!=0 {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 				changed = true
 			}else {
