@@ -313,7 +313,7 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 				validEpochLeadersIndex[i] = false
 				continue
 			}
-			APkiCache.Add(ckey, alphaPki)
+			//APkiCache.Add(ckey, alphaPki)
 		} else {
 			alphaPki = alphaPkiCached.([]*ecdsa.PublicKey)
 		}

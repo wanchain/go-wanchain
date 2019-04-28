@@ -360,20 +360,22 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 
 func (bc *BlockChain) getPosPivot() uint64 {
 	eid, sid := posUtil.CalEpochSlotID(bc.currentBlock.Time().Uint64())
-	if eid == 0 {
+	if eid < 2 {
 		return 0
 	}
-	min := bc.currentBlock.Number().Int64() - int64(sid) - 1
+	max := bc.currentBlock.Number().Int64() - int64(sid) - 1
+	min := max - posconfig.SlotCount
 	if min < 0 {
 		return 0
 	}
 	from := uint64(min)
+	desEid := eid - 1
 	for {
-		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from + 1).Time.Uint64())
-		if epochId == eid {
-			return from - 1
-		}
 		from ++
+		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from).Time.Uint64())
+		if epochId >= desEid {
+			return from - 2
+		}
 	}
 }
 

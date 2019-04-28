@@ -516,9 +516,10 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			if height > uint64(fsMinFullBlocks)+pivotOffset.Uint64() {
 				pivot = height - uint64(fsMinFullBlocks) - pivotOffset.Uint64()
 			}
-			if pivot > posPivot && posPivot != 0 {
-				pivot = posPivot
-			}
+			//if pivot > posPivot && posPivot != 0 {
+			//	pivot = posPivot
+			//}
+			pivot = posPivot
 		} else {
 			// Pivot point locked in, use this and do not pick a new one!
 			pivot = d.fsPivotLock.Number.Uint64()
