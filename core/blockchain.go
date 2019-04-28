@@ -360,22 +360,23 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 }
 
 func (bc *BlockChain) getPosPivot() uint64 {
-	eid, sid := posUtil.CalEpochSlotID(bc.currentBlock.Time().Uint64())
-	if eid == 0 {
-		return 0
-	}
-	min := bc.currentBlock.Number().Int64() - int64(sid) - 1
-	if min < 0 {
-		return 0
-	}
-	from := uint64(min)
-	for {
-		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from + 1).Time.Uint64())
-		if epochId == eid {
-			return from - 1
-		}
-		from ++
-	}
+	return 0
+	//eid, sid := posUtil.CalEpochSlotID(bc.currentBlock.Time().Uint64())
+	//if eid == 0 {
+	//	return 0
+	//}
+	//min := bc.currentBlock.Number().Int64() - int64(sid) - 1
+	//if min < 0 {
+	//	return 0
+	//}
+	//from := uint64(min)
+	//for {
+	//	epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from + 1).Time.Uint64())
+	//	if epochId == eid {
+	//		return from - 1
+	//	}
+	//	from ++
+	//}
 }
 
 // SetProcessor sets the processor required for making state modifications.
