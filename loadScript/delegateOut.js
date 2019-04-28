@@ -3,11 +3,7 @@
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
-//var tranValue = "100000"
-
-// rewardAddr is the reward receive accounts which create nearly.
-var delegateAddr = ""
+var validatorAddr = ""
 
 // baseAddr is the fund source account.
 var baseAddr  = ""
@@ -25,10 +21,8 @@ var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
 var coinContract = contractDef.at(cscContractAddr);
 
-var payloadDelegate = coinContract.delegateIn.getData(delegateAddr)
-
 // delegateOut
-var payloadDelegate5 = coinContract.delegateOut.getData(secAddr)
+var payloadDelegate5 = coinContract.delegateOut.getData(validatorAddr)
 var tx5 = eth.sendTransaction({from:baseAddr, to:cscContractAddr, value:'0x00', data:payloadDelegate5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)});
 console.log("tx5= " + tx5)
 //------------------RUN CODE DO NOT MODIFY------------------
