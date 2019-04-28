@@ -35,5 +35,5 @@ var wlCount = 26
 
 var payload = Contract.upgradeWhiteEpochLeader.getData(EpochId, wlIndex, wlCount)
 console.log("payload: ", payload)
-var tx = eth.sendTransaction({from:eth.coinbase, to:ContractAddr, value:'0x00', data:payload, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+var tx = eth.sendTransaction({from:eth.coinbase, to:ContractAddr, value:'0x00', data:payload, gas: 200000, gasprice:'0x' + (200000000000).toString(16)});
 console.log("tx: ",tx)

@@ -52,7 +52,7 @@ Step 2 start gwan with docker and create account:
 ```
 $ docker pull molin0000/wanpos_poc_node
 
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
 
 YourContainerID
 
@@ -122,7 +122,8 @@ var passwd    = "YourPassword"
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
+
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
 var coinContract = contractDef.at(cscContractAddr);
@@ -151,7 +152,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -177,7 +178,7 @@ $ exit
 
 Step 2 start gwan with docker and create account and select delegate:
 ```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
 
 YourContainerID
 
@@ -239,7 +240,8 @@ var passwd    = "YourPassword"
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
+
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
 var coinContract = contractDef.at(cscContractAddr);
@@ -279,15 +281,15 @@ You can run a node as a sync node as below:
 
 ```
 //On MacOS:
-$ docker run -d -p 17717:17717 -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
 
 //On Ubuntu
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
 ```
 
 If you want to be a miner, you should create a account and start like this:
 ```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
 ```
 
 The `YourPasswordTxtFile` is a txt file with your miner account password in it in docker.
@@ -295,7 +297,7 @@ The `YourPasswordTxtFile` is a txt file with your miner account password in it i
 Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt` , you should start docker like this:
 
 ```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 ```
 
 

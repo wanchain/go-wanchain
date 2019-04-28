@@ -63,6 +63,7 @@ type peer struct {
 
 	head common.Hash
 	td   *big.Int
+	posPivot uint64
 	lock sync.RWMutex
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
@@ -259,7 +260,7 @@ func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) 
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash, posPivot uint64) error {
 
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
@@ -272,6 +273,7 @@ func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
+			PosPivot:        posPivot,
 		})
 	}()
 	go func() {
@@ -289,7 +291,7 @@ func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			return p2p.DiscReadTimeout
 		}
 	}
-	p.td, p.head = status.TD, status.CurrentBlock
+	p.td, p.head, p.posPivot = status.TD, status.CurrentBlock, status.PosPivot
 	return nil
 }
 

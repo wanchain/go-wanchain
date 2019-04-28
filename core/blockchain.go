@@ -352,11 +352,30 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 
 // Status returns status information about the current chain such as the HEAD Td,
 // the HEAD hash and the hash of the genesis block.
-func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash) {
+func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash, posPivot uint64) {
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
 
-	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
+	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash(), bc.getPosPivot()
+}
+
+func (bc *BlockChain) getPosPivot() uint64 {
+	eid, sid := posUtil.CalEpochSlotID(bc.currentBlock.Time().Uint64())
+	if eid == 0 {
+		return 0
+	}
+	min := bc.currentBlock.Number().Int64() - int64(sid) - 1
+	if min < 0 {
+		return 0
+	}
+	from := uint64(min)
+	for {
+		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from + 1).Time.Uint64())
+		if epochId == eid {
+			return from - 1
+		}
+		from ++
+	}
 }
 
 // SetProcessor sets the processor required for making state modifications.

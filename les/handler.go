@@ -77,7 +77,7 @@ type BlockChain interface {
 	GetTdByHash(hash common.Hash) *big.Int
 	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
 	Rollback(chain []common.Hash)
-	Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
+	Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash, posPivot uint64)
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
 	LastBlockHash() common.Hash
@@ -258,7 +258,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	p.Log().Debug("Light Wanchain peer connected", "name", p.Name())
 
 	// Execute the LES handshake
-	td, head, genesis := pm.blockchain.Status()
+	td, head, genesis, _ := pm.blockchain.Status()
 	headNum := core.GetBlockNumber(pm.chainDb, head)
 	if err := p.Handshake(td, head, headNum, genesis, pm.server); err != nil {
 		p.Log().Debug("Light Ethereum handshake failed", "err", err)
