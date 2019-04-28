@@ -5,6 +5,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/rpc"
 	"math/big"
 	"os"
 	"path"
@@ -384,4 +387,113 @@ func TestGetSlotLeader(t *testing.T) {
 
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 
+}
+
+func TestGetLocalPublicKey(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+	s.key.PrivateKey = key
+
+	keyGot, err := s.GetLocalPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !uleaderselection.PublicKeyEqual(keyGot, &s.key.PrivateKey.PublicKey) {
+		t.Fail()
+	}
+
+	keyGot1, err := s.getLocalPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !uleaderselection.PublicKeyEqual(keyGot1, &s.key.PrivateKey.PublicKey) {
+		t.Fail()
+	}
+
+}
+
+func TestGetSlotCreateStatusByEpochID(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+
+	if s.GetSlotCreateStatusByEpochID(0) {
+		t.Fail()
+	}
+	s.slotCreateStatus[0] = true
+	if !s.GetSlotCreateStatusByEpochID(0) {
+		t.Fail()
+	}
+}
+
+func TestGetSlotLeaderSelection(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+
+	if s == nil {
+		t.Fail()
+	}
+}
+
+func TestGetEpochLeaders(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	posconfig.SelfTestMode = true
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKeyByes := crypto.FromECDSAPub(&prvKey.PublicKey)
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+	}
+	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+
+	// getEpochLeaders
+	epochLeadersBytes := s.getEpochLeaders(uint64(1))
+	if len(epochLeadersBytes) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+
+	// GetEpochLeadersPK
+	epochLeadersPks := s.GetEpochLeadersPK(uint64(2))
+	if len(epochLeadersPks) != posconfig.EpochLeaderCount {
+		t.Errorf("GetEpochLeadersPK error!")
+		t.Fail()
+	}
+
+	// getEpochLeadersPK
+	epochLeadersPks1 := s.getEpochLeadersPK(uint64(2))
+	if len(epochLeadersPks1) != posconfig.EpochLeaderCount {
+		t.Errorf("getEpochLeadersPK error!")
+		t.Fail()
+	}
+	//getPreEpochLeadersPK
+	epochLeadersPks2, err := s.getPreEpochLeadersPK(uint64(2))
+	if err != nil {
+		t.Fail()
+	}
+	if len(epochLeadersPks2) != posconfig.EpochLeaderCount {
+		t.Errorf("getPreEpochLeadersPK error!")
+		t.Fail()
+	}
+	// getEpoch0LeadersPK
+	pksGenesis := s.getEpoch0LeadersPK()
+	if len(pksGenesis) != posconfig.EpochLeaderCount {
+		t.Errorf("getEpoch0LeadersPK error!")
+		t.Fail()
+	}
+
+	posconfig.SelfTestMode = false
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
