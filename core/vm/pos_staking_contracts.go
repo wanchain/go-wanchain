@@ -40,6 +40,7 @@ const (
 	PSMinFeeRate = 0
 	PSMaxFeeRate = 100
 	PSNodeleFeeRate = 100
+	maxTimeDelegate   = 5
 
 	PSOutKeyHash = 700
 )
@@ -334,6 +335,16 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 		return nil, err
 	}
 
+	//  Lock time >= min epoch, <= max epoch
+	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
+		return nil, errors.New("invalid lock time")
+	}
+
+	//  0 <= FeeRate <= 100
+	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
+		return nil, errors.New("fee rate should between 0 to 100")
+	}
+
 	key := GetStakeInKeyHash(info.Addr)
 	stakerBytes, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
 	if stakerBytes == nil {
@@ -345,8 +356,12 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 		return nil, errors.New("parse staker info error")
 	}
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs -2 {
-		return nil, errors.New("cannot change at the last 2 epoch.")
+	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs -3 {
+		return nil, errors.New("cannot change at the last 3 epoch.")
+	}
+
+	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  stakerInfo.Amount.Cmp(minValidatorStake) < 0 {
+		return nil, errors.New("need more Wan to be a validator")
 	}
 	stakerInfo.NextLockEpochs = info.LockEpochs.Uint64()
 	stakerInfo.NextFeeRate = info.FeeRate.Uint64()
@@ -490,12 +505,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		return nil, err
 	}
 
-	// 1. amount is valid
-	if contract.value.Cmp(minDelegatorStake) < 0 {
-		return nil, errors.New("low amount")
-	}
-
-	// 2. mandatory is a valid stakeholder
+	//  mandatory is a valid stakeholder
 	sKey := GetStakeInKeyHash(addr)
 	stakerBytes, err := GetInfo(evm.StateDB, StakersInfoAddr, sKey)
 	if stakerBytes == nil {
@@ -508,20 +518,28 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		return nil, errors.New("parse staker info error")
 	}
 
-
-	// 4. sender has not delegated by this
+	//  sender has not delegated by this
 	var  info*ClientInfo
 	length := len(stakerInfo.Clients)
+	totalDelegated := big.NewInt(0)
 	for i := 0; i < length; i++ {
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
 			weight := CalLocktimeWeight(0)
 			info = &stakerInfo.Clients[i]
 			info.Amount.Add(info.Amount, contract.Value())
 			info.StakeAmount.Add(info.StakeAmount, contract.Value().Mul(contract.Value(), big.NewInt(int64(weight))))
-			break
+			totalDelegated.Add(totalDelegated, info.Amount)
 		}
 	}
+	// check the totalDelegated <= 5*stakerInfo.Amount
+	if totalDelegated.Cmp(big.NewInt(0).Mul(stakerInfo.Amount,big.NewInt(maxTimeDelegate))) > 0 {
+		return nil, errors.New("over delegate limitation")
+	}
 	if info == nil {
+		// only first delegatein check amount is valid.
+		if contract.value.Cmp(minDelegatorStake) < 0 {
+			return nil, errors.New("low amount")
+		}
 		// save
 		weight := CalLocktimeWeight(0)
 		info := &ClientInfo{
@@ -573,6 +591,10 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	found := false
 	for i := 0; i < length; i++ {
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
+			// check if delegater has existed.
+			if stakerInfo.Clients[i].QuitEpoch != 0 {
+				return nil,  errors.New("delegater has existed")
+			}
 			stakerInfo.Clients[i].QuitEpoch = eidNow+3
 			found = true
 			break
