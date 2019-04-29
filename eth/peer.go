@@ -63,12 +63,10 @@ type peer struct {
 
 	head common.Hash
 	td   *big.Int
-	posPivot uint64
 	lock sync.RWMutex
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -168,6 +166,9 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 // SendBlockHeaders sends a batch of block headers to the remote peer.
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
+}
+func (p *peer) SendPivot(pivot uint64) error {
+	return p2p.Send(p.rw, PivotMsg, pivot)
 }
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
@@ -320,6 +321,33 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	}
 	return nil
 }
+
+func (p *peer) RequestPivot(hash common.Hash) error {
+	p.Log().Debug("Fetching pivot", "hash", hash)
+
+	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
+			Current: hash,
+		})
+}
+func (p *peer) readPivot(pivot *uint64) (err error) {
+	msg, err := p.rw.ReadMsg()
+	if err != nil {
+		return err
+	}
+	if msg.Code != PivotMsg {
+		p.Log().Debug("read pivot", "msg.Code", msg.Code)
+		return err
+	}
+	if msg.Size > ProtocolMaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	}
+	// Decode the handshake and make sure everything matches
+	if err := msg.Decode(&pivot); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	return nil
+}
+
 
 // String implements fmt.Stringer.
 func (p *peer) String() string {

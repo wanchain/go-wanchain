@@ -141,6 +141,7 @@ type Downloader struct {
 	epochGenesisCh        chan  dataPack
 	epochGenesisFbCh 	  chan 	int64
 	//trackEpochGenesisReq  chan  *epochGenesisReq
+	posPivotCh			  chan  uint64
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -255,6 +256,8 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
 		epochGenesisCh: make(chan  dataPack,1),
+
+		posPivotCh:     make(chan uint64, 1),
 	}
 
 	go dl.qosTuner()
@@ -463,6 +466,18 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
 
+	const missingNumber = uint64(0xffffffffffffffff)
+	var posPivot uint64 = missingNumber
+	if d.mode == FastSync {
+		pp, err := d.fetchPivot(p)
+		if err != nil {
+			return err
+		}
+		if pp < posPivot {
+			posPivot = pp
+		}
+	}
+
 	// Look up the sync boundaries: the common ancestor and the target block
 	latest, err := d.fetchHeight(p)
 	if err != nil {
@@ -515,6 +530,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			}
 			if height > uint64(fsMinFullBlocks)+pivotOffset.Uint64() {
 				pivot = height - uint64(fsMinFullBlocks) - pivotOffset.Uint64()
+			}
+			if pivot > posPivot {
+				pivot = posPivot
 			}
 		} else {
 			// Pivot point locked in, use this and do not pick a new one!
@@ -696,6 +714,36 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			p.log.Debug("Waiting for head header timed out", "elapsed", ttl)
 			return nil, errTimeout
 
+		case <-d.bodyCh:
+		case <-d.receiptCh:
+			// Out of bounds delivery, ignore
+		}
+	}
+}
+
+func (d *Downloader) DeliverPivot(pivot uint64) {
+	d.posPivotCh <- pivot
+}
+
+func (d *Downloader) fetchPivot(p *peerConnection) (uint64, error) {
+	p.log.Debug("Retrieving remote chain pivot")
+	head, _ := p.peer.Head()
+
+	const missingNumber = uint64(0xffffffffffffffff)
+
+	go p.peer.RequestPivot(head)
+	ttl := d.requestTTL()
+	timeout := time.After(ttl)
+	for {
+		select {
+		case <-d.cancelCh:
+			return missingNumber, errCancelBlockFetch
+		case posPivot := <-d.posPivotCh:
+			p.log.Debug("fetched ", "pivot", posPivot)
+			return posPivot, nil
+		case <-timeout:
+			p.log.Debug("Waiting for pivot timed out", "elapsed", ttl)
+			return missingNumber, errTimeout
 		case <-d.bodyCh:
 		case <-d.receiptCh:
 			// Out of bounds delivery, ignore

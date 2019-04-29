@@ -161,7 +161,6 @@ func (d *Downloader) epochGenesisFetcher() {
 	}
 }
 
-
 func (d *Downloader) sendEpochGenesisReq(epochid uint64,active map[string]*epochGenesisReq) *epochGenesisReq {
 
 	newPeer := make(chan *peerConnection, 1024)

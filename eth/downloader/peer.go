@@ -93,6 +93,7 @@ type Peer interface {
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
 	RequestEpochGenesisData(uint64) error
+	RequestPivot(common.Hash) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -122,6 +123,10 @@ func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
 
 func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
 	panic("RequestNodeData not supported in light client mode sync")
+}
+
+func (w *lightPeerWrapper)RequestPivot(common.Hash) error {
+	panic("RequestPivot not supported in light client mode sync")
 }
 
 // newPeerConnection creates a new downloader peer.

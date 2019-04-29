@@ -410,6 +410,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		return p.SendBlockHeaders(headers)
+	case msg.Code == GetPivotMsg:
+		var query getPivotData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		pivotBlockNumber := pm.blockchain.GetPosPivot(query.Current)
+		return p.SendPivot(pivotBlockNumber)
+
+	case msg.Code == PivotMsg:
+		var pivotBlockNumber uint64
+		if err := msg.Decode(&pivotBlockNumber); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		pm.downloader.DeliverPivot(pivotBlockNumber)
 
 	case msg.Code == BlockHeadersMsg:
 		// A batch of headers arrived to one of our previous requests

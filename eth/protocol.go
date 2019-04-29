@@ -62,10 +62,14 @@ const (
 	EpochGenesisMsg    = 0x09
 
 	// Protocol messages belonging to eth/63
+	GetPivotMsg    = 0x0a
+	PivotMsg       = 0x0b
+
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
 )
 
 type errCode int
@@ -133,6 +137,10 @@ type getBlockHeadersData struct {
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
+}
+
+type getPivotData struct {
+	Current common.Hash
 }
 
 // hashOrNumber is a combined field for specifying an origin block.
