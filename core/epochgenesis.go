@@ -116,7 +116,7 @@ func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block){
 
 func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error) {
 
-	fmt.Println("generate epg",epochid)
+	log.Debug("generate epg","",epochid)
 	epg := f.GetEpochGenesis(epochid)
 	if epg != nil {
 		return epg,nil
@@ -162,19 +162,18 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 
 			}
 
-			fmt.Println("getEpochRandomAndPreEpLastBlk")
 			rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
 
 			if epgPre == nil {
 				return nil, errors.New("pre epg is nil")
 			}
-			fmt.Println("generateEpochGenesis")
+
 			epg, err = f.generateEpochGenesis(i, blk, rb.Bytes(),epgPre.GenesisBlkHash)
 			if err != nil {
 				return nil, err
 			}
 
-			fmt.Println("SetEpochGenesis",epg.EpochId)
+
 			err = f.SetEpochGenesis(epg)
 			if err != nil {
 				return nil, err
@@ -448,7 +447,7 @@ func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis{
 }
 
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
-    fmt.Println("begin EpochGenesisBlock ValidateBody")
+	log.Debug("begin EpochGenesisBlock ValidateBody")
 	extraSeal := 65
 	header := block.Header()
 	blkTd := block.Difficulty().Uint64()
