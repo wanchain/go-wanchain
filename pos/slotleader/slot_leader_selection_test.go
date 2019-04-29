@@ -240,6 +240,7 @@ func TestArraySave(t *testing.T) {
 func TestGetEpoch0LeadersPK(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
+	//getEpoch0LeadersPK
 	leadersPK := s.getEpoch0LeadersPK()
 	if len(leadersPK) != posconfig.EpochLeaderCount {
 		t.Fail()
@@ -398,7 +399,7 @@ func TestGetLocalPublicKey(t *testing.T) {
 		t.Fail()
 	}
 	s.key.PrivateKey = key
-
+	// GetLocalPublicKey
 	keyGot, err := s.GetLocalPublicKey()
 	if err != nil {
 		t.Fail()
@@ -407,13 +408,22 @@ func TestGetLocalPublicKey(t *testing.T) {
 	if !uleaderselection.PublicKeyEqual(keyGot, &s.key.PrivateKey.PublicKey) {
 		t.Fail()
 	}
-
+	// getLocalPublicKey
 	keyGot1, err := s.getLocalPublicKey()
 	if err != nil {
 		t.Fail()
 	}
 
 	if !uleaderselection.PublicKeyEqual(keyGot1, &s.key.PrivateKey.PublicKey) {
+		t.Fail()
+	}
+	//getLocalPrivateKey
+	prvKeyGot, err := s.getLocalPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if prvKeyGot != key {
 		t.Fail()
 	}
 
@@ -492,6 +502,171 @@ func TestGetEpochLeaders(t *testing.T) {
 	if len(pksGenesis) != posconfig.EpochLeaderCount {
 		t.Errorf("getEpoch0LeadersPK error!")
 		t.Fail()
+	}
+
+	posconfig.SelfTestMode = false
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+}
+
+func TestGetAlpha(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
+	alpha := big.NewInt(0).SetUint64(uint64(^uint64(0)))
+	posdb.GetDb().PutWithIndex(uint64(0), uint64(0), "alpha", alpha.Bytes())
+
+	alphaGet, err := s.getAlpha(0, 0)
+	if err != nil {
+		t.Fail()
+	}
+
+	if alphaGet.Cmp(alpha) != 0 {
+		t.Fail()
+	}
+
+	alpha = big.NewInt(0).SetUint64(0)
+	posdb.GetDb().PutWithIndex(uint64(0), uint64(1), "alpha", alpha.Bytes())
+
+	alphaGet, err = s.getAlpha(0, 1)
+	if err != nil {
+		t.Fail()
+	}
+
+	if alphaGet.Cmp(alpha) != 0 {
+		t.Fail()
+	}
+
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+}
+
+func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	posconfig.SelfTestMode = true
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
+	var prvKeyExist *ecdsa.PrivateKey
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKeyByes := crypto.FromECDSAPub(&prvKey.PublicKey)
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+
+		if i == posconfig.EpochLeaderCount-1 {
+			prvKeyExist = prvKey
+		}
+
+		// build epochLeadersMap
+		s.epochLeadersMap[hex.EncodeToString(pubKeyByes)] = append(s.epochLeadersMap[hex.EncodeToString(pubKeyByes)],
+			uint64(i))
+	}
+
+	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+	s.key.PrivateKey = key
+
+	//isLocalPkInPreEpochLeaders
+	inOrNot, err := s.isLocalPkInPreEpochLeaders(2)
+	if err != nil {
+		t.Fail()
+	}
+
+	if inOrNot == true {
+		t.Fail()
+	}
+
+	// isLocalPkInCurrentEpochLeaders false
+	inOrNot = s.isLocalPkInCurrentEpochLeaders()
+	if inOrNot == true {
+		t.Fail()
+	}
+
+	s.key.PrivateKey = prvKeyExist
+	//isLocalPkInPreEpochLeaders
+	inOrNot, err = s.isLocalPkInPreEpochLeaders(2)
+	if err != nil {
+		t.Fail()
+	}
+
+	if inOrNot == false {
+		t.Fail()
+	}
+
+	// isLocalPkInCurrentEpochLeaders true
+	inOrNot = s.isLocalPkInCurrentEpochLeaders()
+	if inOrNot == false {
+		t.Fail()
+	}
+
+	posconfig.SelfTestMode = false
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+}
+
+func TestBuildEpochLeaderGroup(t *testing.T) {
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	posconfig.SelfTestMode = true
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		pubKeyByes := crypto.FromECDSAPub(&prvKey.PublicKey)
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+	}
+
+	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+
+	// buildEpochLeaderGroup
+	s.buildEpochLeaderGroup(2)
+	if len(s.epochLeadersArray) != posconfig.EpochLeaderCount {
+		t.Errorf("len(s.epochLeadersArray) error!")
+		t.Fail()
+	}
+	for _, value := range s.epochLeadersArray {
+		if len(value) != 130 {
+			t.Errorf("epochLeadersArray has not valid length")
+			t.Fail()
+		}
+	}
+
+	if len(s.epochLeadersMap) != posconfig.EpochLeaderCount {
+		t.Errorf("len(s.epochLeadersMap) error!")
+		t.Fail()
+	}
+	for _, value := range s.epochLeadersMap {
+		if len(value) == 0 {
+			t.Errorf("epochLeadersMap has no index")
+			t.Fail()
+		}
+	}
+
+	if len(s.epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+		t.Errorf("len(s.epochLeadersPtrArray) error!")
+		t.Fail()
+	}
+	for _, value := range s.epochLeadersPtrArray {
+		if value == nil {
+			t.Errorf("epochLeadersPtrArray nil")
+			t.Fail()
+		}
 	}
 
 	posconfig.SelfTestMode = false
