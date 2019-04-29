@@ -470,15 +470,16 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 
 	/////////////get max genesis epochid////////////
-	localBlk := d.blockchain.CurrentBlock()
-	beginEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(localBlk)
-
-
-	endblk := types.NewBlockWithHeader(latest)
-	endEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
-
 	if d.mode == FastSync || d.mode == LightSync {
-		err = d.fetchEpochGenesises(beginEpid, endEpid)
+
+		localBlk := d.blockchain.CurrentBlock()
+		beginEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(localBlk)
+
+
+		endblk := types.NewBlockWithHeader(latest)
+		endEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
+
+		err = d.fetchEpochGenesises(beginEpid, endEpid - 1)
 		if err != nil {
 			return err
 		}
