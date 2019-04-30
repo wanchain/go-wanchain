@@ -527,7 +527,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 			weight := CalLocktimeWeight(0)
 			info = &stakerInfo.Clients[i]
 			info.Amount.Add(info.Amount, contract.Value())
-			info.StakeAmount.Add(info.StakeAmount, contract.Value().Mul(contract.Value(), big.NewInt(int64(weight))))
+			info.StakeAmount.Add(info.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
 			totalDelegated.Add(totalDelegated, info.Amount)
 		}
 	}

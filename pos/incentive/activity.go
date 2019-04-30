@@ -2,13 +2,34 @@ package incentive
 
 import (
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
+
+var whiteList map[common.Address]int
+
+func init() {
+	whiteList = make(map[common.Address]int, 0)
+	for _, value := range posconfig.WhiteList {
+		b := hexutil.MustDecode(value)
+		address := crypto.PubkeyToAddress(*(crypto.ToECDSAPub(b)))
+		whiteList[address] = 1
+	}
+}
+
+func isInWhiteList(coinBase common.Address) bool {
+	if _, ok := whiteList[coinBase]; ok {
+		return true
+	} else {
+		return false
+	}
+}
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if stateDb == nil {
@@ -114,6 +135,10 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 	for i := currentNumber - 1; i > 0; i-- {
 		header := chain.GetHeaderByNumber(i)
 		if header == nil {
+			continue
+		}
+
+		if isInWhiteList(header.Coinbase) {
 			continue
 		}
 

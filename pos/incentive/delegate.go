@@ -11,16 +11,17 @@ import (
 
 // delegate can calc the delegate division
 func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
-	finalIncentive := make([][]vm.ClientIncentive, len(addrs))
+	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remain := big.NewInt(0)
 	for i := 0; i < len(addrs); i++ {
 		stakers, division, totalProbility, err := getStakerInfoAndCheck(epochID, addrs[i])
 		if err != nil {
-			return nil, nil, err
+			log.SyslogErr(err.Error())
+			continue
 		}
 
-		var subRemain *big.Int
-		finalIncentive[i], subRemain = delegateDivision(addrs[i], values[i], stakers, division, totalProbility)
+		incentive, subRemain := delegateDivision(addrs[i], values[i], stakers, division, totalProbility)
+		finalIncentive = append(finalIncentive, incentive)
 		remain.Add(remain, subRemain)
 	}
 	return finalIncentive, remain, nil
