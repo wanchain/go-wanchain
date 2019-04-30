@@ -72,8 +72,8 @@ var (
 
 	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 
-	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
-	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
+	diffInTurn      = big.NewInt(2) // Block difficulty for in-turn signatures
+	diffNoTurn      = big.NewInt(1) // Block difficulty for out-of-turn signatures
 	lastEpochSlotId = uint64(0)
 )
 
@@ -557,7 +557,6 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				log.Error(err.Error())
 			}
 
-
 			if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
 				log.Error("Pk signer verify failed in verifySeal", "number", number,
 					"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
@@ -779,7 +778,6 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		return nil, nil
 	}
 
-
 	log.Info("Generate a new block", "number", number, "epochID", epochId, "slotId", slotId, "curTime", time.Now(),
 		"header.Time", header.Time)
 
@@ -822,7 +820,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
 	log.Debug("Packed slotleader proof info success", "epochID", epochId, "slotID", slotId, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 
-	err = c.verifySeal(nil, header, nil, true)
+	err = c.verifySeal(nil, header, nil, false)
 	if err != nil {
 		log.Warn("Seal error", "error", err.Error())
 		return nil, err
