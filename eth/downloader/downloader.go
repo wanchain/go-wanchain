@@ -37,6 +37,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 )
 
+const missingNumber = uint64(0xffffffffffffffff)
+
 var (
 	MaxHashFetch    = 512 // Amount of hashes to be fetched per retrieval request
 	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
@@ -466,7 +468,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
 
-	const missingNumber = uint64(0xffffffffffffffff)
 	var posPivot uint64 = missingNumber
 	if d.mode == FastSync {
 		pp, err := d.fetchPivot(p)
@@ -483,6 +484,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if err != nil {
 		return err
 	}
+
 
 	/////////////get max genesis epochid////////////
 	localBlk := d.blockchain.CurrentBlock()
@@ -728,8 +730,6 @@ func (d *Downloader) DeliverPivot(pivot uint64) {
 func (d *Downloader) fetchPivot(p *peerConnection) (uint64, error) {
 	p.log.Debug("Retrieving remote chain pivot")
 	head, _ := p.peer.Head()
-
-	const missingNumber = uint64(0xffffffffffffffff)
 
 	go p.peer.RequestPivot(head)
 	ttl := d.requestTTL()

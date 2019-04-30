@@ -1131,7 +1131,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		if bc.config.Pluto != nil && bc.SlotValidator() != nil{
-			err = bc.SlotValidator().ValidateBody(block)
+ 			err = bc.SlotValidator().ValidateBody(block)
 			if err != nil {
 				bc.reportBlock(block, receipts, err)
 				return i, events, coalescedLogs, err

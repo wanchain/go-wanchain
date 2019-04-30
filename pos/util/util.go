@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"github.com/wanchain/go-wanchain/log"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
+	log.Debug("***CalEpochSlotID", "EpochBaseTime", posconfig.EpochBaseTime, "time", time)
 	if posconfig.EpochBaseTime == 0 {
 		return
 	}
@@ -26,6 +28,7 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
 	epochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimespan)
 	slotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	log.Debug("***CalEpochSlotID", "epochId", epochId, "slotId", slotId)
 	//fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
 }
