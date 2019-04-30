@@ -537,6 +537,10 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				staker.FeeRate = staker.NextFeeRate
+				// recalculate the staker.
+				weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
+				staker.StakeAmount = big.NewInt(0)
+				staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
 				staker.StakingEpoch = epochID+2
 				changed = true
 			}
