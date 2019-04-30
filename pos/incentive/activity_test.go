@@ -161,3 +161,13 @@ func TestGetRandomProposerActivity(t *testing.T) {
 		}
 	}
 }
+
+func TestWhiteList(t *testing.T) {
+	if isInWhiteList(common.HexToAddress("0xcf696d8EEA08a311780fB89B20d4F0895198a489")) {
+		t.FailNow()
+	}
+
+	if !isInWhiteList(common.HexToAddress("0xb0Daf2a0a61B0f721486D3B88235a0714D60bAa6")) {
+		t.FailNow()
+	}
+}
