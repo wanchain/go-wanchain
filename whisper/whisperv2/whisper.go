@@ -277,7 +277,7 @@ func (self *Whisper) add(envelope *Envelope) error {
 		// Notify the local node of a message arrival
 		go self.postEvent(envelope)
 	}
-	log.Trace(fmt.Sprintf("cached whisper envelope %x\n", envelope))
+	//log.Trace(fmt.Sprintf("cached whisper envelope %x\n", envelope))
 	return nil
 }
 
