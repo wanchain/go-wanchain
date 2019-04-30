@@ -131,6 +131,10 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 	return blkStatusArr
 }
 
+func (c *CFM) IsInWhiteList(coinBase common.Address) bool {
+	return c.isInWhiteList(coinBase)
+}
+
 func (c *CFM) isInWhiteList(coinBase common.Address) bool {
 	if _, ok := c.whiteList[coinBase]; ok {
 		return true

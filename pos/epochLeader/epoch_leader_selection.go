@@ -472,6 +472,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	staker := vm.StakerInfo{}
 	err = rlp.DecodeBytes(stakerBytes, &staker)
 	if nil != err {
+		log.Error("GetEpochProbability DecodeBytes failed", "addr", addr)
 		return nil, 0, nil, err
 	}
 	infors = make([]vm.ClientProbability, 1)
