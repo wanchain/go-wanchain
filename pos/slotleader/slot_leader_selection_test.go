@@ -838,7 +838,7 @@ func TestGenerateSecurityMsg(t *testing.T) {
 	}
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.stateDb = stateDb
+	s.stateDbTest = stateDb
 	// build block chain
 	vmcfg := vm.Config{}
 	//gspec := core.DefaultPPOWTestingGenesisBlock()

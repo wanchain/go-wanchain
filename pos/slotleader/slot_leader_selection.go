@@ -57,7 +57,7 @@ type SLS struct {
 	workStage      int
 	rc             *rpc.Client
 	key            *keystore.Key
-	stateDb        *state.StateDB
+	stateDbTest    *state.StateDB
 
 	epochLeadersArray []string            // len(pki)=65 hex.EncodeToString
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
