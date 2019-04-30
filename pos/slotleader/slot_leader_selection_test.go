@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"os"
+	"path"
+	"path/filepath"
+	"testing"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
@@ -13,11 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/rpc"
-	"math/big"
-	"os"
-	"path"
-	"path/filepath"
-	"testing"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
@@ -30,6 +31,7 @@ import (
 
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
 	posdb.GetDb().DbInit("test")
+	SlsInit()
 	slot := GetSlotLeaderSelection()
 	if slot == nil {
 		t.Fail()
