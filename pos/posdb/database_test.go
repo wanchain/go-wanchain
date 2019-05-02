@@ -144,8 +144,6 @@ func TestInfomationGet(t *testing.T) {
 	fmt.Println(buf)
 	buf2 := GetStakerInfoBytes(0, common.Address{})
 	fmt.Println(buf2)
-	buf3 := GetAllStakerInfoBytes(0)
-	fmt.Println(buf3)
 	buf4 := GetEpochLeaderGroup(0)
 	fmt.Println(buf4)
 }

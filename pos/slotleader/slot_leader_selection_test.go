@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"os"
+	"path"
+	"path/filepath"
+	"testing"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
@@ -13,11 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/rpc"
-	"math/big"
-	"os"
-	"path"
-	"path/filepath"
-	"testing"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
@@ -30,6 +31,7 @@ import (
 
 func TestSlotLeaderSelectionGetInstance(t *testing.T) {
 	posdb.GetDb().DbInit("test")
+	SlsInit()
 	slot := GetSlotLeaderSelection()
 	if slot == nil {
 		t.Fail()
@@ -822,4 +824,123 @@ func TestBuildSecurityPieces(t *testing.T) {
 			t.Fail()
 		}
 	}
+}
+
+func TestGenerateSecurityMsg(t *testing.T) {
+	// init
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	)
+
+	if stateDb == nil {
+		t.Fail()
+	}
+	SlsInit()
+	s := GetSlotLeaderSelection()
+	s.stateDbTest = stateDb
+	// build block chain
+	vmcfg := vm.Config{}
+	//gspec := core.DefaultPPOWTestingGenesisBlock()
+	gspec := core.DefaultGenesisBlock()
+	gspec.MustCommit(db)
+	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg)
+
+	if err != nil {
+		t.Fail()
+	}
+
+	// build local key
+	s.Init(chain, &rpc.Client{}, &keystore.Key{})
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+	s.key.PrivateKey = key
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
+	// build current epoch leaders s.epochLeadersMap
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		s.validEpochLeadersIndex[i] = true
+	}
+	s.epochLeadersMap[hex.EncodeToString(crypto.FromECDSAPub(&key.PublicKey))] = []uint64{0}
+	alpha := big.NewInt(123)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		alpha = alpha.Add(alpha, alpha)
+		alphaPk := new(ecdsa.PublicKey)
+		alphaPk.Curve = crypto.S256()
+		alphaPk.X, alphaPk.Y = crypto.S256().ScalarMult(key.PublicKey.X, key.PublicKey.Y, alpha.Bytes())
+
+		s.stageTwoAlphaPKi[i][0] = alphaPk
+		// only used to len(s.epochLeadersPtrArray)
+		//s.epochLeadersArray[i] = hex.EncodeToString(crypto.FromECDSAPub(alphaPk))
+		s.epochLeadersArray = append(s.epochLeadersArray, hex.EncodeToString(crypto.FromECDSAPub(alphaPk)))
+	}
+
+	posconfig.SelfTestMode = true
+
+	for i := 1; i < posconfig.EpochLeaderCount; i++ {
+		key, err := crypto.GenerateKey()
+		if err != nil {
+			t.Fail()
+		}
+
+		s.epochLeadersPtrArray[i] = &key.PublicKey
+	}
+	s.epochLeadersPtrArray[0] = &key.PublicKey
+	epochID := uint64(1)
+
+	// build stg2 trans and input into state db
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		txPayLoadByte, err := s.buildStage2TxPayload(epochID, uint64(i))
+		if err != nil {
+			t.Fail()
+		}
+
+		epochIDBuf, selfIndexBuf, _ := vm.RlpGetStage2IDFromTx(txPayLoadByte)
+		keyHash := vm.GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
+		stateDb.SetStateByteArray(vm.GetSlotLeaderSCAddress(),
+			keyHash,
+			txPayLoadByte)
+
+	}
+
+	indexKeyHash := vm.GetSlotLeaderStage2IndexesKeyHash(convert.Uint64ToBytes(epochID))
+	var sendtrans [posconfig.EpochLeaderCount]bool
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		sendtrans[i] = true
+	}
+
+	indexBytes, _ := rlp.EncodeToBytes(sendtrans)
+	stateDb.SetStateByteArray(vm.GetSlotLeaderSCAddress(),
+		indexKeyHash,
+		indexBytes)
+
+	stateDb1, _ := s.getCurrentStateDb()
+	indexBytesGot := stateDb1.GetStateByteArray(vm.GetSlotLeaderSCAddress(), indexKeyHash)
+	if len(indexBytes) != len(indexBytesGot) {
+		t.Fail()
+	}
+	// build security pieces
+	//pieces,_:= s.buildSecurityPieces(epochID)
+	// create SMA
+	err = s.generateSecurityMsg(epochID, key)
+	if err != nil {
+		t.Logf("generate security message error. err:%v \n", err.Error())
+		t.Fail()
+	}
+
+	// check SMA from local db
+	smaPieces, _, _ := s.getSMAPieces(uint64(epochID + 1))
+	for _, smaValue := range smaPieces {
+		fmt.Println(hex.EncodeToString(crypto.FromECDSAPub(smaValue)))
+	}
+	if len(smaPieces) != posconfig.EpochLeaderCount {
+		t.Fail()
+	}
+	// un init
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }

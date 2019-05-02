@@ -1,12 +1,13 @@
 package cfm
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"testing"
 	"time"
+
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func TestIsInWhiteList(t *testing.T) {

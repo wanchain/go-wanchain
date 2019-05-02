@@ -54,7 +54,8 @@ func generateTestAddrs() {
 
 func TestLoop(t *testing.T) {
 	posdb.GetDb().DbInit("test")
-
+	posconfig.SelfTestMode = false
+	SlsInit()
 	generateTestAddrs()
 	testInitSlotleader()
 	util.SetEpocherInst(&TestSelectLead{})

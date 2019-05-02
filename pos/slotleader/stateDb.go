@@ -2,6 +2,7 @@ package slotleader
 
 import (
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/core/state"
 )
@@ -16,6 +17,9 @@ func (s *SLS) GetCurrentStateDb() (stateDb *state.StateDB, err error) {
 }
 
 func (s *SLS) getCurrentStateDb() (stateDb *state.StateDB, err error) {
+	if posconfig.SelfTestMode {
+		return s.stateDbTest, nil
+	}
 	return s.blockChain.StateAt(s.blockChain.CurrentBlock().Root())
 }
 
