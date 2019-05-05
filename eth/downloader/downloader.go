@@ -143,7 +143,7 @@ type Downloader struct {
 	epochGenesisCh        chan  dataPack
 	epochGenesisFbCh 	  chan 	int64
 	//trackEpochGenesisReq  chan  *epochGenesisReq
-	posPivotCh			  chan  uint64
+	posPivotCh			  chan  *types.Header
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -259,7 +259,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
 		epochGenesisCh: make(chan  dataPack,1),
 
-		posPivotCh:     make(chan uint64, 1),
+		posPivotCh:     make(chan *types.Header, 1),
 	}
 
 	go dl.qosTuner()
@@ -268,6 +268,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 	if dl.mode == FastSync || dl.mode == LightSync {
 		dl.blockchain.SetFastSynchValidator()
+		log.Debug("******dl.blockchain.SetFastSynchValidator()")
 		go dl.epochGenesisFetcher()
 	}
 
@@ -469,13 +470,16 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}(time.Now())
 
 	var posPivot uint64 = missingNumber
+	var pivotHeader *types.Header = nil
 	if d.mode == FastSync {
-		pp, err := d.fetchPivot(p)
+		pivotHeader, err = d.fetchPivot(p)
 		if err != nil {
 			return err
 		}
-		if pp < posPivot {
-			posPivot = pp
+		if pivotHeader != nil {
+			posPivot = pivotHeader.Number.Uint64()
+		} else {
+			posPivot = 0
 		}
 	}
 
@@ -563,7 +567,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 
 	if d.mode == FastSync {
-		fetchers = append(fetchers, func() error { return d.processFastSyncContent(latest) })
+		fetchers = append(fetchers, func() error { return d.processFastSyncContent(latest, pivotHeader) })
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
@@ -723,11 +727,11 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 	}
 }
 
-func (d *Downloader) DeliverPivot(pivot uint64) {
-	d.posPivotCh <- pivot
+func (d *Downloader) DeliverPivot(pivotHeader *types.Header) {
+	d.posPivotCh <- pivotHeader
 }
 
-func (d *Downloader) fetchPivot(p *peerConnection) (uint64, error) {
+func (d *Downloader) fetchPivot(p *peerConnection) (*types.Header, error) {
 	p.log.Debug("Retrieving remote chain pivot")
 	head, _ := p.peer.Head()
 
@@ -737,13 +741,13 @@ func (d *Downloader) fetchPivot(p *peerConnection) (uint64, error) {
 	for {
 		select {
 		case <-d.cancelCh:
-			return missingNumber, errCancelBlockFetch
+			return nil, errCancelBlockFetch
 		case posPivot := <-d.posPivotCh:
 			p.log.Debug("fetched ", "pivot", posPivot)
 			return posPivot, nil
 		case <-timeout:
 			p.log.Debug("Waiting for pivot timed out", "elapsed", ttl)
-			return missingNumber, errTimeout
+			return nil, errTimeout
 		case <-d.bodyCh:
 		case <-d.receiptCh:
 			// Out of bounds delivery, ignore
@@ -1501,7 +1505,7 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
-
+	log.Debug("***importBlockResults begin")
 	for len(results) != 0 {
 		// Check for any termination requests. This makes clean shutdown faster.
 		select {
@@ -1533,32 +1537,45 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		results = results[items:]
 	}
 
+	log.Debug("***importBlockResults end")
 	return nil
 }
 
 // processFastSyncContent takes fetch results from the queue and writes them to the
 // database. It also controls the synchronisation of state nodes of the pivot block.
-func (d *Downloader) processFastSyncContent(latest *types.Header) error {
+func (d *Downloader) processFastSyncContent(latest *types.Header, pivotHeader *types.Header) error {
 
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
 	log.Debug("===fast sync block", "num", latest.Number.Uint64())
-	stateSync := d.syncState(latest.Root)
-	defer stateSync.Cancel()
-	go func() {
-		if err := stateSync.Wait(); err != nil {
-			d.queue.Close() // wake up WaitResults
-		}
-	}()
+	var stateSync *stateSync = nil
 
 	pivot := d.queue.FastSyncPivot()
 	log.Debug("*****pivot is ", "pivot", pivot)
+
+	if pivotHeader != nil {
+		stateSync = d.syncState(pivotHeader.Hash())
+	}
+
+	if stateSync != nil {
+		defer stateSync.Cancel()
+		go func() {
+			if err := stateSync.Wait(); err != nil {
+				d.queue.Close() // wake up WaitResults
+			}
+		}()
+	}
+
 	for {
 
 
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
-			return stateSync.Cancel()
+			if stateSync != nil {
+				return stateSync.Cancel()
+			} else {
+				return nil
+			}
 		}
 
 
@@ -1571,9 +1588,15 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 
 		P, beforeP, afterP := splitAroundPivot(pivot, results)
 
+		if P != nil {
+			log.Debug("***commitFastSyncData begin2", "p", P.Header.Number.Uint64(), "beforeP", len(beforeP), "afterP", len(afterP))
+		} else {
+			log.Debug("***commitFastSyncData begin2", "beforeP", len(beforeP), "afterP", len(afterP))
+		}
 		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
 			return err
 		}
+		log.Debug("***commitFastSyncData end2")
 
 		if P != nil {
 			stateSync.Cancel()
@@ -1581,10 +1604,14 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 				return err
 			}
 		}
+		d.blockchain.SetFullSynchValidator()
+		log.Debug("******dl.blockchain.SetFullSynchValidator()")
 
+		log.Debug("***commitPivotBlock end2")
 		if err := d.importBlockResults(afterP); err != nil {
 			return err
 		}
+		log.Debug("***importBlockResults end2")
 
 		if d.blockchain.CurrentBlock().NumberU64() >= latest.Number.Uint64() {
 			return nil
@@ -1609,6 +1636,7 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 }
 
 func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *stateSync) error {
+	log.Debug("***commitFastSyncData begin")
 	for len(results) != 0 {
 		// Check for any termination requests.
 		select {
@@ -1640,10 +1668,12 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 		// Shift the results to the next batch
 		results = results[items:]
 	}
+	log.Debug("***commitFastSyncData end")
 	return nil
 }
 
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
+	log.Debug("***commitPivotBlock begin")
 	b := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 	// Sync the pivot block state. This should complete reasonably quickly because
 	// we've already synced up to the reported head block state earlier.
@@ -1654,6 +1684,7 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{b}, []types.Receipts{result.Receipts}); err != nil {
 		return err
 	}
+	log.Debug("***commitPivotBlock end")
 	return d.blockchain.FastSyncCommitHead(b.Hash())
 }
 

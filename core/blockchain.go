@@ -359,19 +359,19 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivot(hash common.Hash) uint64 {
+func (bc *BlockChain) GetPosPivot(hash common.Hash) *types.Header {
 	header := bc.hc.GetHeaderByHash(hash)
 	if header == nil {
-		return missingNumber
+		return nil
 	}
 	eid, sid := posUtil.CalEpochSlotID(header.Time.Uint64())
 	if eid < 2 {
-		return 0
+		return nil
 	}
 	max := bc.currentBlock.Number().Int64() - int64(sid) - 1
 	min := max - posconfig.SlotCount
 	if min < 0 {
-		return 0
+		return nil
 	}
 	from := uint64(min)
 	desEid := eid - 1
@@ -379,7 +379,7 @@ func (bc *BlockChain) GetPosPivot(hash common.Hash) uint64 {
 		from ++
 		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from).Time.Uint64())
 		if epochId >= desEid {
-			return from - 2
+			return bc.hc.GetHeaderByNumber(from - 1)
 		}
 	}
 }

@@ -415,15 +415,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
-		pivotBlockNumber := pm.blockchain.GetPosPivot(query.Current)
-		return p.SendPivot(pivotBlockNumber)
+		pivotHeader := pm.blockchain.GetPosPivot(query.Current)
+		return p.SendPivot(pivotHeader)
 
 	case msg.Code == PivotMsg:
-		var pivotBlockNumber uint64
-		if err := msg.Decode(&pivotBlockNumber); err != nil {
+		var pivotHeader types.Header
+		if err := msg.Decode(&pivotHeader); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.downloader.DeliverPivot(pivotBlockNumber)
+		pm.downloader.DeliverPivot(&pivotHeader)
 
 	case msg.Code == BlockHeadersMsg:
 		// A batch of headers arrived to one of our previous requests

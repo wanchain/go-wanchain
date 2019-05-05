@@ -167,8 +167,8 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
-func (p *peer) SendPivot(pivot uint64) error {
-	return p2p.Send(p.rw, PivotMsg, pivot)
+func (p *peer) SendPivot(header *types.Header) error {
+	return p2p.Send(p.rw, PivotMsg, header)
 }
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
