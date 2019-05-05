@@ -31,6 +31,20 @@ func isInWhiteList(coinBase common.Address) bool {
 	}
 }
 
+func checkEpochLeaders(epochLeaders [][]byte) bool {
+	if epochLeaders == nil || len(epochLeaders) == 0 {
+		return false
+	}
+
+	for i := 0; i < len(epochLeaders); i++ {
+		pk := crypto.ToECDSAPub(epochLeaders[i])
+		if pk == nil {
+			return false
+		}
+	}
+	return true
+}
+
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if stateDb == nil {
 		log.Error("getEpochLeaderActivity with an empty stateDb")
@@ -39,7 +53,7 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 	}
 
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
-	if epochLeaders == nil || len(epochLeaders) == 0 {
+	if !checkEpochLeaders(epochLeaders) {
 		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
 		log.SyslogErr("incentive activity GetEpochLeaders error")
 		return []common.Address{}, []int{}
@@ -89,6 +103,22 @@ func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 	return addrs, activity
 }
 
+func getRnpAddrFromLeader(leaders []vm.Leader) []common.Address {
+	if leaders == nil || len(leaders) == 0 {
+		return nil
+	}
+
+	addrs := make([]common.Address, len(leaders))
+	for i := 0; i < len(leaders); i++ {
+		if leaders[i].SecAddr.Hex() == "0x0000000000000000000000000000000000000000" {
+			return nil
+		}
+		addrs[i] = leaders[i].SecAddr
+	}
+
+	return addrs
+}
+
 func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if stateDb == nil {
 		log.SyslogErr("getRandomProposerActivity with an empty stateDb")
@@ -102,12 +132,8 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	}
 
 	leaders := getRandomProposerAddress(epochID)
-	addrs := make([]common.Address, len(leaders))
-	for i := 0; i < len(leaders); i++ {
-		addrs[i] = leaders[i].SecAddr
-	}
-
-	if (addrs == nil) || (len(addrs) == 0) {
+	addrs := getRnpAddrFromLeader(leaders)
+	if addrs == nil {
 		log.Error("incentive activity getRandomProposerAddress error", "epochID", epochID)
 		log.SyslogErr("incentive activity getRandomProposerAddress error")
 		return []common.Address{}, []int{}

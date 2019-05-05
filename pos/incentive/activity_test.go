@@ -80,11 +80,17 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
 
 	epochID := uint64(0)
 	util.SetEpocherInst(&TestSelectLead{})
+
+	//test bad input
+	clearTestAddrs()
+	getEpochLeaderActivity(statedb, epochID)
+
+	//test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	for i := 0; i < len(epAddrs); i++ {
 		epochIDBuf := convert.Uint64ToBytes(epochID)
@@ -129,11 +135,19 @@ func testSimulateData(epochID uint64, index uint32) {
 }
 
 func TestGetRandomProposerActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
+	//test bad input
+	clearTestAddrs()
+	epochID := 0
+
+	getRandomProposerActivity(statedb, uint64(epochID))
+
 	setRBAddressInterface(testGetRBAddress)
 
-	epochID := 0
+	getRandomProposerActivity(statedb, uint64(epochID))
+
+	// test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	addrs, activity := getRandomProposerActivity(statedb, uint64(epochID))
 

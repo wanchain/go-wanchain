@@ -38,6 +38,23 @@ func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int
 	return epAddrs, slBlks, 1
 }
 
+func clearTestAddrs() {
+	for i := 0; i < addrsCount; i++ {
+		epAddrs[i] = common.Address{}
+		epPks[i] = nil
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		rpAddrs[i] = common.Address{}
+		rpActs[i] = 0
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		slAddrs[i] = epAddrs[i]
+		slBlks[i] = 0
+	}
+}
+
 func generateTestAddrs() {
 	for i := 0; i < addrsCount; i++ {
 		key, _ := crypto.GenerateKey()
