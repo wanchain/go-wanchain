@@ -68,17 +68,17 @@ func TestGetSlotsCount(t *testing.T) {
 	start := uint64(time.Now().Unix())
 	stop := uint64(start + posconfig.SlotTime - 1)
 
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 0 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
 		t.Fail()
 	}
 
 	stop = uint64(start + posconfig.SlotTime + 1)
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 2 {
 		t.Fail()
 	}
 
 	stop = uint64(start + posconfig.SlotTime)
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 2 {
 		t.Fail()
 	}
 

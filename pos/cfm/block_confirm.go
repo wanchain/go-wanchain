@@ -93,13 +93,19 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 	}
 
 	startNumber := curBlk.NumberU64()
-	stopNumber := startNumber - posconfig.K
-	if stopNumber <= 0 {
+	stopNumber := startNumber - uint64(posconfig.K)
+
+	if !(stopNumber > 0 && stopNumber < MaxUint64) {
 		stopNumber = 0
 	}
 
 	sbs := SuffixBlkStatic{0, 0}
 	inWhiteList := c.isInWhiteList(curBlk.Coinbase())
+	if inWhiteList {
+		sbs.SuffixBlockTrusted = sbs.SuffixBlockTrusted + 1
+	} else {
+		sbs.SuffixBlockNonTrusted = sbs.SuffixBlockNonTrusted + 1
+	}
 	parentHash := curBlk.ParentHash()
 	blkStatusArr = append(blkStatusArr, &BlkStatus{curBlk.NumberU64(), false})
 	for i := startNumber - 1; i >= stopNumber && i < MaxUint64; i-- {
@@ -107,6 +113,7 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 		if blk == nil {
 			return blkStatusArr
 		}
+		inWhiteList = c.isInWhiteList(blk.Coinbase())
 
 		if inWhiteList {
 			sbs.SuffixBlockTrusted = sbs.SuffixBlockTrusted + 1
@@ -125,7 +132,6 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 			status = true
 		}
 		blkStatusArr = append(blkStatusArr, &BlkStatus{blk.NumberU64(), status})
-		inWhiteList = c.isInWhiteList(blk.Coinbase())
 		parentHash = blk.ParentHash()
 	}
 	return blkStatusArr
@@ -143,6 +149,5 @@ func (c *CFM) getSlotsCount(startTime, stopTime uint64, slotTime uint64) uint64 
 	if stopTime <= startTime {
 		return 0
 	}
-
-	return uint64((stopTime - startTime) / slotTime)
+	return uint64((stopTime-startTime)/slotTime + 1)
 }
