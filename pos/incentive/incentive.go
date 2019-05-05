@@ -54,13 +54,13 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
+func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
 	if chain == nil || stateDb == nil {
 		log.SyslogErr("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false
 	}
 
-	if isFinished(stateDb, epochID, blockNumber) || !openIncentive {
+	if isFinished(stateDb, epochID) || !openIncentive {
 		return true
 	}
 	log.Info("--------Incentive Run Start----------", "epochID", epochID)
@@ -144,7 +144,7 @@ func getRunFlagKey(epochID uint64) common.Hash {
 	return hash
 }
 
-func isFinished(stateDb *state.StateDB, epochID uint64, blockNumber uint64) bool {
+func isFinished(stateDb *state.StateDB, epochID uint64) bool {
 	buf := stateDb.GetStateByteArray(getIncentivePrecompileAddress(), getRunFlagKey(epochID))
 	if buf == nil || len(buf) == 0 {
 		return false

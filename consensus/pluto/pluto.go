@@ -30,7 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -701,7 +701,7 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
-		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs, header.Number.Uint64()) {
+		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
 			log.Error("incentive.Run failed")
 			state.RevertToSnapshot(snap)
 		}
