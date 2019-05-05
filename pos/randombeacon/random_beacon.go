@@ -8,9 +8,9 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/log"
 
 	"math/big"
@@ -68,6 +68,7 @@ type RandomBeacon struct {
 	rpcClient *rpc.Client
 
 	wg sync.WaitGroup
+	mutex sync.Mutex
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
@@ -88,6 +89,7 @@ var (
 	errNoDKG1Data      = errors.New("no dkg1 data")
 	errNoDKG1Poly      = errors.New("no dkg1 random polynomial")
 	errInsufficient    = errors.New("insufficient proposer")
+	errUninitialized   = errors.New("random beacon uninitialized")
 )
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -95,6 +97,11 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
+	defer func() {
+		rb.mutex.Unlock()
+	}()
+
+	rb.mutex.Lock()
 	if rb.loopEvents != nil {
 		return
 	}
@@ -119,6 +126,11 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 }
 
 func (rb *RandomBeacon) Stop() {
+	defer func() {
+		rb.mutex.Unlock()
+	}()
+
+	rb.mutex.Lock()
 	if rb.loopEvents == nil {
 		return
 	}
@@ -130,11 +142,17 @@ func (rb *RandomBeacon) Stop() {
 
 func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid uint64) (err error) {
 	defer func() {
+		rb.mutex.Unlock()
 		if e := recover(); e != nil {
 			err = e.(error)
 			log.SyslogErr("RB loop panic", "err", err.Error())
 		}
 	}()
+
+	rb.mutex.Lock()
+	if rb.loopEvents == nil {
+		return errUninitialized
+	}
 
 	if statedb == nil || rc == nil {
 		log.SyslogErr("invalid RB loop input param")

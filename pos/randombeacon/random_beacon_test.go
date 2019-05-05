@@ -1,16 +1,23 @@
 package randombeacon
 
 import (
+	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	accBn256 "github.com/wanchain/go-wanchain/accounts/keystore/bn256"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
+	"github.com/wanchain/go-wanchain/rpc"
 	"math/big"
+	"sync"
 	"testing"
+	"time"
 )
 
 var (
@@ -21,16 +28,16 @@ var (
 	commit           [][]bn256.G2
 )
 
-func TestInit(t *testing.T) {
+func TestRandomBeacon_Init(t *testing.T) {
 	var epocher epochLeader.Epocher
-	var key keystore.Key
+	//var key keystore.Key
 	var rb RandomBeacon
 
-	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
-	if err != nil {
-		t.Error("generate bn256 fail, ", err)
-	}
+	//var err error
+	//key.PrivateKey3, err = accBn256.GenerateBn256()
+	//if err != nil {
+	//	t.Error("generate bn256 fail, ", err)
+	//}
 
 	rb.Init(&epocher)
 
@@ -53,6 +60,72 @@ func TestInit(t *testing.T) {
 	if rb.rpcClient != nil {
 		t.Error("invalid rb rpc client")
 	}
+
+	rb.Init(&epocher)
+}
+
+func BenchmarkRandomBeacon_Stop(b *testing.B) {
+	var (
+		epocher epochLeader.Epocher
+		key keystore.Key
+		rb RandomBeacon
+		wg sync.WaitGroup
+	)
+
+	var err error
+	key.PrivateKey3, err = accBn256.GenerateBn256()
+	if err != nil {
+		b.Error("generate bn256 fail, ", err)
+	}
+
+	selfPrivate = key.PrivateKey3
+	commityPrivate = selfPrivate
+	posconfig.Cfg().MinerKey = &key
+
+
+	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+	rb.getCji = tmpGetCji
+
+	for i := 0; i < b.N; i++ {
+		fmt.Println("benchmark loop once")
+		rb.Init(&epocher)
+
+		wg.Add(1)
+		go callRBLoop(&rb, &wg)
+		time.Sleep(time.Second*3)
+		rb.Stop()
+		wg.Wait()
+	}
+}
+
+func callRBLoop(rb *RandomBeacon, wg *sync.WaitGroup) {
+	defer func(){
+		wg.Done()
+	}()
+
+	fmt.Println("callRBLoop begin")
+	if rb == nil {
+		return
+	}
+
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		epochId = uint64(0)
+		slotId = uint64(0)
+		rc = new(rpc.Client)
+	)
+
+	for ;; {
+		err := rb.Loop(statedb, rc, epochId, slotId)
+		if err != nil {
+			fmt.Println("callRbLoop break loop, err:", err)
+			break
+		}
+		epochId++
+		slotId++
+		time.Sleep(time.Second*10)
+	}
 }
 
 func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
@@ -64,7 +137,7 @@ func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
 	return ret
 }
 
-func TestGetMyRBProposerId(t *testing.T) {
+func TestRandomBeacon_GetMyRBProposerId(t *testing.T) {
 	var epocher epochLeader.Epocher
 	var key keystore.Key
 	var rb RandomBeacon
@@ -108,7 +181,7 @@ func TestGetMyRBProposerId(t *testing.T) {
 	}
 }
 
-func TestDoGenerateDKG1(t *testing.T) {
+func TestRandomBeacon_DoGenerateDKG1(t *testing.T) {
 	var epocher epochLeader.Epocher
 	var key keystore.Key
 	var rb RandomBeacon
@@ -176,7 +249,7 @@ func TestDoGenerateDKG1(t *testing.T) {
 	}
 }
 
-func TestGenerateDKG2(t *testing.T) {
+func TestRandomBeacon_GenerateDKG2(t *testing.T) {
 	var epocher epochLeader.Epocher
 	var key keystore.Key
 	var rb RandomBeacon
@@ -269,7 +342,7 @@ func TestGenerateDKG2(t *testing.T) {
 	}
 }
 
-func TestGenerateSIG(t *testing.T) {
+func TestRandomBeacon_GenerateSIG(t *testing.T) {
 	var epocher epochLeader.Epocher
 	var key keystore.Key
 	var rb RandomBeacon
