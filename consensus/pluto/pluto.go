@@ -680,7 +680,9 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
+		if curEpochId!=0 || curSlotId!=0 {
+			header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
+		}
 	}
 
 	epochSlotId := uint64(1)
