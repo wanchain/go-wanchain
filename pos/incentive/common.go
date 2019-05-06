@@ -6,6 +6,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 func calcPercent(total *big.Int, percent float64) *big.Int {
@@ -21,7 +22,7 @@ func round(x float64) int64 {
 }
 
 func getEpochIDFromDifficulty(difficulty *big.Int) uint64 {
-	epochID := difficulty.Uint64() >> 32
+	epochID, _ := util.GetEpochSlotIDFromDifficulty(difficulty)
 	return epochID
 }
 
