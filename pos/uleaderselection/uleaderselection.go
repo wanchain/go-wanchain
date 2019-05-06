@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"io"
 	"math/big"
 
@@ -260,10 +261,12 @@ func PublicKeyEqual(PublicKey1 *ecdsa.PublicKey, PublicKey2 *ecdsa.PublicKey) bo
 //need to sort the array received based on PublicKeys in advance
 func GenerateSMA(PrivateKey *ecdsa.PrivateKey, ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
 	if PrivateKey == nil || PrivateKey.D == nil || len(ArrayPiece) == 0 {
+		log.SyslogErr("uleaderselection", "GenerateSMA error", ErrInvalidSecretMessageArrayGeneration.Error())
 		return nil, ErrInvalidSecretMessageArrayGeneration
 	}
 	for _, piece := range ArrayPiece {
 		if piece == nil || piece.X == nil || piece.Y == nil {
+			log.SyslogErr("uleaderselection", "GenerateSMA pieces error", ErrInvalidSecretMessageArrayGeneration.Error())
 			return nil, ErrInvalidSecretMessageArrayGeneration
 		}
 	}

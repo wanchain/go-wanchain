@@ -107,7 +107,7 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) (blkStatus []*BlkStatus, stop u
 	blkStatusArr := make([]*BlkStatus, 0)
 	curBlk := c.bc.CurrentBlock()
 	if curBlk == nil {
-		log.Error("confirm block", "scanAllBlockStatus get currentBlock", ErrNullBlk.Error())
+		log.SyslogErr("confirm block", "scanAllBlockStatus get currentBlock", ErrNullBlk.Error())
 		return blkStatusArr, 0, 0, ErrNullBlk
 	}
 
@@ -125,7 +125,7 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) (blkStatus []*BlkStatus, stop u
 	for i := startNumber; i > stopNumber && i < MaxUint64; i-- {
 		blk := c.bc.GetBlock(hash, i)
 		if blk == nil {
-			log.Error("confirm block", "scanAllBlockStatus", ErrNullBlk.Error(), "block number", i)
+			log.SyslogErr("confirm block", "scanAllBlockStatus", ErrNullBlk.Error(), "block number", i)
 			return blkStatusArr, stopNumber, startNumber, ErrNullBlk
 		}
 

@@ -129,7 +129,7 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 	var info Pack
 	err := rlp.DecodeBytes(input, &info)
 	if err != nil {
-		log.Error("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
+		log.SyslogErr("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
 		return nil, nil, err
 	}
 
@@ -286,7 +286,7 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID - 1)
 	log.Debug("VerifySlotProof", "indexesSentTran", indexesSentTran)
 	if err != nil {
-		log.Error("getStageTwoFromTrans", "indexesSentTran error", err.Error())
+		log.SyslogErr("getStageTwoFromTrans", "indexesSentTran error", err.Error())
 		return validEpochLeadersIndex, stageTwoAlphaPKi, err
 	}
 
