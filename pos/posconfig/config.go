@@ -144,6 +144,11 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 }
 
 func Init(nodeCfg *node.Config) {
+	if IsDev {
+		WhiteList = WhiteListDev
+	} else {
+		WhiteList = WhiteListOrig
+	}
 	EpochLeadersHold = make([][]byte, len(WhiteList))
 	for i := 0; i < len(WhiteList); i++ {
 		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
