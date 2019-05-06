@@ -195,6 +195,6 @@ func GetEpochRBLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addr
 }
 
 // GetSlotLeaderActivity can get the address, blockCnt, and activity of slotleader
-func GetSlotLeaderActivity(chain consensus.ChainReader, epochID uint64) ([]common.Address, []int, float64) {
+func GetSlotLeaderActivity(chain consensus.ChainReader, epochID uint64) ([]common.Address, []int, float64, int) {
 	return getSlotLeaderActivity(chain, epochID, posconfig.SlotCount)
 }

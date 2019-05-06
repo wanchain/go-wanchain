@@ -587,10 +587,11 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		return nil
 	}
 	if (err != nil && epochID > 1) || isGenesis {
-		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID,
-			"preEpochID", epochID-1)
+		if !isGenesis {
+			log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID,
+				"preEpochID", epochID-1)
+		}
 		epochIDGet = 0
-
 	}
 	// get random
 	random, err := s.getRandom(nil, epochIDGet)

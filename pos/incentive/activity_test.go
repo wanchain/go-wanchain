@@ -41,7 +41,7 @@ func TestGetSlotLeaderActivity(t *testing.T) {
 	generateTestStaker()
 
 	chain := &TestChainReader{}
-	addrs, blks, activity := getSlotLeaderActivity(chain, 0, 100)
+	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100)
 	fmt.Println(addrs, blks, activity)
 
 	if activity != 0.99 {
