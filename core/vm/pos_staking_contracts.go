@@ -20,7 +20,7 @@ import (
 
 contract stake {
 	function stakeIn(bytes memory secPk, bytes memory bn256Pk, uint256 lockEpochs, uint256 feeRate) public payable {}
-	function stakeUpdate(address addr, uint256 lockEpochs, uint256 feeRate) public {}
+	function stakeUpdate(address addr, uint256 lockEpochs) public {}
 	function stakeAppend(address addr) public payable {}
 	function delegateIn(address delegateAddress) public payable {}
 	function delegateOut(address delegateAddress) public {}
@@ -58,10 +58,6 @@ var (
 			},
 			{
 				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
 				"type": "uint256"
 			}
 		],
@@ -174,7 +170,6 @@ type StakeInParam struct {
 type StakeUpdateParam struct {
 	Addr    common.Address   //stakeholder’s bn256 pairing public key
 	LockEpochs *big.Int //lock time which is input by user
-	FeeRate    *big.Int
 }
 type DelegateParam struct {
 	DelegateAddress common.Address //delegation’s address
@@ -196,7 +191,7 @@ type StakerInfo struct {
 
 	StakingEpoch uint64 //the first epoch in which stakerHolder might be selected.
 	FeeRate      uint64
-	NextFeeRate  uint64
+	//NextFeeRate  uint64
 	Clients      []ClientInfo
 }
 
@@ -341,9 +336,9 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 	}
 
 	//  0 <= FeeRate <= 100
-	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
-		return nil, errors.New("fee rate should between 0 to 100")
-	}
+	// if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
+	// 	return nil, errors.New("fee rate should between 0 to 100")
+	// }
 
 	key := GetStakeInKeyHash(info.Addr)
 	stakerBytes, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
@@ -360,11 +355,11 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 		return nil, errors.New("cannot change at the last 3 epoch.")
 	}
 
-	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  stakerInfo.Amount.Cmp(minValidatorStake) < 0 {
-		return nil, errors.New("need more Wan to be a validator")
-	}
+	// if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  stakerInfo.Amount.Cmp(minValidatorStake) < 0 {
+	// 	return nil, errors.New("need more Wan to be a validator")
+	// }
 	stakerInfo.NextLockEpochs = info.LockEpochs.Uint64()
-	stakerInfo.NextFeeRate = info.FeeRate.Uint64()
+	//stakerInfo.NextFeeRate = info.FeeRate.Uint64()
 	infoBytes, err := rlp.EncodeToBytes(stakerInfo)
 	if err != nil {
 		return nil, err
@@ -477,7 +472,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		LockEpochs:   info.LockEpochs.Uint64(),
 		FeeRate:      info.FeeRate.Uint64(),
 		NextLockEpochs:   info.LockEpochs.Uint64(),
-		NextFeeRate:      info.FeeRate.Uint64(),
+		//NextFeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow+2,
 	}

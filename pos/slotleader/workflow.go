@@ -216,7 +216,7 @@ func (s *SLS) generateCommitment(publicKey *ecdsa.PublicKey,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
+	//fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
 
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {

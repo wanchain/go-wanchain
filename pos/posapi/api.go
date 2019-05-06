@@ -223,7 +223,7 @@ type StakerJson struct {
 
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
-	NextFeeRate  uint64
+	//NextFeeRate  uint64
 	Clients      []vm.ClientInfo
 }
 
@@ -260,7 +260,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		stakeJson.From = staker.From
 		stakeJson.StakingEpoch = staker.StakingEpoch
 		stakeJson.FeeRate = staker.FeeRate
-		stakeJson.NextFeeRate = staker.NextFeeRate
+		//stakeJson.NextFeeRate = staker.NextFeeRate
 		stakeJson.Clients = staker.Clients
 		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
