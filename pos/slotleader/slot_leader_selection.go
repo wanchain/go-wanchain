@@ -616,20 +616,6 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
 	}
 
-	for i := 0; i < len(piecesPtr); i++ {
-		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
-		if !ret {
-			log.SyslogErr("SLS", "generateSlotLeadsGroup", "SMA pieces are not on curve")
-			return vm.ErrNotOnCurve
-		}
-	}
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
-		if !ret {
-			log.SyslogErr("SLS", "generateSlotLeadsGroup", "epochLeaders are not on curve")
-			return vm.ErrNotOnCurve
-		}
-	}
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
 		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
 	if err != nil {
@@ -688,10 +674,7 @@ func (s *SLS) buildSecurityPieces(epochID uint64) (pieces []*ecdsa.PublicKey, er
 		}
 	}
 	piece := make([]*ecdsa.PublicKey, 0)
-	for _, value := range selfPkReceivePiecesMap {
-		piece = value
-		break
-	}
+	piece = selfPkReceivePiecesMap[indexes[0]]
 	// the value in selfPk Received Pieces Map should be same,so we can return the first one.
 	return piece, nil
 }

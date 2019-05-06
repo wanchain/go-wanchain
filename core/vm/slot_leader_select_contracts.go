@@ -99,6 +99,7 @@ var (
 	ErrInvalidTxLen                    = errors.New("len(mi)==0 or len(alphaPkis) is not right")
 	ErrInvalidTx1Range                 = errors.New("slot leader tx1 is not in invalid range")
 	ErrInvalidTx2Range                 = errors.New("slot leader tx2 is not in invalid range")
+	ErrInvalidProof                    = errors.New("proof is bigZero")
 )
 
 func init() {
@@ -243,21 +244,37 @@ func (c *slotLeaderSC) validTxStg1(stateDB StateDB, signer types.Signer, tx *typ
 
 func (c *slotLeaderSC) validTxStg1ByData(stateDB StateDB, from common.Address, payload []byte) error {
 
-	epochIDBuf, _, err := RlpGetStage1IDFromTx(payload[:])
+	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(payload[:])
 	if err != nil {
 		log.Error("validTxStg1 failed")
 		return err
 	}
 
-	if !InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), from) {
+	if !InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), convert.BytesToUint64(selfIndexBuf), from) {
 		log.SyslogErr("validTxStg1 failed")
 		return ErrIllegalSender
+	}
+
+	_, _, mi, err := RlpUnpackStage1DataForTx(payload[:])
+	if err != nil {
+		return err
+	}
+
+	if !isOnS256CurveOrNot(mi) {
+		return ErrNotOnCurve
 	}
 
 	//log.Info("validTxStg1 success")
 	return nil
 }
-
+func isOnS256CurveOrNot(pk *ecdsa.PublicKey) bool {
+	ret := crypto.S256().IsOnCurve(pk.X, pk.Y)
+	if !ret {
+		log.SyslogErr("isOnS256CurveOrNot", "", "pk is not on curve")
+		return false
+	}
+	return true
+}
 func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, payload []byte) error {
 	epochID, selfIndex, _, alphaPkis, proofs, err := RlpUnpackStage2DataForTx(payload[:])
 	if err != nil {
@@ -265,9 +282,22 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 		return err
 	}
 
-	if !InEpochLeadersOrNotByAddress(epochID, from) {
+	if !InEpochLeadersOrNotByAddress(epochID, selfIndex, from) {
 		log.SyslogErr("validTxStg2:InEpochLeadersOrNotByAddress failed")
 		return ErrIllegalSender
+	}
+
+	for _, alphaPk := range alphaPkis {
+		if !isOnS256CurveOrNot(alphaPk) {
+			return ErrNotOnCurve
+		}
+	}
+
+	for _, proof := range proofs {
+		if proof.Cmp(bigZero) == 0 {
+			log.SyslogErr("validTxStg2ByData", "proofs", ErrInvalidProof.Error())
+			return ErrInvalidProof
+		}
 	}
 
 	//log.Info("validTxStg2 success")
@@ -383,17 +413,20 @@ func PackStage1Data(input []byte, abiString string) ([]byte, error) {
 	return outBuf, err
 }
 
-func InEpochLeadersOrNotByAddress(epochID uint64, senderAddress common.Address) bool {
+func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddress common.Address) bool {
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
 		log.SyslogWarning("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
 		epochLeaders = util.GetEpocherInst().GetEpochLeaders(0)
 	}
 
-	for i := 0; i < len(epochLeaders); i++ {
-		if crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[i])).Hex() == senderAddress.Hex() {
-			return true
-		}
+	if int64(selfIndex) < 0 || int64(selfIndex) >= posconfig.EpochLeaderCount {
+		log.SyslogErr("InEpochLeadersOrNotByAddress", "selfIndex out of range", int64(selfIndex))
+		return false
+	}
+
+	if crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[selfIndex])).Hex() == senderAddress.Hex() {
+		return true
 	}
 
 	return false
