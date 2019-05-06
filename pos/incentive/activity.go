@@ -47,15 +47,13 @@ func checkEpochLeaders(epochLeaders [][]byte) bool {
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if stateDb == nil {
-		log.Error("getEpochLeaderActivity with an empty stateDb")
 		log.SyslogErr("getEpochLeaderActivity with an empty stateDb")
 		return []common.Address{}, []int{}
 	}
 
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if !checkEpochLeaders(epochLeaders) {
-		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
-		log.SyslogErr("incentive activity GetEpochLeaders error")
+		log.SyslogErr("incentive activity GetEpochLeaders error", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
@@ -126,16 +124,14 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	}
 
 	if getRandomProposerAddress == nil {
-		log.Error("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
-		log.SyslogErr("incentive activity getRandomProposerAddress == nil")
+		log.SyslogErr("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
 	leaders := getRandomProposerAddress(epochID)
 	addrs := getRnpAddrFromLeader(leaders)
 	if addrs == nil {
-		log.Error("incentive activity getRandomProposerAddress error", "epochID", epochID)
-		log.SyslogErr("incentive activity getRandomProposerAddress error")
+		log.SyslogErr("incentive activity getRandomProposerAddress error", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 

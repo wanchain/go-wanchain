@@ -89,8 +89,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	if err != nil {
-		log.Error("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
-		log.SyslogErr("Incentive epochLeaderAllocate error")
+		log.SyslogErr("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -98,8 +97,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
 	if err != nil {
-		log.Error("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
-		log.SyslogErr("Incentive randomProposerAllocate error")
+		log.SyslogErr("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -107,8 +105,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount, epochID)
 	if err != nil {
-		log.Error("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
-		log.SyslogErr("Incentive slotLeaderAllocate error")
+		log.SyslogErr("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -118,8 +115,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	extraRemain := getExtraRemain(total, sumPay, remainsAll)
 	remainsAll.Add(remainsAll, extraRemain)
 	if !checkTotalValue(total, sumPay, remainsAll) {
-		log.Error("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
-		log.SyslogErr("Incentive checkTotalValue error")
+		log.SyslogErr("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
 		return false
 	}
 
