@@ -41,6 +41,7 @@ const (
 // Init is use to init the outsides interface of staker.
 // Should be called at the node start
 func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerAddressFn) {
+	activityInit()
 	if get == nil || set == nil || getRbAddr == nil {
 		log.SyslogErr("incentive Init input param error (get == nil || set == nil || getRbAddr == nil)")
 	}

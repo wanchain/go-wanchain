@@ -14,7 +14,7 @@ import (
 
 var whiteList map[common.Address]int
 
-func init() {
+func activityInit() {
 	whiteList = make(map[common.Address]int, 0)
 	for _, value := range posconfig.WhiteList {
 		b := hexutil.MustDecode(value)
