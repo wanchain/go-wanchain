@@ -112,7 +112,7 @@ func TestOtherApiSuccess(t *testing.T) {
 		//t.FailNow()
 	}
 
-	addrs, cnt, actf := GetSlotLeaderActivity(chain, 0)
+	addrs, cnt, actf, _ := GetSlotLeaderActivity(chain, 0)
 	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) {
 		//t.FailNow()
 	}
@@ -147,8 +147,8 @@ func TestOtherApiFail(t *testing.T) {
 		t.FailNow()
 	}
 
-	addrs, cnt, actf := GetSlotLeaderActivity(nil, 0)
-	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) {
+	addrs, cnt, actf, ctrlCnt := GetSlotLeaderActivity(nil, 0)
+	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) || ctrlCnt != 0 {
 		t.FailNow()
 	}
 }
