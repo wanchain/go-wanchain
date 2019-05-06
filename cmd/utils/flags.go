@@ -20,13 +20,14 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -540,7 +541,7 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(DevInternalFlag.Name) {
 			return filepath.Join(path, "interal")
 		}
-		if ctx.GlobalBool(PlutoFlag.Name) || ctx.GlobalBool(PlutoDevFlag.Name){
+		if ctx.GlobalBool(PlutoFlag.Name) || ctx.GlobalBool(PlutoDevFlag.Name) {
 			return filepath.Join(path, "pluto")
 		}
 		return path
@@ -979,7 +980,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag,PlutoDevFlag)
+	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag, PlutoDevFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -1030,10 +1031,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 
-
-
-
-
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
@@ -1047,7 +1044,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		}
 		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
-
+		posconfig.IsDev = false
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 6
 		}

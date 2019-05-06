@@ -13,6 +13,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -34,6 +35,8 @@ func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header       
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
 
 func TestGetSlotLeaderActivity(t *testing.T) {
+	posconfig.Init(nil)
+	activityInit()
 	generateTestAddrs()
 	generateTestStaker()
 
@@ -80,7 +83,8 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
-
+	posconfig.Init(nil)
+	activityInit()
 	epochID := uint64(0)
 	util.SetEpocherInst(&TestSelectLead{})
 
@@ -135,6 +139,8 @@ func testSimulateData(epochID uint64, index uint32) {
 }
 
 func TestGetRandomProposerActivity(t *testing.T) {
+	posconfig.Init(nil)
+	activityInit()
 	//test bad input
 	clearTestAddrs()
 	epochID := 0
