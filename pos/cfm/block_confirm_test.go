@@ -93,7 +93,19 @@ func TestGetMaxStableBlkNumber(t *testing.T) {
 	InitCFM(nil)
 	c := GetCFM()
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 0, nil) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 9, ErrNullBlk) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 9, 0, nil) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 9, 0, ErrNullBlk) != 0 {
 		t.Fail()
 	}
 
@@ -101,7 +113,7 @@ func TestGetMaxStableBlkNumber(t *testing.T) {
 	blkStatusArr = append(blkStatusArr, &BlkStatus{99, true})
 	blkStatusArr = append(blkStatusArr, &BlkStatus{98, true})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 99 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 97, 100, nil) != 99 {
 		t.Fail()
 	}
 
@@ -110,21 +122,21 @@ func TestGetMaxStableBlkNumber(t *testing.T) {
 	blkStatusArr = append(blkStatusArr, &BlkStatus{99, false})
 	blkStatusArr = append(blkStatusArr, &BlkStatus{98, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 97 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 97, 100, nil) != 97 {
 		t.Fail()
 	}
 
 	blkStatusArr = make([]*BlkStatus, 0)
 	blkStatusArr = append(blkStatusArr, &BlkStatus{0, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 1, nil) != 0 {
 		t.Fail()
 	}
 
 	blkStatusArr = make([]*BlkStatus, 0)
 	blkStatusArr = append(blkStatusArr, &BlkStatus{1, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 1, nil) != 0 {
 		t.Fail()
 	}
 }

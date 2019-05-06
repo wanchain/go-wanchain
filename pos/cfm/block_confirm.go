@@ -1,10 +1,12 @@
 package cfm
 
 import (
+	"errors"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"time"
 )
@@ -14,6 +16,10 @@ const (
 	SecBlkDiff = 50
 	//SecBlkDiff = 3
 	MaxUint64 = uint64(^(uint64(0)))
+)
+
+var (
+	ErrNullBlk = errors.New("can not read block")
 )
 
 type CFM struct {
@@ -43,6 +49,7 @@ func InitCFM(bc *core.BlockChain) {
 		address := crypto.PubkeyToAddress(*(crypto.ToECDSAPub(b)))
 		c.whiteList[address] = 1
 	}
+	log.Info("InitCFM success")
 }
 
 func GetCFM() *CFM {
@@ -52,14 +59,25 @@ func GetCFM() *CFM {
 func (c *CFM) GetMaxStableBlkNumber() uint64 {
 
 	timeNow := uint64(time.Now().Unix())
-	blkStatusArr := c.scanAllBlockStatus(timeNow)
-	return c.getMaxStableBlkNumber(blkStatusArr)
+	// stopNumber is the min block number, startNumber is max bock number
+	blkStatusArr, stopNumber, startNumber, err := c.scanAllBlockStatus(timeNow)
+	return c.getMaxStableBlkNumber(blkStatusArr, stopNumber, startNumber, err)
 }
 
-func (c *CFM) getMaxStableBlkNumber(blkStatusArr []*BlkStatus) uint64 {
+func (c *CFM) getMaxStableBlkNumber(blkStatusArr []*BlkStatus, stopNumber uint64, startNumber uint64, err error) uint64 {
+	if startNumber < stopNumber {
+		return 0
+	}
+
+	if err != nil {
+		return stopNumber
+	}
 
 	if len(blkStatusArr) == 0 {
 		return 0
+	}
+	if uint64(len(blkStatusArr)) != (startNumber - stopNumber) {
+		return stopNumber
 	}
 	// false
 	var blkNumber uint64
@@ -85,34 +103,32 @@ func (c *CFM) getMaxStableBlkNumber(blkStatusArr []*BlkStatus) uint64 {
 	}
 }
 
-func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
+func (c *CFM) scanAllBlockStatus(timeNow uint64) (blkStatus []*BlkStatus, stop uint64, start uint64, err error) {
 	blkStatusArr := make([]*BlkStatus, 0)
 	curBlk := c.bc.CurrentBlock()
 	if curBlk == nil {
-		return blkStatusArr
+		log.Error("confirm block", "scanAllBlockStatus get currentBlock", ErrNullBlk.Error())
+		return blkStatusArr, 0, 0, ErrNullBlk
 	}
 
 	startNumber := curBlk.NumberU64()
-	stopNumber := startNumber - uint64(posconfig.K)
-
-	if !(stopNumber > 0 && stopNumber < MaxUint64) {
+	var stopNumber uint64
+	if startNumber > uint64(posconfig.K) {
+		stopNumber = startNumber - uint64(posconfig.K)
+	} else {
 		stopNumber = 0
 	}
 
 	sbs := SuffixBlkStatic{0, 0}
-	inWhiteList := c.isInWhiteList(curBlk.Coinbase())
-	if inWhiteList {
-		sbs.SuffixBlockTrusted = sbs.SuffixBlockTrusted + 1
-	} else {
-		sbs.SuffixBlockNonTrusted = sbs.SuffixBlockNonTrusted + 1
-	}
-	parentHash := curBlk.ParentHash()
-	blkStatusArr = append(blkStatusArr, &BlkStatus{curBlk.NumberU64(), false})
-	for i := startNumber - 1; i >= stopNumber && i < MaxUint64; i-- {
-		blk := c.bc.GetBlock(parentHash, i)
+	var inWhiteList = false
+	hash := curBlk.Hash()
+	for i := startNumber; i > stopNumber && i < MaxUint64; i-- {
+		blk := c.bc.GetBlock(hash, i)
 		if blk == nil {
-			return blkStatusArr
+			log.Error("confirm block", "scanAllBlockStatus", ErrNullBlk.Error(), "block number", i)
+			return blkStatusArr, stopNumber, startNumber, ErrNullBlk
 		}
+
 		inWhiteList = c.isInWhiteList(blk.Coinbase())
 
 		if inWhiteList {
@@ -126,15 +142,29 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) []*BlkStatus {
 		//Empty			= X - Sx - NHX
 		//Sx - Empty 	= Sx - (X-Sx-NHX) = Sx -X + Sx +NHX = 2Sx+NHX-X
 		//diffBlk := 2*slotsCount + sbs.SuffixBlockNonTrusted - sbs.SuffixBlockTrusted
-		diffBlk := 2*sbs.SuffixBlockTrusted + sbs.SuffixBlockNonTrusted - slotsCount
+		diffBlk := int64(2*sbs.SuffixBlockTrusted + sbs.SuffixBlockNonTrusted - slotsCount)
 		var status = false
 		if diffBlk > SecBlkDiff {
 			status = true
 		}
+
+		log.Debug("scanAllBlockStatus",
+			"Number", blk.NumberU64(),
+			"hash", blk.Hash(),
+			"ParentHash", blk.ParentHash(),
+			"Coinbase", blk.Coinbase(),
+			"wl", inWhiteList,
+			"now", timeNow,
+			"blokTime", blk.Time().Uint64(),
+			"slotCounts", slotsCount,
+			"Sx", sbs.SuffixBlockTrusted,
+			"NHx", sbs.SuffixBlockNonTrusted,
+			"diffBlk", diffBlk)
+
 		blkStatusArr = append(blkStatusArr, &BlkStatus{blk.NumberU64(), status})
-		parentHash = blk.ParentHash()
+		hash = blk.ParentHash()
 	}
-	return blkStatusArr
+	return blkStatusArr, stopNumber, startNumber, nil
 }
 
 func (c *CFM) isInWhiteList(coinBase common.Address) bool {
