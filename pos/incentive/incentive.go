@@ -73,7 +73,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
-	slAddrs, slBlk, slAct := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
+	slAddrs, slBlk, slAct, ctrlCount := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
 
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader*100.0))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer*100.0))
@@ -89,8 +89,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	incentives, remains, err := epochLeaderAllocate(epochLeaderSubsidy, epAddrs, epAct, epochID)
 	if err != nil {
-		log.Error("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
-		log.SyslogErr("Incentive epochLeaderAllocate error")
+		log.SyslogErr("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -98,17 +97,15 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
 	if err != nil {
-		log.Error("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
-		log.SyslogErr("Incentive randomProposerAllocate error")
+		log.SyslogErr("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
-	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount, epochID)
+	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount-ctrlCount, epochID)
 	if err != nil {
-		log.Error("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
-		log.SyslogErr("Incentive slotLeaderAllocate error")
+		log.SyslogErr("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
 		return false
 	}
 	finalIncentive = append(finalIncentive, incentives...)
@@ -118,8 +115,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	extraRemain := getExtraRemain(total, sumPay, remainsAll)
 	remainsAll.Add(remainsAll, extraRemain)
 	if !checkTotalValue(total, sumPay, remainsAll) {
-		log.Error("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
-		log.SyslogErr("Incentive checkTotalValue error")
+		log.SyslogErr("Incentive checkTotalValue error", "sumPay", sumPay.String(), "remainsAll", remainsAll.String(), "total", total.String())
 		return false
 	}
 
@@ -209,6 +205,7 @@ func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int,
 }
 
 //slotLeaderAllocate input funds, address, blocks and activity returns address and its amount allocate and remaining funds.
+//slotCount is the slot count ctrled by others not foundation.
 func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
 	act float64, slotCount int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)

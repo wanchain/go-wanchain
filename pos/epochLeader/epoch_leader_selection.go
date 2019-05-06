@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+	"sort"
+
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math/big"
-	"sort"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -38,13 +39,12 @@ var (
 )
 
 type Epocher struct {
-	rbLeadersDb     *posdb.Db
-	epochLeadersDb  *posdb.Db
-	blkChain        *core.BlockChain
+	rbLeadersDb    *posdb.Db
+	epochLeadersDb *posdb.Db
+	blkChain       *core.BlockChain
 }
 
 var epocherInst *Epocher = nil
-
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
 
@@ -67,7 +67,7 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher 
 
 	rbdb := posdb.NewDb(rbn)
 	epdb := posdb.NewDb(epdbn)
-	inst := &Epocher{rbdb,  epdb, blc}
+	inst := &Epocher{rbdb, epdb, blc}
 
 	util.SetEpocherInst(inst)
 	return inst
@@ -84,10 +84,8 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 
 	targetEpochId := epochId - 2
 
-
 	return e.GetEpochLastBlkNumber(targetEpochId)
 }
-
 
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	targetBlkNum := util.GetEpochBlock(targetEpochId)
@@ -96,7 +94,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 		curNum := e.blkChain.CurrentBlock().NumberU64()
 		for {
 			curBlock = e.blkChain.GetBlockByNumber(curNum)
-			curEpochId := curBlock.Header().Difficulty.Uint64() >> 32
+			curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
 			if curEpochId <= targetEpochId {
 				break
 			}
@@ -138,7 +136,7 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	return nil
 }
-func (e *Epocher) selectLeaders(r []byte,  statedb *state.StateDB, epochId uint64) error {
+func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64) error {
 
 	log.Debug("select randoms", "epochId", epochId, "r", common.ToHex(r))
 
@@ -182,7 +180,6 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-
 func (e *Epocher) CalProbability(amountWin *big.Int, lockTime uint64) *big.Int {
 	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
@@ -196,8 +193,6 @@ func (e *Epocher) CalProbability(amountWin *big.Int, lockTime uint64) *big.Int {
 
 	return pb
 }
-
-
 
 func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (ProposerSorter, error) {
 	if statedb == nil {
@@ -215,7 +210,7 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB) (Proposer
 			return true
 		}
 		p := staker.StakeAmount
-		for i:=0; i<len(staker.Clients); i++ {
+		for i := 0; i < len(staker.Clients); i++ {
 			p.Add(p, staker.Clients[i].StakeAmount)
 		}
 		item := Proposer{
@@ -264,7 +259,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	selectionCount := posconfig.EpochLeaderCount
 	info, err := e.GepWhiteInfo(epochId)
 	if err == nil {
-		selectionCount = posconfig.EpochLeaderCount-int(info.WlCount.Uint64())
+		selectionCount = posconfig.EpochLeaderCount - int(info.WlCount.Uint64())
 	}
 	for i := 0; i < selectionCount; i++ {
 
@@ -289,8 +284,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	return nil
 }
 
-
-func (e * Epocher) GepWhiteInfo(epochId uint64)(*vm.UpgradeWhiteEpochLeaderParam, error) {
+func (e *Epocher) GepWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
 	if block == nil {
@@ -304,21 +298,22 @@ func (e * Epocher) GepWhiteInfo(epochId uint64)(*vm.UpgradeWhiteEpochLeaderParam
 	return info, nil
 
 }
-func (e * Epocher) GetWhiteByEpochId(epochId uint64)([]string, error){
-	info,err := e.GepWhiteInfo(epochId)
+func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
+	info, err := e.GepWhiteInfo(epochId)
 	if err != nil {
 		return nil, err
 	}
-	return posconfig.WhiteList[info.WlIndex.Uint64():info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+	return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 }
-func (e * Epocher) GetWhiteArrayByEpochId(epochId uint64)([][]byte, error){
-	info,err := e.GepWhiteInfo(epochId)
+func (e *Epocher) GetWhiteArrayByEpochId(epochId uint64) ([][]byte, error) {
+	info, err := e.GepWhiteInfo(epochId)
 	if err != nil {
 		return nil, err
 	}
-	return posconfig.EpochLeadersHold[info.WlIndex.Uint64():info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+	return posconfig.EpochLeadersHold[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 
 }
+
 //*bn256.G1
 //samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
 func (e *Epocher) randomProposerSelection(r []byte, ps ProposerSorter, epochId uint64) error {
@@ -390,14 +385,14 @@ func (e *Epocher) GetRBProposerG1(epochID uint64) []bn256.G1 {
 		g1s[i] = *new(bn256.G1)
 		_, err := g1s[i].Unmarshal(rbArray[i])
 		if err != nil {
-			log.Error("G1 unmarshal failed: ", "err",  err)
+			log.Error("G1 unmarshal failed: ", "err", err)
 		}
 	}
-
 
 	return g1s
 
 }
+
 //get rbLeaders of epochID in localdb only for incentive. for incentive.
 func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 	proposersArray := e.rbLeadersDb.GetStorageByteArray(epochID)
@@ -408,7 +403,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		proposer := Proposer{}
 		err := rlp.DecodeBytes(proposersArray[i], &proposer)
 		if err != nil {
-			log.Error("can't rlp decode:", "err",  err)
+			log.Error("can't rlp decode:", "err", err)
 		}
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
@@ -436,7 +431,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	proposer := Proposer{}
 	err := rlp.DecodeBytes(psValue, &proposer)
 	if err != nil {
-		log.Error("can't rlp decode:", "err",  err)
+		log.Error("can't rlp decode:", "err", err)
 
 		// todo : return ??
 	}
@@ -479,7 +474,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	infors[0].Addr = addr
 	infors[0].Probability = staker.StakeAmount
 	totalProbability = big.NewInt(0).Set(infors[0].Probability)
-	for i:=0; i<len(staker.Clients); i++ {
+	for i := 0; i < len(staker.Clients); i++ {
 		c := staker.Clients[i]
 		info := vm.ClientProbability{}
 		info.Addr = c.Address
@@ -507,12 +502,12 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		staker := stakers[i]
 		var changed = false
 		// LockEpochs==0 means NO expire
-		if staker.LockEpochs==0 {
+		if staker.LockEpochs == 0 {
 			continue
 		}
 		if epochID >= staker.StakingEpoch+staker.LockEpochs {
 			for j := 0; j < len(staker.Clients); j++ {
-					core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
@@ -520,15 +515,14 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			continue
 		}
 
-
 		newClients := make([]vm.ClientInfo, 0)
 		// check if delegator want to quit.
 		for j := 0; j < len(staker.Clients); j++ {
 			// edit the validator Amount
-			if epochID >= staker.Clients[j].QuitEpoch &&  staker.Clients[j].QuitEpoch!=0 {
+			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 				changed = true
-			}else {
+			} else {
 				newClients = append(newClients, staker.Clients[j])
 			}
 		}
@@ -542,7 +536,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 				weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
 				staker.StakeAmount = big.NewInt(0)
 				staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
-				staker.StakingEpoch = epochID+2
+				staker.StakingEpoch = epochID + 2
 				changed = true
 			}
 		}

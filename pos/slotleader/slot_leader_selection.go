@@ -157,7 +157,7 @@ func SlsInit() {
 	var err error
 	APkiCache, err = lru.NewARC(1000)
 	if err != nil || APkiCache == nil {
-		panic("APkiCache failed")
+		log.SyslogErr("APkiCache failed")
 	}
 	slotLeaderSelection = &SLS{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
@@ -221,6 +221,7 @@ func SlsInit() {
 		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
+	log.SyslogInfo("SLS SlsInit success")
 
 }
 
@@ -267,6 +268,7 @@ func (s *SLS) getAlpha(epochID uint64, selfIndex uint64) (*big.Int, error) {
 
 func (s *SLS) getLocalPublicKey() (*ecdsa.PublicKey, error) {
 	if s.key == nil || s.key.PrivateKey == nil {
+		log.SyslogErr("SLS", "getLocalPublicKey", vm.ErrInvalidLocalPublicKey.Error())
 		return nil, vm.ErrInvalidLocalPublicKey
 	}
 	return &s.key.PrivateKey.PublicKey, nil
@@ -345,6 +347,8 @@ func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
 		if err != nil {
+			// epoch 0 use the genesis pK to propose block, since it comes from configuration
+			// If the configuration has error, system should not continue.
 			panic("posconfig.GenesisPK is Error")
 		}
 		pks[i] = crypto.ToECDSAPub(pkBuf)
@@ -359,7 +363,7 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 	localPk, err := s.getLocalPublicKey()
 	if err != nil {
 		log.Error("SLS.IsLocalPkInPreEpochLeaders getLocalPublicKey error", "error", err)
-		panic("SLS.IsLocalPkInPreEpochLeaders getLocalPublicKey error")
+		return false, err
 	}
 
 	if epochID == 0 {
@@ -503,8 +507,10 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
 	if data == nil {
-		log.Error("SLS", "buildEpochLeaderGroup", "no epoch leaders", "epochID", epochID)
-		panic("No epoch leaders")
+		log.SyslogErr("SLS", "buildEpochLeaderGroup", "no epoch leaders", "epochID", epochID)
+		// no epoch leaders, it leads that no one send SMA stage1 and stage2 transaction.
+		// comment panic, because let node live to used for others node synchronization.
+		//panic("No epoch leaders")
 		return
 	}
 	for index, value := range data {
@@ -522,14 +528,14 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 	if block == nil {
 		db, err = s.getCurrentStateDb()
 		if err != nil {
-			log.Error("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
+			log.SyslogErr("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
 			rb := big.NewInt(1)
 			return rb, nil
 		}
 	} else {
 		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
 		if err != nil {
-			log.Error("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
+			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
 			rb := big.NewInt(1)
 			return rb, nil
 		}
@@ -537,7 +543,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 
 	rb := vm.GetR(db, epochID)
 	if rb == nil {
-		log.Error("vm.GetR return nil, use a default value", "epochID", epochID)
+		log.SyslogErr("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = big.NewInt(1)
 	}
 	return rb, nil
@@ -607,25 +613,28 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	}
 
 	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
 	}
 
 	for i := 0; i < len(piecesPtr); i++ {
 		ret := crypto.S256().IsOnCurve(piecesPtr[i].X, piecesPtr[i].Y)
 		if !ret {
+			log.SyslogErr("SLS", "generateSlotLeadsGroup", "SMA pieces are not on curve")
 			return vm.ErrNotOnCurve
 		}
 	}
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		ret := crypto.S256().IsOnCurve(epochLeadersPtrArray[i].X, epochLeadersPtrArray[i].Y)
 		if !ret {
+			log.SyslogErr("SLS", "generateSlotLeadsGroup", "epochLeaders are not on curve")
 			return vm.ErrNotOnCurve
 		}
 	}
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
 		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
 	if err != nil {
-		log.Error("generateSlotLeadsGroup", "error", err.Error())
+		log.SyslogErr("generateSlotLeadsGroup", "error", err.Error())
 		return err
 	}
 
@@ -633,7 +642,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
 		if err != nil {
-			log.Error("generateSlotLeadsGroup:PutWithIndex", "error", err.Error())
+			log.SyslogErr("generateSlotLeadsGroup:PutWithIndex", "error", err.Error())
 			return err
 		}
 	}
@@ -649,7 +658,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	s.slotCreateStatusLockCh <- 1
 	s.slotCreateStatus[epochID] = true
 	<-s.slotCreateStatusLockCh
-	log.Info("generateSlotLeadsGroup success")
+	log.SyslogInfo("generateSlotLeadsGroup success")
 
 	s.dumpData()
 	return nil
@@ -692,6 +701,7 @@ func (s *SLS) collectStagesData(epochID uint64) (err error) {
 	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID)
 	log.Debug("collectStagesData", "indexesSentTran", indexesSentTran)
 	if err != nil {
+		log.SyslogErr("collectStagesData", "indexesSentTran", vm.ErrCollectTxData.Error())
 		return vm.ErrCollectTxData
 	}
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
@@ -704,13 +714,13 @@ func (s *SLS) collectStagesData(epochID uint64) (err error) {
 		statedb, _ := s.getCurrentStateDb()
 		alphaPki, proof, err := vm.GetStage2TxAlphaPki(statedb, epochID, uint64(i))
 		if err != nil {
-			log.Warn("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
+			log.SyslogErr("GetStage2TxAlphaPki", "error", err.Error(), "index", i)
 			s.validEpochLeadersIndex[i] = false
 			continue
 		}
 
 		if (len(alphaPki) != posconfig.EpochLeaderCount) || (len(proof) != StageTwoProofCount) {
-			log.Warn("GetStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
+			log.SyslogErr("GetStage2TxAlphaPki", "error", "len(alphaPkis) or len(proofs) is wrong.", "index", i)
 			s.validEpochLeadersIndex[i] = false
 		} else {
 			for j := 0; j < posconfig.EpochLeaderCount; j++ {
@@ -749,7 +759,7 @@ func (s *SLS) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) 
 
 	smasPtr, err = uleaderselection.GenerateSMA(PrivateKey, ArrayPiece)
 	if err != nil {
-		log.Warn("generateSecurityMsg:GenerateSMA", "error", err.Error())
+		log.Error("generateSecurityMsg:GenerateSMA", "error", err.Error())
 		return err
 	}
 	for _, value := range smasPtr {
@@ -759,7 +769,7 @@ func (s *SLS) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) 
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
-		log.Warn("generateSecurityMsg:Put", "error", err.Error())
+		log.SyslogErr("generateSecurityMsg:Put", "error", err.Error())
 		return err
 	}
 	return nil
@@ -781,7 +791,7 @@ func (s *SLS) buildArrayPiece(epochID uint64, selfIndex uint64) ([]*ecdsa.Public
 	publicKeys := s.epochLeadersPtrArray[:]
 	for i := 0; i < len(publicKeys); i++ {
 		if publicKeys[i] == nil {
-			log.Error("epochLeader is not ready")
+			log.SyslogErr("epochLeader is not ready")
 			return nil, nil, errors.New("epochLeader is not ready")
 		}
 	}

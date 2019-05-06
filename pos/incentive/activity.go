@@ -47,15 +47,13 @@ func checkEpochLeaders(epochLeaders [][]byte) bool {
 
 func getEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	if stateDb == nil {
-		log.Error("getEpochLeaderActivity with an empty stateDb")
 		log.SyslogErr("getEpochLeaderActivity with an empty stateDb")
 		return []common.Address{}, []int{}
 	}
 
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if !checkEpochLeaders(epochLeaders) {
-		log.Error("incentive activity GetEpochLeaders error", "epochID", epochID)
-		log.SyslogErr("incentive activity GetEpochLeaders error")
+		log.SyslogErr("incentive activity GetEpochLeaders error", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
@@ -126,16 +124,14 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	}
 
 	if getRandomProposerAddress == nil {
-		log.Error("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
-		log.SyslogErr("incentive activity getRandomProposerAddress == nil")
+		log.SyslogErr("incentive activity getRandomProposerAddress == nil", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
 	leaders := getRandomProposerAddress(epochID)
 	addrs := getRnpAddrFromLeader(leaders)
 	if addrs == nil {
-		log.Error("incentive activity getRandomProposerAddress error", "epochID", epochID)
-		log.SyslogErr("incentive activity getRandomProposerAddress error")
+		log.SyslogErr("incentive activity getRandomProposerAddress error", "epochID", epochID)
 		return []common.Address{}, []int{}
 	}
 
@@ -150,12 +146,12 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	return addrs, activity
 }
 
-func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {
+func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int) {
 	if chain == nil {
 		log.SyslogErr("getSlotLeaderActivity chain reader is empty.")
-		return []common.Address{}, []int{}, float64(0)
+		return []common.Address{}, []int{}, float64(0), 0
 	}
-
+	ctrlCount := 0
 	currentNumber := chain.CurrentHeader().Number.Uint64()
 	miners := make(map[common.Address]int)
 	for i := currentNumber - 1; i > 0; i-- {
@@ -165,6 +161,7 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 		}
 
 		if isInWhiteList(header.Coinbase) {
+			ctrlCount++
 			continue
 		}
 
@@ -197,5 +194,5 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 		epochBlockCnt = slotCount
 	}
 	activePercent := float64(epochBlockCnt) / float64(slotCount)
-	return addrs, blocks, activePercent
+	return addrs, blocks, activePercent, ctrlCount
 }

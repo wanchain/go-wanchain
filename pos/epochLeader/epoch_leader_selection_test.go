@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -15,17 +21,12 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/util"
-	"math/big"
-	"testing"
-	"time"
-
 	//"github.com/wanchain/go-wanchain/log"
 	//"crypto/rand"
 	//"github.com/wanchain/pos/cloudflare"
 	//"github.com/wanchain/go-wanchain/common"
 	//"strconv"
 )
-
 
 var allocJson1 = `{
     "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e": {
@@ -105,7 +106,6 @@ var allocJson1 = `{
 	"0xe8ffc3d0c02c0bfc39b139fa49e2c5475f000000": {"balance": "10000000000000000000000000000000000000"}
  }`
 
-
 func jsonPrealloc(data string) core.GenesisAlloc {
 	var ga core.GenesisAlloc
 	if err := json.Unmarshal([]byte(data), &ga); err != nil {
@@ -113,16 +113,17 @@ func jsonPrealloc(data string) core.GenesisAlloc {
 	}
 	return ga
 }
+
 // func testPlutoGenesisBlock() *core.Genesis {
 // 	return core.DefaultPlutoGenesisBlock()
 // }
 func testGenesisBlock1() *core.Genesis {
 	return &core.Genesis{
-		Config:     params.PlutoChainConfig,
-		Timestamp:  0x59f83144,
-		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		Config:    params.PlutoChainConfig,
+		Timestamp: 0x59f83144,
+		ExtraData: hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		//GasLimit:   0x47b760,	// 4700000
-		GasLimit:   0x2cd29c0,	// 47000000
+		GasLimit:   0x2cd29c0, // 47000000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(allocJson1),
 	}
@@ -159,18 +160,18 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 }
 
 func TestGetEpochLeaders(t *testing.T) {
-
+	posconfig.Init(nil)
 	epochID, slotID := util.GetEpochSlotID()
 	fmt.Println("epochID:", epochID, " slotID:", slotID)
 
-   blkChain,_ := newTestBlockChain(true)
+	blkChain, _ := newTestBlockChain(true)
 
-	epocher1 := NewEpocherWithLBN(blkChain,"rb1","epdb1")
-	epocher2 := NewEpocherWithLBN(blkChain,"rb2","epdb2")
+	epocher1 := NewEpocherWithLBN(blkChain, "rb1", "epdb1")
+	epocher2 := NewEpocherWithLBN(blkChain, "rb2", "epdb2")
 
 	epocher1.SelectLeadersLoop(0)
 
-	time.Sleep(30*time.Second)
+	time.Sleep(30 * time.Second)
 	epocher2.SelectLeadersLoop(0)
 
 	epl1 := epocher1.GetEpochLeaders(0)
@@ -180,8 +181,8 @@ func TestGetEpochLeaders(t *testing.T) {
 		t.Fail()
 	}
 
-	for idx,val := range epl1 {
-		if !bytes.Equal(val,epl2[idx]) {
+	for idx, val := range epl1 {
+		if !bytes.Equal(val, epl2[idx]) {
 			t.Fail()
 		}
 	}
@@ -193,15 +194,13 @@ func TestGetEpochLeaders(t *testing.T) {
 		t.Fail()
 	}
 
-	for idx,val := range rbl1 {
-		if !bytes.Equal(val.PubBn256,rbl2[idx].PubBn256) {
+	for idx, val := range rbl1 {
+		if !bytes.Equal(val.PubBn256, rbl2[idx].PubBn256) {
 			t.Fail()
 		}
 	}
 
 }
-
-
 
 //func TestGetGetEpochLeadersCapability(t *testing.T) {
 //
@@ -308,7 +307,6 @@ func TestGetEpochLeaders(t *testing.T) {
 //	}
 //}
 
-
 //
 //func TestGenerateLeader(t *testing.T) {
 //	blkChain, _ := newTestBlockChain(true)
@@ -380,14 +378,13 @@ func TestCalProbability(t *testing.T) {
 	addrc.SetString("0x6e6f37b8463b541fd6d07082f30f0296c5ac2118")
 	c.Address = addrc
 	c.Amount = math.MustParseBig256("1000000000000000000000000")
-	c.StakingEpoch = item.StakingEpoch+1
 	item.Clients = append(item.Clients, c)
 	for epochid := uint64(1); epochid < 11; epochid++ {
-		pb := epocherInst.CalProbability(epochid, item.Amount, item.LockEpochs, item.StakingEpoch)
+		pb := epocherInst.CalProbability(item.Amount, item.LockEpochs)
 		t.Log("pb: ", epochid, pb)
 		for i := 0; i < len(item.Clients); i++ {
-			lockEpoch := item.LockEpochs - (item.Clients[i].StakingEpoch - item.StakingEpoch)
-			cp := epocherInst.CalProbability(epochid, item.Clients[i].Amount, lockEpoch, item.Clients[i].StakingEpoch)
+			lockEpoch := item.LockEpochs
+			cp := epocherInst.CalProbability(item.Clients[i].Amount, lockEpoch)
 			t.Log("cp: ", epochid, cp)
 			pb.Add(pb, cp)
 		}

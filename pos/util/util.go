@@ -4,17 +4,19 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strings"
 	"time"
+
+	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"sync"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -71,14 +73,12 @@ type SelectLead interface {
 }
 
 var (
-	lastBlockEpoch  = make(map[uint64]uint64)
-	lastBlockHashEpoch  = make(map[uint64]common.Hash)
-	lbe	    = sync.Mutex{}
-	selecter        SelectLead
-	lastEpochId     = uint64(0)
-	selectedEpochId = uint64(0)
-
-
+	lastBlockEpoch     = make(map[uint64]uint64)
+	lastBlockHashEpoch = make(map[uint64]common.Hash)
+	lbe                = sync.Mutex{}
+	selecter           SelectLead
+	lastEpochId        = uint64(0)
+	selectedEpochId    = uint64(0)
 )
 
 func SetEpocherInst(sor SelectLead) {
@@ -93,14 +93,14 @@ func GetEpocherInst() SelectLead {
 	return selecter
 }
 
-func CalEpSlbyTd(blkTd uint64)(epochID uint64, slotID uint64) {
+func CalEpSlbyTd(blkTd uint64) (epochID uint64, slotID uint64) {
 	epochID = (blkTd >> 32)
 	slotID = ((blkTd & 0xffffffff) >> 8)
-	return epochID,slotID
+	return epochID, slotID
 }
-func UpdateEpochBlock( block *types.Block) {
+func UpdateEpochBlock(block *types.Block) {
 	blkTd := block.Difficulty().Uint64()
-	epochID,slotID := CalEpSlbyTd(blkTd)
+	epochID, slotID := CalEpSlbyTd(blkTd)
 	updateEpochBlock(epochID, slotID, block.Header().Number.Uint64(), block.Header().Hash())
 }
 func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash common.Hash) {
@@ -139,7 +139,7 @@ func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte 
 
 func TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error) {
 	//return GetEpocherInst().TryGetAndSaveAllStakerInfoBytes(epochId)
-	return nil,nil
+	return nil, nil
 }
 
 // CompressPk
@@ -162,4 +162,15 @@ func UncompressPk(buf []byte) (*ecdsa.PublicKey, error) {
 
 func GetAbi(abiString string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(abiString))
+}
+
+// GetEpochSlotIDFromDifficulty can get epochID and slotID from difficulty.
+func GetEpochSlotIDFromDifficulty(difficulty *big.Int) (epochID, slotID uint64) {
+	if difficulty == nil {
+		return 0, 0
+	}
+
+	epochID = difficulty.Uint64() >> 32
+	slotID = (difficulty.Uint64() >> 8) & 0x00ffffff
+	return
 }

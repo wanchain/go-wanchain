@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -133,20 +133,19 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	if methodId == stgOneIdArr {
 		err := c.validTxStg1ByData(evm.StateDB, from, in[:])
 		if err != nil {
-			log.Error("slotLeaderSC:Run:validTxStg1ByData", "from", from)
 			return nil, err
 		}
 		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
 		err := c.validTxStg2ByData(evm.StateDB, from, in[:])
 		if err != nil {
-			log.Error("slotLeaderSC:Run:validTxStg2ByData", "from", from)
 			return nil, err
 		}
 		return c.handleStgTwo(in[:], contract, evm)
 	}
 
 	functrace.Exit()
+	log.SyslogErr("slotLeaderSC:Run", "", errMethodId.Error())
 	return nil, errMethodId
 }
 
@@ -159,6 +158,7 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	} else if methodId == stgTwoIdArr {
 		return c.validTxStg2(stateDB, signer, tx)
 	} else {
+		log.SyslogErr("slotLeaderSC:ValidTx", "", errMethodId.Error())
 		return errMethodId
 	}
 	return nil
@@ -174,7 +174,7 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 
 	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
 
-		log.Warn("epid cal","",convert.BytesToUint64(epochIDBuf))
+		log.Warn("epid cal", "", convert.BytesToUint64(epochIDBuf))
 		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, ErrInvalidTx1Range
 	}
@@ -207,7 +207,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma2Start, posconfig.Sma2End) {
-		log.Warn("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
+		log.SyslogWarning("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
 		return nil, ErrInvalidTx2Range
 	}
 
@@ -234,6 +234,7 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 func (c *slotLeaderSC) validTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
+		log.SyslogErr("slotLeaderSC:validTxStg1", "", err.Error())
 		return err
 	}
 
@@ -249,7 +250,7 @@ func (c *slotLeaderSC) validTxStg1ByData(stateDB StateDB, from common.Address, p
 	}
 
 	if !InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), from) {
-		log.Error("validTxStg1 failed")
+		log.SyslogErr("validTxStg1 failed")
 		return ErrIllegalSender
 	}
 
@@ -265,7 +266,7 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 	}
 
 	if !InEpochLeadersOrNotByAddress(epochID, from) {
-		log.Error("validTxStg2:InEpochLeadersOrNotByAddress failed")
+		log.SyslogErr("validTxStg2:InEpochLeadersOrNotByAddress failed")
 		return ErrIllegalSender
 	}
 
@@ -279,11 +280,11 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 
 	//mi
 	if len(mi) == 0 || len(alphaPkis) != posconfig.EpochLeaderCount {
-		log.Error("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
+		log.SyslogErr("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
 		return ErrInvalidTxLen
 	}
 	if !util.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
-		log.Error("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
+		log.SyslogErr("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
 		return ErrTx1AndTx2NotConsistent
 	}
 	//Dleq
@@ -295,7 +296,7 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 	}
 
 	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
-		log.Error("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
+		log.SyslogErr("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
 		return ErrDleqProof
 	}
 	return nil
@@ -304,6 +305,7 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 func (c *slotLeaderSC) validTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	sender, err := signer.Sender(tx)
 	if err != nil {
+		log.SyslogErr("slotLeaderSC:validTxStg1", "", err.Error())
 		return err
 	}
 	return c.validTxStg2ByData(stateDB, sender, tx.Data())
@@ -349,6 +351,7 @@ func GetStage1FunctionID(abiString string) ([4]byte, error) {
 
 	abi, err := util.GetAbi(abiString)
 	if err != nil {
+		log.SyslogErr("slotLeaderSC", "GetStage1FunctionID:GetAbi", err.Error())
 		return slotStage1ID, err
 	}
 
@@ -362,6 +365,7 @@ func GetStage2FunctionID(abiString string) ([4]byte, error) {
 
 	abi, err := util.GetAbi(abiString)
 	if err != nil {
+		log.SyslogErr("slotLeaderSC", "GetStage2FunctionID:GetAbi", err.Error())
 		return slotStage2ID, err
 	}
 
@@ -382,7 +386,7 @@ func PackStage1Data(input []byte, abiString string) ([]byte, error) {
 func InEpochLeadersOrNotByAddress(epochID uint64, senderAddress common.Address) bool {
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
-		log.Warn("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
+		log.SyslogWarning("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
 		epochLeaders = util.GetEpocherInst().GetEpochLeaders(0)
 	}
 
@@ -415,6 +419,7 @@ func RlpPackStage1DataForTx(epochID uint64, selfIndex uint64, mi *ecdsa.PublicKe
 
 	buf, err := rlp.EncodeToBytes(data)
 	if err != nil {
+		log.SyslogErr("RlpPackStage1DataForTx", "rlp.EncodeToBytes", err.Error())
 		return nil, err
 	}
 
@@ -429,12 +434,16 @@ func RlpUnpackStage1DataForTx(input []byte) (epochID uint64, selfIndex uint64, m
 
 	err = rlp.DecodeBytes(buf, &data)
 	if err != nil {
+		log.SyslogErr("RlpUnpackStage1DataForTx", "rlp.DecodeBytes", err.Error())
 		return
 	}
 
 	epochID = data.EpochID
 	selfIndex = data.SelfIndex
 	mi, err = util.UncompressPk(data.MiCompress)
+	if err != nil {
+		log.SyslogErr("RlpUnpackStage1DataForTx", "util.UncompressPk", err.Error())
+	}
 	return
 }
 
@@ -446,6 +455,7 @@ func RlpGetStage1IDFromTx(input []byte) (epochIDBuf []byte, selfIndexBuf []byte,
 
 	err = rlp.DecodeBytes(buf, &data)
 	if err != nil {
+		log.SyslogErr("RlpGetStage1IDFromTx", "rlp.DecodeBytes", err.Error())
 		return
 	}
 	epochIDBuf = convert.Uint64ToBytes(data.EpochID)
@@ -465,6 +475,7 @@ func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.Publ
 	proof []*big.Int, abiString string) ([]byte, error) {
 	pk, err := util.CompressPk(selfPK)
 	if err != nil {
+		log.SyslogErr("RlpPackStage2DataForTx", "util.CompressPk", err.Error())
 		return nil, err
 	}
 
@@ -472,6 +483,7 @@ func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.Publ
 	for i := 0; i < len(alphaPki); i++ {
 		pks[i], err = util.CompressPk(alphaPki[i])
 		if err != nil {
+			log.SyslogErr("RlpPackStage2DataForTx", "util.CompressPk", err.Error())
 			return nil, err
 		}
 	}
@@ -486,6 +498,7 @@ func RlpPackStage2DataForTx(epochID uint64, selfIndex uint64, selfPK *ecdsa.Publ
 
 	buf, err := rlp.EncodeToBytes(data)
 	if err != nil {
+		log.SyslogErr("RlpPackStage2DataForTx", "rlp.EncodeToBytes", err.Error())
 		return nil, err
 	}
 
@@ -508,6 +521,7 @@ func RlpUnpackStage2DataForTx(input []byte) (epochID uint64, selfIndex uint64, s
 	var data stage2Data
 	err = rlp.DecodeBytes(inputBuf, &data)
 	if err != nil {
+		log.SyslogErr("RlpUnpackStage2DataForTx", "rlp.DecodeBytes", err.Error())
 		return
 	}
 
@@ -515,6 +529,7 @@ func RlpUnpackStage2DataForTx(input []byte) (epochID uint64, selfIndex uint64, s
 	selfIndex = data.SelfIndex
 	selfPK, err = util.UncompressPk(data.SelfPk)
 	if err != nil {
+		log.SyslogErr("RlpUnpackStage2DataForTx", "util.UncompressPk", err.Error())
 		return
 	}
 
@@ -522,6 +537,7 @@ func RlpUnpackStage2DataForTx(input []byte) (epochID uint64, selfIndex uint64, s
 	for i := 0; i < len(data.AlphaPki); i++ {
 		alphaPki[i], err = util.UncompressPk(data.AlphaPki[i])
 		if err != nil {
+			log.SyslogErr("RlpUnpackStage2DataForTx", "util.UncompressPk", err.Error())
 			return
 		}
 	}
@@ -536,6 +552,7 @@ func RlpGetStage2IDFromTx(input []byte) (epochIDBuf []byte, selfIndexBuf []byte,
 	var data stage2Data
 	err = rlp.DecodeBytes(inputBuf, &data)
 	if err != nil {
+		log.SyslogErr("RlpGetStage2IDFromTx", "rlp.DecodeBytes", err.Error())
 		return
 	}
 
@@ -554,6 +571,7 @@ func GetStage2TxAlphaPki(stateDb StateDB, epochID uint64, selfIndex uint64) (alp
 	data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if data == nil {
 		log.Debug(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
+		log.SyslogErr(fmt.Sprintf("try to get stateDB addr:%s, key:%s", slotLeaderPrecompileAddr.Hex(), keyHash.Hex()))
 		return nil, nil, ErrNoTx2TransInDB
 	}
 
@@ -563,6 +581,7 @@ func GetStage2TxAlphaPki(stateDb StateDB, epochID uint64, selfIndex uint64) (alp
 	}
 
 	if epID != epochID || slfIndex != selfIndex {
+		log.SyslogErr("GetStage2TxAlphaPki", "error", ErrRlpUnpackErr.Error())
 		return nil, nil, ErrRlpUnpackErr
 	}
 
@@ -576,6 +595,7 @@ func GetStg1StateDbInfo(stateDb StateDB, epochID uint64, index uint64) (mi []byt
 	// Read and Verify
 	readBuf := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
 	if readBuf == nil {
+		log.SyslogErr("GetStg1StateDbInfo", "error", ErrNoTx1TransInDB.Error())
 		return nil, ErrNoTx1TransInDB
 	}
 
@@ -615,6 +635,7 @@ func addSlotScCallTimes(epochID uint64) error {
 	times := uint64(0)
 	if err != nil {
 		if err.Error() != "leveldb: not found" {
+			log.SyslogErr("addSlotScCallTimes", "error", err.Error())
 			return err
 		}
 	} else {
@@ -630,13 +651,13 @@ func addSlotScCallTimes(epochID uint64) error {
 func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	eid, sid := util.CalEpochSlotID(evm.Time.Uint64())
 	if epochID != eid {
-		log.Warn("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
+		log.SyslogWarning("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
 
 		return false
 	}
 
 	if sid > kEnd || sid < kStart {
-		log.Warn("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart,
+		log.SyslogWarning("Tx is out of valid stage range", "epochID", eid, "slotID", sid, "rangeStart", kStart,
 			"rangeEnd", kEnd)
 
 		return false
@@ -656,6 +677,7 @@ func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes
 		sendtrans[index] = true
 		value, err := rlp.EncodeToBytes(sendtrans)
 		if err != nil {
+			log.SyslogErr("updateSlotLeaderStageIndex", "rlp.EncodeToBytes", err.Error())
 			return err
 		}
 		evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, key, value)
@@ -664,12 +686,14 @@ func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes
 	} else {
 		err := rlp.DecodeBytes(bytes, &sendtransGet)
 		if err != nil {
+			log.SyslogErr("updateSlotLeaderStageIndex", "rlp.DecodeBytes", err.Error())
 			return err
 		}
 
 		sendtransGet[index] = true
 		value, err := rlp.EncodeToBytes(sendtransGet)
 		if err != nil {
+			log.SyslogErr("updateSlotLeaderStageIndex", "rlp.EncodeToBytes", err.Error())
 			return err
 		}
 		evm.StateDB.SetStateByteArray(slotLeaderPrecompileAddr, key, value)
