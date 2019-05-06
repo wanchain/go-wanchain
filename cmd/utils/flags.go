@@ -20,6 +20,7 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -1054,7 +1055,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.Genesis = core.DefaultPlutoGenesisBlock()
 
 	case ctx.GlobalIsSet(PlutoDevFlag.Name):
-
+		posconfig.IsDev = true
 		cfg.Genesis = core.PlutoDevGenesisBlock()
 
 	case ctx.GlobalBool(DevModeFlag.Name):

@@ -15,6 +15,7 @@ var (
 	EpochBaseTime = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
+	IsDev			= false
 )
 
 const (
