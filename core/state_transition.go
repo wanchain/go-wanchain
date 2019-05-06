@@ -33,6 +33,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 var (
@@ -318,7 +319,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 
 	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
-	epochID := st.evm.Context.Difficulty.Uint64() >> 32
+	epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
 	incentive.AddEpochGas(st.state, new(big.Int).Mul(usedGas, st.gasPrice), epochID)
 	return ret, requiredGas, usedGas, vmerr != nil, err
 }
