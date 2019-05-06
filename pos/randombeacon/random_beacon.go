@@ -37,6 +37,7 @@ type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 type GetCji func(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error)
 type GetEnsFunc func(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error)
 type GetRBMFunc func(db vm.StateDB, epochId uint64) ([]byte, error)
+type DoStageWork func() error
 
 type LoopEvent struct {
 	statedb vm.StateDB
@@ -75,6 +76,10 @@ type RandomBeacon struct {
 	getCji              GetCji
 	getEns              GetEnsFunc
 	getRBM              GetRBMFunc
+
+	fDoDKG1s			DoStageWork
+	fDoDKG2s			DoStageWork
+	fDoSIGs				DoStageWork
 }
 
 var (
@@ -118,6 +123,9 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.getCji = vm.GetCji
 	rb.getEns = vm.GetEncryptShare
 	rb.getRBM = vm.GetRBM
+	rb.fDoDKG1s = rb.doDKG1s
+	rb.fDoDKG2s = rb.doDKG2s
+	rb.fDoSIGs = rb.doSIGs
 
 	rb.loopEvents = make(chan *LoopEvent, loopEventCount)
 
@@ -230,7 +238,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doDKG1s()
+				err := rb.fDoDKG1s()
 				if err != nil {
 					return err
 				}
@@ -250,7 +258,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doDKG2s()
+				err := rb.fDoDKG2s()
 				// while errNoDKG1Poly, noneed to retry, stop dkg2 work
 				if err != nil && err != errNoDKG1Poly {
 					return err
@@ -271,7 +279,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doSIGs()
+				err := rb.fDoSIGs()
 
 				// while errInsufficient, noneed to retry, stop SIG work
 				if err != nil && err != errInsufficient {
