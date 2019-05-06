@@ -8,32 +8,7 @@ You can follow the getting started manual to experience the POC version of WanPO
 
 # 3. Contents
 
-<!-- TOC -->
-
-- [1. WanPoS Getting started manual](#1-wanpos-getting-started-manual)
-- [2. Introduction](#2-introduction)
-- [3. Contents](#3-contents)
-- [4. Quick start from docker](#4-quick-start-from-docker)
-  - [4.1. Step by step to be a miner](#41-step-by-step-to-be-a-miner)
-  - [4.2. Step by step to delegate wan coins](#42-step-by-step-to-delegate-wan-coins)
-- [5. Download and Run](#5-download-and-run)
-  - [5.1. Run from Docker](#51-run-from-docker)
-  - [5.2. Download](#52-download)
-    - [5.2.1. Download BIN](#521-download-bin)
-    - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
-  - [5.3. Run](#53-run)
-    - [5.3.1. Run as a synchronize node](#531-run-as-a-synchronize-node)
-    - [5.3.2. Run as a miner node](#532-run-as-a-miner-node)
-- [6. Operations](#6-operations)
-  - [6.1. PoS account creation](#61-pos-account-creation)
-  - [6.2. Check balance](#62-check-balance)
-  - [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos)
-  - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)
-  - [6.5. Check Incentive](#65-check-incentive)
-  - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)
-- [7. Test result of incentive](#7-test-result-of-incentive)
-
-<!-- /TOC -->
+<!-- TOC -->autoauto- [1. WanPoS Getting started manual](#1-wanpos-getting-started-manual)auto- [2. Introduction](#2-introduction)auto- [3. Contents](#3-contents)auto- [4. Quick start from docker](#4-quick-start-from-docker)auto    - [4.1. Step by step to be a miner](#41-step-by-step-to-be-a-miner)auto    - [4.2. Step by step to delegate wan coins](#42-step-by-step-to-delegate-wan-coins)auto- [5. Download and Run](#5-download-and-run)auto    - [5.1. Run from Docker](#51-run-from-docker)auto    - [5.2. Download](#52-download)auto        - [5.2.1. Download BIN](#521-download-bin)auto        - [5.2.2. Download Code and Compile](#522-download-code-and-compile)auto    - [5.3. Run](#53-run)auto        - [5.3.1. Run as a synchronize node](#531-run-as-a-synchronize-node)auto        - [5.3.2. Run as a miner node](#532-run-as-a-miner-node)auto- [6. Operations](#6-operations)auto    - [6.1. PoS account creation](#61-pos-account-creation)auto    - [6.2. Check balance](#62-check-balance)auto    - [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos)auto    - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)auto    - [6.5. Check Incentive](#65-check-incentive)auto    - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)auto- [7. Test result of incentive](#7-test-result-of-incentive)autoauto<!-- /TOC -->
 
 # 4. Quick start from docker
 
@@ -122,7 +97,8 @@ var passwd    = "YourPassword"
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}];
+
 
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
@@ -240,7 +216,8 @@ var passwd    = "YourPassword"
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}];
+
 
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000d2";
