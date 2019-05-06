@@ -230,7 +230,7 @@ func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
 		fundValues = append(fundValues, big.NewInt(0).Mul(incentiveActive, big.NewInt(int64(blocks[i]))))
 	}
 
-	finalIncentive, subRemain, err := delegate(fundAddrs, fundValues, epochID)
+	finalIncentive, subRemain, err := delegate(fundAddrs, fundValues, epochID-1)
 	if err != nil {
 		return nil, nil, err
 	}
