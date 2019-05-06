@@ -160,13 +160,13 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 			continue
 		}
 
-		if isInWhiteList(header.Coinbase) {
-			ctrlCount++
-			continue
-		}
-
 		epID := getEpochIDFromDifficulty(header.Difficulty)
 		if epID == epochID {
+			if isInWhiteList(header.Coinbase) {
+				ctrlCount++
+				continue
+			}
+
 			cnt, ok := miners[header.Coinbase]
 			if ok {
 				cnt++
