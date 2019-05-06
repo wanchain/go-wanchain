@@ -612,17 +612,17 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 
 	return nil, nil
 }
-
+/*
+the weight of 7 epoch:  a + 7*b ~= 1000
+the weight of 90 epoch: a + 90*b ~= 1500
+the time of maxEpoch/minEpoch is 1.5
+so the a=960, b=6.
+thus, weight of 7 epoch is 960+7*6=1002
+the weight of 90 epoch is 960+90*6 = 1500
+the time is 1500/1002, about 1.5
+*/
 func CalLocktimeWeight(lockEpoch uint64) uint64 {
-	if lockEpoch < PSEpochNum_1 {
-		return 10
-	} else if lockEpoch < PSEpochNum_2 {
-		return 11
-	} else if lockEpoch < PSEpochNum_3 {
-		return 13
-	} else {
-		return 15
-	}
+	return 960+lockEpoch*6
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {
