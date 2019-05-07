@@ -89,7 +89,7 @@ func  (f *faucet) SendTransaction(singedTx *types.Transaction) error {
 		log.Info("send pos tx success", "txHash", txHash)
 	}
 
-	return nil
+	return err
 
 }
 
@@ -153,8 +153,11 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 	//	panic(err)
 	//}
 	//faucet.client = rc
+	faucet.timeouts = make(map[string]time.Time)
 	faucet.index =  website.Bytes()
 	faucet.eth = ethereum
+	faucet.update = make(chan struct{}, 1)
+
 	for _, wallet := range faucet.eth.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
 			baseAddr,err := ethereum.Etherbase()
@@ -238,14 +241,14 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 	f.lock.Unlock()
 
 	defer func() {
-		f.lock.Lock()
+		//f.lock.Lock()
 		for i, c := range f.conns {
 			if c == conn {
 				f.conns = append(f.conns[:i], f.conns[i+1:]...)
 				break
 			}
 		}
-		f.lock.Unlock()
+		//f.lock.Unlock()
 	}()
 	// Gather the initial stats from the network to report
 	var (
@@ -259,7 +262,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 
 	for {
 
-		statdb,err := f.eth.BlockChain().StateAt(curblk.Hash())
+		statdb,err := f.eth.BlockChain().State()
 		if err != nil {
 			time.Sleep(3 * time.Second)
 			continue
@@ -473,6 +476,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			}
 			continue
 		}
+
 		if err = sendSuccess(conn, fmt.Sprintf("Funding request accepted for %s into %s", username, address.Hex())); err != nil {
 			log.Warn("Failed to send funding success to client", "err", err)
 			return
