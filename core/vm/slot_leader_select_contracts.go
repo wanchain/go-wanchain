@@ -255,26 +255,15 @@ func (c *slotLeaderSC) validTxStg1ByData(stateDB StateDB, from common.Address, p
 		return ErrIllegalSender
 	}
 
-	_, _, mi, err := RlpUnpackStage1DataForTx(payload[:])
+	_, _, _, err = RlpUnpackStage1DataForTx(payload[:])
 	if err != nil {
 		return err
-	}
-
-	if !isOnS256CurveOrNot(mi) {
-		return ErrNotOnCurve
 	}
 
 	//log.Info("validTxStg1 success")
 	return nil
 }
-func isOnS256CurveOrNot(pk *ecdsa.PublicKey) bool {
-	ret := crypto.S256().IsOnCurve(pk.X, pk.Y)
-	if !ret {
-		log.SyslogErr("isOnS256CurveOrNot", "", "pk is not on curve")
-		return false
-	}
-	return true
-}
+
 func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, payload []byte) error {
 	epochID, selfIndex, _, alphaPkis, proofs, err := RlpUnpackStage2DataForTx(payload[:])
 	if err != nil {
@@ -285,12 +274,6 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 	if !InEpochLeadersOrNotByAddress(epochID, selfIndex, from) {
 		log.SyslogErr("validTxStg2:InEpochLeadersOrNotByAddress failed")
 		return ErrIllegalSender
-	}
-
-	for _, alphaPk := range alphaPkis {
-		if !isOnS256CurveOrNot(alphaPk) {
-			return ErrNotOnCurve
-		}
 	}
 
 	for _, proof := range proofs {
@@ -473,6 +456,7 @@ func RlpUnpackStage1DataForTx(input []byte) (epochID uint64, selfIndex uint64, m
 
 	epochID = data.EpochID
 	selfIndex = data.SelfIndex
+	// UncompressPK has verified the point on curve or not.
 	mi, err = util.UncompressPk(data.MiCompress)
 	if err != nil {
 		log.SyslogErr("RlpUnpackStage1DataForTx", "util.UncompressPk", err.Error())
