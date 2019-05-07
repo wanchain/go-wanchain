@@ -183,7 +183,8 @@ func TestGetRandomProposerActivity(t *testing.T) {
 }
 
 func TestWhiteList(t *testing.T) {
-
+	posconfig.Init(nil)
+	activityInit()
 	if isInWhiteList(common.HexToAddress("0xcf696d8EEA08a311780fB89B20d4F0895198a489")) {
 		t.FailNow()
 	}
