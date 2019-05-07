@@ -140,7 +140,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 }
 
 func getIncentivePrecompileAddress() common.Address {
-	return common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+	return vm.IncentivePrecompileAddr
 }
 
 func getRunFlagKey(epochID uint64) common.Hash {
