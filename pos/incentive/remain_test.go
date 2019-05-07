@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 func TestAddRemain(t *testing.T) {
@@ -14,8 +14,8 @@ func TestAddRemain(t *testing.T) {
 
 	remainConst := big.NewInt(0).SetUint64(99885844748858447)
 
-	subsidy := getBaseSubsidyTotalForSlot(statedb, subsidyReductionInterval)
-	fmt.Println(subsidy.String(), float64(subsidy.Uint64())/float64(1e18))
+	subsidy := getBaseSubsidyTotalForEpoch(statedb, subsidyReductionInterval)
+	fmt.Println(subsidy.String(), util.FromWin(subsidy))
 
 	fmt.Println(subsidyReductionInterval)
 	for i := uint64(0); i < subsidyReductionInterval; i++ {
@@ -31,11 +31,11 @@ func TestAddRemain(t *testing.T) {
 		t.FailNow()
 	}
 
-	subsidy2 := getBaseSubsidyTotalForSlot(statedb, subsidyReductionInterval)
-	fmt.Println(subsidy2.String(), float64(subsidy2.Uint64())/float64(1e18))
+	subsidy2 := getBaseSubsidyTotalForEpoch(statedb, subsidyReductionInterval)
+	fmt.Println(subsidy2.String(), util.FromWin(subsidy2))
 
 	subsidy2 = subsidy2.Sub(subsidy2, subsidy)
-	totalRemain := subsidy.Mul(subsidy2, big.NewInt(0).SetUint64(subsidyReductionInterval*posconfig.SlotCount))
+	totalRemain := subsidy.Mul(subsidy2, big.NewInt(0).SetUint64(subsidyReductionInterval))
 	fmt.Println(totalRemain.String())
 
 	subValue := remainDef.Sub(remainDef, totalRemain).Int64()

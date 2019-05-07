@@ -6,45 +6,36 @@ import (
 
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
-// calcBaseSubsidy calc the base subsidy of slot base on year. input is wei.
-func calcBaseSubsidy(baseValueOfYear *big.Int, slotTime int64) *big.Int {
-	secondPerYear := big.NewInt(365 * 24 * 3600)
-	slotPerYear := secondPerYear.Div(secondPerYear, big.NewInt(slotTime))
-	subsidyPerSlot := big.NewInt(0).Div(baseValueOfYear, slotPerYear)
-	return subsidyPerSlot
+// calcBaseSubsidy calc the base subsidy of epoch base on subsidyReductionInterval. input is wei.
+func calcBaseSubsidy(baseValue *big.Int) *big.Int {
+	if baseValue == nil {
+		log.SyslogErr("calcBaseSubsidy input is nil")
+		return big.NewInt(0)
+	}
+	subsidyPerEpoch := big.NewInt(0).Div(baseValue, big.NewInt(0).SetUint64(subsidyReductionInterval))
+	return subsidyPerEpoch
 }
 
-// getBaseSubsidyTotalForSlot returns the subsidy amount a slot at the provided epoch
+// getBaseSubsidyTotalForEpoch returns the subsidy amount a epoch at the provided epoch
 // should have. This is mainly used for determining how much the incentive for
 // newly generated blocks awards as well as validating the incentive for blocks
 // has the expected value.
-//
-// The subsidy is halved every SubsidyReductionInterval
-// this is: baseSubsidy / 2^(epoch/SubsidyReductionInterval)
-//
-// At the target block generation rate for the main network, this is
-// approximately every 5 years.
-func getBaseSubsidyTotalForSlot(stateDb *state.StateDB, epochID uint64) *big.Int {
+func getBaseSubsidyTotalForEpoch(stateDb *state.StateDB, epochID uint64) *big.Int {
 	if stateDb == nil {
-		log.SyslogErr("getBaseSubsidyTotalForSlot with an empty stateDb")
+		log.SyslogErr("getBaseSubsidyTotalForEpoch with an empty stateDb")
 		return big.NewInt(0)
 	}
 
-	// 2500000 wan coin for first year
-	year := big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))
-	baseSubsidy := calcBaseSubsidy(year, posconfig.SlotTime)
+	baseSubsidy := calcBaseSubsidy(firstPeriodReward)
 
 	redutionRateNow := math.Pow(redutionRateBase, float64(epochID/subsidyReductionInterval))
 	baseSubsidyReduction := calcPercent(baseSubsidy, redutionRateNow*100.0)
 
-	// If 1 years later, need add the remain incentive pool value of last 1 years
+	// If 1 period later, need add the remain incentive pool value of last period
 	if (epochID / subsidyReductionInterval) >= 1 {
-		remainLastPeriod := getRemainIncentivePool(stateDb, epochID)
-		remainLastPerYears := remainLastPeriod.Div(remainLastPeriod, big.NewInt(int64(redutionYears)))
-		baseRemain := calcBaseSubsidy(remainLastPerYears, posconfig.SlotTime)
+		baseRemain := calcBaseSubsidy(getRemainIncentivePool(stateDb, epochID))
 		baseSubsidyReduction.Add(baseSubsidyReduction, baseRemain)
 	}
 
@@ -58,9 +49,7 @@ func calcWanFromFoundation(stateDb *state.StateDB, epochID uint64) *big.Int {
 		return big.NewInt(0)
 	}
 
-	subsidyOfSlot := getBaseSubsidyTotalForSlot(stateDb, epochID)
-	subsidyOfEpoch := big.NewInt(0).Mul(subsidyOfSlot, big.NewInt(posconfig.SlotCount))
-	return subsidyOfEpoch
+	return getBaseSubsidyTotalForEpoch(stateDb, epochID)
 }
 
 // calculateIncentivePool returns subsidy of Epoch from all
