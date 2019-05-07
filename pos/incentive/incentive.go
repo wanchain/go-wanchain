@@ -28,6 +28,7 @@ var (
 	percentOfSlotLeader      = 12.0 / 49.0                                                                            //24.4898%
 	ceilingPercentS0         = 100.0                                                                                  //100% Turn off in current version.
 	openIncentive            = true                                                                                   //If the incentive function is open
+	firstPeriodReward        = big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))                                 // 2500000 wan coin for first year
 )
 
 const (
@@ -140,7 +141,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 }
 
 func getIncentivePrecompileAddress() common.Address {
-	return common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+	return vm.IncentivePrecompileAddr
 }
 
 func getRunFlagKey(epochID uint64) common.Hash {

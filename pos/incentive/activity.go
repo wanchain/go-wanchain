@@ -26,9 +26,8 @@ func activityInit() {
 func isInWhiteList(coinBase common.Address) bool {
 	if _, ok := whiteList[coinBase]; ok {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func checkEpochLeaders(epochLeaders [][]byte) bool {
