@@ -50,7 +50,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 	setActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	setRBAddressInterface(getRbAddr)
 
-	initLocalDb("incentive")
+	initLocalDb(posconfig.IncentiveLocalDB)
 	log.Info("--------Incentive Init Finish----------")
 }
 
