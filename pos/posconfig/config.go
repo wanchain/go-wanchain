@@ -24,6 +24,7 @@ const (
 	StakerLocalDB    = "stlocaldb"
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
+	ReorgLocalDB     = "forkdb"
 )
 
 var EpochLeadersHold [][]byte

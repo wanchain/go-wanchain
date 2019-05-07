@@ -27,9 +27,9 @@ import (
 
 func (bc *BlockChain) updateReOrg(epochid uint64, slotid uint64, length uint64) {
 
-	reOrgDb := posdb.GetDbByName("forkdb")
+	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
 	if reOrgDb == nil {
-		reOrgDb = posdb.NewDb("forkdb")
+		reOrgDb = posdb.NewDb(posconfig.ReorgLocalDB)
 	}
 
 	numberBytes, _ := reOrgDb.Get((epochid<<16)|slotid, "reorgNumber")
