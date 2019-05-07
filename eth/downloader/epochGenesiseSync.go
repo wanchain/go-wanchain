@@ -40,7 +40,7 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 		}
 
 		d.epochGenesisSyncStart <- &types.EpochSync{EpochId: i, IsEnd: i == endEpochid}
-
+		log.Info("***epochGenesisSyncStart", "i", i)
 		select {
 		case epid := <- fbchan:
 			if epid >= 0 {
@@ -138,6 +138,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
 
+				log.Info("***drop peer")
 				delete(active, req.peer.id)
 				req.peer.SetEpochGenesisDataIdle(1)
 
@@ -158,11 +159,12 @@ func (d *Downloader) epochGenesisFetcher() {
 
 			case <-d.quitCh:
 				return
-			case <-d.cancelCh:
-				return
+			//case <-d.cancelCh:
+			//	return
 
 		}
 	}
+
 }
 
 func (d *Downloader) sendEpochGenesisReq(ep *types.EpochSync, active map[string]*epochGenesisReq) *epochGenesisReq {
