@@ -28,14 +28,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/rpc"
 	"html/template"
 	"io/ioutil"
 	"math"
@@ -87,29 +84,29 @@ func  (f *faucet) SendTransaction(singedTx *types.Transaction) error {
 	ctx := context.Background()
 	var txHash common.Hash
 
-	err := f.client.CallContext(ctx, &txHash, "eth_sendRawTransaction", singedTx)
-	if nil != err {
-		log.Error("send pos tx fail", "err", err)
-		return err
+	err := f.eth.ApiBackend.SendTx(ctx,singedTx)
+	if err == nil {
+		log.Info("send pos tx success", "txHash", txHash)
 	}
 
-	log.Info("send pos tx success", "txHash", txHash)
 	return nil
 
 }
 
 func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 	// Parse the flags and set up the logger to print everything requested
-	flag.Parse()
+	//flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
-
+	if amount == 0 {
+		amount = 100
+	}
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	periods := make([]string, *tiersFlag)
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
-		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("%s Wans", strconv.FormatFloat(amount, 'f', -1, 64))
+		wanAmount := float64(amount) * math.Pow(2.5, float64(i))
+		amounts[i] = fmt.Sprintf("%s Wans", strconv.FormatFloat(wanAmount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -149,15 +146,14 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 
 
 	faucet := &faucet{}
-	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
-	rc, err := rpc.Dial(url)
-	if err != nil {
-		fmt.Println("err:", err)
-		panic(err)
-	}
-
-
-	faucet.client = rc
+	//url := posconfig.Cfg().NodeCfg.IPCEndpoint()
+	//rc, err := rpc.Dial(url)
+	//if err != nil {
+	//	fmt.Println("err:", err)
+	//	panic(err)
+	//}
+	//faucet.client = rc
+	faucet.index =  website.Bytes()
 	faucet.eth = ethereum
 	for _, wallet := range faucet.eth.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -168,6 +164,8 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 
 			if account.Address == baseAddr {
 				faucet.account = account
+				faucet.wallet = wallet
+				break
 			}
 		}
 	}
@@ -176,6 +174,8 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 	if err := faucet.listenAndServe(*apiPortFlag); err != nil {
 		log.Crit("Failed to launch faucet API", "err", err)
 	}
+
+	fmt.Println("launched server...")
 }
 
 // request represents an accepted funding request.
@@ -198,10 +198,12 @@ type faucet struct {
 
 	lock sync.RWMutex // Lock protecting the faucet's internals
 
-	client    *rpc.Client   // Client connection to the Ethereum chain
+	//client    *rpc.Client   // Client connection to the Ethereum chain
 	eth		  *eth.Ethereum
 
-	keystore *keystore.KeyStore
+	//keystore *keystore.KeyStore
+	wallet  accounts.Wallet
+
 	account  accounts.Account   // Account funding user faucet requests
 
 	nonce    uint64             // Current pending nonce of the faucet
@@ -430,7 +432,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 
 			tx := types.NewTransaction(nonce, address, amount, big.NewInt(21000), price, nil)
 
-			signed, err := f.keystore.SignTx(f.account, tx, f.eth.BlockChain().Config().ChainId)
+			signed, err := f.wallet.SignTx(f.account, tx, f.eth.BlockChain().Config().ChainId)
 			if err != nil {
 				f.lock.Unlock()
 				if err = sendError(conn, err); err != nil {
@@ -439,6 +441,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 				}
 				continue
 			}
+
 
 			// Submit the transaction and mark as funded if successful
 			if err := f.SendTransaction(signed); err != nil {
@@ -491,7 +494,7 @@ func (f *faucet) loop() {
 
 	for {
 		select {
-		case head := <-heads:
+		case blk := <-heads:
 			// New chain head arrived, query the current stats and stream to clients
 			var (
 				balance *big.Int
@@ -501,30 +504,28 @@ func (f *faucet) loop() {
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
 
-			statdb,err := f.eth.BlockChain().StateAt(head.Block.Hash())
+			statdb,err := f.eth.BlockChain().State()
 			if err != nil {
 				time.Sleep(3 * time.Second)
 				continue
 			}
 
 			balance = statdb.GetBalance(f.account.Address)
-			fmt.Println("balance")
+
 			if err == nil {
 				nonce = statdb.GetNonce(f.account.Address)
-				fmt.Println("nonce")
 				if err == nil {
 					price, err = f.eth.ApiBackend.SuggestPrice(ctx)
-					fmt.Println("price")
 				}
 			}
 			cancel()
 
 			// If querying the data failed, try for the next block
 			if err != nil {
-				log.Warn("Failed to update faucet state", "block", head.Block.Number, "hash", head.Block.Hash(), "err", err)
+				log.Warn("Failed to update faucet state", "block", blk.Block.Number, "hash", blk.Block.Hash(), "err", err)
 				continue
 			} else {
-				log.Info("Updated faucet state", "block",  head.Block.Number, "hash",  head.Block.Hash(), "balance", balance, "nonce", nonce, "price", price)
+				log.Info("Updated faucet state", "block",  blk.Block.Number, "hash",  blk.Block.Hash(), "balance", balance, "nonce", nonce, "price", price)
 			}
 			// Faucet state retrieved, update locally and send to clients
 			balance = new(big.Int).Div(balance, ether)
@@ -548,7 +549,7 @@ func (f *faucet) loop() {
 					conn.Close()
 					continue
 				}
-				if err := send(conn, head, 10*time.Second); err != nil {
+				if err := send(conn, blk.Block.Header(), 10*time.Second); err != nil {
 					log.Warn("Failed to send header to client", "err", err)
 					conn.Close()
 				}
@@ -755,4 +756,15 @@ func authNoAuth(url string) (string, string, common.Address, error) {
 		return "", "", common.Address{}, errors.New("No Ethereum address found to fund")
 	}
 	return address.Hex() + "@noauth", "", address, nil
+}
+
+
+
+func test() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`hello world`))
+	})
+	err := http.ListenAndServe(":8080", nil) // <-今天讲的就是这个ListenAndServe是如何工作的
+	fmt.Println(err)
+
 }

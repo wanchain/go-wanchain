@@ -108,6 +108,9 @@ var (
 		utils.PlutoFlag,
 		utils.PlutoDevFlag,
 
+		utils.FaucetEnabledFlag,
+		utils.FaucetAmountFlag,
+
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,

@@ -91,7 +91,12 @@ var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
+
+
+
+
 func main() {
+
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
