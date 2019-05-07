@@ -497,6 +497,7 @@ func (self *worker) commitNewWork(isPos bool) {
 	//for _, hash := range badUncles {
 	//	delete(self.possibleUncles, hash)
 	//}
+
 	uncles := []*types.Header{}
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {

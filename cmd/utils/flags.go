@@ -525,6 +525,19 @@ var (
 		Usage: "syslog tag",
 		Value: "gwan_pos",
 	}
+
+	//facuet enbale settings
+	FaucetEnabledFlag = cli.BoolFlag{
+		Name:  "faucet",
+		Usage: "Enable faucet ",
+	}
+
+	FaucetAmountFlag = cli.IntFlag{
+		Name:  "faucetamount",
+		Usage: "faucet charge amount per time",
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
+	}
+
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -782,6 +795,7 @@ func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
 		cfg.Etherbase = account.Address
 		return
 	}
+
 	accounts := ks.Accounts()
 	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {
