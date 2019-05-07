@@ -15,14 +15,16 @@ var (
 	EpochBaseTime = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
-	IsDev			= false
+	IsDev        = false
 )
 
 const (
-	RbLocalDB  = "rblocaldb"
-	EpLocalDB  = "eplocaldb"
-	StakerLocalDB  = "stlocaldb"
-	PosLocalDB = "pos"
+	RbLocalDB        = "rblocaldb"
+	EpLocalDB        = "eplocaldb"
+	StakerLocalDB    = "stlocaldb"
+	PosLocalDB       = "pos"
+	IncentiveLocalDB = "incentive"
+	ReorgLocalDB     = "forkdb"
 )
 
 var EpochLeadersHold [][]byte
@@ -33,8 +35,8 @@ const (
 	// RandomProperCount is count of pk in random leader group which is select by stake
 	RandomProperCount = 25
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
-	MaxEpHold			= 30
-	MinEpHold			= 10
+	MaxEpHold         = 30
+	MinEpHold         = 10
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
@@ -83,6 +85,7 @@ const (
 
 var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
 var PosOwnerAddr = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
+
 type Config struct {
 	PolymDegree   uint
 	K             uint
