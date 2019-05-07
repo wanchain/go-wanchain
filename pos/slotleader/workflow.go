@@ -128,7 +128,9 @@ func (s *SLS) doInit(epochID uint64) {
 	err := s.generateSlotLeadsGroup(epochID)
 	if err != nil {
 		log.Error(err.Error())
-		panic("generateSlotLeadsGroup error")
+		// no slot leaders are created, it leads that no one proposal block
+		// comment panic, because let node live to used for others node synchronization.
+		// panic("generateSlotLeadsGroup error")
 	}
 }
 
@@ -216,7 +218,7 @@ func (s *SLS) generateCommitment(publicKey *ecdsa.PublicKey,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
+	//fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
 
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -34,11 +35,13 @@ func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header       
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
 
 func TestGetSlotLeaderActivity(t *testing.T) {
+	posconfig.Init(nil)
+	activityInit()
 	generateTestAddrs()
 	generateTestStaker()
 
 	chain := &TestChainReader{}
-	addrs, blks, activity := getSlotLeaderActivity(chain, 0, 100)
+	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100)
 	fmt.Println(addrs, blks, activity)
 
 	if activity != 0.99 {
@@ -80,11 +83,18 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
-
+	posconfig.Init(nil)
+	activityInit()
 	epochID := uint64(0)
 	util.SetEpocherInst(&TestSelectLead{})
+
+	//test bad input
+	clearTestAddrs()
+	getEpochLeaderActivity(statedb, epochID)
+
+	//test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	for i := 0; i < len(epAddrs); i++ {
 		epochIDBuf := convert.Uint64ToBytes(epochID)
@@ -129,11 +139,21 @@ func testSimulateData(epochID uint64, index uint32) {
 }
 
 func TestGetRandomProposerActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
+	posconfig.Init(nil)
+	activityInit()
+	//test bad input
+	clearTestAddrs()
+	epochID := 0
+
+	getRandomProposerActivity(statedb, uint64(epochID))
+
 	setRBAddressInterface(testGetRBAddress)
 
-	epochID := 0
+	getRandomProposerActivity(statedb, uint64(epochID))
+
+	// test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	addrs, activity := getRandomProposerActivity(statedb, uint64(epochID))
 

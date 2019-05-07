@@ -6,11 +6,12 @@ import (
 
 // Activity is a struct use for outside api call return
 type Activity struct {
-	EpLeader   []common.Address
-	EpActivity []int
-	RpLeader   []common.Address
-	RpActivity []int
-	SltLeader  []common.Address
-	SlBlocks   []int
-	SlActivity float64
+	EpLeader    []common.Address
+	EpActivity  []int
+	RpLeader    []common.Address
+	RpActivity  []int
+	SltLeader   []common.Address
+	SlBlocks    []int
+	SlActivity  float64
+	SlCtrlCount int
 }

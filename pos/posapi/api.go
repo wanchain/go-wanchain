@@ -145,7 +145,7 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
-func (a PosApi) GetReorg(epochid uint64,slotid uint64) ([]uint64, error) {
+func (a PosApi) GetReorg(epochid uint64, slotid uint64) ([]uint64, error) {
 	reOrgDb := posdb.GetDbByName("forkdb")
 	if reOrgDb == nil {
 		return nil, errors.New("not find db")
@@ -155,7 +155,7 @@ func (a PosApi) GetReorg(epochid uint64,slotid uint64) ([]uint64, error) {
 
 	reOrgNum = 0
 
-	reorBytes, err := reOrgDb.Get((epochid <<16)|slotid, "reorgNumber")
+	reorBytes, err := reOrgDb.Get((epochid<<16)|slotid, "reorgNumber")
 	if err == nil && reorBytes != nil {
 		reOrgNum = binary.BigEndian.Uint64(reorBytes)
 	}
@@ -223,8 +223,8 @@ type StakerJson struct {
 
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
-	NextFeeRate  uint64
-	Clients      []vm.ClientInfo
+	//NextFeeRate  uint64
+	Clients []vm.ClientInfo
 }
 
 // this is the static snap of stekers by the block Number.
@@ -260,7 +260,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		stakeJson.From = staker.From
 		stakeJson.StakingEpoch = staker.StakingEpoch
 		stakeJson.FeeRate = staker.FeeRate
-		stakeJson.NextFeeRate = staker.NextFeeRate
+		//stakeJson.NextFeeRate = staker.NextFeeRate
 		stakeJson.Clients = staker.Clients
 		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
@@ -405,7 +405,7 @@ func (a PosApi) GetActivity(epochID uint64) (*incentive.Activity, error) {
 	activity := incentive.Activity{}
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
-	activity.SltLeader, activity.SlBlocks, activity.SlActivity = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
 	return &activity, nil
 }
 

@@ -8,9 +8,9 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/log"
 
 	"math/big"
@@ -37,6 +37,7 @@ type GetRBProposerGroupFunc func(epochId uint64) []bn256.G1
 type GetCji func(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error)
 type GetEnsFunc func(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error)
 type GetRBMFunc func(db vm.StateDB, epochId uint64) ([]byte, error)
+type DoStageWork func() error
 
 type LoopEvent struct {
 	statedb vm.StateDB
@@ -68,12 +69,17 @@ type RandomBeacon struct {
 	rpcClient *rpc.Client
 
 	wg sync.WaitGroup
+	mutex sync.Mutex
 
 	// based function
 	getRBProposerGroupF GetRBProposerGroupFunc
 	getCji              GetCji
 	getEns              GetEnsFunc
 	getRBM              GetRBMFunc
+
+	fDoDKG1s			DoStageWork
+	fDoDKG2s			DoStageWork
+	fDoSIGs				DoStageWork
 }
 
 var (
@@ -88,6 +94,7 @@ var (
 	errNoDKG1Data      = errors.New("no dkg1 data")
 	errNoDKG1Poly      = errors.New("no dkg1 random polynomial")
 	errInsufficient    = errors.New("insufficient proposer")
+	errUninitialized   = errors.New("random beacon uninitialized")
 )
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -95,6 +102,11 @@ func GetRandonBeaconInst() *RandomBeacon {
 }
 
 func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
+	defer func() {
+		rb.mutex.Unlock()
+	}()
+
+	rb.mutex.Lock()
 	if rb.loopEvents != nil {
 		return
 	}
@@ -111,6 +123,9 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 	rb.getCji = vm.GetCji
 	rb.getEns = vm.GetEncryptShare
 	rb.getRBM = vm.GetRBM
+	rb.fDoDKG1s = rb.doDKG1s
+	rb.fDoDKG2s = rb.doDKG2s
+	rb.fDoSIGs = rb.doSIGs
 
 	rb.loopEvents = make(chan *LoopEvent, loopEventCount)
 
@@ -119,6 +134,11 @@ func (rb *RandomBeacon) Init(epocher *epochLeader.Epocher) {
 }
 
 func (rb *RandomBeacon) Stop() {
+	defer func() {
+		rb.mutex.Unlock()
+	}()
+
+	rb.mutex.Lock()
 	if rb.loopEvents == nil {
 		return
 	}
@@ -130,11 +150,17 @@ func (rb *RandomBeacon) Stop() {
 
 func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid uint64) (err error) {
 	defer func() {
+		rb.mutex.Unlock()
 		if e := recover(); e != nil {
 			err = e.(error)
 			log.SyslogErr("RB loop panic", "err", err.Error())
 		}
 	}()
+
+	rb.mutex.Lock()
+	if rb.loopEvents == nil {
+		return errUninitialized
+	}
 
 	if statedb == nil || rc == nil {
 		log.SyslogErr("invalid RB loop input param")
@@ -212,7 +238,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doDKG1s()
+				err := rb.fDoDKG1s()
 				if err != nil {
 					return err
 				}
@@ -232,7 +258,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doDKG2s()
+				err := rb.fDoDKG2s()
 				// while errNoDKG1Poly, noneed to retry, stop dkg2 work
 				if err != nil && err != errNoDKG1Poly {
 					return err
@@ -253,7 +279,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.doSIGs()
+				err := rb.fDoSIGs()
 
 				// while errInsufficient, noneed to retry, stop SIG work
 				if err != nil && err != errInsufficient {

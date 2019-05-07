@@ -15,7 +15,7 @@ func TestIsInWhiteList(t *testing.T) {
 		"0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786",
 		"0x0406a5c2c0524968089b8e7fdaddd642732e04e0f1da4c49dcb7810aa37dd471317b77936015a86e8efbc2002485e9d146ee392a3021e0c5bf53e5c0f6b158de09",
 	}
-
+	posconfig.Init(nil)
 	InitCFM(nil)
 	c := GetCFM()
 	c.whiteList = make(map[common.Address]int, 0)
@@ -49,7 +49,7 @@ func TestGetCFM(t *testing.T) {
 }
 
 func TestInitCFM(t *testing.T) {
-
+	posconfig.Init(nil)
 	InitCFM(nil)
 	c := GetCFM()
 
@@ -61,24 +61,24 @@ func TestInitCFM(t *testing.T) {
 }
 
 func TestGetSlotsCount(t *testing.T) {
-
+	posconfig.Init(nil)
 	InitCFM(nil)
 	c := GetCFM()
 
 	start := uint64(time.Now().Unix())
 	stop := uint64(start + posconfig.SlotTime - 1)
 
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 0 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
 		t.Fail()
 	}
 
 	stop = uint64(start + posconfig.SlotTime + 1)
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 2 {
 		t.Fail()
 	}
 
 	stop = uint64(start + posconfig.SlotTime)
-	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 1 {
+	if c.getSlotsCount(start, stop, posconfig.SlotTime) != 2 {
 		t.Fail()
 	}
 
@@ -89,11 +89,25 @@ func TestGetSlotsCount(t *testing.T) {
 }
 
 func TestGetMaxStableBlkNumber(t *testing.T) {
+	posconfig.Init(nil)
+
 	blkStatusArr := make([]*BlkStatus, 0)
 	InitCFM(nil)
 	c := GetCFM()
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 0, nil) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 9, ErrNullBlk) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 9, 0, nil) != 0 {
+		t.Fail()
+	}
+
+	if c.getMaxStableBlkNumber(blkStatusArr, 9, 0, ErrNullBlk) != 0 {
 		t.Fail()
 	}
 
@@ -101,7 +115,7 @@ func TestGetMaxStableBlkNumber(t *testing.T) {
 	blkStatusArr = append(blkStatusArr, &BlkStatus{99, true})
 	blkStatusArr = append(blkStatusArr, &BlkStatus{98, true})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 99 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 97, 100, nil) != 99 {
 		t.Fail()
 	}
 
@@ -110,21 +124,21 @@ func TestGetMaxStableBlkNumber(t *testing.T) {
 	blkStatusArr = append(blkStatusArr, &BlkStatus{99, false})
 	blkStatusArr = append(blkStatusArr, &BlkStatus{98, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 97 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 97, 100, nil) != 97 {
 		t.Fail()
 	}
 
 	blkStatusArr = make([]*BlkStatus, 0)
 	blkStatusArr = append(blkStatusArr, &BlkStatus{0, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 1, nil) != 0 {
 		t.Fail()
 	}
 
 	blkStatusArr = make([]*BlkStatus, 0)
 	blkStatusArr = append(blkStatusArr, &BlkStatus{1, false})
 
-	if c.getMaxStableBlkNumber(blkStatusArr) != 0 {
+	if c.getMaxStableBlkNumber(blkStatusArr, 0, 1, nil) != 0 {
 		t.Fail()
 	}
 }

@@ -26,7 +26,7 @@ func TestRun(t *testing.T) {
 
 	for i := 0; i < testTimes; i++ {
 		for m := 0; m < posconfig.SlotCount; m++ {
-			if !Run(&TestChainReader{}, statedb, uint64(i), uint64(m)) {
+			if !Run(&TestChainReader{}, statedb, uint64(i)) {
 				t.FailNow()
 			}
 		}
@@ -53,7 +53,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunFail(t *testing.T) {
-	if Run(nil, nil, 0, 0) {
+	if Run(nil, nil, 0) {
 		t.FailNow()
 	}
 }

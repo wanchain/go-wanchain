@@ -34,8 +34,25 @@ func testgetRProposer(stateDb vm.StateDB, epochID uint64) ([]common.Address, []i
 	return rpAddrs, rpActs
 }
 
-func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {
-	return epAddrs, slBlks, 1
+func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int) {
+	return epAddrs, slBlks, 1, 0
+}
+
+func clearTestAddrs() {
+	for i := 0; i < addrsCount; i++ {
+		epAddrs[i] = common.Address{}
+		epPks[i] = nil
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		rpAddrs[i] = common.Address{}
+		rpActs[i] = 0
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		slAddrs[i] = epAddrs[i]
+		slBlks[i] = 0
+	}
 }
 
 func generateTestAddrs() {

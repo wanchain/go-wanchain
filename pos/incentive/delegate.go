@@ -30,7 +30,7 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
 	stakers, division, totalProbility, err := getStakerInfo(epochID, addr)
 	if err != nil {
-		log.Error("getStakerInfo error", "error", err.Error())
+		log.SyslogErr("getStakerInfo error", "error", err.Error())
 		return nil, 0, nil, err
 	}
 

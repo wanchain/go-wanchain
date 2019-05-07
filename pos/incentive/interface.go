@@ -21,7 +21,7 @@ type GetEpochLeaderInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Add
 type GetRandomProposerInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int)
 
 // GetSlotLeaderInfoFn is use to get slotleader address and activity
-type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
+type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int)
 
 // GetRandomProposerAddressFn is use to get rb group address
 type GetRandomProposerAddressFn func(epochID uint64) []vm.Leader

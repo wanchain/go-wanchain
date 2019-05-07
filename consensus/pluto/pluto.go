@@ -30,7 +30,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -496,8 +496,7 @@ func (c *Pluto) verifyProof(block *types.Block, header *types.Header, parents []
 		return errUnknownBlock
 	}
 
-	epochID := header.Difficulty.Uint64() >> 32
-	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
 	s := slotleader.GetSlotLeaderSelection()
 
@@ -532,8 +531,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		return errUnknownBlock
 	}
 
-	epochID := header.Difficulty.Uint64() >> 32
-	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
 	s := slotleader.GetSlotLeaderSelection()
 
@@ -680,7 +678,9 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
+		if curEpochId != 0 || curSlotId != 0 {
+			header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
+		}
 	}
 
 	epochSlotId := uint64(1)
@@ -695,20 +695,20 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-
-	epochID := header.Difficulty.Uint64() >> 32
-	slotID := (header.Difficulty.Uint64() >> 8) & 0x00FFFFFF
+	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
-		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
+		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
-		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs, header.Number.Uint64()) {
-			log.Error("incentive.Run failed")
+		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
+			log.SyslogErr("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
+		} else {
+			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {
-			log.Error("Stake Out failed.")
+			log.SyslogErr("Stake Out failed.")
 			state.RevertToSnapshot(snap)
 		}
 	}
