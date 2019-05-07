@@ -40,10 +40,10 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 var (
@@ -359,29 +359,28 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivot(hash common.Hash) *types.Header {
+func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
+	rt := make([]*types.Header, 0)
+	if bc.epochGene.rbLeaderSelector == nil {
+		return rt
+	}
 	header := bc.hc.GetHeaderByHash(hash)
-	if header == nil {
-		return nil
-	}
-	eid, sid := posUtil.CalEpochSlotID(header.Time.Uint64())
-	if eid < 2 {
-		return nil
-	}
-	max := bc.currentBlock.Number().Int64() - int64(sid) - 1
-	min := max - posconfig.SlotCount
-	if min < 0 {
-		return nil
-	}
-	from := uint64(min)
-	desEid := eid - 1
-	for {
-		from ++
-		epochId, _ := posUtil.CalEpochSlotID(bc.hc.GetHeaderByNumber(from).Time.Uint64())
-		if epochId >= desEid {
-			return bc.hc.GetHeaderByNumber(from - 1)
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+	// pivot == GetEpochLastBlkNumber(eid - 1)
+	// incentive : eid - 3, eid - 4
+	dst := int64(eid) - 1
+	for i:=0; i<4; i++ {
+		if dst < 0 {
+			break
 		}
+		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
+		h := bc.hc.GetHeaderByNumber(bn)
+		if h != nil {
+			rt = append(rt, h)
+		}
+		dst--
 	}
+	return rt
 }
 
 // SetProcessor sets the processor required for making state modifications.
@@ -1600,8 +1599,8 @@ func (bc *BlockChain)SetSlSelector(sls SlLeadersSelInt){
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis,error){
-	return bc.epochGene.GenerateEpochGenesis(epochid)
+func (bc *BlockChain) GenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error){
+	return bc.epochGene.GenerateEpochGenesis(epochid, isEnd)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
@@ -1616,11 +1615,11 @@ func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool{
 	return bc.epochGene.IsExistEpochGenesis(epochid)
 }
 
-func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error{
-	return bc.epochGene.SetEpochGenesis(epochgen)
+func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd bool) error{
+	return bc.epochGene.SetEpochGenesis(epochgen, isEnd)
 }
 
-func (bc *BlockChain) GetEpochStartCh() (chan uint64) {
+func (bc *BlockChain) GetEpochStartCh() (chan *types.EpochSync) {
 	return bc.epochGene.epochGenesisCh
 }
 

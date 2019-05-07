@@ -293,6 +293,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getEpochIdByBlockNumber',
+			call: 'pos_getEpochIdByBlockNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getSlotIDByTime',
 			call: 'pos_getSlotIDByTime',
 			params: 1

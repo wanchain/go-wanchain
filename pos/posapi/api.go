@@ -452,6 +452,14 @@ func (a PosApi) GetEpochIDByTime(timeUnix uint64) uint64 {
 	ep, _ := util.CalEpochSlotID(timeUnix)
 	return ep
 }
+func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
+	header := a.chain.GetHeaderByNumber(blockNumber)
+	if header != nil {
+		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
+		return ep
+	}
+	return uint64(0)^uint64(0)
+}
 
 //GetSlotIDByTime can get Slot ID by input time second Unix.
 func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {

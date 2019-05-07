@@ -460,3 +460,16 @@ type EpochGenesis struct {
 	Extra               []byte      //empty
 	PreEpochGenHash 	common.Hash
 }
+
+type EpochGenesisHead struct {
+	EpochId             uint64
+	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
+	EpochLeaders		[][]byte
+	RBLeadersSec256     [][]byte
+	RBLeadersBn256	    [][]byte
+}
+
+type EpochSync struct {
+	EpochId uint64
+	IsEnd	bool
+}

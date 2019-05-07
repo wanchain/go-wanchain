@@ -167,7 +167,7 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
-func (p *peer) SendPivot(header *types.Header) error {
+func (p *peer) SendPivot(header []*types.Header) error {
 	return p2p.Send(p.rw, PivotMsg, header)
 }
 
@@ -235,26 +235,26 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
-func (p *peer) RequestEpochGenesisData(epochids uint64) error {
+func (p *peer) RequestEpochGenesisData(ep *types.EpochSync) error {
 	p.Log().Debug("Fetching epoch genesis data", "count", 1)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
+	return p2p.Send(p.rw, GetEpochGenesisMsg, ep)
 }
 
 //send epoch genesis
-func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
-	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis,err := bc.GenerateEpochGenesis(epochid)
+func (p *peer) SendEpochGenesis(bc *core.BlockChain, epochSync *types.EpochSync) error {
+	p.Log().Debug("Fetching epoch genesis", "epochid", epochSync.EpochId, "isEnd", epochSync.IsEnd)
+	epochGenesis,err := bc.GenerateEpochGenesis(epochSync.EpochId, epochSync.IsEnd)
 	if err != nil {
-		log.Info("error to generate epoch genesis")
+		log.Info("error to generate epoch genesis", "err", err.Error())
 		return err
 	}
 
-	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
+	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis, IsEnd:epochSync.IsEnd})
 }
 
-func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) error {
+func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, isEnd bool) error {
 	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
-	bc.SetEpochGenesis(epochgen)
+	bc.SetEpochGenesis(epochgen, isEnd)
 	return nil
 }
 ////////////////////////////////////////////////////////////////

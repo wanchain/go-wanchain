@@ -82,9 +82,11 @@ func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
 // headerPack is a batch of block headers returned by a peer.
 type epochGenesisPack struct {
 	peerId  string
+	isEnd   bool
 	epochGenesis *types.EpochGenesis
 }
 
 func (p *epochGenesisPack) PeerId() string { return p.peerId }
 func (p *epochGenesisPack) Items() int     { return 1 }
 func (p *epochGenesisPack) Stats() string  { return fmt.Sprintf("%d", 1) }
+

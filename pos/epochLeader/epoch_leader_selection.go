@@ -460,6 +460,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
+	log.Warn("====GetEpochProbability", "epochId", epochId, "targetBlkNum", targetBlkNum)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {

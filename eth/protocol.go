@@ -200,5 +200,6 @@ type getEpochGenesisData struct {
 }
 
 type epochGenesisBody struct {
+	IsEnd bool
 	EpochGenesis 	*types.EpochGenesis
 }
