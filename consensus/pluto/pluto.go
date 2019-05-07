@@ -697,13 +697,13 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
-		log.Info("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
+		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
 			log.SyslogErr("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
 		} else {
-			log.Info("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
+			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
 
 		snap = state.Snapshot()
