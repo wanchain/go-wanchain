@@ -86,7 +86,9 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 
 	return e.GetEpochLastBlkNumber(targetEpochId)
 }
-
+/*
+NOTE: if the targetEpochId is future, will return current blockNumber.
+*/
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	targetBlkNum := util.GetEpochBlock(targetEpochId)
 	var curBlock *types.Block
@@ -257,7 +259,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
 	log.Debug("epochLeaderSelection selecting")
 	selectionCount := posconfig.EpochLeaderCount
-	info, err := e.GepWhiteInfo(epochId)
+	info, err := e.GetWhiteInfo(epochId)
 	if err == nil {
 		selectionCount = posconfig.EpochLeaderCount - int(info.WlCount.Uint64())
 	}
@@ -284,7 +286,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	return nil
 }
 
-func (e *Epocher) GepWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
+func (e *Epocher) GetWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
 	if block == nil {
@@ -299,14 +301,14 @@ func (e *Epocher) GepWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam
 
 }
 func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
-	info, err := e.GepWhiteInfo(epochId)
+	info, err := e.GetWhiteInfo(epochId)
 	if err != nil {
 		return nil, err
 	}
 	return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 }
 func (e *Epocher) GetWhiteArrayByEpochId(epochId uint64) ([][]byte, error) {
-	info, err := e.GepWhiteInfo(epochId)
+	info, err := e.GetWhiteInfo(epochId)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +453,7 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 }
 
-// TODO new suanfa
+// TODO new ?
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
@@ -528,7 +530,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 
 		// check the renew
-		if epochID+2 >= staker.StakingEpoch+staker.LockEpochs {
+		if epochID+vm.JoinDelay >= staker.StakingEpoch+staker.LockEpochs {
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				//staker.FeeRate = staker.NextFeeRate
@@ -536,7 +538,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 				weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
 				staker.StakeAmount = big.NewInt(0)
 				staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
-				staker.StakingEpoch = epochID + 2
+				staker.StakingEpoch = epochID + vm.JoinDelay
 				changed = true
 			}
 		}
@@ -544,8 +546,9 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			staker.Clients = newClients
 			stakerBytes, err := rlp.EncodeToBytes(staker)
 			if err != nil {
+				// this will rollback. next slot will retry.
 				log.Error("StakeOutRun Failed: ", "err", err)
-				continue
+				return false
 			}
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
 		}
