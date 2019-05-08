@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	fullFaucet "github.com/wanchain/go-wanchain/cmd/fullfaucet"
 	"os"
 	"runtime"
 	"sort"
@@ -298,4 +299,25 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
+
+
+	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
+	   ctx.GlobalBool(utils.EtherbaseFlag.Name)&&
+	   ctx.GlobalBool(utils.UnlockedAccountFlag.Name)&&
+	   ( ctx.GlobalBool(utils.PlutoFlag.Name) ||
+	  	 ctx.GlobalBool(utils.TestnetFlag.Name)){
+
+		// Mining only makes sense if a full Ethereum node is running
+		var ethereum *eth.Ethereum
+		if err := stack.Service(&ethereum); err != nil {
+			utils.Fatalf("ethereum service not running: %v", err)
+		}
+
+		//-faucet.amount 100 -faucet.tiers 3
+		amount := ctx.GlobalUint64(utils.FaucetAmountFlag.Name)
+
+
+		go fullFaucet.FaucetStart(amount,ethereum,stack.IPCEndpoint())
+	}
+
 }
