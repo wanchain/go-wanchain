@@ -323,8 +323,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
-	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name) && (ctx.GlobalBool(utils.PlutoFlag.Name) ||
-		ctx.GlobalBool(utils.PlutoDevFlag.Name)){
+	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name) && (ctx.GlobalBool(utils.PlutoFlag.Name) || ctx.GlobalBool(utils.TestnetFlag.Name)){
 
 		// Mining only makes sense if a full Ethereum node is running
 		var ethereum *eth.Ethereum

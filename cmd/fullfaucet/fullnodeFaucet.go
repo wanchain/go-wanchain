@@ -32,7 +32,10 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth"
+	"github.com/wanchain/go-wanchain/ethclient"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/rlp"
 	"html/template"
 	"io/ioutil"
 	"math"
@@ -82,11 +85,24 @@ var (
 func  (f *faucet) SendTransaction(singedTx *types.Transaction) error {
 
 	ctx := context.Background()
-	var txHash common.Hash
 
-	err := f.eth.ApiBackend.SendTx(ctx,singedTx)
+	var txHash common.Hash
+	data, err := rlp.EncodeToBytes(singedTx)
+	if err != nil {
+		return err
+	}
+
+	err = f.client.C.CallContext(ctx, &txHash, "eth_sendRawTransaction", common.ToHex(data))
+	if nil != err {
+		log.Error("send pos tx fail", "err", err)
+		return err
+	}
+
+	log.Info("send pos tx success", "txHash", txHash)
 	if err == nil {
 		log.Info("send pos tx success", "txHash", txHash)
+	} else {
+		log.Info("send pos tx failed", "err", err)
 	}
 
 	return err
@@ -146,13 +162,15 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 
 
 	faucet := &faucet{}
-	//url := posconfig.Cfg().NodeCfg.IPCEndpoint()
-	//rc, err := rpc.Dial(url)
-	//if err != nil {
-	//	fmt.Println("err:", err)
-	//	panic(err)
-	//}
-	//faucet.client = rc
+
+	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
+	client,err := ethclient.Dial(url)
+	if err != nil {
+		log.Crit("Failed to render the faucet template", "err", err)
+	}
+	faucet.client = client
+
+
 	faucet.timeouts = make(map[string]time.Time)
 	faucet.index =  website.Bytes()
 	faucet.eth = ethereum
@@ -201,7 +219,7 @@ type faucet struct {
 
 	lock sync.RWMutex // Lock protecting the faucet's internals
 
-	//client    *rpc.Client   // Client connection to the Ethereum chain
+	client    *ethclient.Client   // Client connection to the Ethereum chain
 	eth		  *eth.Ethereum
 
 	//keystore *keystore.KeyStore
@@ -428,6 +446,18 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			timeout time.Time
 		)
 		if timeout = f.timeouts[username]; time.Now().After(timeout) {
+
+			statdb,err := f.eth.BlockChain().State()
+			if err != nil {
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
+			nonce = statdb.GetNonce(f.account.Address)
+
+			//for test,remove later
+			//address := common.HexToAddress("0x3ecb7c39cf5d7b885b3e3f9704f6bb20a35db077")
+
 			// User wasn't funded recently, create the funding transaction
 			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether)
 			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
