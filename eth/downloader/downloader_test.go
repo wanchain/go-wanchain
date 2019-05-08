@@ -811,9 +811,9 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download and the tester
-	targetBlocks := 15
+	targetBlocks := 14
 	if targetBlocks >= MaxHashFetch {
-		targetBlocks = MaxHashFetch - 15
+		targetBlocks = MaxHashFetch - 14
 	}
 
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, testAddress, tester.genesis, nil, false)
@@ -1492,7 +1492,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts := master.makeChain(5, testAddress, master.genesis, nil, false)
-	for i := 0; i < 150; i++ {
+	for i := 0; i < 140; i++ {
 		tester := newTester()
 		tester.peerDb = master.peerDb
 
