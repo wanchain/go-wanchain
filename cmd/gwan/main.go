@@ -323,7 +323,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
-	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name) && (ctx.GlobalBool(utils.PlutoFlag.Name) || ctx.GlobalBool(utils.TestnetFlag.Name)){
+	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
+		ctx.GlobalBool(utils.EtherbaseFlag.Name)&&
+		ctx.GlobalBool(utils.UnlockedAccountFlag.Name)&&
+		( ctx.GlobalBool(utils.PlutoFlag.Name) ||
+			ctx.GlobalBool(utils.TestnetFlag.Name)){
 
 		// Mining only makes sense if a full Ethereum node is running
 		var ethereum *eth.Ethereum
@@ -335,7 +339,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		amount := ctx.GlobalUint64(utils.FaucetAmountFlag.Name)
 
 
-		go fullFaucet.FaucetStart(amount,ethereum)
+		go fullFaucet.FaucetStart(amount,ethereum,stack.IPCEndpoint())
 	}
 
 }

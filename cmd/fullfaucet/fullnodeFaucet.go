@@ -34,7 +34,6 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/ethclient"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/rlp"
 	"html/template"
 	"io/ioutil"
@@ -109,7 +108,7 @@ func  (f *faucet) SendTransaction(singedTx *types.Transaction) error {
 
 }
 
-func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
+func FaucetStart(amount uint64,ethereum *eth.Ethereum,url string) {
 	// Parse the flags and set up the logger to print everything requested
 	//flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
@@ -163,7 +162,6 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum) {
 
 	faucet := &faucet{}
 
-	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
 	client,err := ethclient.Dial(url)
 	if err != nil {
 		log.Crit("Failed to render the faucet template", "err", err)
