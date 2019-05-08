@@ -96,8 +96,14 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
 		return false
 	}
-	log.Info("epoch leader allocate", "total", sumToPay(incentives), "len", len(incentives))
-	finalIncentive = append(finalIncentive, incentives...)
+
+	if incentives != nil {
+		log.Info("epoch leader allocate", "total", sumToPay(incentives), "len", len(incentives))
+		finalIncentive = append(finalIncentive, incentives...)
+	} else {
+		log.Warn("Nothing epoch Leader to incentive.")
+	}
+
 	remainsAll.Add(remainsAll, remains)
 
 	incentives, remains, err = randomProposerAllocate(randomProposerSubsidy, rpAddrs, rpAct, epochID)
@@ -105,9 +111,14 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
 		return false
 	}
-	log.Info("random proposer allocate", "total", sumToPay(incentives), "len", len(incentives))
 
-	finalIncentive = append(finalIncentive, incentives...)
+	if incentives != nil {
+		log.Info("random proposer allocate", "total", sumToPay(incentives), "len", len(incentives))
+		finalIncentive = append(finalIncentive, incentives...)
+	} else {
+		log.Warn("Nothing random proposer to incentive.")
+	}
+
 	remainsAll.Add(remainsAll, remains)
 
 	incentives, remains, err = slotLeaderAllocate(slotLeaderSubsidy, slAddrs, slBlk, slAct, posconfig.SlotCount-ctrlCount, epochID)
@@ -115,9 +126,14 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
 		return false
 	}
-	log.Info("slot leader allocate", "total", sumToPay(incentives), "len", len(incentives))
 
-	finalIncentive = append(finalIncentive, incentives...)
+	if incentives != nil {
+		log.Info("slot leader allocate", "total", sumToPay(incentives), "len", len(incentives))
+		finalIncentive = append(finalIncentive, incentives...)
+	} else {
+		log.Warn("Nothing slot leader to incentive.")
+	}
+
 	remainsAll.Add(remainsAll, remains)
 
 	sumPay := sumToPay(finalIncentive)
@@ -165,6 +181,11 @@ func finished(stateDb *state.StateDB, epochID uint64) {
 func protocalRunerAllocate(funds *big.Int, addrs []common.Address, acts []int,
 	epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
+
+	if addrs == nil || len(addrs) == 0 {
+		return nil, remains.Add(remains, funds), nil
+	}
+
 	count := len(addrs)
 	if count == 0 {
 		return nil, nil, errors.New("protocalRunerAllocate addrs length == 0")
@@ -217,6 +238,10 @@ func randomProposerAllocate(funds *big.Int, addrs []common.Address, acts []int,
 func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
 	act float64, slotCount int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
 	remains := big.NewInt(0)
+
+	if addrs == nil || len(addrs) == 0 || slotCount == 0 || act == 0 {
+		return nil, remains.Add(remains, funds), nil
+	}
 
 	scale := 100000.0
 

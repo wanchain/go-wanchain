@@ -14,7 +14,7 @@ var coinContract = contractDef.at(cscContractAddr);
 var secAddr = "0xc0eca9432a57e077d6ebe609cab3aace17f6c06b"
 var payload5 = coinContract.stakeUpdate.getData(secAddr, 45)
 console.log("payload5: ", payload5)
-var tx = eth.sendTransaction({from:eth.coinbase, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (20000000000).toString(16)});
+var tx = eth.sendTransaction({from:eth.coinbase, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)});
 console.log("tx5= " + tx)
 
 /////////////////////////////////unregister staker//////////////////////////////////////////////////////////////////////
