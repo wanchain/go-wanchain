@@ -429,52 +429,7 @@ We have given a smart contract for register and unregister.
 
 Its contract interface is shown as below.
 ```
-var cscDefinition = [
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "secPk",
-				"type": "bytes"
-			},
-			{
-				"name": "bn256Pk",
-				"type": "bytes"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "delegateAddr",
-				"type": "address"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			}
-		],
-		"name": "delegateIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	}
-]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 ```
 
 In the smart contract input parameters, the `feeRate` means the delegate dividend ratio, which is used for the delegator node. If set it to 100 means do not accept others delegate in and it's a independent mining node.
