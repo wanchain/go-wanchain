@@ -2,8 +2,7 @@ package vm
 
 import (
 	"crypto/ecdsa"
-	"errors"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare" // this is not match with other
+	"errors" // this is not match with other
 	"math/big"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -34,17 +34,17 @@ const (
 	PSMaxEpochNum = 90
 
 	PSMinStakeholderStake = 10000
-	PSMinValidatorStake = 100000
-	PSMinDelegatorStake = 100
-	PSMinFeeRate = 0
-	PSMaxFeeRate = 100
-	PSNodeleFeeRate = 100
-	maxTimeDelegate   = 5
-	UpdateDelay = 3
-	QuitDelay = 3
-	JoinDelay = 2
-	PSOutKeyHash = 700
-	maxPartners = 5
+	PSMinValidatorStake   = 100000
+	PSMinDelegatorStake   = 100
+	PSMinFeeRate          = 0
+	PSMaxFeeRate          = 100
+	PSNodeleFeeRate       = 100
+	maxTimeDelegate       = 5
+	UpdateDelay           = 3
+	QuitDelay             = 3
+	JoinDelay             = 2
+	PSOutKeyHash          = 700
+	maxPartners           = 5
 )
 
 var (
@@ -161,21 +161,21 @@ var (
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	// function "stakeIn" "delegateIn" 's solidity binary id
-	stakeInId [4]byte
+	stakeInId     [4]byte
 	stakeUpdateId [4]byte
 	stakeAppendId [4]byte
-	partnerInId [4]byte
-	delegateInId [4]byte
+	partnerInId   [4]byte
+	delegateInId  [4]byte
 	delegateOutId [4]byte
 
-	maxEpochNum         = big.NewInt(PSMaxEpochNum)
-	minEpochNum         = big.NewInt(PSMinEpochNum)
-	minStakeholderStake = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
-	minValidatorStake 	= new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
-	minDelegatorStake = new(big.Int).Mul(big.NewInt(PSMinDelegatorStake), ether)
-	minFeeRate = big.NewInt(PSMinFeeRate)
-	maxFeeRate = big.NewInt(PSMaxFeeRate)
-	noDelegateFeeRate = big.NewInt(PSNodeleFeeRate)
+	maxEpochNum                = big.NewInt(PSMaxEpochNum)
+	minEpochNum                = big.NewInt(PSMinEpochNum)
+	minStakeholderStake        = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
+	minValidatorStake          = new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
+	minDelegatorStake          = new(big.Int).Mul(big.NewInt(PSMinDelegatorStake), ether)
+	minFeeRate                 = big.NewInt(PSMinFeeRate)
+	maxFeeRate                 = big.NewInt(PSMaxFeeRate)
+	noDelegateFeeRate          = big.NewInt(PSNodeleFeeRate)
 	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(PSOutKeyHash).Bytes())
 )
 
@@ -187,14 +187,14 @@ type StakeInParam struct {
 	Bn256Pk    []byte   //stakeholder’s bn256 pairing public key
 	LockEpochs *big.Int //lock time which is input by user
 	FeeRate    *big.Int
-	pub			*ecdsa.PublicKey
+	pub        *ecdsa.PublicKey
 }
 type StakeUpdateParam struct {
-	Addr    common.Address   //stakeholder’s bn256 pairing public key
-	LockEpochs *big.Int //lock time which is input by user
+	Addr       common.Address //stakeholder’s bn256 pairing public key
+	LockEpochs *big.Int       //lock time which is input by user
 }
 type PartnerInParam struct {
-	Addr    common.Address   //stakeholder’s bn256 pairing public key
+	Addr    common.Address //stakeholder’s bn256 pairing public key
 	Renewal bool
 }
 type DelegateParam struct {
@@ -209,39 +209,39 @@ type StakerInfo struct {
 	PubSec256 []byte //stakeholder’s wan public key
 	PubBn256  []byte //stakeholder’s bn256 public key
 
-	Amount     *big.Int //staking wan value
-	StakeAmount     *big.Int //staking wan value
-	LockEpochs uint64   //lock time which is input by user. 0 means unexpired.
+	Amount         *big.Int //staking wan value
+	StakeAmount    *big.Int //staking wan value
+	LockEpochs     uint64   //lock time which is input by user. 0 means unexpired.
 	NextLockEpochs uint64   //lock time which is input by user. 0 means unexpired.
-	From       common.Address
+	From           common.Address
 
 	StakingEpoch uint64 //the first epoch in which stakerHolder might be selected.
 	FeeRate      uint64
 	//NextFeeRate  uint64
-	Clients      []ClientInfo
-	Partners	 []PartnerInfo
+	Clients  []ClientInfo
+	Partners []PartnerInfo
 }
 
 type ClientInfo struct {
-	Address      common.Address
-	Amount       *big.Int
-	StakeAmount     *big.Int //staking wan value
-	QuitEpoch uint64
+	Address     common.Address
+	Amount      *big.Int
+	StakeAmount *big.Int //staking wan value
+	QuitEpoch   uint64
 }
 type PartnerInfo struct {
-	Address      common.Address
-	Amount       *big.Int
-	StakeAmount     *big.Int //staking wan value
-	Renewal bool
+	Address     common.Address
+	Amount      *big.Int
+	StakeAmount *big.Int //staking wan value
+	Renewal     bool
 }
 
 //
 // public helper structures
 //
 type Leader struct {
-	PubSec256     []byte
-	PubBn256      []byte
-	SecAddr       common.Address
+	PubSec256 []byte
+	PubBn256  []byte
+	SecAddr   common.Address
 }
 
 type ClientProbability struct {
@@ -293,7 +293,7 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	copy(methodId[:], input[:4])
 
 	if methodId == stakeInId {
-		ret,err :=  p.StakeIn(input[4:], contract, evm)
+		ret, err := p.StakeIn(input[4:], contract, evm)
 		if err != nil {
 			log.Info("stakein failed", "err", err)
 		}
@@ -322,13 +322,13 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	copy(methodId[:], input[:4])
 
 	if methodId == stakeInId {
-		_,err := p.stakeInParseAndValid(input[4:])
+		_, err := p.stakeInParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("stakein verify failed")
 		}
 		return nil
 	} else if methodId == stakeAppendId {
-		_,err := p.stakeAppendParseAndValid(input[4:])
+		_, err := p.stakeAppendParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("stakeAppend verify failed " + err.Error())
 		}
@@ -346,13 +346,13 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 		}
 		return nil
 	} else if methodId == delegateInId {
-		_,err := p.delegateInParseAndValid(input[4:])
+		_, err := p.delegateInParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("delegateIn verify failed")
 		}
 		return nil
 	} else if methodId == delegateOutId {
-		_,err := p.delegateOutParseAndValid(input[4:])
+		_, err := p.delegateOutParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("delegateOut verify failed")
 		}
@@ -362,20 +362,19 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	return errParameters
 }
 
-
 func (p *PosStaking) saveStakeInfo(evm *EVM, stakerInfo *StakerInfo) error {
 	infoBytes, err := rlp.EncodeToBytes(stakerInfo)
 	if err != nil {
-		return  err
+		return err
 	}
 	key := GetStakeInKeyHash(stakerInfo.Address)
 	res := StoreInfo(evm.StateDB, StakersInfoAddr, key, infoBytes)
 	if res != nil {
-		return  res
+		return res
 	}
 	return nil
 }
-func (p *PosStaking) getStakeInfo(evm *EVM, addr common.Address) (*StakerInfo,error)  {
+func (p *PosStaking) getStakeInfo(evm *EVM, addr common.Address) (*StakerInfo, error) {
 	key := GetStakeInKeyHash(addr)
 	stakerBytes, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
 	if stakerBytes == nil {
@@ -386,7 +385,7 @@ func (p *PosStaking) getStakeInfo(evm *EVM, addr common.Address) (*StakerInfo,er
 	if err != nil {
 		return nil, errors.New("parse staker info error")
 	}
-	return &stakerInfo,nil
+	return &stakerInfo, nil
 }
 func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	info, err := p.stakeUpdateParseAndValid(payload)
@@ -394,8 +393,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 		return nil, err
 	}
 
-
-	stakerInfo,err := p.getStakeInfo(evm, info.Addr)
+	stakerInfo, err := p.getStakeInfo(evm, info.Addr)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +402,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs -UpdateDelay {
+	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs-UpdateDelay {
 		return nil, errors.New("cannot change at the last 3 epoch.")
 	}
 
@@ -421,14 +419,14 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	stakerInfo,err := p.getStakeInfo(evm, info.Addr)
+	stakerInfo, err := p.getStakeInfo(evm, info.Addr)
 	if err != nil {
 		return nil, err
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs-(eidNow+JoinDelay - stakerInfo.StakingEpoch)
-	if realLockEpoch<0 || realLockEpoch > PSMaxEpochNum {
+	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
 	weight := CalLocktimeWeight(realLockEpoch)
@@ -446,12 +444,12 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 		}
 	}
 	if found == false {
-		if  length >=  maxPartners {
+		if length >= maxPartners {
 			return nil, errors.New("Too many partners")
 		}
 		partner := PartnerInfo{
-			Address:      contract.CallerAddress,
-			Amount:	contract.Value(),
+			Address: contract.CallerAddress,
+			Amount:  contract.Value(),
 			Renewal: info.Renewal,
 		}
 		partner.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
@@ -470,7 +468,7 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 		return nil, err
 	}
 
-	stakerInfo,err := p.getStakeInfo(evm, addr)
+	stakerInfo, err := p.getStakeInfo(evm, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -481,8 +479,8 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	// add origen Amount
 	stakerInfo.Amount.Add(stakerInfo.Amount, contract.Value())
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs-(eidNow+JoinDelay - stakerInfo.StakingEpoch)
-	if realLockEpoch<0 || realLockEpoch > PSMaxEpochNum {
+	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
 	weight := CalLocktimeWeight(realLockEpoch)
@@ -505,7 +503,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
 
-	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(minValidatorStake) < 0 {
+	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 && contract.value.Cmp(minValidatorStake) < 0 {
 		return nil, errors.New("need more Wan to be a validator")
 	}
 	secAddr := crypto.PubkeyToAddress(*info.pub)
@@ -522,16 +520,16 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	weight := CalLocktimeWeight(info.LockEpochs.Uint64())
 	stakerInfo := &StakerInfo{
-		Address:      secAddr,
-		PubSec256:    info.SecPk,
-		PubBn256:     info.Bn256Pk,
-		Amount:       contract.value,
-		LockEpochs:   info.LockEpochs.Uint64(),
-		FeeRate:      info.FeeRate.Uint64(),
-		NextLockEpochs:   info.LockEpochs.Uint64(),
+		Address:        secAddr,
+		PubSec256:      info.SecPk,
+		PubBn256:       info.Bn256Pk,
+		Amount:         contract.value,
+		LockEpochs:     info.LockEpochs.Uint64(),
+		FeeRate:        info.FeeRate.Uint64(),
+		NextLockEpochs: info.LockEpochs.Uint64(),
 		//NextFeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
-		StakingEpoch: eidNow+JoinDelay,
+		StakingEpoch: eidNow + JoinDelay,
 	}
 	stakerInfo.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)
@@ -548,25 +546,27 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		return nil, err
 	}
 
-	stakerInfo,err := p.getStakeInfo(evm, addr)
+	stakerInfo, err := p.getStakeInfo(evm, addr)
 	if err != nil {
 		return nil, err
 	}
 	//  sender has not delegated by this
-	var  info*ClientInfo
+	var info *ClientInfo
 	length := len(stakerInfo.Clients)
+
 	totalDelegated := big.NewInt(0)
+	totalDelegated.Add(totalDelegated, contract.Value())
 	for i := 0; i < length; i++ {
+		totalDelegated.Add(totalDelegated, stakerInfo.Clients[i].Amount)
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
 			weight := CalLocktimeWeight(0)
 			info = &stakerInfo.Clients[i]
 			info.Amount.Add(info.Amount, contract.Value())
 			info.StakeAmount.Add(info.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
 		}
-		totalDelegated.Add(totalDelegated, stakerInfo.Clients[i].Amount)
 	}
 	// check the totalDelegated <= 5*stakerInfo.Amount
-	if totalDelegated.Cmp(big.NewInt(0).Mul(stakerInfo.Amount,big.NewInt(maxTimeDelegate))) > 0 {
+	if totalDelegated.Cmp(big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(maxTimeDelegate))) > 0 {
 		return nil, errors.New("over delegate limitation")
 	}
 	if info == nil {
@@ -577,10 +577,10 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		// save
 		weight := CalLocktimeWeight(0)
 		info := &ClientInfo{
-			Address:      contract.CallerAddress,
-			Amount:       contract.value,
-			StakeAmount:       big.NewInt(0).Mul(contract.value, big.NewInt(int64(weight))),
-			QuitEpoch: 0,
+			Address:     contract.CallerAddress,
+			Amount:      contract.value,
+			StakeAmount: big.NewInt(0).Mul(contract.value, big.NewInt(int64(weight))),
+			QuitEpoch:   0,
 		}
 		stakerInfo.Clients = append(stakerInfo.Clients, *info)
 	}
@@ -597,7 +597,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
-	stakerInfo,err := p.getStakeInfo(evm, addr)
+	stakerInfo, err := p.getStakeInfo(evm, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -610,15 +610,15 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
 			// check if delegater has existed.
 			if stakerInfo.Clients[i].QuitEpoch != 0 {
-				return nil,  errors.New("delegator has existed")
+				return nil, errors.New("delegator has existed")
 			}
-			stakerInfo.Clients[i].QuitEpoch = eidNow+QuitDelay
+			stakerInfo.Clients[i].QuitEpoch = eidNow + QuitDelay
 			found = true
 			break
 		}
 	}
-	if ! found {
-		return nil,  errors.New("item doesn't exist")
+	if !found {
+		return nil, errors.New("item doesn't exist")
 	}
 
 	err = p.saveStakeInfo(evm, stakerInfo)
@@ -627,6 +627,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	}
 	return nil, nil
 }
+
 /*
 the weight of 7 epoch:  a + 7*b ~= 1000
 the weight of 90 epoch: a + 90*b ~= 1500
@@ -637,7 +638,7 @@ the weight of 90 epoch is 960+90*6 = 1500
 the time is 1500/1002, about 1.5
 */
 func CalLocktimeWeight(lockEpoch uint64) uint64 {
-	return 960+lockEpoch*6
+	return 960 + lockEpoch*6
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {
@@ -659,14 +660,13 @@ func GetStakersSnap(stateDb *state.StateDB) []StakerInfo {
 	return stakeHolders
 }
 
-
-func StakeoutSetEpoch(stateDb *state.StateDB,epochID uint64) {
+func StakeoutSetEpoch(stateDb *state.StateDB, epochID uint64) {
 	b := big.NewInt(int64(epochID))
 	StoreInfo(stateDb, StakingCommonAddr, StakersInfoStakeOutKeyHash, b.Bytes())
 }
 
-func StakeoutIsFinished(stateDb *state.StateDB,epochID uint64) (bool) {
-	epochByte,err := GetInfo(stateDb, StakingCommonAddr, StakersInfoStakeOutKeyHash)
+func StakeoutIsFinished(stateDb *state.StateDB, epochID uint64) bool {
+	epochByte, err := GetInfo(stateDb, StakingCommonAddr, StakersInfoStakeOutKeyHash)
 	if err != nil {
 		return false
 	}
@@ -681,7 +681,7 @@ func (p *PosStaking) stakeInParseAndValid(payload []byte) (StakeInParam, error) 
 	var info StakeInParam
 	err := cscAbi.UnpackInput(&info, "stakeIn", payload)
 	if err != nil {
-		return info,err
+		return info, err
 	}
 	// 1. SecPk is valid
 	if info.SecPk == nil {
@@ -715,7 +715,7 @@ func (p *PosStaking) stakeInParseAndValid(payload []byte) (StakeInParam, error) 
 
 	return info, nil
 }
-func (p *PosStaking) partnerInParseAndValid(payload []byte) (PartnerInParam,error) {
+func (p *PosStaking) partnerInParseAndValid(payload []byte) (PartnerInParam, error) {
 	var info PartnerInParam
 	err := cscAbi.UnpackInput(&info, "partnerIn", payload)
 	if err != nil {
@@ -723,7 +723,7 @@ func (p *PosStaking) partnerInParseAndValid(payload []byte) (PartnerInParam,erro
 	}
 	return info, nil
 }
-func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam,error) {
+func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam, error) {
 	var info StakeUpdateParam
 	err := cscAbi.UnpackInput(&info, "stakeUpdate", payload)
 	if err != nil {
@@ -745,14 +745,14 @@ func (p *PosStaking) stakeAppendParseAndValid(payload []byte) (common.Address, e
 
 	return addr, nil
 }
-func (p *PosStaking) delegateInParseAndValid(payload []byte) (common.Address,error) {
+func (p *PosStaking) delegateInParseAndValid(payload []byte) (common.Address, error) {
 	var addr common.Address
 	err := cscAbi.UnpackInput(&addr, "delegateIn", payload)
 	if err != nil {
 		return addr, err
 	}
 
-	return addr,nil
+	return addr, nil
 }
 func (p *PosStaking) delegateOutParseAndValid(payload []byte) (common.Address, error) {
 	var addr common.Address
@@ -761,5 +761,5 @@ func (p *PosStaking) delegateOutParseAndValid(payload []byte) (common.Address, e
 		return addr, err
 	}
 
-	return addr,nil
+	return addr, nil
 }
