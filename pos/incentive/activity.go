@@ -26,9 +26,8 @@ func activityInit() {
 func isInWhiteList(coinBase common.Address) bool {
 	if _, ok := whiteList[coinBase]; ok {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func checkEpochLeaders(epochLeaders [][]byte) bool {
@@ -160,13 +159,13 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 			continue
 		}
 
-		if isInWhiteList(header.Coinbase) {
-			ctrlCount++
-			continue
-		}
-
 		epID := getEpochIDFromDifficulty(header.Difficulty)
 		if epID == epochID {
+			if isInWhiteList(header.Coinbase) {
+				ctrlCount++
+				continue
+			}
+
 			cnt, ok := miners[header.Coinbase]
 			if ok {
 				cnt++

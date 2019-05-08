@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -173,4 +174,14 @@ func GetEpochSlotIDFromDifficulty(difficulty *big.Int) (epochID, slotID uint64) 
 	epochID = difficulty.Uint64() >> 32
 	slotID = (difficulty.Uint64() >> 8) & 0x00ffffff
 	return
+}
+
+// FromWin use to calc win to wan
+func FromWin(win *big.Int) float64 {
+	winStr := win.String()
+	wan, err := strconv.ParseFloat(winStr, 64)
+	if err != nil {
+		return 0
+	}
+	return wan
 }

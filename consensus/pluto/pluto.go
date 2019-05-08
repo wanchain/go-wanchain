@@ -695,19 +695,20 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
-		//log.Info("--------Incentive Runs--------", "number", header.Number.String(), "epochID", epochID)
+		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
-			log.Error("incentive.Run failed")
+			log.SyslogErr("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
+		} else {
+			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {
-			log.Error("Stake Out failed.")
+			log.SyslogErr("Stake Out failed.")
 			state.RevertToSnapshot(snap)
 		}
 	}

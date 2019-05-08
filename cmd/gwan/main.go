@@ -38,6 +38,7 @@ import (
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/wanchain/go-wanchain/cmd/fullfaucet"
 )
 
 const (
@@ -106,6 +107,9 @@ var (
 
 		utils.PlutoFlag,
 		utils.PlutoDevFlag,
+
+		utils.FaucetEnabledFlag,
+		utils.FaucetAmountFlag,
 
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
@@ -293,6 +297,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running
@@ -300,6 +305,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := stack.Service(&ethereum); err != nil {
 			utils.Fatalf("ethereum service not running: %v", err)
 		}
+
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
 			type threaded interface {
@@ -315,4 +321,23 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
+
+
+	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name) && (ctx.GlobalBool(utils.PlutoFlag.Name) ||
+		ctx.GlobalBool(utils.PlutoDevFlag.Name)){
+
+		// Mining only makes sense if a full Ethereum node is running
+		var ethereum *eth.Ethereum
+		if err := stack.Service(&ethereum); err != nil {
+			utils.Fatalf("ethereum service not running: %v", err)
+		}
+
+		//-faucet.amount 100 -faucet.tiers 3
+		amount := ctx.GlobalUint64(utils.FaucetAmountFlag.Name)
+
+
+		go fullFaucet.FaucetStart(amount,ethereum)
+	}
+
 }
+

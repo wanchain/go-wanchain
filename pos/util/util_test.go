@@ -43,3 +43,9 @@ func TestGetEpochIDFromDifficulty(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestFromWin(t *testing.T) {
+	a, _ := big.NewInt(0).SetString("83713850837138508370", 10)
+	f := FromWin(a)
+	fmt.Println(f)
+}

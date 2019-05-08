@@ -151,6 +151,19 @@ var (
 		Usage: "Pluto dev network: pre-configured wanchain proof-of-authority test network",
 	}
 
+	//facuet enbale settings
+	FaucetEnabledFlag = cli.BoolFlag{
+		Name:  "faucet",
+		Usage: "Enable faucet ",
+	}
+
+	FaucetAmountFlag = cli.IntFlag{
+		Name:  "faucetamount",
+		Usage: "Faucet charge amount per time",
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
+	}
+
+
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
@@ -527,6 +540,8 @@ var (
 		Usage: "syslog tag",
 		Value: "gwan_pos",
 	}
+
+
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -784,6 +799,7 @@ func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
 		cfg.Etherbase = account.Address
 		return
 	}
+
 	accounts := ks.Accounts()
 	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {

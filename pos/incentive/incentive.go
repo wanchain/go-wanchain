@@ -2,7 +2,6 @@ package incentive
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"math/big"
 
@@ -29,6 +28,7 @@ var (
 	percentOfSlotLeader      = 12.0 / 49.0                                                                            //24.4898%
 	ceilingPercentS0         = 100.0                                                                                  //100% Turn off in current version.
 	openIncentive            = true                                                                                   //If the incentive function is open
+	firstPeriodReward        = big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))                                 // 2500000 wan coin for first year
 )
 
 const (
@@ -50,7 +50,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 	setActivityInterface(getEpochLeaderActivity, getRandomProposerActivity, getSlotLeaderActivity)
 	setRBAddressInterface(getRbAddr)
 
-	initLocalDb("incentive")
+	initLocalDb(posconfig.IncentiveLocalDB)
 	log.Info("--------Incentive Init Finish----------")
 }
 
@@ -64,7 +64,6 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	if isFinished(stateDb, epochID) || !openIncentive {
 		return true
 	}
-	log.Info("--------Incentive Run Start----------", "epochID", epochID)
 	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remainsAll := big.NewInt(0)
 
@@ -72,8 +71,13 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	saveIncentiveIncome(total, foundation, gasPool)
 
 	epAddrs, epAct := getEpochLeaderInfo(stateDb, epochID)
+	log.Info("epoch addr", "len", len(epAddrs))
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
+	log.Info("rp Addrs", "len", len(rpAddrs))
+
 	slAddrs, slBlk, slAct, ctrlCount := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
+	log.Info("sl Addr ", "len", len(slAddrs), "slAct", slAct, "ctrlCount", ctrlCount)
+	log.Info("sl Blk ", "len", len(slBlk), "blks", slBlk)
 
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader*100.0))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer*100.0))
@@ -92,6 +96,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive epochLeaderAllocate error", "error", err.Error(), "epochLeaderSubsidy", epochLeaderSubsidy.String(), "epAddrs", epAddrs)
 		return false
 	}
+	log.Info("epoch leader allocate", "total", sumToPay(incentives), "len", len(incentives))
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
@@ -100,6 +105,8 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive randomProposerAllocate error", "error", err.Error(), "randomProposerSubsidy", randomProposerSubsidy.String(), "rpAddrs", rpAddrs)
 		return false
 	}
+	log.Info("random proposer allocate", "total", sumToPay(incentives), "len", len(incentives))
+
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
@@ -108,6 +115,8 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 		log.SyslogErr("Incentive slotLeaderAllocate error", "slotLeaderSubsidy", slotLeaderSubsidy.String(), "slAddrs", slAddrs)
 		return false
 	}
+	log.Info("slot leader allocate", "total", sumToPay(incentives), "len", len(incentives))
+
 	finalIncentive = append(finalIncentive, incentives...)
 	remainsAll.Add(remainsAll, remains)
 
@@ -128,12 +137,11 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	saveIncentiveHistory(epochID, finalIncentive)
 
 	finished(stateDb, epochID)
-	log.Info("--------Incentive Run Success Finish----------", "epochID", epochID)
 	return true
 }
 
 func getIncentivePrecompileAddress() common.Address {
-	return common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+	return vm.IncentivePrecompileAddr
 }
 
 func getRunFlagKey(epochID uint64) common.Hash {
@@ -219,6 +227,10 @@ func slotLeaderAllocate(funds *big.Int, addrs []common.Address, blocks []int,
 
 	remains.Add(remains, big.NewInt(0).Mul(singleRemain, big.NewInt(int64(slotCount))))
 
+	log.Info("-->slotLeaderAllocate", "funds", funds, "slotCount", slotCount,
+		"incentiveOfSlot", incentiveOfSlot, "incentiveActive", incentiveActive,
+		"singleRemain", singleRemain, "len", len(addrs))
+
 	fundAddrs := make([]common.Address, 0)
 	fundValues := make([]*big.Int, 0)
 
@@ -248,7 +260,7 @@ func sumToPay(readyToPay [][]vm.ClientIncentive) *big.Int {
 }
 
 func checkTotalValue(total *big.Int, sumPay, remain *big.Int) bool {
-	fmt.Println("Total:", total, "payout:", sumPay.String(), "remains:", remain)
+	log.Info("checkTotalValue", "Total", total, "payout", sumPay, "remains", remain)
 
 	sum := big.NewInt(0).Add(sumPay, remain)
 	if total.Cmp(sum) == -1 {
@@ -267,11 +279,11 @@ func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
 }
 
 func saveIncentiveIncome(total, foundation, gasPool *big.Int) {
-	//	fmt.Println("total:", total.String(), "foundation:", foundation.String(), "gasPool:", gasPool.String())
+	log.Info("Incentive total", "total", total, "foundation", foundation, "gasPool", gasPool)
 }
 
 func saveIncentiveDivide(ep, rp, sl *big.Int) {
-	fmt.Println("ep:", ep, "rp:", rp, "sl:", sl)
+	log.Info("Incentive Divide", "ep", ep, "rp", rp, "sl", sl)
 }
 
 func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
