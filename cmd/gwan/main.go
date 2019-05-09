@@ -305,11 +305,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
-	res := ctx.GlobalBool(utils.FaucetEnabledFlag.Name)
-	res = ctx.GlobalIsSet(utils.EtherbaseFlag.Name)
-	res = ctx.GlobalIsSet(utils.UnlockedAccountFlag.Name)
-
-	res = res
 
 	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
 	   ctx.GlobalIsSet(utils.EtherbaseFlag.Name)&&
