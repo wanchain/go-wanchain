@@ -136,7 +136,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 		//start from ep1
 		for i := uint64(1); i <= epochid; i++ {
 
-			epg := f.GetEpochGenesis(i)
+			epg = f.GetEpochGenesis(i)
 			if epg != nil {
 				continue
 			}
