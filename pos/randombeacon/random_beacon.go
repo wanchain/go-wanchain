@@ -523,8 +523,6 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 		data, err := rb.getEns(rb.statedb, rb.epochId, uint32(id))
 		if err == nil && data != nil {
 			datas = append(datas, RbEnsDataCollector{data, &pk})
-		} else {
-			// do nothing
 		}
 	}
 

@@ -176,8 +176,6 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 		log.SyslogErr("random beacon contract no match id found")
 		return nil, errors.New("no function")
 	}
-
-	return nil, nil
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
