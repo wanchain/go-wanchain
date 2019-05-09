@@ -115,6 +115,9 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum,url string) {
 	if amount == 0 {
 		amount = 100
 	}
+
+	*payoutFlag = int(amount)
+
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	periods := make([]string, *tiersFlag)

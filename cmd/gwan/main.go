@@ -105,6 +105,10 @@ var (
 		utils.TestnetFlag,
 		utils.DevInternalFlag,
 		utils.PlutoFlag,
+
+		utils.FaucetEnabledFlag,
+		utils.FaucetAmountFlag,
+
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -301,9 +305,15 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
+	res := ctx.GlobalBool(utils.FaucetEnabledFlag.Name)
+	res = ctx.GlobalIsSet(utils.EtherbaseFlag.Name)
+	res = ctx.GlobalIsSet(utils.UnlockedAccountFlag.Name)
+
+	res = res
+
 	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
-	   ctx.GlobalBool(utils.EtherbaseFlag.Name)&&
-	   ctx.GlobalBool(utils.UnlockedAccountFlag.Name)&&
+	   ctx.GlobalIsSet(utils.EtherbaseFlag.Name)&&
+	   ctx.GlobalIsSet(utils.UnlockedAccountFlag.Name)&&
 	   ( ctx.GlobalBool(utils.PlutoFlag.Name) ||
 	  	 ctx.GlobalBool(utils.TestnetFlag.Name)){
 
