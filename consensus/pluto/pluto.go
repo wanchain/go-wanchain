@@ -49,6 +49,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	posUtil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 const (
@@ -297,6 +298,7 @@ func (c *Pluto) verifyHeader(chain consensus.ChainReader, header *types.Header, 
 	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
+
 	// Checkpoint blocks need to enforce zero beneficiary
 	// checkpoint := (number % c.config.Epoch) == 0
 	// if checkpoint && header.Coinbase != (common.Address{}) {
@@ -531,7 +533,14 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		return errUnknownBlock
 	}
 
+	epidTime, slIdTime := posUtil.CalEpochSlotID(header.Time.Uint64())
+
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
+
+	if epidTime != epochID || slIdTime != slotID {
+		log.Error("epochid or slotid do ot match", "error", "epidTime=",epidTime,"slIdTime=",slIdTime,"epidFromDiffulty=",epochID,"slotIDFromDifficulty=",slotID)
+		return errors.New("epochid or slotid do ot match")
+	}
 
 	s := slotleader.GetSlotLeaderSelection()
 

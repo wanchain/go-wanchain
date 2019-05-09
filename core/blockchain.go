@@ -1288,12 +1288,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	newChainLen := len(newChain)
-	epochId, slotid, err := bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
-	if err != nil {
-		log.Error("Impossible reorg because epochId or slotId can not be got", "newnum", newBlock.Number(), "newhash", newBlock.Hash())
-		return fmt.Errorf("Impossible reorg because new chain epochId or slotId can not be got")
-	}
-
+	epochId, slotid, _:= bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
 
 	log.Info("reorg happended")
