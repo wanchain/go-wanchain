@@ -253,7 +253,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				panic("Invalid genesis.")
 			}
 			secAddr := crypto.PubkeyToAddress(*pub)
-			weight := vm.CalLocktimeWeight(0)
+			weight := vm.CalLocktimeWeight(vm.PSMinEpochNum)
 			staker := &vm.StakerInfo{
 				PubSec256:   account.Staking.S256pk,
 				PubBn256:    account.Staking.Bn256pk,

@@ -34,7 +34,7 @@ const (
 	PSMaxEpochNum = 90
 
 	PSMinStakeholderStake = 10000
-	PSMinValidatorStake   = 100000
+	PSMinValidatorStake   = 50000
 	PSMinDelegatorStake   = 100
 	PSMinFeeRate          = 0
 	PSMaxFeeRate          = 100
@@ -171,7 +171,7 @@ var (
 	maxEpochNum                = big.NewInt(PSMaxEpochNum)
 	minEpochNum                = big.NewInt(PSMinEpochNum)
 	minStakeholderStake        = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
-	minValidatorStake          = new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
+	MinValidatorStake          = new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
 	minDelegatorStake          = new(big.Int).Mul(big.NewInt(PSMinDelegatorStake), ether)
 	minFeeRate                 = big.NewInt(PSMinFeeRate)
 	maxFeeRate                 = big.NewInt(PSMaxFeeRate)
@@ -362,6 +362,7 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	return errParameters
 }
 
+
 func (p *PosStaking) saveStakeInfo(evm *EVM, stakerInfo *StakerInfo) error {
 	infoBytes, err := rlp.EncodeToBytes(stakerInfo)
 	if err != nil {
@@ -451,8 +452,10 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			Address: contract.CallerAddress,
 			Amount:  contract.Value(),
 			Renewal: info.Renewal,
+			StakingEpoch: eidNow + JoinDelay,
+			LockEpochs: realLockEpoch,
 		}
-		partner.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
+		partner.StakeAmount = big.NewInt(0).Mul(partner.Amount, big.NewInt(int64(weight)))
 		stakerInfo.Partners = append(stakerInfo.Partners, partner)
 	}
 
@@ -503,9 +506,11 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
 
-	if info.FeeRate.Cmp(noDelegateFeeRate) != 0 && contract.value.Cmp(minValidatorStake) < 0 {
-		return nil, errors.New("need more Wan to be a validator")
-	}
+	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
+	// SO, don't need all in the first stakeIn.
+	//if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(MinValidatorStake) < 0 {
+	//	return nil, errors.New("need more Wan to be a validator")
+	//}
 	secAddr := crypto.PubkeyToAddress(*info.pub)
 
 	// 6. secAddr has not join the pos or has finished
@@ -550,6 +555,18 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	if err != nil {
 		return nil, err
 	}
+	// check if the validator's feeRate is 100, can't delegatein
+	if stakerInfo.FeeRate == noDelegateFeeRate.Uint64() {
+		return nil, errors.New("Validator don't accept delegation.")
+	}
+	// check if the validator's amount(include partner) is not enough, can't delegatein
+	total := big.NewInt(0).Set(stakerInfo.Amount)
+	for i:=0; i<len(stakerInfo.Partners); i++ {
+		total.Add(total, stakerInfo.Partners[i].Amount)
+	}
+	if total.Cmp(MinValidatorStake) < 0 {
+		return nil, errors.New("Validator don't have enough amount.")
+	}
 	//  sender has not delegated by this
 	var info *ClientInfo
 	length := len(stakerInfo.Clients)
@@ -559,7 +576,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	for i := 0; i < length; i++ {
 		totalDelegated.Add(totalDelegated, stakerInfo.Clients[i].Amount)
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
-			weight := CalLocktimeWeight(0)
+			weight := CalLocktimeWeight(PSMinEpochNum)
 			info = &stakerInfo.Clients[i]
 			info.Amount.Add(info.Amount, contract.Value())
 			info.StakeAmount.Add(info.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
@@ -575,7 +592,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 			return nil, errors.New("low amount")
 		}
 		// save
-		weight := CalLocktimeWeight(0)
+		weight := CalLocktimeWeight(PSMinEpochNum)
 		info := &ClientInfo{
 			Address:     contract.CallerAddress,
 			Amount:      contract.value,
@@ -638,7 +655,10 @@ the weight of 90 epoch is 960+90*6 = 1500
 the time is 1500/1002, about 1.5
 */
 func CalLocktimeWeight(lockEpoch uint64) uint64 {
-	return 960 + lockEpoch*6
+	if lockEpoch == 0 { //builtin account.
+		return 960+PSMinEpochNum*6
+	}
+	return 960+lockEpoch*6
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {

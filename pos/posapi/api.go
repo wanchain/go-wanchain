@@ -225,6 +225,7 @@ type StakerJson struct {
 	FeeRate      uint64
 	//NextFeeRate  uint64
 	Clients []vm.ClientInfo
+	Partners []vm.PartnerInfo
 }
 
 // this is the static snap of stekers by the block Number.
@@ -262,6 +263,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 		stakeJson.FeeRate = staker.FeeRate
 		//stakeJson.NextFeeRate = staker.NextFeeRate
 		stakeJson.Clients = staker.Clients
+		stakeJson.Partners = staker.Partners
 		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
 		stakers = append(stakers, stakeJson)
@@ -292,19 +294,15 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 			log.SyslogErr(err.Error())
 			return true
 		}
-		es := StakerInfo{}
-		es.Infors = make([]vm.ClientProbability, 1)
-		pb := epocherInst.CalProbability(staker.Amount, staker.LockEpochs)
-		es.Infors[0].Probability = big.NewInt(0).Set(pb)
-		es.Infors[0].Addr = staker.Address
-		for i := 0; i < len(staker.Clients); i++ {
-			pc := epocherInst.CalProbability(staker.Clients[i].Amount, 0)
-			vc := vm.ClientProbability{}
-			vc.Probability = big.NewInt(0).Set(pc)
-			vc.Addr = staker.Clients[i].Address
-			es.Infors = append(es.Infors, vc)
-			pb = pb.Add(pb, pc)
+
+		infors, pb, err := epochLeader.CalEpochProbabilityStaker(&staker)
+		if err != nil || pb == nil {
+			// this validator has no enough
+			return true
 		}
+
+		es := StakerInfo{}
+		es.Infors = infors
 		es.TotalProbability = pb
 		es.FeeRate = staker.FeeRate
 		es.Addr = staker.Address
