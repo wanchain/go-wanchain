@@ -154,8 +154,6 @@ func (d *Downloader) epochGenesisFetcher() {
 
 			case <-d.quitCh:
 				return
-			case <-d.cancelCh:
-				return
 
 		}
 	}
