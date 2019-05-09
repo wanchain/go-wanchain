@@ -3,7 +3,9 @@ package randombeacon
 import (
 	"crypto/rand"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
+	"io"
 	"sync"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -54,6 +56,64 @@ type PolyInfo struct {
 type PolyMap map[uint32]PolyInfo
 type TaskTags []bool
 
+// DecodeRLP implements rlp.Encoder
+func (polys *PolyMap) EncodeRLP(w io.Writer) error {
+	for k, v := range *polys {
+		err := rlp.Encode(w, k)
+		if err != nil {
+			return err
+		}
+
+		err = rlp.Encode(w, []big.Int(v.poly))
+		if err != nil {
+			return err
+		}
+
+		err = rlp.Encode(w, v.s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DecodeRLP implements rlp.Decoder
+func (polys *PolyMap) DecodeRLP(s *rlp.Stream) error {
+	for {
+		k := uint32(0)
+		info := PolyInfo{make(rbselection.Polynomial, 0), big.NewInt(0)}
+		err := s.Decode(&k)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		err = s.Decode(&info.poly)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		err = s.Decode(&info.s)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		(*polys)[k] = info
+	}
+}
+
 type RandomBeacon struct {
 	loopEvents chan *LoopEvent
 
@@ -86,6 +146,7 @@ var (
 	maxUint64      = uint64(1<<64 - 1)
 	loopEventCount = 1000
 	randomBeacon   RandomBeacon
+	rbPloys        = "RB_PLOYS"
 )
 
 var (
@@ -95,6 +156,7 @@ var (
 	errNoDKG1Poly      = errors.New("no dkg1 random polynomial")
 	errInsufficient    = errors.New("insufficient proposer")
 	errUninitialized   = errors.New("random beacon uninitialized")
+	errNotAllTaskSuc   = errors.New("not all task succeed")
 )
 
 func GetRandonBeaconInst() *RandomBeacon {
@@ -153,7 +215,7 @@ func (rb *RandomBeacon) Loop(statedb vm.StateDB, rc *rpc.Client, eid uint64, sid
 		rb.mutex.Unlock()
 		if e := recover(); e != nil {
 			err = e.(error)
-			log.SyslogErr("RB loop panic", "err", err.Error())
+			log.SyslogErr("RB loop panic", "err", err)
 		}
 	}()
 
@@ -186,6 +248,7 @@ func (rb *RandomBeacon) LoopRoutine() {
 
 func (rb *RandomBeacon) updateEpochId(epochId uint64) {
 	log.SyslogInfo("rb update epochId", "epochId", epochId)
+	oldEpochId := rb.epochId
 	rb.epochId = epochId
 	rb.myPropserIds = rb.getMyRBProposerId(epochId)
 
@@ -193,6 +256,10 @@ func (rb *RandomBeacon) updateEpochId(epochId uint64) {
 	rb.epochStage = vm.RbDkg1Stage
 	rb.polys = make(PolyMap)
 	rb.taskTags = nil
+
+	if oldEpochId == maxUint64 {
+		rb.loadPolys()
+	}
 }
 
 func (rb *RandomBeacon) updateStage(stage int) {
@@ -238,9 +305,9 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.fDoDKG1s()
-				if err != nil {
-					return err
+				rb.fDoDKG1s()
+				if !rb.isTaskAllDone() {
+					return errNotAllTaskSuc
 				}
 			}
 
@@ -258,10 +325,9 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.fDoDKG2s()
-				// while errNoDKG1Poly, noneed to retry, stop dkg2 work
-				if err != nil && err != errNoDKG1Poly {
-					return err
+				rb.fDoDKG2s()
+				if !rb.isTaskAllDone() {
+					return errNotAllTaskSuc
 				}
 			}
 
@@ -279,11 +345,9 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 					rb.taskTags = make(TaskTags, len(rb.myPropserIds))
 				}
 
-				err := rb.fDoSIGs()
-
-				// while errInsufficient, noneed to retry, stop SIG work
-				if err != nil && err != errInsufficient {
-					return err
+				rb.fDoSIGs()
+				if !rb.isTaskAllDone() {
+					return errNotAllTaskSuc
 				}
 			}
 
@@ -295,6 +359,20 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 	}
 
 	return nil
+}
+
+func (rb *RandomBeacon) isTaskAllDone() bool {
+	if len(rb.taskTags) == 0 {
+		return true
+	}
+
+	for i := range rb.taskTags {
+		if !rb.taskTags[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
@@ -325,11 +403,20 @@ func (rb *RandomBeacon) doDKG1s() error {
 			continue
 		}
 
+		if rb.polys[uint32(i)].poly != nil && rb.polys[uint32(i)].s != nil {
+			rb.taskTags[i] = true
+			continue
+		}
+
 		err := rb.doDKG1(id)
 		if err == nil {
 			rb.taskTags[i] = true
+			rb.storePolys()
 		} else {
-			return err
+			// try the best to send every tx,
+			// prevent that one error stop all left task.
+			// so, continue the loop
+			continue
 		}
 	}
 
@@ -361,13 +448,13 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 	// fi(x)
 	s, err := rand.Int(rand.Reader, bn256.Order)
 	if err != nil {
-		log.SyslogErr("dkg1, get rand fail", "err", err.Error())
+		log.SyslogErr("dkg1, get rand fail", "err", err)
 		return nil, err
 	}
 
 	poly, err:= rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
 	if err != nil {
-		log.SyslogErr("dkg1, get rand poly fail", "err", err.Error())
+		log.SyslogErr("dkg1, get rand poly fail", "err", err)
 		return nil, err
 	}
 
@@ -376,8 +463,8 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		// share for i is fi(x) evaluation result on x[i]
 		sshare[i], err = rbselection.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
 		if err != nil {
-			rb.polys[proposerId] = PolyInfo{nil, nil}
-			log.SyslogErr("dkg1, evaluate poly fail", "err", err.Error())
+			delete(rb.polys, proposerId)
+			log.SyslogErr("dkg1, evaluate poly fail", "err", err)
 			return nil, err
 		}
 	}
@@ -410,7 +497,10 @@ func (rb *RandomBeacon) doDKG2s() error {
 		if err == nil || err == errNoDKG1Data {
 			rb.taskTags[i] = true
 		} else {
-			return err
+			// try the best to send every tx,
+			// prevent that one error stop all left task.
+			// so, continue the loop
+			continue
 		}
 	}
 
@@ -493,12 +583,14 @@ func (rb *RandomBeacon) doSIGs() error {
 			continue
 		}
 
-		// try the best to send every SIG tx, prevent that one error stop all left task
 		err := rb.doSIG(id)
-		if err == nil {
+		if err == nil || err == errInsufficient {
 			rb.taskTags[i] = true
 		} else {
-			return err
+			// try the best to send every SIG tx,
+			// prevent that one error stop all left task.
+			// so, continue the loop
+			continue
 		}
 	}
 
@@ -616,16 +708,52 @@ func (rb *RandomBeacon) getTxFrom() common.Address {
 	return posconfig.Cfg().GetMinerAddr()
 }
 
+func (rb *RandomBeacon) storePolys() error {
+	if len(rb.polys) == 0 {
+		return nil
+	}
+
+	b, err := rlp.EncodeToBytes(&rb.polys)
+	if err != nil {
+		log.SyslogErr("random beacon store ploys fail", "err", err)
+		return err
+	}
+
+	_, err = posdb.GetDb().Put(rb.epochId, rbPloys, b)
+	if err != nil {
+		log.SyslogErr("random beacon store polys fail", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (rb *RandomBeacon) loadPolys() error {
+	b, err := posdb.GetDb().Get(rb.epochId, rbPloys)
+	if err != nil {
+		log.SyslogDebug("random beacon load polys fail", "err", err)
+		return err
+	}
+
+	err = rlp.DecodeBytes(b, &rb.polys)
+	if err != nil {
+		log.SyslogErr("random beacon load polys fail", "err", err)
+		return err
+	}
+
+	return nil
+}
+
 func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 	if payload == nil {
 		err := errors.New("invalid dkg1 payload object")
-		log.SyslogErr(err.Error())
+		log.SyslogErr(err)
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.SyslogErr("rlp encode dkg1 fail", "err", err.Error())
+		log.SyslogErr("rlp encode dkg1 fail", "err", err)
 		return nil, err
 	}
 
@@ -639,13 +767,13 @@ func getRBDKG1TxPayloadBytes(payload *vm.RbDKG1FlatTxPayload) ([]byte, error) {
 func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 	if payload == nil {
 		err := errors.New("invalid dkg2 payload object")
-		log.SyslogErr(err.Error())
+		log.SyslogErr(err)
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.SyslogErr("rlp encode dkg2 fail", "err", err.Error())
+		log.SyslogErr("rlp encode dkg2 fail", "err", err)
 		return nil, err
 	}
 
@@ -659,13 +787,13 @@ func getRBDKG2TxPayloadBytes(payload *vm.RbDKG2FlatTxPayload) ([]byte, error) {
 func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 	if payload == nil {
 		err := errors.New("invalid sig payload object")
-		log.SyslogErr(err.Error())
+		log.SyslogErr(err)
 		return nil, err
 	}
 
 	payloadBytes, err := rlp.EncodeToBytes(payload)
 	if err != nil {
-		log.SyslogErr("rlp encode sig payload", "err", err.Error())
+		log.SyslogErr("rlp encode sig payload", "err", err)
 		return nil, err
 	}
 
@@ -675,3 +803,5 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
+
+

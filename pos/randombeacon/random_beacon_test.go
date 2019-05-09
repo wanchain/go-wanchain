@@ -14,7 +14,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
+	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
+	"io"
 	"math/big"
 	"sync"
 	"testing"
@@ -988,4 +990,119 @@ func tmpGetCji(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, e
 	}
 
 	return ret, nil
+}
+
+func TestPolyMap_storePolys(t *testing.T) {
+	poly1 := make(rbselection.Polynomial, 0)
+	poly2 := make(rbselection.Polynomial, 0)
+	poly1 = append(poly1, *big.NewInt(11))
+	poly1 = append(poly1, *big.NewInt(12))
+	poly2 = append(poly2, *big.NewInt(21))
+	poly2 = append(poly2, *big.NewInt(22))
+
+	rb := RandomBeacon{}
+	rb.polys = make(PolyMap)
+	rb.polys[1] = PolyInfo{poly1, big.NewInt(1)}
+	rb.polys[2] = PolyInfo{poly2, big.NewInt(2)}
+
+	err := rb.storePolys()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPolyMap_loadPolys(t *testing.T) {
+	TestPolyMap_storePolys(t)
+
+	rb := RandomBeacon{}
+	rb.polys = make(PolyMap)
+	err := rb.loadPolys()
+	if err != nil {
+		t.Error(err)
+	}
+
+	poly1 := make(rbselection.Polynomial, 0)
+	poly2 := make(rbselection.Polynomial, 0)
+	poly1 = append(poly1, *big.NewInt(11))
+	poly1 = append(poly1, *big.NewInt(12))
+	poly2 = append(poly2, *big.NewInt(21))
+	poly2 = append(poly2, *big.NewInt(22))
+
+	polys := make(PolyMap)
+	polys[1] = PolyInfo{poly1, big.NewInt(1)}
+	polys[2] = PolyInfo{poly2, big.NewInt(2)}
+
+	if len(polys) != len(rb.polys) {
+		t.Error("rlp decode PolyMap fail, invalid len")
+	}
+
+	for k, v := range polys {
+		v2, ok := rb.polys[k]
+		if !ok {
+			t.Error("rlp decode PolyMap fail, invalid key")
+		}
+
+		if v.s.Cmp(v2.s) != 0 {
+			t.Error("rlp decode PolyMap fail, invalid value")
+		}
+
+		if len(v.poly) != len(v2.poly) {
+			t.Error("rlp decode PolyMap fail, invalid poly len")
+		}
+
+		for i := 0; i < len(v.poly); i++ {
+			if v.poly[i].Cmp(&v2.poly[i]) != 0 {
+				t.Error("rlp decode PolyMap fail, invalid poly value")
+			}
+		}
+	}
+}
+
+func TestPolyMap_DecodeRLP(t *testing.T) {
+	poly1 := make(rbselection.Polynomial, 0)
+	poly2 := make(rbselection.Polynomial, 0)
+	poly1 = append(poly1, *big.NewInt(11))
+	poly1 = append(poly1, *big.NewInt(12))
+	poly2 = append(poly2, *big.NewInt(21))
+	poly2 = append(poly2, *big.NewInt(22))
+
+	polys1 := make(PolyMap)
+	polys1[1] = PolyInfo{poly1, big.NewInt(1)}
+	polys1[2] = PolyInfo{poly2, big.NewInt(2)}
+
+	b, err := rlp.EncodeToBytes(&polys1)
+	if err != nil {
+		t.Error("rlp encode PolyMap fail, err:", err)
+	}
+
+	polys2 := make(PolyMap)
+	err = rlp.DecodeBytes(b, &polys2)
+	if err != nil && err != io.EOF {
+		t.Error("rlp decode PolyMap fail, err:", err)
+	}
+
+	if len(polys1) != len(polys2) {
+		t.Error("rlp decode PolyMap fail, invalid len")
+	}
+
+	for k, v := range polys1 {
+		v2, ok := polys2[k]
+		if !ok {
+			t.Error("rlp decode PolyMap fail, invalid key")
+		}
+
+		if v.s.Cmp(v2.s) != 0 {
+			t.Error("rlp decode PolyMap fail, invalid value")
+		}
+
+		if len(v.poly) != len(v2.poly) {
+			t.Error("rlp decode PolyMap fail, invalid poly len")
+		}
+
+		for i := 0; i < len(v.poly); i++ {
+			if v.poly[i].Cmp(&v2.poly[i]) != 0 {
+				t.Error("rlp decode PolyMap fail, invalid poly value")
+			}
+		}
+	}
 }
