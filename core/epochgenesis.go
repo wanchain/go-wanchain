@@ -32,7 +32,7 @@ func (bc *BlockChain) updateReOrg(epochid uint64, slotid uint64, length uint64) 
 		reOrgDb = posdb.NewDb(posconfig.ReorgLocalDB)
 	}
 
-	numberBytes, _ := reOrgDb.Get((epochid<<16)|slotid, "reorgNumber")
+	numberBytes, _ := reOrgDb.Get(epochid, "reorgNumber")
 
 	num := uint64(0)
 	if numberBytes != nil {

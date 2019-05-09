@@ -145,7 +145,7 @@ func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
-func (a PosApi) GetReorg(epochid uint64, slotid uint64) ([]uint64, error) {
+func (a PosApi) GetReorg(epochid uint64) ([]uint64, error) {
 	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
 	if reOrgDb == nil {
 		return nil, errors.New("not find db")
@@ -155,12 +155,12 @@ func (a PosApi) GetReorg(epochid uint64, slotid uint64) ([]uint64, error) {
 
 	reOrgNum = 0
 
-	reorBytes, err := reOrgDb.Get((epochid<<16)|slotid, "reorgNumber")
+	reorBytes, err := reOrgDb.Get(epochid, "reorgNumber")
 	if err == nil && reorBytes != nil {
 		reOrgNum = binary.BigEndian.Uint64(reorBytes)
 	}
 
-	lenBytes, err := reOrgDb.Get(slotid, "reorgLength")
+	lenBytes, err := reOrgDb.Get(epochid, "reorgLength")
 	if err == nil && reorBytes != nil {
 		reOrgLen = binary.BigEndian.Uint64(lenBytes)
 	}
