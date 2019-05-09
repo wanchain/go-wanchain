@@ -881,7 +881,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 	return nil, nil
 }
 
-// sigShare: sign, happens in 8k~10k-1 slots, send the proof, enShare to chain
+// sigShare: sign, happens in 8k~10k-1 slots, generate R if enough signers
 func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("sigShare")
 	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)

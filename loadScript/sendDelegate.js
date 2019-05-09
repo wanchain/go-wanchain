@@ -1,15 +1,14 @@
 // If you want to send to a delegate you can modify and use this script to run.
 
-
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
+// tranValue is the value you want to send to lock in stake, minValue is 100
 var tranValue = "100000"
 
-// rewardAddr is the reward receive accounts which create nearly.
+// delegateAddr is the validator address which accept delegator.
 var delegateAddr = ""
 
-// baseAddr is the fund source account.
+// baseAddr is the delegator's fund source account.
 var baseAddr  = ""
 
 // passwd is the fund source account password.
