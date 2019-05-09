@@ -10,7 +10,6 @@ import (
 
 	"github.com/wanchain/go-wanchain/params"
 
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/rlp"
 
@@ -211,27 +210,9 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerI
 	return skInfo, nil
 }
 
-type StakerJson struct {
-	Address   common.Address
-	PubSec256 string //stakeholder’s wan public key
-	PubBn256  string //stakeholder’s bn256 public key
-
-	Amount         *big.Int //staking wan value
-	StakeAmount    *big.Int //staking wan value
-	LockEpochs     uint64   //lock time which is input by user. 0 means unexpired.
-	NextLockEpochs uint64   //lock time which is input by user. 0 means unexpired.
-	From           common.Address
-
-	StakingEpoch uint64 //the user’s staking time
-	FeeRate      uint64
-	//NextFeeRate  uint64
-	Clients  []vm.ClientInfo
-	Partners []vm.PartnerInfo
-}
-
 // this is the static snap of stekers by the block Number.
-func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
-	stakers := make([]StakerJson, 0)
+func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
+	stakers := make([]*StakerJson, 0)
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
 		return stakers, errors.New("epocher instance do not exist")
@@ -253,20 +234,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]StakerJson, error) {
 			log.SyslogErr(err.Error())
 			return true
 		}
-		stakeJson := StakerJson{}
-		stakeJson.Address = staker.Address
-		stakeJson.Amount = staker.Amount
-		stakeJson.StakeAmount = staker.StakeAmount
-		stakeJson.LockEpochs = staker.LockEpochs
-		stakeJson.NextLockEpochs = staker.NextLockEpochs
-		stakeJson.From = staker.From
-		stakeJson.StakingEpoch = staker.StakingEpoch
-		stakeJson.FeeRate = staker.FeeRate
-		//stakeJson.NextFeeRate = staker.NextFeeRate
-		stakeJson.Clients = staker.Clients
-		stakeJson.Partners = staker.Partners
-		stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
-		stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
+		stakeJson := ToStakerJson(&staker)
 		stakers = append(stakers, stakeJson)
 		return true
 	})

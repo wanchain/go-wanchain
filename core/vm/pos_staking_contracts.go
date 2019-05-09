@@ -235,7 +235,6 @@ type PartnerInfo struct {
 	Renewal     bool
 	LockEpochs     uint64
 	StakingEpoch uint64
-
 }
 
 //
