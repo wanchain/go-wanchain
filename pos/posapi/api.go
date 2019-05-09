@@ -132,7 +132,7 @@ func (a PosApi) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 	return slotleader.GetSlotLeaderSelection().GetSlotCreateStatusByEpochID(epochID)
 }
 
-func (a PosApi) Random(epochId uint64, blockNr int64) (*big.Int, error) {
+func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {
 	return []uint64{reOrgNum, reOrgLen}, nil
 }
 
-func (a PosApi) GetSijCount(epochId uint64, blockNr int64) (int, error) {
+func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) {
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return 0, err

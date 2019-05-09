@@ -157,13 +157,13 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'random',
-			call: 'pos_random',
+			name: 'getRandom',
+			call: 'pos_getRandom',
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getSijCount',
-			call: 'pos_getSijCount',
+			name: 'getRbSignatureCount',
+			call: 'pos_getRbSignatureCount',
 			params: 2
 		}),
 		new web3._extend.Method({
