@@ -239,7 +239,22 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getStakerInfo',
 			call: 'pos_getStakerInfo',
-			params: 1
+			params: 1,
+            outputFormatter: function(stakers) {
+                for(var i=0; i<stakers.length; i++) {
+                    stakers[i].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].StakeAmount)
+                    stakers[i].Amount = web3._extend.utils.toBigNumber(stakers[i].Amount)
+                    for(var k=0; k<stakers[i].Clients.length; k++) {
+                        stakers[i].Clients[k].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].Clients[k].StakeAmount)
+                        stakers[i].Clients[k].Amount = web3._extend.utils.toBigNumber(stakers[i].Clients[k].Amount)
+                    }
+                    for(var k=0; k<stakers[i].Partners.length; k++) {
+                        stakers[i].Partners[k].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].Partners[k].StakeAmount)
+                        stakers[i].Partners[k].Amount = web3._extend.utils.toBigNumber(stakers[i].Partners[k].Amount)
+                    }
+                }
+                return stakers
+            }
 		}),
 		new web3._extend.Method({
 			name: 'getRBAddress',
