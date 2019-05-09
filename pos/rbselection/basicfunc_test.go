@@ -46,7 +46,7 @@ func TestDLEQ1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof := DLEQ(*gbase, *hbase, Pri)
+	proof, _ := DLEQ(*gbase, *hbase, Pri)
 
 	commit := new(bn256.G2).ScalarBaseMult(Pri)
 
@@ -67,7 +67,7 @@ func TestDLEQ2(t *testing.T) {
 
 	sPub := new(bn256.G1).ScalarMult(Pub, s)
 
-	proof := DLEQ(*Pub, *hbase, s)
+	proof, _ := DLEQ(*Pub, *hbase, s)
 
 	commit := new(bn256.G2).ScalarBaseMult(s)
 
@@ -94,7 +94,7 @@ func TestRScode(t *testing.T) {
 
 	commit := make([]bn256.G2, Nr)
 
-	poly := RandPoly(Thres-1, *s)
+	poly, _ := RandPoly(Thres-1, *s)
 
 	for i := 0; i < Nr; i++ {
 		sshare[i], _ = EvaluatePoly(poly, &x[i], Thres-1)

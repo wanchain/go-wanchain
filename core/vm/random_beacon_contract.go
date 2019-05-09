@@ -434,7 +434,7 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 func GetR(db StateDB, epochId uint64) *big.Int {
 	r := GetStateR(db, epochId)
 	if r == nil {
-		log.SyslogWarning("***Can not found random r just use epoch 0 R, epochId:%d", epochId)
+		log.SyslogWarning("***Can not found random r just use epoch 0 R", "epochId", epochId)
 		r = GetStateR(db, 0)
 	}
 	return r
@@ -907,7 +907,7 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.SyslogInfo("generate random, epochId:%d, r:%s", eid+1, common.ToHex(r.Bytes()))
+			log.SyslogInfo("generate random", "epochId", eid+1,"r", common.ToHex(r.Bytes()))
 		}
 	}
 

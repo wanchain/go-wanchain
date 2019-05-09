@@ -88,7 +88,7 @@ func TestRandomBeacon(t *testing.T) {
 	var proof [Nr][Nr] DLEQproof
 	for i := 0; i < Nr; i++ {
 		for j := 0; j < Nr; j++ { // proof = (a1, a2, z)
-			proof[i][j] = DLEQ(Pubkey[j], *hbase, &sshare[i][j])
+			proof[i][j], _ = DLEQ(Pubkey[j], *hbase, &sshare[i][j])
 		}
 	}
 

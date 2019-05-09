@@ -365,11 +365,21 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		return nil, err
 	}
 
-	poly := rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
+	poly, err:= rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
+	if err != nil {
+		log.SyslogErr("dkg1, get rand poly fail", "err", err.Error())
+		return nil, err
+	}
+
 	rb.polys[proposerId] = PolyInfo{poly, s}
 	for i := 0; i < nr; i++ {
 		// share for i is fi(x) evaluation result on x[i]
-		sshare[i], _ = rbselection.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
+		sshare[i], err = rbselection.EvaluatePoly(poly, &x[i], int(posconfig.Cfg().PolymDegree))
+		if err != nil {
+			rb.polys[proposerId] = PolyInfo{nil, nil}
+			log.SyslogErr("dkg1, evaluate poly fail", "err", err.Error())
+			return nil, err
+		}
 	}
 
 	// make commitment for the secret share, i.e. multiply with the generator of G2
@@ -459,7 +469,10 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 	proof := make([]rbselection.DLEQproof, nr)
 	for i := 0; i < nr; i++ {
 		// proof = (a1, a2, z)
-		proof[i] = rbselection.DLEQ(rb.proposerPks[i], *rbselection.Hbase, &sshare[i])
+		proof[i], err = rbselection.DLEQ(rb.proposerPks[i], *rbselection.Hbase, &sshare[i])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	enshareBytes := make([][]byte, nr)

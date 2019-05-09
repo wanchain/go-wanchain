@@ -184,7 +184,7 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 	for i := 0; i < nr; i++ {
 		proof[i] = make([]rbselection.DLEQproof, nr, nr)
 		for j := 0; j < nr; j++ { // proof = (a1, a2, z)
-			proof[i][j] = rbselection.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
+			proof[i][j], _ = rbselection.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
 		}
 	}
 
