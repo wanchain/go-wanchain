@@ -6,14 +6,14 @@ API module supply the interface about pos
 *  getEpochStakerInfo,
 *  getRandomProposersByEpochID,
 *  getReorg,
-*  getSijCount,
+*  getRbSignatureCount,
 *  getSlotCreateStatusByEpochID,
 *  getSlotErrorCount,
 *  getSlotLeadersByEpochID,
 *  getSlotScCallTimesByEpochID,
 *  getSlotWarnCount,
 *  getSmaByEpochID,
-*  random,
+*  getRandom,
 *  version
 
 ## version
@@ -246,3 +246,21 @@ for example to get activty of epoch 365:
 calProbability(amount, locktime) use to calc the probability of a staker with amount by stake wan coins.
 
 Such as CalProbability(10000, 60) means lock amount 10000 wan and lock time 60 epoch's probability.
+
+## getRandom
+GetRandom(epochId uint64, blockNr int64) get pos Random number in epochId-th epoch at blockNr-th block.
+
+if blockNr = -1, it will use the latest block number
+```
+> pos.getRandom(0, -1)
+"0x5fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2"
+```
+
+## getRbSignatureCount
+GetRbSignatureCount(epochId uint64, blockNr int64) get signatures count in Random Beacon Generation process in epochId-th epoch at blockNr-th block.
+
+if blockNr = -1, it will use the latest block number
+```
+> pos.getRbSignatureCount(0,-1)
+17
+```
