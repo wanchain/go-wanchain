@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -224,7 +225,7 @@ type StakerJson struct {
 	StakingEpoch uint64 //the user’s staking time
 	FeeRate      uint64
 	//NextFeeRate  uint64
-	Clients []vm.ClientInfo
+	Clients  []vm.ClientInfo
 	Partners []vm.PartnerInfo
 }
 
@@ -318,8 +319,24 @@ func biToString(value *big.Int, err error) (string, error) {
 	}
 	return value.String(), err
 }
-func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
-	return incentive.GetEpochPayDetail(epochID)
+
+func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([][]PayInfo, error) {
+	c, err := incentive.GetEpochPayDetail(epochID)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([][]PayInfo, len(c))
+	for i := 0; i < len(c); i++ {
+		ret[i] = make([]PayInfo, len(c[i]))
+		for m := 0; m < len(c[i]); m++ {
+			ret[i][m] = PayInfo{}
+			ret[i][m].Addr = c[i][m].Addr
+			ret[i][m].Incentive = (*math.HexOrDecimal256)(c[i][m].Incentive)
+		}
+	}
+
+	return ret, nil
 }
 
 func (a PosApi) GetTotalIncentive() (string, error) {
@@ -333,6 +350,7 @@ func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 func (a PosApi) GetEpochRemain(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochRemain(epochID))
 }
+
 func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) {
 	epocherInst := epochLeader.GetEpocher()
 	block := epocherInst.GetBlkChain().CurrentBlock()
@@ -357,10 +375,12 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 	sort.Stable(infos)
 	return infos, nil
 }
+
 func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
 	return epocherInst.GetWhiteByEpochId(epochID)
 }
+
 func (a PosApi) GetTotalRemain() (string, error) {
 	return biToString(incentive.GetTotalRemain())
 }
@@ -393,14 +413,14 @@ func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
 }
 
 // GetActivity get epoch leader, random proposer, slot leader 's addresses and activity
-func (a PosApi) GetActivity(epochID uint64) (*incentive.Activity, error) {
+func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {
 		return nil, err
 	}
 
-	activity := incentive.Activity{}
+	activity := Activity{}
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
