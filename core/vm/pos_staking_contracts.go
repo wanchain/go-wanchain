@@ -233,6 +233,9 @@ type PartnerInfo struct {
 	Amount      *big.Int
 	StakeAmount *big.Int //staking wan value
 	Renewal     bool
+	LockEpochs     uint64
+	StakingEpoch uint64
+
 }
 
 //
