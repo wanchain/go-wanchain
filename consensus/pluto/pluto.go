@@ -538,8 +538,8 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
 	if epidTime != epochID || slIdTime != slotID {
-		log.Error("epochid or slotid do ot match", "error", "epidTime=",epidTime,"slIdTime=",slIdTime,"epidFromDiffulty=",epochID,"slotIDFromDifficulty=",slotID)
-		return errors.New("epochid or slotid do ot match")
+		log.Error("epochid or slotid do not match", "error", "epidTime=",epidTime,"slIdTime=",slIdTime,"epidFromDiffulty=",epochID,"slotIDFromDifficulty=",slotID)
+		return errors.New("epochid or slotid do not match")
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
