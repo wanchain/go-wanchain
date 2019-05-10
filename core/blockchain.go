@@ -50,7 +50,7 @@ var (
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
 
 	ErrNoGenesis        = errors.New("Genesis not found in chain")
-	ErrSecurityViolated = errors.New("reorg length more than BlockSecurityParam")
+	ErrSecurityViolated = errors.New("reorg length is more than BlockSecurityParam")
 	ErrInsufficientCQ   = errors.New("chain quality is too low")
 )
 
@@ -864,7 +864,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 		if !posconfig.IsDev {
-			return NonStatTy, ErrSecurityViolated
+			return NonStatTy, ErrInsufficientCQ
 		}
 	}
 
@@ -1296,7 +1296,16 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	epochId, slotid, _:= bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
 
-	log.Info("reorg happended")
+	//if reorg length is bigger than k,do not let reorg happen
+	if uint(newChainLen) > posconfig.Cfg().K {
+		log.Error("Impossible reorg because reorg length is bigger than K setting", "reorg length",newChainLen,"old chain rollback lenght",len(oldChain))
+		return ErrSecurityViolated
+
+	} else {
+		log.Info("reorg happended", "reorg length", newChainLen,"old chain rollback lenght",len(oldChain))
+	}
+
+
 	for _, block := range newChain {
 
 		// insert the block in the canonical way, re-writing history
