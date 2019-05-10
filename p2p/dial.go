@@ -204,14 +204,6 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	// scenario is useful for the testnet (and private networks) where the discovery
 	// table might be full of mostly bad peers, making it hard to find good ones.
 
-	res := len(peers) < len(s.bootnodes)
-	res = needDynDials > 0
-	res = now.Sub(s.start) > fallbackInterval
-
-	t := now.Sub(s.start)
-	t = t
-	res = res
-
 	if len(peers) < len(s.bootnodes) && len(s.bootnodes) > 0 && needDynDials > 0 && now.Sub(s.start) > fallbackInterval {
 		bootnode := s.bootnodes[0]
 		s.bootnodes = append(s.bootnodes[:0], s.bootnodes[1:]...)

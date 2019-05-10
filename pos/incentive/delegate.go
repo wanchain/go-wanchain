@@ -85,8 +85,6 @@ func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 
 func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientProbability,
 	divisionPercent uint64, totalProbility *big.Int) ([]vm.ClientIncentive, *big.Int) {
-	//totalPercent := calcTotalPercent(stakers, totalProbility)
-	//valueCeiling := ceilingCalc(value, totalPercent)
 	valueCeiling := value
 
 	remain := big.NewInt(0).Sub(value, valueCeiling)
