@@ -983,6 +983,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Do a sanity check that the provided chain is actually ordered and linked
 
 	for i := 1; i < len(chain); i++ {
+
+		if chain[i-1].NumberU64() == 1 && posconfig.EpochBaseTime == 0{
+			posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
+		}
+
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
 			chain[i].ParentHash() != chain[i-1].Hash() {
 			// Chain broke ancestry, log a messge (programming error) and skip insertion
