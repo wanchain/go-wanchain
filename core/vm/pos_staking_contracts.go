@@ -294,6 +294,11 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
+	//params := make([][]byte,0)
+	//p1 := contract.value.Bytes()
+	//params = append(params,p1)
+	//precompiledScMakeLog(contract,evm,"StakeIn",params,nil)
+
 	if methodId == stakeInId {
 		ret, err := p.StakeIn(input[4:], contract, evm)
 		if err != nil {

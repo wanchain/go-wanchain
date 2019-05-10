@@ -167,8 +167,8 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getReorg',
-			call: 'pos_getReorg',
+			name: 'getReorgState',
+			call: 'pos_getReorgState',
 			params: 1
 		}),
 		new web3._extend.Method({

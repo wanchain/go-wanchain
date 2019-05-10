@@ -148,7 +148,7 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {
 	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
 	if reOrgDb == nil {
-		return nil, errors.New("not find db")
+		return []uint64{0,0}, nil
 	}
 
 	var reOrgNum, reOrgLen uint64
