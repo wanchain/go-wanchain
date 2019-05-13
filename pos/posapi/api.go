@@ -214,15 +214,8 @@ func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) 
 	return j, nil
 }
 
-type StakerInfo struct {
-	Addr             common.Address
-	Infors           []vm.ClientProbability
-	FeeRate          uint64
-	TotalProbability *big.Int
-}
-
-func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerInfo, error) {
-	skInfo := StakerInfo{}
+func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (ApiStakerInfo, error) {
+	skInfo := ApiStakerInfo{}
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
 		return skInfo, errors.New("epocher instance does not exist")
@@ -231,9 +224,13 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerI
 	if err != nil {
 		return skInfo, err
 	}
-	skInfo.TotalProbability = total
+	skInfo.TotalProbability = (*math.HexOrDecimal256)(total)
 	skInfo.FeeRate = feeRate
-	skInfo.Infors = infors
+	skInfo.Infors = make([]ApiClientProbability, len(infors))
+	for i := 0; i < len(infors); i++ {
+		skInfo.Infors[i].Addr = infors[i].Addr
+		skInfo.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
+	}
 	skInfo.Addr = addr
 	return skInfo, nil
 }
@@ -269,7 +266,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
-func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
+func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
@@ -283,7 +280,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	ess := make([]StakerInfo, 0)
+	ess := make([]ApiStakerInfo, 0)
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
@@ -298,9 +295,13 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 			return true
 		}
 
-		es := StakerInfo{}
-		es.Infors = infors
-		es.TotalProbability = pb
+		es := ApiStakerInfo{}
+		es.Infors = make([]ApiClientProbability, len(infors))
+		for i := 0; i < len(infors); i++ {
+			es.Infors[i].Addr = infors[i].Addr
+			es.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
+		}
+		es.TotalProbability = (*math.HexOrDecimal256)(pb)
 		es.FeeRate = staker.FeeRate
 		es.Addr = staker.Address
 		ess = append(ess, es)
