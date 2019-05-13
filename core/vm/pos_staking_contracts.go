@@ -763,7 +763,7 @@ func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam,
 		return info, err
 	}
 	//  Lock time >= min epoch, <= max epoch
-	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
+	if info.LockEpochs.Uint64()!= 0 && (info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0) {
 		return info, errors.New("invalid lock time")
 	}
 
