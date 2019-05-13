@@ -4,10 +4,11 @@ import (
 	"errors"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
 )
 
 const maxTopicLengh  = 4
+
+
 
 func precompiledScMakeLog(contract *Contract, evm *EVM,evenName string,argsValue [][]byte,data []byte)  error{
 
@@ -18,18 +19,13 @@ func precompiledScMakeLog(contract *Contract, evm *EVM,evenName string,argsValue
 	}
 
 	topics := make([]common.Hash, size + 1)
-	if len(evenName) > common.HashLength {
-		topics[0] = crypto.Keccak256Hash([]byte(evenName))
-	} else {
-		topics[0] = common.StringToHash(evenName)
-	}
 
-	for i := 1; i < size; i++ {
-		if len(argsValue) > common.HashLength {
-			topics[i] = crypto.Keccak256Hash(argsValue[i-1])
-		} else {
-			topics[i] = common.BytesToHash(argsValue[i-1])
-		}
+	//topic[0] is for the name of event
+	topics[0] = common.StringToHash(evenName)
+
+	//topic[1:n] is for the parameters
+	for i := 1; i < size + 1; i++ {
+		topics[i] = common.BytesToHash(argsValue[i-1])
 	}
 
 	evm.StateDB.AddLog(&types.Log{

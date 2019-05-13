@@ -294,10 +294,7 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
-	//params := make([][]byte,0)
-	//p1 := contract.value.Bytes()
-	//params = append(params,p1)
-	//precompiledScMakeLog(contract,evm,"StakeIn",params,nil)
+
 
 	if methodId == stakeInId {
 		ret, err := p.StakeIn(input[4:], contract, evm)
@@ -501,6 +498,8 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	}
 	return nil, nil
 }
+
+
 func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	info, err := p.stakeInParseAndValid(payload)
 	if err != nil {
@@ -512,6 +511,9 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if contract.value.Cmp(minStakeholderStake) < 0 {
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
+
+	//first log
+	p.stakinLog(contract,evm,payload)
 
 	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
 	// SO, don't need all in the first stakeIn.
@@ -548,6 +550,10 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if err != nil {
 		return nil, err
 	}
+
+	//second log
+	p.stakinLog(contract,evm,payload)
+
 	return nil, nil
 }
 
@@ -789,4 +795,25 @@ func (p *PosStaking) delegateOutParseAndValid(payload []byte) (common.Address, e
 	}
 
 	return addr, nil
+}
+
+
+func (p *PosStaking) stakinLog( contract *Contract, evm *EVM,data []byte,)	error {
+
+	params := make([][]byte,0)
+
+	p1 := contract.CallerAddress.Bytes()
+	params = append(params,p1)
+
+	p2 := contract.value.Bytes()
+	params = append(params,p2)
+
+	p3 := evm.Time.Bytes()
+	params = append(params,p3)
+
+	p4 := contract.Address().Bytes()
+	params = append(params,p4)
+
+
+	return precompiledScMakeLog(contract,evm,"StakeIn",params,data)
 }
