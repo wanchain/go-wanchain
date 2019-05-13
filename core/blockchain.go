@@ -89,6 +89,7 @@ type BlockChain struct {
 	chainSideFeed event.Feed
 	chainHeadFeed event.Feed
 	logsFeed      event.Feed
+	reorgFeed	  event.Feed
 	scope         event.SubscriptionScope
 	genesisBlock  *types.Block
 
@@ -1295,6 +1296,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	newChainLen := len(newChain)
 	epochId, slotid, _:= bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
 	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
+	go bc.reorgFeed.Send(ReorgEvent{epochId, slotid, uint64(len(oldChain))})
 
 	//if reorg length is bigger than k,do not let reorg happen
 	if uint(newChainLen) > posconfig.Cfg().K {
@@ -1533,6 +1535,10 @@ func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {
 	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))
+}
+
+func (bc *BlockChain) SubscribeReorgEvent(ch chan<- ReorgEvent) event.Subscription {
+	return bc.scope.Track(bc.reorgFeed.Subscribe(ch))
 }
 
 // SubscribeChainEvent registers a subscription of ChainEvent.

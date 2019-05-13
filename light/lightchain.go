@@ -503,3 +503,10 @@ func (self *LightChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 func (self *LightChain) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
 	return self.scope.Track(new(event.Feed).Subscribe(ch))
 }
+
+// SubscribeReorgEvent implements the interface of netstats.blockChain
+// LightChain does not send reorg event, so return an empty subscription.
+func (bc *LightChain) SubscribeReorgEvent(ch chan<- core.ReorgEvent) event.Subscription {
+	return bc.scope.Track(new(event.Feed).Subscribe(ch))
+}
+

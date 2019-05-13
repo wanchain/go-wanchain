@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posapi"
 	"math/big"
 	"net"
 	"regexp"
@@ -54,6 +55,10 @@ const (
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
+	// alarmLogChanSize is the size of channel listening to AlarmLogEvent
+	alarmLogChanSize = 1024
+	// reorgChanSize is the size of channel listening to ReorgEvent
+	reorgChanSize = 1024
 )
 
 type txPool interface {
@@ -64,6 +69,7 @@ type txPool interface {
 
 type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
+	SubscribeReorgEvent(ch chan<- core.ReorgEvent) event.Subscription
 }
 
 // Service implements an Ethereum netstats reporting daemon that pushes local
@@ -154,11 +160,21 @@ func (s *Service) loop() {
 	txSub := txpool.SubscribeTxPreEvent(txEventCh)
 	defer txSub.Unsubscribe()
 
+	alarmEventCh := make(chan log.LogInfo, alarmLogChanSize)
+	alarmSub := log.SubscribeAlarm(alarmEventCh)
+	defer alarmSub.Unsubscribe()
+
+	reorgEventCh := make(chan core.ReorgEvent, reorgChanSize)
+	reorgSub := blockchain.SubscribeReorgEvent(reorgEventCh)
+	defer reorgSub.Unsubscribe()
+
 	// Start a goroutine that exhausts the subsciptions to avoid events piling up
 	var (
 		quitCh = make(chan struct{})
 		headCh = make(chan *types.Block, 1)
 		txCh   = make(chan struct{}, 1)
+		alarmCh = make(chan log.LogInfo, 10)
+		reorgCh = make(chan core.ReorgEvent, 10)
 	)
 	go func() {
 		var lastTx mclock.AbsTime
@@ -185,10 +201,28 @@ func (s *Service) loop() {
 				default:
 				}
 
+			// Notify of new alarm
+			case alarm := <- alarmEventCh:
+				select {
+				case alarmCh <- alarm:
+				default:
+				}
+
+			// Notify of new reorg
+			case len := <- reorgEventCh:
+				select {
+				case reorgCh <- len:
+				default:
+				}
+
 			// node stopped
 			case <-txSub.Err():
 				break HandleLoop
 			case <-headSub.Err():
+				break HandleLoop
+			case <-alarmSub.Err():
+				break HandleLoop
+			case <-reorgSub.Err():
 				break HandleLoop
 			}
 		}
@@ -253,13 +287,26 @@ func (s *Service) loop() {
 					log.Warn("Full stats report failed", "err", err)
 				}
 			case list := <-s.histCh:
-				if err = s.reportHistory(conn, list); err != nil {
-					log.Warn("Requested history report failed", "err", err)
+				if s.isPos() {
+					if err = s.reportPosHistory(conn, list); err != nil {
+						log.Warn("Requested pos history report failed", "err", err)
+					}
+				} else {
+					if err = s.reportHistory(conn, list); err != nil {
+						log.Warn("Requested history report failed", "err", err)
+					}
 				}
 			case head := <-headCh:
-				if err = s.reportBlock(conn, head); err != nil {
-					log.Warn("Block stats report failed", "err", err)
+				if s.isPos() {
+					if err = s.reportPosBlock(conn, head); err != nil {
+						log.Warn("Pos block stats report failed", "err", err)
+					}
+				} else {
+					if err = s.reportBlock(conn, head); err != nil {
+						log.Warn("Block stats report failed", "err", err)
+					}
 				}
+
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Post-block transaction stats report failed", "err", err)
 				}
@@ -267,11 +314,68 @@ func (s *Service) loop() {
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Transaction stats report failed", "err", err)
 				}
+			case alarm := <- alarmCh:
+				if err = s.reportPosAlarm(conn, &alarm); err != nil {
+					log.Warn("pos alarm report failed", "err", err)
+				}
+			case reorg := <- reorgCh:
+				if !s.isPos() {
+					continue
+				}
+
+				posReorg := pos_reorg{reorg.EpochId, reorg.SlotId, reorg.Len}
+				if err = s.reportPosReorg(conn, &posReorg); err != nil {
+					log.Warn("reorg length report failed", "err", err)
+				}
 			}
 		}
 		// Make sure the connection is closed
 		conn.Close()
 	}
+}
+
+func (s *Service) reportPosReorg(conn *websocket.Conn, reorg *pos_reorg) error {
+	log.Trace("Sending reorg statistics to ethstats", "len", reorg.Len)
+	stats := map[string]interface{}{
+		"id":    s.node,
+		"pos-reorg": reorg,
+	}
+	report := map[string][]interface{}{
+		"emit": {"pos-reorg", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
+func (s *Service) reportPosLog(conn *websocket.Conn) error {
+	warn, wrong := log.GetWarnAndWrongLogCount()
+	logCount := pos_log{warn, wrong}
+	log.Trace("Sending log statistics to ethstats", "warn", warn, "wrong", wrong)
+
+	stats := map[string]interface{}{
+		"id":    s.node,
+		"pos-log": logCount,
+	}
+	report := map[string][]interface{}{
+		"emit": {"pos-log", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
+func (s *Service) reportPosAlarm(conn *websocket.Conn, alarm *log.LogInfo) error {
+	log.Trace("Sending alarm to ethstats", "level", alarm.Lvl, "msg", alarm.Msg)
+
+	stats := map[string]interface{}{
+		"id":    s.node,
+		"pos-alarm": *alarm,
+	}
+	report := map[string][]interface{}{
+		"emit": {"pos-alarm", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
+func (s *Service) isPos() bool {
+	return true
 }
 
 // readLoop loops as long as the connection is alive and retrieves data packets
@@ -418,14 +522,25 @@ func (s *Service) report(conn *websocket.Conn) error {
 	if err := s.reportLatency(conn); err != nil {
 		return err
 	}
-	if err := s.reportBlock(conn, nil); err != nil {
-		return err
+	if s.isPos() {
+		if err := s.reportPosBlock(conn, nil); err != nil {
+			return err
+		}
+	} else {
+		if err := s.reportBlock(conn, nil); err != nil {
+			return err
+		}
 	}
 	if err := s.reportPending(conn); err != nil {
 		return err
 	}
 	if err := s.reportStats(conn); err != nil {
 		return err
+	}
+	if s.isPos() {
+		if err := s.reportPosLog(conn); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -484,6 +599,40 @@ type blockStats struct {
 	Uncles     uncleStats     `json:"uncles"`
 }
 
+type pos_blockStats struct {
+	Number     *big.Int       `json:"number"`
+	Hash       common.Hash    `json:"hash"`
+	ParentHash common.Hash    `json:"parentHash"`
+	Timestamp  *big.Int       `json:"timestamp"`
+	Miner      common.Address `json:"miner"`
+	GasUsed    *big.Int       `json:"gasUsed"`
+	GasLimit   *big.Int       `json:"gasLimit"`
+	Txs        []txStats      `json:"transactions"`
+	TxHash     common.Hash    `json:"transactionsRoot"`
+	Root       common.Hash    `json:"stateRoot"`
+}
+
+type pos_selection struct {
+	ELList  []common.Address `json:"elList"`
+	RNPList []common.Address `json:"rnpList"`
+}
+
+type pos_reorg struct {
+	EpochId uint64 `json:"epochId"`
+	SlotId  uint64 `json:"slotId"`
+	Len     uint64 `json:"len"`
+}
+
+type pos_log struct {
+	WarningCount uint64 `json:"warningCount"`
+	ErrorCount   uint64 `json:"errorCount"`
+}
+
+//type pos_alarm struct {
+//	Level string `json:"level"`
+//	Msg   string `json:"msg"`
+//}
+
 // txStats is the information to report about individual transactions.
 type txStats struct {
 	Hash common.Hash `json:"hash"`
@@ -517,6 +666,25 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	}
 	return websocket.JSON.Send(conn, report)
 }
+
+// reportBlock retrieves the current chain head and repors it to the stats server.
+func (s *Service) reportPosBlock(conn *websocket.Conn, block *types.Block) error {
+	// Gather the block details from the header or block chain
+	details := s.assemblePosBlockStats(block)
+
+	// Assemble the block report and send it to the server
+	log.Trace("Sending new block to ethstats", "number", details.Number, "hash", details.Hash)
+
+	stats := map[string]interface{}{
+		"id":    s.node,
+		"block": details,
+	}
+	report := map[string][]interface{}{
+		"emit": {"block", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
 
 // assembleBlockStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
@@ -568,6 +736,49 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		TxHash:     header.TxHash,
 		Root:       header.Root,
 		Uncles:     uncles,
+	}
+}
+
+func (s *Service) assemblePosBlockStats(block *types.Block) *pos_blockStats {
+	// Gather the block infos from the local blockchain
+	var (
+		header *types.Header
+		txs    []txStats
+	)
+	if s.eth != nil {
+		// Full nodes have all needed information available
+		if block == nil {
+			block = s.eth.BlockChain().CurrentBlock()
+		}
+		header = block.Header()
+
+		txs = make([]txStats, len(block.Transactions()))
+		for i, tx := range block.Transactions() {
+			txs[i].Hash = tx.Hash()
+		}
+	} else {
+		// Light nodes would need on-demand lookups for transactions/uncles, skip
+		if block != nil {
+			header = block.Header()
+		} else {
+			header = s.les.BlockChain().CurrentHeader()
+		}
+		txs = []txStats{}
+	}
+	// Assemble and return the block stats
+	author, _ := s.engine.Author(header)
+
+	return &pos_blockStats{
+		Number:     header.Number,
+		Hash:       header.Hash(),
+		ParentHash: header.ParentHash,
+		Timestamp:  header.Time,
+		Miner:      author,
+		GasUsed:    new(big.Int).Set(header.GasUsed),
+		GasLimit:   new(big.Int).Set(header.GasLimit),
+		Txs:        txs,
+		TxHash:     header.TxHash,
+		Root:       header.Root,
 	}
 }
 
@@ -631,6 +842,64 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	return websocket.JSON.Send(conn, report)
 }
 
+func (s *Service) reportPosHistory(conn *websocket.Conn, list []uint64) error {
+	// Figure out the indexes that need reporting
+	indexes := make([]uint64, 0, historyUpdateRange)
+	if len(list) > 0 {
+		// Specific indexes requested, send them back in particular
+		indexes = append(indexes, list...)
+	} else {
+		// No indexes requested, send back the top ones
+		var head int64
+		if s.eth != nil {
+			head = s.eth.BlockChain().CurrentHeader().Number.Int64()
+		} else {
+			head = s.les.BlockChain().CurrentHeader().Number.Int64()
+		}
+		start := head - historyUpdateRange + 1
+		if start < 0 {
+			start = 0
+		}
+		for i := uint64(start); i <= uint64(head); i++ {
+			indexes = append(indexes, i)
+		}
+	}
+	// Gather the batch of blocks to report
+	history := make([]*pos_blockStats, len(indexes))
+	for i, number := range indexes {
+		// Retrieve the next block if it's known to us
+		var block *types.Block
+		if s.eth != nil {
+			block = s.eth.BlockChain().GetBlockByNumber(number)
+		} else {
+			if header := s.les.BlockChain().GetHeaderByNumber(number); header != nil {
+				block = types.NewBlockWithHeader(header)
+			}
+		}
+		// If we do have the block, add to the history and continue
+		if block != nil {
+			history[len(history)-1-i] = s.assemblePosBlockStats(block)
+			continue
+		}
+		// Ran out of blocks, cut the report short and send
+		history = history[len(history)-i:]
+	}
+	// Assemble the history report and send it to the server
+	if len(history) > 0 {
+		log.Trace("Sending historical blocks to ethstats", "first", history[0].Number, "last", history[len(history)-1].Number)
+	} else {
+		log.Trace("No history to send to stats server")
+	}
+	stats := map[string]interface{}{
+		"id":      s.node,
+		"history": history,
+	}
+	report := map[string][]interface{}{
+		"emit": {"history", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
 // pendStats is the information to report about pending transactions.
 type pendStats struct {
 	Pending int `json:"pending"`
@@ -670,6 +939,31 @@ type nodeStats struct {
 	Peers    int  `json:"peers"`
 	GasPrice int  `json:"gasPrice"`
 	Uptime   int  `json:"uptime"`
+}
+
+type pos_nodeStats struct {
+	Active          bool   `json:"active"`
+	Syncing         bool   `json:"syncing"`
+	Mining          bool   `json:"mining"`
+	Peers           int    `json:"peers"`
+	GasPrice        int    `json:"gasPrice"`
+	Uptime          int    `json:"uptime"`
+	EpochId         uint64 `json:"epochId"`
+	SlotId          uint64 `json:"slotId"`
+	ChainQuality    string `json:"chainQuality"`
+	EpBlockCount    uint64 `json:"epBlockCount"`
+	CurRandom       string `json:"curRandom"`
+	NextRandom      string `json:"nextRandom"`
+	CurRBStage      uint64 `json:"curRbStage"`
+	ValidDKG1Cnt    uint64 `json:"validDkg1Cnt"`
+	ValidDKG2Cnt    uint64 `json:"validDkgx2Cnt"`
+	ValidSIGCnt     uint64 `json:"validSigCnt"`
+	CurSLStage      uint64 `json:"curSlStage"`
+	ValidSMA1Cnt    uint64 `json:"validSma1Cnt"`
+	ValidSMA2Cnt    uint64 `json:"validSma2Cnt"`
+	SelfMinedBlks   uint64 `json:"selfMinedBlks"`
+	SelfELActivity  uint64 `json:"selfElActivity"`
+	SelfRNPActivity uint64 `json:"selfRnpActivity"`
 }
 
 // reportPending retrieves various stats about the node at the networking and
@@ -717,28 +1011,93 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 }
 
 
-// posStats is the information to report about the pos.
-type posStats struct {
-	EpochId  uint64	`json:"epochId"`
-	SlotId	 uint64 `json:"slotId"`
-	RB   	 string `json:"rb"`
-	// todo : append more itam
-}
-
-
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
+	// Gather the syncing and mining infos from the local miner instance
+	var (
+		mining   bool
+		syncing  bool
+		gasprice int
+
+		epochId  uint64
+		slotId   uint64
+		chainQuality string
+		epBlockCount uint64
+		curRandom *big.Int
+		nextRandom *big.Int
+		curRbStage uint64
+		validDkg1Cnt uint64
+		validDkg2Cnt uint64
+		validSigCnt  uint64
+		curSlStage   uint64
+		validSma1Cnt uint64
+		validSma2Cnt uint64
+		selfMinedBlks uint64
+		selfElActivity uint64
+		selfRnpActivity uint64
+	)
+	if s.eth != nil {
+		mining = s.eth.Miner().Mining()
+
+		sync := s.eth.Downloader().Progress()
+		syncing = s.eth.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+
+		price, _ := s.eth.ApiBackend.SuggestPrice(context.Background())
+		gasprice = int(price.Uint64())
+
+		api := posapi.PosApi{}
+		epochId = api.GetEpochID()
+		slotId = api.GetSlotID()
+
+		//chainQuality
+		//epBlockCount
+		//curRandom
+		//nextRandom
+		//curRbStage
+		//validDkg1Cnt
+		//validDkg2Cnt
+		//validSigCnt
+		//curSlStage
+		//validSma1Cnt
+		//validSma2Cnt
+		//selfMinedBlks
+		//selfElActivity
+		//selfRnpActivity
+	} else {
+		sync := s.les.Downloader().Progress()
+		syncing = s.les.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+	}
 	// Assemble the node stats and send it to the server
-	log.Trace("Sending pos states to ethstats")
+	log.Trace("Sending node details to ethstats")
 
 	stats := map[string]interface{}{
 		"id": s.node,
-		"posStats": &posStats{
-			// todo : init pos states
+		"stats": &pos_nodeStats{
+			Active:   true,
+			Mining:   mining,
+			Peers:    s.server.PeerCount(),
+			GasPrice: gasprice,
+			Syncing:  syncing,
+			Uptime:   100,
+			EpochId:  epochId,
+			SlotId:   slotId,
+			ChainQuality: chainQuality,
+			EpBlockCount: epBlockCount,
+			CurRandom: curRandom.String(),
+			NextRandom: nextRandom.String(),
+			CurRBStage: curRbStage,
+			ValidDKG1Cnt: validDkg1Cnt,
+			ValidDKG2Cnt: validDkg2Cnt,
+			ValidSIGCnt: validSigCnt,
+			CurSLStage: curSlStage,
+			ValidSMA1Cnt: validSma1Cnt,
+			ValidSMA2Cnt: validSma2Cnt,
+			SelfMinedBlks: selfMinedBlks,
+			SelfELActivity: selfElActivity,
+			SelfRNPActivity: selfRnpActivity,
 		},
 	}
-
 	report := map[string][]interface{}{
-		"emit": {"posStats", stats},
+		"emit": {"pos-stats", stats},
 	}
 	return websocket.JSON.Send(conn, report)
 }

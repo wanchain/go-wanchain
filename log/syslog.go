@@ -5,11 +5,17 @@ package log
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/event"
 	"log/syslog"
 )
 
 type SyslogFun func(m string) error
 type LocallogFun func(msg string, ctx ...interface{})
+
+type LogInfo struct {
+	Lvl syslog.Priority	`json:"level"`
+	Msg string			`json:"msg"`
+}
 
 type SyslogSetting struct {
 	net string
@@ -23,6 +29,12 @@ type Syslogger struct {
 	threshold syslog.Priority
 	setting *SyslogSetting
 	dialTimes uint64
+
+	alarmFeed    event.Feed
+	scope        event.SubscriptionScope
+
+	warnCount	uint64
+	wrongCount	uint64
 }
 
 var (
@@ -86,6 +98,8 @@ func dialSyslog() error {
 }
 
 func CloseSyslog() {
+	// close all event subscribe
+	syslogger.scope.Close()
 	if syslogger.writer == nil {
 		return
 	}
@@ -107,23 +121,32 @@ func SyslogNotice(a ...interface{}) {
 }
 
 func SyslogWarning(a ...interface{}) {
+	syslogger.warnCount++
 	writeSyslog(syslog.LOG_WARNING, a...)
 }
 
 func SyslogErr(a ...interface{}) {
+	syslogger.wrongCount++
 	writeSyslog(syslog.LOG_ERR, a...)
 }
 
 func SyslogCrit(a ...interface{}) {
+	syslogger.wrongCount++
 	writeSyslog(syslog.LOG_CRIT, a...)
 }
 
 func SyslogAlert(a ...interface{}) {
+	syslogger.wrongCount++
 	writeSyslog(syslog.LOG_ALERT, a...)
 }
 
 func SyslogEmerg(a ...interface{}) {
+	syslogger.wrongCount++
 	writeSyslog(syslog.LOG_EMERG, a...)
+}
+
+func GetWarnAndWrongLogCount() (uint64, uint64) {
+	return syslogger.warnCount, syslogger.wrongCount
 }
 
 
@@ -192,8 +215,11 @@ func writeSyslog(level syslog.Priority, a ...interface{}) {
 	}
 
 	logStr := fmt.Sprint(p...)
-	lfunc(logStr)
+	if level <= syslog.LOG_CRIT {
+		syslogger.alarmFeed.Send(LogInfo{level, logStr})
+	}
 
+	lfunc(logStr)
 	if level <= syslogger.threshold && sfunc != nil {
 		if err := sfunc(logStr); err != nil {
 			Error("send syslog fail", "err", err)
@@ -201,3 +227,7 @@ func writeSyslog(level syslog.Priority, a ...interface{}) {
 	}
 }
 
+
+func SubscribeAlarm(ch chan<- LogInfo) event.Subscription {
+	return syslogger.scope.Track(syslogger.alarmFeed.Subscribe(ch))
+}
