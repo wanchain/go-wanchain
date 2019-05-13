@@ -411,7 +411,7 @@ func GetSigShareId() []byte {
 
 // get key hash
 func GetRBKeyHash(kind []byte, epochId uint64, proposerId uint32) *common.Hash {
-	keyBytes := make([]byte, 12+len(kind))
+	keyBytes := make([]byte, 16)
 	copy(keyBytes, kind)
 	copy(keyBytes[4:], UIntToByteSlice(epochId))
 	copy(keyBytes[12:], UInt32ToByteSlice(proposerId))
