@@ -398,17 +398,17 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 }
 
 func (rb *RandomBeacon) doDKG1s() error {
-	for i, id := range rb.myPropserIds {
+	for i, ppId := range rb.myPropserIds {
 		if rb.taskTags[i] {
 			continue
 		}
 
-		if rb.polys[uint32(i)].poly != nil && rb.polys[uint32(i)].s != nil {
+		if rb.polys[ppId].poly != nil && rb.polys[ppId].s != nil {
 			rb.taskTags[i] = true
 			continue
 		}
 
-		err := rb.doDKG1(id)
+		err := rb.doDKG1(ppId)
 		if err == nil {
 			rb.taskTags[i] = true
 			rb.storePolys()
@@ -488,12 +488,12 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 
 func (rb *RandomBeacon) doDKG2s() error {
 	// random proposer group
-	for i, id := range rb.myPropserIds {
+	for i, ppId := range rb.myPropserIds {
 		if rb.taskTags[i] {
 			continue
 		}
 
-		err := rb.doDKG2(id)
+		err := rb.doDKG2(ppId)
 		if err == nil || err == errNoDKG1Data {
 			rb.taskTags[i] = true
 		} else {
