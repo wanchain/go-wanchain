@@ -289,7 +289,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 			return true
 		}
 
-		infors, pb, err := epochLeader.CalEpochProbabilityStaker(&staker)
+		infors, pb, err := epochLeader.CalEpochProbabilityStaker(&staker, epochID)
 		if err != nil || pb == nil {
 			// this validator has no enough
 			return true
