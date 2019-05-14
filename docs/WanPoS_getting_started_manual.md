@@ -14,23 +14,23 @@ You can follow the getting started manual to experience the POC version of WanPO
 - [2. Introduction](#2-introduction)
 - [3. Contents](#3-contents)
 - [4. Quick start from docker](#4-quick-start-from-docker)
-  - [4.1. Step by step to be a miner](#41-step-by-step-to-be-a-miner)
-  - [4.2. Step by step to delegate wan coins](#42-step-by-step-to-delegate-wan-coins)
+    - [4.1. Step by step to be a miner](#41-step-by-step-to-be-a-miner)
+    - [4.2. Step by step to delegate wan coins](#42-step-by-step-to-delegate-wan-coins)
 - [5. Download and Run](#5-download-and-run)
-  - [5.1. Run from Docker](#51-run-from-docker)
-  - [5.2. Download](#52-download)
-    - [5.2.1. Download BIN](#521-download-bin)
-    - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
-  - [5.3. Run](#53-run)
-    - [5.3.1. Run as a synchronize node](#531-run-as-a-synchronize-node)
-    - [5.3.2. Run as a miner node](#532-run-as-a-miner-node)
+    - [5.1. Run from Docker](#51-run-from-docker)
+    - [5.2. Download](#52-download)
+        - [5.2.1. Download BIN](#521-download-bin)
+        - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
+    - [5.3. Run](#53-run)
+        - [5.3.1. Run as a synchronize node](#531-run-as-a-synchronize-node)
+        - [5.3.2. Run as a miner node](#532-run-as-a-miner-node)
 - [6. Operations](#6-operations)
-  - [6.1. PoS account creation](#61-pos-account-creation)
-  - [6.2. Check balance](#62-check-balance)
-  - [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos)
-  - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)
-  - [6.5. Check Incentive](#65-check-incentive)
-  - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)
+    - [6.1. PoS account creation](#61-pos-account-creation)
+    - [6.2. Check balance](#62-check-balance)
+    - [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos)
+    - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)
+    - [6.5. Check Incentive](#65-check-incentive)
+    - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)
 - [7. Test result of incentive](#7-test-result-of-incentive)
 
 <!-- /TOC -->
@@ -224,10 +224,10 @@ Step 4 create a script file in path: `/home/YourUserName/.wanchain/sendDelegate.
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
+// tranValue is the value you want to stake in minValue is 100
 var tranValue = "100000"
 
-// rewardAddr is the reward receive accounts which create nearly.
+// delegateAddr is the validator address
 var delegateAddr = "DelegateAddress"
 
 // baseAddr is the fund source account.

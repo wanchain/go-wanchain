@@ -241,10 +241,10 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
+// tranValue is the value you want to stake in minValue is 100
 var tranValue = "100000"
 
-// rewardAddr is the reward receive accounts which create nearly.
+// delegateAddr is the validator address.
 var delegateAddr = "DelegateAddress"
 
 // baseAddr is the fund source account.
