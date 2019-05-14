@@ -485,7 +485,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
 	for i := 0; i < len(staker.Clients); i++ {
 		if staker.Clients[i].QuitEpoch == 0 ||
-			(epochID >= staker.StakingEpoch && epochID+vm.QuitDelay < staker.Clients[i].QuitEpoch && staker.Clients[i].QuitEpoch != 0) {
+			(epochID >= staker.StakingEpoch && epochID+vm.QuitDelay < staker.Clients[i].QuitEpoch) {
 			c := staker.Clients[i]
 			info := vm.ClientProbability{}
 			info.Addr = c.Address
