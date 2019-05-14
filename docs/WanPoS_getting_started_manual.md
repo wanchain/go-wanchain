@@ -50,9 +50,9 @@ $ exit
 
 Step 2 start gwan with docker and create account:
 ```
-$ docker pull molin0000/wanpos_poc_node
+$ docker pull wanchain/wanpos
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 
 YourContainerID
 
@@ -153,7 +153,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -179,7 +179,7 @@ $ exit
 
 Step 2 start gwan with docker and create account and select delegate:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 
 YourContainerID
 
@@ -283,15 +283,15 @@ You can run a node as a sync node as below:
 
 ```
 //On MacOS:
-$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 
 //On Ubuntu
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 ```
 
 If you want to be a miner, you should create a account and start like this:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
 ```
 
 The `YourPasswordTxtFile` is a txt file with your miner account password in it in docker.
@@ -299,7 +299,7 @@ The `YourPasswordTxtFile` is a txt file with your miner account password in it i
 Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt` , you should start docker like this:
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 ```
 
 
