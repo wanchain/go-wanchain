@@ -989,3 +989,52 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 	log.Debug("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
 	return big.NewInt(0).SetBytes(random), nil
 }
+
+
+func GetValidDkg1Cnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetCji(db, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func GetValidDkg2Cnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetEncryptShare(db, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func GetValidSigCnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetSig(db, epochId, uint32(i))
+		if err == nil && c != nil {
+			count++
+		}
+	}
+
+	return count
+}

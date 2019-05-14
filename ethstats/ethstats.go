@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posapi"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"net"
 	"regexp"
@@ -1078,9 +1077,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		icurRbStage, _, _ := vm.GetRBStage(slotId)
 		curRbStage = uint64(icurRbStage)
 
-		validDkg1Cnt = s.getRBValidDkg1Cnt(epochId)
-		validDkg2Cnt = s.getRBValidDkg2Cnt(epochId)
-		validSigCnt = s.getRBValidSigCnt(epochId)
+		validDkg1Cnt, validDkg2Cnt, validSigCnt = api.GetValidRBCnt(epochId)
 		curSlStage = api.GetSlStage(slotId)
 		validSma1Cnt, validSma2Cnt = api.GetValidSMACnt(epochId)
 		//selfMinedBlks
@@ -1126,65 +1123,3 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 	return websocket.JSON.Send(conn, report)
 }
 
-func (s *Service) getRBValidDkg1Cnt(epochId uint64) uint64 {
-	if s.eth == nil {
-		return 0
-	}
-
-	stateDb, err := s.eth.BlockChain().State()
-	if err != nil {
-		return 0
-	}
-
-	count := uint64(0)
-	for i := 0; i < posconfig.RandomProperCount; i++ {
-		c, err := vm.GetCji(stateDb, epochId, uint32(i))
-		if err == nil && len(c) != 0 {
-			count++
-		}
-	}
-
-	return count
-}
-
-func (s *Service) getRBValidDkg2Cnt(epochId uint64) uint64 {
-	if s.eth == nil {
-		return 0
-	}
-
-	stateDb, err := s.eth.BlockChain().State()
-	if err != nil {
-		return 0
-	}
-
-	count := uint64(0)
-	for i := 0; i < posconfig.RandomProperCount; i++ {
-		c, err := vm.GetEncryptShare(stateDb, epochId, uint32(i))
-		if err == nil && len(c) != 0 {
-			count++
-		}
-	}
-
-	return count
-}
-
-func (s *Service) getRBValidSigCnt(epochId uint64) uint64 {
-	if s.eth == nil {
-		return 0
-	}
-
-	stateDb, err := s.eth.BlockChain().State()
-	if err != nil {
-		return 0
-	}
-
-	count := uint64(0)
-	for i := 0; i < posconfig.RandomProperCount; i++ {
-		c, err := vm.GetSig(stateDb, epochId, uint32(i))
-		if err == nil && c != nil {
-			count++
-		}
-	}
-
-	return count
-}
