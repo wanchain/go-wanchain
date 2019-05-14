@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core/types"
 	"sort"
 	"time"
 
@@ -24,7 +25,6 @@ import (
 
 	"encoding/binary"
 
-	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/internal/ethapi"
@@ -35,12 +35,36 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
+type PosChainReader interface {
+	// Config retrieves the blockchain's chain configuration.
+	Config() *params.ChainConfig
+
+	// CurrentHeader retrieves the current header from the local chain.
+	CurrentHeader() *types.Header
+
+	// GetHeader retrieves a block header from the database by hash and number.
+	GetHeader(hash common.Hash, number uint64) *types.Header
+
+	// GetHeaderByNumber retrieves a block header from the database by number.
+	GetHeaderByNumber(number uint64) *types.Header
+
+	// GetHeaderByHash retrieves a block header from the database by its hash.
+	GetHeaderByHash(hash common.Hash) *types.Header
+
+	// GetBlock retrieves a block from the database by hash and number.
+	GetBlock(hash common.Hash, number uint64) *types.Block
+
+	//get chain quality,return quality * 1000
+	ChainQuality(blockNr int64) (uint64,error)
+}
+
+
 type PosApi struct {
-	chain   consensus.ChainReader
+	chain   PosChainReader
 	backend ethapi.Backend
 }
 
-func APIs(chain consensus.ChainReader, backend ethapi.Backend) []rpc.API {
+func APIs(chain PosChainReader, backend ethapi.Backend) []rpc.API {
 	return []rpc.API{{
 		Namespace: "pos",
 		Version:   "1.0",
@@ -143,6 +167,10 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	}
 
 	return r, nil
+}
+
+func (a PosApi) GetChainQuality(blkNr int64) (uint64,error) {
+	return a.chain.ChainQuality(blkNr)
 }
 
 func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {

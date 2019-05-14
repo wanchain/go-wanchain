@@ -137,6 +137,8 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	return nil
 }
+
+
 func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64) error {
 
 	log.Debug("select randoms", "epochId", epochId, "r", common.ToHex(r))

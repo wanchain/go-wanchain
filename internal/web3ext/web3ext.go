@@ -167,10 +167,16 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'getChainQuality',
+			call: 'pos_getChainQuality',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getReorgState',
 			call: 'pos_getReorgState',
 			params: 1
 		}),
+
 		new web3._extend.Method({
 			name: 'getEpochStakerInfo',
 			call: 'pos_getEpochStakerInfo',

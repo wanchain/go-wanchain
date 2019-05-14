@@ -59,6 +59,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	return epochSelector
 }
+
 func posInitMiner(s Backend, key *keystore.Key) {
 	log.Debug("posInitMiner is running")
 

@@ -5,6 +5,7 @@ API module supply the interface about pos
 *  getEpochLeadersByEpochID,
 *  getEpochStakerInfo,
 *  getRandomProposersByEpochID,
+*  GetChainQuality,
 *  getReorgState,
 *  getRbSignatureCount,
 *  getSlotCreateStatusByEpochID,

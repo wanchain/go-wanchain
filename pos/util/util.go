@@ -116,6 +116,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 
 	SetEpochBlock(epochID, blockNumber, hash)
 }
+
 func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lbe.Lock()
 	lastBlockEpoch[epochID] = blockNumber

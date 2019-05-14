@@ -857,6 +857,26 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	return true
 }
 
+func (bc *BlockChain) ChainQuality(blockNr int64) (uint64,error) {
+	block := bc.CurrentBlock()
+
+	if blockNr >= 0 {
+		if uint64(blockNr) > block.NumberU64() {
+			return 0,errors.New("wrong input for block number")
+		} else {
+			block = bc.GetBlockByNumber(uint64(blockNr))
+		}
+	}
+
+
+	blocksIn2K := bc.getBlocksCountIn2KSlots(block)
+
+	quality := blocksIn2K*1000/ posconfig.SlotSecurityParam
+
+	return uint64(quality),nil
+
+}
+
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
