@@ -460,19 +460,21 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	totalAmount := big.NewInt(0).Set(staker.Amount)
 	for i:=0; i<len(staker.Partners); i++ {
-		totalAmount.Add(totalAmount, staker.Partners[i].Amount)
+		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch + staker.Partners[i].LockEpochs -1 { // the last epoch only miner, don't send tx.
+			totalAmount.Add(totalAmount, staker.Partners[i].Amount)
+		}
 	}
 	if staker.FeeRate != vm.PSNodeleFeeRate &&   totalAmount.Cmp(vm.MinValidatorStake) < 0 {
 		return nil, nil, errors.New("Validator don't have enough amount.")
 	}
 
 	// check validator is exiting.
-	if staker.LockEpochs!= 0 && epochID+vm.QuitDelay-vm.JoinDelay >= staker.StakingEpoch+staker.LockEpochs {
+	if staker.LockEpochs!= 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
 		return nil, nil, errors.New("Validator is exiting")
 	}
 	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
 	for i := 0; i < len(staker.Partners); i++ {
-		if epochID >= staker.Partners[i].StakingEpoch && epochID+vm.QuitDelay-vm.JoinDelay < staker.Partners[i].StakingEpoch + staker.Partners[i].LockEpochs {
+		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch + staker.Partners[i].LockEpochs -1{// the last epoch only miner, don't send tx.
 			totalPartnerProbability.Add(totalPartnerProbability, staker.Partners[i].StakeAmount)
 		}
 	}
@@ -493,13 +495,14 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 		}
 	}
 	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
-	probability5 := big.NewInt(0).Set(totalPartnerProbability)
-	probability5.Mul(probability5, big.NewInt(5))
-	if totalProbability.Cmp(probability5)>0 {
-		totalProbability = probability5
+	probability6 := big.NewInt(0).Set(totalPartnerProbability)
+	probability6.Mul(probability6, big.NewInt(6))
+	if totalProbability.Cmp(probability6)>0 {
+		totalProbability = probability6
 	}
 	return infors,  totalProbability, nil
 }
+// incentive  use it.
 func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ( []vm.ClientProbability,  uint64,  *big.Int,  error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
@@ -592,7 +595,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 
 		// check the renew
-		if epochID+vm.JoinDelay >= staker.StakingEpoch+staker.LockEpochs {
+		if epochID+vm.QuitDelay >= staker.StakingEpoch+staker.LockEpochs {
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				//staker.FeeRate = staker.NextFeeRate
@@ -618,7 +621,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			stakerBytes, err := rlp.EncodeToBytes(staker)
 			if err != nil {
 				// this will rollback. next slot will retry.
-				log.Error("StakeOutRun Failed: ", "err", err)
+				log.SyslogErr("StakeOutRun Failed: ", "err", err)
 				return false
 			}
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
