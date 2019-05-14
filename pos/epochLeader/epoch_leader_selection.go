@@ -461,7 +461,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	totalAmount := big.NewInt(0).Set(staker.Amount)
 	for i := 0; i < len(staker.Partners); i++ {
-		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
+		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
 			totalAmount.Add(totalAmount, staker.Partners[i].Amount)
 		}
 	}
@@ -475,7 +475,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	}
 	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
 	for i := 0; i < len(staker.Partners); i++ {
-		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
+		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
 			totalPartnerProbability.Add(totalPartnerProbability, staker.Partners[i].StakeAmount)
 		}
 	}
@@ -487,7 +487,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
 	for i := 0; i < len(staker.Clients); i++ {
 		if staker.Clients[i].QuitEpoch == 0 ||
-			(epochID >= staker.StakingEpoch && epochID+vm.QuitDelay < staker.Clients[i].QuitEpoch) {
+			epochID < staker.Clients[i].QuitEpoch-1 {
 			c := staker.Clients[i]
 			info := vm.ClientProbability{}
 			info.Addr = c.Address
