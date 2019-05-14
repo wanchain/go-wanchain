@@ -85,6 +85,7 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 
 	return e.GetEpochLastBlkNumber(targetEpochId)
 }
+
 /*
 NOTE: if the targetEpochId is future, will return current blockNumber.
 */
@@ -457,22 +458,22 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	totalAmount := big.NewInt(0).Set(staker.Amount)
-	for i:=0; i<len(staker.Partners); i++ {
-		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch + staker.Partners[i].LockEpochs -1 { // the last epoch only miner, don't send tx.
+	for i := 0; i < len(staker.Partners); i++ {
+		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
 			totalAmount.Add(totalAmount, staker.Partners[i].Amount)
 		}
 	}
-	if staker.FeeRate != vm.PSNodeleFeeRate &&   totalAmount.Cmp(vm.MinValidatorStake) < 0 {
+	if staker.FeeRate != vm.PSNodeleFeeRate && totalAmount.Cmp(vm.MinValidatorStake) < 0 {
 		return nil, nil, errors.New("Validator don't have enough amount.")
 	}
 
 	// check validator is exiting.
-	if staker.LockEpochs!= 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
+	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
 		return nil, nil, errors.New("Validator is exiting")
 	}
 	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
 	for i := 0; i < len(staker.Partners); i++ {
-		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch + staker.Partners[i].LockEpochs -1{// the last epoch only miner, don't send tx.
+		if epochID >= staker.Partners[i].StakingEpoch && epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
 			totalPartnerProbability.Add(totalPartnerProbability, staker.Partners[i].StakeAmount)
 		}
 	}
@@ -483,7 +484,8 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 
 	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
 	for i := 0; i < len(staker.Clients); i++ {
-		if epochID >= staker.StakingEpoch && epochID+vm.QuitDelay < staker.Clients[i].QuitEpoch && staker.Clients[i].QuitEpoch != 0 {
+		if staker.Clients[i].QuitEpoch == 0 ||
+			(epochID >= staker.StakingEpoch && epochID+vm.QuitDelay < staker.Clients[i].QuitEpoch && staker.Clients[i].QuitEpoch != 0) {
 			c := staker.Clients[i]
 			info := vm.ClientProbability{}
 			info.Addr = c.Address
@@ -495,13 +497,14 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
 	probability6 := big.NewInt(0).Set(totalPartnerProbability)
 	probability6.Mul(probability6, big.NewInt(6))
-	if totalProbability.Cmp(probability6)>0 {
+	if totalProbability.Cmp(probability6) > 0 {
 		totalProbability = probability6
 	}
-	return infors,  totalProbability, nil
+	return infors, totalProbability, nil
 }
+
 // incentive  use it.
-func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ( []vm.ClientProbability,  uint64,  *big.Int,  error) {
+func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
@@ -522,7 +525,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ( []v
 
 	infors, totalProbability, err := CalEpochProbabilityStaker(&staker, epochId)
 	if err != nil {
-		return nil,0, nil,  err
+		return nil, 0, nil, err
 	}
 	return infors, staker.FeeRate, totalProbability, nil
 }
@@ -562,13 +565,12 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			staker.Clients = newClients
 		}
 
-
 		// check if partner want to quit.
 		newPartners := make([]vm.PartnerInfo, 0)
 		partnerchanged := false
 		for j := 0; j < len(staker.Partners); j++ {
 			// edit the validator Amount
-			if epochID >= staker.Partners[j].StakingEpoch + staker.Partners[j].LockEpochs {
+			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
 				partnerchanged = true
 			} else {
