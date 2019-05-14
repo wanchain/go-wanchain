@@ -500,3 +500,61 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 
 	return time
 }
+
+func (a PosApi) GetEpochBlkCnt(epochId uint64) uint64 {
+	blkCnt := uint64(0)
+	bgBlkNum := uint64(0)
+
+	// todo : add pow switch to pos checking
+	header := a.chain.CurrentHeader()
+	if header != nil {
+		for {
+			epid := a.GetEpochIDByTime(header.Time.Uint64())
+			if epid <= epochId {
+				bgBlkNum = header.Number.Uint64()
+				break
+			}
+		}
+	}
+
+	if bgBlkNum == 0 {
+		return 0
+	}
+
+	for {
+		header := a.chain.GetHeaderByNumber(bgBlkNum)
+		if header == nil {
+			break
+		}
+
+		epid := a.GetEpochIDByTime(header.Time.Uint64())
+		if epid < epochId {
+			break
+		}
+
+		blkCnt++
+		bgBlkNum--
+	}
+
+	return blkCnt
+}
+
+func (a PosApi) GetValidSMACnt(epochId uint64) (uint64, uint64) {
+	sma1, sma2 := uint64(0), uint64(0)
+
+	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(-1))
+	if err != nil {
+		return sma1, sma2
+	}
+
+	sma1 = vm.GetValidSMA1Cnt(state, epochId)
+	sma2 = vm.GetValidSMA2Cnt(state, epochId)
+
+	return sma1, sma2
+}
+
+func (a PosApi) GetSlStage(slotId uint64) uint64 {
+	return vm.GetSlStage(slotId)
+}
+
+

@@ -718,3 +718,51 @@ func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes
 	}
 	return nil
 }
+
+func GetValidSMA1Cnt(db StateDB, epochId uint64) uint64 {
+	return getValidIndexCnt(db, epochId, SlotLeaderStag1Indexes)
+}
+
+func GetValidSMA2Cnt(db StateDB, epochId uint64) uint64 {
+	return getValidIndexCnt(db, epochId, SlotLeaderStag2Indexes)
+}
+
+func getValidIndexCnt(db StateDB, epochId uint64, indexKey string) uint64 {
+	var sendtransGet [posconfig.EpochLeaderCount]bool
+	epochIDBuf := convert.Uint64ToBytes(epochId)
+
+	key := getSlotLeaderStageIndexesKeyHash(epochIDBuf, indexKey)
+	bytes := db.GetStateByteArray(slotLeaderPrecompileAddr, key)
+	if len(bytes) == 0 {
+		return 0
+	}
+
+	err := rlp.DecodeBytes(bytes, &sendtransGet)
+	if err != nil {
+		log.SyslogErr("GetValidSMA1Cnt, rlp decode fail", "err", err.Error())
+		return 0
+	}
+
+	cnt := uint64(0)
+	for i := range sendtransGet {
+		if sendtransGet[i] {
+			cnt++
+		}
+	}
+
+	return cnt
+}
+
+func GetSlStage(slotId uint64) uint64 {
+	if slotId <= posconfig.Sma1End {
+		return 1
+	} else if slotId < posconfig.Sma2Start {
+		return 2
+	} else if slotId <= posconfig.Sma2End {
+		return 3
+	} else if slotId < posconfig.Sma3Start {
+		return 4
+	} else {
+		return 5
+	}
+}

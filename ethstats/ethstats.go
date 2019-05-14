@@ -22,7 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posapi"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"net"
 	"regexp"
@@ -170,9 +172,9 @@ func (s *Service) loop() {
 
 	// Start a goroutine that exhausts the subsciptions to avoid events piling up
 	var (
-		quitCh = make(chan struct{})
-		headCh = make(chan *types.Block, 1)
-		txCh   = make(chan struct{}, 1)
+		quitCh  = make(chan struct{})
+		headCh  = make(chan *types.Block, 1)
+		txCh    = make(chan struct{}, 1)
 		alarmCh = make(chan log.LogInfo, 10)
 		reorgCh = make(chan core.ReorgEvent, 10)
 	)
@@ -202,14 +204,14 @@ func (s *Service) loop() {
 				}
 
 			// Notify of new alarm
-			case alarm := <- alarmEventCh:
+			case alarm := <-alarmEventCh:
 				select {
 				case alarmCh <- alarm:
 				default:
 				}
 
 			// Notify of new reorg
-			case len := <- reorgEventCh:
+			case len := <-reorgEventCh:
 				select {
 				case reorgCh <- len:
 				default:
@@ -314,11 +316,11 @@ func (s *Service) loop() {
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Transaction stats report failed", "err", err)
 				}
-			case alarm := <- alarmCh:
+			case alarm := <-alarmCh:
 				if err = s.reportPosAlarm(conn, &alarm); err != nil {
 					log.Warn("pos alarm report failed", "err", err)
 				}
-			case reorg := <- reorgCh:
+			case reorg := <-reorgCh:
 				if !s.isPos() {
 					continue
 				}
@@ -337,7 +339,7 @@ func (s *Service) loop() {
 func (s *Service) reportPosReorg(conn *websocket.Conn, reorg *pos_reorg) error {
 	log.Trace("Sending reorg statistics to ethstats", "len", reorg.Len)
 	stats := map[string]interface{}{
-		"id":    s.node,
+		"id":        s.node,
 		"pos-reorg": reorg,
 	}
 	report := map[string][]interface{}{
@@ -352,7 +354,7 @@ func (s *Service) reportPosLog(conn *websocket.Conn) error {
 	log.Trace("Sending log statistics to ethstats", "warn", warn, "wrong", wrong)
 
 	stats := map[string]interface{}{
-		"id":    s.node,
+		"id":      s.node,
 		"pos-log": logCount,
 	}
 	report := map[string][]interface{}{
@@ -365,7 +367,7 @@ func (s *Service) reportPosAlarm(conn *websocket.Conn, alarm *log.LogInfo) error
 	log.Trace("Sending alarm to ethstats", "level", alarm.Lvl, "msg", alarm.Msg)
 
 	stats := map[string]interface{}{
-		"id":    s.node,
+		"id":        s.node,
 		"pos-alarm": *alarm,
 	}
 	report := map[string][]interface{}{
@@ -684,7 +686,6 @@ func (s *Service) reportPosBlock(conn *websocket.Conn, block *types.Block) error
 	}
 	return websocket.JSON.Send(conn, report)
 }
-
 
 // assembleBlockStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
@@ -1010,29 +1011,30 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	return websocket.JSON.Send(conn, report)
 }
 
-
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
 	// Gather the syncing and mining infos from the local miner instance
 	var (
+		err      error
 		mining   bool
 		syncing  bool
 		gasprice int
 
-		epochId  uint64
-		slotId   uint64
-		chainQuality string
-		epBlockCount uint64
-		curRandom *big.Int
-		nextRandom *big.Int
-		curRbStage uint64
-		validDkg1Cnt uint64
-		validDkg2Cnt uint64
-		validSigCnt  uint64
-		curSlStage   uint64
-		validSma1Cnt uint64
-		validSma2Cnt uint64
-		selfMinedBlks uint64
-		selfElActivity uint64
+		epochId         uint64
+		slotId          uint64
+		iChainQuality   uint64
+		chainQuality    string
+		epBlockCount    uint64
+		curRandom       *big.Int
+		nextRandom      *big.Int
+		curRbStage      uint64
+		validDkg1Cnt    uint64
+		validDkg2Cnt    uint64
+		validSigCnt     uint64
+		curSlStage      uint64
+		validSma1Cnt    uint64
+		validSma2Cnt    uint64
+		selfMinedBlks   uint64
+		selfElActivity  uint64
 		selfRnpActivity uint64
 	)
 	if s.eth != nil {
@@ -1044,21 +1046,43 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		price, _ := s.eth.ApiBackend.SuggestPrice(context.Background())
 		gasprice = int(price.Uint64())
 
-		api := posapi.PosApi{}
+		apis := posapi.APIs(s.eth.BlockChain(), s.eth.ApiBackend)
+		api, ok := apis[0].Service.(posapi.PosApi)
+		if !ok {
+			log.Error("create posapi instance fail")
+		}
+
 		epochId = api.GetEpochID()
 		slotId = api.GetSlotID()
 
-		//chainQuality
-		//epBlockCount
-		//curRandom
-		//nextRandom
-		//curRbStage
-		//validDkg1Cnt
-		//validDkg2Cnt
-		//validSigCnt
-		//curSlStage
-		//validSma1Cnt
-		//validSma2Cnt
+		blockNum := s.eth.BlockChain().CurrentHeader().Number.Uint64()
+		iChainQuality, err = api.GetChainQuality(int64(blockNum))
+		if err != nil {
+			log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
+		} else {
+			chainQuality = fmt.Sprint("%.1f", float64(iChainQuality)/1000.0)
+		}
+
+		epBlockCount = api.GetEpochBlkCnt(epochId)
+
+		curRandom, err = api.GetRandom(epochId, -1)
+		if err != nil {
+			curRandom = big.NewInt(0)
+		}
+
+		nextRandom, err = api.GetRandom(epochId+1, -1)
+		if err != nil {
+			nextRandom = big.NewInt(0)
+		}
+
+		icurRbStage, _, _ := vm.GetRBStage(slotId)
+		curRbStage = uint64(icurRbStage)
+
+		validDkg1Cnt = s.getRBValidDkg1Cnt(epochId)
+		validDkg2Cnt = s.getRBValidDkg2Cnt(epochId)
+		validSigCnt = s.getRBValidSigCnt(epochId)
+		curSlStage = api.GetSlStage(slotId)
+		validSma1Cnt, validSma2Cnt = api.GetValidSMACnt(epochId)
 		//selfMinedBlks
 		//selfElActivity
 		//selfRnpActivity
@@ -1072,27 +1096,27 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 	stats := map[string]interface{}{
 		"id": s.node,
 		"stats": &pos_nodeStats{
-			Active:   true,
-			Mining:   mining,
-			Peers:    s.server.PeerCount(),
-			GasPrice: gasprice,
-			Syncing:  syncing,
-			Uptime:   100,
-			EpochId:  epochId,
-			SlotId:   slotId,
-			ChainQuality: chainQuality,
-			EpBlockCount: epBlockCount,
-			CurRandom: curRandom.String(),
-			NextRandom: nextRandom.String(),
-			CurRBStage: curRbStage,
-			ValidDKG1Cnt: validDkg1Cnt,
-			ValidDKG2Cnt: validDkg2Cnt,
-			ValidSIGCnt: validSigCnt,
-			CurSLStage: curSlStage,
-			ValidSMA1Cnt: validSma1Cnt,
-			ValidSMA2Cnt: validSma2Cnt,
-			SelfMinedBlks: selfMinedBlks,
-			SelfELActivity: selfElActivity,
+			Active:          true,
+			Mining:          mining,
+			Peers:           s.server.PeerCount(),
+			GasPrice:        gasprice,
+			Syncing:         syncing,
+			Uptime:          100,
+			EpochId:         epochId,
+			SlotId:          slotId,
+			ChainQuality:    chainQuality,
+			EpBlockCount:    epBlockCount,
+			CurRandom:       curRandom.String(),
+			NextRandom:      nextRandom.String(),
+			CurRBStage:      curRbStage,
+			ValidDKG1Cnt:    validDkg1Cnt,
+			ValidDKG2Cnt:    validDkg2Cnt,
+			ValidSIGCnt:     validSigCnt,
+			CurSLStage:      curSlStage,
+			ValidSMA1Cnt:    validSma1Cnt,
+			ValidSMA2Cnt:    validSma2Cnt,
+			SelfMinedBlks:   selfMinedBlks,
+			SelfELActivity:  selfElActivity,
 			SelfRNPActivity: selfRnpActivity,
 		},
 	}
@@ -1100,4 +1124,67 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		"emit": {"pos-stats", stats},
 	}
 	return websocket.JSON.Send(conn, report)
+}
+
+func (s *Service) getRBValidDkg1Cnt(epochId uint64) uint64 {
+	if s.eth == nil {
+		return 0
+	}
+
+	stateDb, err := s.eth.BlockChain().State()
+	if err != nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := vm.GetCji(stateDb, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func (s *Service) getRBValidDkg2Cnt(epochId uint64) uint64 {
+	if s.eth == nil {
+		return 0
+	}
+
+	stateDb, err := s.eth.BlockChain().State()
+	if err != nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := vm.GetEncryptShare(stateDb, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func (s *Service) getRBValidSigCnt(epochId uint64) uint64 {
+	if s.eth == nil {
+		return 0
+	}
+
+	stateDb, err := s.eth.BlockChain().State()
+	if err != nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := vm.GetSig(stateDb, epochId, uint32(i))
+		if err == nil && c != nil {
+			count++
+		}
+	}
+
+	return count
 }
