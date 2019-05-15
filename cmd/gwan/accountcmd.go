@@ -17,7 +17,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
@@ -400,14 +399,14 @@ func showPublicKey(ctx *cli.Context) error {
 				utils.Fatalf("Error failed to load keyfile ")
 			}
 			if key.PrivateKey != nil {
-				fmt.Println("key1:" + hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+				fmt.Println("key1:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
 			if key.PrivateKey2 != nil {
-				fmt.Println("key2:" + hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
-				fmt.Println("waddress:" + hex.EncodeToString(key.WAddress[:]))
+				fmt.Println("key2:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+				fmt.Println("waddress:" + common.ToHex(key.WAddress[:]))
 			}
 			if key.PrivateKey3 != nil {
-				fmt.Println("key3:" + hex.EncodeToString(key.PrivateKey3.G1.Marshal()))
+				fmt.Println("key3:" + common.ToHex(key.PrivateKey3.G1.Marshal()))
 			}
 			break
 		}
