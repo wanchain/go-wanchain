@@ -301,7 +301,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout pos
+$ git checkout posalpha
 
 $ git pull
 
