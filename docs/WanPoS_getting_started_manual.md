@@ -349,7 +349,7 @@ Or you can clone from github.com as below:
 ```
 $ mkdir -p $GOPATH/src/github.com/wanchain/
 
-$ cd $GO_PATH/src/github.com/wanchain/
+$ cd $GOPATH/src/github.com/wanchain/
 
 $ git clone https://github.com/wanchain/go-wanchain.git
 
