@@ -25,6 +25,7 @@ or, to build the release version
 
     make release	
 
+	
 ## Running gwan
 
 ### Full node on the main wanchain network
