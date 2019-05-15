@@ -295,7 +295,7 @@ Follow the step 2's command line:
 ```
 $ mkdir -p $GOPATH/src/github.com/wanchain/
 
-$ cd $GO_PATH/src/github.com/wanchain/
+$ cd $GOPATH/src/github.com/wanchain/
 
 $ git clone https://github.com/wanchain/go-wanchain.git
 
