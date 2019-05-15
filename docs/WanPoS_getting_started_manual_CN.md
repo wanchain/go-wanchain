@@ -334,7 +334,7 @@ $ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --
 
 
 ```
-$ gwan --pluto acccount new
+$ gwan --pluto account new
 ```
 
 
