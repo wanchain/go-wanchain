@@ -301,7 +301,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout pos
+$ git checkout posalpha
 
 $ git pull
 
@@ -334,7 +334,7 @@ $ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --
 
 
 ```
-$ gwan --pluto acccount new
+$ gwan --pluto account new
 ```
 
 
@@ -343,7 +343,7 @@ $ gwan --pluto acccount new
 使用如下命令获取两个星系共识需要用到的公钥。
 
 ```
-$ gwan --pluto account pubkeys 'Your Address', 'Your Password'
+$ gwan --pluto account pubkeys 'Your Address' 'Your Password'
 ```
 
 星系共识需要使用key1和key3，作为SecPk和G1PK。
