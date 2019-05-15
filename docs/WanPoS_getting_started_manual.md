@@ -21,7 +21,7 @@ This is a manual for helping getting started as a Wanchain Galaxy Consensus node
     - [5.3. Run](#53-run)
         - [5.3.1. Non-staking node](#531-run-as-a-synchronize-node)
         - [5.3.2. Staking node](#532-run-as-a-miner-node)
-- [6. Operations](#6-operations)
+- [6. Common Operations](#6-operations)
     - [6.1. PoS account creation](#61-pos-account-creation)
     - [6.2. Check balance](#62-check-balance)
     - [6.3. Get test WAN](#63-get-test-wan-coins-of-pos)
@@ -374,7 +374,7 @@ In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a
 $ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
 ```
 
-# 6. Operations
+# 6. Common Operations
 
 ## 6.1. PoS account creation
 
