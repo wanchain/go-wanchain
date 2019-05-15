@@ -216,7 +216,7 @@ func writeSyslog(level syslog.Priority, a ...interface{}) {
 
 	logStr := fmt.Sprint(p...)
 	if level <= syslog.LOG_CRIT {
-		syslogger.alarmFeed.Send(LogInfo{level, logStr})
+		go syslogger.alarmFeed.Send(LogInfo{level, logStr})
 	}
 
 	lfunc(logStr)

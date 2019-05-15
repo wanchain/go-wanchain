@@ -1105,6 +1105,8 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 }
 
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
+	return nil
+
 	log.Debug("wanstats report pos stats begin")
 	defer log.Debug("wanstats report pos stats end")
 
