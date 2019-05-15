@@ -152,6 +152,9 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 	}
 	ctrlCount := 0
 	currentNumber := chain.CurrentHeader().Number.Uint64()
+	if currentNumber == 0 {
+		return []common.Address{}, []int{}, float64(0), 0
+	}
 	miners := make(map[common.Address]int)
 	for i := currentNumber - 1; i > 0; i-- {
 		header := chain.GetHeaderByNumber(i)
