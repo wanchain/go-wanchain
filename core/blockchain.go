@@ -807,7 +807,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
-func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block) int {
+//posconfig.SlotSecurityParam
+func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64) int {
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	endFlatSlotId := epochId*posconfig.SlotCount + slotId
 
@@ -816,8 +817,8 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block) int {
 	}
 
 	startFlatSlotId := uint64(0)
-	if endFlatSlotId >= posconfig.SlotSecurityParam {
-		startFlatSlotId = endFlatSlotId - posconfig.SlotSecurityParam
+	if endFlatSlotId >= secPara{
+		startFlatSlotId = endFlatSlotId - secPara
 	}
 
 	n := 0
@@ -844,7 +845,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block) int {
 }
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
-	blocksIn2K := bc.getBlocksCountIn2KSlots(block)
+	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	//because slot index starts from 0
 	totalSlots := epochId*posconfig.SlotCount + slotId + 1
@@ -857,21 +858,33 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	return true
 }
 
-func (bc *BlockChain) ChainQuality(blockNr int64) (uint64,error) {
-	block := bc.CurrentBlock()
+func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error) {
 
-	if blockNr >= 0 {
-		if uint64(blockNr) > block.NumberU64() {
-			return 0,errors.New("wrong input for block number")
-		} else {
-			block = bc.GetBlockByNumber(uint64(blockNr))
-		}
+	curBlk := bc.currentBlock
+
+	blkEpid,blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+
+	if epochid > blkEpid || (epochid == blkEpid && slotid > blkSlid) || (epochid==0 && slotid == 0){
+		return 0,errors.New("wrong epoid or slotid")
 	}
 
+	lastBlock := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
 
-	blocksIn2K := bc.getBlocksCountIn2KSlots(block)
+	for i := lastBlock;i>0;i--  {
 
-	quality := blocksIn2K*1000/ posconfig.SlotSecurityParam
+		curBlk = bc.GetBlockByNumber(i)
+		epid,blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+		fmt.Println(epid,blkSlid)
+		//if the epochid is changed or slotid is smaller than expected
+		if blkSlid <= slotid || (epochid > 0 && epid == epochid - 1) {
+			break
+		}
+
+	}
+
+	blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk,posconfig.SlotSecurityParam - uint64(slotid - blkSlid))
+
+	quality := blocksIn2K*1000/ (posconfig.SlotSecurityParam)
 
 	return uint64(quality),nil
 

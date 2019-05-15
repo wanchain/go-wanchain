@@ -61,6 +61,7 @@ type SlLeadersSelInt interface {
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error
 
 	GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []*ecdsa.PublicKey, error)
+
 }
 
 type EpochGenesisBlock struct {

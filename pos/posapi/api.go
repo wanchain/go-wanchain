@@ -55,7 +55,7 @@ type PosChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
 	//get chain quality,return quality * 1000
-	ChainQuality(blockNr int64) (uint64,error)
+	ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 }
 
 
@@ -169,8 +169,8 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
-func (a PosApi) GetChainQuality(blkNr int64) (uint64,error) {
-	return a.chain.ChainQuality(blkNr)
+func (a PosApi) GetChainQuality(epochid uint64, slotid uint64) (uint64,error) {
+	return a.chain.ChainQuality(epochid,slotid)
 }
 
 func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {

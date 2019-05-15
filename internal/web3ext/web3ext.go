@@ -169,7 +169,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getChainQuality',
 			call: 'pos_getChainQuality',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'getReorgState',
