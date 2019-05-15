@@ -1850,7 +1850,7 @@ func (s *PrivateAccountAPI) GetOTABalance(ctx context.Context, blockNr rpc.Block
 
 }
 
-func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string,error) {
+func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string, error) {
 
 	if len(addr) == 0 {
 		return nil, errors.New("address must be given as argument")
@@ -1863,16 +1863,16 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 	all := ks.Accounts()
 	lenth := len(all)
 
-	pubs := make([]string,0)
+	pubs := make([]string, 0)
 	for i := 0; i < lenth; i++ {
 		if all[i].Address == addr {
 			key, err := ks.GetKey(all[i], passwd)
 			if err != nil {
-				return nil, errors.New("Error failed to load keyfile ")
+				return nil, err
 			}
 
 			if key.PrivateKey != nil {
-				pubs =append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+				pubs = append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
 
 			if key.PrivateKey3 != nil {
@@ -1883,6 +1883,5 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 		}
 	}
 
-	return pubs,nil
+	return pubs, nil
 }
-
