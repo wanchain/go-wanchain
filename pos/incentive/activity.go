@@ -189,6 +189,7 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 	}
 
 	epochBlockCnt := sumIntArray(blocks)
+	epochBlockCnt += ctrlCount
 	if epochBlockCnt > slotCount {
 		epochBlockCnt = slotCount
 	}

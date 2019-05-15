@@ -55,9 +55,9 @@ $ exit
 
 2）使用docker中的gwan创建keystore账号:
 ```
-$ docker pull molin0000/wanpos_poc_node
+$ docker pull wanchain/wanpos
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 
 YourContainerID
 
@@ -162,7 +162,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -197,7 +197,7 @@ $ exit
 验证人信息可以通过命令行查找，也可以通过浏览器查找。
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
 
 YourContainerID
 
@@ -241,10 +241,10 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
+// tranValue is the value you want to stake in minValue is 100
 var tranValue = "100000"
 
-// rewardAddr is the reward receive accounts which create nearly.
+// delegateAddr is the validator address.
 var delegateAddr = "DelegateAddress"
 
 // baseAddr is the fund source account.

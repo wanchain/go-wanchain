@@ -596,7 +596,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		}
 	}
 	// check the totalDelegated <= 5*stakerInfo.Amount
-	if totalDelegated.Cmp(big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(maxTimeDelegate))) > 0 {
+	if totalDelegated.Cmp(big.NewInt(0).Mul(total, big.NewInt(maxTimeDelegate))) > 0 {
 		return nil, errors.New("over delegate limitation")
 	}
 	if info == nil {
@@ -763,7 +763,7 @@ func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam,
 		return info, err
 	}
 	//  Lock time >= min epoch, <= max epoch
-	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
+	if info.LockEpochs.Uint64()!= 0 && (info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0) {
 		return info, errors.New("invalid lock time")
 	}
 

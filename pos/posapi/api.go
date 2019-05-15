@@ -214,15 +214,8 @@ func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) 
 	return j, nil
 }
 
-type StakerInfo struct {
-	Addr             common.Address
-	Infors           []vm.ClientProbability
-	FeeRate          uint64
-	TotalProbability *big.Int
-}
-
-func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerInfo, error) {
-	skInfo := StakerInfo{}
+func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (ApiStakerInfo, error) {
+	skInfo := ApiStakerInfo{}
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
 		return skInfo, errors.New("epocher instance does not exist")
@@ -231,9 +224,13 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (StakerI
 	if err != nil {
 		return skInfo, err
 	}
-	skInfo.TotalProbability = total
+	skInfo.TotalProbability = (*math.HexOrDecimal256)(total)
 	skInfo.FeeRate = feeRate
-	skInfo.Infors = infors
+	skInfo.Infors = make([]ApiClientProbability, len(infors))
+	for i := 0; i < len(infors); i++ {
+		skInfo.Infors[i].Addr = infors[i].Addr
+		skInfo.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
+	}
 	skInfo.Addr = addr
 	return skInfo, nil
 }
@@ -269,7 +266,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
-func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
+func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
@@ -283,7 +280,7 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	ess := make([]StakerInfo, 0)
+	ess := make([]ApiStakerInfo, 0)
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
@@ -292,15 +289,19 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]StakerInfo, error) {
 			return true
 		}
 
-		infors, pb, err := epochLeader.CalEpochProbabilityStaker(&staker)
+		infors, pb, err := epochLeader.CalEpochProbabilityStaker(&staker, epochID)
 		if err != nil || pb == nil {
 			// this validator has no enough
 			return true
 		}
 
-		es := StakerInfo{}
-		es.Infors = infors
-		es.TotalProbability = pb
+		es := ApiStakerInfo{}
+		es.Infors = make([]ApiClientProbability, len(infors))
+		for i := 0; i < len(infors); i++ {
+			es.Infors[i].Addr = infors[i].Addr
+			es.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
+		}
+		es.TotalProbability = (*math.HexOrDecimal256)(pb)
 		es.FeeRate = staker.FeeRate
 		es.Addr = staker.Address
 		ess = append(ess, es)
@@ -499,3 +500,74 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 
 	return time
 }
+
+func (a PosApi) GetEpochBlkCnt(epochId uint64) uint64 {
+	blkCnt := uint64(0)
+	bgBlkNum := uint64(0)
+
+	// todo : add pow switch to pos checking
+	header := a.chain.CurrentHeader()
+	if header != nil {
+		for {
+			epid := a.GetEpochIDByTime(header.Time.Uint64())
+			if epid <= epochId {
+				bgBlkNum = header.Number.Uint64()
+				break
+			}
+		}
+	}
+
+	if bgBlkNum == 0 {
+		return 0
+	}
+
+	for {
+		header := a.chain.GetHeaderByNumber(bgBlkNum)
+		if header == nil {
+			break
+		}
+
+		epid := a.GetEpochIDByTime(header.Time.Uint64())
+		if epid < epochId {
+			break
+		}
+
+		blkCnt++
+		bgBlkNum--
+	}
+
+	return blkCnt
+}
+
+func (a PosApi) GetValidSMACnt(epochId uint64) (uint64, uint64) {
+	sma1, sma2 := uint64(0), uint64(0)
+
+	stateDb, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(-1))
+	if err != nil {
+		return sma1, sma2
+	}
+
+	sma1 = vm.GetValidSMA1Cnt(stateDb, epochId)
+	sma2 = vm.GetValidSMA2Cnt(stateDb, epochId)
+
+	return sma1, sma2
+}
+
+func (a PosApi) GetSlStage(slotId uint64) uint64 {
+	return vm.GetSlStage(slotId)
+}
+
+func (a PosApi) GetValidRBCnt(epochId uint64) (uint64, uint64, uint64) {
+	dkg1, dkg2, sig := uint64(0), uint64(0), uint64(0)
+	stateDb, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(-1))
+	if err != nil {
+		return dkg1, dkg2, sig
+	}
+
+	dkg1 = vm.GetValidDkg1Cnt(stateDb, epochId)
+	dkg2 = vm.GetValidDkg2Cnt(stateDb, epochId)
+	sig = vm.GetValidSigCnt(stateDb, epochId)
+
+	return dkg1, dkg2, sig
+}
+
