@@ -168,7 +168,11 @@ $ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos 
 
 执行完上述脚本，即可完成开启挖矿运行。
 
-可通过docker logs -f `docker ps -q`命令查看工作日志。
+可通过:
+```
+docker logs -f `docker ps -q`
+```
+命令查看工作日志。
 
 挖矿工作，将在所有块同步完成后正式开始。
 
