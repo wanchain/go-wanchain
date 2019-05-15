@@ -21,7 +21,7 @@ import (
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
-	if posconfig.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 || time < posconfig.EpochBaseTime {
 		return
 	}
 	//timeUnix := uint64(time.Now().Unix())
