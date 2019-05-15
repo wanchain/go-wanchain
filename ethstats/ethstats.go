@@ -1055,7 +1055,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		slotId = api.GetSlotID()
 
 		blockNum := s.eth.BlockChain().CurrentHeader().Number.Uint64()
-		iChainQuality, err = api.GetChainQuality(int64(blockNum))
+		iChainQuality, err = api.GetChainQuality(epochId,slotId)
 		if err != nil {
 			log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
 		} else {

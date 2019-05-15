@@ -70,6 +70,7 @@ type SelectLead interface {
 	GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
+	GetEpochLastBlkNumber(targetEpochId uint64) uint64
 	//TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
 }
 
@@ -123,12 +124,21 @@ func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lastBlockHashEpoch[epochID] = hash
 	lbe.Unlock()
 }
+
+//this function only can return
 func GetEpochBlock(epochID uint64) uint64 {
 	lbe.Lock()
 	b := lastBlockEpoch[epochID]
+
+	if b == 0 {
+		b = selecter.GetEpochLastBlkNumber(epochID)
+	}
+
 	lbe.Unlock()
 	return b
 }
+
+
 func GetEpochBlockHash(epochID uint64) common.Hash {
 	lbe.Lock()
 	bh := lastBlockHashEpoch[epochID]

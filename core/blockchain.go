@@ -868,25 +868,34 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 		return 0,errors.New("wrong epoid or slotid")
 	}
 
-	lastBlock := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
+	expSlots := epochid*posconfig.SlotCount + slotid
+	//lastBlock := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
+	checkSlots := uint64(0)
 
+	lastBlock := posUtil.GetEpochBlock(epochid)
 	for i := lastBlock;i>0;i--  {
 
 		curBlk = bc.GetBlockByNumber(i)
-		epid,blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
-		fmt.Println(epid,blkSlid)
-		//if the epochid is changed or slotid is smaller than expected
-		if blkSlid <= slotid || (epochid > 0 && epid == epochid - 1) {
+		blkEpid,blkSlid = posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+		checkSlots = blkEpid*posconfig.SlotCount + blkSlid
+
+		if checkSlots <= expSlots {
 			break
 		}
-
 	}
 
-	blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk,posconfig.SlotSecurityParam - uint64(slotid - blkSlid))
+	//if the gap is empty block,then the quality is 0
+	diff := expSlots - checkSlots
+	if uint64(diff) >= posconfig.SlotSecurityParam {
+		return uint64(0),nil
+	} else {
 
-	quality := blocksIn2K*1000/ (posconfig.SlotSecurityParam)
+		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam - diff)
 
-	return uint64(quality),nil
+		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
+
+		return uint64(quality), nil
+	}
 
 }
 

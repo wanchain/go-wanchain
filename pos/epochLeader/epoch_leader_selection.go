@@ -83,28 +83,30 @@ func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 
 	targetEpochId := epochId - 2
 
-	return e.GetEpochLastBlkNumber(targetEpochId)
+	//return e.GetEpochLastBlkNumber(targetEpochId)
+	return util.GetEpochBlock(targetEpochId)
 }
 
 /*
 NOTE: if the targetEpochId is future, will return current blockNumber.
 */
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
-	targetBlkNum := util.GetEpochBlock(targetEpochId)
+
 	var curBlock *types.Block
-	if targetBlkNum == 0 {
-		curNum := e.blkChain.CurrentBlock().NumberU64()
-		for {
-			curBlock = e.blkChain.GetBlockByNumber(curNum)
-			curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
-			if curEpochId <= targetEpochId {
-				break
-			}
-			curNum--
-		}
-		targetBlkNum = curNum
-		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
+
+	curNum := e.blkChain.CurrentBlock().NumberU64()
+	for {
+		 curBlock = e.blkChain.GetBlockByNumber(curNum)
+		 curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		 if curEpochId <= targetEpochId {
+			break
+		 }
+		 curNum--
 	}
+
+	targetBlkNum := curNum
+	util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
+
 
 	return targetBlkNum
 }
