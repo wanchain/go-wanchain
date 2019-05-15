@@ -3,6 +3,11 @@
 # 2. Introduction
 This is a manual for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus.
 
+**Software Environment**
+- We recommend using Linux or MacOS
+- Docker services
+- Install Golang from https://golang.org/ and set GO environment variables `$GOPATH` and `$GOROOT`
+
 # 3. Contents
 
 <!-- TOC -->
