@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/posapi"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"net"
 	"regexp"
@@ -1055,7 +1056,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		slotId = api.GetSlotID()
 
 		blockNum := s.eth.BlockChain().CurrentHeader().Number.Uint64()
-		iChainQuality, err = api.GetChainQuality(epochId,slotId)
+		iChainQuality, err = api.GetChainQuality(epochId, slotId)
 		if err != nil {
 			log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
 		} else {
@@ -1080,9 +1081,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		validDkg1Cnt, validDkg2Cnt, validSigCnt = api.GetValidRBCnt(epochId)
 		curSlStage = api.GetSlStage(slotId)
 		validSma1Cnt, validSma2Cnt = api.GetValidSMACnt(epochId)
-		//selfMinedBlks
-		//selfElActivity
-		//selfRnpActivity
+		selfMinedBlks, selfElActivity, selfRnpActivity = s.getSelfActivity(&api, epochId)
 	} else {
 		sync := s.les.Downloader().Progress()
 		syncing = s.les.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
@@ -1123,3 +1122,36 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 	return websocket.JSON.Send(conn, report)
 }
 
+func (s *Service) getSelfActivity(api *posapi.PosApi, epochId uint64) (uint64, uint64, uint64) {
+	minedBlks, elActivity, rnpActivity := uint64(0), uint64(0), uint64(0)
+	if api == nil {
+		return minedBlks, elActivity, rnpActivity
+	}
+
+	activity, err := api.GetActivity(epochId)
+	if err != nil {
+		log.Error("posapi get activity fail", "err", err)
+		return minedBlks, elActivity, rnpActivity
+	}
+
+	selfAddr := posconfig.Cfg().GetMinerAddr()
+	for i := range activity.EpLeader {
+		if activity.EpLeader[i] == selfAddr {
+			elActivity = uint64(activity.EpActivity[i])
+		}
+	}
+
+	for i := range activity.RpLeader {
+		if activity.RpLeader[i] == selfAddr {
+			rnpActivity = uint64(activity.RpActivity[i])
+		}
+	}
+
+	for i := range activity.SltLeader {
+		if activity.SltLeader[i] == selfAddr {
+			minedBlks = uint64(activity.SlBlocks[i])
+		}
+	}
+
+	return minedBlks, elActivity, rnpActivity
+}
