@@ -1864,6 +1864,7 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 	lenth := len(all)
 
 	pubs := make([]string, 0)
+	var exisit bool
 	for i := 0; i < lenth; i++ {
 		if all[i].Address == addr {
 			key, err := ks.GetKey(all[i], passwd)
@@ -1878,10 +1879,12 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 			if key.PrivateKey3 != nil {
 				pubs = append(pubs, common.ToHex(key.PrivateKey3.G1.Marshal()))
 			}
-
+			exisit = true
 			break
 		}
 	}
-
+	if !exisit {
+		return nil, errors.New("invalid address")
+	}
 	return pubs, nil
 }
