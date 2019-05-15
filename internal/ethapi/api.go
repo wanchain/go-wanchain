@@ -24,10 +24,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
