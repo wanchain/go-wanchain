@@ -198,7 +198,7 @@ $ exit
 
 2）创建账号，查找验证人信息:
 
-验证人信息可以通过命令行查找，也可以通过浏览器查找。
+验证人信息可以通过命令行查找，也可以通过浏览器查找。请注意，在使用pos.getStakerInfo获取验证节点信息前，请确认当前已经同步到最新块。可通过eth.blockNumber来查看。
 
 ```
 $ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
@@ -277,8 +277,11 @@ console.log("tx2=" + tx2)
 
 5）在gwan中运行投注脚本
 
-Follow the step 2's command line: 
 ```
+$ docker exec -it YourContainerID /bin/bash
+
+root> gwan attach .wanchain/pluto/gwan.ipc
+
 > loadScript("/root/.wanchain/sendDelegate.js")
 
 ```
