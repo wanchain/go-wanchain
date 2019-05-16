@@ -323,6 +323,31 @@ web3._extend({
 			call: 'pos_getTimeByEpochID',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getEpochBlkCnt',
+			call: 'pos_getEpochBlkCnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidSMACnt',
+			call: 'pos_getValidSMACnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSlStage',
+			call: 'pos_getSlStage',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidRBCnt',
+			call: 'pos_getValidRBCnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRbStage',
+			call: 'pos_getRbStage',
+			params: 1
+		}),
 	]
 });
 `

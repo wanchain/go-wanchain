@@ -22,8 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posapi"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"log/syslog"
 	"math/big"
 	"net"
 	"regexp"
@@ -40,7 +42,6 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/les"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rpc"
 	"golang.org/x/net/websocket"
@@ -398,9 +399,10 @@ func (s *Service) reportPosLog(conn *websocket.Conn) error {
 func (s *Service) reportPosAlarm(conn *websocket.Conn, alarm *log.LogInfo) error {
 	log.Trace("Sending alarm to ethstats", "level", alarm.Lvl, "msg", alarm.Msg)
 
+	posAlarm := log2PosAlarm(alarm)
 	stats := map[string]interface{}{
 		"id":        s.node,
-		"pos-alarm": *alarm,
+		"pos-alarm": posAlarm,
 	}
 	report := map[string][]interface{}{
 		"emit": {"pos-alarm", stats},
@@ -612,13 +614,10 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		return err
 	}
 
-	sl := s.api.GetSlotLeadersByEpochID(s.epochId)
-	if err != nil {
-		return err
-	}
+	rnpl := s.api.GetRandomProposersByEpochID(s.epochId)
 
 	elArr := make([]string, 0, len(el))
-	slArr := make([]string, 0, len(sl))
+	rnpArr := make([]string, 0, len(rnpl))
 	for i := 0; i < len(el); i++ {
 		key := fmt.Sprintf("%06d", i)
 		if v, ok := el[key]; ok {
@@ -626,14 +625,14 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		}
 	}
 
-	for i := 0; i < len(sl); i++ {
+	for i := 0; i < len(rnpl); i++ {
 		key := fmt.Sprintf("%06d", i)
-		if v, ok := sl[key]; ok {
-			slArr = append(slArr, v)
+		if v, ok := rnpl[key]; ok {
+			rnpArr = append(rnpArr, v)
 		}
 	}
 
-	posL := pos_leader{elArr, slArr}
+	posL := pos_leader{elArr, rnpArr}
 	stats := map[string]interface{}{
 		"id":    s.node,
 		"pos-leader": posL,
@@ -725,6 +724,11 @@ type pos_reorg struct {
 type pos_log struct {
 	WarningCount uint64 `json:"warningCount"`
 	ErrorCount   uint64 `json:"errorCount"`
+}
+
+type pos_alarm struct {
+	Level string `json:"level"`
+	Msg string `json:"msg"`
 }
 
 
@@ -1105,8 +1109,6 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 }
 
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
-	return nil
-
 	log.Debug("wanstats report pos stats begin")
 	defer log.Debug("wanstats report pos stats end")
 
@@ -1168,12 +1170,20 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 			}
 
 			curRbStage = s.api.GetRbStage(slotId)
-			validDkg1Cnt, validDkg2Cnt, validSigCnt = s.api.GetValidRBCnt(epochId)
+			validDkgCnts, _ := s.api.GetValidRBCnt(epochId)
+			if len(validDkgCnts) == 3 {
+				validDkg1Cnt = validDkgCnts[0]
+				validDkg2Cnt = validDkgCnts[1]
+				validSigCnt = validDkgCnts[2]
+			}
+
 			curSlStage = s.api.GetSlStage(slotId)
-			validSma1Cnt, validSma2Cnt = s.api.GetValidSMACnt(epochId)
-			log.Debug("wanstats 10")
+			validSmaCnts, _ := s.api.GetValidSMACnt(epochId)
+			if len(validSmaCnts) == 2 {
+				validSma1Cnt = validSmaCnts[0]
+				validSma2Cnt = validSmaCnts[1]
+			}
 			selfMinedBlks, selfElActivity, selfRnpActivity = s.getSelfActivity(s.api, epochId)
-			log.Debug("wanstats 11")
 		}
 
 	} else {
@@ -1269,4 +1279,32 @@ func (s *Service) updateEpochId() uint64 {
 	oldEpochId := s.epochId
 	s.epochId = epochId
 	return oldEpochId
+}
+
+func log2PosAlarm(log *log.LogInfo) pos_alarm {
+	if log == nil {
+		return pos_alarm{}
+	}
+
+	lvlStr := ""
+	switch log.Lvl {
+	case syslog.LOG_EMERG:
+		lvlStr = "EMERG"
+	case syslog.LOG_ALERT:
+		lvlStr = "ALERT"
+	case syslog.LOG_CRIT:
+		lvlStr = "CRIT"
+	case syslog.LOG_ERR:
+		lvlStr = "ERR"
+	case syslog.LOG_WARNING:
+		lvlStr = "WARNING"
+	case syslog.LOG_NOTICE:
+		lvlStr = "NOTICE"
+	case syslog.LOG_INFO:
+		lvlStr = "INFO"
+	case syslog.LOG_DEBUG:
+		lvlStr = "DEBUG"
+	}
+
+	return pos_alarm{lvlStr, log.Msg}
 }
