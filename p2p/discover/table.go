@@ -197,7 +197,11 @@ func (tab *Table) SetFallbackNodes(nodes []*Node) error {
 		// created by NewNode or ParseNode.
 		cpy.sha = crypto.Keccak256Hash(n.ID[:])
 		tab.nursery = append(tab.nursery, &cpy)
+
+		//tab.add(n)
+
 	}
+
 	tab.mutex.Unlock()
 	tab.refresh()
 	return nil
@@ -429,18 +433,32 @@ func (tab *Table) len() (n int) {
 // bondall bonds with all given nodes concurrently and returns
 // those nodes for which bonding has probably succeeded.
 func (tab *Table) bondall(nodes []*Node) (result []*Node) {
+	var wg sync.WaitGroup
+
 	rc := make(chan *Node, len(nodes))
+
+	wg.Add(len(nodes))
+
 	for i := range nodes {
 		go func(n *Node) {
+
+			log.Info("bonall","", n.addr(),n.TCP)
 			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
 			rc <- nn
+
+			wg.Done()
+
 		}(nodes[i])
 	}
+
 	for range nodes {
 		if n := <-rc; n != nil{
 			result = append(result, n)
 		}
 	}
+
+	wg.Wait()
+
 	return result
 }
 
