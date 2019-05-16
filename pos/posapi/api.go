@@ -571,3 +571,8 @@ func (a PosApi) GetValidRBCnt(epochId uint64) (uint64, uint64, uint64) {
 	return dkg1, dkg2, sig
 }
 
+func (a PosApi) GetRbStage(slotId uint64) uint64 {
+	stage, _, _ := vm.GetRBStage(slotId)
+	return uint64(stage)
+}
+
