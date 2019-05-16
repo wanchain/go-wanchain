@@ -561,7 +561,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			hc = bc.Hc
 		}
 		if hc.IsEpochFirstBlkNumber(epochID, number) {
-			extraType := header.Extra[0:1][0]
+			extraType := header.Extra[0]
 			if extraType == 'g' {
 				if len(header.Extra) < extraSeal + 33 {
 
