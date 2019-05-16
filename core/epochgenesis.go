@@ -1,26 +1,26 @@
 package core
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	 posUtil "github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
-	"encoding/binary"
-	"bytes"
-	"github.com/wanchain/go-wanchain/common"
-	"sync"
-	"github.com/wanchain/go-wanchain/core/state"
-	"math/big"
-	"encoding/hex"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	posUtil "github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/rlp"
+	"math/big"
+	"sync"
 )
 
 
@@ -87,7 +87,6 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 	f.lastEpochId = 0
 
 	f.epochGenDb = posdb.NewDb("epochGendb")
-
 
 	return f
 }
@@ -237,8 +236,8 @@ func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) 
 }
 func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
 	if epochid > 1 {
-		log.Info(" epoch > 1")
 		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
+		log.Info(" IsEpochFirstBlkNumber", "epoch", epochid, "last", blkNumLast, "num", blkNum)
 		if blkNumLast + 1 == blkNum {
 			return true
 		}
@@ -273,8 +272,10 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 
 	if lastblk == nil {
 		epGen.PreEpochLastBlkHash = common.Hash{}
+		epGen.PreEpochLastBlkNumber = 0
 	} else {
 		epGen.PreEpochLastBlkHash = lastblk.Hash()
+		epGen.PreEpochLastBlkNumber = lastblk.NumberU64()
 	}
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
@@ -363,6 +364,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew := &types.EpochGenesis{}
 
 	epGenNew.ProtocolMagic = []byte("wanchainpos")
+	epGenNew.PreEpochLastBlkNumber = epGen.PreEpochLastBlkNumber
 	epGenNew.PreEpochLastBlkHash = epGen.PreEpochLastBlkHash
 	epGenNew.EpochId = epGen.EpochId
 	epGenNew.RBLeadersSec256 = epGen.RBLeadersSec256
@@ -471,6 +473,7 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 			return err
 		}
 	}
+	posUtil.SetEpochBlock(epochgen.EpochId - 1, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
 
 	err = f.saveToPosDb(epochgen, isEnd)
 	if err != nil {
@@ -638,7 +641,7 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis, isEnd bool
 		return errors.New("create epoch local db error")
 	}
 	count := len(epochgen.EpochLeaders)
-	// TODO: 1. check valid public key, 2. check exist? 3. put failed? 4. how to rollback
+
 	for i := 0; i < count; i++ {
 		tmp := posdb.Proposer{
 		//PubSec256:make([]byte,0),
