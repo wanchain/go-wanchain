@@ -131,11 +131,11 @@ func GetEpochBlock(epochID uint64) uint64 {
 	lbe.Lock()
 	b := lastBlockEpoch[epochID]
 	lbe.Unlock()
-	
+
 	if b == 0 {
 		b = selecter.GetEpochLastBlkNumber(epochID)
 	}
-	
+
 	return b
 }
 
