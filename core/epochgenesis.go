@@ -225,6 +225,43 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64)(*big.I
 }
 
 
+func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64) bool {
+	return bc.epochgen.IsEpochFirstBlkNumber(epochId, blocknum)
+}
+func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
+	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash)
+}
+
+func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
+	return hc.epochgen.GetOrGenerateEGHash(epochid)
+}
+func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
+	if epochid > 0 {
+		log.Info(" epoch > 0")
+		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
+		if blkNumLast + 1 == blkNum {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
+	epkGnss := f.GetEpochGenesis(epochid)
+	if epkGnss == nil {
+		epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
+		if err != nil {
+			return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
+		}
+		return epkGnss.PreEpochLastBlkHash, nil
+	}
+	return common.Hash{}, nil
+}
+
+func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
+	return nil
+}
+
 func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte,preHash common.Hash) (*types.EpochGenesis, error) {
 
 
@@ -495,7 +532,13 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 
 	idx := int(block.NumberU64() - blKBegin)
 
-	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+	extraType := header.Extra[0]
+	start := 1
+	if extraType == 'g' {
+		start = 33
+	}
+
+	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[start:len(header.Extra)-extraSeal])
 
 	if err != nil {
 		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())

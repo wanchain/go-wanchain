@@ -551,7 +551,7 @@ func testInsertNonceError(t *testing.T, full bool) {
 			failNum = headers[failAt].Number.Uint64()
 
 			blockchain.engine = ethash.NewFakeFailer(failNum, chainEnv.db)
-			blockchain.hc.engine = blockchain.engine
+			blockchain.Hc.engine = blockchain.engine
 			failRes, err = blockchain.InsertHeaderChain(headers, 1)
 		}
 		// Check that the returned error indicates the failure.
