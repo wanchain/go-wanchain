@@ -844,6 +844,8 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 	return n
 }
 
+
+
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
@@ -860,19 +862,21 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error) {
 
-	curBlk := bc.currentBlock
+	curBlk := bc.CurrentBlock()
 
 	blkEpid,blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+	blkSlots := blkEpid*posconfig.SlotCount + blkSlid
+	expSlots := epochid*posconfig.SlotCount + slotid
 
-	if epochid > blkEpid || (epochid == blkEpid && slotid > blkSlid) || (epochid==0 && slotid == 0){
+	if expSlots >= (blkSlots + posconfig.SlotSecurityParam) || (epochid==0 && slotid == 0){
 		return 0,errors.New("wrong epoid or slotid")
 	}
 
-	expSlots := epochid*posconfig.SlotCount + slotid
+
 	//lastBlock := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
 	checkSlots := uint64(0)
 
-	lastBlock := posUtil.GetEpochBlock(epochid)
+	lastBlock := posUtil.GetEpochBlock(blkEpid)
 	for i := lastBlock;i>0;i--  {
 
 		curBlk = bc.GetBlockByNumber(i)

@@ -539,35 +539,40 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) uint64 {
 	return blkCnt
 }
 
-func (a PosApi) GetValidSMACnt(epochId uint64) (uint64, uint64) {
-	sma1, sma2 := uint64(0), uint64(0)
+func (a PosApi) GetValidSMACnt(epochId uint64) ([]uint64, error) {
+	smas := make([]uint64, 2)
 
 	stateDb, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(-1))
 	if err != nil {
-		return sma1, sma2
+		return smas, err
 	}
 
-	sma1 = vm.GetValidSMA1Cnt(stateDb, epochId)
-	sma2 = vm.GetValidSMA2Cnt(stateDb, epochId)
+	smas[0] = vm.GetValidSMA1Cnt(stateDb, epochId)
+	smas[1] = vm.GetValidSMA2Cnt(stateDb, epochId)
 
-	return sma1, sma2
+	return smas, err
 }
 
 func (a PosApi) GetSlStage(slotId uint64) uint64 {
 	return vm.GetSlStage(slotId)
 }
 
-func (a PosApi) GetValidRBCnt(epochId uint64) (uint64, uint64, uint64) {
-	dkg1, dkg2, sig := uint64(0), uint64(0), uint64(0)
+func (a PosApi) GetValidRBCnt(epochId uint64) ([]uint64, error) {
+	cnts := make([]uint64, 3)
 	stateDb, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(-1))
 	if err != nil {
-		return dkg1, dkg2, sig
+		return cnts, err
 	}
 
-	dkg1 = vm.GetValidDkg1Cnt(stateDb, epochId)
-	dkg2 = vm.GetValidDkg2Cnt(stateDb, epochId)
-	sig = vm.GetValidSigCnt(stateDb, epochId)
+	cnts[0] = vm.GetValidDkg1Cnt(stateDb, epochId)
+	cnts[1] = vm.GetValidDkg2Cnt(stateDb, epochId)
+	cnts[2] = vm.GetValidSigCnt(stateDb, epochId)
 
-	return dkg1, dkg2, sig
+	return cnts, err
+}
+
+func (a PosApi) GetRbStage(slotId uint64) uint64 {
+	stage, _, _ := vm.GetRBStage(slotId)
+	return uint64(stage)
 }
 

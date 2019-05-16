@@ -305,6 +305,7 @@ func (e *Epocher) GetWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam
 	return info, nil
 
 }
+
 func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
 	info, err := e.GetWhiteInfo(epochId)
 	if err != nil {
@@ -312,6 +313,7 @@ func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
 	}
 	return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 }
+
 func (e *Epocher) GetWhiteArrayByEpochId(epochId uint64) ([][]byte, error) {
 	info, err := e.GetWhiteInfo(epochId)
 	if err != nil {

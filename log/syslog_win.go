@@ -11,7 +11,13 @@ import (
 type SyslogFun func(m string) error
 type LocallogFun func(msg string, ctx ...interface{})
 
+type LogInfo struct {
+	Lvl syslog.Priority	`json:"level"`
+	Msg string			`json:"msg"`
+}
+
 type Syslogger struct {
+	scope        event.SubscriptionScope
 }
 
 var (
@@ -24,6 +30,7 @@ func InitSyslog(net, svr, level, tag string) error {
 }
 
 func CloseSyslog() {
+	syslogger.scope.Close()
 }
 
 func SyslogDebug(format string, a ...interface{}) {
@@ -66,3 +73,6 @@ func SyslogEmerg(format string, a ...interface{}) {
 	Error(logStr)
 }
 
+func SubscribeAlarm(ch chan<- LogInfo) event.Subscription {
+	return syslogger.scope.Track(new(event.Feed).Subscribe(ch))
+}

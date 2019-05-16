@@ -22,9 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posapi"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"log/syslog"
 	"math/big"
 	"net"
 	"regexp"
@@ -41,7 +42,6 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/les"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rpc"
 	"golang.org/x/net/websocket"
@@ -61,6 +61,10 @@ const (
 	alarmLogChanSize = 1024
 	// reorgChanSize is the size of channel listening to ReorgEvent
 	reorgChanSize = 1024
+)
+
+var (
+	maxUint64      = uint64(1<<64 - 1)
 )
 
 type txPool interface {
@@ -88,6 +92,9 @@ type Service struct {
 
 	pongCh chan struct{} // Pong notifications are fed into this channel
 	histCh chan []uint64 // History request block numbers are fed into this channel
+
+	epochId uint64
+	api *posapi.PosApi
 }
 
 // New returns a monitoring service ready for stats reporting.
@@ -105,7 +112,8 @@ func New(url string, ethServ *eth.Ethereum, lesServ *les.LightEthereum) (*Servic
 	} else {
 		engine = lesServ.Engine()
 	}
-	return &Service{
+
+	svr := &Service{
 		eth:    ethServ,
 		les:    lesServ,
 		engine: engine,
@@ -114,7 +122,26 @@ func New(url string, ethServ *eth.Ethereum, lesServ *les.LightEthereum) (*Servic
 		host:   parts[4],
 		pongCh: make(chan struct{}),
 		histCh: make(chan []uint64, 1),
-	}, nil
+		epochId: maxUint64,
+	}
+
+	svr.initApi()
+	return svr, nil
+}
+
+func (s *Service) initApi() {
+	if s.eth == nil || s.api != nil {
+		return
+	}
+
+	apis := posapi.APIs(s.eth.BlockChain(), s.eth.ApiBackend)
+	api, ok := apis[0].Service.(*posapi.PosApi)
+	if !ok {
+		log.Error("create posapi instance fail")
+		return
+	}
+
+	s.api = api
 }
 
 // Protocols implements node.Service, returning the P2P network protocols used
@@ -183,6 +210,7 @@ func (s *Service) loop() {
 
 	HandleLoop:
 		for {
+			log.Debug("wanstats handle loop begin..")
 			select {
 			// Notify of chain head events, but drop if too frequent
 			case head := <-chainHeadCh:
@@ -233,6 +261,7 @@ func (s *Service) loop() {
 	}()
 	// Loop reporting until termination
 	for {
+		log.Debug("wanstats report big loop begin..")
 		// Resolve the URL, defaulting to TLS, but falling back to none too
 		path := fmt.Sprintf("%s/api", s.host)
 		urls := []string{path}
@@ -276,9 +305,13 @@ func (s *Service) loop() {
 			continue
 		}
 		// Keep sending status updates until the connection breaks
-		fullReport := time.NewTicker(15 * time.Second)
+		fullReport := time.NewTicker(posconfig.SlotTime*time.Second)
 
 		for err == nil {
+			log.Debug("wanstats report small loop begin..")
+
+			s.initApi()
+
 			select {
 			case <-quitCh:
 				conn.Close()
@@ -289,23 +322,23 @@ func (s *Service) loop() {
 					log.Warn("Full stats report failed", "err", err)
 				}
 			case list := <-s.histCh:
-				if s.isPos() {
-					if err = s.reportPosHistory(conn, list); err != nil {
-						log.Warn("Requested pos history report failed", "err", err)
-					}
-				} else {
+				if !s.isPos() {
 					if err = s.reportHistory(conn, list); err != nil {
 						log.Warn("Requested history report failed", "err", err)
 					}
+				} else {
+					if err = s.reportPosHistory(conn, list); err != nil {
+						log.Warn("Requested pos history report failed", "err", err)
+					}
 				}
 			case head := <-headCh:
-				if s.isPos() {
-					if err = s.reportPosBlock(conn, head); err != nil {
-						log.Warn("Pos block stats report failed", "err", err)
-					}
-				} else {
+				if !s.isPos() {
 					if err = s.reportBlock(conn, head); err != nil {
 						log.Warn("Block stats report failed", "err", err)
+					}
+				} else {
+					if err = s.reportPosBlock(conn, head); err != nil {
+						log.Warn("Pos block stats report failed", "err", err)
 					}
 				}
 
@@ -345,7 +378,7 @@ func (s *Service) reportPosReorg(conn *websocket.Conn, reorg *pos_reorg) error {
 	report := map[string][]interface{}{
 		"emit": {"pos-reorg", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) reportPosLog(conn *websocket.Conn) error {
@@ -360,20 +393,21 @@ func (s *Service) reportPosLog(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"pos-log", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) reportPosAlarm(conn *websocket.Conn, alarm *log.LogInfo) error {
 	log.Trace("Sending alarm to ethstats", "level", alarm.Lvl, "msg", alarm.Msg)
 
+	posAlarm := log2PosAlarm(alarm)
 	stats := map[string]interface{}{
 		"id":        s.node,
-		"pos-alarm": *alarm,
+		"pos-alarm": posAlarm,
 	}
 	report := map[string][]interface{}{
 		"emit": {"pos-alarm", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) isPos() bool {
@@ -506,7 +540,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
-	if err := websocket.JSON.Send(conn, login); err != nil {
+	if err := s.doSendReportData(conn, login); err != nil {
 		return err
 	}
 	// Retrieve the remote ack or connection termination
@@ -521,30 +555,92 @@ func (s *Service) login(conn *websocket.Conn) error {
 // This should only be used on reconnects or rarely to avoid overloading the
 // server. Use the individual methods for reporting subscribed events.
 func (s *Service) report(conn *websocket.Conn) error {
-	if err := s.reportLatency(conn); err != nil {
+	log.Debug("wanstats report begin")
+	defer log.Debug("wanstats report end")
+
+	var err error
+	if err = s.reportLatency(conn); err != nil {
 		return err
 	}
-	if s.isPos() {
-		if err := s.reportPosBlock(conn, nil); err != nil {
-			return err
-		}
+
+	if !s.isPos() {
+		err = s.reportBlock(conn, nil)
 	} else {
-		if err := s.reportBlock(conn, nil); err != nil {
-			return err
-		}
+		err = s.reportPosBlock(conn, nil)
 	}
-	if err := s.reportPending(conn); err != nil {
+
+	if err != nil {
 		return err
 	}
-	if err := s.reportStats(conn); err != nil {
+
+	if err = s.reportPending(conn); err != nil {
 		return err
 	}
+
+	if !s.isPos() {
+		err = s.reportStats(conn)
+	} else {
+		err = s.reportPosStats(conn)
+	}
+
+	if err != nil {
+		return err
+	}
+
 	if s.isPos() {
 		if err := s.reportPosLog(conn); err != nil {
 			return err
 		}
+
+		oldEpochId := s.updateEpochId()
+		if oldEpochId != s.epochId {
+			if err := s.reportLeader(conn); err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
+}
+
+func (s *Service) reportLeader(conn *websocket.Conn) error {
+	// Gather the block details from the header or block chain
+	if s.api == nil {
+		return nil
+	}
+
+	el, err := s.api.GetEpochLeadersByEpochID(s.epochId)
+	if err != nil {
+		return err
+	}
+
+	rnpl := s.api.GetRandomProposersByEpochID(s.epochId)
+
+	elArr := make([]string, 0, len(el))
+	rnpArr := make([]string, 0, len(rnpl))
+	for i := 0; i < len(el); i++ {
+		key := fmt.Sprintf("%06d", i)
+		if v, ok := el[key]; ok {
+			elArr = append(elArr, v)
+		}
+	}
+
+	for i := 0; i < len(rnpl); i++ {
+		key := fmt.Sprintf("%06d", i)
+		if v, ok := rnpl[key]; ok {
+			rnpArr = append(rnpArr, v)
+		}
+	}
+
+	posL := pos_leader{elArr, rnpArr}
+	stats := map[string]interface{}{
+		"id":    s.node,
+		"pos-leader": posL,
+	}
+	report := map[string][]interface{}{
+		"emit": {"pos-leader", stats},
+	}
+	return s.doSendReportData(conn, report)
 }
 
 // reportLatency sends a ping request to the server, measures the RTT time and
@@ -559,7 +655,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"clientTime": start.String(),
 		}},
 	}
-	if err := websocket.JSON.Send(conn, ping); err != nil {
+	if err := s.doSendReportData(conn, ping); err != nil {
 		return err
 	}
 	// Wait for the pong request to arrive back
@@ -581,7 +677,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"latency": latency,
 		}},
 	}
-	return websocket.JSON.Send(conn, stats)
+	return s.doSendReportData(conn, stats)
 }
 
 // blockStats is the information to report about individual blocks.
@@ -614,9 +710,9 @@ type pos_blockStats struct {
 	Root       common.Hash    `json:"stateRoot"`
 }
 
-type pos_selection struct {
-	ELList  []common.Address `json:"elList"`
-	RNPList []common.Address `json:"rnpList"`
+type pos_leader struct {
+	ELList  []string `json:"elList"`
+	RNPList []string `json:"rnpList"`
 }
 
 type pos_reorg struct {
@@ -630,10 +726,11 @@ type pos_log struct {
 	ErrorCount   uint64 `json:"errorCount"`
 }
 
-//type pos_alarm struct {
-//	Level string `json:"level"`
-//	Msg   string `json:"msg"`
-//}
+type pos_alarm struct {
+	Level string `json:"level"`
+	Msg string `json:"msg"`
+}
+
 
 // txStats is the information to report about individual transactions.
 type txStats struct {
@@ -666,7 +763,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 // reportBlock retrieves the current chain head and repors it to the stats server.
@@ -679,12 +776,12 @@ func (s *Service) reportPosBlock(conn *websocket.Conn, block *types.Block) error
 
 	stats := map[string]interface{}{
 		"id":    s.node,
-		"block": details,
+		"pos-block": details,
 	}
 	report := map[string][]interface{}{
-		"emit": {"block", stats},
+		"emit": {"pos-block", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 // assembleBlockStats retrieves any required metadata to report a single block
@@ -840,7 +937,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	report := map[string][]interface{}{
 		"emit": {"history", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) reportPosHistory(conn *websocket.Conn, list []uint64) error {
@@ -893,12 +990,12 @@ func (s *Service) reportPosHistory(conn *websocket.Conn, list []uint64) error {
 	}
 	stats := map[string]interface{}{
 		"id":      s.node,
-		"history": history,
+		"pos-history": history,
 	}
 	report := map[string][]interface{}{
-		"emit": {"history", stats},
+		"emit": {"pos-history", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 // pendStats is the information to report about pending transactions.
@@ -928,7 +1025,7 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"pending", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 // nodeStats is the information to report about the local node.
@@ -1008,10 +1105,13 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"stats", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
+	log.Debug("wanstats report pos stats begin")
+	defer log.Debug("wanstats report pos stats end")
+
 	// Gather the syncing and mining infos from the local miner instance
 	var (
 		err      error
@@ -1046,42 +1146,46 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		price, _ := s.eth.ApiBackend.SuggestPrice(context.Background())
 		gasprice = int(price.Uint64())
 
-		apis := posapi.APIs(s.eth.BlockChain(), s.eth.ApiBackend)
-		api, ok := apis[0].Service.(posapi.PosApi)
-		if !ok {
-			log.Error("create posapi instance fail")
+		if s.api != nil {
+			epochId = s.api.GetEpochID()
+			slotId = s.api.GetSlotID()
+
+			blockNum := s.eth.BlockChain().CurrentHeader().Number.Uint64()
+			iChainQuality, err = s.api.GetChainQuality(epochId, slotId)
+			if err != nil {
+				log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
+			} else {
+				chainQuality = fmt.Sprint("%.1f", float64(iChainQuality)/1000.0)
+			}
+
+			epBlockCount = s.api.GetEpochBlkCnt(epochId)
+			curRandom, err = s.api.GetRandom(epochId, -1)
+			if err != nil {
+				curRandom = big.NewInt(0)
+			}
+
+			nextRandom, err = s.api.GetRandom(epochId+1, -1)
+			if err != nil {
+				nextRandom = big.NewInt(0)
+			}
+
+			curRbStage = s.api.GetRbStage(slotId)
+			validDkgCnts, _ := s.api.GetValidRBCnt(epochId)
+			if len(validDkgCnts) == 3 {
+				validDkg1Cnt = validDkgCnts[0]
+				validDkg2Cnt = validDkgCnts[1]
+				validSigCnt = validDkgCnts[2]
+			}
+
+			curSlStage = s.api.GetSlStage(slotId)
+			validSmaCnts, _ := s.api.GetValidSMACnt(epochId)
+			if len(validSmaCnts) == 2 {
+				validSma1Cnt = validSmaCnts[0]
+				validSma2Cnt = validSmaCnts[1]
+			}
+			selfMinedBlks, selfElActivity, selfRnpActivity = s.getSelfActivity(s.api, epochId)
 		}
 
-		epochId = api.GetEpochID()
-		slotId = api.GetSlotID()
-
-		blockNum := s.eth.BlockChain().CurrentHeader().Number.Uint64()
-		iChainQuality, err = api.GetChainQuality(epochId, slotId)
-		if err != nil {
-			log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
-		} else {
-			chainQuality = fmt.Sprint("%.1f", float64(iChainQuality)/1000.0)
-		}
-
-		epBlockCount = api.GetEpochBlkCnt(epochId)
-
-		curRandom, err = api.GetRandom(epochId, -1)
-		if err != nil {
-			curRandom = big.NewInt(0)
-		}
-
-		nextRandom, err = api.GetRandom(epochId+1, -1)
-		if err != nil {
-			nextRandom = big.NewInt(0)
-		}
-
-		icurRbStage, _, _ := vm.GetRBStage(slotId)
-		curRbStage = uint64(icurRbStage)
-
-		validDkg1Cnt, validDkg2Cnt, validSigCnt = api.GetValidRBCnt(epochId)
-		curSlStage = api.GetSlStage(slotId)
-		validSma1Cnt, validSma2Cnt = api.GetValidSMACnt(epochId)
-		selfMinedBlks, selfElActivity, selfRnpActivity = s.getSelfActivity(&api, epochId)
 	} else {
 		sync := s.les.Downloader().Progress()
 		syncing = s.les.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
@@ -1091,7 +1195,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 
 	stats := map[string]interface{}{
 		"id": s.node,
-		"stats": &pos_nodeStats{
+		"pos-stats": &pos_nodeStats{
 			Active:          true,
 			Mining:          mining,
 			Peers:           s.server.PeerCount(),
@@ -1119,7 +1223,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"pos-stats", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return s.doSendReportData(conn, report)
 }
 
 func (s *Service) getSelfActivity(api *posapi.PosApi, epochId uint64) (uint64, uint64, uint64) {
@@ -1135,23 +1239,72 @@ func (s *Service) getSelfActivity(api *posapi.PosApi, epochId uint64) (uint64, u
 	}
 
 	selfAddr := posconfig.Cfg().GetMinerAddr()
+	if (selfAddr == common.Address{}) {
+		return minedBlks, elActivity, rnpActivity
+	}
+
 	for i := range activity.EpLeader {
 		if activity.EpLeader[i] == selfAddr {
-			elActivity = uint64(activity.EpActivity[i])
+			elActivity += uint64(activity.EpActivity[i])
 		}
 	}
 
 	for i := range activity.RpLeader {
 		if activity.RpLeader[i] == selfAddr {
-			rnpActivity = uint64(activity.RpActivity[i])
+			rnpActivity += uint64(activity.RpActivity[i])
 		}
 	}
 
 	for i := range activity.SltLeader {
 		if activity.SltLeader[i] == selfAddr {
-			minedBlks = uint64(activity.SlBlocks[i])
+			minedBlks += uint64(activity.SlBlocks[i])
 		}
 	}
 
 	return minedBlks, elActivity, rnpActivity
+}
+
+func (s *Service) doSendReportData(conn *websocket.Conn, v interface{}) error {
+	log.Debug("wanstats send report data", "data", v)
+	return websocket.JSON.Send(conn, v)
+}
+
+// return old epochId
+func (s *Service) updateEpochId() uint64 {
+	if s.api == nil {
+		return s.epochId
+	}
+
+	epochId := s.api.GetEpochIDByTime(uint64(time.Now().Unix()))
+	oldEpochId := s.epochId
+	s.epochId = epochId
+	return oldEpochId
+}
+
+func log2PosAlarm(log *log.LogInfo) pos_alarm {
+	if log == nil {
+		return pos_alarm{}
+	}
+
+	lvlStr := ""
+	switch log.Lvl {
+	case syslog.LOG_EMERG:
+		lvlStr = "EMERG"
+	case syslog.LOG_ALERT:
+		lvlStr = "ALERT"
+	case syslog.LOG_CRIT:
+		lvlStr = "CRIT"
+	case syslog.LOG_ERR:
+		lvlStr = "ERR"
+	case syslog.LOG_WARNING:
+		lvlStr = "WARNING"
+	case syslog.LOG_NOTICE:
+		lvlStr = "NOTICE"
+	case syslog.LOG_INFO:
+		lvlStr = "INFO"
+	case syslog.LOG_DEBUG:
+		lvlStr = "DEBUG"
+	}
+
+	return pos_alarm{lvlStr, log.Msg}
 }

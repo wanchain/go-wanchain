@@ -905,7 +905,6 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.SyslogInfo("generate random", "epochId", eid+1,"r", common.ToHex(r.Bytes()))
 		}
 	}
 
@@ -986,7 +985,7 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 		return nil, logError(errors.New("final pairing check failed"))
 	}
 
-	log.Debug("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
+	log.SyslogInfo("compute random success", "epochId", epochId+1, "random", common.ToHex(random))
 	return big.NewInt(0).SetBytes(random), nil
 }
 

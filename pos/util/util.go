@@ -21,7 +21,7 @@ import (
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
-	if posconfig.EpochBaseTime == 0 {
+	if posconfig.EpochBaseTime == 0 || time < posconfig.EpochBaseTime {
 		return
 	}
 	//timeUnix := uint64(time.Now().Unix())
@@ -127,14 +127,15 @@ func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 
 //this function only can return
 func GetEpochBlock(epochID uint64) uint64 {
+
 	lbe.Lock()
 	b := lastBlockEpoch[epochID]
-
+	lbe.Unlock()
+	
 	if b == 0 {
 		b = selecter.GetEpochLastBlkNumber(epochID)
 	}
-
-	lbe.Unlock()
+	
 	return b
 }
 
