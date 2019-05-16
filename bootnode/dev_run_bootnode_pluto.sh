@@ -7,8 +7,8 @@
 #      \_/\_/_/   \_\_| \_|\____|_| |_|\__,_|_|_| |_|____/ \___| \_/  
 #                                                                     
 
+echo "run gwan in pluto bootnode testnet"
+make && \
+rm -rf ~/.wanchain/pluto/gwan && \
+build/bin/gwan --plutodev  --nodiscover --etherbase  "0xcf696d8eea08a311780fb89b20d4f0895198a489"  --unlock "0xcf696d8eea08a311780fb89b20d4f0895198a489" --password ./pw.txt  --mine --minerthreads=1 $@
 
-echo "run geth in pluto bootnode testnet"
-echo -n ${COINBASEPW} > /tmp/pw.txt
-geth --datadir=./data --pluto --nodiscover --unlock "0xe8ffc3d0c02c0bfc39b139fa49e2c5475f000000" --password /tmp/pw.txt \
---nodekey nodekey.key --mine --minerthreads=1

@@ -158,3 +158,8 @@ func (p *FakePeer) RequestNodeData(hashes []common.Hash) error {
 	p.dl.DeliverNodeData(p.id, data)
 	return nil
 }
+
+func (p *FakePeer) RequestEpochGenesisData(epochids uint64) error {
+	return nil
+}
+

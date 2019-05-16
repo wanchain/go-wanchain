@@ -40,6 +40,7 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
+	Etherbase() (common.Address, error)
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -55,19 +56,21 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
+	timerStop   chan interface{}
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
-		eth:      eth,
-		mux:      mux,
-		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
-		canStart: 1,
+		eth:       eth,
+		mux:       mux,
+		engine:    engine,
+		worker:    newWorker(config, engine, common.Address{}, eth, mux),
+		canStart:  1,
+		timerStop: make(chan interface{}),
 	}
 	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	//posInit(eth, nil)
 	go miner.update()
-
 	return miner
 }
 
@@ -116,13 +119,19 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
+	//self.worker.commitNewWork()
+	if self.worker.config.Pluto != nil {
+		go self.backendTimerLoop(self.eth)
+	}
 }
 
 func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
+	if self.worker.config.Pluto != nil {
+		self.timerStop <- nil
+	}
 }
 
 func (self *Miner) Register(agent Agent) {

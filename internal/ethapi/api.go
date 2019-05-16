@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/wanchain/go-wanchain/accounts"
@@ -329,12 +331,15 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, password string) (common.Address, error) {
 	if strings.HasPrefix(privkey0, "0x") {
 		privkey0 = privkey0[2:]
 	}
 	if strings.HasPrefix(privkey1, "0x") {
 		privkey1 = privkey1[2:]
+	}
+	if strings.HasPrefix(privkey2, "0x") {
+		privkey2 = privkey2[2:]
 	}
 
 	r0, err := hex.DecodeString(privkey0)
@@ -343,6 +348,11 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password str
 	}
 
 	r1, err := hex.DecodeString(privkey1)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	r2, err := hex.DecodeString(privkey2)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -357,7 +367,12 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password str
 		return common.Address{}, nil
 	}
 
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, password)
+	sk2, err := bn256.ToBn256(r2)
+	if err != nil {
+		return common.Address{}, nil
+	}
+
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, sk2, password)
 	return acc.Address, err
 }
 
@@ -1367,7 +1382,43 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	}
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
+	var chainID *big.Int
 
+	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config != nil {
+		chainID = config.ChainId
+	}
+
+	signed, err := wallet.SignTx(account, tx, chainID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, signed)
+}
+func (s *PublicTransactionPoolAPI) SendPosTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+	// Assemble the transaction and sign with the wallet
+	tx := args.toTransaction()
+	tx.SetTxtype(types.POS_TX)
 	var chainID *big.Int
 
 	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
@@ -1798,4 +1849,43 @@ func (s *PrivateAccountAPI) GetOTABalance(ctx context.Context, blockNr rpc.Block
 
 	return otaB, state.Error()
 
+}
+
+func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([]string, error) {
+
+	if len(addr) == 0 {
+		return nil, errors.New("address must be given as argument")
+	}
+	if len(passwd) == 0 {
+		return nil, errors.New("passwd must be given as argument")
+	}
+
+	ks := s.am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	all := ks.Accounts()
+	lenth := len(all)
+
+	pubs := make([]string, 0)
+	var exisit bool
+	for i := 0; i < lenth; i++ {
+		if all[i].Address == addr {
+			key, err := ks.GetKey(all[i], passwd)
+			if err != nil {
+				return nil, err
+			}
+
+			if key.PrivateKey != nil {
+				pubs = append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+			}
+
+			if key.PrivateKey3 != nil {
+				pubs = append(pubs, common.ToHex(key.PrivateKey3.G1.Marshal()))
+			}
+			exisit = true
+			break
+		}
+	}
+	if !exisit {
+		return nil, errors.New("invalid address")
+	}
+	return pubs, nil
 }

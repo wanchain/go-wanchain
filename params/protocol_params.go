@@ -72,12 +72,16 @@ const (
 
 	RequiredGasPerMixPub uint64 = 4000 // ring signature mix difficulty gas
 	GetOTAMixSetMaxSize  uint64 = 20   // Max number of mix ota set size from once getting
+
+	//SlsStgOnePerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
+	SlsStgTwoPerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
 )
 
 var (
 	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
 	GenesisGasLimit        = big.NewInt(4712388)               // Gas limit of the Genesis block.
+	//GenesisGasLimit        = big.NewInt(47123880)               // Gas limit of the Genesis block.
 	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
 	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.

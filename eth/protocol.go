@@ -57,6 +57,10 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
+	//GET Epoch genesis
+	GetEpochGenesisMsg = 0x08
+	EpochGenesisMsg    = 0x09
+
 	// Protocol messages belonging to eth/63
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
@@ -181,3 +185,12 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+// GetEpochGenesisMsg represents a block header query.
+type getEpochGenesisData struct {
+	Epochid uint64 // epochid from which to get epoch genesis
+}
+
+type epochGenesisBody struct {
+	EpochGenesis 	*types.EpochGenesis
+}

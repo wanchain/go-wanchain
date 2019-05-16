@@ -89,6 +89,7 @@ func (d *Downloader) stateFetcher() {
 // runStateSync runs a state synchronisation until it completes or another root
 // hash is requested to be switched over to.
 func (d *Downloader) runStateSync(s *stateSync) *stateSync {
+	log.Debug("####runStateSync", "sched", s.sched)
 	var (
 		active   = make(map[string]*stateReq) // Currently in-flight requests
 		finished []*stateReq                  // Completed or failed requests
@@ -234,6 +235,7 @@ type stateTask struct {
 // newStateSync creates a new state trie download scheduler. This method does not
 // yet start the sync. The user needs to call run to initiate.
 func newStateSync(d *Downloader, root common.Hash) *stateSync {
+	log.Debug("===newStateSync", "root", common.ToHex(root.Bytes()))
 	return &stateSync{
 		d:       d,
 		sched:   state.NewStateSync(root, d.stateDB),

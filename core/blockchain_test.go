@@ -393,7 +393,7 @@ func TestReorgShortHeaders(t *testing.T) { testReorgShort(t, false) }
 func TestReorgShortBlocks(t *testing.T)  { testReorgShort(t, true) }
 
 func testReorgShort(t *testing.T, full bool) {
-	testReorg(t, []int{1, 2, 3, 4}, []int{1, 10}, 11, full)
+	testReorg(t, []int{1, 2, 3, 4}, []int{1, 12}, 10, full)
 }
 
 func testReorg(t *testing.T, first, second []int, td int64, full bool) {
@@ -408,6 +408,8 @@ func testReorg(t *testing.T, first, second []int, td int64, full bool) {
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, first, 11), 1)
 		bc.InsertHeaderChain(makeHeaderChainWithDiff(bc.genesisBlock, second, 22), 1)
 	}
+
+
 	// Check that the chain is valid number and link wise
 	if full {
 		prev := bc.CurrentBlock()
@@ -1068,6 +1070,7 @@ func TestCanonicalBlockRetrieval(t *testing.T) {
 	}
 	pend.Wait()
 }
+
 
 //func TestEIP155Transition(t *testing.T) {
 //	// Configure and generate a sample block chain

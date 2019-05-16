@@ -18,6 +18,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/crypto"
 	"io/ioutil"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -187,6 +189,17 @@ this import mechanism is not needed when you transfer an account between
 nodes.
 `,
 			},
+			{
+				Name:   "pubkeys",
+				Usage:  "Print public keys",
+				Action: utils.MigrateFlags(showPublicKey),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
+Print public key of an address`,
+			},
 		},
 	}
 )
@@ -348,7 +361,7 @@ func accountImport(ctx *cli.Context) error {
 	if len(keyfile) == 0 {
 		utils.Fatalf("keyfile must be given as argument")
 	}
-	key, key1, err := keystore.LoadECDSAPair(keyfile)
+	key, key1, key2, err := keystore.LoadECDSAPair(keyfile)
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
@@ -356,10 +369,47 @@ func accountImport(ctx *cli.Context) error {
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportECDSA(key, key1, passphrase)
+	acct, err := ks.ImportECDSA(key, key1, key2, passphrase)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
 	fmt.Printf("Address: {%s}\n", acct.Address.Hex()[2:])
+	return nil
+}
+
+func showPublicKey(ctx *cli.Context) error {
+	addrstr := ctx.Args().Get(0)
+	passwd := ctx.Args().Get(1)
+	if len(addrstr) == 0 {
+		utils.Fatalf("address must be given as argument")
+	}
+	if len(passwd) == 0 {
+		utils.Fatalf("passwd must be given as argument")
+	}
+
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	addr := common.HexToAddress(addrstr)
+	all := ks.Accounts()
+	lenth := len(all)
+	for i := 0; i < lenth; i++ {
+		if all[i].Address == addr {
+			key, err := ks.GetKey(all[i], passwd)
+			if err != nil {
+				utils.Fatalf("Error failed to load keyfile ")
+			}
+			if key.PrivateKey != nil {
+				fmt.Println("key1:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+			}
+			if key.PrivateKey2 != nil {
+				fmt.Println("key2:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+				fmt.Println("waddress:" + common.ToHex(key.WAddress[:]))
+			}
+			if key.PrivateKey3 != nil {
+				fmt.Println("key3:" + common.ToHex(key.PrivateKey3.G1.Marshal()))
+			}
+			break
+		}
+	}
 	return nil
 }

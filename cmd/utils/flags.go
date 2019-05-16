@@ -24,9 +24,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -54,7 +55,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -139,14 +140,35 @@ var (
 		Name:  "internal",
 		Usage: "Internal network: pre-configured proof-of-authority internal test network",
 	}
+
 	PlutoFlag = cli.BoolFlag{
 		Name:  "pluto",
 		Usage: "Pluto network: pre-configured wanchain proof-of-authority test network",
 	}
+
+	PlutoDevFlag = cli.BoolFlag{
+		Name:  "plutodev",
+		Usage: "Pluto dev network: pre-configured wanchain proof-of-authority test network",
+	}
+
+	//facuet enbale settings
+	FaucetEnabledFlag = cli.BoolFlag{
+		Name:  "faucet",
+		Usage: "Enable faucet ",
+	}
+
+	FaucetAmountFlag = cli.IntFlag{
+		Name:  "faucetamount",
+		Usage: "Faucet charge amount per time",
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
+	}
+
+
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
 	}
+
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
 		Usage: "Custom node name",
@@ -284,7 +306,7 @@ var (
 	MinerThreadsFlag = cli.IntFlag{
 		Name:  "minerthreads",
 		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
 	}
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
@@ -493,6 +515,33 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	// syslog
+	SysLogFlag = cli.BoolFlag{
+		Name:  "syslog",
+		Usage: "Enable the syslog",
+	}
+	SyslogNetFlag = cli.StringFlag{
+		Name:  "syslognet",
+		Usage: "syslog net protocol",
+		Value: "tcp",
+	}
+	SyslogSvrFlag = cli.StringFlag{
+		Name:  "syslogsvr",
+		Usage: "syslog server address",
+	}
+	SyslogLevelFlag = cli.StringFlag{
+		Name:  "sysloglevel",
+		Usage: "syslog level",
+		Value: "INFO",
+	}
+	SyslogTagFlag = cli.StringFlag{
+		Name:  "syslogtag",
+		Usage: "syslog tag",
+		Value: "gwan_pos",
+	}
+
+
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -507,7 +556,7 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(DevInternalFlag.Name) {
 			return filepath.Join(path, "interal")
 		}
-		if ctx.GlobalBool(PlutoFlag.Name) {
+		if ctx.GlobalBool(PlutoFlag.Name) || ctx.GlobalBool(PlutoDevFlag.Name) {
 			return filepath.Join(path, "pluto")
 		}
 		return path
@@ -566,6 +615,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.InternalBootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
 		urls = params.PlutoBootnodes
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		urls = params.PlutoBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -593,6 +644,8 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.GlobalBool(DevInternalFlag.Name):
 		urls = params.InternalV5Bootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
+		urls = params.PlutoV5ootnodes
+	case ctx.GlobalBool(PlutoDevFlag.Name):
 		urls = params.PlutoV5ootnodes
 	case cfg.BootstrapNodesV5 != nil:
 		return // already set, don't apply defaults.
@@ -746,6 +799,7 @@ func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
 		cfg.Etherbase = account.Address
 		return
 	}
+
 	accounts := ks.Accounts()
 	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {
@@ -838,6 +892,8 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	case ctx.GlobalBool(DevInternalFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "internal")
 	case ctx.GlobalBool(PlutoFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
+	case ctx.GlobalBool(PlutoDevFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
 	}
 
@@ -940,7 +996,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag)
+	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag, PlutoDevFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -978,12 +1034,14 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
+
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
 		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
+
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
@@ -1002,10 +1060,17 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		}
 		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
+		posconfig.IsDev = false
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 6
 		}
+
 		cfg.Genesis = core.DefaultPlutoGenesisBlock()
+
+	case ctx.GlobalIsSet(PlutoDevFlag.Name):
+		posconfig.IsDev = true
+		cfg.Genesis = core.PlutoDevGenesisBlock()
+
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
@@ -1100,6 +1165,10 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
 		genesis = core.DefaultPlutoGenesisBlock()
+
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		genesis = core.PlutoDevGenesisBlock()
+
 	case ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DevGenesisBlock()
 	}

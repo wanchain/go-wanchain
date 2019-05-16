@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/wanchain/go-wanchain/consensus"
 )
 
 const (
@@ -143,6 +143,7 @@ type Fetcher struct {
 	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (eth/61) or header (eth/62) fetch
 	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (eth/62)
 	importedHook       func(*types.Block)      // Method to call upon successful block import (both eth/61 and eth/62)
+
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
@@ -632,6 +633,8 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	}
 }
 
+
+
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, if updates
 // the phase states accordingly.
@@ -649,6 +652,8 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 			log.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
 			return
 		}
+
+
 		// Quickly validate the header and propagate the block if it passes
 		switch err := f.verifyHeader(block.Header()); err {
 		case nil:
@@ -665,6 +670,8 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 			f.dropPeer(peer)
 			return
 		}
+
+
 		// Run the actual import and log any issues
 		if _, err := f.insertChain(types.Blocks{block}); err != nil {
 			log.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)

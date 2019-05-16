@@ -356,7 +356,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		oldNum := oldHead.Number.Uint64()
 		newNum := newHead.Number.Uint64()
 
-		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 64 {
+		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 1024 {
 			log.Warn("Skipping deep transaction reorg", "depth", depth)
 		} else {
 			// Reorg seems shallow enough to pull in all transactions into memory
@@ -555,8 +555,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidTxType
 	}
 
+	// type must match to des address
+	isNormalType := types.IsNormalTransaction(tx.Txtype())
+	isPosType := types.IsPosTransaction(tx.Txtype())
+	isPosAddr := vm.IsPosPrecompiledAddr(tx.To())
+	if isPosType != isPosAddr {
+		return ErrInvalidTxType
+	}
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
-	if tx.Size() > 32*1024 {
+	if tx.Size() > 320*1024 {
 		return ErrOversizedData
 	}
 
@@ -585,12 +593,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if types.IsNormalTransaction(tx.Txtype()) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	if (isNormalType || isPosType) && pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
 
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if types.IsNormalTransaction(tx.Txtype()) {
+	intrGas := IntrinsicGas(tx.Data(), tx.To(), pool.homestead)
+	if isNormalType || isPosType {
 		if tx.Gas().Cmp(intrGas) < 0 {
 			return ErrIntrinsicGas
 		}
@@ -805,13 +813,13 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	if !replace {
 		from, _ := types.Sender(pool.signer, tx) // already validated
 		pool.promoteExecutables([]common.Address{from})
-		
-	}  else {//fixing the bug that replaced tx can not be broadcast
-		if err==nil {
-		   go pool.txFeed.Send(TxPreEvent{tx})
+
+	} else { //fixing the bug that replaced tx can not be broadcast
+		if err == nil {
+			go pool.txFeed.Send(TxPreEvent{tx})
 		}
 	}
-	
+
 	return nil
 }
 
@@ -926,7 +934,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			if types.IsNormalTransaction(tx.Txtype()) {
+			if types.IsNormalTransaction(tx.Txtype()) || types.IsPosTransaction(tx.Txtype()) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable queued transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -943,6 +951,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.all, hash)
 			pool.priced.Removed()
 			queuedNofundsCounter.Inc(1)
+		}
+
+		// Remove all invalid pos transactions
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer)
+		for _, tx := range invalidPos {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
 		}
 
 		// Gather all executable transactions and promote them
@@ -1097,7 +1115,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			if types.IsNormalTransaction(tx.Txtype()) {
+			if types.IsNormalTransaction(tx.Txtype()) || types.IsPosTransaction(tx.Txtype()) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable pending transaction", "hash", hash)
 				delete(pool.all, hash)
@@ -1116,6 +1134,16 @@ func (pool *TxPool) demoteUnexecutables() {
 		for _, tx := range invalidPrivacy {
 			hash := tx.Hash()
 			log.Trace("Removed invalid privacy transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
+		// Remove all invalid pos transactions
+		invalidPos := list.InvalidPosRBTx(pool.currentState, pool.signer)
+		for _, tx := range invalidPos {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos transaction", "hash", hash)
 			delete(pool.all, hash)
 			pool.priced.Removed()
 			pendingNofundsCounter.Inc(1)
