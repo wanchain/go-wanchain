@@ -563,7 +563,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		if hc.IsEpochFirstBlkNumber(epochID, number) {
 			extraType := header.Extra[0]
 			if extraType == 'g' {
-				if len(header.Extra) < extraSeal + 33 {
+				if len(header.Extra) > extraSeal + 33 {
 
 					egHash := common.BytesToHash(header.Extra[1:33])
 					if err := hc.VerifyEpochGenesisHash(epochID, egHash); err != nil {

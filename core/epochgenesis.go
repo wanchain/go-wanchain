@@ -237,7 +237,7 @@ func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) 
 }
 func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
 	if epochid > 1 {
-		log.Info(" epoch > 0")
+		log.Info(" epoch > 1")
 		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
 		if blkNumLast + 1 == blkNum {
 			return true
