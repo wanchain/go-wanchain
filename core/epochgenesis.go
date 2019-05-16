@@ -473,7 +473,7 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 			return err
 		}
 	}
-	posUtil.SetEpochBlock(epochgen.EpochId - 1, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
+	posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
 
 	err = f.saveToPosDb(epochgen, isEnd)
 	if err != nil {
