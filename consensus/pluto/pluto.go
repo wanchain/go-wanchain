@@ -47,9 +47,9 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
+	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/rpc"
-	posUtil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 const (
@@ -538,40 +538,41 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
 	if epidTime != epochID || slIdTime != slotID {
-		log.Error("epochid or slotid do not match", "epidTime=",epidTime,"slIdTime=",slIdTime,"epidFromDiffulty=",epochID,"slotIDFromDifficulty=",slotID)
+		log.SyslogErr("epochid or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
 		return errors.New("epochid or slotid do not match")
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
 
 	if len(header.Extra) == extraSeal {
-		log.Warn("Header extra info length is too short")
+		log.SyslogErr("Header extra info length is too short")
 		return errUnauthorized
 
 	} else {
 		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 		if err != nil {
-			log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+			log.SyslogErr("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
+			return errUnauthorized
 		} else {
-
 			log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 
 			pk := proofMeg[0]
+
 			log.Debug("ecrecover(header, c.signatures)")
 			signer, err := ecrecover(header, c.signatures)
 			if err != nil {
-				log.Error(err.Error())
+				log.SyslogErr(err.Error())
+				return errUnauthorized
 			}
 
 			if signer.Hex() != crypto.PubkeyToAddress(*pk).Hex() {
-				log.Error("Pk signer verify failed in verifySeal", "number", number,
+				log.SyslogErr("Pk signer verify failed in verifySeal", "number", number,
 					"epochID", epochID, "slotID", slotID, "signer", signer.Hex(), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 				return errUnauthorized
 			}
 
 			if isSlotVerify {
-
 				err := s.ValidateBody(types.NewBlockWithHeader(header))
 				if err != nil {
 					return err
