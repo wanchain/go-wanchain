@@ -123,6 +123,8 @@ type BlockChain struct {
 	epochGene *EpochGenesisBlock
 
 	slotValidator Validator
+
+	checkCQ	  bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -147,6 +149,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		checkCQ:	  false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -910,10 +913,16 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
-		if !posconfig.IsDev {
+		//the chain quality is not ok when chain is restarted
+		if !posconfig.IsDev && bc.checkCQ{
 			return NonStatTy, ErrInsufficientCQ
 		}
+	} else {
+		//once chain quality is ok,then set it to be check in the future
+		bc.checkCQ = true
 	}
+
+
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1658,3 +1667,8 @@ func (bc *BlockChain) SetFastSynchValidator() {
 func (bc *BlockChain) SetFullSynchValidator() {
 	bc.slotValidator = bc.epochGene.slotLeaderSelector
 }
+
+func (bc *BlockChain) GetCheckCQFlag() bool {
+	return bc.checkCQ
+}
+

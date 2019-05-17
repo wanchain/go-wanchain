@@ -71,7 +71,8 @@ type SelectLead interface {
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
 	GetEpochLastBlkNumber(targetEpochId uint64) uint64
-	//TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
+	GetPosGenesisEpAndSlId() (epochID uint64, slotID uint64)
+	GetWhiteByEpochId(epochId uint64) ([]string, error)
 }
 
 var (
@@ -196,4 +197,9 @@ func FromWin(win *big.Int) float64 {
 		return 0
 	}
 	return wan
+}
+
+
+func GetPosGenesisEpAndSlId() (epochID, slotID uint64) {
+	return GetEpocherInst().GetPosGenesisEpAndSlId()
 }

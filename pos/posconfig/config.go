@@ -100,6 +100,8 @@ type Config struct {
 	Dkg2End       uint64
 	SignBegin     uint64
 	SignEnd       uint64
+
+	PosGensBlkNum uint64
 }
 
 var DefaultConfig = Config{
@@ -116,6 +118,7 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
 }
 
 func Cfg() *Config {

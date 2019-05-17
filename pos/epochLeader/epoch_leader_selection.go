@@ -635,3 +635,11 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	}
 	return true
 }
+
+
+func (e *Epocher) GetPosGenesisEpAndSlId() (epochID uint64, slotID uint64) {
+
+	posGenBlk := e.blkChain.GetBlockByNumber(posconfig.Cfg().PosGensBlkNum)
+
+	return util.CalEpochSlotID(posGenBlk.Time().Uint64())
+}

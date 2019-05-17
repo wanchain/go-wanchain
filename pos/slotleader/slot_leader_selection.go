@@ -6,9 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
-
 	"github.com/wanchain/go-wanchain/consensus"
+	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/core"
@@ -342,7 +341,7 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 	return pks, nil
 }
 
-func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
+func (s *SLS) getEpoch0LeadersPKOld() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
@@ -351,6 +350,33 @@ func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 			// If the configuration has error, system should not continue.
 			panic("posconfig.GenesisPK is Error")
 		}
+		pks[i] = crypto.ToECDSAPub(pkBuf)
+	}
+	return pks
+}
+
+func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
+	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
+
+	selector := util.GetEpocherInst() //TODO:CHECK INIT
+
+	initPksStr,err := selector.GetWhiteByEpochId(0)
+	if err != nil {
+		return nil
+	}
+
+	pkslen := len(initPksStr)
+
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		pkStr := initPksStr[i%pkslen]
+		pkBuf, err := hex.DecodeString(pkStr)
+		if err != nil {
+			// epoch 0 use the genesis pK to propose block, since it comes from configuration
+			// If the configuration has error, system should not continue.
+			panic("posconfig.GenesisPK is Error")
+		}
+
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
 	return pks
@@ -807,3 +833,25 @@ func (s *SLS) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, er
 func (s *SLS) GetChainReader() consensus.ChainReader {
 	return s.blockChain
 }
+
+
+//func (s *SLS) UseEpoch0Leaders (epochid uint64) bool {
+//
+//    posGenBlk := s.blockChain.GetBlockByNumber(posconfig.Cfg().PosGensBlkNum)
+//    genepid,_ := util.CalEpSlbyTd(posGenBlk.Difficulty().Uint64())
+//	if epochid == genepid {
+//		return true
+//	}
+//
+//    epochid,slotid := util.CalEpochSlotID(uint64(time.Now().Unix()))
+//	check := s.blockChain.GetCheckCQFlag()
+//	cq,_ := s.blockChain.ChainQuality(epochid,slotid)
+//
+//	if !check && cq < 500 {
+//		return true
+//	}
+//
+//	return false
+//}
+
+
