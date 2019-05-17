@@ -211,7 +211,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesisHead(epochid uint64) (*ty
 func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64)(*big.Int,*types.Block){
 	blkNum := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
 
-	preEpLastblk := f.bc.GetBlockByNumber(blkNum - 1)
+	preEpLastblk := f.bc.GetBlockByNumber(blkNum)
 
 	stateDb, err := f.bc.StateAt(preEpLastblk.Root())
 	if err != nil {
@@ -472,8 +472,8 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 		if err != nil {
 			return err
 		}
+		posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
 	}
-	posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
 
 	err = f.saveToPosDb(epochgen, isEnd)
 	if err != nil {

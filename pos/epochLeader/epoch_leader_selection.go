@@ -103,7 +103,6 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 			curNum--
 		}
 		targetBlkNum = curNum
-		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
 
 	return targetBlkNum
