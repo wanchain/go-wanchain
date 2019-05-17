@@ -722,8 +722,8 @@ type pos_reorg struct {
 }
 
 type pos_log struct {
-	WarningCount uint64 `json:"warningCount"`
-	ErrorCount   uint64 `json:"errorCount"`
+	WarnCnt   uint64 `json:"warnCnt"`
+	ErrorCnt  uint64 `json:"errorCnt"`
 }
 
 type pos_alarm struct {
