@@ -109,6 +109,28 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, err
 	return infoMap, nil
 }
 
+func (a PosApi) GetEpochLeadersAddrByEpochID(epochID uint64) ([]common.Address, error) {
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return nil, errors.New("GetEpocherInst error")
+	}
+
+	leaders := selector.GetEpochLeaders(epochID)
+	addres := make([]common.Address, len(leaders))
+	for i := range leaders {
+		pub := crypto.ToECDSAPub(leaders[i])
+		if pub == nil {
+			continue
+		}
+
+		addres[i] = crypto.PubkeyToAddress(*pub)
+
+	}
+
+	return addres, nil
+}
+
+
 func (a PosApi) GetLocalPK() (string, error) {
 	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
 	if err != nil {
@@ -141,14 +163,34 @@ func (a PosApi) GetSmaByEpochID(epochID uint64) (map[string]string, error) {
 	return info, nil
 }
 
-func (a PosApi) GetRandomProposersByEpochID(epochID uint64) map[string]string {
-	//leaders := posdb.GetRBProposerGroup(epochID)
-	leaders := epochLeader.GetEpocher().GetRBProposer(epochID)
+func (a PosApi) GetRandomProposersByEpochID(epochID uint64) (map[string]string, error) {
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return nil, errors.New("GetEpocherInst error")
+	}
+
+	leaders := selector.GetRBProposer(epochID)
 	info := make(map[string]string, 0)
 	for i := 0; i < len(leaders); i++ {
 		info[fmt.Sprintf("%06d", i)] = hex.EncodeToString(leaders[i])
 	}
-	return info
+
+	return info, nil
+}
+
+func (a PosApi) GetRandomProposersAddrByEpochId(epochID uint64) ([]common.Address, error) {
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return nil, errors.New("GetEpocherInst error")
+	}
+
+	leaders := selector.GetRBProposerGroup(epochID)
+	addres := make([]common.Address, len(leaders))
+	for i := range leaders {
+		addres[i] = leaders[i].SecAddr
+	}
+
+	return addres, nil
 }
 
 func (a PosApi) GetSlotCreateStatusByEpochID(epochID uint64) bool {
