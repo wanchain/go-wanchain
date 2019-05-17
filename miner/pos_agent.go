@@ -28,8 +28,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 
-	cfm.InitCFM(s.BlockChain())
-	slotleader.SlsInit()
+
 
 	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -47,6 +46,9 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		panic("PosInit")
 	}
 
+	cfm.InitCFM(s.BlockChain())
+
+	slotleader.SlsInit()
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
 

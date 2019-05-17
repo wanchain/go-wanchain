@@ -33,6 +33,15 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	return epochId, slotId
 }
 
+func CalTimeFromEpochSlotID (epochId, slotId uint64) (timeUnix uint64){
+
+	allSlots := epochId * posconfig.SlotCount + slotId
+	allSlotTime := allSlots * posconfig.SlotTime
+	timeUnix = allSlotTime +  posconfig.EpochBaseTime
+
+	return timeUnix
+}
+
 var (
 	curEpochId = uint64(0)
 	curSlotId  = uint64(0)

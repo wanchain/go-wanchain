@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -152,6 +154,8 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 	return s.getSMAPieces(epochID)
 }
 
+
+
 func SlsInit() {
 	var err error
 	APkiCache, err = lru.NewARC(1000)
@@ -165,6 +169,7 @@ func SlsInit() {
 	slotLeaderSelection.slotCreateStatusLockCh = make(chan int, 1)
 	s := slotLeaderSelection
 	s.randomGenesis = big.NewInt(1)
+
 	epoch0Leaders := s.getEpoch0LeadersPK()
 	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
@@ -358,7 +363,7 @@ func (s *SLS) getEpoch0LeadersPKOld() []*ecdsa.PublicKey {
 func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
-	selector := util.GetEpocherInst() //TODO:CHECK INIT
+	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(0)
 	if err != nil {
@@ -370,15 +375,10 @@ func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkStr := initPksStr[i%pkslen]
-		pkBuf, err := hex.DecodeString(pkStr)
-		if err != nil {
-			// epoch 0 use the genesis pK to propose block, since it comes from configuration
-			// If the configuration has error, system should not continue.
-			panic("posconfig.GenesisPK is Error")
-		}
-
+		pkBuf := common.FromHex(pkStr)
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
+
 	return pks
 }
 
