@@ -710,7 +710,7 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
-			log.SyslogErr("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
+			log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
 		} else {
 			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
