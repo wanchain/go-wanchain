@@ -261,7 +261,7 @@ func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, er
 
 func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
 	epkGnssHash, err := f.GetOrGenerateEGHash(epochid)
-	if err == nil {
+	if err != nil {
 		return errors.New("GetOrGenerateEGHash failed, epoch id=" + strconv.FormatUint(epochid, 10))
 	}
 	if epkGnssHash != hash {
