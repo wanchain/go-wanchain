@@ -166,7 +166,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 			}
 
 			fmt.Println("getEpochRandomAndPreEpLastBlk")
-			rb, blk = f.g
+			rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
 
 			if epgPre == nil {
 				return nil, errors.New("pre epg is nil")
