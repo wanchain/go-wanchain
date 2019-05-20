@@ -20,6 +20,7 @@ import (
 	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
+	"strconv"
 	"sync"
 )
 
@@ -249,15 +250,23 @@ func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, er
 	epkGnss := f.GetEpochGenesis(epochid)
 	if epkGnss == nil {
 		epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
-		if err != nil {
+		if err != nil || epkGnss == nil{
 			return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
 		}
-		return epkGnss.PreEpochLastBlkHash, nil
+		return epkGnss.GenesisBlkHash, nil
+	} else {
+		return epkGnss.GenesisBlkHash, nil
 	}
-	return common.Hash{}, nil
 }
 
 func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
+	epkGnssHash, err := f.GetOrGenerateEGHash(epochid)
+	if err == nil {
+		return errors.New("GetOrGenerateEGHash failed, epoch id=" + strconv.FormatUint(epochid, 10))
+	}
+	if epkGnssHash != hash {
+		return errors.New("VerifyEpochGenesisHash failed, epoch id="+ strconv.FormatUint(epochid, 10))
+	}
 	return nil
 }
 

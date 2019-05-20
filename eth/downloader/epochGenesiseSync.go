@@ -121,6 +121,8 @@ func (d *Downloader) epochGenesisFetcher() {
 					}
 				}
 
+				// todo: check
+
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
 				req.peer.SetEpochGenesisDataIdle(1)
