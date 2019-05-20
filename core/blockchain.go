@@ -1691,7 +1691,7 @@ func (bc *BlockChain) SetFullSynchValidator() {
 }
 
 
-func (bc *BlockChain) IsChainRestarted() bool {
+func (bc *BlockChain) IsChainRestarting() bool {
 
 	block := bc.currentBlock
 	if block == nil {
@@ -1702,7 +1702,7 @@ func (bc *BlockChain) IsChainRestarted() bool {
 
 	insertSlots := epid*posconfig.SlotCount + slid
 
-	//if
+	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
 	res := (insertSlots - bc.checkCQStartSlot) < posconfig.SlotCount && bc.checkCQStartSlot > 0
 
 	return res
