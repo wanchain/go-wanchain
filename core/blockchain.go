@@ -63,6 +63,8 @@ const (
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
+
+	INITRESTARTING = 0
 )
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -124,8 +126,9 @@ type BlockChain struct {
 
 	slotValidator Validator
 
-	checkCQStartSlot uint64
+	checkCQStartSlot uint64  //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 
+	restarted   bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -150,7 +153,8 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
-		checkCQStartSlot: 0,
+		checkCQStartSlot: INITRESTARTING,
+		restarted:    false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -919,14 +923,22 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if !bc.isWriteBlockSecure(block) {
 
 		insertSlots := epid*posconfig.SlotCount + slid
-
-		if bc.checkCQStartSlot == 0 {
+		//if start slot is 0 and cq is not qualified and no restarted flag,this chain is restarted
+		if bc.checkCQStartSlot == INITRESTARTING && !bc.restarted{
+			//record the restarting slot point
 			bc.checkCQStartSlot = insertSlots
+
 		}
 
-		if (insertSlots - bc.checkCQStartSlot) > posconfig.SlotSecurityParam {
+		//if chain is restated successfully or chain is not stable after 2k,then return error
+		if (insertSlots - bc.checkCQStartSlot) > posconfig.SlotSecurityParam ||
+			bc.restarted {
 			return NonStatTy, ErrInsufficientCQ
 		}
+
+	} else {
+
+		bc.restarted = true
 
 	}
 
@@ -1678,3 +1690,21 @@ func (bc *BlockChain) SetFullSynchValidator() {
 	bc.slotValidator = bc.epochGene.slotLeaderSelector
 }
 
+
+func (bc *BlockChain) IsChainRestarted() bool {
+
+	block := bc.currentBlock
+	if block == nil {
+		return false
+	}
+
+	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+
+	insertSlots := epid*posconfig.SlotCount + slid
+
+	//if
+	res := (insertSlots - bc.checkCQStartSlot) < posconfig.SlotCount && bc.checkCQStartSlot > 0
+
+	return res
+
+}
