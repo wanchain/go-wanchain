@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -114,6 +115,8 @@ type BlockChain struct {
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
 	engine    consensus.Engine
+	posEngine consensus.Engine
+	agents    []consensus.EngineSwitcher
 	processor Processor // block processor interface
 	validator Validator // block and state validator interface
 	vmConfig  vm.Config
@@ -128,7 +131,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngine consensus.Engine) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -145,6 +148,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		blockCache:   blockCache,
 		futureBlocks: futureBlocks,
 		engine:       engine,
+		posEngine:    posEngine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 	}
@@ -905,7 +909,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 	//confirm chain quality confirm security
-	if !bc.isWriteBlockSecure(block) {
+	if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
 		if !posconfig.IsDev {
 			return NonStatTy, ErrInsufficientCQ
 		}
@@ -920,7 +924,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	//localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
+	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
 	//localTd := bc.currentBlock.Difficulty()
@@ -951,9 +955,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//removed second clause in the if statement reduces the vulnerability to selfish mining
 	//get maxvalid chain as our suppose
 
-	//if externTd.Cmp(localTd) > 0 {
-	if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
+	//if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
 
+	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
+	if (!bc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) || (bc.config.IsPosActive && (bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64()) ) {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -985,7 +991,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if status == CanonStatTy {
 		bc.insert(block)
 		// TODO: update epoch ->blockNumber
-		if bc.config.Pluto != nil {
+		//if bc.config.Pluto != nil {
+		if bc.config.IsPosActive{
+			//TODO:ppow2pos change next as
 			if block.NumberU64() == 1 {
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
@@ -1000,9 +1008,23 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	bc.futureBlocks.Remove(block.Hash())
 
+	if bc.IsInPosStage() && !bc.Config().IsPosActive {
+		bc.config.SetPosActive()
+	}
+
 	return status, nil
 }
 
+func (bc *BlockChain) SwitchClientEngine() (error){
+	for _, agent := range bc.agents{
+		agent.SwitchEngine(bc.posEngine)
+	}
+	return nil
+}
+
+func (bc *BlockChain) registerSwitchEngine(agent consensus.EngineSwitcher){
+	bc.agents = append(bc.agents, agent)
+}
 // InsertChain attempts to insert the given batch of blocks in to the canonical
 // chain or, otherwise, create a fork. If an error is returned it will return
 // the index number of the failing block as well an error describing what went
@@ -1653,4 +1675,11 @@ func (bc *BlockChain) SetFastSynchValidator() {
 
 func (bc *BlockChain) SetFullSynchValidator() {
 	bc.slotValidator = bc.epochGene.slotLeaderSelector
+}
+
+// if current block number +1 is >= pos first block
+func (bc *BlockChain) IsInPosStage() (bool){
+	currentBlockNumber := bc.currentBlock.Number()
+	currentBlockNumber = currentBlockNumber.Add(currentBlockNumber, big.NewInt(1))
+	return bc.config.IsPosBlockNumber(currentBlockNumber)
 }

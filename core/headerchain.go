@@ -20,7 +20,7 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	//"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	mrand "math/rand"
@@ -144,11 +144,8 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
 
-	//localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
+	localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
 	externTd := new(big.Int).Add(header.Difficulty, ptd)
-
-	//localTd := hc.CurrentHeader().Difficulty
-	//externTd :=header.Difficulty
 
 
 	// Irrelevant of the canonical status, write the td and header to the database
@@ -161,8 +158,9 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	//if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
-	if hc.CurrentHeader().Number.Uint64() < header.Number.Uint64() {
+	if (!hc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) || (hc.config.IsPosActive && hc.CurrentHeader().Number.Uint64() < header.Number.Uint64()) {
+	//if hc.CurrentHeader().Number.Uint64() < header.Number.Uint64() {
+
 		// Delete any canonical number assignments above the new head
 		for i := number + 1; ; i++ {
 			hash := GetCanonicalHash(hc.chainDb, i)
@@ -276,11 +274,12 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 	// All headers passed verification, import them into the database
 	for i, header := range chain {
 
-		if header.Number.Uint64() == 1 {
-			if posconfig.EpochBaseTime == 0 {
-				posconfig.EpochBaseTime = header.Time.Uint64()
-			}
-		}
+		// TODO:ppow2pos set posconfig.EpochBaseTime when switch engine
+		//if header.Number.Uint64() == 1 {
+		//	if posconfig.EpochBaseTime == 0 {
+		//		posconfig.EpochBaseTime = header.Time.Uint64()
+		//	}
+		//}
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")

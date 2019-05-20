@@ -55,8 +55,6 @@ var (
 	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 
-        // TODO: change in mainnet
-	posBootstrapBlockNum  uint64        = 40
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -449,7 +447,8 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-        // Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
+	// Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
+	posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
 	if number == posBootstrapBlockNum {
 		ppowWindowLen := (len(s.UsedSigners)-1) / 2
 		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
@@ -458,7 +457,7 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		}
 	}
 	if number > posBootstrapBlockNum {
-		//
+		return errors.New("consensus engines should switched")
 	}
 	if err = s.isLegal4Sign(header.Coinbase); err != nil {
 		return err
@@ -760,6 +759,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 			return err
 		}
 
+		posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
 		if header.Number.Uint64() == posBootstrapBlockNum {
 			ppowWindowLen := (len(snap.UsedSigners)-1) / 2
 			slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
@@ -771,7 +771,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 		}
 
 		if header.Number.Uint64() > posBootstrapBlockNum{			
-			// 
+			return errors.New("consensus engine switched")
 		}
 
 		err = snap.isLegal4Sign(header.Coinbase)

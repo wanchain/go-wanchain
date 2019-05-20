@@ -148,7 +148,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
+	//posEngine := pluto.New(chainConfig.Pluto, chainDb)
+	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +161,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.bloomIndexer.Start(eth.blockchain.CurrentHeader(), eth.blockchain.SubscribeChainEvent)
 
-	if chainConfig.Pluto != nil {
-		miner.PosInit(eth)
-	}
+	// TODO:ppow2pos
+	//if chainConfig.Pluto != nil {
+	//	miner.PosInit(eth)
+	//}
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)

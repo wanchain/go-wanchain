@@ -71,7 +71,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 	if posconfig.EpochBaseTime == 0 {
 		//todo:`switch pos from pow,the time is not 1?
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
@@ -109,7 +109,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 
 	//todo:`switch pos from pow,the time is not 1?
-	h := s.BlockChain().GetHeaderByNumber(1)
+	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil == h {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
 		if err == nil {
@@ -124,7 +124,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 	for {
 		// wait until block1
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 		if nil == h {
 			select {
 			case <-self.timerStop:

@@ -119,8 +119,9 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	//self.worker.commitNewWork()
-	if self.worker.config.Pluto != nil {
+	if !self.eth.BlockChain().IsInPosStage() {
+		self.worker.commitNewWork(true)
+	} else {
 		go self.backendTimerLoop(self.eth)
 	}
 }
