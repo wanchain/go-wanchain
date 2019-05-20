@@ -681,7 +681,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	//if header.Time.Int64() < time.Now().Unix() {
 	//	header.Time = big.NewInt(time.Now().Unix())
 	//}
-	curEpochId, curSlotId := util.GetEpochSlotID()
+	curEpochId, curSlotId := util.CalEpochSlotID(header.Time.Uint64())
 
 	if posconfig.EpochBaseTime == 0 {
 		cur := time.Now().Unix()
@@ -772,7 +772,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	// }
 	// check if our trun
 	epochSlotId := uint64(1)
-	epochId, slotId := util.GetEpochSlotID()
+	epochId, slotId := util.CalEpochSlotID(header.Time.Uint64())
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
 	if epochSlotId <= lastEpochSlotId {
