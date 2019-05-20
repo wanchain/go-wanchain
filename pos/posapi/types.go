@@ -43,35 +43,35 @@ type ApiStakerInfo struct {
 }
 
 type ClientInfo struct {
-	Address     common.Address
-	Amount      *math.HexOrDecimal256
-	StakeAmount *math.HexOrDecimal256
-	QuitEpoch   uint64
+	Address     common.Address `json:"address"`
+	Amount      *math.HexOrDecimal256 `json:"amount"`
+	StakeAmount *math.HexOrDecimal256 `json:"stakeAmount"`
+	QuitEpoch   uint64 `json:"quitEpoch"`
 }
 type PartnerInfo struct {
-	Address      common.Address
-	Amount       *math.HexOrDecimal256
-	StakeAmount  *math.HexOrDecimal256
-	Renewal      bool
-	LockEpochs   uint64
-	StakingEpoch uint64
+	Address      common.Address `json:"address"`
+	Amount       *math.HexOrDecimal256 `json:"amount"`
+	StakeAmount  *math.HexOrDecimal256 `json:"stakeAmount"`
+	Renewal      bool `json:"renewal"`
+	LockEpochs   uint64 `json:"lockEpochs"`
+	StakingEpoch uint64 `json:"stakingEpoch"`
 }
 type StakerJson struct {
-	Address   common.Address
-	PubSec256 string //stakeholder’s wan public key
-	PubBn256  string //stakeholder’s bn256 public key
+	Address   common.Address `json:"address"`
+	PubSec256 string  `json:"pubSec256"`//stakeholder’s wan public key
+	PubBn256  string  `json:"pubBn256"`//stakeholder’s bn256 public key
 
-	Amount         *math.HexOrDecimal256
-	StakeAmount    *math.HexOrDecimal256
-	LockEpochs     uint64 //lock time which is input by user. 0 means unexpired.
-	NextLockEpochs uint64 //lock time which is input by user. 0 means unexpired.
-	From           common.Address
+	Amount         *math.HexOrDecimal256 `json:"amount"`
+	StakeAmount    *math.HexOrDecimal256 `json:"stakeAmount"`
+	LockEpochs     uint64  `json:"lockEpochs"`//lock time which is input by user. 0 means unexpired.
+	NextLockEpochs uint64  `json:"nextLockEpochs"`//lock time which is input by user. 0 means unexpired.
+	From           common.Address `json:"from"`
 
-	StakingEpoch uint64 //the user’s staking time
-	FeeRate      uint64
+	StakingEpoch uint64  `json:"stakingEpoch"`//the user’s staking time
+	FeeRate      uint64 `json:"feeRate"`
 	//NextFeeRate  uint64
-	Clients  []ClientInfo
-	Partners []PartnerInfo
+	Clients  []ClientInfo `json:"clients"`
+	Partners []PartnerInfo `json:"partners"`
 }
 
 func ToStakerJson(staker *vm.StakerInfo) *StakerJson {

@@ -260,15 +260,15 @@ web3._extend({
 			params: 1,
             outputFormatter: function(stakers) {
                 for(var i=0; i<stakers.length; i++) {
-                    stakers[i].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].StakeAmount)
-                    stakers[i].Amount = web3._extend.utils.toBigNumber(stakers[i].Amount)
-                    for(var k=0; k<stakers[i].Clients.length; k++) {
-                        stakers[i].Clients[k].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].Clients[k].StakeAmount)
-                        stakers[i].Clients[k].Amount = web3._extend.utils.toBigNumber(stakers[i].Clients[k].Amount)
+                    stakers[i].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].stakeAmount)
+                    stakers[i].amount = web3._extend.utils.toBigNumber(stakers[i].Amount)
+                    for(var k=0; k<stakers[i].clients.length; k++) {
+                        stakers[i].clients[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].clients[k].stakeAmount)
+                        stakers[i].clients[k].amount = web3._extend.utils.toBigNumber(stakers[i].clients[k].Amount)
                     }
-                    for(var k=0; k<stakers[i].Partners.length; k++) {
-                        stakers[i].Partners[k].StakeAmount = web3._extend.utils.toBigNumber(stakers[i].Partners[k].StakeAmount)
-                        stakers[i].Partners[k].Amount = web3._extend.utils.toBigNumber(stakers[i].Partners[k].Amount)
+                    for(var k=0; k<stakers[i].partners.length; k++) {
+                        stakers[i].partners[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].partners[k].stakeAmount)
+                        stakers[i].partners[k].amount = web3._extend.utils.toBigNumber(stakers[i].partners[k].Amount)
                     }
                 }
                 return stakers
