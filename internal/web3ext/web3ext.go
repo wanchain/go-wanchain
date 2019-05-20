@@ -133,6 +133,12 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getEpochLeadersAddrByEpochID',
+			call: 'pos_getEpochLeadersAddrByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
 			name: 'getSmaByEpochID',
 			call: 'pos_getSmaByEpochID',
 			params: 1
@@ -141,6 +147,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRandomProposersByEpochID',
 			call: 'pos_getRandomProposersByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getRandomProposersAddrByEpochId',
+			call: 'pos_getRandomProposersAddrByEpochId',
 			params: 1
 		}),
 

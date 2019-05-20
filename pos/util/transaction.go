@@ -33,6 +33,6 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
-	log.SyslogInfo("send pos tx success", "txHash", txHash)
+	log.SyslogInfo("send pos tx success", "txHash", txHash.String())
 	return txHash, nil
 }

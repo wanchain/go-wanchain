@@ -609,30 +609,17 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		return nil
 	}
 
-	el, err := s.api.GetEpochLeadersByEpochID(s.epochId)
+	el, err := s.api.GetEpochLeadersAddrByEpochID(s.epochId)
 	if err != nil {
 		return err
 	}
 
-	rnpl := s.api.GetRandomProposersByEpochID(s.epochId)
-
-	elArr := make([]string, 0, len(el))
-	rnpArr := make([]string, 0, len(rnpl))
-	for i := 0; i < len(el); i++ {
-		key := fmt.Sprintf("%06d", i)
-		if v, ok := el[key]; ok {
-			elArr = append(elArr, v)
-		}
+	rnpl, err := s.api.GetRandomProposersAddrByEpochId(s.epochId)
+	if err != nil {
+		return err
 	}
 
-	for i := 0; i < len(rnpl); i++ {
-		key := fmt.Sprintf("%06d", i)
-		if v, ok := rnpl[key]; ok {
-			rnpArr = append(rnpArr, v)
-		}
-	}
-
-	posL := pos_leader{elArr, rnpArr}
+	posL := pos_leader{el, rnpl}
 	stats := map[string]interface{}{
 		"id":    s.node,
 		"pos-leader": posL,
@@ -711,8 +698,8 @@ type pos_blockStats struct {
 }
 
 type pos_leader struct {
-	ELList  []string `json:"elList"`
-	RNPList []string `json:"rnpList"`
+	ELList  []common.Address `json:"elList"`
+	RNPList []common.Address `json:"rnpList"`
 }
 
 type pos_reorg struct {
@@ -722,8 +709,8 @@ type pos_reorg struct {
 }
 
 type pos_log struct {
-	WarningCount uint64 `json:"warningCount"`
-	ErrorCount   uint64 `json:"errorCount"`
+	WarnCnt   uint64 `json:"warnCnt"`
+	ErrorCnt  uint64 `json:"errorCnt"`
 }
 
 type pos_alarm struct {
@@ -1155,7 +1142,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 			if err != nil {
 				log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
 			} else {
-				chainQuality = fmt.Sprint("%.1f", float64(iChainQuality)/1000.0)
+				chainQuality = fmt.Sprintf("%.1f", float64(iChainQuality)/1000.0)
 			}
 
 			epBlockCount = s.api.GetEpochBlkCnt(epochId)
