@@ -374,13 +374,13 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 
 		for m := 1; m < len(c[i]); m++ {
 			delegators[m] = DelegatorInfo{}
-			delegators[m].Addr = c[i][m].Addr
+			delegators[m].Address = c[i][m].Addr
 			delegators[m].Incentive = (*math.HexOrDecimal256)(c[i][m].Incentive)
 			delegators[m].Type = "delegator"
 		}
 
 		ret[i] = ValidatorInfo{
-			Addr:       c[i][0].Addr,
+			Address:    c[i][0].Addr,
 			Incentive:  (*math.HexOrDecimal256)(c[i][0].Incentive),
 			Type:       "validator",
 			Delegators: delegators,

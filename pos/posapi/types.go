@@ -19,13 +19,13 @@ type Activity struct {
 }
 
 type ValidatorInfo struct {
-	Addr       common.Address        `json:"addr"`
+	Address    common.Address        `json:"address"`
 	Incentive  *math.HexOrDecimal256 `json:"incentive"`
 	Type       string                `json:"type"`
 	Delegators []DelegatorInfo       `json:"delegators"`
 }
 type DelegatorInfo struct {
-	Addr      common.Address        `json:"addr"`
+	Address   common.Address        `json:"address"`
 	Incentive *math.HexOrDecimal256 `json:"incentive"`
 	Type      string                `json:"type"`
 }
