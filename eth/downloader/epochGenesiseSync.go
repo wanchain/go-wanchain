@@ -116,12 +116,15 @@ func (d *Downloader) epochGenesisFetcher() {
 					log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
 					d.epochGenesisSyncStart <- &types.EpochSync{EpochId:req.epochid.Uint64(), IsEnd:req.isEnd}
 				} else {
+					// todo: check hash is same with best peer
+					//if d.VerifyGenesisBlockHash(response.epochGenesis.GenesisBlkHash, response.epochGenesis.EpochId) {
+					//
+					//}
 					if d.epochGenesisFbCh != nil {
 						d.epochGenesisFbCh <- int64(response.EpochId)
 					}
 				}
 
-				// todo: check
 
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
