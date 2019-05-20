@@ -340,7 +340,11 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 	pks := s.getEpochLeadersPK(epochID - 1)
 	if len(pks) == 0 {
 		log.Warn("Can not found pre epoch leaders return epoch 0", "epochIDPre", epochID-1)
-		return s.getEpoch0LeadersPK(), vm.ErrInvalidPreEpochLeaders
+		if s.blockChain.IsChainRestarting() {
+			return s.getEpoch0LeadersPK(), errors.New("chain is restarted,use epoch 0 leaders")
+		} else {
+			return nil,vm.ErrInvalidPreEpochLeaders
+		}
 	}
 
 	return pks, nil
@@ -548,7 +552,7 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Exit()
 }
 
-func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+func (s *SLS) getRandomOld(block *types.Block, epochID uint64) (ret *big.Int, err error) {
 	// If db is nil, use current stateDB
 	var db *state.StateDB
 	if block == nil {
@@ -573,6 +577,39 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		rb = big.NewInt(1)
 	}
 	return rb, nil
+}
+
+
+func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+	// If db is nil, use current stateDB
+	var db *state.StateDB
+	if block == nil {
+		db, err = s.getCurrentStateDb()
+		if err != nil {
+			return nil,errors.New("error to get statedb for getting random when generate slot leadersD")
+		}
+	} else {
+		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+		if err != nil {
+			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
+			return nil, errors.New("Update stateDb error in SLS.updateToLastStateDb")
+		}
+	}
+
+	rb := vm.GetR(db, epochID)
+	if rb == nil {
+		if s.blockChain.IsChainRestarting() {
+			log.SyslogErr("vm.GetR return nil, use a default value", "epochID", epochID)
+			rb = big.NewInt(1)
+			return rb, nil
+		} else {
+			return nil, errors.New("vm.GetR return nil")
+		}
+
+	} else {
+
+		return rb, nil
+	}
 }
 
 // getSMAPieces can get the SMA info generate in pre epoch.
