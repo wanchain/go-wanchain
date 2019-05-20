@@ -63,10 +63,10 @@ var (
 		PosFirstBlock:       big.NewInt(10), // set as n * epoch_length
 		IsPosActive:    false,
 		Ethash:         new(EthashConfig),
-		//Pluto: &PlutoConfig{
-		//	Period: 10,
-		//	Epoch:  100,
-		//},
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.

@@ -148,8 +148,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	//posEngine := pluto.New(chainConfig.Pluto, chainDb)
-	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, nil)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, posEngine)
 	if err != nil {
 		return nil, err
 	}
@@ -222,9 +222,9 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-	if chainConfig.Pluto != nil {
-		return pluto.New(chainConfig.Pluto, db)
-	}
+	//if chainConfig.Pluto != nil {
+	//	return pluto.New(chainConfig.Pluto, db)
+	//}
 	// Otherwise assume proof-of-work
 	switch {
 	case config.PowFake:
