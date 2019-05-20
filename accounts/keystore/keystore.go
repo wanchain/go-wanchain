@@ -35,8 +35,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
-
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
@@ -491,8 +489,8 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 // }
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
-func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, priv3 *bn256.PrivateKeyBn256, passphrase string) (accounts.Account, error) {
-	key := newKeyFromECDSA(priv1, priv2, priv3)
+func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
+	key := newKeyFromECDSA(priv1, priv2)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
