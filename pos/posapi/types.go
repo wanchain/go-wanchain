@@ -18,9 +18,16 @@ type Activity struct {
 	SlCtrlCount int
 }
 
-type PayInfo struct {
-	Addr      common.Address
-	Incentive *math.HexOrDecimal256
+type ValidatorInfo struct {
+	Addr       common.Address        `json:"addr"`
+	Incentive  *math.HexOrDecimal256 `json:"incentive"`
+	Type       string                `json:"type"`
+	Delegators []DelegatorInfo       `json:"delegators"`
+}
+type DelegatorInfo struct {
+	Addr      common.Address        `json:"addr"`
+	Incentive *math.HexOrDecimal256 `json:"incentive"`
+	Type      string                `json:"type"`
 }
 
 type ApiClientProbability struct {
