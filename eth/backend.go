@@ -153,6 +153,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+	eth.blockchain.RegisterSwitchEngine(eth)
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -451,4 +452,8 @@ func (s *Ethereum) Stop() error {
 	close(s.shutdownChan)
 
 	return nil
+}
+
+func (s *Ethereum) SwitchEngine(engine consensus.Engine){
+	s.engine = engine
 }

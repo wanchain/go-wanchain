@@ -68,7 +68,10 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		canStart:  1,
 		timerStop: make(chan interface{}),
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	cpuAgent := NewCpuAgent(eth.BlockChain(), engine)
+	miner.Register(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
 	go miner.update()
 	return miner
@@ -190,4 +193,8 @@ func (self *Miner) PendingBlock() *types.Block {
 func (self *Miner) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
 	self.worker.setEtherbase(addr)
+}
+
+func (self *Miner) SwitchEngine(engine consensus.Engine){
+	self.engine = engine
 }

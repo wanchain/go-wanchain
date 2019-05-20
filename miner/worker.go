@@ -164,6 +164,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		worker.commitNewWork(true)
 	}
 
+	eth.BlockChain().RegisterSwitchEngine(worker)
+
 	return worker
 }
 func (self *worker) SwitchEngine(engine consensus.Engine){

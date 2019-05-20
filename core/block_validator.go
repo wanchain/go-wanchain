@@ -44,7 +44,12 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 		engine: engine,
 		bc:     blockchain,
 	}
+	blockchain.RegisterSwitchEngine(validator)
 	return validator
+}
+
+func (v *BlockValidator)SwitchEngine (engine consensus.Engine) {
+	v.engine = engine
 }
 
 // ValidateBody validates the given block's uncles and verifies the the block

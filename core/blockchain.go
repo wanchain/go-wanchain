@@ -163,6 +163,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	if err != nil {
 		return nil, err
 	}
+	bc.RegisterSwitchEngine(bc.hc)
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -1012,7 +1013,17 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		bc.config.SetPosActive()
 	}
 
+	if bc.isCurrentLastPPowBlock(){
+		bc.SwitchClientEngine()
+	}
+
 	return status, nil
+}
+
+func (bc *BlockChain)isCurrentLastPPowBlock() (bool){
+	num := bc.currentBlock.Number()
+	num = num.Add(num, big.NewInt(1))
+	return num.Cmp(bc.Config().PosFirstBlock) == 0
 }
 
 func (bc *BlockChain) SwitchClientEngine() (error){
@@ -1022,7 +1033,7 @@ func (bc *BlockChain) SwitchClientEngine() (error){
 	return nil
 }
 
-func (bc *BlockChain) registerSwitchEngine(agent consensus.EngineSwitcher){
+func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher){
 	bc.agents = append(bc.agents, agent)
 }
 // InsertChain attempts to insert the given batch of blocks in to the canonical

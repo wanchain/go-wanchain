@@ -123,6 +123,10 @@ func (hc *HeaderChain) GetBlockNumber(hash common.Hash) uint64 {
 	return number
 }
 
+func (hc *HeaderChain) SwitchEngine (engine consensus.Engine){
+	hc.engine = engine
+}
+
 // WriteHeader writes a header into the local chain, given that its parent is
 // already known. If the total difficulty of the newly inserted header becomes
 // greater than the current known TD, the canonical chain is re-routed.

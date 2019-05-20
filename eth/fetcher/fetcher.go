@@ -173,6 +173,10 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 	}
 }
 
+func (f *Fetcher) UpdateValidator(verifyHeader headerVerifierFn){
+	f.verifyHeader = verifyHeader
+}
+
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and block fetches until termination requested.
 func (f *Fetcher) Start() {
