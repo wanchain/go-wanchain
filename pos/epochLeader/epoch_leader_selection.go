@@ -462,6 +462,11 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
+	// check validator is exiting.
+	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
+		return nil, nil, errors.New("Validator is exiting")
+	}
+
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	totalAmount := big.NewInt(0).Set(staker.Amount)
 	for i := 0; i < len(staker.Partners); i++ {
@@ -473,10 +478,6 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 		return nil, nil, errors.New("Validator don't have enough amount.")
 	}
 
-	// check validator is exiting.
-	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
-		return nil, nil, errors.New("Validator is exiting")
-	}
 	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
 	for i := 0; i < len(staker.Partners); i++ {
 		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.

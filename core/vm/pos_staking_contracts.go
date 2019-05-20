@@ -37,8 +37,8 @@ const (
 	PSMinValidatorStake   = 50000
 	PSMinDelegatorStake   = 100
 	PSMinFeeRate          = 0
-	PSMaxFeeRate          = 100
-	PSNodeleFeeRate       = 100
+	PSMaxFeeRate          = 10000
+	PSNodeleFeeRate       = 10000
 	maxTimeDelegate       = 5
 	UpdateDelay           = 3
 	QuitDelay             = 3

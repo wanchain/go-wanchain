@@ -39,7 +39,7 @@ func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProb
 		return nil, 0, nil, errors.New("getStakerInfo get stakers error")
 	}
 
-	if division > 100 {
+	if division > 10000 {
 		log.SyslogErr("getStakerInfo get division error")
 		return nil, 0, nil, errors.New("getStakerInfo get division error")
 	}
@@ -90,7 +90,7 @@ func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientPr
 	remain := big.NewInt(0).Sub(value, valueCeiling)
 
 	//commission for delegator
-	commission := calcPercent(valueCeiling, float64(divisionPercent))
+	commission := calcPercent(valueCeiling, float64(divisionPercent)/100.0)
 	lastValue := big.NewInt(0).Sub(valueCeiling, commission)
 	tp := sumStakerProbility(stakers)
 	result := make([]vm.ClientIncentive, len(stakers))
