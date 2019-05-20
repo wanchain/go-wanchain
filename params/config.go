@@ -60,7 +60,7 @@ var (
 		//EIP155Block:    big.NewInt(0),
 		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
-		PosFirstBlock:       big.NewInt(10), // set as n * epoch_length
+		PosFirstBlock:       big.NewInt(4), // set as n * epoch_length
 		IsPosActive:    false,
 		Ethash:         new(EthashConfig),
 		Pluto: &PlutoConfig{

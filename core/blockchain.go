@@ -1014,6 +1014,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	}
 
 	if bc.isCurrentLastPPowBlock(){
+		log.Info("ppow2pos", "", "will switch engine......")
 		bc.SwitchClientEngine()
 	}
 
