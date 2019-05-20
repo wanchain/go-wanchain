@@ -522,6 +522,13 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Exit()
 }
 
+func (s *SLS) isEpochLeaderMapReady() bool {
+	if s.epochLeadersMap == nil || len(s.epochLeadersMap) == 0 {
+		return false
+	}
+	return true
+}
+
 func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
 	// If db is nil, use current stateDB
 	var db *state.StateDB
