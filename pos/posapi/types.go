@@ -8,14 +8,14 @@ import (
 )
 
 type Activity struct {
-	EpLeader    []common.Address
-	EpActivity  []int
-	RpLeader    []common.Address
-	RpActivity  []int
-	SltLeader   []common.Address
-	SlBlocks    []int
-	SlActivity  float64
-	SlCtrlCount int
+	EpLeader    []common.Address `json:"epLeader"`
+	EpActivity  []int            `json:"epActivity"`
+	RpLeader    []common.Address `json:"rpLeader"`
+	RpActivity  []int            `json:"rpActivity"`
+	SltLeader   []common.Address `json:"sltLeader"`
+	SlBlocks    []int            `json:"slBlocks"`
+	SlActivity  float64          `json:"slActivity"`
+	SlCtrlCount int              `json:"slCtrlCount"`
 }
 
 type ValidatorInfo struct {
@@ -43,34 +43,34 @@ type ApiStakerInfo struct {
 }
 
 type ClientInfo struct {
-	Address     common.Address `json:"address"`
+	Address     common.Address        `json:"address"`
 	Amount      *math.HexOrDecimal256 `json:"amount"`
 	StakeAmount *math.HexOrDecimal256 `json:"stakeAmount"`
-	QuitEpoch   uint64 `json:"quitEpoch"`
+	QuitEpoch   uint64                `json:"quitEpoch"`
 }
 type PartnerInfo struct {
-	Address      common.Address `json:"address"`
+	Address      common.Address        `json:"address"`
 	Amount       *math.HexOrDecimal256 `json:"amount"`
 	StakeAmount  *math.HexOrDecimal256 `json:"stakeAmount"`
-	Renewal      bool `json:"renewal"`
-	LockEpochs   uint64 `json:"lockEpochs"`
-	StakingEpoch uint64 `json:"stakingEpoch"`
+	Renewal      bool                  `json:"renewal"`
+	LockEpochs   uint64                `json:"lockEpochs"`
+	StakingEpoch uint64                `json:"stakingEpoch"`
 }
 type StakerJson struct {
 	Address   common.Address `json:"address"`
-	PubSec256 string  `json:"pubSec256"`//stakeholder’s wan public key
-	PubBn256  string  `json:"pubBn256"`//stakeholder’s bn256 public key
+	PubSec256 string         `json:"pubSec256"` //stakeholder’s wan public key
+	PubBn256  string         `json:"pubBn256"`  //stakeholder’s bn256 public key
 
 	Amount         *math.HexOrDecimal256 `json:"amount"`
 	StakeAmount    *math.HexOrDecimal256 `json:"stakeAmount"`
-	LockEpochs     uint64  `json:"lockEpochs"`//lock time which is input by user. 0 means unexpired.
-	NextLockEpochs uint64  `json:"nextLockEpochs"`//lock time which is input by user. 0 means unexpired.
-	From           common.Address `json:"from"`
+	LockEpochs     uint64                `json:"lockEpochs"`     //lock time which is input by user. 0 means unexpired.
+	NextLockEpochs uint64                `json:"nextLockEpochs"` //lock time which is input by user. 0 means unexpired.
+	From           common.Address        `json:"from"`
 
-	StakingEpoch uint64  `json:"stakingEpoch"`//the user’s staking time
+	StakingEpoch uint64 `json:"stakingEpoch"` //the user’s staking time
 	FeeRate      uint64 `json:"feeRate"`
 	//NextFeeRate  uint64
-	Clients  []ClientInfo `json:"clients"`
+	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 }
 
