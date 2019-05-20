@@ -129,6 +129,13 @@ func (a PosApi) GetEpochLeadersAddrByEpochID(epochID uint64) ([]common.Address, 
 
 	return addres, nil
 }
+func (a PosApi) GetLeaderGroupByEpochID(epochID uint64) ([]LeaderJson, error) {
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return nil, errors.New("GetEpocherInst error")
+	}
+	return ToLeaderJson(selector.GetLeaderGroup(epochID)), nil
+}
 
 func (a PosApi) GetLocalPK() (string, error) {
 	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()

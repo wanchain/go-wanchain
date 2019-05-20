@@ -241,9 +241,10 @@ type PartnerInfo struct {
 // public helper structures
 //
 type Leader struct {
-	PubSec256 []byte
-	PubBn256  []byte
-	SecAddr   common.Address
+	Type      uint8 `json:"type"`
+	SecAddr   common.Address `json:"secAddr"`
+	PubSec256 []byte `json:"pubSec256"`
+	PubBn256  []byte `json:"pubBn256"`
 }
 
 type ClientProbability struct {

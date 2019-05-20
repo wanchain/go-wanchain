@@ -73,6 +73,23 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 }
+type LeaderJson struct {
+	Type      uint8 `json:"type"`
+	SecAddr   common.Address `json:"secAddr"`
+	PubSec256 string `json:"pubSec256"`
+	PubBn256  string `json:"pubBn256"`
+}
+
+func ToLeaderJson(leader []vm.Leader) []LeaderJson {
+	lj := make([]LeaderJson,len(leader))
+	for i:=0; i<len(leader); i++ {
+		lj[i].Type = leader[i].Type
+		lj[i].SecAddr = leader[i].SecAddr
+		lj[i].PubSec256 = hexutil.Encode(leader[i].PubSec256)
+		lj[i].PubBn256 = hexutil.Encode(leader[i].PubBn256)
+	}
+	return lj
+}
 
 func ToStakerJson(staker *vm.StakerInfo) *StakerJson {
 	stakeJson := StakerJson{}

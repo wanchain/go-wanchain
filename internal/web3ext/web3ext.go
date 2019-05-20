@@ -139,6 +139,11 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getLeaderGroupByEpochID',
+			call: 'pos_getLeaderGroupByEpochID',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getSmaByEpochID',
 			call: 'pos_getSmaByEpochID',
 			params: 1

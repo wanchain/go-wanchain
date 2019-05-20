@@ -414,6 +414,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		if err != nil {
 			log.Error("can't rlp decode:", "err", err)
 		}
+		g1s[i].Type = 1
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
 		pub := crypto.ToECDSAPub(proposer.PubSec256)
@@ -422,12 +423,55 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		}
 
 		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
-		//g1s[i].Probabilities = proposer.Probabilities
 	}
 
 	return g1s
 }
 
+func (e *Epocher) GetEpLeaderGroup(epochID uint64) []vm.Leader {
+	epLeaderArray := e.epochLeadersDb.GetStorageByteArray(epochID)
+	length := len(epLeaderArray)
+	g1s := make([]vm.Leader, posconfig.EpochLeaderCount)
+
+	for i := 0; i < length; i++ {
+		proposer := Proposer{}
+		err := rlp.DecodeBytes(epLeaderArray[i], &proposer)
+		if err != nil {
+			log.Error("can't rlp decode:", "err", err)
+		}
+		g1s[i].Type = 0
+		g1s[i].PubSec256 = proposer.PubSec256
+		g1s[i].PubBn256 = proposer.PubBn256
+		pub := crypto.ToECDSAPub(proposer.PubSec256)
+		if nil == pub {
+			continue
+		}
+
+		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
+	}
+	wa, err := e.GetWhiteArrayByEpochId(epochID)
+	if err == nil && length < posconfig.EpochLeaderCount{
+		for i:=0; i<posconfig.EpochLeaderCount-length; i++ {
+			g1s[i+length].Type = 0
+			g1s[i+length].PubSec256 = wa[i]
+			g1s[i+length].PubBn256 = ([]byte)("")
+			pub := crypto.ToECDSAPub(wa[i])
+			if nil == pub {
+				continue
+			}
+			g1s[i+length].SecAddr = crypto.PubkeyToAddress(*pub)
+		}
+	}
+	return g1s
+}
+func (e *Epocher) GetLeaderGroup(epochID uint64) []vm.Leader {
+	eps := e.GetEpLeaderGroup(epochID)
+	rbs := e.GetRBProposerGroup(epochID)
+	leaders := make([]vm.Leader, 0)
+	leaders = append(leaders, eps...)
+	leaders = append(leaders, rbs...)
+	return leaders
+}
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	valSet := e.rbLeadersDb.GetStorageByteArray(epochID)
 
