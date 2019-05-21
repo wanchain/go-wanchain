@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
 	"io"
 	"math/big"
@@ -449,6 +450,7 @@ func GenerateSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicKe
 	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
 	csbigtemp := new(big.Int).Mod(cr[slt], choicelen)
 	tempint := csbigtemp.Int64()
+
 	if PublicKeyEqual(&PrivateKey.PublicKey, PublicKeys[tempint]) {
 		ProofMeg := make([]*ecdsa.PublicKey, 0)
 		//Copy PK to ProofMeg[0]
@@ -517,6 +519,7 @@ func GenerateSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicKe
 		}
 		return ProofMeg, Proof, nil
 	}
+
 	return nil, nil, ErrPublicKeyNotEqual
 }
 
@@ -886,5 +889,10 @@ func GenerateSlotLeaderProof2(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicK
 		}
 		return ProofMeg, Proof, nil
 	}
+
+	addr1 := crypto.PubkeyToAddress(PrivateKey.PublicKey)
+	addr2 := crypto.PubkeyToAddress(*PublicKeys[tempint])
+
+	log.Info("pk is not equal","private address",common.ToHex(addr1[:]),"address from input pk",common.ToHex(addr2[:]))
 	return nil, nil, ErrPublicKeyNotEqual
 }

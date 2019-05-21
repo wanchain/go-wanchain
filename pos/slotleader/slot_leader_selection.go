@@ -170,7 +170,7 @@ func SlsInit() {
 	s := slotLeaderSelection
 	s.randomGenesis = big.NewInt(1)
 
-	epoch0Leaders := s.getEpoch0LeadersPK()
+	epoch0Leaders := s.getGenesisLeadersPK()
 	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
 	}
@@ -350,7 +350,7 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 	return pks, nil
 }
 
-func (s *SLS) getEpoch0LeadersPKOld() []*ecdsa.PublicKey {
+func (s *SLS) getGenesisLeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
@@ -363,6 +363,8 @@ func (s *SLS) getEpoch0LeadersPKOld() []*ecdsa.PublicKey {
 	}
 	return pks
 }
+
+
 
 func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
@@ -559,7 +561,7 @@ func (s *SLS) isEpochLeaderMapReady() bool {
 	return true
 }
 
-func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+func (s *SLS) getRandomOld(block *types.Block, epochID uint64) (ret *big.Int, err error) {
 	// If db is nil, use current stateDB
 	var db *state.StateDB
 	if block == nil {
@@ -877,25 +879,3 @@ func (s *SLS) buildStage2TxPayload(epochID uint64, selfIndex uint64) ([]byte, er
 func (s *SLS) GetChainReader() consensus.ChainReader {
 	return s.blockChain
 }
-
-
-//func (s *SLS) UseEpoch0Leaders (epochid uint64) bool {
-//
-//    posGenBlk := s.blockChain.GetBlockByNumber(posconfig.Cfg().PosGensBlkNum)
-//    genepid,_ := util.CalEpSlbyTd(posGenBlk.Difficulty().Uint64())
-//	if epochid == genepid {
-//		return true
-//	}
-//
-//    epochid,slotid := util.CalEpochSlotID(uint64(time.Now().Unix()))
-//	check := s.blockChain.GetCheckCQFlag()
-//	cq,_ := s.blockChain.ChainQuality(epochid,slotid)
-//
-//	if !check && cq < 500 {
-//		return true
-//	}
-//
-//	return false
-//}
-
-

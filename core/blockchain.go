@@ -1703,7 +1703,7 @@ func (bc *BlockChain) IsChainRestarting() bool {
 	insertSlots := epid*posconfig.SlotCount + slid
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	res := (insertSlots - bc.checkCQStartSlot) < posconfig.SlotCount && bc.checkCQStartSlot > 0
+	res := (insertSlots - bc.checkCQStartSlot) < 2*posconfig.SlotCount && bc.checkCQStartSlot > 0
 
 	return res
 
