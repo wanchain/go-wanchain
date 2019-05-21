@@ -852,7 +852,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	}
 
 	if bc.Hc.IsEpochFirstBlkNumber(epochId, number) {
-		hash,err := bc.Hc.GetOrGenerateEGHash(epochId - 1)
+		hash,err := bc.Hc.GenerateEGHash(epochId - 1)
 		if err != nil {
 			return nil, err
 		}

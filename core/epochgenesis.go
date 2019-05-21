@@ -232,6 +232,10 @@ func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) 
 	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash)
 }
 
+func (hc *HeaderChain) GenerateEGHash(epochid uint64) (common.Hash, error) {
+	return hc.epochgen.GenerateEGHash(epochid)
+}
+
 func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
 	return hc.epochgen.GetOrGenerateEGHash(epochid)
 }
@@ -246,6 +250,17 @@ func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64)
 	return false
 }
 
+func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
+	epkGnss := f.GetEpochGenesis(epochid)
+	if epkGnss == nil {
+		log.Error("***dirty epoch genesis block data")
+	}
+	epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
+	if err != nil {
+		return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
+	}
+	return epkGnss.GenesisBlkHash, nil
+}
 func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
 	epkGnss := f.GetEpochGenesis(epochid)
 	if epkGnss == nil {
