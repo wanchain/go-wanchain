@@ -32,7 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"time"
+	//"time"
 )
 
 // Backend wraps all methods required for mining.

@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 	"time"
 	"github.com/wanchain/go-wanchain/consensus/pluto"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 func posWhiteList() {
@@ -33,7 +34,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	slotleader.SlsInit()
 
 	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(params.WanchainChainConfig.PosFirstBlock.Uint64())
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}

@@ -832,6 +832,11 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 		block = bc.GetBlockByHash(blockHash)
 
 		if nil == block {
+			//never reached, because ppow blocks, safely remove this code?
+			break
+		}
+
+		if block.Number().Cmp(params.WanchainChainConfig.PosFirstBlock) < 0 {
 			break
 		}
 
@@ -845,8 +850,6 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 		if flatSlotId == uint64(0) {
 			break
 		}
-
-		//if block.Number()==
 	}
 
 	return n
@@ -998,7 +1001,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		//if bc.config.Pluto != nil {
 		if bc.config.IsPosActive{
 			//TODO:ppow2pos change next as
-			if block.NumberU64() == 1 {
+			if block.NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() {
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
 
@@ -1069,7 +1072,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	for i := 1; i < len(chain); i++ {
 
-		if chain[i-1].NumberU64() == 1 && posconfig.EpochBaseTime == 0{
+		if chain[i-1].NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
 			posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
 		}
 
