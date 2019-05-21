@@ -186,6 +186,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
 
+	if eth.blockchain.IsInPosStage(){
+		eth.blockchain.SwitchClientEngine()
+	}
 	return eth, nil
 }
 

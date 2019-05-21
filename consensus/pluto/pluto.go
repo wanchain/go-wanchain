@@ -20,7 +20,7 @@ package pluto
 import (
 	"errors"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	"sync"
 	"time"
 
@@ -626,31 +626,31 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	number := header.Number.Uint64()
 
 	// Assemble the voting snapshot to check which votes make sense
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-	if number%c.config.Epoch != 0 {
-		c.lock.RLock()
-
-		// Gather all the proposals that make sense voting on
-		addresses := make([]common.Address, 0, len(c.proposals))
-		for address, authorize := range c.proposals {
-			if snap.validVote(address, authorize) {
-				addresses = append(addresses, address)
-			}
-		}
-		// If there's pending proposals, cast a vote on them
-		if len(addresses) > 0 {
-			header.Coinbase = addresses[rand.Intn(len(addresses))]
-			if c.proposals[header.Coinbase] {
-				copy(header.Nonce[:], nonceAuthVote)
-			} else {
-				copy(header.Nonce[:], nonceDropVote)
-			}
-		}
-		c.lock.RUnlock()
-	}
+	//snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//if number%c.config.Epoch != 0 {
+	//	c.lock.RLock()
+	//
+	//	// Gather all the proposals that make sense voting on
+	//	addresses := make([]common.Address, 0, len(c.proposals))
+	//	for address, authorize := range c.proposals {
+	//		if snap.validVote(address, authorize) {
+	//			addresses = append(addresses, address)
+	//		}
+	//	}
+	//	// If there's pending proposals, cast a vote on them
+	//	if len(addresses) > 0 {
+	//		header.Coinbase = addresses[rand.Intn(len(addresses))]
+	//		if c.proposals[header.Coinbase] {
+	//			copy(header.Nonce[:], nonceAuthVote)
+	//		} else {
+	//			copy(header.Nonce[:], nonceDropVote)
+	//		}
+	//	}
+	//	c.lock.RUnlock()
+	//}
 	// Set the correct difficulty
 	// header.Difficulty = CalcDifficulty(snap, c.signer)
 	header.Difficulty = big.NewInt(1)
@@ -661,11 +661,11 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	//}
 	//header.Extra = header.Extra[:extraVanity]
 
-	if number%c.config.Epoch == 0 {
-		for _, signer := range snap.signers() {
-			header.Extra = append(header.Extra, signer[:]...)
-		}
-	}
+	//if number%c.config.Epoch == 0 {
+	//	for _, signer := range snap.signers() {
+	//		header.Extra = append(header.Extra, signer[:]...)
+	//	}
+	//}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
 	// Mix digest is reserved for now, set to empty
@@ -687,9 +687,9 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
 		header.Time = big.NewInt(hcur)
 	} else {
-		if curEpochId != 0 || curSlotId != 0 {
+		//if curEpochId != 0 || curSlotId != 0 {
 			header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
-		}
+		//}
 	}
 
 	epochSlotId := uint64(1)

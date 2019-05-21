@@ -18,6 +18,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rpc"
 	"time"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
 )
 
 func posWhiteList() {
@@ -99,6 +100,10 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
+
+	if pluto, ok := self.engine.(*pluto.Pluto); ok {
+		pluto.Authorize(eb, wallet.SignHash, key)
+	}
 	posInitMiner(s, key)
 	// get rpcClient
 	url := posconfig.Cfg().NodeCfg.IPCEndpoint()

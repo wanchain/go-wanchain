@@ -32,6 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"time"
 )
 
 // Backend wraps all methods required for mining.
@@ -197,5 +198,6 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 
 func (self *Miner) SwitchEngine(engine consensus.Engine){
 	self.engine = engine
+	//time.Sleep(1000*time.Millisecond)
 	go self.backendTimerLoop(self.eth)
 }

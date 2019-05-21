@@ -245,10 +245,6 @@ func (bc *BlockChain) loadLastState() error {
 	log.Info("Loaded most recent local full block", "number", bc.currentBlock.Number(), "hash", bc.currentBlock.Hash(), "td", blockTd)
 	log.Info("Loaded most recent local fast block", "number", bc.currentFastBlock.Number(), "hash", bc.currentFastBlock.Hash(), "td", fastTd)
 
-	if bc.IsInPosStage(){
-		bc.SwitchClientEngine()
-	}
-
 	return nil
 }
 
@@ -834,6 +830,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 	for {
 		blockHash := block.ParentHash()
 		block = bc.GetBlockByHash(blockHash)
+
 		if nil == block {
 			break
 		}
@@ -848,6 +845,8 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 		if flatSlotId == uint64(0) {
 			break
 		}
+
+		//if block.Number()==
 	}
 
 	return n
@@ -861,7 +860,7 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
-		return blocksIn2K > (int)(totalSlots-posconfig.K)
+		return blocksIn2K > (int)(totalSlots-posconfig.K-params.WanchainChainConfig.PosFirstBlock.Uint64())
 	}
 
 	return true
