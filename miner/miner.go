@@ -197,4 +197,5 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 
 func (self *Miner) SwitchEngine(engine consensus.Engine){
 	self.engine = engine
+	go self.backendTimerLoop(self.eth)
 }

@@ -245,6 +245,10 @@ func (bc *BlockChain) loadLastState() error {
 	log.Info("Loaded most recent local full block", "number", bc.currentBlock.Number(), "hash", bc.currentBlock.Hash(), "td", blockTd)
 	log.Info("Loaded most recent local fast block", "number", bc.currentFastBlock.Number(), "hash", bc.currentFastBlock.Hash(), "td", fastTd)
 
+	if bc.IsInPosStage(){
+		bc.SwitchClientEngine()
+	}
+
 	return nil
 }
 
@@ -1037,6 +1041,11 @@ func (bc *BlockChain) SwitchClientEngine() (error){
 func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher){
 	bc.agents = append(bc.agents, agent)
 }
+
+func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher){
+	bc.agents = append([]consensus.EngineSwitcher{agent}, bc.agents...)
+}
+
 // InsertChain attempts to insert the given batch of blocks in to the canonical
 // chain or, otherwise, create a fork. If an error is returned it will return
 // the index number of the failing block as well an error describing what went
