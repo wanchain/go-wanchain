@@ -225,8 +225,25 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64)(*big.I
 }
 
 
-func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64) bool {
-	return bc.epochgen.IsEpochFirstBlkNumber(epochId, blocknum)
+func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, parents []*types.Header) bool {
+	if epochId > 1 && blocknum > 1 {
+		var head *types.Header = nil
+		size := len(parents)
+		if size > 0 {
+			head = parents[ size - 1]
+		} else {
+			head = bc.GetHeaderByNumber(blocknum - 1)
+		}
+		if head != nil {
+			eid := head.Difficulty.Uint64() >> 32
+			if eid + 1 == epochId {
+				log.Info(" IsEpochFirstBlkNumber", "epoch", epochId, "first", blocknum)
+				return true
+			}
+		}
+	}
+
+	return false
 }
 func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
 	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash)
@@ -239,16 +256,16 @@ func (hc *HeaderChain) GenerateEGHash(epochid uint64) (common.Hash, error) {
 func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
 	return hc.epochgen.GetOrGenerateEGHash(epochid)
 }
-func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
-	if epochid > 1 {
-		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
-		log.Info(" IsEpochFirstBlkNumber", "epoch", epochid, "last", blkNumLast, "num", blkNum)
-		if blkNumLast + 1 == blkNum {
-			return true
-		}
-	}
-	return false
-}
+//func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
+//	if epochid > 1 {
+//		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
+//		log.Info(" IsEpochFirstBlkNumber", "epoch", epochid, "last", blkNumLast, "num", blkNum)
+//		if blkNumLast + 1 == blkNum {
+//			return true
+//		}
+//	}
+//	return false
+//}
 
 func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	epkGnss := f.GetEpochGenesis(epochid)
