@@ -157,6 +157,7 @@ func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, er
 
 
 func SlsInit() {
+
 	var err error
 	APkiCache, err = lru.NewARC(1000)
 	if err != nil || APkiCache == nil {
@@ -181,6 +182,7 @@ func SlsInit() {
 		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
 		alphas = append(alphas, tempInt)
 	}
+
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 
@@ -317,6 +319,9 @@ func (s *SLS) getEpochLeaders(epochID uint64) [][]byte {
 		if epochLeaders != nil {
 			log.Debug(fmt.Sprintf("getEpochLeaders called return len(epochLeaders):%d", len(epochLeaders)))
 		}
+
+
+
 		return epochLeaders
 	}
 }
@@ -538,6 +543,18 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 	functrace.Enter()
 	// build Array and map
 	data := s.getEpochLeaders(epochID)
+
+	//for restarting
+	if len(data) == 0 && s.blockChain.IsChainRestarting() {
+		epPks := s.getEpoch0LeadersPK()
+		if data == nil {
+			data = make([][]byte,0)
+		}
+		for _,pk := range epPks {
+			data = append(data,crypto.FromECDSAPub(pk))
+		}
+	}
+
 	if data == nil {
 		log.SyslogErr("SLS", "buildEpochLeaderGroup", "no epoch leaders", "epochID", epochID)
 		// no epoch leaders, it leads that no one send SMA stage1 and stage2 transaction.
@@ -545,6 +562,9 @@ func (s *SLS) buildEpochLeaderGroup(epochID uint64) {
 		//panic("No epoch leaders")
 		return
 	}
+
+
+
 	for index, value := range data {
 		s.epochLeadersArray = append(s.epochLeadersArray, hex.EncodeToString(value))
 		s.epochLeadersMap[hex.EncodeToString(value)] = append(s.epochLeadersMap[hex.EncodeToString(value)],
@@ -658,7 +678,11 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 		log.Warn("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
-	if (err != nil && epochID > 1) || isGenesis {
+
+
+	if (err != nil && epochID > 1) ||
+		isGenesis ||
+		s.blockChain.IsChainRestarting() {
 		if !isGenesis {
 			log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use epoch 0.", "curEpochID", epochID,
 				"preEpochID", epochID-1)

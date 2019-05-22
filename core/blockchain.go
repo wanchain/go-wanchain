@@ -141,6 +141,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(badBlockLimit)
 
+
 	bc := &BlockChain{
 		config:       config,
 		chainDb:      chainDb,
@@ -187,6 +188,16 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 			}
 		}
 	}
+
+	block := bc.currentBlock
+	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+
+	//if start slot is 0 and cq is not qualified and no restarted flag,this chain is restarted
+	if bc.checkCQStartSlot == INITRESTARTING && !bc.restarted{
+		//record the restarting slot point
+		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+	}
+
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
@@ -923,13 +934,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if !bc.isWriteBlockSecure(block) {
 
 		insertSlots := epid*posconfig.SlotCount + slid
-		//if start slot is 0 and cq is not qualified and no restarted flag,this chain is restarted
-		if bc.checkCQStartSlot == INITRESTARTING && !bc.restarted{
-			//record the restarting slot point
-			bc.checkCQStartSlot = insertSlots
-
-		}
-
 		//if chain is restated successfully or chain is not stable after 2k,then return error
 		if (insertSlots - bc.checkCQStartSlot) > posconfig.SlotSecurityParam ||
 			bc.restarted {

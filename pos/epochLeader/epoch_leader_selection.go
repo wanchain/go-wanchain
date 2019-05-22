@@ -315,8 +315,8 @@ func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
 	if posconfig.IsDev {
 		return posconfig.WhiteListDev[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 	} else {
-		//return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
-		return posconfig.WhiteList,nil
+		return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+		//return posconfig.WhiteList,nil
 	}
 }
 
