@@ -45,7 +45,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
+	SlotTime = 2
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -89,7 +89,8 @@ const (
 	NonCriticalChainQuality = 0.8
 )
 
-var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+//var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+var GenesisPK = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
 var PosOwnerAddr = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
 
 type Config struct {

@@ -6,7 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
+	//"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -18,6 +18,8 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rpc"
 	"time"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
+	"github.com/wanchain/go-wanchain/params"
 )
 
 func posWhiteList() {
@@ -25,14 +27,14 @@ func posWhiteList() {
 }
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
-	g := s.BlockChain().GetHeaderByNumber(0)
-	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+	//g := s.BlockChain().GetHeaderByNumber(0)
+	//posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 
 	cfm.InitCFM(s.BlockChain())
 	slotleader.SlsInit()
 
 	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(params.WanchainChainConfig.PosFirstBlock.Uint64())
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
@@ -71,7 +73,7 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
 	if posconfig.EpochBaseTime == 0 {
 		//todo:`switch pos from pow,the time is not 1?
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
@@ -99,6 +101,10 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
+
+	if pluto, ok := self.engine.(*pluto.Pluto); ok {
+		pluto.Authorize(eb, wallet.SignHash, key)
+	}
 	posInitMiner(s, key)
 	// get rpcClient
 	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
@@ -109,7 +115,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 
 	//todo:`switch pos from pow,the time is not 1?
-	h := s.BlockChain().GetHeaderByNumber(1)
+	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil == h {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
 		if err == nil {
@@ -124,7 +130,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 	for {
 		// wait until block1
-		h := s.BlockChain().GetHeaderByNumber(1)
+		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 		if nil == h {
 			select {
 			case <-self.timerStop:

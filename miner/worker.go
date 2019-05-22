@@ -160,9 +160,16 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	//worker.commitNewWork()
+	if !worker.chain.IsInPosStage() {
+		worker.commitNewWork(true)
+	}
+
+	eth.BlockChain().RegisterSwitchEngine(worker)
 
 	return worker
+}
+func (self *worker) SwitchEngine(engine consensus.Engine){
+	self.engine = engine
 }
 
 func (self *worker) setEtherbase(addr common.Address) {
@@ -257,7 +264,9 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			self.commitNewWork(false)
+			if !self.chain.IsInPosStage() {
+				self.commitNewWork(true)
+			}
 		case <-self.chainSlotTimer:
 			self.commitNewWork(true)
 		// Handle ChainSideEvent
@@ -292,7 +301,7 @@ func (self *worker) update() {
 
 func (self *worker) wait() {
 	for {
-		//mustCommitNewWork := true
+		mustCommitNewWork := true
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
 
@@ -333,10 +342,10 @@ func (self *worker) wait() {
 				continue
 			}
 			// check if canon block and write transactions
-			//if stat == core.CanonStatTy {
-			//	// implicit by posting ChainHeadEvent
-			//	mustCommitNewWork = false
-			//}
+			if stat == core.CanonStatTy {
+				// implicit by posting ChainHeadEvent
+				mustCommitNewWork = false
+			}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
@@ -352,9 +361,9 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			//if mustCommitNewWork {
-			//	self.commitNewWork()
-			//}
+			if mustCommitNewWork && !self.chain.IsInPosStage(){
+				self.commitNewWork(true)
+			}
 		}
 	}
 }

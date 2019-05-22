@@ -148,10 +148,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, posEngine)
 	if err != nil {
 		return nil, err
 	}
+	//eth.blockchain.RegisterSwitchEngine(eth)
+	eth.blockchain.PrependRegisterSwitchEngine(eth)
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -160,9 +163,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.bloomIndexer.Start(eth.blockchain.CurrentHeader(), eth.blockchain.SubscribeChainEvent)
 
-	if chainConfig.Pluto != nil {
-		miner.PosInit(eth)
-	}
+	// TODO:ppow2pos
+	//if chainConfig.Pluto != nil {
+	//	miner.PosInit(eth)
+	//}
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
@@ -182,6 +186,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
 
+	if eth.blockchain.IsInPosStage(){
+		eth.blockchain.SwitchClientEngine()
+	}
 	return eth, nil
 }
 
@@ -220,9 +227,9 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-	if chainConfig.Pluto != nil {
-		return pluto.New(chainConfig.Pluto, db)
-	}
+	//if chainConfig.Pluto != nil {
+	//	return pluto.New(chainConfig.Pluto, db)
+	//}
 	// Otherwise assume proof-of-work
 	switch {
 	case config.PowFake:
@@ -449,4 +456,10 @@ func (s *Ethereum) Stop() error {
 	close(s.shutdownChan)
 
 	return nil
+}
+
+func (s *Ethereum) SwitchEngine(engine consensus.Engine){
+	s.engine = engine
+
+	miner.PosInit(s)
 }

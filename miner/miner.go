@@ -32,6 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	//"time"
 )
 
 // Backend wraps all methods required for mining.
@@ -68,7 +69,10 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		canStart:  1,
 		timerStop: make(chan interface{}),
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	cpuAgent := NewCpuAgent(eth.BlockChain(), engine)
+	miner.Register(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
 	go miner.update()
 	return miner
@@ -119,8 +123,9 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	//self.worker.commitNewWork()
-	if self.worker.config.Pluto != nil {
+	if !self.eth.BlockChain().IsInPosStage() {
+		self.worker.commitNewWork(true)
+	} else {
 		go self.backendTimerLoop(self.eth)
 	}
 }
@@ -189,4 +194,10 @@ func (self *Miner) PendingBlock() *types.Block {
 func (self *Miner) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
 	self.worker.setEtherbase(addr)
+}
+
+func (self *Miner) SwitchEngine(engine consensus.Engine){
+	self.engine = engine
+	//time.Sleep(1000*time.Millisecond)
+	go self.backendTimerLoop(self.eth)
 }

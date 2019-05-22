@@ -180,8 +180,17 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	blockchain.RegisterSwitchEngine(manager)
 
 	return manager, nil
+}
+
+func (pm *ProtocolManager) SwitchEngine (engine consensus.Engine){
+	validator := func(header *types.Header) error {
+		return engine.VerifyHeader(pm.blockchain, header, true)
+	}
+
+	pm.fetcher.UpdateValidator(validator)
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
