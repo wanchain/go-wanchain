@@ -417,6 +417,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
+	p.stakeUpdateLog(contract,evm,stakerInfo)
 	return nil, nil
 }
 func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -497,6 +498,7 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
+	p.stakeAppendLog(contract,evm,stakerInfo.Address)
 	return nil, nil
 }
 
@@ -512,9 +514,6 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if contract.value.Cmp(minStakeholderStake) < 0 {
 		return nil, errors.New("need more Wan to be a stake holder")
 	}
-
-	//first log
-	p.stakinLog(contract,evm,payload)
 
 	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
 	// SO, don't need all in the first stakeIn.
@@ -551,10 +550,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if err != nil {
 		return nil, err
 	}
-
-	//second log
-	p.stakinLog(contract,evm,payload)
-
+	p.stakeInLog(contract, evm, stakerInfo)
 	return nil, nil
 }
 
@@ -620,6 +616,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	if err != nil {
 		return nil, err
 	}
+	p.delegateInLog(contract,evm,stakerInfo.Address)
 	return nil, nil
 }
 
@@ -656,6 +653,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
+	p.delegatOutLog(contract, evm, stakerInfo.Address)
 	return nil, nil
 }
 
@@ -799,22 +797,53 @@ func (p *PosStaking) delegateOutParseAndValid(payload []byte) (common.Address, e
 }
 
 
-func (p *PosStaking) stakinLog( contract *Contract, evm *EVM,data []byte,)	error {
+func (p *PosStaking) stakeInLog( contract *Contract, evm *EVM, info *StakerInfo)	error {
 
-	params := make([][]byte,0)
+	params := make([]common.Hash, 5)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = common.BigToHash(contract.Value())
+	params[2] = common.BigToHash(new(big.Int).SetUint64(info.FeeRate))
+	params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
+	params[4] = info.Address.Hash()
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig()))
+	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+}
+func (p *PosStaking) stakeAppendLog( contract *Contract, evm *EVM, validator common.Address)	error {
 
-	p1 := contract.CallerAddress.Bytes()
-	params = append(params,p1)
+	params := make([]common.Hash, 3)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = common.BigToHash(contract.Value())
+	params[2] = validator.Hash()
 
-	p2 := contract.value.Bytes()
-	params = append(params,p2)
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig()))
+	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+}
+func (p *PosStaking) stakeUpdateLog( contract *Contract, evm *EVM, info *StakerInfo)	error {
 
-	p3 := evm.Time.Bytes()
-	params = append(params,p3)
+	params := make([]common.Hash, 3)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
+	params[2] = info.Address.Hash()
 
-	p4 := contract.Address().Bytes()
-	params = append(params,p4)
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig()))
+	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+}
+func (p *PosStaking) delegateInLog( contract *Contract, evm *EVM, validator common.Address)	error {
 
+	params := make([]common.Hash, 3)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = common.BigToHash(contract.Value())
+	params[2] = validator.Hash()
 
-	return precompiledScMakeLog(contract,evm,"StakeIn",params,data)
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig()))
+	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+}
+func (p *PosStaking) delegatOutLog( contract *Contract, evm *EVM, validator common.Address)	error {
+
+	params := make([]common.Hash, 2)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = validator.Hash()
+
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
+	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
 }

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"strings"
 	"time"
@@ -1029,7 +1030,11 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-
+	if head.Number.Uint64() > posconfig.Pow2PosUpgradeBlockNumber  {
+		epochid,slotid := posutil.CalEpSlbyTd(head.Difficulty.Uint64())
+		fields["epochId"] = epochid
+		fields["slotId"] = slotid
+	}
 	return fields, nil
 }
 

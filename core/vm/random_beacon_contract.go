@@ -905,6 +905,13 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
+			evm.StateDB.AddLog(&types.Log{
+				Address: contract.Address(),
+				Topics:  []common.Hash{common.BigToHash(new(big.Int).SetUint64(eid)), common.BytesToHash(r.Bytes())},
+				// This is a non-consensus field, but assigned here because
+				// core/state doesn't know the current block number.
+				BlockNumber: evm.BlockNumber.Uint64(),
+			})
 		}
 	}
 
