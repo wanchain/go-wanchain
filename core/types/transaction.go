@@ -188,6 +188,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte   { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Txtype() uint64 { return tx.data.Txtype }
+func (tx *Transaction) SetTxtype(txtype uint64)  { tx.data.Txtype = txtype }
 
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
@@ -524,12 +525,18 @@ func newOTATransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPr
 const (
 	NORMAL_TX  = 1
 	PRIVACY_TX = 6
+	POS_TX     = 7
 )
 
 func IsNormalTransaction(txType uint64) bool {
-	return txType != PRIVACY_TX
+	return txType == NORMAL_TX
 }
-
+func IsPosTransaction(txType uint64) bool {
+	return txType == POS_TX
+}
+func IsPrivacyTransaction(txType uint64) bool {
+	return txType == PRIVACY_TX
+}
 func IsValidTransactionType(txType uint64) bool {
-	return (txType == NORMAL_TX || txType == PRIVACY_TX)
+	return (txType == NORMAL_TX || txType == PRIVACY_TX|| txType == POS_TX)
 }

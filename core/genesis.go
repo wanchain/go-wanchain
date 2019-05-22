@@ -23,19 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
-	"strings"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
+	"math/big"
+	"strings"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -78,11 +78,18 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type GenesisAccountStaking struct {
+	Amount  *big.Int `json:"amount"`
+	S256pk  []byte   `json:"s256pk"`
+	Bn256pk []byte   `json:"bn256pk"`
+}
+
 // GenesisAccount is an account in the state of the genesis block.
 type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
+	Staking    GenesisAccountStaking       `json:"staking,omitempty"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
@@ -239,6 +246,36 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
 		statedb.SetNonce(addr, account.Nonce)
+
+		if account.Staking.S256pk != nil {
+			pub := crypto.ToECDSAPub(account.Staking.S256pk)
+			if nil == pub {
+				panic("Invalid genesis.")
+			}
+			secAddr := crypto.PubkeyToAddress(*pub)
+			weight := vm.CalLocktimeWeight(vm.PSMinEpochNum)
+			staker := &vm.StakerInfo{
+				PubSec256:   account.Staking.S256pk,
+				PubBn256:    account.Staking.Bn256pk,
+				Amount:      account.Staking.Amount,
+				From:		 secAddr,
+				Address:	 secAddr,
+				LockEpochs:    0, // never expired
+				StakingEpoch: uint64(0),
+				FeeRate:	 uint64(100),
+			}
+			staker.StakeAmount = big.NewInt(0)
+			staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
+			infoArray, err := rlp.EncodeToBytes(staker)
+			if err != nil {
+				panic(err)
+			}
+			addr := crypto.PubkeyToAddress(*crypto.ToECDSAPub(account.Staking.S256pk))
+			addrHash := common.BytesToHash(addr[:])
+			statedb.AddBalance(vm.WanCscPrecompileAddr,staker.Amount)
+
+			statedb.SetStateByteArray(vm.StakersInfoAddr, addrHash, infoArray)
+		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
 		}
@@ -376,10 +413,22 @@ func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
 		Timestamp:  0x59f83144,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e8ffc3d0c02c0bfc39b139fa49e2c5475f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   0x47b760,
+		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
+		GasLimit:   0x47b760,	// 4700000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
+	}
+}
+
+
+func PlutoDevGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x59f83144,
+		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
+		GasLimit:   0x47b760,	// 4700000
+		Difficulty: big.NewInt(1),
+		Alloc:      jsonPrealloc(PlutoDevAllocJson),
 	}
 }
 

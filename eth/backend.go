@@ -20,6 +20,8 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/posapi"
 	"math/big"
 	"runtime"
 	"sync"
@@ -30,6 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/clique"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/bloombits"
@@ -143,6 +146,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
 	}
 
+
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
 	if err != nil {
@@ -155,6 +159,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
 	eth.bloomIndexer.Start(eth.blockchain.CurrentHeader(), eth.blockchain.SubscribeChainEvent)
+
+	if chainConfig.Pluto != nil {
+		miner.PosInit(eth)
+	}
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
@@ -213,11 +221,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		return clique.New(chainConfig.Clique, db)
 	}
 	if chainConfig.Pluto != nil {
-		var cliqueCfg params.CliqueConfig
-		chainConfig.Clique = &cliqueCfg
-		chainConfig.Clique.Period = chainConfig.Pluto.Period
-		chainConfig.Clique.Epoch = chainConfig.Pluto.Epoch
-		return clique.New(chainConfig.Clique, db)
+		return pluto.New(chainConfig.Pluto, db)
 	}
 	// Otherwise assume proof-of-work
 	switch {
@@ -245,6 +249,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+	apis = append(apis, posapi.APIs(s.BlockChain(), s.ApiBackend)...)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -337,6 +342,23 @@ func (s *Ethereum) StartMining(local bool) error {
 			return fmt.Errorf("signer missing: %v", err)
 		}
 		clique.Authorize(eb, wallet.SignHash)
+	}
+	if pluto, ok := s.engine.(*pluto.Pluto); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		//------------Get local unlock publicKey
+		type getKey interface {
+			GetUnlockedKey(address common.Address) (*keystore.Key, error)
+		}
+		key, err := wallet.(getKey).GetUnlockedKey(eb)
+		if key == nil || err != nil {
+			panic(err)
+		}
+		//------------
+		pluto.Authorize(eb, wallet.SignHash, key)
 	}
 
 	if ethash, ok := s.engine.(*ethash.Ethash); ok {

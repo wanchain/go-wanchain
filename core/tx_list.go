@@ -297,7 +297,8 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		return types.IsNormalTransaction(tx.Txtype()) && (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)
+		txType := tx.Txtype()
+		return (types.IsNormalTransaction(txType) || types.IsPosTransaction(txType)) && (tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0)
 	})
 
 	// If the list was strict, filter anything above the lowest nonce
@@ -318,7 +319,7 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 // InvalidPrivacyTx remove invalidate privacy transactions
 func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLimit *big.Int) types.Transactions {
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		if types.IsNormalTransaction(tx.Txtype()) {
+		if !types.IsPrivacyTransaction(tx.Txtype()){
 			return false
 		}
 
@@ -327,9 +328,42 @@ func (l *txList) InvalidPrivacyTx(stateDB vm.StateDB, signer types.Signer, gasLi
 			return true
 		}
 
-		intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+		intrGas := IntrinsicGas(tx.Data(), tx.To(), true)
 		err = ValidPrivacyTx(stateDB, from.Bytes(), tx.Data(), tx.GasPrice(), intrGas, tx.Value(), gasLimit)
 
+		return err != nil
+	})
+
+	var invalids types.Transactions
+	if l.strict && len(removed) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range removed {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+
+	// Privacy transaction's sender is not real sender, just a hash info.
+	// So, no need to move invalid transactions to queue for later.
+	// Just remove all of invalid transactions.
+	return append(removed, invalids...)
+}
+
+// InvalidPosTx remove invalidate pos transactions
+func (l *txList) InvalidPosRBTx(stateDB vm.StateDB, signer types.Signer) types.Transactions {
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		if !types.IsPosTransaction(tx.Txtype()) || (*tx.To()) != vm.GetRBAddress() {
+			return false
+		}
+
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return true
+		}
+
+		err = vm.ValidPosRBTx(stateDB, from, tx.Data())
 		return err != nil
 	})
 

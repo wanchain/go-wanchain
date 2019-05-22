@@ -3,9 +3,10 @@
 package vm
 
 import (
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
-	"math/big"
 )
 
 // Precompiled contracts address or
@@ -24,6 +25,9 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
+	WanCscPrecompileAddr  = common.BytesToAddress([]byte{210})
+	StakersInfoAddr       = common.BytesToAddress(big.NewInt(400).Bytes())
+	StakingCommonAddr     = common.BytesToAddress(big.NewInt(401).Bytes())
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
@@ -31,7 +35,7 @@ var (
 	otaBalancePercentdot001WStorageAddr = common.HexToAddress(WanStampdot001)
 	otaBalancePercentdot002WStorageAddr = common.HexToAddress(WanStampdot002)
 	otaBalancePercentdot005WStorageAddr = common.HexToAddress(WanStampdot005)
-	
+
 	otaBalancePercentdot003WStorageAddr = common.HexToAddress(WanStampdot003)
 	otaBalancePercentdot006WStorageAddr = common.HexToAddress(WanStampdot006)
 	otaBalancePercentdot009WStorageAddr = common.HexToAddress(WanStampdot009)
@@ -39,19 +43,31 @@ var (
 	otaBalancePercentdot03WStorageAddr = common.HexToAddress(WanStampdot03)
 	otaBalancePercentdot06WStorageAddr = common.HexToAddress(WanStampdot06)
 	otaBalancePercentdot09WStorageAddr = common.HexToAddress(WanStampdot09)
-	otaBalancePercentdot2WStorageAddr = common.HexToAddress(WanStampdot2)
-	otaBalancePercentdot5WStorageAddr = common.HexToAddress(WanStampdot5)
+	otaBalancePercentdot2WStorageAddr  = common.HexToAddress(WanStampdot2)
+	otaBalancePercentdot5WStorageAddr  = common.HexToAddress(WanStampdot5)
 
-	otaBalance10WStorageAddr       = common.HexToAddress(Wancoin10)
-	otaBalance20WStorageAddr       = common.HexToAddress(Wancoin20)
-	otaBalance50WStorageAddr       = common.HexToAddress(Wancoin50)
-	otaBalance100WStorageAddr      = common.HexToAddress(Wancoin100)
+	otaBalance10WStorageAddr  = common.HexToAddress(Wancoin10)
+	otaBalance20WStorageAddr  = common.HexToAddress(Wancoin20)
+	otaBalance50WStorageAddr  = common.HexToAddress(Wancoin50)
+	otaBalance100WStorageAddr = common.HexToAddress(Wancoin100)
 
-	otaBalance200WStorageAddr       = common.HexToAddress(Wancoin200)
-	otaBalance500WStorageAddr       = common.HexToAddress(Wancoin500)
-	otaBalance1000WStorageAddr      = common.HexToAddress(Wancoin1000)
-	otaBalance5000WStorageAddr      = common.HexToAddress(Wancoin5000)
-	otaBalance50000WStorageAddr     = common.HexToAddress(Wancoin50000)
+	otaBalance200WStorageAddr   = common.HexToAddress(Wancoin200)
+	otaBalance500WStorageAddr   = common.HexToAddress(Wancoin500)
+	otaBalance1000WStorageAddr  = common.HexToAddress(Wancoin1000)
+	otaBalance5000WStorageAddr  = common.HexToAddress(Wancoin5000)
+	otaBalance50000WStorageAddr = common.HexToAddress(Wancoin50000)
+
+	//pos
+	slotLeaderPrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
+
+	IncentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+
+	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
+	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
+
+	// TODO: remove one?
+	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
+	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -89,4 +105,24 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 	wanCoinPrecompileAddr:  &wanCoinSC{},
 	wanStampPrecompileAddr: &wanchainStampSC{},
+
+	//pos
+	WanCscPrecompileAddr:       &PosStaking{},
+	PosControlPrecompileAddr:   &PosControl{},
+	slotLeaderPrecompileAddr:   &slotLeaderSC{},
+	randomBeaconPrecompileAddr: &RandomBeaconContract{},
+}
+
+func IsPosPrecompiledAddr(addr *common.Address) bool {
+	if addr == nil {
+		return false
+	}
+
+	if (*addr) == slotLeaderPrecompileAddr ||
+		(*addr) == IncentivePrecompileAddr ||
+		(*addr) == randomBeaconPrecompileAddr {
+		return true
+	}
+
+	return false
 }

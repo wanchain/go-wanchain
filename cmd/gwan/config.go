@@ -34,6 +34,11 @@ import (
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
+	//"github.com/wanchain/go-wanchain/pos/posconfig"
+
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 )
 
@@ -102,7 +107,7 @@ func defaultNodeConfig() node.Config {
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
-	cfg.HTTPModules = append(cfg.HTTPModules, "wan", "shh")
+	cfg.HTTPModules = append(cfg.HTTPModules, "wan", "shh","pos")
 	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
 	cfg.WSModules = append(cfg.WSModules, "wan", "shh")
 	cfg.IPCPath = "gwan.ipc"
@@ -136,6 +141,10 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	}
 
 	utils.SetShhConfig(ctx, stack, &cfg.Shh)
+
+	//Init wanpos private db
+	posdb.DbInitAll(cfg.Node.DataDir)
+	posconfig.Init(&cfg.Node)
 
 	return stack, cfg
 }

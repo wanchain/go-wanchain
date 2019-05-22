@@ -443,3 +443,20 @@ func (self blockSorter) Swap(i, j int) {
 func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], self.blocks[j]) }
 
 func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }
+
+
+
+type EpochGenesis struct {
+	ProtocolMagic       []byte      //magic number
+	EpochId             uint64      //current epochId
+	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
+	Random              []byte
+	EpochLeaders		[][]byte
+	SlotLeaders         [][]byte    //current epoch slotleaders
+	RBLeadersSec256     [][]byte    //current epoch slotleaders
+	RBLeadersBn256	    [][]byte
+	StakerInfos         [][]byte    // StakerInfo
+	GenesisBlkHash      common.Hash //the hash of this block
+	Extra               []byte      //empty
+	PreEpochGenHash 	common.Hash
+}

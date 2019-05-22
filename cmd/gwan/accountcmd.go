@@ -18,6 +18,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -25,6 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/console"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -186,6 +190,17 @@ As you can directly copy your encrypted accounts to another ethereum instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
 `,
+			},
+			{
+				Name:   "pubkeys",
+				Usage:  "Print public keys",
+				Action: utils.MigrateFlags(showPublicKey),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
+Print public key of an address`,
 			},
 		},
 	}
@@ -361,5 +376,42 @@ func accountImport(ctx *cli.Context) error {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
 	fmt.Printf("Address: {%s}\n", acct.Address.Hex()[2:])
+	return nil
+}
+
+func showPublicKey(ctx *cli.Context) error {
+	addrstr := ctx.Args().Get(0)
+	passwd := ctx.Args().Get(1)
+	if len(addrstr) == 0 {
+		utils.Fatalf("address must be given as argument")
+	}
+	if len(passwd) == 0 {
+		utils.Fatalf("passwd must be given as argument")
+	}
+
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	addr := common.HexToAddress(addrstr)
+	all := ks.Accounts()
+	lenth := len(all)
+	for i := 0; i < lenth; i++ {
+		if all[i].Address == addr {
+			key, err := ks.GetKey(all[i], passwd)
+			if err != nil {
+				utils.Fatalf("Error failed to load keyfile ")
+			}
+			if key.PrivateKey != nil {
+				fmt.Println("key1:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
+			}
+			if key.PrivateKey2 != nil {
+				fmt.Println("key2:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
+				fmt.Println("waddress:" + common.ToHex(key.WAddress[:]))
+			}
+			D3 := posconfig.GenerateD3byKey2(key.PrivateKey2)
+			G1 := new(bn256.G1).ScalarBaseMult(D3)
+			fmt.Println("key3:" + common.ToHex(G1.Marshal()))
+			break
+		}
+	}
 	return nil
 }

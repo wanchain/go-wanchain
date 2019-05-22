@@ -28,6 +28,8 @@ import (
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rlp"
 	set "gopkg.in/fatih/set.v0"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
@@ -65,6 +67,7 @@ type peer struct {
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -98,6 +101,8 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	defer p.lock.RUnlock()
 
 	copy(hash[:], p.head[:])
+
+
 	return hash, new(big.Int).Set(p.td)
 }
 
@@ -228,9 +233,34 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
+func (p *peer) RequestEpochGenesisData(epochids uint64) error {
+	p.Log().Debug("Fetching epoch genesis data", "count", 1)
+	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
+}
+
+//send epoch genesis
+func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
+	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
+	epochGenesis,err := bc.GenerateEpochGenesis(epochid)
+	if err != nil {
+		log.Info("error to generate epoch genesis")
+		return err
+	}
+
+	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
+}
+
+func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) error {
+	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
+	bc.SetEpochGenesis(epochgen)
+	return nil
+}
+////////////////////////////////////////////////////////////////
+
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc

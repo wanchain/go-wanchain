@@ -101,6 +101,7 @@ type worker struct {
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
 	chainSideSub event.Subscription
+	chainSlotTimer  chan struct{}
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
@@ -140,6 +141,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txCh:           make(chan core.TxPreEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
+		chainSlotTimer: make(chan struct{}, chainHeadChanSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -158,7 +160,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	worker.commitNewWork()
+	//worker.commitNewWork()
 
 	return worker
 }
@@ -255,8 +257,9 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			self.commitNewWork()
-
+			self.commitNewWork(false)
+		case <-self.chainSlotTimer:
+			self.commitNewWork(true)
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
@@ -289,7 +292,7 @@ func (self *worker) update() {
 
 func (self *worker) wait() {
 	for {
-		mustCommitNewWork := true
+		//mustCommitNewWork := true
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
 
@@ -330,10 +333,10 @@ func (self *worker) wait() {
 				continue
 			}
 			// check if canon block and write transactions
-			if stat == core.CanonStatTy {
-				// implicit by posting ChainHeadEvent
-				mustCommitNewWork = false
-			}
+			//if stat == core.CanonStatTy {
+			//	// implicit by posting ChainHeadEvent
+			//	mustCommitNewWork = false
+			//}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
@@ -349,9 +352,9 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			if mustCommitNewWork {
-				self.commitNewWork()
-			}
+			//if mustCommitNewWork {
+			//	self.commitNewWork()
+			//}
 		}
 	}
 }
@@ -401,7 +404,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() {
+func (self *worker) commitNewWork(isPos bool) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -472,7 +475,6 @@ func (self *worker) commitNewWork() {
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
-
 	// compute uncles for the new block.
 	//var (
 	//	uncles    []*types.Header
@@ -495,6 +497,7 @@ func (self *worker) commitNewWork() {
 	//for _, hash := range badUncles {
 	//	delete(self.possibleUncles, hash)
 	//}
+
 	uncles := []*types.Header{}
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
@@ -506,7 +509,9 @@ func (self *worker) commitNewWork() {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
-	self.push(work)
+	if isPos {
+		self.push(work)
+	}
 }
 
 func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
@@ -529,12 +534,28 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	var coalescedLogs []*types.Log
 
+	var rbCount  = 0
+	var slotCount = 0
 	for {
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
 			break
 		}
+		//fmt.Println(tx.To().String())
+		//fmt.Println(vm.RandomBeaconPrecompileAddr.String())
+		if tx.To()!=nil&&tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
+			rbCount++
+			if rbCount > 10 {
+				break
+			}
+		} else  if tx.To()!=nil&&tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
+			slotCount++
+			if slotCount > 20 {
+				break
+			}
+		}
+
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		//

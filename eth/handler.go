@@ -165,6 +165,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)
 	}
+
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
@@ -177,6 +178,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
+	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
@@ -341,6 +343,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers []*types.Header
 			unknown bool
 		)
+
 		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 			// Retrieve the next header satisfying the query
 			var origin *types.Header
@@ -352,6 +355,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if origin == nil {
 				break
 			}
+
+
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
 			bytes += estHeaderRlpSize
@@ -403,6 +408,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				query.Origin.Number += (query.Skip + 1)
 			}
 		}
+
 		return p.SendBlockHeaders(headers)
 
 	case msg.Code == BlockHeadersMsg:
@@ -453,6 +459,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
 
+		//p.CheckEpochBoundary(pm.blockchain,headers)
+
+
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -485,6 +494,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				bytes += len(data)
 			}
 		}
+
 		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
@@ -506,12 +516,34 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if filter {
 			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
 		}
+
+
 		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
 			if err != nil {
 				log.Debug("Failed to deliver bodies", "err", err)
 			}
 		}
+
+	case msg.Code == GetEpochGenesisMsg:
+		var epochid uint64
+		if err := msg.Decode(&epochid); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		p.SendEpochGenesis(pm.blockchain,epochid)
+
+	case msg.Code == EpochGenesisMsg:
+		var epBody epochGenesisBody
+		if err := msg.Decode(&epBody); err != nil {
+			log.Debug("Failed to decode epoch genesis data", "err", err)
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
+			log.Debug("Failed to deliver epoch genesis data", "err", err)
+		}
+
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
@@ -615,6 +647,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 		for _, block := range unknown {
+
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
@@ -674,6 +707,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	}
 	return nil
 }
+
+
 
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).

@@ -191,6 +191,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			contract.UseGas(contract.Gas)
 		}
 	}
+	
 	return ret, contract.Gas, err
 }
 

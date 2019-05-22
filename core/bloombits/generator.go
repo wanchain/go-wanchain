@@ -80,8 +80,10 @@ func (b *Generator) Bitset(idx uint) ([]byte, error) {
 	if b.nextBit != b.sections {
 		return nil, errors.New("bloom not fully generated yet")
 	}
+
 	if idx >= types.BloomBitLength {
 		return nil, errSectionOutOfBounds
 	}
+
 	return b.blooms[idx], nil
 }

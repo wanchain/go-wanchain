@@ -110,14 +110,13 @@ func  (f *faucet) SendTransaction(singedTx *types.Transaction) error {
 
 func FaucetStart(amount uint64,ethereum *eth.Ethereum,url string) {
 	// Parse the flags and set up the logger to print everything requested
-	//flag.Parse()
+
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	if amount == 0 {
 		amount = 100
 	}
 
 	*payoutFlag = int(amount)
-
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	periods := make([]string, *tiersFlag)
@@ -164,7 +163,6 @@ func FaucetStart(amount uint64,ethereum *eth.Ethereum,url string) {
 
 
 	faucet := &faucet{}
-
 
 	client,err := ethclient.Dial(url)
 	if err != nil {

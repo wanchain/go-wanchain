@@ -26,6 +26,7 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -534,6 +535,20 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	ks.refreshWallets()
 	return a, nil
 }
+
+// TODO: temp add, for quickly print public keys, maybe removed later
+func (ks *KeyStore) GetKey(a accounts.Account,  passphrase string) (*Key, error) {
+	keyJSON, err := ioutil.ReadFile(a.URL.Path)
+	if err != nil {
+		return nil, err
+	}
+	key, err := DecryptKey(keyJSON, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
 
 // GetWanAddress represents the keystore to retrieve corresponding wanchain public address for a specific ordinary account/address
 func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, error) {

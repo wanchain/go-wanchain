@@ -20,7 +20,6 @@ package main
 
 import (
 	"fmt"
-	fullFaucet "github.com/wanchain/go-wanchain/cmd/fullfaucet"
 	"os"
 	"runtime"
 	"sort"
@@ -39,6 +38,7 @@ import (
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/wanchain/go-wanchain/cmd/fullfaucet"
 )
 
 const (
@@ -104,7 +104,9 @@ var (
 		utils.DevModeFlag,
 		utils.TestnetFlag,
 		utils.DevInternalFlag,
+
 		utils.PlutoFlag,
+		utils.PlutoDevFlag,
 
 		utils.FaucetEnabledFlag,
 		utils.FaucetAmountFlag,
@@ -141,13 +143,22 @@ var (
 		utils.WhisperMaxMessageSizeFlag,
 		utils.WhisperMinPOWFlag,
 	}
+
+	syslogFlags = []cli.Flag{
+		utils.SysLogFlag,
+		utils.SyslogNetFlag,
+		utils.SyslogSvrFlag,
+		utils.SyslogLevelFlag,
+		utils.SyslogTagFlag,
+	}
 )
 
 func init() {
+
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The go-wanchain Authors"
+	app.Copyright = "Copyright 2013-2017 The go-ethereum Authors; Copyright 2018 Wanchain Foundation Ltd"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -182,6 +193,7 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, whisperFlags...)
+	app.Flags = append(app.Flags, syslogFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -227,6 +239,14 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	if ctx.GlobalBool(utils.SysLogFlag.Name) {
+		log.InitSyslog(
+			ctx.GlobalString(utils.SyslogNetFlag.Name),
+			ctx.GlobalString(utils.SyslogSvrFlag.Name),
+			ctx.GlobalString(utils.SyslogLevelFlag.Name),
+			ctx.GlobalString(utils.SyslogTagFlag.Name))
+	}
+
 	// Start up the node itself
 	utils.StartNode(stack)
 
@@ -281,6 +301,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running
@@ -288,6 +309,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := stack.Service(&ethereum); err != nil {
 			utils.Fatalf("ethereum service not running: %v", err)
 		}
+
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
 			type threaded interface {
@@ -305,12 +327,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
-
 	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
-	   ctx.GlobalIsSet(utils.EtherbaseFlag.Name)&&
-	   ctx.GlobalIsSet(utils.UnlockedAccountFlag.Name)&&
-	   ( ctx.GlobalBool(utils.PlutoFlag.Name) ||
-	  	 ctx.GlobalBool(utils.TestnetFlag.Name)){
+		ctx.GlobalBool(utils.EtherbaseFlag.Name)&&
+		ctx.GlobalBool(utils.UnlockedAccountFlag.Name)&&
+		( ctx.GlobalBool(utils.PlutoFlag.Name) ||
+			ctx.GlobalBool(utils.TestnetFlag.Name)){
 
 		// Mining only makes sense if a full Ethereum node is running
 		var ethereum *eth.Ethereum
@@ -326,3 +347,4 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 }
+
