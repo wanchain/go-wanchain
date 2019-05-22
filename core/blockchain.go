@@ -189,11 +189,15 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		}
 	}
 
-	block := bc.currentBlock
-	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 
-	//if start slot is 0 and cq is not qualified and no restarted flag,this chain is restarted
-	if bc.checkCQStartSlot == INITRESTARTING && !bc.restarted{
+
+	//if chain number is bigger than 0,then this chain is restarted
+	if bc.currentBlock.NumberU64() > 0{
+		if posconfig.EpochBaseTime == 0 {
+			posconfig.EpochBaseTime = bc.GetBlockByNumber(uint64(1)).Time().Uint64()
+		}
+
+		epid,slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 		//record the restarting slot point
 		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 	}
@@ -930,12 +934,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//for restart, allow CQ is not qualified in pass 2k slot
 	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+
+	insertSlots := epid*posconfig.SlotCount + slid
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 
-		insertSlots := epid*posconfig.SlotCount + slid
 		//if chain is restated successfully or chain is not stable after 2k,then return error
-		if (insertSlots - bc.checkCQStartSlot) > posconfig.SlotSecurityParam ||
+		if (insertSlots - bc.checkCQStartSlot) > 10*posconfig.SlotSecurityParam ||
 			bc.restarted {
 			return NonStatTy, ErrInsufficientCQ
 		}
@@ -946,11 +951,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	}
 
-	cq,_ := bc.ChainQuality(epid,slid)
-	log.Info("chain quality","=",cq)
-
-
-	// Calculate the total difficulty of the block
+	if (insertSlots - bc.checkCQStartSlot) >= 2*posconfig.SlotCount {
+		bc.checkCQStartSlot = insertSlots
+	}
+		// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
@@ -1703,12 +1707,13 @@ func (bc *BlockChain) IsChainRestarting() bool {
 	}
 
 	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
-
-	insertSlots := epid*posconfig.SlotCount + slid
+	curSlots := epid*posconfig.SlotCount + slid
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	res := (insertSlots - bc.checkCQStartSlot) < 2*posconfig.SlotCount && bc.checkCQStartSlot > 0
+	if (bc.checkCQStartSlot - curSlots) > posconfig.K && bc.checkCQStartSlot > 0 {
+		return true
+	}
 
-	return res
+	return false
 
 }
