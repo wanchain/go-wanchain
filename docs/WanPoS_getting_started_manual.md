@@ -1,7 +1,7 @@
 # 1. Galaxy Consensus getting started manual
 
 # 2. Introduction
-This is a manual for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus. Please join our [Gitter chat room](https://gitter.im/wandevs/community) if you have any questions about this guide. Members of our official dev team and Wanchain community developers are there to help out with any issues you might have.  
+This is a guide for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus. Please join our [Gitter chat room](https://gitter.im/wandevs/community) if you have any questions about this guide. Members of our official dev team and Wanchain community developers are there to help out with any issues you might have.  
 
 **Software Environment**
 - We recommend using Linux or MacOS
