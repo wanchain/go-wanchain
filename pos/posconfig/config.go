@@ -54,6 +54,7 @@ const (
 	// K count of each epoch
 	KCount = 12
 	K      = 10
+	Pow2PosUpgradeBlockNumber = 36
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
