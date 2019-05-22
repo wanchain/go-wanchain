@@ -298,12 +298,30 @@ func (s *Service) loop() {
 		}
 		go s.readLoop(conn)
 
-		// Send the initial stats so our node looks decent from the get go
-		if err = s.report(conn); err != nil {
-			log.Warn("Initial stats report failed", "err", err)
-			conn.Close()
-			continue
+
+		if !s.isPos() {
+			// Send the initial stats so our node looks decent from the get go
+			if err = s.report(conn); err != nil {
+				log.Warn("Initial stats report failed", "err", err)
+				conn.Close()
+				continue
+			}
+		} else {
+			// Send the initial stats so our node looks decent from the get go
+			if err = s.reportPos(conn); err != nil {
+				log.Warn("Initial stats reportPos failed", "err", err)
+				conn.Close()
+				continue
+			}
+
+			// send the initial leader info
+			if err = s.reportLeader(conn); err != nil {
+				log.Warn("Initial leader report failed", "err", err)
+				conn.Close()
+				continue
+			}
 		}
+
 		// Keep sending status updates until the connection breaks
 		fullReport := time.NewTicker(posconfig.SlotTime*time.Second)
 
@@ -555,20 +573,12 @@ func (s *Service) login(conn *websocket.Conn) error {
 // This should only be used on reconnects or rarely to avoid overloading the
 // server. Use the individual methods for reporting subscribed events.
 func (s *Service) report(conn *websocket.Conn) error {
-	log.Debug("wanstats report begin")
-	defer log.Debug("wanstats report end")
-
 	var err error
 	if err = s.reportLatency(conn); err != nil {
 		return err
 	}
 
-	if !s.isPos() {
-		err = s.reportBlock(conn, nil)
-	} else {
-		err = s.reportPosBlock(conn, nil)
-	}
-
+	err = s.reportBlock(conn, nil)
 	if err != nil {
 		return err
 	}
@@ -577,26 +587,42 @@ func (s *Service) report(conn *websocket.Conn) error {
 		return err
 	}
 
-	if !s.isPos() {
-		err = s.reportStats(conn)
-	} else {
-		err = s.reportPosStats(conn)
-	}
-
+	err = s.reportStats(conn)
 	if err != nil {
 		return err
 	}
 
-	if s.isPos() {
-		if err := s.reportPosLog(conn); err != nil {
-			return err
-		}
+	return nil
+}
 
-		oldEpochId := s.updateEpochId()
-		if oldEpochId != s.epochId {
-			if err := s.reportLeader(conn); err != nil {
-				return err
-			}
+func (s *Service) reportPos(conn *websocket.Conn) error {
+	var err error
+	if err = s.reportLatency(conn); err != nil {
+		return err
+	}
+
+	err = s.reportPosBlock(conn, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = s.reportPending(conn); err != nil {
+		return err
+	}
+
+	err = s.reportPosStats(conn)
+	if err != nil {
+		return err
+	}
+
+	if err := s.reportPosLog(conn); err != nil {
+		return err
+	}
+
+	oldEpochId := s.updateEpochId()
+	if oldEpochId != s.epochId {
+		if err := s.reportLeader(conn); err != nil {
+			return err
 		}
 	}
 
