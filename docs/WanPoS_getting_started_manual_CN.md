@@ -113,7 +113,7 @@ var g1pub     = "YourPK2"
 // feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
 var feeRate   = 100
 
-// lockTime is the time for miner works which measures in epoch count. And must larger than 5.
+// lockTime is the time for miner works which measures in epoch count. And must 7.
 var lockTime  = 30
 
 // baseAddr is the fund source account.
