@@ -808,6 +808,8 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	header.Coinbase = signer
 
 	s := slotleader.GetSlotLeaderSelection()
+
+
 	buf, err := s.PackSlotProof(epochId, slotId, key.PrivateKey)
 	if err != nil {
 		log.Warn("PackSlotProof failed in Seal", "epochID", epochId, "slotID", slotId, "error", err.Error())

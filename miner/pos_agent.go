@@ -130,6 +130,8 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 
 	for {
+
+
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
 		if nil == h {

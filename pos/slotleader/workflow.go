@@ -40,67 +40,71 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	s.sendTransactionFn = util.SendTx
 
 	if s.blockChain.IsChainRestarting() {
-
-		epoch0Leaders := s.getEpoch0LeadersPK()
-		for index, value := range epoch0Leaders {
-			s.epochLeadersPtrArrayGenesis[index] = value
-		}
-
-		alphas := make([]*big.Int, 0)
-		for _, value := range epoch0Leaders {
-			tempInt := new(big.Int).SetInt64(0)
-			tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
-			alphas = append(alphas, tempInt)
-		}
-
-		for i := 0; i < posconfig.EpochLeaderCount; i++ {
-
-			// AlphaPK  stage1Genesis
-			mi0 := new(ecdsa.PublicKey)
-			mi0.Curve = crypto.S256()
-			mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
-				alphas[i].Bytes())
-			s.stageOneMiGenesis[i] = mi0
-
-			// G
-			BasePoint := new(ecdsa.PublicKey)
-			BasePoint.Curve = crypto.S256()
-			BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
-
-			// alphaG SMAGenesis
-			smaPiece := new(ecdsa.PublicKey)
-			smaPiece.Curve = crypto.S256()
-			smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
-			s.smaGenesis[i] = smaPiece
-
-			for j := 0; j < posconfig.EpochLeaderCount; j++ {
-				// AlphaIPki stage2Genesis, used to verify genesis proof
-				alphaIPkj := new(ecdsa.PublicKey)
-				alphaIPkj.Curve = crypto.S256()
-				alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
-					s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
-
-				s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
-			}
-
-		}
-
-		epochLeadersPreHexStr := make([]string, 0)
-		for _, value := range s.epochLeadersPtrArrayGenesis {
-			epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
-		}
-		log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
-
-		smaPiecesHexStr := make([]string, 0)
-		for _, value := range s.smaGenesis {
-			smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
-		}
-
-		log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
-
+		s.generateRestartSma()
 	}
 }
 
+
+func (s *SLS) generateRestartSma() {
+
+	epoch0Leaders := s.getEpoch0LeadersPK()
+	for index, value := range epoch0Leaders {
+		s.epochLeadersPtrArrayGenesis[index] = value
+	}
+
+	alphas := make([]*big.Int, 0)
+	for _, value := range epoch0Leaders {
+		tempInt := new(big.Int).SetInt64(0)
+		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
+		alphas = append(alphas, tempInt)
+	}
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+
+		// AlphaPK  stage1Genesis
+		mi0 := new(ecdsa.PublicKey)
+		mi0.Curve = crypto.S256()
+		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
+			alphas[i].Bytes())
+		s.stageOneMiGenesis[i] = mi0
+
+		// G
+		BasePoint := new(ecdsa.PublicKey)
+		BasePoint.Curve = crypto.S256()
+		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
+
+		// alphaG SMAGenesis
+		smaPiece := new(ecdsa.PublicKey)
+		smaPiece.Curve = crypto.S256()
+		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
+		s.smaGenesis[i] = smaPiece
+
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+			// AlphaIPki stage2Genesis, used to verify genesis proof
+			alphaIPkj := new(ecdsa.PublicKey)
+			alphaIPkj.Curve = crypto.S256()
+			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+				s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+
+			s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
+		}
+
+	}
+
+	epochLeadersPreHexStr := make([]string, 0)
+	for _, value := range s.epochLeadersPtrArrayGenesis {
+		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
+
+	smaPiecesHexStr := make([]string, 0)
+	for _, value := range s.smaGenesis {
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+
+	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
+
+}
 //Loop check work every Slot time. Called by backend loop.
 //It's all slotLeaderSelection's main workflow loop.
 //It does not loop at all, it is loop called by the backend.

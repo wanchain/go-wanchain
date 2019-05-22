@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -151,6 +152,8 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 	return profMeg, proof, err
 }
 
+
+
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
@@ -165,7 +168,12 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	//SMA PRE
 	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
-		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+		if s.blockChain.IsChainRestarting() {
+			return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+		} else {
+			return nil,nil,errors.New("failed to get sma for when not")
+		}
+
 	}
 
 	//RB PRE

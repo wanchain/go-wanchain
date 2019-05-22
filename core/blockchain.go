@@ -935,25 +935,26 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//for restart, allow CQ is not qualified in pass 2k slot
 	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 
-	insertSlots := epid*posconfig.SlotCount + slid
+	insertSlots := int64(epid*posconfig.SlotCount + slid)
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 
 		//if chain is restated successfully or chain is not stable after 2k,then return error
-		if (insertSlots - bc.checkCQStartSlot) > 10*posconfig.SlotSecurityParam ||
-			bc.restarted {
+
+		diff := int64(insertSlots) - int64(bc.checkCQStartSlot)
+
+		//allow one epoch?
+		if diff > posconfig.SlotCount ||
+		   bc.restarted {
 			return NonStatTy, ErrInsufficientCQ
 		}
 
 	} else {
 
 		bc.restarted = true
-
 	}
 
-	if (insertSlots - bc.checkCQStartSlot) >= 2*posconfig.SlotCount {
-		bc.checkCQStartSlot = insertSlots
-	}
+
 		// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
@@ -1710,7 +1711,8 @@ func (bc *BlockChain) IsChainRestarting() bool {
 	curSlots := epid*posconfig.SlotCount + slid
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	if (bc.checkCQStartSlot - curSlots) > posconfig.K && bc.checkCQStartSlot > 0 {
+	diff := bc.checkCQStartSlot - curSlots
+	if diff > posconfig.K && bc.checkCQStartSlot > 0 {
 		return true
 	}
 
