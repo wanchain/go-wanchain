@@ -189,9 +189,6 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		}
 	}
 
-
-
-	//if chain number is bigger than 0,then this chain is restarted
 	if bc.currentBlock.NumberU64() > 0{
 		if posconfig.EpochBaseTime == 0 {
 			posconfig.EpochBaseTime = bc.GetBlockByNumber(uint64(1)).Time().Uint64()
@@ -201,7 +198,6 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		//record the restarting slot point
 		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 	}
-
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
@@ -932,28 +928,17 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 
-	//for restart, allow CQ is not qualified in pass 2k slot
-	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
-
-	insertSlots := int64(epid*posconfig.SlotCount + slid)
+	if block.NumberU64() >= 120 {
+		fmt.Println("here")
+	}
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 
-		//if chain is restated successfully or chain is not stable after 2k,then return error
-
-		diff := int64(insertSlots) - int64(bc.checkCQStartSlot)
-
-		//allow one epoch?
-		if diff > posconfig.SlotCount ||
-		   bc.restarted {
+		if bc.restarted {
 			return NonStatTy, ErrInsufficientCQ
 		}
 
-	} else {
-
-		bc.restarted = true
 	}
-
 
 		// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1030,6 +1015,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		bc.insert(block)
 		// TODO: update epoch ->blockNumber
 		if bc.config.Pluto != nil {
+
 			if block.NumberU64() == 1 {
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
@@ -1040,6 +1026,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 			posUtil.UpdateEpochBlock(block)
 		}
+
+
+
 	}
 
 	bc.futureBlocks.Remove(block.Hash())
@@ -1162,6 +1151,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
+
+
 		// TODO: verify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
@@ -1718,4 +1709,8 @@ func (bc *BlockChain) IsChainRestarting() bool {
 
 	return false
 
+}
+
+func (bc *BlockChain) SetChainRestarted() {
+	bc.restarted = true
 }

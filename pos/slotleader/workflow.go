@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
-
-	"github.com/wanchain/go-wanchain/core/vm"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -45,11 +44,16 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	if s.blockChain.IsChainRestarting() {
 		pks := s.getDefaultLeadersPK()
 		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+
+		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 		s.isRestarting = true
 	} else {
 		g := s.blockChain.GetHeaderByNumber(0)
 		posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 	}
+
+
+
 
 	s.initSma()
 }
@@ -60,7 +64,9 @@ func (s *SLS) getDefaultLeadersPK() []*ecdsa.PublicKey {
 	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(0)
-	if err != nil || len(initPksStr) == 0{
+
+	pksl := len(initPksStr)
+	if err != nil || pksl == 0{
 		return nil
 	}
 
@@ -217,7 +223,18 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
 
-		s.isRestarting = false
+		selector := util.GetEpocherInst()
+		if selector == nil {
+			return
+		}
+		epochLeaders := selector.GetRBProposerG1(epochID)
+		slpks := s.GetAllSlotLeaders(epochID)
+
+		if len(slpks) == posconfig.SlotCount &&
+		   len(epochLeaders) == posconfig.EpochLeaderCount {
+			s.isRestarting = false
+			s.blockChain.SetChainRestarted()
+		}
 
 	default:
 	}

@@ -122,8 +122,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 
 
-
-
 	for {
 
 
