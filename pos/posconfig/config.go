@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
@@ -55,7 +54,6 @@ const (
 	// K count of each epoch
 	KCount = 12
 	K      = 10
-	Pow2PosUpgradeBlockNumber = params.Pow2PosUpgradeBlockNumber
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 

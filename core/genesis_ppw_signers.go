@@ -69,7 +69,7 @@ func getInternalNetPpwSignStr() string {
 var (
 
 	ppwMainNetSigAddr []string = []string{
-		"2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
+		"CA49d01eBF894182DeeaB1D8Aa31a955fb042C3d",
 		"dFfC36Df40615c56Cca31D4f731DccFcC7C5593a",
 		"967e075A05145D9E54ec55f4D08E772451E2F00D",
 		"dB76fFd9E4b530332c51FB1B089A2A260d4EdAEa",

@@ -225,7 +225,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case g != nil:
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
-		return params.MainnetChainConfig
+		return params.WanchainChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
 	case ghash == params.InternalGenesisHash:
@@ -373,7 +373,7 @@ func DefaultPPOWTestingGenesisBlock() *Genesis {
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.MainnetChainConfig,
+		Config:     params.WanchainChainConfig,
 		Nonce:      98,
 		ExtraData:  hexutil.MustDecode(getMainNetPpwSignStr()),
 		GasLimit:   0x2fefd8,

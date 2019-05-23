@@ -1030,7 +1030,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-	if head.Number.Uint64() > posconfig.Pow2PosUpgradeBlockNumber  {
+	if head.Number.Uint64() > s.b.ChainConfig().PosFirstBlock.Uint64()  {
 		epochid,slotid := posutil.CalEpSlbyTd(head.Difficulty.Uint64())
 		fields["epochId"] = epochid
 		fields["slotId"] = slotid

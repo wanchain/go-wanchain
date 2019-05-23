@@ -31,7 +31,10 @@ var (
 
 	InternalGenesisHash = common.HexToHash("0xb1dc31a86510003c23b9ddee0e194775807262529b8dafa6dc23d9315364d2b3")
 )
-const Pow2PosUpgradeBlockNumber = 6
+const MainnetPow2PosUpgradeBlockNumber = 4000000
+const TestnetPow2PosUpgradeBlockNumber = 4000000
+const InternalPow2PosUpgradeBlockNumber = 6
+
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
@@ -48,6 +51,12 @@ var (
 		//ByzantiumBlock: big.NewInt(4370000),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
+		PosFirstBlock:       big.NewInt(MainnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	WanchainChainConfig = &ChainConfig{
@@ -60,7 +69,7 @@ var (
 		//EIP155Block:    big.NewInt(0),
 		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
-		PosFirstBlock:       big.NewInt(Pow2PosUpgradeBlockNumber), // set as n * epoch_length
+		PosFirstBlock:       big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
 		IsPosActive:    false,
 		Ethash:         new(EthashConfig),
 		Pluto: &PlutoConfig{
@@ -82,7 +91,7 @@ var (
 		ByzantiumBlock: big.NewInt(0),
 
 		Ethash: new(EthashConfig),
-		PosFirstBlock:       big.NewInt(Pow2PosUpgradeBlockNumber), // set as n * epoch_length
+		PosFirstBlock:       big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
 		IsPosActive:    false,
 		Pluto: &PlutoConfig{
 			Period: 10,
@@ -103,7 +112,7 @@ var (
 		ByzantiumBlock: big.NewInt(0),
 
 		Ethash: new(EthashConfig),
-		PosFirstBlock:       big.NewInt(Pow2PosUpgradeBlockNumber), // set as n * epoch_length
+		PosFirstBlock:       big.NewInt(InternalPow2PosUpgradeBlockNumber), // set as n * epoch_length
 		IsPosActive:    false,
 		Pluto: &PlutoConfig{
 			Period: 10,
@@ -121,7 +130,7 @@ var (
 		//EIP155Block:    big.NewInt(3),
 		//EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(0),
-		PosFirstBlock: big.NewInt(Pow2PosUpgradeBlockNumber),
+		PosFirstBlock: big.NewInt(InternalPow2PosUpgradeBlockNumber),
 
 		Pluto: &PlutoConfig{
 			Period: 10,
