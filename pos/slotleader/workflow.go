@@ -227,11 +227,14 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		if selector == nil {
 			return
 		}
-		epochLeaders := selector.GetRBProposerG1(epochID)
+
+		rbleaders := selector.GetRBProposerG1(epochID)
 		slpks := s.GetAllSlotLeaders(epochID)
+		epleaders := selector.GetEpochLeaders(epochID)
 
 		if len(slpks) == posconfig.SlotCount &&
-		   len(epochLeaders) == posconfig.EpochLeaderCount {
+		   len(rbleaders) == posconfig.RandomProperCount &&
+		   len(epleaders) == posconfig.EpochLeaderCount {
 			s.isRestarting = false
 			s.blockChain.SetChainRestarted()
 		}

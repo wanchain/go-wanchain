@@ -931,6 +931,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if block.NumberU64() >= 120 {
 		fmt.Println("here")
 	}
+
+	epid,slid := posUtil.CalEpochSlotID(block.Time().Uint64())
+	cq,_:= bc.ChainQuality(epid,slid)
+	log.Info("current chain","quality",cq,"block number",block.NumberU64())
+
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 
