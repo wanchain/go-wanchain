@@ -33,15 +33,6 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	return epochId, slotId
 }
 
-func CalTimeFromEpochSlotID (epochId, slotId uint64) (timeUnix uint64){
-
-	allSlots := epochId * posconfig.SlotCount + slotId
-	allSlotTime := allSlots * posconfig.SlotTime
-	timeUnix = allSlotTime +  posconfig.EpochBaseTime
-
-	return timeUnix
-}
-
 var (
 	curEpochId = uint64(0)
 	curSlotId  = uint64(0)
@@ -80,8 +71,7 @@ type SelectLead interface {
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
 	GetEpochLastBlkNumber(targetEpochId uint64) uint64
-	GetPosGenesisEpAndSlId() (epochID uint64, slotID uint64)
-	GetWhiteByEpochId(epochId uint64) ([]string, error)
+	//TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
 }
 
 var (
@@ -141,11 +131,11 @@ func GetEpochBlock(epochID uint64) uint64 {
 	lbe.Lock()
 	b := lastBlockEpoch[epochID]
 	lbe.Unlock()
-
+	
 	if b == 0 {
 		b = selecter.GetEpochLastBlkNumber(epochID)
 	}
-
+	
 	return b
 }
 
@@ -206,9 +196,4 @@ func FromWin(win *big.Int) float64 {
 		return 0
 	}
 	return wan
-}
-
-
-func GetPosGenesisEpAndSlId() (epochID, slotID uint64) {
-	return GetEpocherInst().GetPosGenesisEpAndSlId()
 }

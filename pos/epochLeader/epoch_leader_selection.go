@@ -311,13 +311,7 @@ func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if posconfig.IsDev {
-		return posconfig.WhiteListDev[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
-	} else {
-		return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
-		//return posconfig.WhiteList,nil
-	}
+	return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
 }
 
 func (e *Epocher) GetWhiteArrayByEpochId(epochId uint64) ([][]byte, error) {
@@ -420,6 +414,7 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		if err != nil {
 			log.Error("can't rlp decode:", "err", err)
 		}
+		g1s[i].Type = 1
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
 		pub := crypto.ToECDSAPub(proposer.PubSec256)
@@ -428,12 +423,55 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		}
 
 		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
-		//g1s[i].Probabilities = proposer.Probabilities
 	}
 
 	return g1s
 }
 
+func (e *Epocher) GetEpLeaderGroup(epochID uint64) []vm.Leader {
+	epLeaderArray := e.epochLeadersDb.GetStorageByteArray(epochID)
+	length := len(epLeaderArray)
+	g1s := make([]vm.Leader, posconfig.EpochLeaderCount)
+
+	for i := 0; i < length; i++ {
+		proposer := Proposer{}
+		err := rlp.DecodeBytes(epLeaderArray[i], &proposer)
+		if err != nil {
+			log.Error("can't rlp decode:", "err", err)
+		}
+		g1s[i].Type = 0
+		g1s[i].PubSec256 = proposer.PubSec256
+		g1s[i].PubBn256 = proposer.PubBn256
+		pub := crypto.ToECDSAPub(proposer.PubSec256)
+		if nil == pub {
+			continue
+		}
+
+		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
+	}
+	wa, err := e.GetWhiteArrayByEpochId(epochID)
+	if err == nil && length < posconfig.EpochLeaderCount{
+		for i:=0; i<posconfig.EpochLeaderCount-length; i++ {
+			g1s[i+length].Type = 0
+			g1s[i+length].PubSec256 = wa[i]
+			g1s[i+length].PubBn256 = ([]byte)("")
+			pub := crypto.ToECDSAPub(wa[i])
+			if nil == pub {
+				continue
+			}
+			g1s[i+length].SecAddr = crypto.PubkeyToAddress(*pub)
+		}
+	}
+	return g1s
+}
+func (e *Epocher) GetLeaderGroup(epochID uint64) []vm.Leader {
+	eps := e.GetEpLeaderGroup(epochID)
+	rbs := e.GetRBProposerGroup(epochID)
+	leaders := make([]vm.Leader, 0)
+	leaders = append(leaders, eps...)
+	leaders = append(leaders, rbs...)
+	return leaders
+}
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	valSet := e.rbLeadersDb.GetStorageByteArray(epochID)
 
@@ -468,6 +506,11 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
+	// check validator is exiting.
+	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
+		return nil, nil, errors.New("Validator is exiting")
+	}
+
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	totalAmount := big.NewInt(0).Set(staker.Amount)
 	for i := 0; i < len(staker.Partners); i++ {
@@ -479,10 +522,6 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 		return nil, nil, errors.New("Validator don't have enough amount.")
 	}
 
-	// check validator is exiting.
-	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
-		return nil, nil, errors.New("Validator is exiting")
-	}
 	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
 	for i := 0; i < len(staker.Partners); i++ {
 		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
@@ -640,12 +679,4 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 	}
 	return true
-}
-
-
-func (e *Epocher) GetPosGenesisEpAndSlId() (epochID uint64, slotID uint64) {
-
-	posGenBlk := e.blkChain.GetBlockByNumber(posconfig.Cfg().PosGensBlkNum)
-
-	return util.CalEpochSlotID(posGenBlk.Time().Uint64())
 }

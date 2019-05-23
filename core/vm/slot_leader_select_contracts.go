@@ -398,9 +398,13 @@ func PackStage1Data(input []byte, abiString string) ([]byte, error) {
 
 func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddress common.Address) bool {
 	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
+
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
 		log.SyslogWarning("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
 		epochLeaders = util.GetEpocherInst().GetEpochLeaders(0)
+
+
+
 	}
 
 	if int64(selfIndex) < 0 || int64(selfIndex) >= posconfig.EpochLeaderCount {
@@ -412,6 +416,10 @@ func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddres
 		return true
 	}
 
+	addr1 := crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[selfIndex])).Hex()
+	addr2 := senderAddress.Hex()
+
+	log.Info("epochleader not match","epochleader array address",addr1,"sender",addr2)
 	return false
 }
 

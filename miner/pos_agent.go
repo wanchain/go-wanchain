@@ -6,7 +6,6 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -25,10 +24,6 @@ func posWhiteList() {
 }
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
-	g := s.BlockChain().GetHeaderByNumber(0)
-	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
-
-
 
 	if posconfig.EpochBaseTime == 0 {
 		h := s.BlockChain().GetHeaderByNumber(1)

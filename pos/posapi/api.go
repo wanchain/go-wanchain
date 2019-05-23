@@ -3,9 +3,10 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core/types"
 	"sort"
 	"time"
+
+	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
 
@@ -55,9 +56,8 @@ type PosChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
 	//get chain quality,return quality * 1000
-	ChainQuality(epochid uint64, slotid uint64) (uint64,error)
+	ChainQuality(epochid uint64, slotid uint64) (uint64, error)
 }
-
 
 type PosApi struct {
 	chain   PosChainReader
@@ -129,7 +129,13 @@ func (a PosApi) GetEpochLeadersAddrByEpochID(epochID uint64) ([]common.Address, 
 
 	return addres, nil
 }
-
+func (a PosApi) GetLeaderGroupByEpochID(epochID uint64) ([]LeaderJson, error) {
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return nil, errors.New("GetEpocherInst error")
+	}
+	return ToLeaderJson(selector.GetLeaderGroup(epochID)), nil
+}
 
 func (a PosApi) GetLocalPK() (string, error) {
 	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
@@ -211,14 +217,14 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	return r, nil
 }
 
-func (a PosApi) GetChainQuality(epochid uint64, slotid uint64) (uint64,error) {
-	return a.chain.ChainQuality(epochid,slotid)
+func (a PosApi) GetChainQuality(epochid uint64, slotid uint64) (uint64, error) {
+	return a.chain.ChainQuality(epochid, slotid)
 }
 
 func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {
 	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
 	if reOrgDb == nil {
-		return []uint64{0,0}, nil
+		return []uint64{0, 0}, nil
 	}
 
 	var reOrgNum, reOrgLen uint64
@@ -359,19 +365,32 @@ func biToString(value *big.Int, err error) (string, error) {
 	return value.String(), err
 }
 
-func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([][]PayInfo, error) {
+func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, error) {
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([][]PayInfo, len(c))
+	ret := make([]ValidatorInfo, len(c))
 	for i := 0; i < len(c); i++ {
-		ret[i] = make([]PayInfo, len(c[i]))
-		for m := 0; m < len(c[i]); m++ {
-			ret[i][m] = PayInfo{}
-			ret[i][m].Addr = c[i][m].Addr
-			ret[i][m].Incentive = (*math.HexOrDecimal256)(c[i][m].Incentive)
+		if len(c[i]) == 0 {
+			continue
+		}
+
+		delegators := make([]DelegatorInfo, len(c[i])-1)
+
+		for m := 1; m < len(c[i]); m++ {
+			delegators[m] = DelegatorInfo{}
+			delegators[m].Address = c[i][m].Addr
+			delegators[m].Incentive = (*math.HexOrDecimal256)(c[i][m].Incentive)
+			delegators[m].Type = "delegator"
+		}
+
+		ret[i] = ValidatorInfo{
+			Address:    c[i][0].Addr,
+			Incentive:  (*math.HexOrDecimal256)(c[i][0].Incentive),
+			Type:       "validator",
+			Delegators: delegators,
 		}
 	}
 
@@ -617,4 +636,3 @@ func (a PosApi) GetRbStage(slotId uint64) uint64 {
 	stage, _, _ := vm.GetRBStage(slotId)
 	return uint64(stage)
 }
-

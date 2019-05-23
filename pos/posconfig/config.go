@@ -1,12 +1,16 @@
 package posconfig
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto"
+
 	"github.com/wanchain/go-wanchain/node"
 )
 
@@ -37,10 +41,11 @@ const (
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold         = 30
 	MinEpHold         = 10
+	Key3Suffix		  = "bn256KeySuffix"
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 4
+	SlotTime = 10
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -49,6 +54,7 @@ const (
 	// K count of each epoch
 	KCount = 12
 	K      = 10
+	Pow2PosUpgradeBlockNumber = 36
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -100,8 +106,6 @@ type Config struct {
 	Dkg2End       uint64
 	SignBegin     uint64
 	SignEnd       uint64
-
-	PosGensBlkNum uint64
 }
 
 var DefaultConfig = Config{
@@ -118,7 +122,6 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
-	0,
 }
 
 func Cfg() *Config {
@@ -134,19 +137,28 @@ func (c *Config) GetMinerAddr() common.Address {
 }
 
 func (c *Config) GetMinerBn256PK() *bn256.G1 {
-	if c.MinerKey == nil {
-		return nil
-	}
+	D3 := GenerateD3byKey2(c.MinerKey.PrivateKey2)
+	return new(bn256.G1).ScalarBaseMult(D3)
+}
 
-	return new(bn256.G1).Set(c.MinerKey.PrivateKey3.PublicKeyBn256.G1)
+func GenerateD3byKey2(PrivateKey *ecdsa.PrivateKey) *big.Int {
+	var one = new(big.Int).SetInt64(1)
+	params := crypto.S256().Params()
+	var ebuffer bytes.Buffer
+	ebuffer.Write(PrivateKey.D.Bytes())
+	ebuffer.Write(([]byte)(Key3Suffix))
+
+	ebyte := crypto.Keccak256(ebuffer.Bytes())
+	d3 := new(big.Int).SetBytes(ebyte)
+
+	n := new(big.Int).Sub(params.N, one)
+	d3.Mod(d3, n)
+	d3.Add(d3, one)
+	return d3
 }
 
 func (c *Config) GetMinerBn256SK() *big.Int {
-	if c.MinerKey == nil {
-		return nil
-	}
-
-	return new(big.Int).Set(c.MinerKey.PrivateKey3.D)
+	return GenerateD3byKey2(c.MinerKey.PrivateKey2)
 }
 
 func Init(nodeCfg *node.Config) {
