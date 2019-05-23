@@ -216,6 +216,9 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
+
+		s.isRestarting = false
+
 	default:
 	}
 }

@@ -1712,7 +1712,7 @@ func (bc *BlockChain) IsChainRestarting() bool {
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
 	diff := bc.checkCQStartSlot - curSlots
-	if diff > posconfig.K && bc.checkCQStartSlot > 0 {
+	if diff > 2*posconfig.K && bc.checkCQStartSlot > 0 {
 		return true
 	}
 

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"
@@ -117,11 +118,8 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
-	if epochID == 0 {
-		b, err := hex.DecodeString(posconfig.GenesisPK)
-		if err != nil {
-			return nil, vm.ErrInvalidGenesisPk
-		}
+	if epochID == 0 || s.isRestarting {
+		b := common.FromHex(posconfig.GenesisPK)
 		return crypto.ToECDSAPub(b), nil
 	}
 
@@ -288,12 +286,7 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
-		if err != nil {
-			// epoch 0 use the genesis pK to propose block, since it comes from configuration
-			// If the configuration has error, system should not continue.
-			panic("posconfig.GenesisPK is Error")
-		}
+		pkBuf := common.FromHex(posconfig.GenesisPK)
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
 	return pks
