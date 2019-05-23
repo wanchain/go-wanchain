@@ -266,14 +266,14 @@ web3._extend({
             outputFormatter: function(stakers) {
                 for(var i=0; i<stakers.length; i++) {
                     stakers[i].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].stakeAmount)
-                    stakers[i].amount = web3._extend.utils.toBigNumber(stakers[i].Amount)
+                    stakers[i].amount = web3._extend.utils.toBigNumber(stakers[i].amount)
                     for(var k=0; k<stakers[i].clients.length; k++) {
                         stakers[i].clients[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].clients[k].stakeAmount)
-                        stakers[i].clients[k].amount = web3._extend.utils.toBigNumber(stakers[i].clients[k].Amount)
+                        stakers[i].clients[k].amount = web3._extend.utils.toBigNumber(stakers[i].clients[k].amount)
                     }
                     for(var k=0; k<stakers[i].partners.length; k++) {
                         stakers[i].partners[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].partners[k].stakeAmount)
-                        stakers[i].partners[k].amount = web3._extend.utils.toBigNumber(stakers[i].partners[k].Amount)
+                        stakers[i].partners[k].amount = web3._extend.utils.toBigNumber(stakers[i].partners[k].amount)
                     }
                 }
                 return stakers
