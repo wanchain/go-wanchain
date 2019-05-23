@@ -513,6 +513,8 @@ The locktime is measured by epoch counts.
 
 The epoch time is 20 minutes for one epoch. So 6 epochs means 120 minutes.
 
+(Attention: In alpha testnet the epoch time is 2 days and slot count is 1440*12 in every epoch)
+
 The total stake is about 6000000 ~ 8000000 WAN on the testnet.
 
 The reward sent to the addresses is shown below:
