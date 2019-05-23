@@ -307,6 +307,16 @@ web3._extend({
 			call: 'pos_getTimeByEpochID',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getEpochGenesis',
+			call: 'pos_getEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'generateEpochGenesis',
+			call: 'pos_generateEpochGenesis',
+			params: 1
+		}),
 	]
 });
 `

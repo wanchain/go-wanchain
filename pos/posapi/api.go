@@ -3,6 +3,8 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/core/types"
 	"sort"
 	"time"
 
@@ -492,4 +494,40 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 	}
 
 	return time
+}
+
+func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+		return eg, nil
+	}
+
+	return nil, errors.New("PrintEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId, true)
+	}
+
+	return nil, errors.New("GenerateEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		geg, err := bc.GetEpochGene().DoGenerateEpochGenesis(epochId, true)
+		if err != nil {
+			return false, errors.New("GenerateEpochGenesis failed")
+		}
+
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+
+		if eg != nil && geg != nil {
+			if eg.GenesisBlkHash == geg.GenesisBlkHash {
+				return true, nil
+			}
+		}
+	}
+
+	return false, errors.New("GenerateEpochGenesis failed, cast failed")
 }

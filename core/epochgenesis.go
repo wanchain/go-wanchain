@@ -125,6 +125,22 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64, isEnd bool) (*t
 	}
 }
 
+func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error) {
+	epgPre := f.GetEpochGenesis(epochid - 1)
+	if epgPre == nil {
+		return nil, errors.New("epoch genesis -1 not exist")
+	}
+
+	var rb 			*big.Int
+	var blk 		*types.Block
+	rb, blk = f.getEpochRandomAndPreEpLastBlk(epochid)
+	epg, err := f.generateEpochGenesis(epochid, blk, rb.Bytes(), epgPre.GenesisBlkHash)
+	if err != nil {
+		return nil, err
+	}
+	return epg, nil
+}
+
 
 func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error){
 	//it is the first block of this epoch
@@ -134,6 +150,10 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 	var epg			*types.EpochGenesis
 
 	curEpid,_,err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
+
+	if curEpid == 0 {
+		curEpid,_,err = f.GetBlockEpochIdAndSlotId(f.bc.Hc.CurrentHeader())
+	}
 
 	if curEpid < epochid || err !=nil || epochid == 0{
 		return nil , errors.New("error epochid")
@@ -467,10 +487,10 @@ func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) ([][]byte){
 	startBlkNum := uint64(0)
 	if epochID > 0 {
-		startBlkNum = posUtil.GetEpochBlock(epochID - 1) + 1
+		startBlkNum = f.rbLeaderSelector.GetEpochLastBlkNumber(epochID - 1) + 1
 	}
 
-	endBlkNum := posUtil.GetEpochBlock(epochID)
+	endBlkNum := f.rbLeaderSelector.GetEpochLastBlkNumber(epochID)
 	slotLeaders :=  make([][]byte, 0)
 	for i := startBlkNum;i <= endBlkNum;i++ {
 		header := f.bc.GetHeaderByNumber(i)

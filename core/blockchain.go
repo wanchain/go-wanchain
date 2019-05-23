@@ -1624,6 +1624,10 @@ func (bc *BlockChain) GetEpochStartCh() (chan *types.EpochSync) {
 	return bc.epochGene.epochGenesisCh
 }
 
+func (bc *BlockChain) GetEpochGene() *EpochGenesisBlock {
+	return bc.epochGene
+}
+
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
 	bc.slotValidator = validator
 }

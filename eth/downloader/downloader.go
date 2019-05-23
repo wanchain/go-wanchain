@@ -472,7 +472,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if d.mode == FastSync {
 		pivotHeader, err = d.fetchPivot(p)
 		if err != nil {
-			log.Error("***fetch pivot error", "err", err)
+			log.Error("fetch pivot error", "err", err)
 			return err
 		}
 
@@ -736,7 +736,7 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 }
 
 func (d *Downloader) fetchPivot(p *peerConnection) ([]*types.Header, error) {
-	p.log.Info("Retrieving remote chain pivot")
+	p.log.Debug("Retrieving remote chain pivot")
 	head, _ := p.peer.Head()
 
 	go p.peer.RequestPivot(head)
