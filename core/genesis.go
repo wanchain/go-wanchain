@@ -403,7 +403,7 @@ func DefaultInternalGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1),
-		Alloc:      jsonPrealloc(wanchainTestAllocJson),
+		Alloc:      jsonPrealloc(wanchainInternalAllocJson),
 	}
 }
 
