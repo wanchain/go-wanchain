@@ -193,6 +193,17 @@ func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }
 
+func PeekChainHeight(db ethdb.Database) (uint64){
+	head := GetHeadBlockHash(db)
+	if head == (common.Hash{}) {
+		// Corrupt or empty database, init from scratch
+		log.Warn("Empty database, resetting chain")
+		return uint64(0)
+	}
+
+	return GetBlockNumber(db, head)
+}
+
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
