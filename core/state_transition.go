@@ -318,7 +318,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
-	if !params.WanchainChainConfig.IsPosActive {
+	if !params.MainnetChainConfig.IsPosActive {
 		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
 	} else {
 		epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)

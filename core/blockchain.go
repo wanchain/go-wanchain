@@ -836,7 +836,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 			break
 		}
 
-		if block.Number().Cmp(params.WanchainChainConfig.PosFirstBlock) < 0 {
+		if block.Number().Cmp(bc.config.PosFirstBlock) < 0 {
 			break
 		}
 
@@ -865,7 +865,7 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
-		return blocksIn2K > (int)(totalSlots-posconfig.K-params.WanchainChainConfig.PosFirstBlock.Uint64())
+		return blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
 
 	return true
@@ -1005,7 +1005,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		//if bc.config.Pluto != nil {
 		if bc.config.IsPosActive{
 			//TODO:ppow2pos change next as
-			if block.NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() {
+			if block.NumberU64() == bc.config.PosFirstBlock.Uint64() {
 				posconfig.EpochBaseTime = block.Time().Uint64()
 			}
 
@@ -1076,7 +1076,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	for i := 1; i < len(chain); i++ {
 
-		if chain[i-1].NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
+		if chain[i-1].NumberU64() == bc.config.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
 			posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
 		}
 

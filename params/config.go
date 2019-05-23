@@ -82,6 +82,12 @@ var (
 		ByzantiumBlock: big.NewInt(0),
 
 		Ethash: new(EthashConfig),
+		PosFirstBlock:       big.NewInt(Pow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
@@ -97,6 +103,12 @@ var (
 		ByzantiumBlock: big.NewInt(0),
 
 		Ethash: new(EthashConfig),
+		PosFirstBlock:       big.NewInt(Pow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{

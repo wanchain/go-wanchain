@@ -6,6 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
 	//"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
@@ -18,8 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rpc"
 	"time"
-	"github.com/wanchain/go-wanchain/consensus/pluto"
-	"github.com/wanchain/go-wanchain/params"
 )
 
 func posWhiteList() {
@@ -34,7 +33,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	slotleader.SlsInit()
 
 	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(params.WanchainChainConfig.PosFirstBlock.Uint64())
+		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
