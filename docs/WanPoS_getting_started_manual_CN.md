@@ -428,6 +428,8 @@ $ loadScript('loadScript/register.js')
 
 测试时，epoch时间为20分钟，每个epoch有120个slot。6个epoch为120分钟。
 
+（注意！本测试不是在alpha测试网络开展的，是在少量节点的私链上进行，alpha网络的时间参数为每个epoch 2天，每个epoch有1440*12个slot）
+
 总stake约为 6000000 ~ 8000000 万币。
 
 | Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
