@@ -128,6 +128,7 @@ type BlockChain struct {
 
 	checkCQStartSlot uint64  //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 
+	restartSlot 	uint64	//the best peer's latest slot
 	restarted   bool
 }
 
@@ -155,7 +156,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restarted:    false,
+		restarted:    true,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -189,15 +190,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		}
 	}
 
-	if bc.currentBlock.NumberU64() > 0{
-		if posconfig.EpochBaseTime == 0 {
-			posconfig.EpochBaseTime = bc.GetBlockByNumber(uint64(1)).Time().Uint64()
-		}
 
-		epid,slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
-		//record the restarting slot point
-		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
-	}
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
@@ -1698,17 +1691,11 @@ func (bc *BlockChain) SetFullSynchValidator() {
 
 func (bc *BlockChain) IsChainRestarting() bool {
 
-	block := bc.currentBlock
-	if block == nil {
-		return false
-	}
-
-	epid,slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
-	curSlots := epid*posconfig.SlotCount + slid
-
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	diff := bc.checkCQStartSlot - curSlots
-	if diff > 2*posconfig.K && bc.checkCQStartSlot > 0 {
+	diff := bc.checkCQStartSlot - bc.restartSlot
+	if diff > 2*posconfig.K &&
+		bc.checkCQStartSlot > 0 &&
+		bc.restartSlot > 0{
 		return true
 	}
 
@@ -1719,3 +1706,26 @@ func (bc *BlockChain) IsChainRestarting() bool {
 func (bc *BlockChain) SetChainRestarted() {
 	bc.restarted = true
 }
+
+func (bc *BlockChain) SetPeerLastestHeader(header *types.Header) {
+
+	if bc.currentBlock.NumberU64() > 0{
+		if posconfig.EpochBaseTime == 0 {
+			posconfig.EpochBaseTime = bc.GetBlockByNumber(uint64(1)).Time().Uint64()
+		}
+
+		epid,slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
+		//record the restarting slot point
+		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
+		lastepid, lastlslid := posUtil.CalEpSlbyTd(header.Difficulty.Uint64())
+		bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+
+		if bc.IsChainRestarting() {
+			bc.restarted = false
+		}
+	}
+
+
+}
+

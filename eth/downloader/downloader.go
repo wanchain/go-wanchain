@@ -222,6 +222,8 @@ type BlockChain interface {
 	GetEpochStartCh() (chan	uint64)
 
 	IsExistEpochGenesis(epochid uint64) bool
+
+	SetPeerLastestHeader(header *types.Header)
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -460,6 +462,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	log.Debug("Synchronising with the network", "peer", p.id, "eth", p.version, "head", hash, "td", td, "mode", d.mode)
 	defer func(start time.Time) {
+
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
 
@@ -484,7 +487,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			return err
 		}
 	}
-
 
 	////////////////////////////////////////////////
 
@@ -554,6 +556,10 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		// If sync failed in the critical section, bump the fail counter.
 		atomic.AddUint32(&d.fsPivotFails, 1)
 	}
+
+	//for set best peers epochid and slotid to check if blockchain need restart
+	d.blockchain.SetPeerLastestHeader(latest)
+
 	return err
 }
 

@@ -149,6 +149,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		epochid, slotid := util.GetEpochSlotID()
 		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
 
+		//reset initial sma
+		sls := slotleader.GetSlotLeaderSelection()
+		if s.BlockChain().IsChainRestarting() {
+			sls.Init(s.BlockChain(), nil, nil)
+		}
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochid, slotid)
 

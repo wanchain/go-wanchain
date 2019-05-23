@@ -52,9 +52,6 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 		posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 	}
 
-
-
-
 	s.initSma()
 }
 
