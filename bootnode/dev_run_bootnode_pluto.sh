@@ -10,5 +10,6 @@
 echo "run gwan in pluto bootnode testnet"
 make && \
 rm -rf ~/.wanchain/pluto/gwan && \
-build/bin/gwan --plutodev  --nodiscover --etherbase  "0xcf696d8eea08a311780fb89b20d4f0895198a489"  --unlock "0xcf696d8eea08a311780fb89b20d4f0895198a489" --password ./pw.txt  --mine --minerthreads=1 $@
+rm -rf ~/.wanchain/gwan && \
+build/bin/gwan     --nodiscover --etherbase  "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"  --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password ./pw.txt  --mine --minerthreads=1 $@
 
