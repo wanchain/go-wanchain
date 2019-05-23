@@ -121,12 +121,16 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		}
 	}
 
+	//set current block as the restart condition
+	s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock())
 
 	for {
 
 
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
+
+
 		if nil == h {
 			select {
 			case <-self.timerStop:

@@ -1707,18 +1707,15 @@ func (bc *BlockChain) SetChainRestarted() {
 	bc.restarted = true
 }
 
-func (bc *BlockChain) SetPeerLastestHeader(header *types.Header) {
+func (bc *BlockChain) SetRestartBlock(block *types.Block) {
 
 	if bc.currentBlock.NumberU64() > 0{
-		if posconfig.EpochBaseTime == 0 {
-			posconfig.EpochBaseTime = bc.GetBlockByNumber(uint64(1)).Time().Uint64()
-		}
 
 		epid,slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 		//record the restarting slot point
 		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 
-		lastepid, lastlslid := posUtil.CalEpSlbyTd(header.Difficulty.Uint64())
+		lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 		bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
 
 		if bc.IsChainRestarting() {
