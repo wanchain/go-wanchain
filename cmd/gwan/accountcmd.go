@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -27,6 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/console"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -361,7 +363,7 @@ func accountImport(ctx *cli.Context) error {
 	if len(keyfile) == 0 {
 		utils.Fatalf("keyfile must be given as argument")
 	}
-	key, key1, key2, err := keystore.LoadECDSAPair(keyfile)
+	key, key1, err := keystore.LoadECDSAPair(keyfile)
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
@@ -369,7 +371,7 @@ func accountImport(ctx *cli.Context) error {
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportECDSA(key, key1, key2, passphrase)
+	acct, err := ks.ImportECDSA(key, key1, passphrase)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
@@ -405,9 +407,9 @@ func showPublicKey(ctx *cli.Context) error {
 				fmt.Println("key2:" + common.ToHex(crypto.FromECDSAPub(&key.PrivateKey2.PublicKey)))
 				fmt.Println("waddress:" + common.ToHex(key.WAddress[:]))
 			}
-			if key.PrivateKey3 != nil {
-				fmt.Println("key3:" + common.ToHex(key.PrivateKey3.G1.Marshal()))
-			}
+			D3 := posconfig.GenerateD3byKey2(key.PrivateKey2)
+			G1 := new(bn256.G1).ScalarBaseMult(D3)
+			fmt.Println("key3:" + common.ToHex(G1.Marshal()))
 			break
 		}
 	}
