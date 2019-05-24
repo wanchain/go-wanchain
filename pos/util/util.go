@@ -2,8 +2,10 @@ package util
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"math/big"
 	"strconv"
 	"strings"
@@ -27,11 +29,93 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	//timeUnix := uint64(time.Now().Unix())
 	timeUnix := time
 	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
-	epochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimespan)
-	slotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	epochId = uint64((timeUnix - posconfig.EpochBaseTime - posconfig.EpochOffsetTime) / epochTimespan)
+	slotId = uint64((timeUnix - posconfig.EpochBaseTime  - posconfig.EpochOffsetTime) / posconfig.SlotTime % posconfig.SlotCount)
 	//fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
 }
+
+
+func IncreaseOffsetTime(header *types.Header) {
+
+	headerTime := header.Time.Uint64()
+	epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
+	slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
+
+	offset := ((headerTime - slotTime)/posconfig.SlotTime)*posconfig.SlotTime
+
+	posconfig.EpochOffsetTime = posconfig.EpochBaseTime + offset
+	posconfig.EpochOTLatestBlk = header.Number.Uint64()
+
+	SaveTimeOffset(posconfig.EpochOffsetTime,header.Number.Uint64())
+
+}
+
+func DecreasecreaseOffsetTime(chain []*types.Header) {
+
+	for i := len(chain) - 1; i > 0 ; i-- {
+
+		header := chain[i]
+		if header.Number.Uint64() <= posconfig.EpochOTLatestBlk {
+			headerTime := header.Time.Uint64()
+			epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
+			slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
+
+			offset := headerTime - slotTime
+
+			posconfig.EpochOffsetTime = posconfig.EpochBaseTime - offset
+			posconfig.EpochOTLatestBlk = header.Number.Uint64()
+
+			RemoveTimeOffset(header.Number.Uint64())
+
+		}
+
+	}
+
+}
+
+
+func SaveTimeOffset(offsetTime uint64, blknr uint64) {
+
+	TmOffsetDb := posdb.GetDbByName(posconfig.EpochOffsetDB)
+	if TmOffsetDb == nil {
+		TmOffsetDb = posdb.NewDb(posconfig.EpochOffsetDB)
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, offsetTime)
+
+	TmOffsetDb.Put(blknr, "offsetTime", b)
+}
+
+func ReadTimeOffset(blknr uint64) uint64 {
+
+	TmOffsetDb := posdb.GetDbByName(posconfig.EpochOffsetDB)
+	if TmOffsetDb == nil {
+		TmOffsetDb = posdb.NewDb(posconfig.EpochOffsetDB)
+		return 0
+	}
+
+	numberBytes,err:=TmOffsetDb.Get(blknr, "offsetTime")
+	if err != nil || numberBytes == nil {
+		return 0
+	}
+
+	offset := binary.BigEndian.Uint64(numberBytes)
+
+	return offset
+}
+
+func RemoveTimeOffset(blknr uint64){
+	TmOffsetDb := posdb.GetDbByName(posconfig.EpochOffsetDB)
+	if TmOffsetDb == nil {
+		return
+	}
+	b := make([]byte,8)
+	binary.BigEndian.PutUint64(b, 0)
+	TmOffsetDb.Put(blknr, "offsetTime", b)
+}
+
 
 var (
 	curEpochId = uint64(0)

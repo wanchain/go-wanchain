@@ -289,6 +289,8 @@ func (c *Pluto) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 // a batch of new headers.
 func (c *Pluto) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 
+	posUtil.IncreaseOffsetTime(header)
+
 	if header.Number == nil {
 		return errUnknownBlock
 	}

@@ -908,12 +908,15 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
+
+
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 		if !posconfig.IsDev {
 			return NonStatTy, ErrInsufficientCQ
 		}
 	}
+
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1095,10 +1098,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		if err != nil {
+
+			posUtil.DecreasecreaseOffsetTime(headers)
+
 			if err == ErrKnownBlock {
 				stats.ignored++
 				continue
 			}
+
 
 			if err == consensus.ErrFutureBlock {
 				// Allow up to MaxFuture second in the future blocks. If this limit
@@ -1479,7 +1486,10 @@ Error: %v
 func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
 	start := time.Now()
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
+
+		posUtil.DecreasecreaseOffsetTime(chain)
 		return i, err
+
 	}
 
 	// Make sure only one thread manipulates the chain at once

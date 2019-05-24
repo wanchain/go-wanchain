@@ -25,6 +25,9 @@ func posWhiteList() {
 }
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
+
+
+
 	g := s.BlockChain().GetHeaderByNumber(0)
 	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 
@@ -36,6 +39,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		if nil != h {
 			posconfig.EpochBaseTime = h.Time.Uint64()
 		}
+		blkNr := s.BlockChain().CurrentBlock().Number().Uint64()
+		posconfig.EpochOffsetTime = util.ReadTimeOffset(blkNr)
 	}
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
