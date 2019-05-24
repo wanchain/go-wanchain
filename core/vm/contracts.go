@@ -579,7 +579,7 @@ func (c *wanchainStampSC) ValidBuyStampReq(stateDB StateDB, payload []byte, valu
 		Value   *big.Int
 	}
 
-	err = stampAbi.Unpack(&StampInput, "buyStamp", payload)
+	err = stampAbi.UnpackTmp(&StampInput, "buyStamp", payload)
 	if err != nil || StampInput.Value == nil {
 		return nil, errBuyStamp
 	}
