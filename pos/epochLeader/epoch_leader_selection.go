@@ -109,6 +109,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	return targetBlkNum
 }
 
+// return 0 if failed
 func (e *Epocher) GetEpochEndBlkNumber(targetEpochId uint64) uint64 {
 	var header *types.Header = nil
 	block := e.blkChain.CurrentBlock()

@@ -48,7 +48,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 10
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 

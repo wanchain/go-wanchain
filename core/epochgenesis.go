@@ -52,6 +52,7 @@ func (bc *BlockChain) updateReOrg(epochid uint64, slotid uint64, length uint64) 
 
 type RbLeadersSelInt interface {
 	GetEpochLastBlkNumber(epochId uint64) uint64
+	GetEpochEndBlkNumber(epochId uint64) uint64
 	GetRBProposerGroup(epochID uint64) []vm.Leader
 	GetEpochLeaders(epochID uint64) [][]byte
 }
