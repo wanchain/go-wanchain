@@ -308,6 +308,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getEpochIdByBlockNumber',
+			call: 'pos_getEpochIdByBlockNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getSlotIDByTime',
 			call: 'pos_getSlotIDByTime',
 			params: 1
@@ -315,6 +320,16 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getTimeByEpochID',
 			call: 'pos_getTimeByEpochID',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochGenesis',
+			call: 'pos_getEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'generateEpochGenesis',
+			call: 'pos_generateEpochGenesis',
 			params: 1
 		}),
 	]

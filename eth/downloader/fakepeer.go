@@ -159,7 +159,10 @@ func (p *FakePeer) RequestNodeData(hashes []common.Hash) error {
 	return nil
 }
 
-func (p *FakePeer) RequestEpochGenesisData(epochids uint64) error {
+func (p *FakePeer) RequestEpochGenesisData(ep *types.EpochSync) error {
 	return nil
 }
 
+func (p *FakePeer) RequestPivot(hash common.Hash) error {
+	return nil
+}

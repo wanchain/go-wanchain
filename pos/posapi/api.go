@@ -439,6 +439,14 @@ func (a PosApi) GetEpochIDByTime(timeUnix uint64) uint64 {
 	ep, _ := util.CalEpochSlotID(timeUnix)
 	return ep
 }
+func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
+	header := a.chain.GetHeaderByNumber(blockNumber)
+	if header != nil {
+		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
+		return ep
+	}
+	return uint64(0)^uint64(0)
+}
 
 //GetSlotIDByTime can get Slot ID by input time second Unix.
 func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {
@@ -471,4 +479,40 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 	}
 
 	return time
+}
+
+func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+		return eg, nil
+	}
+
+	return nil, errors.New("PrintEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId, true)
+	}
+
+	return nil, errors.New("GenerateEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		geg, err := bc.GetEpochGene().DoGenerateEpochGenesis(epochId, true)
+		if err != nil {
+			return false, errors.New("GenerateEpochGenesis failed")
+		}
+
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+
+		if eg != nil && geg != nil {
+			if eg.GenesisBlkHash == geg.GenesisBlkHash {
+				return true, nil
+			}
+		}
+	}
+
+	return false, errors.New("GenerateEpochGenesis failed, cast failed")
 }

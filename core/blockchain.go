@@ -158,6 +158,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	if err != nil {
 		return nil, err
 	}
+	bc.Hc.epochgen = bc.epochGene
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -357,6 +358,30 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	defer bc.mu.RUnlock()
 
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
+}
+
+func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
+	rt := make([]*types.Header, 0)
+	if bc.epochGene.rbLeaderSelector == nil {
+		return rt
+	}
+	header := bc.Hc.GetHeaderByHash(hash)
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+	// pivot == GetEpochLastBlkNumber(eid - 1)
+	// incentive : eid - 3, eid - 4
+	dst := int64(eid) - 1
+	for i:=0; i<4; i++ {
+		if dst < 0 {
+			break
+		}
+		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
+		h := bc.Hc.GetHeaderByNumber(bn)
+		if h != nil {
+			rt = append(rt, h)
+		}
+		dst--
+	}
+	return rt
 }
 
 // SetProcessor sets the processor required for making state modifications.

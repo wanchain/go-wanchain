@@ -168,6 +168,9 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
+func (p *peer) SendPivot(header []*types.Header) error {
+	return p2p.Send(p.rw, PivotMsg, header)
+}
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *peer) SendBlockBodies(bodies []*blockBody) error {
@@ -233,26 +236,26 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
-func (p *peer) RequestEpochGenesisData(epochids uint64) error {
+func (p *peer) RequestEpochGenesisData(ep *types.EpochSync) error {
 	p.Log().Debug("Fetching epoch genesis data", "count", 1)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
+	return p2p.Send(p.rw, GetEpochGenesisMsg, ep)
 }
 
 //send epoch genesis
-func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
-	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis,err := bc.GenerateEpochGenesis(epochid)
+func (p *peer) SendEpochGenesis(bc *core.BlockChain, epochSync *types.EpochSync) error {
+	p.Log().Debug("Fetching epoch genesis", "epochid", epochSync.EpochId, "isEnd", epochSync.IsEnd)
+	epochGenesis,err := bc.GenerateEpochGenesis(epochSync.EpochId, epochSync.IsEnd)
 	if err != nil {
-		log.Info("error to generate epoch genesis")
+		log.Info("error to generate epoch genesis", "err", err.Error())
 		return err
 	}
 
-	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
+	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis, IsEnd:epochSync.IsEnd})
 }
 
-func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) error {
+func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, isEnd bool) error {
 	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
-	bc.SetEpochGenesis(epochgen)
+	bc.SetEpochGenesis(epochgen, isEnd)
 	return nil
 }
 ////////////////////////////////////////////////////////////////
@@ -319,6 +322,33 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	}
 	return nil
 }
+
+func (p *peer) RequestPivot(hash common.Hash) error {
+	p.Log().Debug("Fetching pivot", "hash", hash)
+
+	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
+			Current: hash,
+		})
+}
+func (p *peer) readPivot(pivot *uint64) (err error) {
+	msg, err := p.rw.ReadMsg()
+	if err != nil {
+		return err
+	}
+	if msg.Code != PivotMsg {
+		p.Log().Debug("read pivot", "msg.Code", msg.Code)
+		return err
+	}
+	if msg.Size > ProtocolMaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	}
+	// Decode the handshake and make sure everything matches
+	if err := msg.Decode(&pivot); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	return nil
+}
+
 
 // String implements fmt.Stringer.
 func (p *peer) String() string {

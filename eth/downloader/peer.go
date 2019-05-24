@@ -22,6 +22,7 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core/types"
 	"math"
 	"math/big"
 	"sort"
@@ -92,7 +93,8 @@ type Peer interface {
 	RequestBodies([]common.Hash) error
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
-	RequestEpochGenesisData(uint64) error
+	RequestEpochGenesisData(*types.EpochSync) error
+	RequestPivot(common.Hash) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -120,8 +122,12 @@ func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
-func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
-	panic("RequestNodeData not supported in light client mode sync")
+func (w *lightPeerWrapper)RequestEpochGenesisData(*types.EpochSync) error {
+	panic("RequestEpochGenesisData not supported in light client mode sync")
+}
+
+func (w *lightPeerWrapper)RequestPivot(common.Hash) error {
+	panic("RequestPivot not supported in light client mode sync")
 }
 
 // newPeerConnection creates a new downloader peer.
@@ -237,7 +243,7 @@ func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 }
 
 // FetchNodeData sends a node state data retrieval request to the remote peer.
-func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
+func (p *peerConnection) FetchEpochGenesisData(ep *types.EpochSync) error {
 	// Sanity check the protocol version
 	if p.version < 63 {
 		panic(fmt.Sprintf("node data fetch [eth/63+] requested on eth/%d", p.version))
@@ -248,7 +254,7 @@ func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
 	}
 	p.epochGenesisStarted = time.Now()
 
-	go p.peer.RequestEpochGenesisData(epochid)
+	go p.peer.RequestEpochGenesisData(ep)
 
 	return nil
 }

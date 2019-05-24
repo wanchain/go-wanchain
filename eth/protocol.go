@@ -62,6 +62,9 @@ const (
 	EpochGenesisMsg    = 0x09
 
 	// Protocol messages belonging to eth/63
+	GetPivotMsg    = 0x0a
+	PivotMsg       = 0x0b
+
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
@@ -135,6 +138,10 @@ type getBlockHeadersData struct {
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
 }
 
+type getPivotData struct {
+	Current common.Hash
+}
+
 // hashOrNumber is a combined field for specifying an origin block.
 type hashOrNumber struct {
 	Hash   common.Hash // Block hash from which to retrieve headers (excludes Number)
@@ -192,5 +199,6 @@ type getEpochGenesisData struct {
 }
 
 type epochGenesisBody struct {
+	IsEnd bool
 	EpochGenesis 	*types.EpochGenesis
 }

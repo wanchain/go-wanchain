@@ -410,6 +410,26 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		return p.SendBlockHeaders(headers)
+	case msg.Code == GetPivotMsg:
+		var query getPivotData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		pivotHeader := pm.blockchain.GetPosPivot(query.Current)
+		log.Debug("send pivot", "pivotHeader", pivotHeader)
+		return p.SendPivot(pivotHeader)
+
+	case msg.Code == PivotMsg:
+		var pivotHeader []*types.Header
+		if err := msg.Decode(&pivotHeader); err != nil {
+			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
+		}
+		//pm.downloader.DeliverPivot(pivotHeader)
+		pivotHeader = pm.fetcher.FilterHeaders(p.id, pivotHeader, time.Now())
+		err := pm.downloader.DeliverHeaders(p.id, pivotHeader)
+		if err != nil {
+			log.Debug("Failed to deliver pivot headers", "err", err)
+		}
 
 	case msg.Code == BlockHeadersMsg:
 		// A batch of headers arrived to one of our previous requests
@@ -526,12 +546,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == GetEpochGenesisMsg:
-		var epochid uint64
-		if err := msg.Decode(&epochid); err != nil {
+		var ep types.EpochSync
+		if err := msg.Decode(&ep); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		p.SendEpochGenesis(pm.blockchain,epochid)
+		p.SendEpochGenesis(pm.blockchain, &ep)
 
 	case msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
@@ -540,7 +560,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
+		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.IsEnd, epBody.EpochGenesis); err != nil {
 			log.Debug("Failed to deliver epoch genesis data", "err", err)
 		}
 
