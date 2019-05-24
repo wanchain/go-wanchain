@@ -1041,6 +1041,9 @@ func (bc *BlockChain) SwitchClientEngine() (error){
 	for _, agent := range bc.agents{
 		agent.SwitchEngine(bc.posEngine)
 	}
+
+	bc.engine = bc.posEngine
+
 	return nil
 }
 
@@ -1061,10 +1064,37 @@ func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
+	splitChain := make([]types.Blocks,0)
+	splitChain = append(splitChain,make(types.Blocks,0))
+	splitChain = append(splitChain,make(types.Blocks,0))
 
-	return n, err
+	for _, block := range chain {
+		if block.Number().Uint64() < bc.Config().PosFirstBlock.Uint64() {
+			splitChain[0] = append(splitChain[0],block)
+		} else {
+			splitChain[1] = append(splitChain[1],block)
+		}
+	}
+
+	realIdx := 0
+	for _,split := range splitChain {
+
+		if len(split) == 0 {
+			continue
+		}
+
+		n, events, logs, err := bc.insertChain(split)
+		bc.PostChainEvents(events, logs)
+
+		if err != nil {
+			return n + realIdx,err
+		}
+
+		realIdx = realIdx + len(split)
+
+	}
+
+	return 0,nil
 
 }
 
@@ -1115,6 +1145,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		headers[i] = block.Header()
 		seals[i] = true
 	}
+
+
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
