@@ -34,6 +34,8 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 
 	if !s.VerifySlotProof(block, epochID, slotID, proof, proofMeg) {
 		log.Error("VerifyPackedSlotProof failed", "number", block.NumberU64(), "epochID", epochID, "slotID", slotID)
+
+
 		return errors.New("VerifyPackedSlotProof failed")
 	}
 

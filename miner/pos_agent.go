@@ -123,6 +123,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 	//set current block as the restart condition
 	s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock())
+	//reset initial sma
+	sls := slotleader.GetSlotLeaderSelection()
+	if s.BlockChain().IsChainRestarting() {
+		sls.Init(s.BlockChain(), nil, nil)
+	}
 
 	for {
 
@@ -152,12 +157,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		util.CalEpochSlotIDByNow()
 		epochid, slotid := util.GetEpochSlotID()
 		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
-
-		//reset initial sma
-		sls := slotleader.GetSlotLeaderSelection()
-		if s.BlockChain().IsChainRestarting() {
-			sls.Init(s.BlockChain(), nil, nil)
-		}
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochid, slotid)
 

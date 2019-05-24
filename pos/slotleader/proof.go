@@ -26,6 +26,8 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	// genesis or not
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
+		s.getDefaultLeadersPK()
+		s.initSma()
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
@@ -236,6 +238,7 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 			break
 		}
 	}
+
 	if !skGtValid {
 		log.Warn("verifySlotProofByGenesis Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false

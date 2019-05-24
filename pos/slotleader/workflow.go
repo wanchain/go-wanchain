@@ -58,23 +58,54 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 func (s *SLS) getDefaultLeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
+	curepid,_ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
 	selector := epochLeader.GetEpocher()
 
-	initPksStr,err := selector.GetWhiteByEpochId(0)
+	initPksStr,err := selector.GetWhiteByEpochId(curepid)
 
 	pksl := len(initPksStr)
 	if err != nil || pksl == 0{
 		return nil
 	}
 
+	rb := s.getLastRandom()
+	pkslBig := big.NewInt(int64(pksl))
+	idx := pkslBig.Mod(rb,pkslBig).Uint64()
+
+
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		pkStr := initPksStr[0]
+		pkStr := initPksStr[idx]
 		pkBuf := common.FromHex(pkStr)
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
 
+	log.Info("select producer","address",crypto.PubkeyToAddress(*pks[0]),"idx",idx)
+
 	return pks
 }
+
+
+func (s *SLS) getLastRandom() *big.Int {
+	curepid,_ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
+	db, err := s.blockChain.State()
+	if err != nil {
+		return big.NewInt(0)
+	}
+
+	i := curepid
+	for i>0 {
+
+		rb := vm.GetR(db, i)
+		if rb != nil {
+			return rb
+		}
+
+		i--
+	}
+
+	return big.NewInt(0)
+}
+
 
 func (s *SLS) initSma() {
 
