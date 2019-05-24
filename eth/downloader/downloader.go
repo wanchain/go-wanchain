@@ -1560,6 +1560,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	log.Debug("===fast sync block", "num", latest.Number.Uint64())
 	stateSync := d.syncState(latest.Root)
 	pivot := d.queue.FastSyncPivot()
+	log.Debug("*****pivot is ", "pivot", pivot)
 	defer stateSync.Cancel()
 	go func() {
 		if err := stateSync.Wait(); err != nil {
@@ -1567,8 +1568,6 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 		}
 	}()
 
-	pivot := d.queue.FastSyncPivot()
-	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
 
 

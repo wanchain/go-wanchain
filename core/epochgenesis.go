@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -145,7 +146,7 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 	curEpid, _, err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
 	if curEpid == 0 {
-		curEpid,_,err = f.GetBlockEpochIdAndSlotId(f.bc.Hc.CurrentHeader())
+		curEpid,_,err = f.GetBlockEpochIdAndSlotId(f.bc.hc.CurrentHeader())
 	}
 
 	if curEpid < epochid || err !=nil || epochid == 0{

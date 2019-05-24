@@ -3,6 +3,8 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/core/types"
 	"sort"
 	"time"
 

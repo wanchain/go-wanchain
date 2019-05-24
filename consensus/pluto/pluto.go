@@ -565,7 +565,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				return errors.New("un support chain type")
 			}
 
-			hc = bc.Hc
+			hc = bc.GetHc()
 		}
 		if hc.IsEpochFirstBlkNumber(epochID, number, parents) {
 			extraType := header.Extra[0]
@@ -857,8 +857,8 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		return nil, errors.New("seal param chain is not a block chain")
 	}
 
-	if bc.Hc.IsEpochFirstBlkNumber(epochId, number, nil) {
-		hash,err := bc.Hc.GenerateEGHash(epochId - 1)
+	if bc.GetHc().IsEpochFirstBlkNumber(epochId, number, nil) {
+		hash,err := bc.GetHc().GenerateEGHash(epochId - 1)
 		if err != nil {
 			return nil, err
 		}

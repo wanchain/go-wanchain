@@ -2,6 +2,7 @@
 package downloader
 
 import (
+	"github.com/wanchain/go-wanchain/core/types"
 	"time"
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
@@ -40,7 +41,6 @@ func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) 
 		}
 
 		d.epochGenesisSyncStart <- &types.EpochSync{EpochId: i, IsEnd: i == endEpochid}
-		d.epochGenesisSyncStart <- i
 
 		select {
 		case epid := <- fbchan:

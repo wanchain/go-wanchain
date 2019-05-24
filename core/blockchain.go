@@ -158,7 +158,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	if err != nil {
 		return nil, err
 	}
-	bc.Hc.epochgen = bc.epochGene
+	bc.hc.epochgen = bc.epochGene
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -186,6 +186,10 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
+}
+
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -365,7 +369,7 @@ func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
 	if bc.epochGene.rbLeaderSelector == nil {
 		return rt
 	}
-	header := bc.Hc.GetHeaderByHash(hash)
+	header := bc.hc.GetHeaderByHash(hash)
 	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
 	// pivot == GetEpochLastBlkNumber(eid - 1)
 	// incentive : eid - 3, eid - 4
@@ -375,7 +379,7 @@ func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
 			break
 		}
 		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
-		h := bc.Hc.GetHeaderByNumber(bn)
+		h := bc.hc.GetHeaderByNumber(bn)
 		if h != nil {
 			rt = append(rt, h)
 		}
@@ -1591,8 +1595,8 @@ func (bc *BlockChain) SetSlSelector(sls SlLeadersSelInt) {
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, error) {
-	return bc.epochGene.GenerateEpochGenesis(epochid)
+func (bc *BlockChain) GenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis, error) {
+	return bc.epochGene.GenerateEpochGenesis(epochid, isEnd)
 }
 
 func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
@@ -1607,12 +1611,16 @@ func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool {
 	return bc.epochGene.IsExistEpochGenesis(epochid)
 }
 
-func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
-	return bc.epochGene.SetEpochGenesis(epochgen)
+func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd bool) error {
+	return bc.epochGene.SetEpochGenesis(epochgen, isEnd)
 }
 
-func (bc *BlockChain) GetEpochStartCh() chan uint64 {
+func (bc *BlockChain) GetEpochStartCh() chan *types.EpochSync {
 	return bc.epochGene.epochGenesisCh
+}
+
+func (bc *BlockChain) GetEpochGene() *EpochGenesisBlock {
+	return bc.epochGene
 }
 
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
