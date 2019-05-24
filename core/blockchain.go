@@ -1099,7 +1099,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		if err != nil {
 
-			posUtil.DecreasecreaseOffsetTime(headers)
+			posUtil.DecreaseOffsetTimeByHeader(headers)
 
 			if err == ErrKnownBlock {
 				stats.ignored++
@@ -1348,7 +1348,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	newChainLen := len(newChain)
 	epochId, slotid, _:= bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
-	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
+
+	go bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
 	go bc.reorgFeed.Send(ReorgEvent{epochId, slotid, uint64(len(oldChain))})
 
 	//if reorg length is bigger than k,do not let reorg happen
@@ -1360,6 +1361,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		log.Info("reorg happended", "reorg length", newChainLen,"old chain rollback lenght",len(oldChain))
 	}
 
+
+	posUtil.DecreaseOffsetTimeByBlock(oldChain)
 
 	for _, block := range newChain {
 
@@ -1487,7 +1490,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	start := time.Now()
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
 
-		posUtil.DecreasecreaseOffsetTime(chain)
+		posUtil.DecreaseOffsetTimeByHeader(chain)
 		return i, err
 
 	}

@@ -51,27 +51,36 @@ func IncreaseOffsetTime(header *types.Header) {
 
 }
 
-func DecreasecreaseOffsetTime(chain []*types.Header) {
+func DecreaseOffsetTimeByBlock(chain []*types.Block) {
 
 	for i := len(chain) - 1; i > 0 ; i-- {
+		header := chain[i].Header()
+		decreaseOffsetTime(header)
+	}
+}
 
-		header := chain[i]
-		if header.Number.Uint64() <= posconfig.EpochOTLatestBlk {
-			headerTime := header.Time.Uint64()
-			epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
-			slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
+func DecreaseOffsetTimeByHeader(chain []*types.Header) {
 
-			offset := headerTime - slotTime
+	for i := len(chain) - 1; i > 0 ; i-- {
+		decreaseOffsetTime(chain[i])
+	}
+}
 
-			posconfig.EpochOffsetTime = posconfig.EpochBaseTime - offset
-			posconfig.EpochOTLatestBlk = header.Number.Uint64()
+func decreaseOffsetTime(header *types.Header) {
 
-			RemoveTimeOffset(header.Number.Uint64())
+	if header.Number.Uint64() <= posconfig.EpochOTLatestBlk {
+	headerTime := header.Time.Uint64()
+	epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
+	slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
 
-		}
+	offset := headerTime - slotTime
+
+	posconfig.EpochOffsetTime = posconfig.EpochBaseTime - offset
+	posconfig.EpochOTLatestBlk = header.Number.Uint64()
+
+	RemoveTimeOffset(header.Number.Uint64())
 
 	}
-
 }
 
 
