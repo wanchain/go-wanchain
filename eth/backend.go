@@ -119,6 +119,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
 
 	eth := &Ethereum{
 		config:         config,
@@ -136,6 +137,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
+	inPosStage := false
+	if (core.PeekChainHeight(chainDb)+1) >= params.WanchainChainConfig.PosFirstBlock.Uint64() {
+		eth.engine = posEngine
+		inPosStage = true
+	}
+
 	log.Info("Initialising Wanchain protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
@@ -148,7 +155,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+
 	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, posEngine)
 	if err != nil {
 		return nil, err
@@ -186,8 +193,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
 
-	if eth.blockchain.IsInPosStage(){
-		eth.blockchain.SwitchClientEngine()
+
+    if inPosStage{
+		miner.PosInit(eth)
 	}
 	return eth, nil
 }
