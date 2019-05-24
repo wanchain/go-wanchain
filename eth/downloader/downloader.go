@@ -1695,8 +1695,7 @@ func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 }
 
 func (d *Downloader) DeliverEpochGenesisData(id string, isEnd bool, data *types.EpochGenesis ) (err error) {
-
-	return d.deliver(id, d.epochGenesisCh, &epochGenesisPack{id, isEnd, data}, stateInMeter, stateDropMeter)
+	return d.deliver(id, d.epochGenesisCh, &epochGenesisPack{id, isEnd, data}, epochGenesisInMeter, epochGenesisDropMeter)
 }
 
 // deliver injects a new batch of data received from a remote node.

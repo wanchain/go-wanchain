@@ -109,6 +109,35 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	return targetBlkNum
 }
 
+func (e *Epocher) GetEpochEndBlkNumber(targetEpochId uint64) uint64 {
+	var header *types.Header = nil
+	block := e.blkChain.CurrentBlock()
+
+	if block != nil {
+		header = block.Header()
+	} else {
+		// try header?
+		log.Warn("GetEpochEndBlkNumber no block!! Let's try header")
+		header = e.blkChain.GetHc().CurrentHeader()
+	}
+
+	if header != nil {
+		eid, _ := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
+		// is eid <= req ? return 0
+		if eid <= targetEpochId {
+			return 0
+		}
+
+		// load from cache
+		return e.GetEpochLastBlkNumber(targetEpochId)
+	} else {
+		log.Warn("GetEpochEndBlkNumber header chain is also empty!! ")
+
+		return 0
+	}
+
+}
+
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)

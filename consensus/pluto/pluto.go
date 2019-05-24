@@ -272,6 +272,12 @@ func (c *Pluto) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 
 	go func() {
 		for i, header := range headers {
+
+			if header.Number.Uint64() == 1 {
+				if posconfig.EpochBaseTime == 0 {
+					posconfig.EpochBaseTime = header.Time.Uint64()
+				}
+			}
 			err := c.verifyHeader(chain, header, headers[:i])
 
 			select {

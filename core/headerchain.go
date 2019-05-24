@@ -277,9 +277,7 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 	for i, header := range chain {
 
 		if header.Number.Uint64() == 1 {
-			if posconfig.EpochBaseTime == 0 {
-				posconfig.EpochBaseTime = header.Time.Uint64()
-			}
+			posconfig.EpochBaseTime = header.Time.Uint64()
 		}
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
