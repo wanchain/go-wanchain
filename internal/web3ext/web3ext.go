@@ -156,7 +156,7 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'getRandomProposersAddrByEpochId',
+			name: 'getRandomProposersAddrByEpochID',
 			call: 'pos_getRandomProposersAddrByEpochId',
 			params: 1
 		}),

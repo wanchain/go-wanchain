@@ -184,7 +184,7 @@ func (a PosApi) GetRandomProposersByEpochID(epochID uint64) (map[string]string, 
 	return info, nil
 }
 
-func (a PosApi) GetRandomProposersAddrByEpochId(epochID uint64) ([]common.Address, error) {
+func (a PosApi) GetRandomProposersAddrByEpochID(epochID uint64) ([]common.Address, error) {
 	selector := epochLeader.GetEpocher()
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
