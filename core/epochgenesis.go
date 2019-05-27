@@ -147,7 +147,8 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 	curEpid, _, err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
 	if curEpid == 0 {
-		curEpid,_,err = f.GetBlockEpochIdAndSlotId(f.bc.hc.CurrentHeader())
+		//curEpid,_,err = f.GetBlockEpochIdAndSlotId(f.bc.hc.CurrentHeader())
+		log.Warn("generateChainedEpochGenesis  current block is 0")
 	}
 
 	if curEpid < epochid || err !=nil || epochid == 0{
@@ -187,7 +188,11 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 				return nil, err
 			}
 
-			err = f.SetEpochGenesis(epg, i == epochid)
+			bEnd := i == epochid
+			if bEnd {
+				bEnd = isEnd
+			}
+			err = f.SetEpochGenesis(epg,  bEnd)
 			if err != nil {
 				return nil, err
 			}

@@ -19,6 +19,7 @@ package pluto
 
 import (
 	"errors"
+	"fmt"
 	"github.com/wanchain/go-wanchain/core"
 	"math/big"
 	"math/rand"
@@ -492,6 +493,36 @@ func (c *Pluto) VerifyUncles(chain consensus.ChainReader, block *types.Block) er
 	return nil
 }
 
+func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	epochID, _ := posUtil.CalEpochSlotID(block.Header().Time.Uint64())
+	hc, ok := chain.(*core.HeaderChain)
+	if !ok {
+		bc,ok := chain.(*core.BlockChain)
+		if !ok {
+			log.Error("un support chain type")
+			return errors.New("un support chain type")
+		}
+
+		hc = bc.GetHc()
+	}
+	if hc.IsEpochFirstBlkNumber(epochID, block.Header().Number.Uint64(), nil) {
+		extraType := block.Header().Extra[0]
+		if extraType == 'g' {
+			if len(block.Header().Extra) > extraSeal + 33 {
+
+				egHash := common.BytesToHash(block.Header().Extra[1:33])
+				if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash); err != nil {
+					return err
+				}
+
+			} else {
+				return fmt.Errorf("header extra info length is too short for epochGenesisHeadHash")
+			}
+		}
+	}
+	return nil
+}
+
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Pluto) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
@@ -579,8 +610,10 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				if len(header.Extra) > extraSeal + 33 {
 
 					egHash := common.BytesToHash(header.Extra[1:33])
-					if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash); err != nil {
-						return err
+					if isSlotVerify {
+						if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash); err != nil {
+							return err
+						}
 					}
 
 				} else {
