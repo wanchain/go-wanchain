@@ -511,7 +511,7 @@ func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Bl
 			if len(block.Header().Extra) > extraSeal + 33 {
 
 				egHash := common.BytesToHash(block.Header().Extra[1:33])
-				if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash); err != nil {
+				if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, true); err != nil {
 					return err
 				}
 
@@ -595,6 +595,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 	} else {
 		proofStart := 1
 		hc, ok := chain.(*core.HeaderChain)
+		bGenerate := false
 		if !ok {
 			bc,ok := chain.(*core.BlockChain)
 			if !ok {
@@ -602,16 +603,16 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				return errors.New("un support chain type")
 			}
 
+			bGenerate = true
 			hc = bc.GetHc()
 		}
 		if hc.IsEpochFirstBlkNumber(epochID, number, parents) {
 			extraType := header.Extra[0]
 			if extraType == 'g' {
 				if len(header.Extra) > extraSeal + 33 {
-
 					egHash := common.BytesToHash(header.Extra[1:33])
-					if isSlotVerify {
-						if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash); err != nil {
+					if !isSlotVerify && !bGenerate {
+						if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, false); err != nil {
 							return err
 						}
 					}

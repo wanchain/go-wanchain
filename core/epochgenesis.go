@@ -123,7 +123,12 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64, isEnd bool) (*t
 func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error) {
 	epgPre := f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
-		return nil, errors.New("epoch genesis -1 not exist")
+		if epochid == 1 {
+			rb := big.NewInt(1)
+			epgPre, _ = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+		} else {
+			return nil, errors.New("epoch genesis not exist")
+		}
 	}
 
 	var rb 			*big.Int
@@ -135,7 +140,6 @@ func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (
 	}
 	return epg, nil
 }
-
 
 func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error){
 	//it is the first block of this epoch
@@ -221,7 +225,7 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64) (*big.
 
 	preEpLastblk := f.bc.GetBlockByNumber(blkNum)
 
-	stateDb, err := f.bc.StateAt(preEpLastblk.Root())
+	stateDb, err := f.bc.State() //f.bc.StateAt(preEpLastblk.Root())
 	if err != nil {
 		return nil, nil
 	}
@@ -252,26 +256,16 @@ func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, pa
 
 	return false
 }
-func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
-	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash)
+func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
+	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash, bGenerate)
 }
 
 func (hc *HeaderChain) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	return hc.epochgen.GenerateEGHash(epochid)
 }
 
-func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
-	return hc.epochgen.GetOrGenerateEGHash(epochid)
-}
-//func (f *EpochGenesisBlock) IsEpochFirstBlkNumber(epochid uint64, blkNum uint64) bool {
-//	if epochid > 1 {
-//		blkNumLast := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid - 1)
-//		log.Info(" IsEpochFirstBlkNumber", "epoch", epochid, "last", blkNumLast, "num", blkNum)
-//		if blkNumLast + 1 == blkNum {
-//			return true
-//		}
-//	}
-//	return false
+//func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
+//	return hc.epochgen.GetOrGenerateEGHash(epochid)
 //}
 
 func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
@@ -285,24 +279,36 @@ func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) 
 	}
 	return epkGnss.GenesisBlkHash, nil
 }
-func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
-	epkGnss := f.GetEpochGenesis(epochid)
-	if epkGnss == nil {
-		epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
-		if err != nil || epkGnss == nil{
-			return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
-		}
-		return epkGnss.GenesisBlkHash, nil
-	} else {
-		return epkGnss.GenesisBlkHash, nil
-	}
-}
+//func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
+//	epkGnss := f.GetEpochGenesis(epochid)
+//	if epkGnss == nil {
+//		epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
+//		if err != nil {
+//			return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
+//		}
+//		return epkGnss.GenesisBlkHash, nil
+//	} else {
+//		return epkGnss.GenesisBlkHash, nil
+//	}
+//}
 
-func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash) error {
-	epkGnssHash, err := f.GetOrGenerateEGHash(epochid)
-	if err != nil {
-		return errors.New("GetOrGenerateEGHash failed, epoch id=" + strconv.FormatUint(epochid, 10))
+// seal, header --> verify
+func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
+	var epkGnss *types.EpochGenesis = nil
+	var err error
+	if bGenerate {
+		epkGnss, err = f.generateChainedEpochGenesis(epochid, false)
+		if err != nil {
+			return errors.New("VerifyEpochGenesisHash error, can't generate epoch genesis, id=" + strconv.Itoa(int(epochid)))
+		}
+	} else {
+		epkGnss = f.GetEpochGenesis(epochid)
 	}
+	if epkGnss == nil{
+		return errors.New("VerifyEpochGenesisHash error, can't get epoch genesis, id=" + strconv.FormatUint(epochid, 10))
+	}
+
+	epkGnssHash := epkGnss.GenesisBlkHash
 	if epkGnssHash != hash {
 		return errors.New("VerifyEpochGenesisHash failed, epoch id="+ strconv.FormatUint(epochid, 10))
 	}

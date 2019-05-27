@@ -332,6 +332,11 @@ web3._extend({
 			call: 'pos_generateEpochGenesis',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'isEqualEpochGenesis',
+			call: 'pos_isEqualEpochGenesis',
+			params: 1
+		}),
 	]
 });
 `

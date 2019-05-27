@@ -514,7 +514,8 @@ func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
 				return true, nil
 			}
 		}
+		return false, errors.New("GetEpochGenesis failed")
 	}
 
-	return false, errors.New("GenerateEpochGenesis failed, cast failed")
+	return false, errors.New("a.chain is not block chain")
 }
