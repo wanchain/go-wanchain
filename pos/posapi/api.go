@@ -36,6 +36,10 @@ import (
 	"github.com/wanchain/go-wanchain/rpc"
 )
 
+var (
+	maxUint64 = uint64(1<<64 - 1)
+)
+
 type PosChainReader interface {
 	// Config retrieves the blockchain's chain configuration.
 	Config() *params.ChainConfig
@@ -562,42 +566,114 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 	return time
 }
 
-func (a PosApi) GetEpochBlkCnt(epochId uint64) uint64 {
-	blkCnt := uint64(0)
-	bgBlkNum := uint64(0)
+func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
+	fastBgBlkNum := maxUint64
+	fastEdBlkNum := maxUint64
+	step := uint64(posconfig.SlotCount)
 
-	// todo : add pow switch to pos checking
-	header := a.chain.CurrentHeader()
-	if header != nil {
-		for {
-			epid := a.GetEpochIDByTime(header.Time.Uint64())
-			if epid <= epochId {
-				bgBlkNum = header.Number.Uint64()
-				break
-			}
-		}
+	lastHeader := a.chain.CurrentHeader()
+	if lastHeader == nil {
+		return 0, nil
 	}
 
-	if bgBlkNum == 0 {
-		return 0
+	epId := a.GetEpochIDByTime(lastHeader.Time.Uint64())
+	if epId < epochId {
+		return 0, nil
 	}
 
+	// fast find the begin and end block numbers
+	curNum := lastHeader.Number.Uint64()
 	for {
-		header := a.chain.GetHeaderByNumber(bgBlkNum)
+		header := a.chain.GetHeaderByNumber(curNum)
 		if header == nil {
+			log.Error("get header by number fail", "number", curNum)
+			return 0, errors.New("get header by number fail")
+		}
+
+		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		if epId > epochId {
+			fastEdBlkNum = curNum
+		} else if epId == epochId {
+			if curNum > step {
+				fastBgBlkNum = curNum - step
+			} else {
+				fastBgBlkNum = 0
+			}
+
+			if curNum + step > lastHeader.Number.Uint64() {
+				fastEdBlkNum = lastHeader.Number.Uint64()
+			} else {
+				fastEdBlkNum = curNum + step
+			}
+
+			break
+		} else {
+			fastBgBlkNum = curNum
 			break
 		}
 
-		epid := a.GetEpochIDByTime(header.Time.Uint64())
-		if epid < epochId {
-			break
+		// todo : add pow switch to pos checking
+		if curNum == 0 {
+			return 0, nil
 		}
 
-		blkCnt++
-		bgBlkNum--
+		if curNum > step {
+			curNum -= step
+		} else {
+			curNum = 0
+		}
 	}
 
-	return blkCnt
+	if fastBgBlkNum == maxUint64 || fastEdBlkNum == maxUint64 {
+		return 0, nil
+	}
+
+	// finely find the begin block number
+	for {
+		header := a.chain.GetHeaderByNumber(fastBgBlkNum)
+		if header == nil {
+			log.Error("get header by number fail", "number", fastBgBlkNum)
+			return 0, errors.New("get header by number fail")
+		}
+
+		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		if epId == epochId {
+			break
+		} else if epId > epochId {
+			return 0, nil
+		}
+
+		fastBgBlkNum++
+	}
+
+	// finely find the end block number
+	for {
+		header := a.chain.GetHeaderByNumber(fastEdBlkNum)
+		if header == nil {
+			log.Error("get header by number fail", "number", fastEdBlkNum)
+			return 0, errors.New("get header by number fail")
+		}
+
+		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		if epId == epochId {
+			break
+		} else if epId < epochId {
+			return 0, nil
+		}
+
+		// todo : add pow switch to pos checking
+		if fastEdBlkNum == 0 {
+			return 0, nil
+		}
+
+		fastEdBlkNum--
+	}
+
+	if fastEdBlkNum < fastBgBlkNum {
+		return 0, nil
+	}
+
+	return fastEdBlkNum - fastBgBlkNum + 1, nil
 }
 
 func (a PosApi) GetValidSMACnt(epochId uint64) ([]uint64, error) {

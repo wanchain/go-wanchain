@@ -1170,7 +1170,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 				chainQuality = fmt.Sprintf("%.1f", float64(iChainQuality)/1000.0)
 			}
 
-			epBlockCount = s.api.GetEpochBlkCnt(epochId)
+			epBlockCount, _ = s.api.GetEpochBlkCnt(epochId)
 			curRandom, err = s.api.GetRandom(epochId, -1)
 			if err != nil {
 				curRandom = big.NewInt(0)
