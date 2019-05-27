@@ -196,6 +196,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
     if inPosStage{
 		miner.PosInit(eth)
+		params.WanchainChainConfig.SetPosActive()
 	}
 	return eth, nil
 }
