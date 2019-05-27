@@ -138,7 +138,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 
 	inPosStage := false
-	if (core.PeekChainHeight(chainDb)+1) >= params.WanchainChainConfig.PosFirstBlock.Uint64() {
+	if chainConfig.IsPosActive  ||
+		(core.PeekChainHeight(chainDb)+1) >= chainConfig.PosFirstBlock.Uint64() {
 		eth.engine = posEngine
 		inPosStage = true
 	}

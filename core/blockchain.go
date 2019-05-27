@@ -871,8 +871,12 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+	//// TODO this looks not enough
+	//if epochId == posconfig.FirstEpochId {
+	//	return true
+	//}
 	//because slot index starts from 0
-	totalSlots := epochId*posconfig.SlotCount + slotId + 1
+	totalSlots := (epochId-posconfig.FirstEpochId)*posconfig.SlotCount + slotId + 1
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
@@ -931,11 +935,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 	//confirm chain quality confirm security
-	if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
-		if !posconfig.IsDev {
-			return NonStatTy, ErrInsufficientCQ
-		}
-	}
+	// TODO disable chain quality temp
+	//if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
+	//	if !posconfig.IsDev {
+	//		return NonStatTy, ErrInsufficientCQ
+	//	}
+	//}
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1016,9 +1021,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		//if bc.config.Pluto != nil {
 		if bc.config.IsPosActive{
 			//TODO:ppow2pos change next as
-			if block.NumberU64() == bc.config.PosFirstBlock.Uint64() {
-				posconfig.EpochBaseTime = block.Time().Uint64()
-			}
+			//if block.NumberU64() == bc.config.PosFirstBlock.Uint64() {
+			//	posconfig.EpochBaseTime = block.Time().Uint64()
+			//}
 
 			//if bc.slotValidator != bc.epochGene {
 			//	bc.epochGene.SelfGenerateEpochGenesis(block)
@@ -1117,9 +1122,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	for i := 1; i < len(chain); i++ {
 
-		if chain[i-1].NumberU64() == bc.config.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
-			posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
-		}
+		//if chain[i-1].NumberU64() == bc.config.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
+		//	posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
+		//}
 
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
 			chain[i].ParentHash() != chain[i-1].Hash() {

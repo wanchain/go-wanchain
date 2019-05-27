@@ -32,12 +32,12 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	cfm.InitCFM(s.BlockChain())
 	slotleader.SlsInit()
 
-	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
-		if nil != h {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-		}
-	}
+	//if posconfig.EpochBaseTime == 0 {
+	//	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+	//	if nil != h {
+	//		posconfig.EpochBaseTime = h.Time.Uint64()
+	//	}
+	//}
 
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
@@ -70,13 +70,13 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
-	if posconfig.EpochBaseTime == 0 {
-		//todo:`switch pos from pow,the time is not 1?
-		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
-		if nil != h {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-		}
-	}
+	//if posconfig.EpochBaseTime == 0 {
+	//	//todo:`switch pos from pow,the time is not 1?
+	//	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+	//	if nil != h {
+	//		posconfig.EpochBaseTime = h.Time.Uint64()
+	//	}
+	//}
 }
 
 // backendTimerLoop is pos main time loop
@@ -113,41 +113,60 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
+
 	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil == h {
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
-		if err == nil {
-			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-			if leader == localPublicKey {
-				self.worker.chainSlotTimer <- struct{}{}
+		leaderPub  := slotleader.GetSlotLeaderSelection().GetEpochFirstLeadersPK()
+		leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub[0]))
+		if leader == localPublicKey {
+			cur := uint64(time.Now().Unix())
+			sleepTime := cur%posconfig.SlotTime
+			if sleepTime != 0 {
+				select {
+				case <-self.timerStop:
+					return
+				case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
+				}
 			}
-		} else {//todo panic if err?
-			panic(err)
+			util.CalEpochSlotIDByNow()
+			epochId,_ := util.GetEpochSlotID()
+			posconfig.FirstEpochId = epochId
+			log.Info("************** backendTimerLoop :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
+			self.worker.chainSlotTimer <- struct{}{}
 		}
+
+		for {
+			if nil == h {
+				select {
+				case <-self.timerStop:
+					return
+				case <-time.After(time.Duration(time.Second)):
+				}
+			} else {
+				break
+			}
+			h = s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+		}
+	}else{
+		util.CalEpochSlotIDByNow()
+		epochId,_ := util.CalEpSlbyTd(h.Difficulty.Uint64())
+		posconfig.FirstEpochId = epochId
+		log.Info("************** backendTimerLoop else :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
 	}
 
+
 	for {
-		// wait until block1
-		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
-		if nil == h {
+		cur := uint64(time.Now().Unix())
+		sleepTime := cur%posconfig.SlotTime
+		if sleepTime != 0 {
 			select {
 			case <-self.timerStop:
 				randombeacon.GetRandonBeaconInst().Stop()
 				return
-			case <-time.After(time.Duration(time.Second)):
-				continue
-			}
-			//todo,this is unnessessary?
-			continue
-		} else {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-			cur := uint64(time.Now().Unix())
-			if cur < posconfig.EpochBaseTime+posconfig.SlotTime {
-				time.Sleep(time.Duration((posconfig.EpochBaseTime + posconfig.SlotTime - cur)) * time.Second)
+			case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 			}
 		}
-
 		util.CalEpochSlotIDByNow()
 		epochid, slotid := util.GetEpochSlotID()
 		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
@@ -171,19 +190,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
 
-		cur := uint64(time.Now().Unix())
-		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
-		log.Debug("timeloop sleep", "sleepTime", sleepTime)
-		if sleepTime < 0 {
-			sleepTime = 0
-		}
-		select {
-		case <-self.timerStop:
-			randombeacon.GetRandonBeaconInst().Stop()
-			return
-		case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
-			continue
-		}
+		time.Sleep(time.Second)
 	}
 	return
 }

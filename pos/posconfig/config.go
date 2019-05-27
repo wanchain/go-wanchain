@@ -16,7 +16,8 @@ import (
 
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
-	EpochBaseTime = uint64(0)
+	//EpochBaseTime = uint64(0)
+	FirstEpochId = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
 	IsDev        = false
@@ -90,6 +91,7 @@ const (
 
 //var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
 var GenesisPK = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+//var GenesisPK = "046a5e1d2b8ca62accede9b8c7995dbd428ddbaf6a7f85673d426038b05bfdb428681046930a27b849a8f3541e71e8779948df95c78b2b303380769d0f4e8a753e"
 var PosOwnerAddr = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
 
 type Config struct {

@@ -130,7 +130,8 @@ var (
 		//EIP155Block:    big.NewInt(3),
 		//EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(0),
-		PosFirstBlock: big.NewInt(InternalPow2PosUpgradeBlockNumber),
+		PosFirstBlock: big.NewInt(1),
+		IsPosActive:    true,
 
 		Pluto: &PlutoConfig{
 			Period: 10,

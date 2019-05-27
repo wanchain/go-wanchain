@@ -21,14 +21,14 @@ import (
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
-	if posconfig.EpochBaseTime == 0 || time < posconfig.EpochBaseTime {
-		return
-	}
+	//if posconfig.EpochBaseTime == 0 || time < posconfig.EpochBaseTime {
+	//	return
+	//}
 	//timeUnix := uint64(time.Now().Unix())
 	timeUnix := time
 	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
-	epochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimespan)
-	slotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	epochId = uint64(timeUnix / epochTimespan)
+	slotId = uint64(timeUnix / posconfig.SlotTime % posconfig.SlotCount)
 	//fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
 }
@@ -42,13 +42,13 @@ func GetEpochSlotID() (uint64, uint64) {
 	return curEpochId, curSlotId
 }
 func CalEpochSlotIDByNow() {
-	if posconfig.EpochBaseTime == 0 {
-		return
-	}
+	//if posconfig.EpochBaseTime == 0 {
+	//	return
+	//}
 	timeUnix := uint64(time.Now().Unix())
 	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
-	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
-	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	curEpochId = uint64((timeUnix) / epochTimeSpan)
+	curSlotId = uint64((timeUnix) / posconfig.SlotTime % posconfig.SlotCount)
 	//fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
