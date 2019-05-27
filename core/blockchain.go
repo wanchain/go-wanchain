@@ -925,9 +925,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	cq,_:= bc.ChainQuality(epid,slid)
 	log.Info("current chain","quality",cq,"block number",block.NumberU64())
 
-	if bc.restarted {
-		bc.checkRestarting(block)
-	}
+
 
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
@@ -1100,6 +1098,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		headers[i] = block.Header()
 		seals[i] = true
 	}
+
+	if bc.restarted {
+		bc.checkRestarting(chain)
+	}
+
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
@@ -1730,22 +1733,29 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block) {
 }
 
 
-func (bc *BlockChain) checkRestarting(block *types.Block) bool {
+func (bc *BlockChain) checkRestarting(chain types.Blocks)  {
 
-	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	epid,slid := posUtil.CalEpochSlotID(block.Difficulty().Uint64())
-	curSlots :=  epid*posconfig.SlotCount + slid
+	idx := 0
+	for _, block := range chain {
+		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
+		epid, slid := posUtil.CalEpochSlotID(block.Difficulty().Uint64())
+		curSlots := epid*posconfig.SlotCount + slid
 
-	preBlock := bc.GetBlockByNumber(block.NumberU64() - 1)
-	preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
-	preSlots := preepid*posconfig.SlotCount + preslid
+		preBlock := bc.GetBlockByNumber(block.NumberU64() - 1)
+		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+		preSlots := preepid*posconfig.SlotCount + preslid
 
-	diff := curSlots - preSlots
-	if diff > 2*posconfig.K {
-		bc.SetRestartBlock(preBlock)
-		return true
-	} else {
-		return false
+		diff := curSlots - preSlots
+		if diff > 2*posconfig.K {
+			bc.SetRestartBlock(block)
+		}
 	}
+
+	//check the following singer is same to ensure chain is restarting
+	for i := idx;i<len(chain);i++ {
+
+	}
+
+
 }
 
