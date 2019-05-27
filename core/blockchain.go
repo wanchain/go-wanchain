@@ -1747,7 +1747,12 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks)  {
 
 		diff := curSlots - preSlots
 		if diff > 2*posconfig.K {
-			bc.SetRestartBlock(block)
+
+			//record the restarting slot point
+			bc.checkCQStartSlot = curSlots
+			bc.restartSlot = preSlots
+
+		    bc.restarted = false
 		}
 	}
 
