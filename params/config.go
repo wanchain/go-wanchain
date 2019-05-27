@@ -70,7 +70,7 @@ var (
 		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 		PosFirstBlock:       big.NewInt(MainnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
-		IsPosActive:    false,
+		IsPosActive:    false,// when pos running, the state changed to true by program
 		Ethash:         new(EthashConfig),
 		Pluto: &PlutoConfig{
 			Period: 10,
