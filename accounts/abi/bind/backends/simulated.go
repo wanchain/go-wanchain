@@ -73,7 +73,7 @@ func NewSimulatedBackend() *SimulatedBackend {
 	gspec.MustCommit(db)
 
 	ce := ethash.NewFaker(db)
-	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
+	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{}, nil)
 	env := core.NewChainEnv(gspec.Config, gspec, ce, bc, db)
 
 	backend := &SimulatedBackend{env: env}
@@ -90,7 +90,7 @@ func NewSimulatedBackendEx(alloc core.GenesisAlloc) *SimulatedBackend {
 	gspec.MustCommit(db)
 
 	ce := ethash.NewFaker(db)
-	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
+	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{}, nil)
 	env := core.NewChainEnv(gspec.Config, gspec, ce, bc, db)
 
 	backend := &SimulatedBackend{env: env}
