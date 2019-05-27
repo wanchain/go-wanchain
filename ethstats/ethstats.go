@@ -22,9 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posapi"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"log/syslog"
 	"math/big"
 	"net"
@@ -33,6 +30,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posapi"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/mclock"
@@ -64,7 +65,7 @@ const (
 )
 
 var (
-	maxUint64      = uint64(1<<64 - 1)
+	maxUint64 = uint64(1<<64 - 1)
 )
 
 type txPool interface {
@@ -94,7 +95,7 @@ type Service struct {
 	histCh chan []uint64 // History request block numbers are fed into this channel
 
 	epochId uint64
-	api *posapi.PosApi
+	api     *posapi.PosApi
 }
 
 // New returns a monitoring service ready for stats reporting.
@@ -114,14 +115,14 @@ func New(url string, ethServ *eth.Ethereum, lesServ *les.LightEthereum) (*Servic
 	}
 
 	svr := &Service{
-		eth:    ethServ,
-		les:    lesServ,
-		engine: engine,
-		node:   parts[1],
-		pass:   parts[3],
-		host:   parts[4],
-		pongCh: make(chan struct{}),
-		histCh: make(chan []uint64, 1),
+		eth:     ethServ,
+		les:     lesServ,
+		engine:  engine,
+		node:    parts[1],
+		pass:    parts[3],
+		host:    parts[4],
+		pongCh:  make(chan struct{}),
+		histCh:  make(chan []uint64, 1),
 		epochId: maxUint64,
 	}
 
@@ -298,7 +299,6 @@ func (s *Service) loop() {
 		}
 		go s.readLoop(conn)
 
-
 		if !s.isPos() {
 			// Send the initial stats so our node looks decent from the get go
 			if err = s.report(conn); err != nil {
@@ -323,7 +323,7 @@ func (s *Service) loop() {
 		}
 
 		// Keep sending status updates until the connection breaks
-		fullReport := time.NewTicker(posconfig.SlotTime*time.Second)
+		fullReport := time.NewTicker(posconfig.SlotTime * time.Second)
 
 		for err == nil {
 			log.Debug("wanstats report small loop begin..")
@@ -640,14 +640,14 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		return err
 	}
 
-	rnpl, err := s.api.GetRandomProposersAddrByEpochId(s.epochId)
+	rnpl, err := s.api.GetRandomProposersAddrByEpochID(s.epochId)
 	if err != nil {
 		return err
 	}
 
 	posL := pos_leader{el, rnpl}
 	stats := map[string]interface{}{
-		"id":    s.node,
+		"id":         s.node,
 		"pos-leader": posL,
 	}
 	report := map[string][]interface{}{
@@ -735,15 +735,14 @@ type pos_reorg struct {
 }
 
 type pos_log struct {
-	WarnCnt   uint64 `json:"warnCnt"`
-	ErrorCnt  uint64 `json:"errorCnt"`
+	WarnCnt  uint64 `json:"warnCnt"`
+	ErrorCnt uint64 `json:"errorCnt"`
 }
 
 type pos_alarm struct {
 	Level string `json:"level"`
-	Msg string `json:"msg"`
+	Msg   string `json:"msg"`
 }
-
 
 // txStats is the information to report about individual transactions.
 type txStats struct {
@@ -788,7 +787,7 @@ func (s *Service) reportPosBlock(conn *websocket.Conn, block *types.Block) error
 	log.Trace("Sending new block to ethstats", "number", details.Number, "hash", details.Hash)
 
 	stats := map[string]interface{}{
-		"id":    s.node,
+		"id":        s.node,
 		"pos-block": details,
 	}
 	report := map[string][]interface{}{
@@ -1002,7 +1001,7 @@ func (s *Service) reportPosHistory(conn *websocket.Conn, list []uint64) error {
 		log.Trace("No history to send to stats server")
 	}
 	stats := map[string]interface{}{
-		"id":      s.node,
+		"id":          s.node,
 		"pos-history": history,
 	}
 	report := map[string][]interface{}{
