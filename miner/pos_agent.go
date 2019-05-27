@@ -113,8 +113,13 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
+
+	util.IncreaseOffsetTime(s.BlockChain().CurrentHeader(),true)
+
 	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(1)
+
+
 	if nil == h {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, 0)
 		if err == nil {
@@ -126,7 +131,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			panic(err)
 		}
 	}
-
 	for {
 		// wait until block1
 		h := s.BlockChain().GetHeaderByNumber(1)
@@ -147,6 +151,8 @@ func (self *Miner) backendTimerLoop(s Backend) {
 				time.Sleep(time.Duration((posconfig.EpochBaseTime + posconfig.SlotTime - cur)) * time.Second)
 			}
 		}
+
+
 
 		util.CalEpochSlotIDByNow()
 		epochid, slotid := util.GetEpochSlotID()

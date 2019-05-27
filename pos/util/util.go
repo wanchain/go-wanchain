@@ -36,15 +36,27 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 }
 
 
-func IncreaseOffsetTime(header *types.Header) {
+
+
+func IncreaseOffsetTime(header *types.Header,uselocalTime  bool) {
 
 	headerTime := header.Time.Uint64()
+
+	if uselocalTime {
+		headerTime = uint64(time.Now().Unix())
+	}
+
 	epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
+
+	if epid == 0 && slid == 0 || posconfig.EpochBaseTime == 0{
+		return
+	}
+
 	slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
 
-	offset := ((headerTime - slotTime)/posconfig.SlotTime)*posconfig.SlotTime
+	offset := ((headerTime - slotTime)/posconfig.SlotTime - 1)*posconfig.SlotTime
 
-	posconfig.EpochOffsetTime = posconfig.EpochBaseTime + offset
+	posconfig.EpochOffsetTime = posconfig.EpochOffsetTime +  offset
 	posconfig.EpochOTLatestBlk = header.Number.Uint64()
 
 	SaveTimeOffset(posconfig.EpochOffsetTime,header.Number.Uint64())
@@ -69,16 +81,16 @@ func DecreaseOffsetTimeByHeader(chain []*types.Header) {
 func decreaseOffsetTime(header *types.Header) {
 
 	if header.Number.Uint64() <= posconfig.EpochOTLatestBlk {
-	headerTime := header.Time.Uint64()
-	epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
-	slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
+		headerTime := header.Time.Uint64()
+		epid, slid := CalEpSlbyTd(header.Difficulty.Uint64())
+		slotTime := (epid*posconfig.SlotCount+slid)*posconfig.SlotTime + posconfig.EpochBaseTime
 
-	offset := headerTime - slotTime
+		offset := headerTime - slotTime
 
-	posconfig.EpochOffsetTime = posconfig.EpochBaseTime - offset
-	posconfig.EpochOTLatestBlk = header.Number.Uint64()
+		posconfig.EpochOffsetTime = posconfig.EpochBaseTime - offset
+		posconfig.EpochOTLatestBlk = header.Number.Uint64()
 
-	RemoveTimeOffset(header.Number.Uint64())
+		RemoveTimeOffset(header.Number.Uint64())
 
 	}
 }
@@ -135,14 +147,16 @@ func GetEpochSlotID() (uint64, uint64) {
 	return curEpochId, curSlotId
 }
 func CalEpochSlotIDByNow() {
-	if posconfig.EpochBaseTime == 0 {
-		return
-	}
-	timeUnix := uint64(time.Now().Unix())
-	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
-	curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
-	curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
+	//if posconfig.EpochBaseTime == 0 {
+	//	return
+	//}
+	//timeUnix := uint64(time.Now().Unix())
+	//epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)
+	//curEpochId = uint64((timeUnix - posconfig.EpochBaseTime) / epochTimeSpan)
+	//curSlotId = uint64((timeUnix - posconfig.EpochBaseTime) / posconfig.SlotTime % posconfig.SlotCount)
 	//fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
+
+	curEpochId,curSlotId = CalEpochSlotID(uint64(time.Now().Unix()))
 }
 
 //PkEqual only can use in same curve. return whether the two points equal

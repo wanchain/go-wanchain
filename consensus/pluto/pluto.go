@@ -289,7 +289,7 @@ func (c *Pluto) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 // a batch of new headers.
 func (c *Pluto) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 
-	posUtil.IncreaseOffsetTime(header)
+	posUtil.IncreaseOffsetTime(header,false)
 
 	if header.Number == nil {
 		return errUnknownBlock
@@ -689,11 +689,16 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 		cur := time.Now().Unix()
 		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
 		header.Time = big.NewInt(hcur)
+		util.CalEpochSlotIDByNow()
+		curEpochId, curSlotId = util.GetEpochSlotID()
 	} else {
 		if curEpochId != 0 || curSlotId != 0 {
 			header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
 		}
 	}
+
+
+
 
 	epochSlotId := uint64(1)
 	epochSlotId += curSlotId << 8
