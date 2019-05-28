@@ -627,7 +627,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
 		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
 	if err != nil {
-		log.SyslogErr("generateSlotLeadsGroup", "error", err.Error())
+		log.SyslogAlert("generateSlotLeadsGroup", "epochid", epochID, "error", err.Error())
 		return err
 	}
 
@@ -635,7 +635,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	for index, val := range slotLeadersPtr {
 		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
 		if err != nil {
-			log.SyslogErr("generateSlotLeadsGroup:PutWithIndex", "error", err.Error())
+			log.SyslogAlert("generateSlotLeadsGroup:PutWithIndex", "epochid", epochID, "error", err.Error())
 			return err
 		}
 	}
@@ -759,7 +759,7 @@ func (s *SLS) generateSecurityMsg(epochID uint64, PrivateKey *ecdsa.PrivateKey) 
 	}
 	_, err = posdb.GetDb().Put(uint64(epochID+1), SecurityMsg, smasBytes.Bytes())
 	if err != nil {
-		log.SyslogErr("generateSecurityMsg:Put", "error", err.Error())
+		log.SyslogCrit("generateSecurityMsg:Put", "epochid", epochID, "error", err.Error())
 		return err
 	}
 	return nil
