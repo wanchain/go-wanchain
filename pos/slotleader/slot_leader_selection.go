@@ -284,11 +284,13 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 }
 
 func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
+
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkBuf := common.FromHex(posconfig.GenesisPK)
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
+
 	return pks
 }
 

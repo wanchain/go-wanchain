@@ -156,7 +156,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restarted:    true,
+		restarted:    false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -930,7 +930,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//confirm chain quality confirm security
 	if !bc.isWriteBlockSecure(block) {
 
-
 		if bc.restarted {
 			return NonStatTy, ErrInsufficientCQ
 		}
@@ -1099,9 +1098,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		seals[i] = true
 	}
 
-	if bc.restarted {
-		bc.checkRestarting(chain)
-	}
+	bc.checkRestarting(chain)
+
 
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
@@ -1738,10 +1736,14 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks)  {
 	idx := 0
 	for _, block := range chain {
 		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-		epid, slid := posUtil.CalEpochSlotID(block.Difficulty().Uint64())
+		epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 		curSlots := epid*posconfig.SlotCount + slid
 
 		preBlock := bc.GetBlockByNumber(block.NumberU64() - 1)
+		if preBlock == nil || preBlock.NumberU64() == 0{
+			continue
+		}
+
 		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
 		preSlots := preepid*posconfig.SlotCount + preslid
 

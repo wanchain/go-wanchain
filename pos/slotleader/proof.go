@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -24,10 +25,18 @@ import (
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
+	if s.blockChain.IsChainRestarting() && !s.isRestarting {
+		pks := s.getDefaultLeadersPK(block)
+		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+		s.initSma()
+		s.isRestarting = true
+	}
+
+
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID == 0 || errGenesis != nil {
-		s.getDefaultLeadersPK()
-		s.initSma()
+
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
@@ -203,6 +212,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 
 func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*big.Int,
 	ProofMeg []*ecdsa.PublicKey) bool {
+
 
 	var publicKey *ecdsa.PublicKey
 	publicKey = ProofMeg[0]

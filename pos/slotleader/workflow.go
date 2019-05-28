@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
@@ -42,7 +43,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	s.sendTransactionFn = util.SendTx
 
 	if s.blockChain.IsChainRestarting() {
-		pks := s.getDefaultLeadersPK()
+		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
 		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
 
 		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
@@ -55,23 +56,20 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	s.initSma()
 }
 
-func (s *SLS) getDefaultLeadersPK() []*ecdsa.PublicKey {
+func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
-	curepid,_ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
+	curepid,_ := util.CalEpSlbyTd(blk.Difficulty().Uint64())
 	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(curepid)
 
-	pksl := len(initPksStr)
+	pksl := uint64(len(initPksStr))
 	if err != nil || pksl == 0{
 		return nil
 	}
 
-	rb := s.getLastRandom()
-	pkslBig := big.NewInt(int64(pksl))
-	idx := pkslBig.Mod(rb,pkslBig).Uint64()
-
+	idx := curepid%pksl
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkStr := initPksStr[idx]
@@ -110,60 +108,65 @@ func (s *SLS) getLastRandom() *big.Int {
 func (s *SLS) initSma() {
 
 	s.randomGenesis = big.NewInt(1)
+
+
 	epoch0Leaders := s.getEpoch0LeadersPK()
+
+
 	for index, value := range epoch0Leaders {
-	s.epochLeadersPtrArrayGenesis[index] = value
+		s.epochLeadersPtrArrayGenesis[index] = value
 	}
 
 	alphas := make([]*big.Int, 0)
 	for _, value := range epoch0Leaders {
-	tempInt := new(big.Int).SetInt64(0)
-	tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
-	alphas = append(alphas, tempInt)
+		tempInt := new(big.Int).SetInt64(0)
+		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
+		alphas = append(alphas, tempInt)
 	}
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 
-	// AlphaPK  stage1Genesis
-	mi0 := new(ecdsa.PublicKey)
-	mi0.Curve = crypto.S256()
-	mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
-	alphas[i].Bytes())
-	s.stageOneMiGenesis[i] = mi0
+		// AlphaPK  stage1Genesis
+		mi0 := new(ecdsa.PublicKey)
+		mi0.Curve = crypto.S256()
+		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
+		alphas[i].Bytes())
+		s.stageOneMiGenesis[i] = mi0
 
-	// G
-	BasePoint := new(ecdsa.PublicKey)
-	BasePoint.Curve = crypto.S256()
-	BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
+		// G
+		BasePoint := new(ecdsa.PublicKey)
+		BasePoint.Curve = crypto.S256()
+		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
 
-	// alphaG SMAGenesis
-	smaPiece := new(ecdsa.PublicKey)
-	smaPiece.Curve = crypto.S256()
-	smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
-	s.smaGenesis[i] = smaPiece
+		// alphaG SMAGenesis
+		smaPiece := new(ecdsa.PublicKey)
+		smaPiece.Curve = crypto.S256()
+		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
+		s.smaGenesis[i] = smaPiece
 
-	for j := 0; j < posconfig.EpochLeaderCount; j++ {
-	// AlphaIPki stage2Genesis, used to verify genesis proof
-	alphaIPkj := new(ecdsa.PublicKey)
-	alphaIPkj.Curve = crypto.S256()
-	alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
-	s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+		// AlphaIPki stage2Genesis, used to verify genesis proof
+		alphaIPkj := new(ecdsa.PublicKey)
+		alphaIPkj.Curve = crypto.S256()
+		alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+		s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
 
-	s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
-	}
+		s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
+		}
 
 	}
 
 	epochLeadersPreHexStr := make([]string, 0)
 	for _, value := range s.epochLeadersPtrArrayGenesis {
-	epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
 
 	smaPiecesHexStr := make([]string, 0)
 	for _, value := range s.smaGenesis {
-	smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
+
 	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
 	log.SyslogInfo("SLS SlsInit success")
 }
@@ -251,21 +254,19 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
 
-		//selector := util.GetEpocherInst()
-		//if selector == nil {
-		//	return
-		//}
-		//
-		//rbleaders := selector.GetRBProposerG1(epochID)
-		//slpks := s.GetAllSlotLeaders(epochID)
-		//epleaders := selector.GetEpochLeaders(epochID)
-		//
-		//if len(slpks) == posconfig.SlotCount &&
-		//   len(rbleaders) == posconfig.RandomProperCount &&
-		//   len(epleaders) == posconfig.EpochLeaderCount {
-		//	s.isRestarting = false
-		//	s.blockChain.SetChainRestarted()
-		//}
+		selector := util.GetEpocherInst()
+		if selector == nil {
+			return
+		}
+
+		rbleaders := selector.GetRBProposerG1(epochID)
+		epleaders := selector.GetEpochLeaders(epochID)
+
+		if len(rbleaders) == posconfig.RandomProperCount &&
+		  len(epleaders) == posconfig.EpochLeaderCount {
+			s.isRestarting = false
+			s.blockChain.SetChainRestarted()
+		}
 
 	default:
 	}
