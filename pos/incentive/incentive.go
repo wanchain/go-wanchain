@@ -23,9 +23,6 @@ var (
 	redutionYears            = 1
 	redutionRateBase         = 0.88                                                                                   //88% redution for every year
 	subsidyReductionInterval = uint64((365 * 24 * 3600 * redutionYears) / (posconfig.SlotTime * posconfig.SlotCount)) // Epoch count in 1 years
-	percentOfEpochLeader     = 12.0 / 49.0                                                                            //24.4898%
-	percentOfRandomProposer  = 25.0 / 49.0                                                                            //51.0204%
-	percentOfSlotLeader      = 12.0 / 49.0                                                                            //24.4898%
 	ceilingPercentS0         = 100.0                                                                                  //100% Turn off in current version.
 	openIncentive            = true                                                                                   //If the incentive function is open
 	firstPeriodReward        = big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))                                 // 2500000 wan coin for first year
@@ -78,6 +75,8 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	slAddrs, slBlk, slAct, ctrlCount := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
 	log.Info("sl Addr ", "len", len(slAddrs), "slAct", slAct, "ctrlCount", ctrlCount)
 	log.Info("sl Blk ", "len", len(slBlk), "blks", slBlk)
+
+	percentOfEpochLeader, percentOfRandomProposer, percentOfSlotLeader := calcIncentivePercent(stateDb, epochID)
 
 	epochLeaderSubsidy := calcPercent(total, float64(percentOfEpochLeader*100.0))
 	randomProposerSubsidy := calcPercent(total, float64(percentOfRandomProposer*100.0))
@@ -321,4 +320,20 @@ func getExtraRemain(total, sumPay, remain *big.Int) *big.Int {
 		extraRemain.Sub(total, sum)
 	}
 	return extraRemain
+}
+
+func calcIncentivePercent(stateDb vm.StateDB, epochID uint64) (percentOfEpochLeader, percentOfRandomProposer, percentOfSlotLeader float64) {
+	rnpCnt := float64(posconfig.RandomProperCount)
+
+	wlInfo := vm.GetEpochWLInfo(stateDb, epochID)
+	wlLen := wlInfo.WlCount.Uint64()
+	elCnt := float64(posconfig.EpochLeaderCount - wlLen)
+
+	totalMemberCnt := float64(rnpCnt + elCnt)
+
+	percentOfEpochLeader = elCnt / 2.0 / totalMemberCnt //24.4898%
+	percentOfRandomProposer = rnpCnt / totalMemberCnt   //51.0204%
+	percentOfSlotLeader = elCnt / 2.0 / totalMemberCnt  //24.4898%
+
+	return
 }

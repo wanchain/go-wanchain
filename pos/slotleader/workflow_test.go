@@ -44,6 +44,8 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
+func (t *TestSelectLead) GetEpochLastBlkNumber(epochID uint64) uint64 { return 0 }
+
 func generateTestAddrs() {
 	for i := 0; i < addrsCount; i++ {
 		key, _ := crypto.GenerateKey()
