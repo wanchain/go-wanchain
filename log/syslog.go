@@ -204,7 +204,19 @@ func writeSyslog(level syslog.Priority, a ...interface{}) {
 	p := make([]interface{}, 0, len(a)*2)
 	for i := range a {
 		if i == 0 {
-			p = append(p, fmt.Sprintf("%-41s", a[i]))
+			fastr, ok := a[i].(string)
+			if !ok {
+				fmt.Println("invalid syslog first input param, need string")
+				return
+			}
+
+			minLen := 41
+			if len(fastr) >= minLen {
+				minLen += 10
+			}
+
+			fmtstr := fmt.Sprintf("%%-%ds", minLen)
+			p = append(p, fmt.Sprintf(fmtstr, a[i]))
 		} else if i%2 == 1 {
 			p = append(p, a[i])
 			p = append(p, string("="))

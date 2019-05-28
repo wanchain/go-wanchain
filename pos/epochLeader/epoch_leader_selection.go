@@ -141,22 +141,60 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 	return nil
 }
 
+func (e *Epocher) reportSelectELFailed(epochId uint64) {
+	failedTimes := 1
+	if epochId > 0 {
+		if !e.IsGenerateELSuc(epochId - 1) {
+			failedTimes = 2
+		}
+	}
+
+	// print the failed log
+	if failedTimes == 1 {
+		log.SyslogCrit("select EL failed", "epochid", epochId)
+	} else if failedTimes == 2 {
+		log.SyslogAlert("select EL failed in two consecutive epoch", "epochid", epochId)
+	}
+}
+
+func (e *Epocher) reportSelectRBPFailed(epochId uint64) {
+	failedTimes := 1
+	if epochId > 0 {
+		if !e.IsGenerateRBPSuc(epochId - 1) {
+			failedTimes = 2
+		}
+	}
+
+	// print the failed log
+	if failedTimes == 1 {
+		log.SyslogCrit("select RNP failed", "epochid", epochId)
+	} else if failedTimes == 2 {
+		log.SyslogAlert("select RNP failed in two consecutive epoch", "epochid", epochId)
+	}
+}
 
 func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64) error {
-
 	log.Debug("select randoms", "epochId", epochId, "r", common.ToHex(r))
 
 	pa, err := e.createStakerProbabilityArray(statedb, epochId)
 	if pa == nil || err != nil {
+		e.reportSelectELFailed(epochId)
+		e.reportSelectRBPFailed(epochId)
 		return err
 	}
 
-	e.epochLeaderSelection(r, pa, epochId)
+	err = e.epochLeaderSelection(r, pa, epochId)
+	if err != nil {
+		e.reportSelectELFailed(epochId)
+	}
 
-	e.randomProposerSelection(r, pa, epochId)
+
+	err = e.randomProposerSelection(r, pa, epochId)
+	if err != nil {
+		e.reportSelectRBPFailed(epochId)
+	}
 
 	return nil
-
 }
 
 type Proposer struct {
@@ -361,6 +399,16 @@ func (e *Epocher) randomProposerSelection(r []byte, ps ProposerSorter, epochId u
 	}
 
 	return nil
+}
+
+func (e *Epocher) IsGenerateELSuc(epochID uint64) bool {
+	epArray := posdb.GetEpochLeaderGroup(epochID)
+	return len(epArray) != 0
+}
+
+func (e *Epocher) IsGenerateRBPSuc(epochID uint64) bool {
+	rbArray := posdb.GetRBProposerGroup(epochID)
+	return len(rbArray) != 0
 }
 
 //get epochLeaders of epochID in localdb

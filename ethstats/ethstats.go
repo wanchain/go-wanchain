@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"log/syslog"
 	"math/big"
 	"net"
@@ -336,9 +337,16 @@ func (s *Service) loop() {
 				return
 
 			case <-fullReport.C:
-				if err = s.report(conn); err != nil {
-					log.Warn("Full stats report failed", "err", err)
+				if !s.isPos() {
+					if err = s.report(conn); err != nil {
+						log.Warn("Full stats report failed", "err", err)
+					}
+				} else {
+					if err = s.reportPos(conn); err != nil {
+						log.Warn("Full pos-stats report failed", "err", err)
+					}
 				}
+
 			case list := <-s.histCh:
 				if !s.isPos() {
 					if err = s.reportHistory(conn, list); err != nil {
@@ -429,7 +437,21 @@ func (s *Service) reportPosAlarm(conn *websocket.Conn, alarm *log.LogInfo) error
 }
 
 func (s *Service) isPos() bool {
-	return true
+	if s.eth == nil {
+		return false
+	}
+
+	bc := s.eth.BlockChain()
+	if bc == nil {
+		return false
+	}
+
+	block := bc.CurrentBlock()
+	if block == nil {
+		return false
+	}
+
+	return util.IsPosBlock(block.NumberU64())
 }
 
 // readLoop loops as long as the connection is alive and retrieves data packets
@@ -624,6 +646,10 @@ func (s *Service) reportPos(conn *websocket.Conn) error {
 		if err := s.reportLeader(conn); err != nil {
 			return err
 		}
+
+		if err := s.reportAlarm(conn); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -645,7 +671,12 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		return err
 	}
 
-	posL := pos_leader{el, rnpl}
+	preEpBlkCnt := uint64(0)
+	if s.epochId > 0 {
+		preEpBlkCnt, _ = s.api.GetEpochBlkCnt(s.epochId-1)
+	}
+
+	posL := pos_leader{s.epochId,el, rnpl, preEpBlkCnt}
 	stats := map[string]interface{}{
 		"id":         s.node,
 		"pos-leader": posL,
@@ -654,6 +685,33 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		"emit": {"pos-leader", stats},
 	}
 	return s.doSendReportData(conn, report)
+}
+
+func (s *Service) reportAlarm(conn *websocket.Conn) error {
+	// generate random
+	if s.api == nil {
+		return nil
+	}
+
+	failTimes := 0
+	_, err := s.api.GetRandom(s.epochId, -1)
+	if err != nil {
+		failTimes = 1
+		if s.epochId > 0 {
+			_, err = s.api.GetRandom(s.epochId-1, -1)
+			if err != nil {
+				failTimes = 2
+			}
+		}
+	}
+
+	if failTimes == 1 {
+		log.SyslogCrit("first generate random failed", "epochId", s.epochId)
+	} else if failTimes == 2 {
+		log.SyslogAlert("generate random failed in two consecutive epoch", "epochId", s.epochId)
+	}
+
+	return nil
 }
 
 // reportLatency sends a ping request to the server, measures the RTT time and
@@ -724,8 +782,10 @@ type pos_blockStats struct {
 }
 
 type pos_leader struct {
-	ELList  []common.Address `json:"elList"`
-	RNPList []common.Address `json:"rnpList"`
+	EpochId        uint64           `json:"epochId"`
+	ELList         []common.Address `json:"elList"`
+	RNPList        []common.Address `json:"rnpList"`
+	PreEpochBlkCnt uint64           `json:"preEpochBlkCnt"`
 }
 
 type pos_reorg struct {
@@ -1066,7 +1126,7 @@ type pos_nodeStats struct {
 	NextRandom      string `json:"nextRandom"`
 	CurRBStage      uint64 `json:"curRbStage"`
 	ValidDKG1Cnt    uint64 `json:"validDkg1Cnt"`
-	ValidDKG2Cnt    uint64 `json:"validDkgx2Cnt"`
+	ValidDKG2Cnt    uint64 `json:"validDkg2Cnt"`
 	ValidSIGCnt     uint64 `json:"validSigCnt"`
 	CurSLStage      uint64 `json:"curSlStage"`
 	ValidSMA1Cnt    uint64 `json:"validSma1Cnt"`
@@ -1121,9 +1181,6 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 }
 
 func (s *Service) reportPosStats(conn *websocket.Conn) error {
-	log.Debug("wanstats report pos stats begin")
-	defer log.Debug("wanstats report pos stats end")
-
 	// Gather the syncing and mining infos from the local miner instance
 	var (
 		err      error
@@ -1167,7 +1224,7 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 			if err != nil {
 				log.Error("get chain quality fail", "blocknumber", blockNum, "err", err)
 			} else {
-				chainQuality = fmt.Sprintf("%.1f", float64(iChainQuality)/1000.0)
+				chainQuality = fmt.Sprintf("%.1f", float64(iChainQuality)/10.0)
 			}
 
 			epBlockCount, _ = s.api.GetEpochBlkCnt(epochId)
