@@ -105,7 +105,7 @@ func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint6
 		client[i].Probability = probs[i]
 	}
 
-	return client, 10, big.NewInt(int64(100 * count * 10)), nil
+	return client, 1000, big.NewInt(int64(100 * count * 10)), nil
 }
 
 func setInfo(uint64, [][]vm.ClientIncentive) error { return nil }
