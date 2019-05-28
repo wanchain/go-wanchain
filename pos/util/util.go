@@ -197,3 +197,11 @@ func FromWin(win *big.Int) float64 {
 	}
 	return wan
 }
+
+func IsPosBlock(number uint64) bool {
+	return number > posconfig.Pow2PosUpgradeBlockNumber
+}
+
+func FirstPosBlockNumber() uint64 {
+	return posconfig.Pow2PosUpgradeBlockNumber + 1
+}

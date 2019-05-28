@@ -425,7 +425,7 @@ func PlutoDevGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
 		Timestamp:  0x59f83144,
-		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
+		ExtraData:  hexutil.MustDecode("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"),
 		GasLimit:   0x47b760,	// 4700000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoDevAllocJson),

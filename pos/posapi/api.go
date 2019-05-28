@@ -576,6 +576,10 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 		return 0, nil
 	}
 
+	if !util.IsPosBlock(lastHeader.Number.Uint64()) {
+		return 0, nil
+	}
+
 	epId := a.GetEpochIDByTime(lastHeader.Time.Uint64())
 	if epId < epochId {
 		return 0, nil
@@ -594,10 +598,10 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 		if epId > epochId {
 			fastEdBlkNum = curNum
 		} else if epId == epochId {
-			if curNum > step {
+			if curNum > step && util.IsPosBlock(curNum - step) {
 				fastBgBlkNum = curNum - step
 			} else {
-				fastBgBlkNum = 0
+				fastBgBlkNum = util.FirstPosBlockNumber()
 			}
 
 			if curNum + step > lastHeader.Number.Uint64() {
@@ -612,15 +616,14 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			break
 		}
 
-		// todo : add pow switch to pos checking
-		if curNum == 0 {
+		if curNum == util.FirstPosBlockNumber() {
 			return 0, nil
 		}
 
-		if curNum > step {
+		if curNum > step && util.IsPosBlock(curNum - step) {
 			curNum -= step
 		} else {
-			curNum = 0
+			curNum = util.FirstPosBlockNumber()
 		}
 	}
 
@@ -661,8 +664,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, nil
 		}
 
-		// todo : add pow switch to pos checking
-		if fastEdBlkNum == 0 {
+		if fastEdBlkNum == util.FirstPosBlockNumber() {
 			return 0, nil
 		}
 
