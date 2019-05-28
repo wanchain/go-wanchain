@@ -94,7 +94,7 @@ var (
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
-		ChainId: big.NewInt(6),
+		ChainId: big.NewInt(3),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
