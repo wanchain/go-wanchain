@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
 	"strconv"
 	"sync"
@@ -87,6 +88,22 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 	f.epochGenDb = posdb.NewDb("epochGendb")
 
 	return f
+}
+
+var whiteMap map[common.Address] bool
+// epoch => slotId -> signer address
+var slotLeaderCache map[uint64]map[uint64]common.Address
+
+func init() {
+	whiteMap = make(map[common.Address] bool)
+	slotLeaderCache = make(map[uint64]map[uint64] common.Address)
+
+	// init white list
+	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
+		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
+		addr := crypto.PubkeyToAddress(*pk)
+		whiteMap[addr]= true
+	}
 }
 
 func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -264,9 +281,15 @@ func (hc *HeaderChain) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	return hc.epochgen.GenerateEGHash(epochid)
 }
 
+func (hc *HeaderChain) IsSignerValid(addr *common.Address, header *types.Header) bool {
+	return hc.epochgen.IsSignerValid(addr, header)
+}
+
 //func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
 //	return hc.epochgen.GetOrGenerateEGHash(epochid)
 //}
+
+
 
 func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	epkGnss := f.GetEpochGenesis(epochid)
@@ -279,18 +302,49 @@ func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) 
 	}
 	return epkGnss.GenesisBlkHash, nil
 }
-//func (f *EpochGenesisBlock) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
-//	epkGnss := f.GetEpochGenesis(epochid)
-//	if epkGnss == nil {
-//		epkGnss, err := f.generateChainedEpochGenesis(epochid, false)
-//		if err != nil {
-//			return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
-//		}
-//		return epkGnss.GenesisBlkHash, nil
-//	} else {
-//		return epkGnss.GenesisBlkHash, nil
-//	}
-//}
+
+func (f *EpochGenesisBlock) IsSignerValid(addr *common.Address, header *types.Header) bool {
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+
+	f.epgGenmu.RLock()
+	slotLeaderMap, ok := slotLeaderCache[eid]
+	f.epgGenmu.RUnlock()
+	if !ok {
+		var epkGnss *types.EpochGenesis = nil
+		if eid == 0 {
+			// todo: genesisPk 's addr
+			//GenesisPK == *addr
+			return true
+		} else {
+			epkGnss = f.GetEpochGenesis(eid)
+		}
+		if epkGnss != nil {
+			slotLeaderMap = make(map[uint64] common.Address)
+			sz := len(epkGnss.SlotLeaders)
+			for i:=0; i<sz; i++ {
+				pubkey := epkGnss.SlotLeaders[i]
+
+				//pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
+				//addr := crypto.PubkeyToAddress(*pk)
+				pk := crypto.ToECDSAPub(pubkey)
+				slotLeaderMap[epkGnss.PreEpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = crypto.PubkeyToAddress(*pk)
+			}
+			f.epgGenmu.Lock()
+			slotLeaderCache[eid] = slotLeaderMap
+			f.epgGenmu.Unlock()
+		} else {
+			log.Error("IsSignerValid GetEpochGenesis failed")
+			return false
+		}
+	}
+
+	add := slotLeaderMap[header.Number.Uint64()]
+	if add == *addr {
+		return true
+	}
+
+	return false
+}
 
 // seal, header --> verify
 func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
