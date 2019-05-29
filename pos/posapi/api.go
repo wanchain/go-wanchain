@@ -616,6 +616,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			break
 		}
 
+		// todo : add pow switch to pos checking
 		if curNum == util.FirstPosBlockNumber() {
 			return 0, nil
 		}
@@ -664,6 +665,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, nil
 		}
 
+		// todo : add pow switch to pos checking
 		if fastEdBlkNum == util.FirstPosBlockNumber() {
 			return 0, nil
 		}

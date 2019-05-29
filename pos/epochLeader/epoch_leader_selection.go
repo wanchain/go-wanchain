@@ -578,7 +578,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	}
 
 	infors = make([]vm.ClientProbability, 1)
-	infors[0].Addr = staker.Address
+	infors[0].Addr = staker.From
 	infors[0].Probability = big.NewInt(0).Set(totalPartnerProbability)
 
 	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
