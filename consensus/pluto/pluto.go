@@ -44,6 +44,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -708,13 +709,12 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
-		// TODO disavle incentive temp.
-		//if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
-		//	log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
-		//	state.RevertToSnapshot(snap)
-		//} else {
-		//	log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
-		//}
+		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
+			log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
+			state.RevertToSnapshot(snap)
+		} else {
+			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
+		}
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {
