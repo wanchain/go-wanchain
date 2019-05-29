@@ -4,6 +4,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/log"
 )
@@ -28,14 +30,20 @@ func getBaseSubsidyTotalForEpoch(stateDb *state.StateDB, epochID uint64) *big.In
 		return big.NewInt(0)
 	}
 
+	if epochID < posconfig.FirstEpochId {
+		return big.NewInt(0)
+	}
+
+	epochIDOffset := epochID - posconfig.FirstEpochId
+
 	baseSubsidy := calcBaseSubsidy(firstPeriodReward)
 
-	redutionRateNow := math.Pow(redutionRateBase, float64(epochID/subsidyReductionInterval))
+	redutionRateNow := math.Pow(redutionRateBase, float64(epochIDOffset/subsidyReductionInterval))
 	baseSubsidyReduction := calcPercent(baseSubsidy, redutionRateNow*100.0)
 
 	// If 1 period later, need add the remain incentive pool value of last period
-	if (epochID / subsidyReductionInterval) >= 1 {
-		baseRemain := calcBaseSubsidy(getRemainIncentivePool(stateDb, epochID))
+	if (epochIDOffset / subsidyReductionInterval) >= 1 {
+		baseRemain := calcBaseSubsidy(getRemainIncentivePool(stateDb, epochIDOffset))
 		baseSubsidyReduction.Add(baseSubsidyReduction, baseRemain)
 	}
 
