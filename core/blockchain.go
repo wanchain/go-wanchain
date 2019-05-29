@@ -846,12 +846,10 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 
 		flatSlotId := epochId*posconfig.SlotCount + slotId
 
-		fmt.Println("time epochId=",epochId,"slotId",slotId,"total=",flatSlotId)
 
 		epochId, slotId = posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 
 		flatSlotId = epochId*posconfig.SlotCount + slotId
-		fmt.Println("difficult epochId=",epochId,"slotId",slotId,"total=",flatSlotId,"startFlatSlotId=",startFlatSlotId,"endFlatSlotId=",endFlatSlotId)
 
 		if flatSlotId < startFlatSlotId || flatSlotId >= endFlatSlotId {
 			break
@@ -871,14 +869,11 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 
-	fmt.Println("blocksIn2K",blocksIn2K)
-
 	//epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	epochId, slotId := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 	//because slot index starts from 0
 	totalSlots := epochId*posconfig.SlotCount + slotId + 1
 
-	fmt.Println("totalSlots",totalSlots)
 	if totalSlots >= posconfig.SlotSecurityParam {
 
 		return blocksIn2K > posconfig.K
@@ -1847,6 +1842,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 		diff := curSlots - preSlots
 		if diff > posconfig.SlotSecurityParam {
 			idxs = append(idxs,uint(i))
+			fmt.Println("restart point=",i)
 		}
 	}
 

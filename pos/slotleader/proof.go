@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
@@ -26,6 +27,9 @@ import (
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
 	if s.blockChain.IsChainRestarting()  {
+		if block.NumberU64() >= 510 {
+			fmt.Println("here")
+		}
 		pks := s.getDefaultLeadersPK(block)
 		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
 		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
