@@ -659,7 +659,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 				// if epoch genesis is down from others, we should check signer
 				if !bGenerate {
 					if !hc.IsSignerValid(&signer, header) {
-						log.Error("signer is not write")
+						log.Error("signer is not same with epoch genesis")
 						return errors.New("signer is not same with epoch genesis")
 					}
 				}

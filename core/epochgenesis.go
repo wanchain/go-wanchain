@@ -306,36 +306,15 @@ func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) 
 func (f *EpochGenesisBlock) IsSignerValid(addr *common.Address, header *types.Header) bool {
 	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
 
+	if eid == 0 {
+		return true
+	}
 	f.epgGenmu.RLock()
 	slotLeaderMap, ok := slotLeaderCache[eid]
 	f.epgGenmu.RUnlock()
 	if !ok {
-		var epkGnss *types.EpochGenesis = nil
-		if eid == 0 {
-			// todo: genesisPk 's addr
-			//GenesisPK == *addr
-			return true
-		} else {
-			epkGnss = f.GetEpochGenesis(eid)
-		}
-		if epkGnss != nil {
-			slotLeaderMap = make(map[uint64] common.Address)
-			sz := len(epkGnss.SlotLeaders)
-			for i:=0; i<sz; i++ {
-				pubkey := epkGnss.SlotLeaders[i]
-
-				//pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
-				//addr := crypto.PubkeyToAddress(*pk)
-				pk := crypto.ToECDSAPub(pubkey)
-				slotLeaderMap[epkGnss.PreEpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = crypto.PubkeyToAddress(*pk)
-			}
-			f.epgGenmu.Lock()
-			slotLeaderCache[eid] = slotLeaderMap
-			f.epgGenmu.Unlock()
-		} else {
-			log.Error("IsSignerValid GetEpochGenesis failed")
-			return false
-		}
+		// todo: check it's the last epoch, and in full sync mode, it's check in valid body
+		return true
 	}
 
 	add := slotLeaderMap[header.Number.Uint64()]
@@ -425,7 +404,25 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	}
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
+
+
 	return epGen, nil
+}
+
+func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis)  {
+	slotLeaderMap := make(map[uint64] common.Address)
+	sz := len(epkGnss.SlotLeaders)
+	for i:=0; i<sz; i++ {
+		pubkey := epkGnss.SlotLeaders[i]
+
+		//pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
+		//addr := crypto.PubkeyToAddress(*pk)
+		pk := crypto.ToECDSAPub(pubkey)
+		slotLeaderMap[epkGnss.PreEpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = crypto.PubkeyToAddress(*pk)
+	}
+	f.epgGenmu.Lock()
+	slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
+	f.epgGenmu.Unlock()
 }
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
@@ -569,12 +566,15 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 			return err
 		}
 		posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
+
+		f.updateCache(epochgen)
 	}
 
 	err = f.saveToPosDb(epochgen, isEnd)
 	if err != nil {
 		return err
 	}
+
 
 	log.Info("successfully input epochGenesis", "", epochgen.EpochId)
 
