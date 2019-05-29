@@ -847,7 +847,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 			break
 		}
 
-		if block.Number().Cmp(params.WanchainChainConfig.PosFirstBlock) < 0 {
+		if block.Number().Cmp(bc.config.PosFirstBlock) < 0 {
 			break
 		}
 
@@ -871,12 +871,16 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+	//// TODO this looks not enough
+	//if epochId == posconfig.FirstEpochId {
+	//	return true
+	//}
 	//because slot index starts from 0
-	totalSlots := epochId*posconfig.SlotCount + slotId + 1
+	totalSlots := (epochId-posconfig.FirstEpochId)*posconfig.SlotCount + slotId + 1
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
-		return blocksIn2K > (int)(totalSlots-posconfig.K-params.WanchainChainConfig.PosFirstBlock.Uint64())
+		return blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
 
 	return true
@@ -931,11 +935,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 	//confirm chain quality confirm security
-	if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
-		if !posconfig.IsDev {
-			return NonStatTy, ErrInsufficientCQ
-		}
-	}
+	// TODO disable chain quality temp
+	//if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
+	//	if !posconfig.IsDev {
+	//		return NonStatTy, ErrInsufficientCQ
+	//	}
+	//}
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1016,9 +1021,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		//if bc.config.Pluto != nil {
 		if bc.config.IsPosActive{
 			//TODO:ppow2pos change next as
-			if block.NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() {
-				posconfig.EpochBaseTime = block.Time().Uint64()
-			}
+			//if block.NumberU64() == bc.config.PosFirstBlock.Uint64() {
+			//	posconfig.EpochBaseTime = block.Time().Uint64()
+			//}
 
 			//if bc.slotValidator != bc.epochGene {
 			//	bc.epochGene.SelfGenerateEpochGenesis(block)
@@ -1052,6 +1057,9 @@ func (bc *BlockChain) SwitchClientEngine() (error){
 	for _, agent := range bc.agents{
 		agent.SwitchEngine(bc.posEngine)
 	}
+
+	bc.engine = bc.posEngine
+
 	return nil
 }
 
@@ -1072,10 +1080,37 @@ func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
+	splitChain := make([]types.Blocks,0)
+	splitChain = append(splitChain,make(types.Blocks,0))
+	splitChain = append(splitChain,make(types.Blocks,0))
 
-	return n, err
+	for _, block := range chain {
+		if block.Number().Uint64() < bc.Config().PosFirstBlock.Uint64() {
+			splitChain[0] = append(splitChain[0],block)
+		} else {
+			splitChain[1] = append(splitChain[1],block)
+		}
+	}
+
+	realIdx := 0
+	for _,split := range splitChain {
+
+		if len(split) == 0 {
+			continue
+		}
+
+		n, events, logs, err := bc.insertChain(split)
+		bc.PostChainEvents(events, logs)
+
+		if err != nil {
+			return n + realIdx,err
+		}
+
+		realIdx = realIdx + len(split)
+
+	}
+
+	return 0,nil
 
 }
 
@@ -1087,9 +1122,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	for i := 1; i < len(chain); i++ {
 
-		if chain[i-1].NumberU64() == params.WanchainChainConfig.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
-			posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
-		}
+		//if chain[i-1].NumberU64() == bc.config.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
+		//	posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
+		//}
 
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
 			chain[i].ParentHash() != chain[i-1].Hash() {
@@ -1126,6 +1161,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		headers[i] = block.Header()
 		seals[i] = true
 	}
+
+
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 

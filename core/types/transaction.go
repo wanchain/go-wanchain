@@ -529,7 +529,7 @@ const (
 )
 
 func IsNormalTransaction(txType uint64) bool {
-	return txType == NORMAL_TX
+	return txType == NORMAL_TX || txType == 0 ||  txType == 2// some of old tx used , which is allowed.
 }
 func IsPosTransaction(txType uint64) bool {
 	return txType == POS_TX

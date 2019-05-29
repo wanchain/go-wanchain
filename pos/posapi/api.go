@@ -541,11 +541,11 @@ func (a PosApi) GetSlotIDByTime(timeUnix uint64) uint64 {
 
 //GetTimeByEpochID can get time second Unix by epoch ID.
 func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
-	if posconfig.EpochBaseTime == 0 {
-		return 0
-	}
+	//if posconfig.EpochBaseTime == 0 {
+	//	return 0
+	//}
 
-	time := posconfig.EpochBaseTime + epochID*posconfig.SlotCount*posconfig.SlotTime
+	time := epochID*posconfig.SlotCount*posconfig.SlotTime
 
 	epochIDGet := a.GetEpochIDByTime(time)
 	if epochIDGet < epochID {

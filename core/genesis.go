@@ -262,7 +262,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				Address:	 secAddr,
 				LockEpochs:    0, // never expired
 				StakingEpoch: uint64(0),
-				FeeRate:	 uint64(100),
+				FeeRate:	 uint64(10000),
 			}
 			staker.StakeAmount = big.NewInt(0)
 			staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
@@ -403,7 +403,7 @@ func DefaultInternalGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1),
-		Alloc:      jsonPrealloc(wanchainTestAllocJson),
+		Alloc:      jsonPrealloc(wanchainInternalAllocJson),
 	}
 }
 

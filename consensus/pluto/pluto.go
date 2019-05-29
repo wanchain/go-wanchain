@@ -27,11 +27,9 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/util"
 
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -621,6 +619,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 // header for running the transactions on top.
 func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, mining bool) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
+	log.Info("pos prepare")
 	header.Coinbase = common.Address{}
 	header.Nonce = types.BlockNonce{}
 
@@ -683,15 +682,15 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 	//}
 	curEpochId, curSlotId := util.CalEpochSlotID(header.Time.Uint64())
 
-	if posconfig.EpochBaseTime == 0 {
-		cur := time.Now().Unix()
-		hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
-		header.Time = big.NewInt(hcur)
-	} else {
-		//if curEpochId != 0 || curSlotId != 0 {
-			header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
-		//}
-	}
+	//if posconfig.EpochBaseTime == 0 {
+	//	cur := time.Now().Unix()
+	//	hcur := cur - (cur % posconfig.SlotTime) + posconfig.SlotTime
+	//	header.Time = big.NewInt(hcur)
+	//} else {
+	//	//if curEpochId != 0 || curSlotId != 0 {
+	//		header.Time = big.NewInt(int64(posconfig.EpochBaseTime + (curEpochId*posconfig.SlotCount+curSlotId)*posconfig.SlotTime))
+	//	//}
+	//}
 
 	epochSlotId := uint64(1)
 	epochSlotId += curSlotId << 8
@@ -709,12 +708,13 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
-		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
-			log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
-			state.RevertToSnapshot(snap)
-		} else {
-			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
-		}
+		// TODO disavle incentive temp.
+		//if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
+		//	log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
+		//	state.RevertToSnapshot(snap)
+		//} else {
+		//	log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
+		//}
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {

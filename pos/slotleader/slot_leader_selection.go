@@ -115,7 +115,7 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
-	if epochID == 0 {
+	if epochID <= posconfig.FirstEpochId+1 {
 		b, err := hex.DecodeString(posconfig.GenesisPK)
 		if err != nil {
 			return nil, vm.ErrInvalidGenesisPk
@@ -166,7 +166,7 @@ func SlsInit() {
 	slotLeaderSelection.slotCreateStatusLockCh = make(chan int, 1)
 	s := slotLeaderSelection
 	s.randomGenesis = big.NewInt(1)
-	epoch0Leaders := s.getEpoch0LeadersPK()
+	epoch0Leaders := s.GetEpochFirstLeadersPK()
 	for index, value := range epoch0Leaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
 	}
@@ -329,20 +329,20 @@ func (s *SLS) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 
 func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
-	if epochID == 0 {
-		return s.getEpoch0LeadersPK(), nil
+	if epochID <= posconfig.FirstEpochId+1 {
+		return s.GetEpochFirstLeadersPK(), nil
 	}
 
 	pks := s.getEpochLeadersPK(epochID - 1)
 	if len(pks) == 0 {
 		log.Warn("Can not found pre epoch leaders return epoch 0", "epochIDPre", epochID-1)
-		return s.getEpoch0LeadersPK(), vm.ErrInvalidPreEpochLeaders
+		return s.GetEpochFirstLeadersPK(), vm.ErrInvalidPreEpochLeaders
 	}
 
 	return pks, nil
 }
 
-func (s *SLS) getEpoch0LeadersPK() []*ecdsa.PublicKey {
+func (s *SLS) GetEpochFirstLeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
@@ -611,7 +611,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	var epochLeadersPtrArray []*ecdsa.PublicKey
 	if epochIDGet == 0 {
-		epochLeadersPtrArray = s.getEpoch0LeadersPK()
+		epochLeadersPtrArray = s.GetEpochFirstLeadersPK()
 	} else {
 		epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
 		if err != nil {
