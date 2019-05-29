@@ -586,6 +586,9 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	for i := 0; i < length; i++ {
 		totalDelegated.Add(totalDelegated, stakerInfo.Clients[i].Amount)
 		if stakerInfo.Clients[i].Address == contract.CallerAddress {
+			if stakerInfo.Clients[i].QuitEpoch != 0 {
+				return nil, errors.New("dalegater is quiting.")
+			}
 			weight := CalLocktimeWeight(PSMinEpochNum)
 			info = &stakerInfo.Clients[i]
 			info.Amount.Add(info.Amount, contract.Value())
