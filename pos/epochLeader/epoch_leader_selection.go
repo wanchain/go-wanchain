@@ -479,6 +479,9 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 func (e *Epocher) GetEpLeaderGroup(epochID uint64) []vm.Leader {
 	epLeaderArray := e.epochLeadersDb.GetStorageByteArray(epochID)
 	length := len(epLeaderArray)
+	if length == 0 {
+		return make([]vm.Leader, 0)
+	}
 	g1s := make([]vm.Leader, posconfig.EpochLeaderCount)
 
 	for i := 0; i < length; i++ {
