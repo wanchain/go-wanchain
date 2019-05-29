@@ -163,6 +163,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
 		if err == nil {
 			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+			log.Info("leader ","leader",leader)
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
 			}

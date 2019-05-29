@@ -1056,6 +1056,9 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
 
+
+	var rete error
+
 	idxs,err := bc.checkRestarting(chain)
 	if err != nil {
 		return 0,err
@@ -1078,19 +1081,19 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 			if err != nil {
 				return n, err
 			}
-		} else {
+		} else {//the firt block is restarting block
 			preblock = bc.GetBlockByHash(block.ParentHash())
 			bc.SetRestartBlock(block,preblock,false)
-			n, events, logs, err := bc.insertChain(chain[0:idxs[0]])
+
+			n, events, logs, err := bc.insertChain(chain[0:end + 1])
 			bc.PostChainEvents(events, logs)
 			if err != nil {
 				return n, err
 			}
 			idxStart = 1
+			rete = err
 		}
 
-		var retn int
-		var rete error
 
 		for i:=idxStart;i<len(idxs);i++ {
 
@@ -1112,11 +1115,10 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 			if err != nil {
 				return n,err
 			}
-			retn = n
 			rete = err
 		}
 
-		return retn,rete
+		return 0,rete
 	}
 
 }
@@ -1818,7 +1820,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 	idxs := make([]uint,0)
 	for i, block := range chain {
 
-		if block.NumberU64() == 1 {
+		if block.NumberU64() <= 2 {
 			continue
 		}
 		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot

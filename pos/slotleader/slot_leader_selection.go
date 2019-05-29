@@ -118,8 +118,11 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
-	if epochID == 0 || s.isRestarting {
+	if epochID == 0 || s.blockChain.IsChainRestarting() {
+
 		b := common.FromHex(posconfig.GenesisPK)
+
+
 		return crypto.ToECDSAPub(b), nil
 	}
 

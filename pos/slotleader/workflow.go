@@ -59,7 +59,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
-	curepid,slotid := util.CalEpSlbyTd(blk.Difficulty().Uint64())
+	curepid,_ := util.CalEpSlbyTd(blk.Difficulty().Uint64())
 	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(curepid)
@@ -69,7 +69,7 @@ func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
 		return nil
 	}
 
-	idx := (curepid*posconfig.EpochLeaderCount + slotid)%pksl
+	idx := (curepid)%pksl
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkStr := initPksStr[idx]
