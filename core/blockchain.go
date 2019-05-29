@@ -918,7 +918,7 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 	}
 
 	//if the gap is empty block,then the quality is 0
-	diff := expSlots - checkSlots
+	diff := expSlots - checkSlots + 1
 	if uint64(diff) >= posconfig.SlotSecurityParam {
 		return uint64(0),nil
 	} else {
@@ -1061,7 +1061,10 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 	//insert here
 
-	idxs := bc.checkRestarting(chain)
+	idxs,err := bc.checkRestarting(chain)
+	if err != nil {
+		return 0,err
+	}
 
 	if len(idxs) == 0 {
 		n, events, logs, err := bc.insertChain(chain)
@@ -1084,7 +1087,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 			preblock = bc.GetBlockByNumber(block.NumberU64() - 1)
 			bc.SetRestartBlock(block,preblock,false)
 
-			n, events, logs, err := bc.insertChain(chain[0:idxs[1]])
+			n, events, logs, err := bc.insertChain(chain[0:idxs[0]])
 			bc.PostChainEvents(events, logs)
 			if err != nil {
 				return n, err
@@ -1164,8 +1167,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		headers[i] = block.Header()
 		seals[i] = true
 	}
-
-	bc.checkRestarting(chain)
 
 
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
@@ -1812,7 +1813,7 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 }
 
 
-func (bc *BlockChain) checkRestarting(chain types.Blocks) []uint {
+func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 	idxs := make([]uint,0)
 	for i, block := range chain {
 
@@ -1825,9 +1826,13 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) []uint {
 
 		var preBlock *types.Block
 		if i == 0{
-			preBlock = bc.GetBlockByNumber(block.NumberU64() - 1)
+			preBlock = bc.GetBlockByHash(block.ParentHash())
 		} else {
 			preBlock = chain[i - 1]
+		}
+
+		if preBlock == nil {
+			return nil,errors.New("can not find parent block in check restart")
 		}
 
 		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
@@ -1839,7 +1844,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) []uint {
 		}
 	}
 
-	return idxs
+	return idxs,nil
 
 }
 
