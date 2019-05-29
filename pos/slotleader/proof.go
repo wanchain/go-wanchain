@@ -25,7 +25,7 @@ import (
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
-	if s.blockChain.IsChainRestarting() && !s.isRestarting {
+	if s.blockChain.IsChainRestarting()  {
 		pks := s.getDefaultLeadersPK(block)
 		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
 		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))

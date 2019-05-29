@@ -1066,6 +1066,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		return 0,err
 	}
 
+	idxStart := 0
 	if len(idxs) == 0 {
 		n, events, logs, err := bc.insertChain(chain)
 		bc.PostChainEvents(events, logs)
@@ -1083,27 +1084,32 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 				return n, err
 			}
 		} else {
-
-			preblock = bc.GetBlockByNumber(block.NumberU64() - 1)
+			preblock = bc.GetBlockByHash(block.ParentHash())
 			bc.SetRestartBlock(block,preblock,false)
-
 			n, events, logs, err := bc.insertChain(chain[0:idxs[0]])
 			bc.PostChainEvents(events, logs)
 			if err != nil {
 				return n, err
 			}
+			idxStart = 1
 		}
 
 		var retn int
 		var rete error
 
-		for i:=1;i<len(idxs);i++ {
+		for i:=idxStart;i<len(idxs);i++ {
 
-			start := idxs[i-1]
-			end   := idxs[i]
+			start := idxs[i]
+			end := start
+			if i < len(idxs) - 1 {
+				end = idxs[i+1]
+			} else {
+				end = uint(len(chain))
+			}
 
-			preblock = chain[start]
-			block = chain[start - 1]
+			block = chain[start]
+			preblock = chain[start-1]
+
 			bc.SetRestartBlock(block,preblock,false)
 
 			n, events, logs, err := bc.insertChain(chain[start:end])
