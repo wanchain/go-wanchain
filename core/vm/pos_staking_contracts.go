@@ -224,10 +224,10 @@ type StakerInfo struct {
 
 type ValidatorInfo struct {
 	TotalProbability *big.Int
-	FeeRate      uint64
-	ValidatorAddr           common.Address
-	WalletAddr           common.Address
-	Infos []     ClientProbability
+	FeeRate          uint64
+	ValidatorAddr    common.Address
+	WalletAddr       common.Address
+	Infos            []ClientProbability // the obj 0 is validator and others is delegators.
 }
 type ClientInfo struct {
 	Address     common.Address
@@ -236,11 +236,11 @@ type ClientInfo struct {
 	QuitEpoch   uint64
 }
 type PartnerInfo struct {
-	Address     common.Address
-	Amount      *big.Int
-	StakeAmount *big.Int //staking wan value
-	Renewal     bool
-	LockEpochs     uint64
+	Address      common.Address
+	Amount       *big.Int
+	StakeAmount  *big.Int //staking wan value
+	Renewal      bool
+	LockEpochs   uint64
 	StakingEpoch uint64
 }
 
@@ -248,10 +248,10 @@ type PartnerInfo struct {
 // public helper structures
 //
 type Leader struct {
-	Type      uint8 `json:"type"`
+	Type      uint8          `json:"type"`
 	SecAddr   common.Address `json:"secAddr"`
-	PubSec256 []byte `json:"pubSec256"`
-	PubBn256  []byte `json:"pubBn256"`
+	PubSec256 []byte         `json:"pubSec256"`
+	PubBn256  []byte         `json:"pubBn256"`
 }
 
 type ClientProbability struct {
@@ -301,8 +301,6 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
-
-
 
 	if methodId == stakeInId {
 		ret, err := p.StakeIn(input[4:], contract, evm)
@@ -374,7 +372,6 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	return errParameters
 }
 
-
 func (p *PosStaking) saveStakeInfo(evm *EVM, stakerInfo *StakerInfo) error {
 	infoBytes, err := rlp.EncodeToBytes(stakerInfo)
 	if err != nil {
@@ -424,7 +421,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
-	p.stakeUpdateLog(contract,evm,stakerInfo)
+	p.stakeUpdateLog(contract, evm, stakerInfo)
 	return nil, nil
 }
 func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -462,11 +459,11 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			return nil, errors.New("Too many partners")
 		}
 		partner := PartnerInfo{
-			Address: contract.CallerAddress,
-			Amount:  contract.Value(),
-			Renewal: info.Renewal,
+			Address:      contract.CallerAddress,
+			Amount:       contract.Value(),
+			Renewal:      info.Renewal,
 			StakingEpoch: eidNow + JoinDelay,
-			LockEpochs: realLockEpoch,
+			LockEpochs:   realLockEpoch,
 		}
 		partner.StakeAmount = big.NewInt(0).Mul(partner.Amount, big.NewInt(int64(weight)))
 		stakerInfo.Partners = append(stakerInfo.Partners, partner)
@@ -505,10 +502,9 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
-	p.stakeAppendLog(contract,evm,stakerInfo.Address)
+	p.stakeAppendLog(contract, evm, stakerInfo.Address)
 	return nil, nil
 }
-
 
 func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	info, err := p.stakeInParseAndValid(payload)
@@ -578,7 +574,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	}
 	// check if the validator's amount(include partner) is not enough, can't delegatein
 	total := big.NewInt(0).Set(stakerInfo.Amount)
-	for i:=0; i<len(stakerInfo.Partners); i++ {
+	for i := 0; i < len(stakerInfo.Partners); i++ {
 		total.Add(total, stakerInfo.Partners[i].Amount)
 	}
 	if total.Cmp(MinValidatorStake) < 0 {
@@ -626,7 +622,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 	if err != nil {
 		return nil, err
 	}
-	p.delegateInLog(contract,evm,stakerInfo.Address)
+	p.delegateInLog(contract, evm, stakerInfo.Address)
 	return nil, nil
 }
 
@@ -678,9 +674,9 @@ the time is 1500/1002, about 1.5
 */
 func CalLocktimeWeight(lockEpoch uint64) uint64 {
 	if lockEpoch == 0 { //builtin account.
-		return 960+PSMinEpochNum*6
+		return 960 + PSMinEpochNum*6
 	}
-	return 960+lockEpoch*6
+	return 960 + lockEpoch*6
 }
 
 func GetStakeInKeyHash(address common.Address) common.Hash {
@@ -772,7 +768,7 @@ func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam,
 		return info, err
 	}
 	//  Lock time >= min epoch, <= max epoch
-	if info.LockEpochs.Uint64()!= 0 && (info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0) {
+	if info.LockEpochs.Uint64() != 0 && (info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0) {
 		return info, errors.New("invalid lock time")
 	}
 
@@ -806,8 +802,7 @@ func (p *PosStaking) delegateOutParseAndValid(payload []byte) (common.Address, e
 	return addr, nil
 }
 
-
-func (p *PosStaking) stakeInLog( contract *Contract, evm *EVM, info *StakerInfo)	error {
+func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) error {
 
 	params := make([]common.Hash, 5)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -816,9 +811,9 @@ func (p *PosStaking) stakeInLog( contract *Contract, evm *EVM, info *StakerInfo)
 	params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
 	params[4] = info.Address.Hash()
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig()))
-	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
-func (p *PosStaking) stakeAppendLog( contract *Contract, evm *EVM, validator common.Address)	error {
+func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator common.Address) error {
 
 	params := make([]common.Hash, 3)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -826,9 +821,9 @@ func (p *PosStaking) stakeAppendLog( contract *Contract, evm *EVM, validator com
 	params[2] = validator.Hash()
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig()))
-	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
-func (p *PosStaking) stakeUpdateLog( contract *Contract, evm *EVM, info *StakerInfo)	error {
+func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerInfo) error {
 
 	params := make([]common.Hash, 3)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -836,9 +831,9 @@ func (p *PosStaking) stakeUpdateLog( contract *Contract, evm *EVM, info *StakerI
 	params[2] = info.Address.Hash()
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig()))
-	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
-func (p *PosStaking) delegateInLog( contract *Contract, evm *EVM, validator common.Address)	error {
+func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator common.Address) error {
 
 	params := make([]common.Hash, 3)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -846,14 +841,14 @@ func (p *PosStaking) delegateInLog( contract *Contract, evm *EVM, validator comm
 	params[2] = validator.Hash()
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig()))
-	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
-func (p *PosStaking) delegatOutLog( contract *Contract, evm *EVM, validator common.Address)	error {
+func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator common.Address) error {
 
 	params := make([]common.Hash, 2)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
 	params[1] = validator.Hash()
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
-	return precompiledScAddLog(contract.Address(),evm,common.BytesToHash(sig),params,nil)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
