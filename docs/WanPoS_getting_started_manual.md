@@ -128,7 +128,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d2";
+var cscContractAddr = "0x00000000000000000000000000000000000000d8";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
@@ -245,7 +245,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d2";
+var cscContractAddr = "0x00000000000000000000000000000000000000d8";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payloadDelegate = coinContract.delegateIn.getData(delegateAddr)
