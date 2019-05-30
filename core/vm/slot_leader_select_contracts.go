@@ -762,7 +762,9 @@ func GetSlStage(slotId uint64) uint64 {
 		return 3
 	} else if slotId < posconfig.Sma3Start {
 		return 4
-	} else {
+	} else if slotId <= posconfig.Sma3End {
 		return 5
+	} else {
+		return 6
 	}
 }

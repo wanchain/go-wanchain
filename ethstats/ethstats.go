@@ -824,6 +824,9 @@ func (s uncleStats) MarshalJSON() ([]byte, error) {
 func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	// Gather the block details from the header or block chain
 	details := s.assembleBlockStats(block)
+	if details.Number.Uint64() == 0 {
+		return nil
+	}
 
 	// Assemble the block report and send it to the server
 	log.Trace("Sending new block to ethstats", "number", details.Number, "hash", details.Hash)
@@ -842,6 +845,9 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 func (s *Service) reportPosBlock(conn *websocket.Conn, block *types.Block) error {
 	// Gather the block details from the header or block chain
 	details := s.assemblePosBlockStats(block)
+	if details.Number.Uint64() == 0 {
+		return nil
+	}
 
 	// Assemble the block report and send it to the server
 	log.Trace("Sending new block to ethstats", "number", details.Number, "hash", details.Hash)
