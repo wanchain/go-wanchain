@@ -201,5 +201,7 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 func (self *Miner) SwitchEngine(engine consensus.Engine){
 	self.engine = engine
 	//time.Sleep(1000*time.Millisecond)
-	go self.backendTimerLoop(self.eth)
+	if self.Mining() {
+		go self.backendTimerLoop(self.eth)
+	}
 }
