@@ -18,7 +18,8 @@ var secpub    = ""
 // g1pub is the miner accounts's g1pub value which is get by personal.showPublicKey
 var g1pub     = ""
 
-// feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
+// feeRate is the delegate dividend ratio if set to 10000, means it's a single miner do not accept delegate in.
+// range 0 ~ 1000 ~ 10000 means 0% ~ 10.00% ~ 100.00%
 var feeRate   = 100
 
 // lockTime do not use in POC

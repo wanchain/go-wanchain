@@ -110,8 +110,9 @@ var secpub    = "YourPK1"
 // g1pub is the miner node's g1pub value
 var g1pub     = "YourPK2"
 
-// feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
-var feeRate   = 100
+// feeRate is the delegate dividend ratio if set to 10000, means it's a single miner do not accept delegate in.
+// range 0~10000 means 0%~100%
+var feeRate   = 1000
 
 // lockTime is the time for miner works which measures in epoch count. And must >= 7.
 var lockTime  = 30
@@ -401,11 +402,11 @@ Its contract interface is shown as below.
 var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 ```
 
-在智能合约的参数中, `feeRate` 是接受委托后的分红费率，如果设置为100，则为独立节点，不接受委托。
+在智能合约的参数中, `feeRate` 是接受委托后的分红费率，如果设置为10000，则为独立节点，不接受委托。
 
 如果您想成为可以接受委托的验证节点，则应设置友好的费率值 `feeRate` 来吸引用户投注。
 
-`feeRate`取值范围[ 0, 100 ]. 表示分红的百分比.
+`feeRate`取值范围[ 0, 10000 ]. 表示分红的百分比0.00% ~ 100.00%.
 
 可以直接修改代码目录下的脚本文件来完成矿工注册 `loadScript/minerRegister.js`.
 

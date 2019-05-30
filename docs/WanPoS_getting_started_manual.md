@@ -12,28 +12,28 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
 
 <!-- TOC -->
 
-- [1. Galaxy Consensus getting started manual](#1-wanpos-getting-started-manual)
+- [1. Galaxy Consensus getting started manual](#1-galaxy-consensus-getting-started-manual)
 - [2. Introduction](#2-introduction)
 - [3. Contents](#3-contents)
 - [4. Quick start from Docker](#4-quick-start-from-docker)
-    - [4.1. Step by step node setup](#41-step-by-step-to-be-a-miner)
-    - [4.2. Step by step delegation guide](#42-step-by-step-to-delegate-wan-coins)
+    - [4.1. Step by step node setup](#41-step-by-step-node-setup)
+    - [4.2. Step by step delegation guide](#42-step-by-step-delegation-guide)
 - [5. Download and run](#5-download-and-run)
     - [5.1. Run from Docker](#51-run-from-docker)
     - [5.2. Download](#52-download)
         - [5.2.1. Download BIN](#521-download-bin)
-        - [5.2.2. Download code and compile](#522-download-code-and-compile)
+        - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
     - [5.3. Run](#53-run)
-        - [5.3.1. Non-staking node](#531-run-as-a-synchronize-node)
-        - [5.3.2. Staking node](#532-run-as-a-miner-node)
-- [6. Common Operations](#6-operations)
+        - [5.3.1. Non-staking node](#531-non-staking-node)
+        - [5.3.2. Staking-node](#532-staking-node)
+- [6. Common Operations](#6-common-operations)
     - [6.1. PoS account creation](#61-pos-account-creation)
     - [6.2. Check balance](#62-check-balance)
-    - [6.3. Get test WAN](#63-get-test-wan-coins-of-pos)
-    - [6.4. Registration and delegation](#64-stake-register-and-delegate)
-    - [6.5. Check rewards](#65-check-incentive)
-    - [6.6. Unregister and unlock](#66-stake-unregister-and-unlock)
-- [7. Results of internal testing](#7-test-result-of-incentive)
+    - [6.3. Get test WAN](#63-get-test-wan)
+    - [6.4. Registration and delegation](#64-registration-and-delegation)
+    - [6.5. Check rewards](#65-check-rewards)
+    - [6.6. Unregister and Unlock](#66-unregister-and-unlock)
+- [7. Results of internal testing](#7-results-of-internal-testing)
 
 <!-- /TOC -->
 
@@ -107,8 +107,9 @@ var secpub    = "YourPK1"
 // g1pub is the miner node's g1pub value
 var g1pub     = "YourPK2"
 
-// feeRate is the percent of the reward kept by the node in delegation - 100 indicates the node does not accept delegation.
-var feeRate   = 100
+// feeRate is the percent of the reward kept by the node in delegation - 10000 indicates the node does not accept delegation.
+// feeRate range is 0~10000, means 0~100.00%
+var feeRate   = 2000
 
 // lockTime is the length of stake locking time measured in epochs - minimum required locking time of 5 epochs
 var lockTime  = 30
@@ -455,11 +456,11 @@ The contract interface is shown below.
 var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 ```
 
-In the smart contract input parameters, the `feeRate` indicates the percentage of reward kept by the validator from the delegators' reward. 100 indicates that the validator does not accept delegations.
+In the smart contract input parameters, the `feeRate` indicates the percentage of reward kept by the validator from the delegators' reward. 10000 indicates that the validator does not accept delegations. 
 
 If you want to be an delegator and accept delegations from others, you need to set a reasonable percentage for your `feeRate` to attract others to invest.
 
-The `feeRate`'s value ranges from 0 to 100 and indicates the amount of reward kept by the validator (10 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
+The `feeRate`'s value ranges from 0 to 100 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
 
 You can register your stake with a custom script or just modify the module's script in `loadScript/minerRegister.js`.
 

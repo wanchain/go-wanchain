@@ -9,30 +9,30 @@
 - [3. Overview](#3-overview)
 - [4. Role division](#4-role-division)
 - [5. The key issue](#5-the-key-issue)
-  - [5.1. Reward distribution method:](#51-reward-distribution-method)
-  - [5.2. How to deal with the bonus share that has not been spent in the reward pool](#52-how-to-deal-with-the-bonus-share-that-has-not-been-spent-in-the-reward-pool)
-  - [5.3. Reward arrival time](#53-reward-arrival-time)
-  - [5.4. Reward time](#54-reward-time)
-  - [5.5. Reward pool funding source](#55-reward-pool-funding-source)
-  - [5.6. Participation time plan](#56-participation-time-plan)
-  - [5.7. Funding plan](#57-funding-plan)
-  - [5.8. Benefits change over time](#58-benefits-change-over-time)
-  - [5.9. Multi-account support](#59-multi-account-support)
+    - [5.1. Reward distribution method:](#51-reward-distribution-method)
+    - [5.2. How to deal with the bonus share that has not been spent in the reward pool](#52-how-to-deal-with-the-bonus-share-that-has-not-been-spent-in-the-reward-pool)
+    - [5.3. Reward arrival time](#53-reward-arrival-time)
+    - [5.4. Reward time](#54-reward-time)
+    - [5.5. Reward pool funding source](#55-reward-pool-funding-source)
+    - [5.6. Participation time plan](#56-participation-time-plan)
+    - [5.7. Funding plan](#57-funding-plan)
+    - [5.8. Benefits change over time](#58-benefits-change-over-time)
+    - [5.9. Multi-account support](#59-multi-account-support)
 - [6. Functional module](#6-functional-module)
 - [7. Interface design](#7-interface-design)
-  - [7.1. Foundation funding interface](#71-foundation-funding-interface)
-  - [7.2. Transaction fee collection interface](#72-transaction-fee-collection-interface)
-  - [7.3. Trigger execution interface](#73-trigger-execution-interface)
-  - [7.4. Chain Query Interface](#74-chain-query-interface)
-  - [7.5. Stake Information Query Interface](#75-stake-information-query-interface)
-  - [7.6. Stake Account Information save interface](#76-stake-account-information-save-interface)
+    - [7.1. Foundation funding interface](#71-foundation-funding-interface)
+    - [7.2. Transaction fee collection interface](#72-transaction-fee-collection-interface)
+    - [7.3. Trigger execution interface](#73-trigger-execution-interface)
+    - [7.4. Chain Query Interface](#74-chain-query-interface)
+    - [7.5. Stake Information Query Interface](#75-stake-information-query-interface)
+    - [7.6. Stake Account Information save interface](#76-stake-account-information-save-interface)
 - [8. Functional module design](#8-functional-module-design)
-  - [8.1. Incentive collection](#81-incentive-collection)
-  - [8.2. Statistic and calculation](#82-statistic-and-calculation)
-  - [8.3. Information collection](#83-information-collection)
-  - [8.4. Reward payment](#84-reward-payment)
-  - [8.5. Gas fee collection](#85-gas-fee-collection)
-  - [8.6. Trigger execution](#86-trigger-execution)
+    - [8.1. Incentive collection](#81-incentive-collection)
+    - [8.2. Statistic and calculation](#82-statistic-and-calculation)
+    - [8.3. Information collection](#83-information-collection)
+    - [8.4. Reward payment](#84-reward-payment)
+    - [8.5. Gas fee collection](#85-gas-fee-collection)
+    - [8.6. Trigger execution](#86-trigger-execution)
 - [9. Workflow design](#9-workflow-design)
 
 <!-- /TOC -->
@@ -291,7 +291,7 @@ Return parameters:
 [{address, probability}, {address, probability}, {address, probability}, {address, probability}, {address, probability}, {address, probability}, {address, probability}
 The first address corresponds to the proxy address.
 ```
-- Proxy dividend ratio (if the dividend ratio is 100%, it is an independent running node, not acting for others), the value range is 1~100. (we aslo called feerate).
+- Proxy dividend ratio (if the dividend ratio is 100.00%, it is an independent running node, not acting for others), the value range is 1~10000. (we aslo called feerate).
 - Total proportion, the sum of the total probabilities
 
 
