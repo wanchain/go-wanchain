@@ -1099,6 +1099,17 @@ func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
+	if bc.IsInPosStage() {
+		return bc.insertChainWithRestart(chain)
+	} else {
+		return bc.insertChainEngineSwitch(chain)
+	}
+
+}
+
+
+func (bc *BlockChain) insertChainEngineSwitch(chain types.Blocks) (int, error) {
+
 	//insert here
 	splitChain := make([]types.Blocks,0)
 	splitChain = append(splitChain,make(types.Blocks,0))
@@ -1118,22 +1129,15 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		if len(split) == 0 {
 			continue
 		}
-		
-		if bc.config.IsPosActive {
-			n, events, logs, err := bc.insertChainWithRestart(split)
-			bc.PostChainEvents(events, logs)
 
-			if err != nil {
-				return n + realIdx,err
-			}		
-		} else {
-			n, events, logs, err := bc.insertChain(split)
-			bc.PostChainEvents(events, logs)
 
-			if err != nil {
-				return n + realIdx,err
-			}
-		} 
+		n, events, logs, err := bc.insertChain(split)
+		bc.PostChainEvents(events, logs)
+
+		if err != nil {
+			return n + realIdx,err
+		}
+
 
 		realIdx = realIdx + len(split)
 
@@ -1145,9 +1149,6 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 
 func (bc *BlockChain) insertChainWithRestart(chain types.Blocks) (int, error) {
-
-	//insert here
-
 
 	var rete error
 

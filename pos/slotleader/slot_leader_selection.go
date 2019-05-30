@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"

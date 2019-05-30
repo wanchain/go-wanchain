@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	 github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"	
 
@@ -111,7 +111,7 @@ func (s *SLS) initSma() {
 	s.randomGenesis = big.NewInt(1)
 
 
-	epoch0Leaders := s.getEpoch0LeadersPK()
+	epoch0Leaders := s.GetEpochFirstLeadersPK()
 
 
 	for index, value := range epoch0Leaders {
