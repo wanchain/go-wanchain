@@ -6,10 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core/types"	
+	"github.com/wanchain/go-wanchain/core/types"
+	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
@@ -50,8 +49,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 		s.isRestarting = true
 	} else {
-		g := s.blockChain.GetHeaderByNumber(0)
-		posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+		posconfig.GenesisPK = posconfig.GenesisPKInit
 	}
 
 	s.initSma()
