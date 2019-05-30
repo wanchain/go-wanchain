@@ -142,6 +142,7 @@ type Downloader struct {
 	epochGenesisSyncStart chan	*types.EpochSync
 	epochGenesisCh        chan  dataPack
 	epochGenesisFbCh 	  chan 	int64
+	epochGenesisHashCh    chan  epochGenesisHashPack
 	//trackEpochGenesisReq  chan  *epochGenesisReq
 
 	// for stateFetcher
@@ -257,6 +258,8 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 
 		epochGenesisSyncStart : chain.GetEpochStartCh(),
 		epochGenesisCh: make(chan  dataPack,1),
+
+		epochGenesisHashCh: make(chan epochGenesisHashPack,1),
 	}
 
 	go dl.qosTuner()
@@ -466,9 +469,10 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}(time.Now())
 
 	var posPivot uint64 = missingNumber
-	var pivotHeader []*types.Header = nil
 	if d.mode == FastSync {
-		pivotHeader, err = d.fetchPivot(p)
+		pivotHeader, hashes, err := d.fetchPivot(p)
+		// TODO: check hashes with epoch genesis block
+		println(len(hashes))
 		if err != nil {
 			log.Error("fetch pivot error", "err", err)
 			return err
@@ -733,31 +737,46 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 	}
 }
 
-func (d *Downloader) fetchPivot(p *peerConnection) ([]*types.Header, error) {
+func (d *Downloader) fetchPivot(p *peerConnection) (headers []*types.Header, hashes []*types.EpochGenesisHash, err error) {
 	p.log.Debug("Retrieving remote chain pivot")
 	head, _ := p.peer.Head()
 
 	go p.peer.RequestPivot(head)
 
+
+	var wait = 0
 	ttl := d.requestTTL()
 	timeout := time.After(ttl)
 	for {
 		select {
 		case <-d.cancelCh:
-			return nil, errCancelBlockFetch
+			return nil, nil, errCancelBlockFetch
 
 		case packet := <-d.headerCh:
 			if packet.PeerId() != p.id {
 				log.Debug("Received headers from incorrect peer", "peer", packet.PeerId())
 				break
 			}
-			headers := packet.(*headerPack).headers
+			headers = packet.(*headerPack).headers
+			wait |= 1
+			if wait == 3 {
+				return
+			}
 
-			return headers, nil
+		case packet := <- d.epochGenesisHashCh:
+			if packet.PeerId() != p.id {
+				log.Debug("Received epoch genesis hash from incorrect peer", "peer", packet.PeerId())
+				break
+			}
 
+			hashes = packet.hashes
+			wait |= 2
+			if wait == 3 {
+				return
+			}
 		case <-timeout:
 			p.log.Debug("Waiting for pivot timed out", "elapsed", ttl)
-			return nil, errTimeout
+			return nil,nil, errTimeout
 
 		case <-d.bodyCh:
 		case <-d.receiptCh:
@@ -1677,6 +1696,22 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 // node into the download schedule.
 func (d *Downloader) DeliverHeaders(id string, headers []*types.Header) (err error) {
 	return d.deliver(id, d.headerCh, &headerPack{id, headers}, headerInMeter, headerDropMeter)
+}
+
+func (d *Downloader) DeliverEpochGenesisHash(id string, hashes []*types.EpochGenesisHash) (err error) {
+	d.cancelLock.RLock()
+	cancel := d.cancelCh
+	d.cancelLock.RUnlock()
+	if cancel == nil {
+		return errNoSyncActive
+	}
+
+	select {
+	case d.epochGenesisHashCh <- epochGenesisHashPack{id, hashes}:
+		return nil
+	case <-cancel:
+		return errNoSyncActive
+	}
 }
 
 // DeliverBodies injects a new batch of block bodies received from a remote node.

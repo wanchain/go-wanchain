@@ -410,26 +410,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		return p.SendBlockHeaders(headers)
-	case msg.Code == GetPivotMsg:
-		var query getPivotData
-		if err := msg.Decode(&query); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		pivotHeader := pm.blockchain.GetPosPivot(query.Current)
-		log.Debug("send pivot", "pivotHeader", pivotHeader)
-		return p.SendPivot(pivotHeader)
 
-	case msg.Code == PivotMsg:
-		var pivotHeader []*types.Header
-		if err := msg.Decode(&pivotHeader); err != nil {
-			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
-		}
-		//pm.downloader.DeliverPivot(pivotHeader)
-		pivotHeader = pm.fetcher.FilterHeaders(p.id, pivotHeader, time.Now())
-		err := pm.downloader.DeliverHeaders(p.id, pivotHeader)
-		if err != nil {
-			log.Debug("Failed to deliver pivot headers", "err", err)
-		}
 
 	case msg.Code == BlockHeadersMsg:
 		// A batch of headers arrived to one of our previous requests
@@ -545,7 +526,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-	case msg.Code == GetEpochGenesisMsg:
+	case p.version >= wan64 && msg.Code == GetEpochGenesisMsg:
 		var ep types.EpochSync
 		if err := msg.Decode(&ep); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -553,7 +534,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		p.SendEpochGenesis(pm.blockchain, &ep)
 
-	case msg.Code == EpochGenesisMsg:
+	case p.version >= wan64 && msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
 		if err := msg.Decode(&epBody); err != nil {
 			log.Debug("Failed to decode epoch genesis data", "err", err)
@@ -564,6 +545,44 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Debug("Failed to deliver epoch genesis data", "err", err)
 		}
 
+	case p.version >= wan64 && msg.Code == GetPivotMsg:
+		var query getPivotData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		pivotHeader, epochHashes := pm.blockchain.GetPosPivotAndEpochGenesisHashes(query.Current)
+		log.Debug("send pivot", "pivotHeader", pivotHeader)
+
+		// TODO: send some epoch hash, less than 128
+		err := p.SendEpochGenesisHash(epochHashes)
+		if err != nil {
+			return err
+		}
+
+		return p.SendPivot(pivotHeader)
+
+	case p.version >= wan64 && msg.Code == PivotMsg:
+		var pivotHeader []*types.Header
+		if err := msg.Decode(&pivotHeader); err != nil {
+			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
+		}
+		//pm.downloader.DeliverPivot(pivotHeader)
+		pivotHeader = pm.fetcher.FilterHeaders(p.id, pivotHeader, time.Now())
+		err := pm.downloader.DeliverHeaders(p.id, pivotHeader)
+		if err != nil {
+			log.Debug("Failed to deliver pivot headers", "err", err)
+		}
+
+	case p.version >= wan64 && msg.Code == EpochGenesisHashMsg:
+		var hashes []*types.EpochGenesisHash
+		if err := msg.Decode(&hashes); err != nil {
+			return errResp(ErrDecode, "EpochGenesisHashMsg msg %v: %v", msg, err)
+		}
+
+		err := pm.downloader.DeliverEpochGenesisHash(p.id, hashes)
+		if err != nil {
+			log.Debug("Failed to deliver epoch genesis hashes", "err", err)
+		}
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
@@ -572,6 +591,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return err
 		}
 		// Gather state data until the fetch or network limits is reached
+
 		var (
 			hash  common.Hash
 			bytes int

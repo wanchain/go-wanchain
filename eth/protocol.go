@@ -32,16 +32,17 @@ import (
 const (
 	eth62 = 62
 	eth63 = 63
+	wan64 = 64
 )
 
 // Official short name of the protocol used during capability negotiation.
 var ProtocolName = "wan"
 
 // Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+var ProtocolVersions = []uint{wan64, eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{25, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -57,18 +58,18 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
-	//GET Epoch genesis
-	GetEpochGenesisMsg = 0x08
-	EpochGenesisMsg    = 0x09
-
 	// Protocol messages belonging to eth/63
-	GetPivotMsg    = 0x0a
-	PivotMsg       = 0x0b
-
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// Protocol messages belonging to wan/64
+	GetEpochGenesisMsg = 0x11
+	EpochGenesisMsg    = 0x12
+	GetPivotMsg    = 0x13
+	PivotMsg       = 0x14
+	EpochGenesisHashMsg   = 0x15
 )
 
 type errCode int

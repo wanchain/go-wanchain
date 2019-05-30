@@ -171,6 +171,9 @@ func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 func (p *peer) SendPivot(header []*types.Header) error {
 	return p2p.Send(p.rw, PivotMsg, header)
 }
+func (p *peer) SendEpochGenesisHash(hashes []*types.EpochGenesisHash) error {
+	return p2p.Send(p.rw, EpochGenesisHashMsg, hashes)
+}
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *peer) SendBlockBodies(bodies []*blockBody) error {

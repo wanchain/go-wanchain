@@ -364,15 +364,18 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
-	rt := make([]*types.Header, 0)
+func (bc *BlockChain) GetPosPivotAndEpochGenesisHashes(hash common.Hash) ([]*types.Header, []*types.EpochGenesisHash) {
+	headers := make([]*types.Header, 0)
+	hashes := make([]*types.EpochGenesisHash, 0)
+
 	if bc.epochGene.rbLeaderSelector == nil {
-		return rt
+		return headers, hashes
 	}
 	header := bc.hc.GetHeaderByHash(hash)
 	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
 	// pivot == GetEpochLastBlkNumber(eid - 1)
 	// incentive : eid - 3, eid - 4
+
 	dst := int64(eid) - 1
 	for i:=0; i<4; i++ {
 		if dst < 0 {
@@ -381,11 +384,19 @@ func (bc *BlockChain) GetPosPivot(hash common.Hash) []*types.Header {
 		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
 		h := bc.hc.GetHeaderByNumber(bn)
 		if h != nil {
-			rt = append(rt, h)
+			headers = append(headers, h)
+		}
+
+		h = bc.hc.GetHeaderByNumber(bn + 1)
+		if h != nil {
+			hash := common.Hash{}
+			copy(hash[:], h.Extra[1:33])
+
+			hashes = append(hashes, &types.EpochGenesisHash{EpochId:uint64(dst), Hash:hash})
 		}
 		dst--
 	}
-	return rt
+	return headers,hashes
 }
 
 // SetProcessor sets the processor required for making state modifications.

@@ -68,6 +68,7 @@ func (msg Msg) Discard() error {
 	return err
 }
 
+
 type MsgReader interface {
 	ReadMsg() (Msg, error)
 }

@@ -474,3 +474,8 @@ type EpochSync struct {
 	EpochId uint64
 	IsEnd	bool
 }
+
+type EpochGenesisHash struct {
+	EpochId uint64
+	Hash    common.Hash
+}
