@@ -1776,8 +1776,7 @@ func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 
 
-	if diff > 2*posconfig.K &&
-
+	if  diff > posconfig.K &&
 		bc.checkCQStartSlot > 0 &&
 		bc.restartSlot > 0 {
 		return true,bc.restartBlk
