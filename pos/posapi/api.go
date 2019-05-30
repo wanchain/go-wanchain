@@ -322,6 +322,12 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
+func (a PosApi) GetPosInfo() (info PosInfoJson){
+	info.FirstEpochId = posconfig.FirstEpochId
+	info.Pow2PosUpgradeBlockNumber = posconfig.Pow2PosUpgradeBlockNumber
+	return
+}
+
 func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()

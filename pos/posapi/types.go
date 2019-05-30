@@ -74,6 +74,10 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 }
+type PosInfoJson struct {
+	FirstEpochId uint64 `json:"firstEpochId"`
+	Pow2PosUpgradeBlockNumber uint64 `json:"pow2PosUpgradeBlockNumber"`
+}
 type LeaderJson struct {
 	Type      uint8          `json:"type"`
 	SecAddr   common.Address `json:"secAddr"`

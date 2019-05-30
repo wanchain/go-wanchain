@@ -195,6 +195,11 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getPosInfo',
+			call: 'pos_getPosInfo',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'getEpochStakerInfo',
 			call: 'pos_getEpochStakerInfo',
 			params: 2
