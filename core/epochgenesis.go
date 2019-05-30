@@ -455,6 +455,7 @@ func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64
 
 	f.epgGenmu.Lock()
 	defer f.epgGenmu.Unlock()
+
 	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
 	f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
 	f.epochGenesisHashCache[epkGnss.EpochId] = epkGnss.GenesisBlkHash
@@ -470,15 +471,37 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 	delete(f.epochGenesisHashCache, epochId)
 }
 
+func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
+	if epochId == 0 {
+		eg := f.GetEpochGenesisZero()
+		f.updateCache(eg)
+	} else {
+		eg := f.GetEpochGenesis(epochId)
+		if eg != nil {
+			f.updateCache(eg)
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
 func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
 	if eid < 1 {
 		return nil
 	}
 	f.epgGenmu.RLock()
-	defer f.epgGenmu.RUnlock()
 	slotLeaderMap, ok := f.slotLeaderCache[eid]
+	f.epgGenmu.RUnlock()
 	if !ok {
-		return nil
+		if f.tryCache(eid) {
+			slotLeaderMap, ok = f.slotLeaderCache[eid]
+			if !ok {
+				return nil
+			}
+		} else {
+			return nil
+		}
 	}
 
 	return &slotLeaderMap
@@ -486,10 +509,17 @@ func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Addr
 
 func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
 	f.epgGenmu.RLock()
-	defer f.epgGenmu.RUnlock()
 	epochLeaderMap, ok := f.epochLeaderCache[eid]
+	f.epgGenmu.RUnlock()
 	if !ok {
-		return nil
+		if f.tryCache(eid) {
+			epochLeaderMap, ok = f.epochLeaderCache[eid]
+			if !ok {
+				return nil
+			}
+		} else {
+			return nil
+		}
 	}
 	return &epochLeaderMap
 }
@@ -516,7 +546,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 		}
 	}
 
-	res := (epGen.PreEpochGenHash == epgPre.GenesisBlkHash)
+	res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
 	if !res {
 		log.Debug("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
 		return false
@@ -668,10 +698,10 @@ func (f * EpochGenesisBlock) checkSlotLeaders(eg *types.EpochGenesis) error {
 		return errors.New("get pre epoch leader map error")
 	}
 
-	opks,_ := hex.DecodeString(posconfig.GenesisPK)
-	opk :=crypto.ToECDSAPub(opks)
-	oaddr := crypto.PubkeyToAddress(*opk)
-	println(common.Bytes2Hex(oaddr[:]))
+	//opks,_ := hex.DecodeString(posconfig.GenesisPK)
+	//opk :=crypto.ToECDSAPub(opks)
+	//oaddr := crypto.PubkeyToAddress(*opk)
+	//println(common.Bytes2Hex(oaddr[:]))
 
 	bHasWhite := false
 	sz := len(eg.SlotLeaders)
