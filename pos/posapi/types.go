@@ -76,7 +76,7 @@ type StakerJson struct {
 }
 type PosInfoJson struct {
 	FirstEpochId uint64 `json:"firstEpochId"`
-	Pow2PosUpgradeBlockNumber uint64 `json:"pow2PosUpgradeBlockNumber"`
+	FirstBlockNumber uint64 `json:"firstBlockNumber"`
 }
 type LeaderJson struct {
 	Type      uint8          `json:"type"`
