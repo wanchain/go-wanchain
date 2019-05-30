@@ -272,7 +272,7 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (ApiStak
 	if epocherInst == nil {
 		return skInfo, errors.New("epocher instance does not exist")
 	}
-	validator,err := epocherInst.GetEpochProbability(epochID, addr)
+	validator, err := epocherInst.GetEpochProbability(epochID, addr)
 	if err != nil {
 		return skInfo, err
 	}
@@ -280,7 +280,11 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (ApiStak
 	skInfo.FeeRate = validator.FeeRate
 	skInfo.Infors = make([]ApiClientProbability, len(validator.Infos))
 	for i := 0; i < len(validator.Infos); i++ {
-		skInfo.Infors[i].Addr = validator.Infos[i].Addr
+		if i == 0 {
+			skInfo.Infors[i].Addr = validator.Infos[i].ValidatorAddr
+		} else {
+			skInfo.Infors[i].Addr = validator.Infos[i].WalletAddr
+		}
 		skInfo.Infors[i].Probability = (*math.HexOrDecimal256)(validator.Infos[i].Probability)
 	}
 	skInfo.Addr = addr
@@ -350,7 +354,11 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 		es := ApiStakerInfo{}
 		es.Infors = make([]ApiClientProbability, len(infors))
 		for i := 0; i < len(infors); i++ {
-			es.Infors[i].Addr = infors[i].Addr
+			if i == 0 {
+				es.Infors[i].Addr = infors[i].ValidatorAddr
+			} else {
+				es.Infors[i].Addr = infors[i].WalletAddr
+			}
 			es.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
 		}
 		es.TotalProbability = (*math.HexOrDecimal256)(pb)
@@ -385,16 +393,17 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 
 		for m := 1; m < len(c[i]); m++ {
 			delegators[m-1] = DelegatorInfo{}
-			delegators[m-1].Address = c[i][m].Addr
+			delegators[m-1].Address = c[i][m].WalletAddr
 			delegators[m-1].Incentive = (*math.HexOrDecimal256)(c[i][m].Incentive)
 			delegators[m-1].Type = "delegator"
 		}
 
 		ret[i] = ValidatorInfo{
-			Address:    c[i][0].Addr,
-			Incentive:  (*math.HexOrDecimal256)(c[i][0].Incentive),
-			Type:       "validator",
-			Delegators: delegators,
+			Address:       c[i][0].ValidatorAddr,
+			WalletAddress: c[i][0].WalletAddr,
+			Incentive:     (*math.HexOrDecimal256)(c[i][0].Incentive),
+			Type:          "validator",
+			Delegators:    delegators,
 		}
 	}
 
@@ -545,7 +554,7 @@ func (a PosApi) GetTimeByEpochID(epochID uint64) uint64 {
 	//	return 0
 	//}
 
-	time := epochID*posconfig.SlotCount*posconfig.SlotTime
+	time := epochID * posconfig.SlotCount * posconfig.SlotTime
 
 	epochIDGet := a.GetEpochIDByTime(time)
 	if epochIDGet < epochID {
@@ -598,13 +607,13 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 		if epId > epochId {
 			fastEdBlkNum = curNum
 		} else if epId == epochId {
-			if curNum > step && util.IsPosBlock(curNum - step) {
+			if curNum > step && util.IsPosBlock(curNum-step) {
 				fastBgBlkNum = curNum - step
 			} else {
 				fastBgBlkNum = util.FirstPosBlockNumber()
 			}
 
-			if curNum + step > lastHeader.Number.Uint64() {
+			if curNum+step > lastHeader.Number.Uint64() {
 				fastEdBlkNum = lastHeader.Number.Uint64()
 			} else {
 				fastEdBlkNum = curNum + step
@@ -621,7 +630,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, nil
 		}
 
-		if curNum > step && util.IsPosBlock(curNum - step) {
+		if curNum > step && util.IsPosBlock(curNum-step) {
 			curNum -= step
 		} else {
 			curNum = util.FirstPosBlockNumber()

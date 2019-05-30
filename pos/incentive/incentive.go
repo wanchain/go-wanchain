@@ -297,7 +297,7 @@ func checkTotalValue(total *big.Int, sumPay, remain *big.Int) bool {
 func pay(incentives [][]vm.ClientIncentive, stateDb *state.StateDB) {
 	for i := 0; i < len(incentives); i++ {
 		for m := 0; m < len(incentives[i]); m++ {
-			stateDb.AddBalance(incentives[i][m].Addr, incentives[i][m].Incentive)
+			stateDb.AddBalance(incentives[i][m].WalletAddr, incentives[i][m].Incentive)
 		}
 	}
 }

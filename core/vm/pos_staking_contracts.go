@@ -227,7 +227,7 @@ type ValidatorInfo struct {
 	FeeRate          uint64
 	ValidatorAddr    common.Address
 	WalletAddr       common.Address
-	Infos            []ClientProbability // the obj 0 addr is wallet address and others is delegators address.
+	Infos            []ClientProbability // the position 0 is validator and others is delegators.
 }
 type ClientInfo struct {
 	Address     common.Address
@@ -255,13 +255,15 @@ type Leader struct {
 }
 
 type ClientProbability struct {
-	Addr        common.Address
-	Probability *big.Int
+	ValidatorAddr common.Address
+	WalletAddr    common.Address
+	Probability   *big.Int
 }
 
 type ClientIncentive struct {
-	Addr      common.Address
-	Incentive *big.Int
+	ValidatorAddr common.Address
+	WalletAddr    common.Address
+	Incentive     *big.Int
 }
 
 //

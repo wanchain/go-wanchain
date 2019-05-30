@@ -19,10 +19,11 @@ type Activity struct {
 }
 
 type ValidatorInfo struct {
-	Address    common.Address        `json:"address"`
-	Incentive  *math.HexOrDecimal256 `json:"incentive"`
-	Type       string                `json:"type"`
-	Delegators []DelegatorInfo       `json:"delegators"`
+	Address       common.Address        `json:"address"`
+	WalletAddress common.Address        `json:"walletAddress"`
+	Incentive     *math.HexOrDecimal256 `json:"incentive"`
+	Type          string                `json:"type"`
+	Delegators    []DelegatorInfo       `json:"delegators"`
 }
 type DelegatorInfo struct {
 	Address   common.Address        `json:"address"`
@@ -74,15 +75,15 @@ type StakerJson struct {
 	Partners []PartnerInfo `json:"partners"`
 }
 type LeaderJson struct {
-	Type      uint8 `json:"type"`
+	Type      uint8          `json:"type"`
 	SecAddr   common.Address `json:"secAddr"`
-	PubSec256 string `json:"pubSec256"`
-	PubBn256  string `json:"pubBn256"`
+	PubSec256 string         `json:"pubSec256"`
+	PubBn256  string         `json:"pubBn256"`
 }
 
 func ToLeaderJson(leader []vm.Leader) []LeaderJson {
-	lj := make([]LeaderJson,len(leader))
-	for i:=0; i<len(leader); i++ {
+	lj := make([]LeaderJson, len(leader))
+	for i := 0; i < len(leader); i++ {
 		lj[i].Type = leader[i].Type
 		lj[i].SecAddr = leader[i].SecAddr
 		lj[i].PubSec256 = hexutil.Encode(leader[i].PubSec256)

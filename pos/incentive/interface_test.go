@@ -101,7 +101,8 @@ func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint6
 
 	client := make([]vm.ClientProbability, count)
 	for i := 0; i < count; i++ {
-		client[i].Addr = addrs[i]
+		client[i].ValidatorAddr = addrs[i]
+		client[i].WalletAddr = addrs[i]
 		client[i].Probability = probs[i]
 	}
 

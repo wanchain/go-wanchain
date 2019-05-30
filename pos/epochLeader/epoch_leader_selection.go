@@ -96,17 +96,16 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
-		 curBlock = e.blkChain.GetBlockByNumber(curNum)
-		 curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
-		 if curEpochId <= targetEpochId {
+		curBlock = e.blkChain.GetBlockByNumber(curNum)
+		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		if curEpochId <= targetEpochId {
 			break
-		 }
-		 curNum--
+		}
+		curNum--
 	}
 
 	targetBlkNum := curNum
 	util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
-
 
 	return targetBlkNum
 }
@@ -187,7 +186,6 @@ func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64
 	if err != nil {
 		e.reportSelectELFailed(epochId)
 	}
-
 
 	err = e.randomProposerSelection(r, pa, epochId)
 	if err != nil {
@@ -501,8 +499,8 @@ func (e *Epocher) GetEpLeaderGroup(epochID uint64) []vm.Leader {
 		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
 	}
 	wa, err := e.GetWhiteArrayByEpochId(epochID)
-	if err == nil && length < posconfig.EpochLeaderCount{
-		for i:=0; i<posconfig.EpochLeaderCount-length; i++ {
+	if err == nil && length < posconfig.EpochLeaderCount {
+		for i := 0; i < posconfig.EpochLeaderCount-length; i++ {
 			g1s[i+length].Type = 0
 			g1s[i+length].PubSec256 = wa[i]
 			g1s[i+length].PubBn256 = ([]byte)("")
@@ -581,7 +579,8 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	}
 
 	infors = make([]vm.ClientProbability, 1)
-	infors[0].Addr = staker.From
+	infors[0].ValidatorAddr = staker.Address
+	infors[0].WalletAddr = staker.From
 	infors[0].Probability = big.NewInt(0).Set(totalPartnerProbability)
 
 	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
@@ -590,7 +589,8 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 			epochID < staker.Clients[i].QuitEpoch-1 {
 			c := staker.Clients[i]
 			info := vm.ClientProbability{}
-			info.Addr = c.Address
+			info.ValidatorAddr = staker.Address
+			info.WalletAddr = c.Address
 			info.Probability = c.StakeAmount
 			totalProbability.Add(totalProbability, info.Probability)
 			infors = append(infors, info)
@@ -612,7 +612,7 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 
 	addrHash := common.BytesToHash(addr[:])
@@ -622,19 +622,19 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 	err = rlp.DecodeBytes(stakerBytes, &staker)
 	if nil != err {
 		log.Error("GetEpochProbability DecodeBytes failed", "addr", addr)
-		return nil,  err
+		return nil, err
 	}
 
 	infors, totalProbability, err := CalEpochProbabilityStaker(&staker, epochId)
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 	validator := &vm.ValidatorInfo{
-		FeeRate: staker.FeeRate,
-		ValidatorAddr: staker.Address,
-		WalletAddr: staker.From,
-		TotalProbability:totalProbability,
-		Infos:infors,
+		FeeRate:          staker.FeeRate,
+		ValidatorAddr:    staker.Address,
+		WalletAddr:       staker.From,
+		TotalProbability: totalProbability,
+		Infos:            infors,
 	}
 	return validator, nil
 }

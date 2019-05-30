@@ -68,16 +68,6 @@ func ceilingCalc(value *big.Int, totalPercent float64) *big.Int {
 	return calcPercent(value, percent*100.0)
 }
 
-func calcTotalPercent(stakers []vm.ClientProbability, totalProbility *big.Int) float64 {
-	totalCalc := big.NewInt(0)
-	for i := 0; i < len(stakers); i++ {
-		totalCalc.Add(totalCalc, stakers[i].Probability)
-	}
-	totalCalc.Mul(totalCalc, big.NewInt(100))
-	percent := totalCalc.Div(totalCalc, totalProbility)
-	return float64(percent.Uint64())
-}
-
 func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 	sumValue := big.NewInt(0)
 	for i := 0; i < len(inputs); i++ {
@@ -99,15 +89,18 @@ func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientPr
 	result := make([]vm.ClientIncentive, len(stakers))
 
 	for i := 0; i < len(stakers); i++ {
-		result[i].Addr = stakers[i].Addr
+		result[i].ValidatorAddr = stakers[i].ValidatorAddr
+		result[i].WalletAddr = stakers[i].WalletAddr
+
 		result[i].Incentive = big.NewInt(0).Mul(lastValue, stakers[i].Probability)
 
 		if result[i].Incentive.Cmp(big.NewInt(0)) != 0 {
 			result[i].Incentive.Div(result[i].Incentive, tp)
 		}
 
-		if stakers[i].Addr.String() == addr.String() {
-			result[i].Incentive.Add(result[i].Incentive, commission)
+		// Position O is validator
+		if i == 0 {
+			result[0].Incentive.Add(result[0].Incentive, commission)
 		}
 
 		//Add check of incentive positive
