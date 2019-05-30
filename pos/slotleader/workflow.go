@@ -41,8 +41,8 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	}
 
 	s.sendTransactionFn = util.SendTx
-
-	if s.blockChain.IsChainRestarting() {
+	res,_ := s.blockChain.ChainRestartStatus()
+	if res  {
 		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
 		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
 

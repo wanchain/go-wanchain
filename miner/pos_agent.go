@@ -125,7 +125,8 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
 	//reset initial sma
 	sls := slotleader.GetSlotLeaderSelection()
-	if s.BlockChain().IsChainRestarting() {
+	res,_ := s.BlockChain().ChainRestartStatus()
+	if res  {
 		sls.Init(s.BlockChain(), nil, nil)
 	}
 

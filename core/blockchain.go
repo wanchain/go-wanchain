@@ -130,6 +130,7 @@ type BlockChain struct {
 
 	restartSlot 	uint64	//the best peer's latest slot
 	restarted   bool
+	restartBlk  *types.Block
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1764,17 +1765,17 @@ func (bc *BlockChain) SetFullSynchValidator() {
 }
 
 
-func (bc *BlockChain) IsChainRestarting() bool {
+func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
 	diff := bc.checkCQStartSlot - bc.restartSlot
 	if diff > 2*posconfig.K &&
 		bc.checkCQStartSlot > 0 &&
 		bc.restartSlot > 0{
-		return true
+		return true,bc.restartBlk
 	}
 
-	return false
+	return false,nil
 }
 
 
@@ -1787,6 +1788,9 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 
 	if block != nil {
 
+
+		bc.restartBlk = block
+
 		if useLocalTime {
 			epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 			//record the restarting slot point
@@ -1794,6 +1798,7 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 
 			lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 			bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+
 		} else {
 
 
@@ -1809,7 +1814,8 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 
 		}
 
-		if bc.IsChainRestarting() {
+		res,_ := bc.ChainRestartStatus()
+		if  res {
 			bc.restarted = false
 		}
 	}
