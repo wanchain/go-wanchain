@@ -227,7 +227,7 @@ type ValidatorInfo struct {
 	FeeRate          uint64
 	ValidatorAddr    common.Address
 	WalletAddr       common.Address
-	Infos            []ClientProbability // the obj 0 is validator and others is delegators.
+	Infos            []ClientProbability // the obj 0 addr is wallet address and others is delegators address.
 }
 type ClientInfo struct {
 	Address     common.Address
