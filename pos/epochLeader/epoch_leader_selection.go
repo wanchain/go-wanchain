@@ -606,13 +606,13 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 }
 
 // incentive  use it.
-func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
+func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.ValidatorInfo, error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
-		return nil, 0, nil, err
+		return nil,  err
 	}
 
 	addrHash := common.BytesToHash(addr[:])
@@ -622,14 +622,21 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) ([]vm
 	err = rlp.DecodeBytes(stakerBytes, &staker)
 	if nil != err {
 		log.Error("GetEpochProbability DecodeBytes failed", "addr", addr)
-		return nil, 0, nil, err
+		return nil,  err
 	}
 
 	infors, totalProbability, err := CalEpochProbabilityStaker(&staker, epochId)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil,  err
 	}
-	return infors, staker.FeeRate, totalProbability, nil
+	validator := &vm.ValidatorInfo{
+		FeeRate: staker.FeeRate,
+		ValidatorAddr: staker.Address,
+		WalletAddr: staker.From,
+		TotalProbability:totalProbability,
+		Infos:infors,
+	}
+	return validator, nil
 }
 
 func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {

@@ -28,12 +28,15 @@ func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm
 }
 
 func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
-	stakers, division, totalProbility, err := getStakerInfo(epochID, addr)
+	//stakers, division, totalProbility, err
+	validator, err := getStakerInfo(epochID, addr)
 	if err != nil {
 		log.SyslogErr("getStakerInfo error", "error", err.Error())
 		return nil, 0, nil, err
 	}
-
+	stakers := validator.Infos
+	division := validator.FeeRate
+	totalProbility := validator.TotalProbability
 	if (stakers == nil) || (len(stakers) == 0) {
 		log.SyslogErr("getStakerInfo get stakers error")
 		return nil, 0, nil, errors.New("getStakerInfo get stakers error")

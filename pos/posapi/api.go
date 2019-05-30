@@ -272,16 +272,16 @@ func (a PosApi) GetEpochStakerInfo(epochID uint64, addr common.Address) (ApiStak
 	if epocherInst == nil {
 		return skInfo, errors.New("epocher instance does not exist")
 	}
-	infors, feeRate, total, err := epocherInst.GetEpochProbability(epochID, addr)
+	validator,err := epocherInst.GetEpochProbability(epochID, addr)
 	if err != nil {
 		return skInfo, err
 	}
-	skInfo.TotalProbability = (*math.HexOrDecimal256)(total)
-	skInfo.FeeRate = feeRate
-	skInfo.Infors = make([]ApiClientProbability, len(infors))
-	for i := 0; i < len(infors); i++ {
-		skInfo.Infors[i].Addr = infors[i].Addr
-		skInfo.Infors[i].Probability = (*math.HexOrDecimal256)(infors[i].Probability)
+	skInfo.TotalProbability = (*math.HexOrDecimal256)(validator.TotalProbability)
+	skInfo.FeeRate = validator.FeeRate
+	skInfo.Infors = make([]ApiClientProbability, len(validator.Infos))
+	for i := 0; i < len(validator.Infos); i++ {
+		skInfo.Infors[i].Addr = validator.Infos[i].Addr
+		skInfo.Infors[i].Probability = (*math.HexOrDecimal256)(validator.Infos[i].Probability)
 	}
 	skInfo.Addr = addr
 	return skInfo, nil

@@ -222,6 +222,13 @@ type StakerInfo struct {
 	Partners []PartnerInfo
 }
 
+type ValidatorInfo struct {
+	TotalProbability *big.Int
+	FeeRate      uint64
+	ValidatorAddr           common.Address
+	WalletAddr           common.Address
+	Infos []     ClientProbability
+}
 type ClientInfo struct {
 	Address     common.Address
 	Amount      *big.Int
