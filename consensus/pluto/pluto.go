@@ -20,6 +20,7 @@ package pluto
 import (
 	"errors"
 	"math/big"
+
 	//"math/rand"
 	"sync"
 	"time"
@@ -27,7 +28,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/util"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -43,8 +44,8 @@ import (
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -706,14 +707,14 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
-	if posconfig.FirstEpochId!= 0 && epochID > posconfig.FirstEpochId && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
-		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
+	if posconfig.FirstEpochId != 0 && epochID > posconfig.FirstEpochId && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
+		log.Info("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
 			log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
 		} else {
-			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
+			log.Info("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
 
 		snap = state.Snapshot()
