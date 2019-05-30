@@ -38,7 +38,11 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	//		posconfig.EpochBaseTime = h.Time.Uint64()
 	//	}
 	//}
-
+	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+	if nil != h {
+		epochId,_ := util.CalEpSlbyTd(h.Difficulty.Uint64())
+		posconfig.FirstEpochId = epochId
+	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
 	//todo,maybe init do not need epochid

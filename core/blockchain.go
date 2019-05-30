@@ -1219,6 +1219,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
 
+		if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
+			epochId,_ := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+			posconfig.FirstEpochId = epochId
+		}
+
 		var parent *types.Block
 		if i == 0 {
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
