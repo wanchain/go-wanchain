@@ -129,8 +129,8 @@ type BlockChain struct {
 	checkCQStartSlot uint64  //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 
 	restartSlot 	uint64	//the best peer's latest slot
-	restarted   bool
-	restartBlk  *types.Block
+	restarted   	bool
+	restartBlk  	*types.Block
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1518,15 +1518,19 @@ func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 }
 
 func (bc *BlockChain) update() {
+
 	futureTimer := time.Tick(5 * time.Second)
 	for {
 		select {
+
 		case <-futureTimer:
 			bc.procFutureBlocks()
 		case <-bc.quit:
 			return
+
 		}
 	}
+
 }
 
 // BadBlockArgs represents the entries in the list returned when bad blocks are queried.
@@ -1769,9 +1773,13 @@ func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
 	diff := bc.checkCQStartSlot - bc.restartSlot
+
+
+
 	if diff > 2*posconfig.K &&
+
 		bc.checkCQStartSlot > 0 &&
-		bc.restartSlot > 0{
+		bc.restartSlot > 0 {
 		return true,bc.restartBlk
 	}
 
@@ -1781,6 +1789,9 @@ func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 
 func (bc *BlockChain) SetChainRestarted() {
+	bc.restartBlk = nil
+	bc.checkCQStartSlot = 0
+	bc.restartSlot = 0
 	bc.restarted = true
 }
 
@@ -1850,11 +1861,12 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 		diff := curSlots - preSlots
 		if diff > posconfig.SlotSecurityParam {
 			idxs = append(idxs,uint(i))
-			fmt.Println("restart point=",i)
+			//fmt.Println("restart point=",i)
 		}
 	}
 
 	return idxs,nil
 
 }
+
 

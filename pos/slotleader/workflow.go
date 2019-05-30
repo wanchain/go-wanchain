@@ -69,7 +69,7 @@ func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
 		return nil
 	}
 
-	idx := (curepid)%pksl
+	idx := 0 //(curepid)%pksl
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		pkStr := initPksStr[idx]

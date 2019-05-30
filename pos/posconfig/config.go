@@ -173,3 +173,4 @@ func Init(nodeCfg *node.Config) {
 	}
 	DefaultConfig.NodeCfg = nodeCfg
 }
+

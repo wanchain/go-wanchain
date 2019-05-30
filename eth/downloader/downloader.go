@@ -452,6 +452,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			d.mux.Post(FailedEvent{err})
 		} else {
 			d.mux.Post(DoneEvent{})
+
 		}
 	}()
 	if p.version < 62 {

@@ -32,6 +32,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		}
 	}
 
+
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
 	//todo,maybe init do not need epochid
