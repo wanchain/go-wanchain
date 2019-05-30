@@ -142,14 +142,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		}
 		
 
-		//reset initial sma
-		sls := slotleader.GetSlotLeaderSelection()
-		res,_ := s.BlockChain().ChainRestartStatus()
-		if res  {
-			sls.Init(s.BlockChain(), nil, nil)
-		}
-		
-
 		for {
 			if nil == h {
 				select {
@@ -170,6 +162,12 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		//set current block as the restart condition
 		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
+		//reset initial sma
+		sls := slotleader.GetSlotLeaderSelection()
+		res,_ := s.BlockChain().ChainRestartStatus()
+		if res  {
+			sls.Init(s.BlockChain(), nil, nil)
+		}
 	}
 
 	for {
