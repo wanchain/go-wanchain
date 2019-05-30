@@ -706,7 +706,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
-	if epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
+	if posconfig.FirstEpochId!= 0 && epochID > posconfig.FirstEpochId && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
