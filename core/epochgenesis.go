@@ -76,6 +76,17 @@ type EpochGenesisBlock struct {
 	epochGenDb *posdb.Db
 	epgSetmu   sync.RWMutex
 	epgGenmu   sync.RWMutex
+
+	// white list map
+	whiteMap map[common.Address] bool
+	// epochId => slotId -> signer address
+	slotLeaderCache map[uint64]map[uint64]common.Address
+	//
+	epochLeaderCache map[uint64]map[common.Address]bool
+	// epochId => genesis block hash
+	epochGenesisHashCache map[uint64]common.Hash
+
+	epgGenesis *types.EpochGenesis
 }
 
 func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
@@ -86,24 +97,38 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 	f.lastEpochId = 0
 
 	f.epochGenDb = posdb.NewDb("epochGendb")
+	f.whiteMap = make(map[common.Address] bool)
 
-	return f
-}
+	f.slotLeaderCache = make(map[uint64]map[uint64] common.Address)
+	f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
+	f.epochGenesisHashCache = make(map[uint64] common.Hash)
 
-var whiteMap map[common.Address] bool
-// epoch => slotId -> signer address
-var slotLeaderCache map[uint64]map[uint64]common.Address
-
-func init() {
-	whiteMap = make(map[common.Address] bool)
-	slotLeaderCache = make(map[uint64]map[uint64] common.Address)
 
 	// init white list
 	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
 		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
 		addr := crypto.PubkeyToAddress(*pk)
-		whiteMap[addr]= true
+		f.whiteMap[addr]= true
 	}
+
+	f.epgGenesis = nil
+
+	return f
+}
+
+func (f *EpochGenesisBlock) GetEpochGenesisZero() *types.EpochGenesis {
+	if f.epgGenesis == nil {
+		rb := big.NewInt(1)
+		epgGenesis, err  := f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+		if err != nil {
+			log.Error("NewEpochGenesisBlock failed epgGenesis error")
+		}
+		//epgGenesis.SlotLeaders = posconfig.GenesisPK
+		f.epgGenesis = epgGenesis
+		f.updateCache(epgGenesis)
+	}
+
+	return f.epgGenesis
 }
 
 func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -141,8 +166,7 @@ func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (
 	epgPre := f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
 		if epochid == 1 {
-			rb := big.NewInt(1)
-			epgPre, _ = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+			return f.GetEpochGenesisZero(), nil
 		} else {
 			return nil, errors.New("epoch genesis not exist")
 		}
@@ -187,11 +211,12 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, isEnd bo
 			}
 
 			if i == 1 {
-				rb = big.NewInt(1)
-				epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
-				if err != nil {
-					return nil, err
-				}
+				//rb = big.NewInt(1)
+				//epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+				//if err != nil {
+				//	return nil, err
+				//}
+				epgPre = f.GetEpochGenesisZero()
 
 			} else {
 				epgPre = f.GetEpochGenesis(i - 1)
@@ -309,15 +334,14 @@ func (f *EpochGenesisBlock) IsSignerValid(addr *common.Address, header *types.He
 	if eid == 0 {
 		return true
 	}
-	f.epgGenmu.RLock()
-	slotLeaderMap, ok := slotLeaderCache[eid]
-	f.epgGenmu.RUnlock()
-	if !ok {
+
+	slotLeaderMap := f.getSlotLeaderMap(eid)
+	if slotLeaderMap == nil {
 		// todo: check it's the last epoch, and in full sync mode, it's check in valid body
 		return true
 	}
 
-	add := slotLeaderMap[header.Number.Uint64()]
+	add := (*slotLeaderMap)[header.Number.Uint64()]
 	if add == *addr {
 		return true
 	}
@@ -409,7 +433,7 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	return epGen, nil
 }
 
-func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis)  {
+func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64]common.Address {
 	slotLeaderMap := make(map[uint64] common.Address)
 	sz := len(epkGnss.SlotLeaders)
 	for i:=0; i<sz; i++ {
@@ -420,9 +444,54 @@ func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis)  {
 		pk := crypto.ToECDSAPub(pubkey)
 		slotLeaderMap[epkGnss.PreEpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = crypto.PubkeyToAddress(*pk)
 	}
+
+	epochLeaderMap := make(map[common.Address] bool)
+	sz = len(epkGnss.EpochLeaders)
+	for i:=0; i<sz; i++ {
+		pubkey := epkGnss.EpochLeaders[i]
+		pk := crypto.ToECDSAPub(pubkey)
+		epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+	}
+
 	f.epgGenmu.Lock()
-	slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
-	f.epgGenmu.Unlock()
+	defer f.epgGenmu.Unlock()
+	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
+	f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
+	f.epochGenesisHashCache[epkGnss.EpochId] = epkGnss.GenesisBlkHash
+	return &slotLeaderMap
+}
+
+func (f *EpochGenesisBlock) dropCache(epochId uint64) {
+	f.epgGenmu.Lock()
+	defer f.epgGenmu.Unlock()
+
+	delete(f.slotLeaderCache, epochId)
+	delete(f.epochLeaderCache, epochId)
+	delete(f.epochGenesisHashCache, epochId)
+}
+
+func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
+	if eid < 1 {
+		return nil
+	}
+	f.epgGenmu.RLock()
+	defer f.epgGenmu.RUnlock()
+	slotLeaderMap, ok := f.slotLeaderCache[eid]
+	if !ok {
+		return nil
+	}
+
+	return &slotLeaderMap
+}
+
+func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
+	f.epgGenmu.RLock()
+	defer f.epgGenmu.RUnlock()
+	epochLeaderMap, ok := f.epochLeaderCache[eid]
+	if !ok {
+		return nil
+	}
+	return &epochLeaderMap
 }
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
@@ -434,11 +503,12 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	}
 
 	if epGen.EpochId == 1 {
-		rb := big.NewInt(1)
-		epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
-		if err != nil {
-			return false
-		}
+		//rb := big.NewInt(1)
+		//epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+		//if err != nil {
+		//	return false
+		//}
+		epgPre = f.GetEpochGenesisZero()
 	} else {
 		epgPre = f.GetEpochGenesis(epGen.EpochId - 1)
 		if epgPre == nil {
@@ -516,7 +586,6 @@ func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 		return false
 	}
 	return true
-
 }
 
 func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) [][]byte {
@@ -560,6 +629,12 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 		return err
 	}
 
+	err = f.checkSlotLeaders(epochgen)
+	if err != nil {
+		return err
+	}
+
+
 	if !isEnd {
 		_,err = f.epochGenDb.Put(epochgen.EpochId,"epochgenesis",val)
 		if err != nil {
@@ -577,6 +652,50 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, isEnd 
 
 
 	log.Info("successfully input epochGenesis", "", epochgen.EpochId)
+
+	return nil
+}
+
+// slot leaders should in pre epoch leader, and must have a member in white list
+func (f * EpochGenesisBlock) checkSlotLeaders(eg *types.EpochGenesis) error {
+	if eg.EpochId == 0 {
+		// may be we should check, slot leader == posConfig.genesisPk
+		return nil
+	}
+
+	preEpochLeaderMap := f.getEpochLeaderMap(eg.EpochId - 1)
+	if preEpochLeaderMap == nil {
+		return errors.New("get pre epoch leader map error")
+	}
+
+	opks,_ := hex.DecodeString(posconfig.GenesisPK)
+	opk :=crypto.ToECDSAPub(opks)
+	oaddr := crypto.PubkeyToAddress(*opk)
+	println(common.Bytes2Hex(oaddr[:]))
+
+	bHasWhite := false
+	sz := len(eg.SlotLeaders)
+	for i:=0; i<sz; i++ {
+		pubkey := eg.SlotLeaders[i]
+		pk := crypto.ToECDSAPub(pubkey)
+		addr := crypto.PubkeyToAddress(*pk)
+
+		if !bHasWhite {
+			_, ok := f.whiteMap[addr]
+			if ok {
+				bHasWhite = true
+			}
+		}
+		_, ok := (*preEpochLeaderMap)[addr]
+		if !ok {
+			return errors.New("slot leader should in pre epoch leader group ")
+		}
+	}
+
+	// todo: develop mode don't support white list
+	//if !bHasWhite {
+	//	return errors.New("slot leader should has member in white group ")
+	//}
 
 	return nil
 }
