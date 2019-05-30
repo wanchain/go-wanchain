@@ -118,6 +118,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 
 
+
 	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil == h {
@@ -140,8 +141,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			self.worker.chainSlotTimer <- struct{}{}
 		}
 		
-		//set current block as the restart condition
-		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
+
 		//reset initial sma
 		sls := slotleader.GetSlotLeaderSelection()
 		res,_ := s.BlockChain().ChainRestartStatus()
@@ -167,6 +167,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		epochId,_ := util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochId
 		log.Info("************** backendTimerLoop else :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
+
+		//set current block as the restart condition
+		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
 	}
 
 	for {
