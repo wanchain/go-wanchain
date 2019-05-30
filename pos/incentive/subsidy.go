@@ -41,6 +41,15 @@ func getBaseSubsidyTotalForEpoch(stateDb *state.StateDB, epochID uint64) *big.In
 	redutionRateNow := math.Pow(redutionRateBase, float64(epochIDOffset/subsidyReductionInterval))
 	baseSubsidyReduction := calcPercent(baseSubsidy, redutionRateNow*100.0)
 
+	log.Info("getBaseSubsidyTotalForEpoch",
+		"FirstEpochId", posconfig.FirstEpochId,
+		"epochID", epochID,
+		"reduceTimes", epochIDOffset/subsidyReductionInterval,
+		"reduceRate", redutionRateNow,
+		"base", baseSubsidy.String(),
+		"afterReduce", baseSubsidyReduction.String(),
+	)
+
 	// If 1 period later, need add the remain incentive pool value of last period
 	if (epochIDOffset / subsidyReductionInterval) >= 1 {
 		baseRemain := calcBaseSubsidy(getRemainIncentivePool(stateDb, epochIDOffset))
