@@ -64,6 +64,8 @@ const (
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
+
+	INITRESTARTING = 0
 )
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -126,6 +128,12 @@ type BlockChain struct {
 	epochGene *EpochGenesisBlock
 
 	slotValidator Validator
+
+	checkCQStartSlot uint64  //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
+
+	restartSlot 	uint64	//the best peer's latest slot
+	restarted   	bool
+	restartBlk  	*types.Block
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -151,6 +159,8 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		posEngine:    posEngine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		checkCQStartSlot: INITRESTARTING,
+		restarted:    false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -915,7 +925,7 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 	}
 
 	//if the gap is empty block,then the quality is 0
-	diff := expSlots - checkSlots
+	diff := expSlots - checkSlots + 1
 	if uint64(diff) >= posconfig.SlotSecurityParam {
 		return uint64(0),nil
 	} else {
@@ -934,13 +944,23 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
+
+	epid,slid := posUtil.CalEpochSlotID(block.Time().Uint64())
+	cq,_:= bc.ChainQuality(epid,slid)
+	log.Info("current chain","quality",cq,"block number",block.NumberU64())
+
+
+
 	//confirm chain quality confirm security
-	// TODO disable chain quality temp
-	//if bc.config.IsPosActive && !bc.isWriteBlockSecure(block) {
-	//	if !posconfig.IsDev {
-	//		return NonStatTy, ErrInsufficientCQ
-	//	}
-	//}
+	if !bc.isWriteBlockSecure(block) {
+
+		if bc.restarted {
+			return NonStatTy, ErrInsufficientCQ
+		}
+
+	} else {
+		bc.restarted = true
+	}
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1098,19 +1118,100 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		if len(split) == 0 {
 			continue
 		}
+		
+		if bc.config.IsPosActive {
+			n, events, logs, err := bc.insertChainWithRestart(split)
+			bc.PostChainEvents(events, logs)
 
-		n, events, logs, err := bc.insertChain(split)
-		bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n + realIdx,err
+			}		
+		} else {
+			n, events, logs, err := bc.insertChain(split)
+			bc.PostChainEvents(events, logs)
 
-		if err != nil {
-			return n + realIdx,err
-		}
+			if err != nil {
+				return n + realIdx,err
+			}
+		} 
 
 		realIdx = realIdx + len(split)
 
 	}
 
 	return 0,nil
+
+}
+
+
+func (bc *BlockChain) insertChainWithRestart(chain types.Blocks) (int, error) {
+
+	//insert here
+
+
+	var rete error
+
+	idxs,err := bc.checkRestarting(chain)
+	if err != nil {
+		return 0,err
+	}
+
+	idxStart := 0
+	if len(idxs) == 0 {
+		n, events, logs, err := bc.insertChain(chain)
+		bc.PostChainEvents(events, logs)
+		return n, err
+	} else {
+
+		end   := idxs[0]
+		block := chain[end]
+		preblock := block
+
+		if end > 0 {
+			n, events, logs, err := bc.insertChain(chain[0:end])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n, err
+			}
+		} else {//the firt block is restarting block
+			preblock = bc.GetBlockByHash(block.ParentHash())
+			bc.SetRestartBlock(block,preblock,false)
+
+			n, events, logs, err := bc.insertChain(chain[0:end + 1])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n, err
+			}
+			idxStart = 1
+			rete = err
+		}
+
+
+		for i:=idxStart;i<len(idxs);i++ {
+
+			start := idxs[i]
+			end := start
+			if i < len(idxs) - 1 {
+				end = idxs[i+1]
+			} else {
+				end = uint(len(chain))
+			}
+
+			block = chain[start]
+			preblock = chain[start-1]
+
+			bc.SetRestartBlock(block,preblock,false)
+
+			n, events, logs, err := bc.insertChain(chain[start:end])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n,err
+			}
+			rete = err
+		}
+
+		return 0,rete
+	}
 
 }
 
@@ -1757,4 +1858,105 @@ func (bc *BlockChain) IsInPosStage() (bool){
 	currentBlockNumber := bc.currentBlock.Number()
 	currentBlockNumber = currentBlockNumber.Add(currentBlockNumber, big.NewInt(1))
 	return bc.config.IsPosBlockNumber(currentBlockNumber)
+}
+
+
+
+func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
+
+	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
+	diff := bc.checkCQStartSlot - bc.restartSlot
+
+
+
+	if  diff > posconfig.K &&
+		bc.checkCQStartSlot > 0 &&
+		bc.restartSlot > 0 {
+		return true,bc.restartBlk
+	}
+
+	return false,nil
+}
+
+
+
+func (bc *BlockChain) SetChainRestarted() {
+	bc.restartBlk = nil
+	bc.checkCQStartSlot = 0
+	bc.restartSlot = 0
+	bc.restarted = true
+}
+
+func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,useLocalTime bool ) {
+
+	if block != nil {
+
+
+		bc.restartBlk = block
+
+		if useLocalTime {
+			epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
+			//record the restarting slot point
+			bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
+			lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+			bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+
+		} else {
+
+
+				epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+				//record the restarting slot point
+				bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
+				lastepid, lastlslid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
+				if preBlock != nil {
+					lastepid, lastlslid = posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+				}
+				bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+
+		}
+
+		res,_ := bc.ChainRestartStatus()
+		if  res {
+			bc.restarted = false
+		}
+	}
+}
+
+
+func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
+	idxs := make([]uint,0)
+	for i, block := range chain {
+
+		if block.NumberU64() <= 2 {
+			continue
+		}
+		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
+		epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+		curSlots := epid*posconfig.SlotCount + slid
+
+		var preBlock *types.Block
+		if i == 0{
+			preBlock = bc.GetBlockByHash(block.ParentHash())
+		} else {
+			preBlock = chain[i - 1]
+		}
+
+		if preBlock == nil {
+			return nil,errors.New("can not find parent block in check restart")
+		}
+
+		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+		preSlots := preepid*posconfig.SlotCount + preslid
+
+		diff := curSlots - preSlots
+		if diff > posconfig.SlotSecurityParam {
+			idxs = append(idxs,uint(i))
+			//fmt.Println("restart point=",i)
+		}
+	}
+
+	return idxs,nil
+
 }

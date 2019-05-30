@@ -26,11 +26,7 @@ func posWhiteList() {
 }
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
-	//g := s.BlockChain().GetHeaderByNumber(0)
-	//posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
 
-	cfm.InitCFM(s.BlockChain())
-	slotleader.SlsInit()
 
 	//if posconfig.EpochBaseTime == 0 {
 	//	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
@@ -48,6 +44,9 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		panic("PosInit")
 	}
 
+	cfm.InitCFM(s.BlockChain())
+
+	slotleader.SlsInit()
 	sls := slotleader.GetSlotLeaderSelection()
 	sls.Init(s.BlockChain(), nil, nil)
 
@@ -135,6 +134,16 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			log.Info("************** backendTimerLoop :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
 			self.worker.chainSlotTimer <- struct{}{}
 		}
+		
+		//set current block as the restart condition
+		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
+		//reset initial sma
+		sls := slotleader.GetSlotLeaderSelection()
+		res,_ := s.BlockChain().ChainRestartStatus()
+		if res  {
+			sls.Init(s.BlockChain(), nil, nil)
+		}
+		
 
 		for {
 			if nil == h {
@@ -176,6 +185,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
 		if err == nil {
 			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+			log.Info("leader ","leader",leader)
 			if leader == localPublicKey {
 				self.worker.chainSlotTimer <- struct{}{}
 			}

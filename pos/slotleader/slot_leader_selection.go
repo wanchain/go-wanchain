@@ -85,6 +85,8 @@ type SLS struct {
 	smaGenesis                  [posconfig.EpochLeaderCount]*ecdsa.PublicKey
 
 	sendTransactionFn SendTxFn
+
+	isRestarting	bool
 }
 
 var slotLeaderSelection *SLS
@@ -115,11 +117,9 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
-	if epochID <= posconfig.FirstEpochId+1 {
-		b, err := hex.DecodeString(posconfig.GenesisPK)
-		if err != nil {
-			return nil, vm.ErrInvalidGenesisPk
-		}
+	res,_ := s.blockChain.ChainRestartStatus()
+	if epochID <= posconfig.FirstEpochId+1  || res {
+		b := common.FromHex(posconfig.GenesisPK)
 		return crypto.ToECDSAPub(b), nil
 	}
 
@@ -164,65 +164,6 @@ func SlsInit() {
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
 	slotLeaderSelection.slotCreateStatus = make(map[uint64]bool)
 	slotLeaderSelection.slotCreateStatusLockCh = make(chan int, 1)
-	s := slotLeaderSelection
-	s.randomGenesis = big.NewInt(1)
-	epoch0Leaders := s.GetEpochFirstLeadersPK()
-	for index, value := range epoch0Leaders {
-		s.epochLeadersPtrArrayGenesis[index] = value
-	}
-
-	alphas := make([]*big.Int, 0)
-	for _, value := range epoch0Leaders {
-		tempInt := new(big.Int).SetInt64(0)
-		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
-		alphas = append(alphas, tempInt)
-	}
-
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-
-		// AlphaPK  stage1Genesis
-		mi0 := new(ecdsa.PublicKey)
-		mi0.Curve = crypto.S256()
-		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
-			alphas[i].Bytes())
-		s.stageOneMiGenesis[i] = mi0
-
-		// G
-		BasePoint := new(ecdsa.PublicKey)
-		BasePoint.Curve = crypto.S256()
-		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
-
-		// alphaG SMAGenesis
-		smaPiece := new(ecdsa.PublicKey)
-		smaPiece.Curve = crypto.S256()
-		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
-		s.smaGenesis[i] = smaPiece
-
-		for j := 0; j < posconfig.EpochLeaderCount; j++ {
-			// AlphaIPki stage2Genesis, used to verify genesis proof
-			alphaIPkj := new(ecdsa.PublicKey)
-			alphaIPkj.Curve = crypto.S256()
-			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
-				s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
-
-			s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
-		}
-
-	}
-
-	epochLeadersPreHexStr := make([]string, 0)
-	for _, value := range s.epochLeadersPtrArrayGenesis {
-		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
-	}
-	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
-
-	smaPiecesHexStr := make([]string, 0)
-	for _, value := range s.smaGenesis {
-		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
-	}
-	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
-	log.SyslogInfo("SLS SlsInit success")
-
 }
 
 func (s *SLS) getSlotLeaderStage2TxIndexes(epochID uint64) (indexesSentTran []bool, err error) {
@@ -345,12 +286,7 @@ func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
 func (s *SLS) GetEpochFirstLeadersPK() []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		pkBuf, err := hex.DecodeString(posconfig.GenesisPK)
-		if err != nil {
-			// epoch 0 use the genesis pK to propose block, since it comes from configuration
-			// If the configuration has error, system should not continue.
-			panic("posconfig.GenesisPK is Error")
-		}
+		pkBuf := common.FromHex(posconfig.GenesisPK)
 		pks[i] = crypto.ToECDSAPub(pkBuf)
 	}
 	return pks

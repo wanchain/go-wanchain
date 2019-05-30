@@ -7,8 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	 github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/core/types"	
 
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -38,6 +42,134 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	}
 
 	s.sendTransactionFn = util.SendTx
+	res,_ := s.blockChain.ChainRestartStatus()
+	if res  {
+		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
+		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+
+		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+		s.isRestarting = true
+	} else {
+		g := s.blockChain.GetHeaderByNumber(0)
+		posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
+	}
+
+	s.initSma()
+}
+
+func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
+	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
+
+	curepid,_ := util.CalEpSlbyTd(blk.Difficulty().Uint64())
+	selector := epochLeader.GetEpocher()
+
+	initPksStr,err := selector.GetWhiteByEpochId(curepid)
+
+	pksl := uint64(len(initPksStr))
+	if err != nil || pksl == 0{
+		return nil
+	}
+
+	idx := 0 //(curepid)%pksl
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		pkStr := initPksStr[idx]
+		pkBuf := common.FromHex(pkStr)
+		pks[i] = crypto.ToECDSAPub(pkBuf)
+	}
+
+	log.Info("select producer","address",crypto.PubkeyToAddress(*pks[0]),"idx",idx)
+
+	return pks
+}
+
+
+func (s *SLS) getLastRandom() *big.Int {
+	curepid,_ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
+	db, err := s.blockChain.State()
+	if err != nil {
+		return big.NewInt(0)
+	}
+
+	i := curepid
+	for i>0 {
+
+		rb := vm.GetR(db, i)
+		if rb != nil {
+			return rb
+		}
+
+		i--
+	}
+
+	return big.NewInt(0)
+}
+
+
+func (s *SLS) initSma() {
+
+	s.randomGenesis = big.NewInt(1)
+
+
+	epoch0Leaders := s.getEpoch0LeadersPK()
+
+
+	for index, value := range epoch0Leaders {
+		s.epochLeadersPtrArrayGenesis[index] = value
+	}
+
+	alphas := make([]*big.Int, 0)
+	for _, value := range epoch0Leaders {
+		tempInt := new(big.Int).SetInt64(0)
+		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
+		alphas = append(alphas, tempInt)
+	}
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+
+		// AlphaPK  stage1Genesis
+		mi0 := new(ecdsa.PublicKey)
+		mi0.Curve = crypto.S256()
+		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
+		alphas[i].Bytes())
+		s.stageOneMiGenesis[i] = mi0
+
+		// G
+		BasePoint := new(ecdsa.PublicKey)
+		BasePoint.Curve = crypto.S256()
+		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
+
+		// alphaG SMAGenesis
+		smaPiece := new(ecdsa.PublicKey)
+		smaPiece.Curve = crypto.S256()
+		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
+		s.smaGenesis[i] = smaPiece
+
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+		// AlphaIPki stage2Genesis, used to verify genesis proof
+		alphaIPkj := new(ecdsa.PublicKey)
+		alphaIPkj.Curve = crypto.S256()
+		alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+		s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+
+		s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
+		}
+
+	}
+
+	epochLeadersPreHexStr := make([]string, 0)
+	for _, value := range s.epochLeadersPtrArrayGenesis {
+		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
+
+	smaPiecesHexStr := make([]string, 0)
+	for _, value := range s.smaGenesis {
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+
+	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
+	log.SyslogInfo("SLS SlsInit success")
 }
 
 //Loop check work every Slot time. Called by backend loop.
@@ -122,6 +254,21 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
+
+		selector := util.GetEpocherInst()
+		if selector == nil {
+			return
+		}
+
+		rbleaders := selector.GetRBProposerG1(epochID)
+		epleaders := selector.GetEpochLeaders(epochID)
+
+		if len(rbleaders) == posconfig.RandomProperCount &&
+		  len(epleaders) == posconfig.EpochLeaderCount {
+			s.isRestarting = false
+			s.blockChain.SetChainRestarted()
+		}
+
 	default:
 	}
 }
