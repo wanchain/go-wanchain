@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -44,29 +43,18 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	res,_ := s.blockChain.ChainRestartStatus()
 	if res  {
 		s.isRestarting = true
-		// TODO can't use CurrentBlock, circle lock.
-		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
-		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
-	} else {
-		//posconfig.GenesisPK = posconfig.GenesisPKInit
-		pks := s.getDefaultLeadersPK(nil)
-		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 	}
+	// TODO can't use CurrentBlock, circle lock.
+	pks := s.getDefaultLeadersPK(s.blockChain.CurrentEpochId)
+	posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+	log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 
 	s.initSma()
 }
 
-func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
+func (s *SLS) getDefaultLeadersPK(curepid uint64) []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
-	var curepid = uint64(0)
-	if blk == nil {
-		curepid = posconfig.CurrentEpochId
-	}else {
-		curepid,_ = util.CalEpSlbyTd(blk.Difficulty().Uint64())
-	}
 	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(curepid)

@@ -126,6 +126,7 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	epochGene *EpochGenesisBlock
+	CurrentEpochId uint64
 
 	slotValidator Validator
 
@@ -1060,6 +1061,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	}
 
 	if bc.isCurrentLastPPowBlock(){
+		bc.CurrentEpochId,_ = posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 		log.Info("ppow2pos", "", "will switch engine......")
 		bc.SwitchClientEngine()
 	}
