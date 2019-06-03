@@ -2,6 +2,8 @@
 package downloader
 
 import (
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/types"
 	"time"
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
@@ -18,8 +20,18 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
+func (d *Downloader) fetchEpochGenesises(origin uint64, originHash *common.Hash,  latest *types.Header) error {
+	localBlk := d.blockchain.GetBlockByHash(*originHash)
+	beginEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(localBlk)
 
-func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) (error) {
+
+	endblk := types.NewBlockWithHeader(latest)
+	endEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
+
+	return d.fetchEpochGenesisesBetween(beginEpid, endEpid - 1)
+}
+
+func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {
 
 	if d.epochGenesisFbCh != nil {
 		return nil

@@ -83,7 +83,7 @@ type peerConnection struct {
 type LightPeer interface {
 	Head() (common.Hash, *big.Int)
 	RequestHeadersByHash(common.Hash, int, int, bool) error
-	RequestHeadersByNumber(uint64, int, int, bool) error
+	RequestHeadersByNumber(uint64, int, int, bool, uint64) error
 }
 
 // Peer encapsulates the methods required to synchronise with a remote full peer.
@@ -93,6 +93,7 @@ type Peer interface {
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
 	RequestEpochGenesisData(uint64) error
+	RequestPivot(common.Hash) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -105,8 +106,8 @@ func (w *lightPeerWrapper) RequestHeadersByHash(h common.Hash, amount int, skip 
 	return w.peer.RequestHeadersByHash(h, amount, skip, reverse)
 }
 
-func (w *lightPeerWrapper) RequestHeadersByNumber(i uint64, amount int, skip int, reverse bool) error {
-	return w.peer.RequestHeadersByNumber(i, amount, skip, reverse)
+func (w *lightPeerWrapper) RequestHeadersByNumber(i uint64, amount int, skip int, reverse bool, to uint64) error {
+	return w.peer.RequestHeadersByNumber(i, amount, skip, reverse, to)
 }
 
 
@@ -122,6 +123,10 @@ func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
 
 func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
 	panic("RequestNodeData not supported in light client mode sync")
+}
+
+func (w *lightPeerWrapper)RequestPivot(common.Hash) error {
+	panic("RequestPivot not supported in light client mode sync")
 }
 
 // newPeerConnection creates a new downloader peer.
@@ -158,7 +163,7 @@ func (p *peerConnection) Reset() {
 }
 
 // FetchHeaders sends a header retrieval request to the remote peer.
-func (p *peerConnection) FetchHeaders(from uint64, count int) error {
+func (p *peerConnection) FetchHeaders(from uint64, count int, to uint64) error {
 	// Sanity check the protocol version
 	if p.version < 62 {
 		panic(fmt.Sprintf("header fetch [eth/62+] requested on eth/%d", p.version))
@@ -170,7 +175,7 @@ func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 	p.headerStarted = time.Now()
 
 	// Issue the header retrieval request (absolut upwards without gaps)
-	go p.peer.RequestHeadersByNumber(from, count, 0, false)
+	go p.peer.RequestHeadersByNumber(from, count, 0, false, to)
 
 	return nil
 }

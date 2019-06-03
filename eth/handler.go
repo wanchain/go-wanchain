@@ -367,7 +367,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 
 			number := origin.Number.Uint64()
-			headers = append(headers, origin)
+			if query.To == 0 || number < uint64(query.To) {
+				headers = append(headers, origin)
+			}
 			bytes += estHeaderRlpSize
 
 			// Advance to the next header of the query

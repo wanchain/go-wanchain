@@ -58,6 +58,10 @@ var (
 	lookupPrefix        = []byte("l") // lookupPrefix + hash -> transaction/receipt lookup metadata
 	bloomBitsPrefix     = []byte("B") // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 
+	//genesisBlockHashPrefix  = []byte("GHash") // genesisPrefix +
+	//genesisHeaderPrefix 	= []byte("gh") //
+	//genesisBodyPrefix		= []byte("gb")
+
 	preimagePrefix = "secure-key-"              // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("ethereum-config-") // config prefix for the db
 

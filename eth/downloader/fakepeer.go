@@ -93,7 +93,7 @@ func (p *FakePeer) RequestHeadersByHash(hash common.Hash, amount int, skip int, 
 
 // RequestHeadersByNumber implements downloader.Peer, returning a batch of headers
 // defined by the origin number and the associaed query parameters.
-func (p *FakePeer) RequestHeadersByNumber(number uint64, amount int, skip int, reverse bool) error {
+func (p *FakePeer) RequestHeadersByNumber(number uint64, amount int, skip int, reverse bool, to uint64) error {
 	var (
 		headers []*types.Header
 		unknown bool
@@ -163,3 +163,6 @@ func (p *FakePeer) RequestEpochGenesisData(epochids uint64) error {
 	return nil
 }
 
+func (p *FakePeer) RequestPivot(hash common.Hash) error {
+	return nil
+}

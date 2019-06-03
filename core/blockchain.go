@@ -1677,6 +1677,22 @@ Error: %v
 // of the header retrieval mechanisms already need to verify nonces, as well as
 // because nonces can be verified sparsely, not needing to check each.
 func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
+	if bc.IsInPosStage() {
+		return bc.InsertHeaderChainWithRestart(chain, checkFreq)
+	} else {
+		return bc.InsertHeaderChainEngineSwitch(chain, checkFreq)
+	}
+}
+
+func (bc *BlockChain) InsertHeaderChainEngineSwitch(chain []*types.Header, checkFreq int) (int, error) {
+	return 0, nil
+}
+
+func (bc *BlockChain) InsertHeaderChainWithRestart(chain []*types.Header, checkFreq int) (int, error) {
+	return 0, nil
+}
+
+func (bc *BlockChain) insertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
 	start := time.Now()
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
 		return i, err
@@ -1866,7 +1882,9 @@ func (bc *BlockChain) IsInPosStage() (bool){
 	return bc.config.IsPosBlockNumber(currentBlockNumber)
 }
 
-
+func (bc *BlockChain) GetFirstPosBlockNumber() uint64 {
+	return bc.Config().PosFirstBlock.Uint64()
+}
 
 func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 

@@ -168,6 +168,12 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
+func (p *peer) SendPivot(header []*types.Header) error {
+	return p2p.Send(p.rw, PivotMsg, header)
+}
+func (p *peer) SendEpochGenesisHash(hashes []*types.EpochGenesisHash) error {
+	return p2p.Send(p.rw, EpochGenesisHashMsg, hashes)
+}
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *peer) SendBlockBodies(bodies []*blockBody) error {
@@ -196,21 +202,21 @@ func (p *peer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 // single header. It is used solely by the fetcher.
 func (p *peer) RequestOneHeader(hash common.Hash) error {
 	p.Log().Debug("Fetching single header", "hash", hash)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false, To: uint64(0)})
 }
 
 // RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the hash of an origin block.
 func (p *peer) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse, To: uint64(0)})
 }
 
 // RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the number of an origin block.
-func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
-	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool, to uint64) error {
+	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse, "to", to)
+	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse, To: to})
 }
 
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
@@ -319,6 +325,33 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	}
 	return nil
 }
+
+func (p *peer) RequestPivot(hash common.Hash) error {
+	p.Log().Debug("Fetching pivot", "hash", hash)
+
+	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
+			Current: hash,
+		})
+}
+func (p *peer) readPivot(pivot *uint64) (err error) {
+	msg, err := p.rw.ReadMsg()
+	if err != nil {
+		return err
+	}
+	if msg.Code != PivotMsg {
+		p.Log().Debug("read pivot", "msg.Code", msg.Code)
+		return err
+	}
+	if msg.Size > ProtocolMaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	}
+	// Decode the handshake and make sure everything matches
+	if err := msg.Decode(&pivot); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	return nil
+}
+
 
 // String implements fmt.Stringer.
 func (p *peer) String() string {
