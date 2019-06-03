@@ -172,6 +172,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 			genesis = DefaultGenesisBlock()
 		} else if genesis.Config.ChainId.Cmp(big.NewInt(3)) == 0 {
 			log.Info("Writing default  test net genesis block")
+			// TODO is this used???
 			//genesis = DefaultTestnetGenesisBlock()
 		} else {
 			log.Info("Writing custom genesis block")

@@ -831,17 +831,18 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
 	log.Debug("Packed slotleader proof info success", "epochID", epochId, "slotID", slotId, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 
-	err = c.verifySeal(nil, header, nil, false)
-	if err != nil {
-		log.Warn("Seal error", "error", err.Error())
-		return nil, err
-	}
-
-	err = c.verifyProof(block.WithSeal(header), header, nil)
-	if err != nil {
-		log.Warn("Seal error", "error", err.Error())
-		return nil, err
-	}
+	//
+	//err = c.verifySeal(nil, header, nil, false)
+	//if err != nil {
+	//	log.Warn("Seal error", "error", err.Error())
+	//	return nil, err
+	//}
+	//
+	//err = c.verifyProof(block.WithSeal(header), header, nil)
+	//if err != nil {
+	//	log.Warn("Seal error", "error", err.Error())
+	//	return nil, err
+	//}
 	lastEpochSlotId = epochSlotId
 	return block.WithSeal(header), nil
 }

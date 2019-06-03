@@ -3,6 +3,9 @@ package util
 import (
 	"context"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"math/rand"
+	"time"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
@@ -35,4 +38,13 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 
 	log.SyslogInfo("send pos tx success", "txHash", txHash.String())
 	return txHash, nil
+}
+
+func SendPosTx(rc *rpc.Client, tx map[string]interface{})  {
+	if posconfig.TxDelay != 0 {
+		delay := rand.Intn(posconfig.TxDelay)
+		time.Sleep(time.Duration(delay)*time.Second)
+		log.Error("SendPosTx", "delay",delay )
+	}
+	SendTx(rc, tx)
 }

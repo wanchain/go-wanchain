@@ -40,7 +40,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 		log.Info("SLS init success")
 	}
 
-	s.sendTransactionFn = util.SendTx
+	s.sendTransactionFn = util.SendPosTx
 	res,_ := s.blockChain.ChainRestartStatus()
 	if res  {
 		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())

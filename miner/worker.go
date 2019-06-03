@@ -160,9 +160,10 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	if !worker.chain.IsInPosStage() {
-		worker.commitNewWork(true)
-	}
+	//if !worker.chain.IsInPosStage() {
+	//	worker.commitNewWork(true)
+	//}
+	worker.commitNewWork(false)
 
 	eth.BlockChain().RegisterSwitchEngine(worker)
 
@@ -267,7 +268,7 @@ func (self *worker) update() {
 			if !self.chain.IsInPosStage() {
 				self.commitNewWork(true)
 			} else {
-				// TODO two block. 
+				// TODO two block.
 				self.commitNewWork(false)
 			}
 		case <-self.chainSlotTimer:
@@ -364,8 +365,8 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			if mustCommitNewWork && !self.chain.IsInPosStage(){
-				self.commitNewWork(true)
+			if mustCommitNewWork {
+				self.commitNewWork(false)
 			}
 		}
 	}

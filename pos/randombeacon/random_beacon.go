@@ -700,8 +700,8 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 
 
 	log.SyslogInfo("do send rb tx", "payload len", len(payload))
-	_, err := util.SendTx(rb.rpcClient, arg)
-	return err
+	go util.SendPosTx(rb.rpcClient, arg)
+	return nil
 }
 
 func (rb *RandomBeacon) getTxFrom() common.Address {

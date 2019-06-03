@@ -47,7 +47,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 8
+	SlotTime = 10
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -89,6 +89,7 @@ const (
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
 )
+var TxDelay  = K
 
 var GenesisPK string
 //var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"

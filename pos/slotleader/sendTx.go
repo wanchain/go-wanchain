@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -17,7 +16,7 @@ var (
 	errRCNotReady = errors.New("rc is not ready")
 )
 
-type SendTxFn func(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error)
+type SendTxFn func(rc *rpc.Client, tx map[string]interface{})
 
 func (s *SLS) sendSlotTx(payload []byte, posSender SendTxFn) error {
 	if s.rc == nil {
@@ -37,6 +36,6 @@ func (s *SLS) sendSlotTx(payload []byte, posSender SendTxFn) error {
 	arg["data"] = data
 	log.Debug("Write data of payload", "length", len(data))
 
-	_, err := posSender(s.rc, arg)
-	return err
+	go posSender(s.rc, arg)
+	return nil
 }
