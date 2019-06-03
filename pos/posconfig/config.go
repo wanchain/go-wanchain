@@ -18,6 +18,7 @@ var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
 	//EpochBaseTime = uint64(0)
 	FirstEpochId = uint64(0)
+	CurrentEpochId = uint64(0)
 	Pow2PosUpgradeBlockNumber = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false

@@ -104,6 +104,7 @@ func UpdateEpochBlock(block *types.Block) {
 	blkTd := block.Difficulty().Uint64()
 	epochID, slotID := CalEpSlbyTd(blkTd)
 	updateEpochBlock(epochID, slotID, block.Header().Number.Uint64(), block.Header().Hash())
+	posconfig.CurrentEpochId = epochID
 }
 func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash common.Hash) {
 	if epochID != lastEpochId {

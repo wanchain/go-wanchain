@@ -44,13 +44,16 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	res,_ := s.blockChain.ChainRestartStatus()
 	if res  {
 		s.isRestarting = true
+		// TODO can't use CurrentBlock, circle lock.
+		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
+		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+	} else {
+		//posconfig.GenesisPK = posconfig.GenesisPKInit
+		pks := s.getDefaultLeadersPK(nil)
+		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 	}
-	//else {
-	//	//posconfig.GenesisPK = posconfig.GenesisPKInit
-	//}
-	pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
-	posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-	log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 
 	s.initSma()
 }
@@ -58,7 +61,12 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 func (s *SLS) getDefaultLeadersPK(blk *types.Block) []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
 
-	curepid,_ := util.CalEpSlbyTd(blk.Difficulty().Uint64())
+	var curepid = uint64(0)
+	if blk == nil {
+		curepid = posconfig.CurrentEpochId
+	}else {
+		curepid,_ = util.CalEpSlbyTd(blk.Difficulty().Uint64())
+	}
 	selector := epochLeader.GetEpocher()
 
 	initPksStr,err := selector.GetWhiteByEpochId(curepid)
