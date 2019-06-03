@@ -373,7 +373,7 @@ type TxByPrice Transactions
 
 func (s TxByPrice) Len() int           { return len(s) }
 func (s TxByPrice) Less(i, j int) bool {
-	if s[i].data.Txtype != POS_TX && s[j].data.Txtype == POS_TX {
+	if s[j].data.Txtype != POS_TX && s[i].data.Txtype == POS_TX {
 		return true
 	}
 	return s[i].data.Price.Cmp(s[j].data.Price) > 0

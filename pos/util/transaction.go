@@ -44,7 +44,7 @@ func SendPosTx(rc *rpc.Client, tx map[string]interface{})  {
 	if posconfig.TxDelay != 0 {
 		delay := rand.Intn(posconfig.TxDelay)
 		time.Sleep(time.Duration(delay)*time.Second)
-		log.Error("SendPosTx", "delay",delay )
+		log.Debug("SendPosTx", "delay",delay )
 	}
 	SendTx(rc, tx)
 }

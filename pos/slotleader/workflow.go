@@ -43,14 +43,14 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	s.sendTransactionFn = util.SendPosTx
 	res,_ := s.blockChain.ChainRestartStatus()
 	if res  {
-		pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
-		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-
-		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 		s.isRestarting = true
-	} else {
-		posconfig.GenesisPK = posconfig.GenesisPKInit
 	}
+	//else {
+	//	//posconfig.GenesisPK = posconfig.GenesisPKInit
+	//}
+	pks := s.getDefaultLeadersPK(s.blockChain.CurrentBlock())
+	posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+	log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 
 	s.initSma()
 }
