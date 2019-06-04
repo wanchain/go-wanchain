@@ -161,7 +161,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restarted:    true,
+		restarted:    false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
