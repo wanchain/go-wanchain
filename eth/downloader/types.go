@@ -97,3 +97,11 @@ type epochGenesisHashPack struct {
 func (p *epochGenesisHashPack) PeerId() string { return p.peerId}
 func (p *epochGenesisHashPack) Items() int { return len(p.hashes)}
 func (p *epochGenesisHashPack) Stats() string { return fmt.Sprintf("%d", len(p.hashes))}
+
+type headerTdPack struct {
+	peerId string
+	headerTd *types.HeaderTdData
+}
+func (p *headerTdPack) PeerId() string { return p.peerId }
+func (p *headerTdPack) Items() int     { return 1 }
+func (p *headerTdPack) Stats() string  { return fmt.Sprintf("%d", 1) }

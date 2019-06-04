@@ -449,13 +449,13 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 
 	// Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
 	posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
-	if number == posBootstrapBlockNum {
-		ppowWindowLen := (len(s.UsedSigners)-1) / 2
-		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
-		if slotheader.Coinbase != header.Coinbase {
-			return errors.New("invalid leader")
-		}
-	}
+	//if number == posBootstrapBlockNum {
+	//	ppowWindowLen := (len(s.UsedSigners)-1) / 2
+	//	slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
+	//	if slotheader.Coinbase != header.Coinbase {
+	//		return errors.New("invalid leader")
+	//	}
+	//}
 	if number > posBootstrapBlockNum {
 		return errors.New("consensus engines should switched")
 	}

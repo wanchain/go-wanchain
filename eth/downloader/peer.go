@@ -94,6 +94,7 @@ type Peer interface {
 	RequestNodeData([]common.Hash) error
 	RequestEpochGenesisData(uint64) error
 	RequestPivot(common.Hash) error
+	RequestHeaderTdByNumber(uint64) error
 }
 
 // lightPeerWrapper wraps a LightPeer struct, stubbing out the Peer-only methods.
@@ -108,6 +109,9 @@ func (w *lightPeerWrapper) RequestHeadersByHash(h common.Hash, amount int, skip 
 
 func (w *lightPeerWrapper) RequestHeadersByNumber(i uint64, amount int, skip int, reverse bool, to uint64) error {
 	return w.peer.RequestHeadersByNumber(i, amount, skip, reverse, to)
+}
+func (w *lightPeerWrapper) RequestHeaderTdByNumber(i uint64) error {
+	panic("RequestHeaderTdByNumber not supported in light client mode sync")
 }
 
 

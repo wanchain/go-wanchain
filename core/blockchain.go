@@ -23,6 +23,7 @@ import (
 	"io"
 	"math/big"
 	mrand "math/rand"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1221,6 +1222,13 @@ func (bc *BlockChain) insertChainWithRestart(chain types.Blocks) (int, error) {
 // with deferred statements.
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
+	if len(chain) > 0 {
+		log.Info("insert chain begin", "from", strconv.FormatUint(chain[0].NumberU64(),10),
+			"to", strconv.FormatUint(chain[len(chain) -1].NumberU64(),10))
+	}
+	defer func() {
+		log.Info("insert chain end")
+	}()
 
 	for i := 1; i < len(chain); i++ {
 

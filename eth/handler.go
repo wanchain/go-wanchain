@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -367,7 +368,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 
 			number := origin.Number.Uint64()
-			if query.To == 0 || number < uint64(query.To) {
+			if query.To == 0 || number <= uint64(query.To) {
 				headers = append(headers, origin)
 			}
 			bytes += estHeaderRlpSize
@@ -712,6 +713,38 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkTransaction(tx.Hash())
 		}
 		pm.txpool.AddRemotes(txs)
+
+	case p.version >= wan64 && msg.Code == GetBlockHeaderTdMsg:
+		var query getHeaderTdData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		hashMode := query.Origin.Hash != (common.Hash{})
+
+		var origin *types.Header
+		if hashMode {
+			origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
+		} else {
+			origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
+		}
+		if origin == nil {
+			return errors.New("GetBlockHeaderTdMsg header not exsit, height =" + strconv.FormatUint(query.Origin.Number, 10))
+		}
+		td := pm.blockchain.GetTd(origin.Hash(), origin.Number.Uint64())
+		if td == nil {
+			return errors.New("GetBlockHeaderTdMsg get td failed, height =" + strconv.FormatUint(origin.Number.Uint64(), 10))
+		}
+
+		return p.SendBlockHeaderTd(origin, td)
+
+	case p.version >= wan64 && msg.Code == BlockHeaderTdMsg:
+		var headerTd types.HeaderTdData
+		if err := msg.Decode(&headerTd); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		if err := pm.downloader.DeliverHeaderTd(p.id, &headerTd); err != nil {
+			log.Debug("Failed to deliver header td", "err", err)
+		}
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)

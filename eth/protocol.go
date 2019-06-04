@@ -65,11 +65,13 @@ const (
 	ReceiptsMsg    = 0x10
 
 	// Protocol messages belonging to wan/64
-	GetEpochGenesisMsg = 0x11
-	EpochGenesisMsg    = 0x12
-	GetPivotMsg    = 0x13
-	PivotMsg       = 0x14
-	EpochGenesisHashMsg   = 0x15
+	GetEpochGenesisMsg 	= 0x11
+	EpochGenesisMsg    	= 0x12
+	GetPivotMsg    		= 0x13
+	PivotMsg       		= 0x14
+	EpochGenesisHashMsg = 0x15
+	GetBlockHeaderTdMsg = 0x16
+	BlockHeaderTdMsg 	= 0x17
 )
 
 type errCode int
@@ -140,6 +142,10 @@ type getBlockHeadersData struct {
 	To      uint64        // destination, if to == -1 ignore this param
 }
 
+type getHeaderTdData struct {
+	Origin hashOrNumber
+}
+
 type getPivotData struct {
 	Current common.Hash
 }
@@ -204,3 +210,5 @@ type epochGenesisBody struct {
 	IsEnd bool
 	EpochGenesis 	*types.EpochGenesis
 }
+
+

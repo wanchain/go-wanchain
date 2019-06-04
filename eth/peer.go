@@ -168,6 +168,9 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
+func (p *peer) SendBlockHeaderTd(header *types.Header, td *big.Int) error {
+	return p2p.Send(p.rw, BlockHeaderTdMsg, []interface{}{header, td})
+}
 func (p *peer) SendPivot(header []*types.Header) error {
 	return p2p.Send(p.rw, PivotMsg, header)
 }
@@ -218,7 +221,10 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse, "to", to)
 	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse, To: to})
 }
-
+func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
+	p.Log().Debug("Fetching head td", "number", origin)
+	return p2p.Send(p.rw, GetBlockHeaderTdMsg, &getHeaderTdData{Origin: hashOrNumber{Number: origin}})
+}
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *peer) RequestBodies(hashes []common.Hash) error {

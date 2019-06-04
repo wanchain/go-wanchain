@@ -479,3 +479,8 @@ type EpochGenesisHash struct {
 	EpochId uint64
 	Hash    common.Hash
 }
+
+type HeaderTdData struct {
+	Header 	*Header
+	Td 		*big.Int
+}
