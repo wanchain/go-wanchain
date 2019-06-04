@@ -621,7 +621,6 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 // header for running the transactions on top.
 func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, mining bool) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
-	log.Info("pos prepare")
 	header.Coinbase = common.Address{}
 	header.Nonce = types.BlockNonce{}
 

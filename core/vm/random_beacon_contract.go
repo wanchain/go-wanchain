@@ -430,17 +430,22 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 
 // get r of one epoch, if not exist return r in epoch 0
 func GetR(db StateDB, epochId uint64) *big.Int {
+	if epochId == posconfig.FirstEpochId {
+		return GetStateR(db, posconfig.FirstEpochId)
+	}
 	r := GetStateR(db, epochId)
 	if r == nil {
-		log.SyslogWarning("***Can not found random r just use epoch 0 R", "epochId", epochId)
-		r = GetStateR(db, 0)
+		if epochId != posconfig.FirstEpochId+1 && epochId != posconfig.FirstEpochId+2 {
+			log.SyslogWarning("***Can not found random r just use the first epoch R", "epochId", epochId)
+		}
+		r = GetStateR(db, posconfig.FirstEpochId)
 	}
 	return r
 }
 
 // get r of one epoch
 func GetStateR(db StateDB, epochId uint64) *big.Int {
-	if epochId == 0 {
+	if epochId == posconfig.FirstEpochId {
 		return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 	hash := GetRBRKeyHash(epochId)

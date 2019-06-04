@@ -773,9 +773,11 @@ func GenerateSlotLeaderSeqAndIndex(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.P
 
 	//calculate the slot leader sequence
 	SlotLeaderSeq := make([]*ecdsa.PublicKey, 0)
+	// TODO: odd slot solution choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)/2))
 	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
 	//cs[i] = cr[i] mod n, n is the number of PublicKeys
 	for i = 0; i < epochlen; i++ {
+		// TODO: odd slot solution cstemp := new(big.Int).Mod(cr[i], choicelen).Int64()+(int64)((int)(i%2)*len(PublicKeys)/2)
 		cstemp := new(big.Int).Mod(cr[i], choicelen).Int64()
 		tempsl := new(ecdsa.PublicKey)
 		tempsl.Curve = crypto.S256()
@@ -819,6 +821,7 @@ func GenerateSlotLeaderProof2(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicK
 		return nil, nil, ErrSortPublicKey
 	}
 	//if it is the leader of slt slot, then calculate ProofMeg = [PK , Gt , skGt] and Proof = [e ,z]
+	// TODO: odd slot solution choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)/2))
 	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
 	smaLen := new(big.Int).SetInt64(int64(len(SMA)))
 
@@ -848,6 +851,7 @@ func GenerateSlotLeaderProof2(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicK
 	bigTemp := new(big.Int).SetInt64(int64(0))
 	bigTemp.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(Gt)))
 	csbigtemp := new(big.Int).Mod(bigTemp, choicelen)
+	// TODO: odd slot solution tempint := csbigtemp.Int64()+(int64)(int64(slt%2)*int64(len(PublicKeys)/2))
 	tempint := csbigtemp.Int64()
 
 	if PublicKeyEqual(&PrivateKey.PublicKey, PublicKeys[tempint]) {

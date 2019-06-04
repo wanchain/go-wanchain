@@ -126,7 +126,7 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	epochGene *EpochGenesisBlock
-	CurrentEpochId uint64
+	CurrentEpochId int64
 
 	slotValidator Validator
 
@@ -161,7 +161,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restarted:    false,
+		restarted:    true,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -883,10 +883,10 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	//// TODO this looks not enough
-	//if epochId == posconfig.FirstEpochId {
-	//	return true
-	//}
-	//because slot index starts from 0
+	if epochId == posconfig.FirstEpochId {
+		return true
+	}
+	//because slot index starts from 0 //
 	totalSlots := (epochId-posconfig.FirstEpochId)*posconfig.SlotCount + slotId + 1
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
@@ -953,15 +953,16 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 
 	//confirm chain quality confirm security
-	if !bc.isWriteBlockSecure(block) {
-
-		if bc.restarted {
-			return NonStatTy, ErrInsufficientCQ
+	if bc.config.IsPosActive {
+		if !bc.isWriteBlockSecure(block) {
+			if bc.restarted {
+				return NonStatTy, ErrInsufficientCQ
+			}
+		} else {
+			bc.restarted = true
 		}
-
-	} else {
-		bc.restarted = true
 	}
+
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1061,7 +1062,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	}
 
 	if bc.isCurrentLastPPowBlock(){
-		bc.CurrentEpochId,_ = posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+		bc.CurrentEpochId = -1
 		log.Info("ppow2pos", "", "will switch engine......")
 		bc.SwitchClientEngine()
 	}

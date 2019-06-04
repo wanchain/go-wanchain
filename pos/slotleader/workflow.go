@@ -44,8 +44,15 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	if res  {
 		s.isRestarting = true
 	}
-	// TODO can't use CurrentBlock, circle lock.
-	pks := s.getDefaultLeadersPK(s.blockChain.CurrentEpochId)
+	var pks []*ecdsa.PublicKey
+	if s.blockChain.CurrentEpochId == -1 {
+		// in the switchEngine process. the lock is holded.
+		pks = s.getDefaultLeadersPK(0)
+	} else {
+		// normal restart. no lock hold.
+		curEpochId, _ := util.CalEpSlbyTd(blockChain.CurrentBlock().Difficulty().Uint64())
+		pks = s.getDefaultLeadersPK(curEpochId)
+	}
 	posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
 	log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 
@@ -105,15 +112,15 @@ func (s *SLS) initSma() {
 	s.randomGenesis = big.NewInt(1)
 
 
-	epoch0Leaders := s.GetEpochFirstLeadersPK()
+	epochDefaultLeaders := s.GetEpochDefaultLeadersPK(0)
 
 
-	for index, value := range epoch0Leaders {
+	for index, value := range epochDefaultLeaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
 	}
 
 	alphas := make([]*big.Int, 0)
-	for _, value := range epoch0Leaders {
+	for _, value := range epochDefaultLeaders {
 		tempInt := new(big.Int).SetInt64(0)
 		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
 		alphas = append(alphas, tempInt)
@@ -192,7 +199,14 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	switch workStage {
 	case slotLeaderSelectionInit:
 		s.doInit(epochID)
-		s.setWorkStage(epochID, slotLeaderSelectionStage1)
+
+		// TODO this is wrong. map is empty.
+		if !s.isLocalPkInCurrentEpochLeaders() {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
+
 	case slotLeaderSelectionStage1:
 		if slotID < (posconfig.Sma1Start + 1) {
 			break
@@ -203,10 +217,6 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID",
 				epochID, "slotID", slotID)
 			break
-		}
-
-		if !s.isLocalPkInCurrentEpochLeaders() {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		}
 
 		err := s.startStage1Work()
