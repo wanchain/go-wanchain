@@ -953,7 +953,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 
 	//confirm chain quality confirm security
-	if bc.config.IsPosActive {
+	if bc.config.IsPosActive && epid > posconfig.FirstEpochId {
 		if !bc.isWriteBlockSecure(block) {
 			if bc.restarted {
 				return NonStatTy, ErrInsufficientCQ

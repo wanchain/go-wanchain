@@ -26,18 +26,19 @@ import (
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
 
-	res,_ := s.blockChain.ChainRestartStatus()
-	if res  {
-		pks := s.getDefaultLeadersPK(epochID)
-		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
-		s.initSma()
-		s.isRestarting = true
+	if epochID > posconfig.FirstEpochId+2 {
+		res,_ := s.blockChain.ChainRestartStatus()
+		if res  {
+			pks := s.getDefaultLeadersPK(epochID)
+			posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+			log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+			s.initSma()
+			s.isRestarting = true
+		}
 	}
 
-
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
-	if epochID == 0 || errGenesis != nil {
+	if epochID <= posconfig.FirstEpochId+2 || errGenesis != nil {
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
@@ -167,7 +168,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
-	if epochID == uint64(0) || err != nil {
+	if epochID <= posconfig.FirstEpochId+2 || err != nil {
 		if err != nil {
 			log.Warn("getSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
 		}

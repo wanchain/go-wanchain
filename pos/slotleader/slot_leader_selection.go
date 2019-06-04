@@ -119,7 +119,7 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
 	res,_ := s.blockChain.ChainRestartStatus()
-	if epochID <= posconfig.FirstEpochId+1  || res {
+	if epochID <= posconfig.FirstEpochId+2  || res {
 		b := common.FromHex(posconfig.GenesisPK)
 		log.Info("use genesisPK", "GenesisPK",posconfig.GenesisPK)
 		return crypto.ToECDSAPub(b), nil
@@ -272,7 +272,7 @@ func (s *SLS) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 
 func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
-	if epochID <= posconfig.FirstEpochId+1 {
+	if epochID <= posconfig.FirstEpochId+2 {
 		return s.GetEpochDefaultLeadersPK(0), nil
 	}
 

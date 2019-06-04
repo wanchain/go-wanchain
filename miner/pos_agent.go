@@ -137,7 +137,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			util.CalEpochSlotIDByNow()
 			epochId,_ := util.GetEpochSlotID()
 			posconfig.FirstEpochId = epochId
-			log.Info("************** backendTimerLoop :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
+			log.Info("backendTimerLoop :", "FirstEpochId", posconfig.FirstEpochId)
 			self.worker.chainSlotTimer <- struct{}{}
 		}
 		
@@ -149,7 +149,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 					return
 				case <-time.After(time.Duration(time.Second)):
 				}
+				log.Info("backendTimerLoop sleep,", "FirstEpochId", posconfig.FirstEpochId)
 			} else {
+				epochId,_ := util.CalEpSlbyTd(h.Difficulty.Uint64())
+				posconfig.FirstEpochId = epochId
+				log.Info("backendTimerLoop download the first pos block :", "FirstEpochId", posconfig.FirstEpochId)
 				break
 			}
 			h = s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())

@@ -110,8 +110,8 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 	if epochID != lastEpochId {
 		lastEpochId = epochID
 	}
-	// there is 2K slot, so need not think about reorg
-	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 {
+	// there is 2K slot, so need not think about reorg  // selec epoch leader from the whole epoch.
+	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 && epochID != posconfig.FirstEpochId  {
 		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
