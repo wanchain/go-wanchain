@@ -311,7 +311,7 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 		return false, err
 	}
 
-	if epochID == posconfig.FirstEpochId {
+	if epochID <= posconfig.FirstEpochId+2 {
 		for _, value := range s.epochLeadersPtrArrayGenesis {
 			if util.PkEqual(localPk, value) {
 				return true, nil
@@ -505,13 +505,13 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 // It had been +1 when save into db, so do not -1 in get.
 func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
-	if epochID == posconfig.FirstEpochId {
+	if epochID <= posconfig.FirstEpochId+2 {
 		return s.smaGenesis[:], true, nil
 	} else {
 		// pieces: alpha[1]*G, alpha[2]*G, .....
 		pieces, err := posdb.GetDb().Get(epochID, SecurityMsg)
 		if err != nil {
-			if epochID != posconfig.FirstEpochId+1 &&epochID != posconfig.FirstEpochId+2 {
+			if epochID > posconfig.FirstEpochId+2 {
 				log.Warn("getSMAPieces error use the first epoch SMA", "epochID", epochID, "SecurityMsg", SecurityMsg)
 			}
 			return s.smaGenesis[:], true, nil

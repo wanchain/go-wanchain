@@ -19,6 +19,7 @@ package miner
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -201,7 +202,9 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 func (self *Miner) SwitchEngine(engine consensus.Engine){
 	self.engine = engine
 	//time.Sleep(1000*time.Millisecond)
-	if self.Mining() {
+	log.Info("SwitchEngine")
+	if posconfig.MineEnabled {
+		log.Info("SwitchEngine, start backendTimerLoop")
 		go self.backendTimerLoop(self.eth)
 	}
 }

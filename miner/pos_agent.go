@@ -162,7 +162,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		util.CalEpochSlotIDByNow()
 		epochId,_ := util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochId
-		log.Info("************** backendTimerLoop else :", "posconfig.FirstEpochId", posconfig.FirstEpochId)
+		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
 
 		//set current block as the restart condition
 		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)

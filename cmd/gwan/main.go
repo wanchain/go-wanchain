@@ -35,6 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/ethclient"
 	"github.com/wanchain/go-wanchain/internal/debug"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
 	"gopkg.in/urfave/cli.v1"
@@ -304,6 +305,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
+		posconfig.MineEnabled = true
 		// Mining only makes sense if a full Ethereum node is running
 		var ethereum *eth.Ethereum
 		if err := stack.Service(&ethereum); err != nil {
