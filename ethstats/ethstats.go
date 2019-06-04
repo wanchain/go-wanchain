@@ -1199,8 +1199,8 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 		iChainQuality   uint64
 		chainQuality    string
 		epBlockCount    uint64
-		curRandom       *big.Int
-		nextRandom      *big.Int
+		curRandom       string
+		nextRandom      string
 		curRbStage      uint64
 		validDkg1Cnt    uint64
 		validDkg2Cnt    uint64
@@ -1234,14 +1234,14 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 			}
 
 			epBlockCount, _ = s.api.GetEpochBlkCnt(epochId)
-			curRandom, err = s.api.GetRandom(epochId, -1)
-			if err != nil {
-				curRandom = big.NewInt(0)
+			curR, err := s.api.GetRandom(epochId, -1)
+			if err == nil {
+				curRandom = common.ToHex(curR.Bytes())
 			}
 
-			nextRandom, err = s.api.GetRandom(epochId+1, -1)
-			if err != nil {
-				nextRandom = big.NewInt(0)
+			nextR, err := s.api.GetRandom(epochId+1, -1)
+			if err == nil {
+				nextRandom = common.ToHex(nextR.Bytes())
 			}
 
 			curRbStage = s.api.GetRbStage(slotId)
@@ -1281,8 +1281,8 @@ func (s *Service) reportPosStats(conn *websocket.Conn) error {
 			SlotId:          slotId,
 			ChainQuality:    chainQuality,
 			EpBlockCount:    epBlockCount,
-			CurRandom:       curRandom.String(),
-			NextRandom:      nextRandom.String(),
+			CurRandom:       curRandom,
+			NextRandom:      nextRandom,
 			CurRBStage:      curRbStage,
 			ValidDKG1Cnt:    validDkg1Cnt,
 			ValidDKG2Cnt:    validDkg2Cnt,
