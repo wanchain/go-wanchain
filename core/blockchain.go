@@ -1677,11 +1677,13 @@ Error: %v
 // of the header retrieval mechanisms already need to verify nonces, as well as
 // because nonces can be verified sparsely, not needing to check each.
 func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
-	if bc.IsInPosStage() {
-		return bc.InsertHeaderChainWithRestart(chain, checkFreq)
-	} else {
-		return bc.InsertHeaderChainEngineSwitch(chain, checkFreq)
-	}
+	//if bc.IsInPosStage() {
+	//	return bc.InsertHeaderChainWithRestart(chain, checkFreq)
+	//} else {
+	//	return bc.InsertHeaderChainEngineSwitch(chain, checkFreq)
+	//}
+
+	return bc.insertHeaderChain(chain, checkFreq)
 }
 
 func (bc *BlockChain) InsertHeaderChainEngineSwitch(chain []*types.Header, checkFreq int) (int, error) {
