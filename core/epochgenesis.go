@@ -435,7 +435,7 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 	blkTd := block.Difficulty().Uint64()
 	epochID := (blkTd >> 32)
 
-	if epochID == 0 {
+	if epochID == posconfig.FirstEpochId {
 		return nil
 	}
 

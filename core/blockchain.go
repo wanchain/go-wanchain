@@ -905,7 +905,7 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 	blkSlots := blkEpid*posconfig.SlotCount + blkSlid
 	expSlots := epochid*posconfig.SlotCount + slotid
 
-	if expSlots >= (blkSlots + posconfig.SlotSecurityParam) || (epochid==0 && slotid == 0){
+	if expSlots >= (blkSlots + posconfig.SlotSecurityParam) || (epochid==posconfig.FirstEpochId && slotid == 0){
 		return 0,errors.New("wrong epoid or slotid")
 	}
 

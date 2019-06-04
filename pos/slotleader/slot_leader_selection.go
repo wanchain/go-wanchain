@@ -311,7 +311,7 @@ func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 		return false, err
 	}
 
-	if epochID == 0 {
+	if epochID == posconfig.FirstEpochId {
 		for _, value := range s.epochLeadersPtrArrayGenesis {
 			if util.PkEqual(localPk, value) {
 				return true, nil
@@ -390,7 +390,7 @@ func (s *SLS) dumpPreEpochLeaders() {
 	log.Debug("\n")
 	currentEpochID := s.getWorkingEpochID()
 	log.Debug("dumpPreEpochLeaders", "currentEpochID", currentEpochID)
-	if currentEpochID == 0 {
+	if currentEpochID == posconfig.FirstEpochId {
 		return
 	}
 
@@ -405,7 +405,7 @@ func (s *SLS) dumpCurrentEpochLeaders() {
 	log.Debug("\n")
 	currentEpochID := s.getWorkingEpochID()
 	log.Debug("dumpCurrentEpochLeaders", "currentEpochID", currentEpochID)
-	if currentEpochID == 0 {
+	if currentEpochID == posconfig.FirstEpochId {
 		return
 	}
 
@@ -420,7 +420,7 @@ func (s *SLS) dumpSlotLeaders() {
 	log.Debug("\n")
 	currentEpochID := s.getWorkingEpochID()
 	log.Debug("dumpSlotLeaders", "currentEpochID", currentEpochID)
-	if currentEpochID == 0 {
+	if currentEpochID == posconfig.FirstEpochId {
 		return
 	}
 
