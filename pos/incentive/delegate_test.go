@@ -29,7 +29,7 @@ func TestDelegate(t *testing.T) {
 	for i := 0; i < len(finalIncentive); i++ {
 		fmt.Println("group:", i)
 		for m := 0; m < len(finalIncentive[i]); m++ {
-			fmt.Println(finalIncentive[i][m].Addr.Hex())
+			fmt.Println(finalIncentive[i][m].WalletAddr.Hex())
 			fmt.Println("-------->")
 			fmt.Println(finalIncentive[i][m].Incentive.String())
 			if m == 0 {

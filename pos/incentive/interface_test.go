@@ -89,14 +89,14 @@ var (
 	delegateStakerProbilityMap = make(map[common.Address][]*big.Int)
 )
 
-func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
+func getInfo(epochID uint64, addr common.Address) (*vm.ValidatorInfo, error) {
 
 	addrs := delegateStakerMap[addr]
 	probs := delegateStakerProbilityMap[addr]
 	count := len(addrs)
 	if count == 0 {
 		fmt.Println("Do not found address")
-		return nil, 0, nil, errors.New("Do not found address")
+		return nil, errors.New("Do not found address")
 	}
 
 	client := make([]vm.ClientProbability, count)
@@ -106,7 +106,11 @@ func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint6
 		client[i].Probability = probs[i]
 	}
 
-	return client, 1000, big.NewInt(int64(100 * count * 10)), nil
+	validator := &vm.ValidatorInfo{}
+	validator.FeeRate = 1000
+	validator.Infos = client
+
+	return validator, nil
 }
 
 func setInfo(uint64, [][]vm.ClientIncentive) error { return nil }

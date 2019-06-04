@@ -24,13 +24,13 @@ func TestGetEpochPayDetail(t *testing.T) {
 
 	payExample := [][]vm.ClientIncentive{
 		{
-			{Addr: epAddrs[0], Incentive: big.NewInt(100)},
-			{Addr: epAddrs[1], Incentive: big.NewInt(200)},
+			{WalletAddr: epAddrs[0], Incentive: big.NewInt(100)},
+			{WalletAddr: epAddrs[1], Incentive: big.NewInt(200)},
 		},
 		{
-			{Addr: epAddrs[3], Incentive: big.NewInt(300)},
-			{Addr: epAddrs[4], Incentive: big.NewInt(400)},
-			{Addr: epAddrs[5], Incentive: big.NewInt(500)},
+			{WalletAddr: epAddrs[3], Incentive: big.NewInt(300)},
+			{WalletAddr: epAddrs[4], Incentive: big.NewInt(400)},
+			{WalletAddr: epAddrs[5], Incentive: big.NewInt(500)},
 		},
 	}
 
@@ -43,7 +43,7 @@ func TestGetEpochPayDetail(t *testing.T) {
 
 	for i := 0; i < len(pay); i++ {
 		for m := 0; m < len(pay[i]); m++ {
-			if pay[i][m].Addr.Hex() != payExample[i][m].Addr.Hex() || pay[i][m].Incentive.String() != payExample[i][m].Incentive.String() {
+			if pay[i][m].WalletAddr.Hex() != payExample[i][m].WalletAddr.Hex() || pay[i][m].Incentive.String() != payExample[i][m].Incentive.String() {
 				t.FailNow()
 			}
 		}
