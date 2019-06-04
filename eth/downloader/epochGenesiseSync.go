@@ -2,13 +2,12 @@
 package downloader
 
 import (
-	"github.com/wanchain/go-wanchain/common"
+	"errors"
 	"github.com/wanchain/go-wanchain/core/types"
-	"time"
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
-	"errors"
+	"time"
 )
 
 const repeatLimit  = 10
@@ -20,9 +19,10 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
-func (d *Downloader) fetchEpochGenesises(origin uint64, originHash *common.Hash,  latest *types.Header) error {
-	localBlk := d.blockchain.GetBlockByHash(*originHash)
+func (d *Downloader) fetchEpochGenesises(origin uint64, latest *types.Header) error {
+	localBlk := d.blockchain.GetBlockByNumber(origin)
 	beginEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(localBlk)
+
 
 
 	endblk := types.NewBlockWithHeader(latest)

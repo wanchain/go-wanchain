@@ -598,6 +598,9 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 }
 
 func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, height uint64, heightHeader *types.Header, td *big.Int) (err error) {
+	log.Info("fastSyncWithPeerPos", "current block", d.blockchain.CurrentBlock().NumberU64())
+	log.Info("fastSyncWithPeerPos", "current header", d.blockchain.CurrentHeader().Number.Uint64())
+	log.Info("fastSyncWithPeerPos", "current fast block", d.blockchain.CurrentFastBlock().NumberU64())
 	log.Info("fastSyncWithPeerPos", "origin", origin, "height", height)
 	d.syncStatsLock.Lock()
 	if d.syncStatsChainHeight <= origin || d.syncStatsChainOrigin > origin {
@@ -607,7 +610,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	d.syncStatsLock.Unlock()
 
 	pivot := uint64(0)
-
+	err = d.fetchEpochGenesises(origin, heightHeader)
 	// TODO: get epoch genesis hashes, and pivot
 	//var posPivot uint64 = missingNumber
 	//if d.mode == FastSync || d.mode == LightSync {

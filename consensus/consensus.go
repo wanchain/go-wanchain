@@ -70,6 +70,9 @@ type Engine interface {
 	// rules of a given engine.
 	VerifyUncles(chain ChainReader, block *types.Block) error
 
+	// VerifyGenesisBlocks verifies that the epoch genesis block's hash in the give block's header extra
+	VerifyGenesisBlocks(chain ChainReader, block *types.Block) error
+
 	// VerifySeal checks whether the crypto seal on a header is valid according to
 	// the consensus rules of the given engine.
 	VerifySeal(chain ChainReader, header *types.Header) error

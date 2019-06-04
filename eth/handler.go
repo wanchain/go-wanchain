@@ -746,6 +746,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Debug("Failed to deliver header td", "err", err)
 		}
 
+	case p.version >= wan64 && msg.Code == GetPivotMsg:
+
+	case p.version >= wan64 && msg.Code == PivotMsg:
+
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}

@@ -175,6 +175,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		return nil, err
 	}
 	bc.RegisterSwitchEngine(bc.hc)
+	bc.hc.epochgen = bc.epochGene
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -215,6 +216,9 @@ func PeekChainHeight(db ethdb.Database) (uint64){
 	return GetBlockNumber(db, head)
 }
 
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
+}
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
@@ -385,6 +389,41 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	defer bc.mu.RUnlock()
 
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
+}
+
+func (bc *BlockChain) GetPosPivotAndEpochGenesisHashes(hash common.Hash) ([]*types.Header, []*types.EpochGenesisHash) {
+	headers := make([]*types.Header, 0)
+	hashes := make([]*types.EpochGenesisHash, 0)
+
+	if bc.epochGene.rbLeaderSelector == nil {
+		return headers, hashes
+	}
+	header := bc.hc.GetHeaderByHash(hash)
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+	// pivot == GetEpochLastBlkNumber(eid - 1)
+	// incentive : eid - 3, eid - 4
+
+	dst := int64(eid) - 1
+	for i:=0; i<4; i++ {
+		if dst < 0 {
+			break
+		}
+		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
+		h := bc.hc.GetHeaderByNumber(bn)
+		if h != nil {
+			headers = append(headers, h)
+		}
+
+		h = bc.hc.GetHeaderByNumber(bn + 1)
+		if h != nil {
+			hash := common.Hash{}
+			copy(hash[:], h.Extra[1:33])
+
+			hashes = append(hashes, &types.EpochGenesisHash{EpochId:uint64(dst), Hash:hash})
+		}
+		dst--
+	}
+	return headers,hashes
 }
 
 // SetProcessor sets the processor required for making state modifications.
@@ -1866,6 +1905,10 @@ func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
 
 func (bc *BlockChain) GetEpochStartCh() chan uint64 {
 	return bc.epochGene.epochGenesisCh
+}
+
+func (bc *BlockChain) GetEpochGene() *EpochGenesisBlock {
+	return bc.epochGene
 }
 
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
