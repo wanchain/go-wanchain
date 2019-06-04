@@ -23,6 +23,7 @@ var (
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
 	IsDev        = false
+	MineEnabled = false
 )
 
 const (
