@@ -430,6 +430,10 @@ func (a PosApi) GetEpochRemain(epochID uint64) (string, error) {
 
 func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) {
 	epocherInst := epochLeader.GetEpocher()
+	infos := make(vm.WhiteInfos, 0)
+	if epocherInst == nil {
+		return infos, errors.New("epocher instance do not exist")
+	}
 	block := epocherInst.GetBlkChain().CurrentBlock()
 	if block == nil {
 		return nil, errors.New("Unkown block")
@@ -439,7 +443,6 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 		return nil, err
 	}
 
-	infos := make(vm.WhiteInfos, 0)
 	infos = append(infos, vm.UpgradeWhiteEpochLeaderDefault)
 	stateDb.ForEachStorageByteArray(vm.PosControlPrecompileAddr, func(key common.Hash, value []byte) bool {
 		info := vm.UpgradeWhiteEpochLeaderParam{}
@@ -455,6 +458,9 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 
 func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return make([]string,0), errors.New("epocher instance do not exist")
+	}
 	return epocherInst.GetWhiteByEpochId(epochID)
 }
 
