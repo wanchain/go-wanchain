@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -29,9 +28,9 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	if epochID > posconfig.FirstEpochId+2 {
 		res,_ := s.blockChain.ChainRestartStatus()
 		if res  {
-			pks := s.getDefaultLeadersPK(epochID)
-			posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-			log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+			//pks := s.GetEpochDefaultLeadersPK(epochID)
+			//posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+			//log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 			s.initSma()
 			s.isRestarting = true
 
@@ -175,7 +174,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 		if err != nil {
 			log.Warn("getSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
 		}
-		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 
 	//SMA PRE
@@ -245,7 +244,7 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		log.Debug("verifySlotProofByGenesis", "epochID", epochID, "slotID", slotID, "slotLeaderRb",
 			hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("verifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
-		skGt := s.getSkGtFromTrans(s.epochLeadersPtrArrayGenesis[:], epochID, slotID, s.randomGenesis.Bytes()[:],
+		skGt := s.getSkGtFromTrans(s.epochLeadersPtrArrayGenesis[:], 0, slotID, s.randomGenesis.Bytes()[:],
 			smaPieces[:])
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true

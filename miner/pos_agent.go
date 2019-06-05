@@ -122,10 +122,15 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	//todo:`switch pos from pow,the time is not 1?
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil == h {
+<<<<<<< HEAD
 		leaderPub  := slotleader.GetSlotLeaderSelection().GetEpochDefaultLeadersPK(posconfig.FirstEpochId)
 		leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub[0]))
 		log.Info("leader ","leader",leader)
 
+=======
+		leaderPub,_  := slotleader.GetSlotLeaderSelection().GetSlotLeader(0,0)
+		leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+>>>>>>> first epoch use whole whiteAccount
 		if leader == localPublicKey {
 			cur := uint64(time.Now().Unix())
 			sleepTime := cur%posconfig.SlotTime

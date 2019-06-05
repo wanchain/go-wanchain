@@ -6,12 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
@@ -30,6 +27,30 @@ var (
 	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
 
+func (s *SLS)GenerateDefaultSlotLeaders() error {
+	epochLeader := s.GetEpochDefaultLeadersPK(0)
+
+	slotLeadersPtr, _, _, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(s.smaGenesis[:],
+		epochLeader, s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
+	if err != nil {
+		log.SyslogAlert("generateSlotLeadsGroup", "epochid", 0, "error", err.Error())
+		return err
+	}
+
+	// insert slot address to local DB
+	for index, val := range slotLeadersPtr {
+		_, err = posdb.GetDb().PutWithIndex(uint64(0), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
+		if err != nil {
+			log.SyslogAlert("generateSlotLeadsGroup:PutWithIndex", "epochid", 0, "error", err.Error())
+			return err
+		}
+	}
+
+	for index, val := range slotLeadersPtr {
+		s.slotLeadersPtrArray[index] = val
+	}
+	return nil
+}
 // Init use to initial slotleader module and input some params.
 func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key) {
 	s.blockChain = blockChain
@@ -44,45 +65,47 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	if res  {
 		s.isRestarting = true
 	}
-	var pks []*ecdsa.PublicKey
-	if s.blockChain.CurrentEpochId == -1 {
-		// in the switchEngine process. the lock is holded.
-		pks = s.getDefaultLeadersPK(0)
-	} else {
-		// normal restart. no lock hold.
-		curEpochId, _ := util.CalEpSlbyTd(blockChain.CurrentBlock().Difficulty().Uint64())
-		pks = s.getDefaultLeadersPK(curEpochId)
-	}
-	posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-	log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+	//var pks []*ecdsa.PublicKey
+	//if s.blockChain.CurrentEpochId == -1 {
+	//	// in the switchEngine process. the lock is holded.
+	//	pks = s.GetEpochDefaultLeadersPK(0)
+	//} else {
+	//	// normal restart. no lock hold.
+	//	curEpochId, _ := util.CalEpSlbyTd(blockChain.CurrentBlock().Difficulty().Uint64())
+	//	pks = s.GetEpochDefaultLeadersPK(curEpochId)
+	//}
+	//posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+	//log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 
 	s.initSma()
+	s.GenerateDefaultSlotLeaders()
 }
 
-func (s *SLS) getDefaultLeadersPK(curepid uint64) []*ecdsa.PublicKey {
-	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
-
-	selector := epochLeader.GetEpocher()
-
-	initPksStr,err := selector.GetWhiteByEpochId(curepid)
-
-	pksl := uint64(len(initPksStr))
-	if err != nil || pksl == 0{
-		return nil
-	}
-
-	idx := 0 //(curepid)%pksl
-
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		pkStr := initPksStr[idx]
-		pkBuf := common.FromHex(pkStr)
-		pks[i] = crypto.ToECDSAPub(pkBuf)
-	}
-
-	log.Info("select producer","address",crypto.PubkeyToAddress(*pks[0]),"idx",idx)
-
-	return pks
-}
+// dup with GetEpochDefaultLeadersPK
+//func (s *SLS) getDefaultLeadersPK(curepid uint64) []*ecdsa.PublicKey {
+//	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
+//
+//	selector := epochLeader.GetEpocher()
+//
+//	initPksStr,err := selector.GetWhiteByEpochId(curepid)
+//
+//	pksl := uint64(len(initPksStr))
+//	if err != nil || pksl == 0{
+//		return nil
+//	}
+//
+//	idx := 0 //(curepid)%pksl
+//
+//	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+//		pkStr := initPksStr[idx]
+//		pkBuf := common.FromHex(pkStr)
+//		pks[i] = crypto.ToECDSAPub(pkBuf)
+//	}
+//
+//	log.Info("select producer","address",crypto.PubkeyToAddress(*pks[0]),"idx",idx)
+//
+//	return pks
+//}
 
 
 func (s *SLS) getLastRandom() *big.Int {
