@@ -213,7 +213,7 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	workStage := s.getWorkStage(epochID)
 
 	//If the gwan restart, try to recover the epoch leader and slot leader
-	if workStage != slotLeaderSelectionInit {
+	if workStage != slotLeaderSelectionInit &&  workStage != slotLeaderSelectionStageFinished{
 		if !s.isEpochLeaderMapReady() {
 			s.doInit(epochID)
 		}

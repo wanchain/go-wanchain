@@ -101,7 +101,7 @@ type worker struct {
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
 	chainSideSub event.Subscription
-	chainSlotTimer  chan struct{}
+	chainSlotTimer  chan uint64
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
@@ -141,7 +141,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txCh:           make(chan core.TxPreEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainSlotTimer: make(chan struct{}, chainHeadChanSize),
+		chainSlotTimer: make(chan uint64, chainHeadChanSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -163,7 +163,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	//if !worker.chain.IsInPosStage() {
 	//	worker.commitNewWork(true)
 	//}
-	worker.commitNewWork(false)
+	worker.commitNewWork(false, 0)
 
 	eth.BlockChain().RegisterSwitchEngine(worker)
 
@@ -266,13 +266,13 @@ func (self *worker) update() {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
 			if !self.chain.IsInPosStage() {
-				self.commitNewWork(true)
+				self.commitNewWork(true, 0)
 			} else {
 				// TODO two block.
-				self.commitNewWork(false)
+				self.commitNewWork(false, 0)
 			}
-		case <-self.chainSlotTimer:
-			self.commitNewWork(true)
+		case slotTime := <-self.chainSlotTimer:
+			self.commitNewWork(true, slotTime)
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
@@ -366,7 +366,7 @@ func (self *worker) wait() {
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
-				self.commitNewWork(false)
+				self.commitNewWork(false, 0)
 			}
 		}
 	}
@@ -417,7 +417,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork(isPos bool) {
+func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -440,13 +440,18 @@ func (self *worker) commitNewWork(isPos bool) {
 	}
 
 	num := parent.Number()
+	headTime := tstamp
+	if slotTime != 0 {
+		headTime = (int64)(slotTime)
+	}
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
 		Extra:      self.extra,
-		Time:       big.NewInt(tstamp),
+		Time:       big.NewInt(headTime),
+		//Time:       big.NewInt(tstamp),
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
@@ -522,7 +527,7 @@ func (self *worker) commitNewWork(isPos bool) {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
-	if isPos {
+	if isPush {
 		self.push(work)
 	}
 }

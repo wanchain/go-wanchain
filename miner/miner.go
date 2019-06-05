@@ -127,7 +127,7 @@ func (self *Miner) Start(coinbase common.Address) {
 	if self.eth.BlockChain().Config().IsPosActive {
 		go self.backendTimerLoop(self.eth)
 	} else 	if !self.eth.BlockChain().IsInPosStage()  {
-		self.worker.commitNewWork(true)
+		self.worker.commitNewWork(true, 0)
 	} else {
 		go self.backendTimerLoop(self.eth)
 	}
