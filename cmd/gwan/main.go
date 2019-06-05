@@ -123,6 +123,8 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
+
+		utils.AwsKmsFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -258,7 +260,16 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
-			unlockAccount(ctx, ks, trimmed, i, passwords)
+			if ctx.IsSet(utils.AwsKmsFlag.Name) {
+				kmsInfo := getAwsKmsInfo()
+				if kmsInfo == nil {
+					utils.Fatalf("invalid AWS KMS info")
+				}
+
+				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, kmsInfo, i, passwords)
+			} else {
+				unlockAccount(ctx, ks, trimmed, i, passwords)
+			}
 		}
 	}
 	// Register wallet event handlers to open and auto-derive wallets

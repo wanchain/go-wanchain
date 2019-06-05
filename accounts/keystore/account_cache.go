@@ -39,6 +39,9 @@ import (
 // exist yet, the code will attempt to create a watcher at most this often.
 const minReloadInterval = 2 * time.Second
 
+var AwsKMSCiphertextFileExt = "-cipher"
+
+
 type accountsByURL []accounts.Account
 
 func (s accountsByURL) Len() int           { return len(s) }
@@ -300,6 +303,13 @@ func (ac *accountCache) scanAccounts() error {
 		}
 	)
 	readAccount := func(path string) *accounts.Account {
+		if strings.LastIndex(path, AwsKMSCiphertextFileExt) == (len(path) - len(AwsKMSCiphertextFileExt)) {
+			addrBegin := strings.LastIndex(path[:len(path) - len(AwsKMSCiphertextFileExt)], "-")
+			if addrBegin != -1 {
+				return &accounts.Account{Address: common.HexToAddress(path[addrBegin+1:addrBegin+41]), URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
+			}
+		}
+
 		fd, err := os.Open(path)
 		if err != nil {
 			log.Trace("Failed to open keystore file", "path", path, "err", err)

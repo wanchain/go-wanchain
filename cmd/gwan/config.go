@@ -21,12 +21,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/console"
 	"io"
 	"os"
 	"reflect"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/naoina/toml"
 	"github.com/wanchain/go-wanchain/cmd/utils"
@@ -217,3 +219,46 @@ func dumpConfig(ctx *cli.Context) error {
 	os.Stdout.Write(out)
 	return nil
 }
+
+
+func getAwsKmsInfo() *keystore.AwsKmsInfo {
+	var keyVal [3]string
+	keyName := [3]string{"aKID", "secretKey", "region"}
+
+	fmt.Println("")
+	fmt.Println("begin collect AWS KMS info and keystore file password...")
+	for i, name := range keyName {
+		input, err := console.Stdin.PromptPassword("please input aws kms " + name +": ")
+		if err != nil {
+			utils.Fatalf("Failed to read input: %v", err)
+		}
+
+		keyVal[i] = input
+	}
+
+	fmt.Println("aws kms info:", keyVal)
+	return &keystore.AwsKmsInfo{keyVal[0], keyVal[1], keyVal[2]}
+}
+
+
+func verifySecurityInfo(node *node.Node, enableKms bool, info *keystore.AwsKmsInfo, password string, accounts []string) (bool, int) {
+	//fmt.Println("")
+	//fmt.Println("should verify ", len(accounts), " accounts")
+	//fmt.Println("begin verify keystore file security info...")
+	//ks := node.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	//for _, acc := range accounts {
+	//	fmt.Println("begin verify ", acc)
+	//
+	//	_, status, err := storemanmpc.GetPrivateShare(ks, common.HexToAddress(acc), enableKms, info, password)
+	//	if err == nil {
+	//		fmt.Println("verify keystore file security info succeed")
+	//		continue
+	//	} else {
+	//		fmt.Println("verify keystore file security info fail. err:", err.Error())
+	//		return false, status
+	//	}
+	//}
+
+	return true, 0
+}
+

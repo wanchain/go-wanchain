@@ -82,7 +82,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.LightServFlag,
 			utils.LightPeersFlag,
 			utils.LightKDFFlag,
-			utils.SysLogFlag,
 		},
 	},
 	{
@@ -123,6 +122,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
+			utils.AwsKmsFlag,
 		},
 	},
 	{
@@ -192,6 +192,11 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsEnabledFlag,
 			utils.FakePoWFlag,
 			utils.NoCompactionFlag,
+			utils.SysLogFlag,
+			utils.SyslogNetFlag,
+			utils.SyslogSvrFlag,
+			utils.SyslogLevelFlag,
+			utils.SyslogTagFlag,
 		}, debug.Flags...),
 	},
 	{
@@ -207,15 +212,6 @@ var AppHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name: "MISC",
-	},
-	{
-		Name: "SYSLOG",
-		Flags: []cli.Flag{
-			utils.SyslogNetFlag,
-			utils.SyslogSvrFlag,
-			utils.SyslogLevelFlag,
-			utils.SyslogTagFlag,
-		},
 	},
 }
 
