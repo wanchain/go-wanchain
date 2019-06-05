@@ -93,7 +93,7 @@ type Peer interface {
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
 	RequestEpochGenesisData(uint64) error
-	RequestPivot(common.Hash) error
+	RequestPivot(origin uint64, height common.Hash) error
 	RequestHeaderTdByNumber(uint64) error
 }
 
@@ -129,7 +129,7 @@ func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
-func (w *lightPeerWrapper)RequestPivot(common.Hash) error {
+func (w *lightPeerWrapper)RequestPivot(origin uint64, height common.Hash) error {
 	panic("RequestPivot not supported in light client mode sync")
 }
 

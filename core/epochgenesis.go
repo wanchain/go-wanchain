@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
+	"strconv"
 	"sync"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -74,18 +76,92 @@ type EpochGenesisBlock struct {
 	epochGenDb *posdb.Db
 	epgSetmu   sync.RWMutex
 	epgGenmu   sync.RWMutex
+
+	// white list map
+	whiteMap map[common.Address] bool
+	// epochId => slotId -> signer address
+	slotLeaderCache map[uint64]map[uint64]common.Address
+	//
+	epochLeaderCache map[uint64]map[common.Address]bool
+
+	epgGenesis *types.EpochGenesis
+
+	// get: epoch genesis block, white header
+	// summary: epoch header list, white header list
+	// save : epoch genesis block,  list summary[100]
+	//summaryList [][]*types.EpochGenesisSummary
+	//summaryMap map[uint64]*types.EpochGenesisSummary
 }
 
 func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
-
 	f := &EpochGenesisBlock{}
 	f.bc = bc
 	f.epochGenesisCh = make(chan uint64, 1)
 	f.lastEpochId = 0
 
 	f.epochGenDb = posdb.NewDb("epochGendb")
+	f.whiteMap = make(map[common.Address] bool)
 
+	f.slotLeaderCache = make(map[uint64]map[uint64] common.Address)
+	f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
+
+	// init white list
+	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
+		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
+		addr := crypto.PubkeyToAddress(*pk)
+		f.whiteMap[addr]= true
+	}
+
+	f.epgGenesis = nil
+
+	//f.InitSummaryListAndMap()
 	return f
+}
+
+//func (f *EpochGenesisBlock) GetSummary(epochId uint64) *types.EpochGenesisSummary {
+//	return f.summaryMap[epochId]
+//}
+
+//func (f *EpochGenesisBlock) InitSummaryListAndMap() bool {
+//	if f.summaryList == nil {
+//		f.summaryList = make([][]*types.EpochGenesisSummary, 0)
+//	}
+//	if f.summaryMap == nil {
+//		f.summaryMap = make(map[uint64]*types.EpochGenesisSummary)
+//	}
+//	for i:=uint64(0); ; i++ {
+//		val, err := f.epochGenDb.Get(i,  "epochSummary")
+//		if err != nil || val == nil {
+//			return true
+//		}
+//		var summaryLine = []*types.EpochGenesisSummary{}
+//		_ = rlp.DecodeBytes(val, &summaryLine)
+//		l := len(summaryLine)
+//		if l > 0 {
+//			f.summaryList = append(f.summaryList, summaryLine)
+//			for j:=0; j < l; j ++ {
+//				f.summaryMap[summaryLine[j].EpochHeader.EpochId] = summaryLine[j]
+//			}
+//		}
+//		if l < 100 {
+//			return true
+//		}
+//	}
+//}
+
+func (f *EpochGenesisBlock) GetEpochGenesisZero() *types.EpochGenesis {
+	if f.epgGenesis == nil {
+		rb := big.NewInt(1)
+		epgGenesis, _, err  := f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+		if err != nil {
+			log.Error("NewEpochGenesisBlock failed epgGenesis error")
+		}
+		//epgGenesis.SlotLeaders = posconfig.GenesisPK
+		f.epgGenesis = epgGenesis
+		f.updateCache(epgGenesis)
+	}
+
+	return f.epgGenesis
 }
 
 func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -108,66 +184,84 @@ func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block) {
 	go f.UpdateEpochGenesis(curEpid)
 }
 
-func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, error) {
+func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
 
 	log.Debug("generate epg", "", epochid)
-	epg := f.GetEpochGenesis(epochid)
+	epg, header := f.GetEpochGenesis(epochid)
 	if epg != nil {
-		return epg, nil
+		return epg, header, nil
 	} else {
 		return f.generateChainedEpochGenesis(epochid)
 	}
 }
 
-func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.EpochGenesis, error) {
+func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error) {
+	epgPre, _ := f.GetEpochGenesis(epochid - 1)
+	if epgPre == nil {
+		if epochid == 1 {
+			return f.GetEpochGenesisZero(), nil
+		} else {
+			return nil, errors.New("epoch genesis not exist")
+		}
+	}
+
+	var rb 			*big.Int
+	var blk 		*types.Block
+	rb, blk = f.getEpochRandomAndPreEpLastBlk(epochid)
+	epg, _, err := f.generateEpochGenesis(epochid, blk, rb.Bytes(), epgPre.GenesisBlkHash)
+	if err != nil {
+		return nil, err
+	}
+	return epg, nil
+}
+
+// TODO: test generate un exist epoch
+func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
 	//it is the first block of this epoch
 	var rb *big.Int
 	var blk *types.Block
 	var epgPre *types.EpochGenesis
 	var epg *types.EpochGenesis
+	var whiteHeader *types.Header
 
 	curEpid, _, err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
 	if curEpid <= epochid || err != nil || epochid == 0 {
-		return nil, errors.New("error epochid")
+		return nil, nil, errors.New("error epochid")
 	}
 
-	epgPre = f.GetEpochGenesis(epochid - 1)
+	epgPre, _ = f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
 		//start from ep1
 		for i := uint64(1); i <= epochid; i++ {
 
-			epg = f.GetEpochGenesis(i)
+			epg, _ = f.GetEpochGenesis(i)
 			if epg != nil {
 				continue
 			}
 
 			if i == 1 {
-				rb = big.NewInt(1)
-				epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
-				if err != nil {
-					return nil, err
-				}
+				epgPre = f.GetEpochGenesisZero()
 
 			} else {
-				epgPre = f.GetEpochGenesis(i - 1)
+				epgPre, _ = f.GetEpochGenesis(i - 1)
 
 			}
 
 			rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
 
 			if epgPre == nil {
-				return nil, errors.New("pre epg is nil")
+				return nil, nil, errors.New("pre epg is nil")
 			}
 
-			epg, err = f.generateEpochGenesis(i, blk, rb.Bytes(), epgPre.GenesisBlkHash)
+			epg, whiteHeader, err = f.generateEpochGenesis(i, blk, rb.Bytes(), epgPre.GenesisBlkHash)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			err = f.SetEpochGenesis(epg)
+			err = f.SetEpochGenesis(epg, whiteHeader)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 		}
@@ -175,27 +269,27 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 	} else {
 
 		rb, blk = f.getEpochRandomAndPreEpLastBlk(epochid)
-		epg, err = f.generateEpochGenesis(epochid, blk, rb.Bytes(), epgPre.GenesisBlkHash)
+		epg, whiteHeader, err = f.generateEpochGenesis(epochid, blk, rb.Bytes(), epgPre.GenesisBlkHash)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		err = f.SetEpochGenesis(epg)
+		err = f.SetEpochGenesis(epg, whiteHeader)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return epg, nil
+	return epg, whiteHeader, nil
 }
 
 func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64) (*big.Int, *types.Block) {
 	//blkNum := f.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
 
 	blkNum := posUtil.GetEpochBlock(epochid)
-	preEpLastblk := f.bc.GetBlockByNumber(blkNum - 1)
+	preEpLastblk := f.bc.GetBlockByNumber(blkNum)
 
-	stateDb, err := f.bc.StateAt(preEpLastblk.Root())
+	stateDb, err := f.bc.State() //f.bc.StateAt(preEpLastblk.Root())
 	if err != nil {
 		return nil, nil
 	}
@@ -205,8 +299,103 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64) (*big.
 	return rb, preEpLastblk
 }
 
-func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64, lastblk *types.Block, rb []byte, preHash common.Hash) (*types.EpochGenesis, error) {
 
+func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, parents []*types.Header) bool {
+	if epochId > 1 && blocknum > 1 {
+		var head *types.Header = nil
+		size := len(parents)
+		if size > 0 {
+			head = parents[ size - 1]
+		} else {
+			head = bc.GetHeaderByNumber(blocknum - 1)
+		}
+		if head != nil {
+			eid := head.Difficulty.Uint64() >> 32
+			if eid + 1 == epochId {
+				log.Info(" IsEpochFirstBlkNumber", "epoch", epochId, "first", blocknum)
+				return true
+			}
+		}
+	}
+
+	return false
+}
+func (hc *HeaderChain) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
+	return hc.epochgen.VerifyEpochGenesisHash(epochid, hash, bGenerate)
+}
+
+func (hc *HeaderChain) GenerateEGHash(epochid uint64) (common.Hash, error) {
+	return hc.epochgen.GenerateEGHash(epochid)
+}
+
+func (hc *HeaderChain) IsSignerValid(addr *common.Address, header *types.Header) bool {
+	return hc.epochgen.IsSignerValid(addr, header)
+}
+
+//func (hc *HeaderChain) GetOrGenerateEGHash(epochid uint64) (common.Hash, error) {
+//	return hc.epochgen.GetOrGenerateEGHash(epochid)
+//}
+
+
+
+func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
+	epkGnss, _ := f.GetEpochGenesis(epochid)
+	if epkGnss == nil {
+		log.Error("***dirty epoch genesis block data")
+	}
+	epkGnss, _, err := f.generateChainedEpochGenesis(epochid)
+	if err != nil {
+		return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
+	}
+	return epkGnss.GenesisBlkHash, nil
+}
+
+func (f *EpochGenesisBlock) IsSignerValid(addr *common.Address, header *types.Header) bool {
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+
+	if eid == 0 {
+		return true
+	}
+
+	slotLeaderMap := f.getSlotLeaderMap(eid)
+	if slotLeaderMap == nil {
+		// todo: check it's the last epoch, and in full sync mode, it's check in valid body
+		return true
+	}
+
+	add := (*slotLeaderMap)[header.Number.Uint64()]
+	if add == *addr {
+		return true
+	}
+
+	return false
+}
+
+// seal, header --> verify
+func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
+	var epkGnss *types.EpochGenesis = nil
+	var err error
+	if bGenerate {
+		epkGnss, _, err = f.generateChainedEpochGenesis(epochid)
+		if err != nil {
+			return errors.New("VerifyEpochGenesisHash error, can't generate epoch genesis, id=" + strconv.Itoa(int(epochid)))
+		}
+	} else {
+		epkGnss,_ = f.GetEpochGenesis(epochid)
+	}
+	if epkGnss == nil{
+		return errors.New("VerifyEpochGenesisHash error, can't get epoch genesis, id=" + strconv.FormatUint(epochid, 10))
+	}
+
+	epkGnssHash := epkGnss.GenesisBlkHash
+	if epkGnssHash != hash {
+		return errors.New("VerifyEpochGenesisHash failed, epoch id="+ strconv.FormatUint(epochid, 10))
+	}
+	return nil
+}
+
+// TODO: if epoch id not exist ? GetEpochLeaders? GetRBProposerGroup?
+func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.Block,rb []byte,preHash common.Hash) (*types.EpochGenesis, *types.Header, error) {
 	epGen := &types.EpochGenesis{}
 
 	epGen.ProtocolMagic = []byte("wanchainpos")
@@ -215,8 +404,10 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64, lastblk *types.
 
 	if lastblk == nil {
 		epGen.PreEpochLastBlkHash = common.Hash{}
+		epGen.PreEpochLastBlkNumber = 0
 	} else {
 		epGen.PreEpochLastBlkHash = lastblk.Hash()
+		epGen.PreEpochLastBlkNumber = lastblk.NumberU64()
 	}
 
 	epGen.EpochLeaders = f.rbLeaderSelector.GetEpochLeaders(epochid)
@@ -232,18 +423,20 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64, lastblk *types.
 		}
 	}
 
-	epGen.SlotLeaders = f.getAllSlotLeaders(epochid)
+	// TODO: white header may not exist !!
+	var whiteHeader *types.Header = nil
+	epGen.SlotLeaders, whiteHeader= f.getAllSlotLeaders(epochid)
+	if whiteHeader == nil {
+		whiteHeader = &types.Header{}
+	}
 
-	// TODO: save WhiteInfos --- func GetWlConfig(stateDb StateDB) WhiteInfos
-	// TODO: SelectLeadersLoop ---
-	stakersBytes := make([][]byte, 0) //f.TryGetAndSaveAllStakerInfoBytes(epochid)
+	stakersBytes := make([][]byte, 0)
+	//f.TryGetAndSaveAllStakerInfoBytes(epochid)
 	//if err != nil {
 	//	log.Debug("fail to get staker")
 	//	return nil, err
 	//}
 	epGen.StakerInfos = stakersBytes
-
-	// TODO: save R? no need
 
 	epGen.PreEpochGenHash = preHash
 
@@ -255,11 +448,97 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64, lastblk *types.
 
 	if err != nil {
 		log.Debug("Failed to marshal epoch genesis data", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	epGen.GenesisBlkHash = crypto.Keccak256Hash(byteVal)
-	return epGen, nil
+	return epGen, whiteHeader, nil
+}
+
+func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64]common.Address {
+	slotLeaderMap := make(map[uint64] common.Address)
+	sz := len(epkGnss.SlotLeaders)
+	for i:=0; i<sz; i++ {
+		addr := epkGnss.SlotLeaders[i]
+		slotLeaderMap[epkGnss.PreEpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = addr
+	}
+
+	epochLeaderMap := make(map[common.Address] bool)
+	sz = len(epkGnss.EpochLeaders)
+	for i:=0; i<sz; i++ {
+		pubkey := epkGnss.EpochLeaders[i]
+		pk := crypto.ToECDSAPub(pubkey)
+		epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+	}
+
+	f.epgGenmu.Lock()
+	defer f.epgGenmu.Unlock()
+
+	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
+	f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
+
+	return &slotLeaderMap
+}
+
+func (f *EpochGenesisBlock) dropCache(epochId uint64) {
+	f.epgGenmu.Lock()
+	defer f.epgGenmu.Unlock()
+
+	delete(f.slotLeaderCache, epochId)
+	delete(f.epochLeaderCache, epochId)
+}
+
+func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
+	if epochId == 0 {
+		eg := f.GetEpochGenesisZero()
+		f.updateCache(eg)
+	} else {
+		eg, _ := f.GetEpochGenesis(epochId)
+		if eg != nil {
+			f.updateCache(eg)
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
+	if eid < 1 {
+		return nil
+	}
+	f.epgGenmu.RLock()
+	slotLeaderMap, ok := f.slotLeaderCache[eid]
+	f.epgGenmu.RUnlock()
+	if !ok {
+		if f.tryCache(eid) {
+			slotLeaderMap, ok = f.slotLeaderCache[eid]
+			if !ok {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+
+	return &slotLeaderMap
+}
+
+func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
+	f.epgGenmu.RLock()
+	epochLeaderMap, ok := f.epochLeaderCache[eid]
+	f.epgGenmu.RUnlock()
+	if !ok {
+		if f.tryCache(eid) {
+			epochLeaderMap, ok = f.epochLeaderCache[eid]
+			if !ok {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+	return &epochLeaderMap
 }
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
@@ -271,19 +550,15 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	}
 
 	if epGen.EpochId == 1 {
-		rb := big.NewInt(1)
-		epgPre, err = f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
-		if err != nil {
-			return false
-		}
+		epgPre = f.GetEpochGenesisZero()
 	} else {
-		epgPre = f.GetEpochGenesis(epGen.EpochId - 1)
+		epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
 		if epgPre == nil {
 			return false
 		}
 	}
 
-	res := (epGen.PreEpochGenHash == epgPre.GenesisBlkHash)
+	res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
 	if !res {
 		log.Debug("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
 		return false
@@ -302,6 +577,7 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	epGenNew := &types.EpochGenesis{}
 
 	epGenNew.ProtocolMagic = []byte("wanchainpos")
+	epGenNew.PreEpochLastBlkNumber = epGen.PreEpochLastBlkNumber
 	epGenNew.PreEpochLastBlkHash = epGen.PreEpochLastBlkHash
 	epGenNew.EpochId = epGen.EpochId
 	epGenNew.RBLeadersSec256 = epGen.RBLeadersSec256
@@ -346,7 +622,6 @@ func (f *EpochGenesisBlock) GetLastBlkInPreEpoch(blk *types.Block) *types.Block 
 }
 
 func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
-
 	val, err := f.epochGenDb.Get(epochid, "epochgenesis")
 	if err != nil || val == nil {
 		return false
@@ -355,14 +630,20 @@ func (f *EpochGenesisBlock) IsExistEpochGenesis(epochid uint64) bool {
 
 }
 
-func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) [][]byte {
+func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) ([]common.Address,  *types.Header) {
+	slotLeaders := make([]common.Address, 0)
 	startBlkNum := uint64(0)
+	var whiteHeader *types.Header
 	if epochID > 0 {
 		startBlkNum = posUtil.GetEpochBlock(epochID-1) + 1
+		header := f.bc.GetHeaderByNumber(startBlkNum)
+		eid, _ :=posUtil.CalEpochSlotID(header.Time.Uint64())
+		if eid != epochID {
+			return slotLeaders, whiteHeader
+		}
 	}
 
 	endBlkNum := posUtil.GetEpochBlock(epochID)
-	slotLeaders := make([][]byte, 0)
 	for i := startBlkNum; i <= endBlkNum; i++ {
 		header := f.bc.GetHeaderByNumber(i)
 		signer, err := f.recoverSigner(header)
@@ -370,15 +651,21 @@ func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) [][]byte {
 			log.Error(err.Error())
 			break
 		}
+		if whiteHeader == nil {
+			_, ok := f.whiteMap[*signer]
+			if ok {
+				whiteHeader = header
+			}
+		}
 
-		slotLeaders = append(slotLeaders, signer[:])
+		slotLeaders = append(slotLeaders, *signer)
 	}
 
-	return slotLeaders
+	return slotLeaders, whiteHeader
 
 }
 
-func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error {
+func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
 	f.epgSetmu.Lock()
 	defer f.epgSetmu.Unlock()
 
@@ -391,41 +678,142 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis) error 
 		return errors.New("epoch genesis preverify is failed")
 	}
 
+	// TODO: if whiteHeader is empty, may the chain had stopped?
+	ok, err := f.checkSlotLeadersAndWhiteHeader(epochgen, whiteHeader)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return errors.New("slot leader has no one on white list")
+	}
+
 	val, err := rlp.EncodeToBytes(epochgen)
 	if err != nil {
 		return err
 	}
-
-	_, err = f.epochGenDb.Put(epochgen.EpochId, "epochgenesis", val)
+	var summary types.EpochGenesisSummary
+	summary.EpochHeader = &types.EpochGenesisHeader{
+		EpochId:epochgen.EpochId,
+		PreEpochLastBlkNumber: epochgen.PreEpochLastBlkNumber,
+		PreEpochLastBlkHash: epochgen.PreEpochLastBlkHash,
+	}
+	summary.WhiteHeader = whiteHeader
+	valSummary, err := rlp.EncodeToBytes(summary)
 	if err != nil {
 		return err
 	}
 
-	err = f.saveToPosDb(epochgen)
-	if err != nil {
-		return err
-	}
+	// TODO: data batch
+	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochgenesis", val)
+	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochsummary", valSummary)
+	_ = f.saveToPosDb(epochgen)
 
+	posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
+
+	f.updateCache(epochgen)
 	log.Info("successfully input epochGenesis", "", epochgen.EpochId)
 
 	return nil
 }
 
-func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) *types.EpochGenesis {
-
-	val, err := f.epochGenDb.Get(epochid, "epochgenesis")
+func (f *EpochGenesisBlock) GetEpochSummary(epochId uint64) *types.EpochGenesisSummary {
+	val, err := f.epochGenDb.Get(epochId, "epochsummary")
 	if err != nil || val == nil {
 		return nil
+	}
+	summary := new (types.EpochGenesisSummary)
+	err = rlp.DecodeBytes(val, summary)
+	if err != nil {
+		log.Debug(err.Error())
+		return nil
+	}
+	return summary
+}
+
+func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) (*types.EpochGenesis,*types.Header) {
+	val, err := f.epochGenDb.Get(epochid, "epochgenesis")
+	if err != nil || val == nil {
+		return nil, nil
 	}
 
 	epochGen := new(types.EpochGenesis)
 	err = rlp.DecodeBytes(val, epochGen)
 	if err != nil {
 		log.Debug(err.Error())
-		return nil
+		return nil, nil
 	}
 
-	return epochGen
+	val, err = f.epochGenDb.Get(epochid, "epochsummary")
+	if err != nil || val == nil {
+		return nil, nil
+	}
+
+	summary := new(types.EpochGenesisSummary)
+	err = rlp.DecodeBytes(val, summary)
+	if err != nil {
+		log.Debug(err.Error())
+		return nil, nil
+	}
+
+	return epochGen, summary.WhiteHeader
+}
+
+
+// slot leaders should in pre epoch leader, and must have a member in white list
+func (f * EpochGenesisBlock) checkSlotLeadersAndWhiteHeader(eg *types.EpochGenesis, whiteHeader *types.Header) (bool, error) {
+	if eg.EpochId == 0 {
+		// may be we should check, slot leader == posConfig.genesisPk
+		return false, nil
+	}
+
+	preEpochLeaderMap := f.getEpochLeaderMap(eg.EpochId - 1)
+	if preEpochLeaderMap == nil {
+		return false, errors.New("get pre epoch leader map error")
+	}
+
+	//opks,_ := hex.DecodeString(posconfig.GenesisPK)
+	//opk :=crypto.ToECDSAPub(opks)
+	//oaddr := crypto.PubkeyToAddress(*opk)
+	//println(common.Bytes2Hex(oaddr[:]))
+
+	bHasWhite := false
+	sz := len(eg.SlotLeaders)
+	for i:=0; i<sz; i++ {
+		addr := eg.SlotLeaders[i]
+
+		if !bHasWhite {
+			_, ok := f.whiteMap[addr]
+			if ok {
+				// check same with white header
+				if whiteHeader.Difficulty != nil {
+					whiteAddr, err := f.recoverSigner(whiteHeader)
+					if err != nil {
+						return false, errors.New("checkSlotLeaders whiteHeader un right")
+					}
+					if *whiteAddr != addr {
+						return false, errors.New("checkSlotLeaders whiteHeader is not same with first white in the slot leaders")
+					}
+					bHasWhite = true
+				}
+			}
+		}
+		_, ok := (*preEpochLeaderMap)[addr]
+		if !ok {
+			return false, errors.New("slot leader should in pre epoch leader group ")
+		}
+	}
+
+	if !bHasWhite {
+		if whiteHeader.Difficulty != nil {
+			return false, errors.New("not white leader in the slot leaders")
+		} else {
+			// todo: develop mode don't support white list
+			//return false, errors.New("slot leader should has member in white group ")
+		}
+	}
+
+	return true, nil
 }
 
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
@@ -443,7 +831,13 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 
 	idx := int(block.NumberU64() - blKBegin)
 
-	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
+	extraType := header.Extra[0]
+	start := 1
+	if extraType == 'g' {
+		start = 33
+	}
+
+	_, proofMeg, err := f.slotLeaderSelector.GetInfoFromHeadExtra(epochID, header.Extra[start:len(header.Extra)-extraSeal])
 
 	if err != nil {
 		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
@@ -459,15 +853,18 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return err
 	}
 
-	if !bytes.Equal(signer, crypto.FromECDSAPub(pk)) {
+	var signerAddr = crypto.PubkeyToAddress(*pk)
+	//if !bytes.Equal(signer, crypto.FromECDSAPub(pk)) {
+	if *signer == signerAddr {
 		log.Error("Pk signer verify failed in verifySeal", "number", block.NumberU64(),
-			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer[:]), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 		return errors.New("failed to verify signer for fast synch verify")
 	}
 
-	headerPkval := crypto.FromECDSAPub(pk)
+	//headerPkval := crypto.FromECDSAPub(pk)
+	headerAddr := crypto.PubkeyToAddress(*pk)
 
-	epg := f.GetEpochGenesis(epochID)
+	epg,_ := f.GetEpochGenesis(epochID)
 	if epg == nil {
 		return errors.New("failed to get epoch genesis")
 	}
@@ -476,9 +873,10 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 		return errors.New("blokc index is beyong slotleader")
 	}
 
-	if !bytes.Equal(epg.SlotLeaders[idx], headerPkval) {
+	//if !bytes.Equal(epg.SlotLeaders[idx], headerPkval) {
+	if epg.SlotLeaders[idx] == headerAddr {
 		log.Error("Pk signer verify with epoch genesis", "number", block.NumberU64(),
-			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
+			"epochID", epochID, "slotID", block.NumberU64(), "signer", common.ToHex(signer[:]), "PkAddress", crypto.PubkeyToAddress(*pk).Hex())
 		return errors.New("failed to verify signer with epoch genesis")
 	}
 
@@ -491,7 +889,7 @@ func (f *EpochGenesisBlock) ValidateState(block, parent *types.Block, state *sta
 	return nil
 }
 
-func (f *EpochGenesisBlock) recoverSigner(header *types.Header) ([]byte, error) {
+func (f *EpochGenesisBlock) recoverSigner(header *types.Header) (*common.Address, error) {
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	log.Debug("signature", "hex", hex.EncodeToString(signature))
@@ -506,12 +904,16 @@ func (f *EpochGenesisBlock) recoverSigner(header *types.Header) ([]byte, error) 
 
 	log.Debug("pubkey in ecrecover", "pk", hex.EncodeToString(pubkey))
 
-	return pubkey, nil
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	log.Debug("signer in ecrecover", "signer", signer.Hex())
+
+	return &signer, nil
 
 }
 
 func sigHash(header *types.Header) (hash common.Hash) {
-
 	hasher := sha3.NewKeccak256()
 
 	rlp.Encode(hasher, []interface{}{
@@ -550,8 +952,14 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
 			//Probabilities: big.NewInt(0),
 		}
 		tmp.PubSec256 = epochgen.EpochLeaders[i]
-		v, _ := rlp.EncodeToBytes(&tmp)
-		elDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
+		v, err := rlp.EncodeToBytes(&tmp)
+		if err != nil {
+			return errors.New("decode epoch leader sec error")
+		}
+		_, err = elDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
+		if err != nil {
+			return errors.New("saveToPosDb to EpLocalDB failed" + err.Error())
+		}
 	}
 	rbDb := posdb.NewDb(posconfig.RbLocalDB)
 	if rbDb == nil {
@@ -562,8 +970,13 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
 		tmp := posdb.Proposer{}
 		tmp.PubBn256 = epochgen.RBLeadersBn256[i]
 		tmp.PubSec256 = epochgen.RBLeadersSec256[i]
-		v, _ := rlp.EncodeToBytes(&tmp)
-		rbDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v)
+		v, err := rlp.EncodeToBytes(&tmp)
+		if err != nil {
+			return errors.New("decode random leader sec error")
+		}
+		if _, err = rbDb.PutWithIndex(epochgen.EpochId, uint64(i), "", v); err != nil {
+			return errors.New("saveToPosDb to RbLocalDB failed" + err.Error())
+		}
 	}
 
 	stDb := posdb.NewDb(posconfig.StakerLocalDB)
@@ -573,8 +986,13 @@ func (f *EpochGenesisBlock) saveToPosDb(epochgen *types.EpochGenesis) error {
 	count = len(epochgen.StakerInfos)
 	for _, pkBytes := range epochgen.StakerInfos {
 		staker := vm.StakerInfo{}
-		_ = rlp.DecodeBytes(pkBytes, &staker)
-		stDb.PutWithIndex(epochgen.EpochId, 0, common.ToHex(staker.Address[:]), pkBytes)
+		err := rlp.DecodeBytes(pkBytes, &staker)
+		if err != nil {
+			return errors.New("decode staker error")
+		}
+		if _, err = stDb.PutWithIndex(epochgen.EpochId, 0, common.ToHex(staker.Address[:]), pkBytes); err != nil {
+			return errors.New("saveToPosDb to StakerLocalDB failed" + err.Error())
+		}
 	}
 
 	return nil

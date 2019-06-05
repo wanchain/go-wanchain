@@ -69,9 +69,8 @@ const (
 	EpochGenesisMsg    	= 0x12
 	GetPivotMsg    		= 0x13
 	PivotMsg       		= 0x14
-	EpochGenesisHashMsg = 0x15
-	GetBlockHeaderTdMsg = 0x16
-	BlockHeaderTdMsg 	= 0x17
+	GetBlockHeaderTdMsg = 0x15
+	BlockHeaderTdMsg 	= 0x16
 )
 
 type errCode int
@@ -147,7 +146,8 @@ type getHeaderTdData struct {
 }
 
 type getPivotData struct {
-	Current common.Hash
+	Origin uint64
+	Height common.Hash
 }
 
 // hashOrNumber is a combined field for specifying an origin block.
@@ -209,6 +209,7 @@ type getEpochGenesisData struct {
 type epochGenesisBody struct {
 	IsEnd bool
 	EpochGenesis 	*types.EpochGenesis
+	WhiteHeader		*types.Header
 }
 
 

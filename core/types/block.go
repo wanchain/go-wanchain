@@ -453,7 +453,7 @@ type EpochGenesis struct {
 	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
 	Random              []byte
 	EpochLeaders		[][]byte
-	SlotLeaders         [][]byte    //current epoch slotleaders
+	SlotLeaders         []common.Address    //current epoch slotleaders
 	RBLeadersSec256     [][]byte    //current epoch slotleaders
 	RBLeadersBn256	    [][]byte
 	StakerInfos         [][]byte    // StakerInfo
@@ -462,10 +462,15 @@ type EpochGenesis struct {
 	PreEpochGenHash 	common.Hash
 }
 
-type EpochGenesisHead struct {
+type EpochGenesisHeader struct {
 	EpochId             uint64
 	PreEpochLastBlkNumber     uint64
 	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
+}
+
+type EpochGenesisSummary struct {
+	EpochHeader *EpochGenesisHeader
+	WhiteHeader *Header
 }
 
 type EpochSync struct {
@@ -473,12 +478,13 @@ type EpochSync struct {
 	IsEnd	bool
 }
 
-type EpochGenesisHash struct {
-	EpochId uint64
-	Hash    common.Hash
-}
-
 type HeaderTdData struct {
 	Header 	*Header
 	Td 		*big.Int
+}
+
+type PivotData struct {
+	Headers []*Header
+	Summaries []*EpochGenesisSummary
+	OriginSummaries *EpochGenesisSummary
 }

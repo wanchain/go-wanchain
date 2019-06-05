@@ -132,3 +132,18 @@ func TestBlockEncoding(t *testing.T) {
 		t.Errorf("encoded block mismatch:\ngot:  %x\nwant: %x", ourBlockEnc, blockEnc)
 	}
 }
+
+func TestNilFieldRlp(t *testing.T) {
+	var e EpochGenesisSummary
+	e.EpochHeader = new(EpochGenesisHeader)
+	e.WhiteHeader = &Header{}
+	b, err := rlp.EncodeToBytes(&e)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	var f EpochGenesisSummary
+	err = rlp.DecodeBytes(b, &f)
+	if err != nil {
+		t.Error(err.Error())
+	}
+}

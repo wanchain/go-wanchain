@@ -370,6 +370,26 @@ web3._extend({
 			call: 'pos_getRbStage',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getEpochIdByBlockNumber',
+			call: 'pos_getEpochIdByBlockNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochGenesis',
+			call: 'pos_getEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'generateEpochGenesis',
+			call: 'pos_generateEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'isEqualEpochGenesis',
+			call: 'pos_isEqualEpochGenesis',
+			params: 1
+		}),
 	]
 });
 `

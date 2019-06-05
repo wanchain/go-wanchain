@@ -120,7 +120,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				response := pack.(*epochGenesisPack).epochGenesis
 				log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
 
-				err := d.blockchain.SetEpochGenesis(response)
+				err := d.blockchain.SetEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
 
 				if err != nil {
 					log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())

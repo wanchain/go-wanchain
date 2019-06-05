@@ -171,11 +171,8 @@ func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 func (p *peer) SendBlockHeaderTd(header *types.Header, td *big.Int) error {
 	return p2p.Send(p.rw, BlockHeaderTdMsg, []interface{}{header, td})
 }
-func (p *peer) SendPivot(header []*types.Header) error {
-	return p2p.Send(p.rw, PivotMsg, header)
-}
-func (p *peer) SendEpochGenesisHash(hashes []*types.EpochGenesisHash) error {
-	return p2p.Send(p.rw, EpochGenesisHashMsg, hashes)
+func (p *peer) SendPivot(pivotData *types.PivotData) error {
+	return p2p.Send(p.rw, PivotMsg, pivotData)
 }
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
@@ -253,18 +250,18 @@ func (p *peer) RequestEpochGenesisData(epochids uint64) error {
 //send epoch genesis
 func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis,err := bc.GenerateEpochGenesis(epochid)
+	epochGenesis, whiteHeader, err := bc.GenerateEpochGenesis(epochid)
 	if err != nil {
 		log.Info("error to generate epoch genesis")
 		return err
 	}
 
-	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis})
+	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis, WhiteHeader:whiteHeader})
 }
 
-func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis) error {
+func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
 	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
-	bc.SetEpochGenesis(epochgen)
+	bc.SetEpochGenesis(epochgen, whiteHeader)
 	return nil
 }
 ////////////////////////////////////////////////////////////////
@@ -332,11 +329,12 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	return nil
 }
 
-func (p *peer) RequestPivot(hash common.Hash) error {
-	p.Log().Debug("Fetching pivot", "hash", hash)
+func (p *peer) RequestPivot(origin uint64, height common.Hash) error {
+	p.Log().Debug("Fetching pivot", "origin", origin, "height", height)
 
 	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
-			Current: hash,
+			Origin: origin,
+			Height: height,
 		})
 }
 func (p *peer) readPivot(pivot *uint64) (err error) {

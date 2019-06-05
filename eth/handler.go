@@ -537,26 +537,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-	case msg.Code == GetEpochGenesisMsg:
-		var epochid uint64
-		if err := msg.Decode(&epochid); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		p.SendEpochGenesis(pm.blockchain,epochid)
-
-	case msg.Code == EpochGenesisMsg:
-		var epBody epochGenesisBody
-		if err := msg.Decode(&epBody); err != nil {
-			log.Debug("Failed to decode epoch genesis data", "err", err)
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
-			log.Debug("Failed to deliver epoch genesis data", "err", err)
-		}
-
-
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
@@ -714,6 +694,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
+	case p.version >= wan64 && msg.Code == GetEpochGenesisMsg:
+		var epochid uint64
+		if err := msg.Decode(&epochid); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		return p.SendEpochGenesis(pm.blockchain,epochid)
+
+	case p.version >= wan64 && msg.Code == EpochGenesisMsg:
+		var epBody epochGenesisBody
+		if err := msg.Decode(&epBody); err != nil {
+			log.Debug("Failed to decode epoch genesis data", "err", err)
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis, epBody.WhiteHeader); err != nil {
+			log.Debug("Failed to deliver epoch genesis data", "err", err)
+		}
+
 	case p.version >= wan64 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
@@ -747,8 +746,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case p.version >= wan64 && msg.Code == GetPivotMsg:
+		var query getPivotData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		pivotData := new(types.PivotData)
+		pivotData.Headers, pivotData.Summaries, pivotData.OriginSummaries = pm.blockchain.GetPosPivot(query.Origin, query.Height)
+
+		return p.SendPivot(pivotData)
 
 	case p.version >= wan64 && msg.Code == PivotMsg:
+		var pivotData = types.PivotData{}
+		if err := msg.Decode(&pivotData); err != nil {
+			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
+		}
+		err := pm.downloader.DeliverEpochPivot(p.id, &pivotData)
+		if err != nil {
+			log.Debug("Failed to deliver pivot headers", "err", err)
+		}
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)

@@ -163,7 +163,7 @@ func (p *FakePeer) RequestEpochGenesisData(epochids uint64) error {
 	return nil
 }
 
-func (p *FakePeer) RequestPivot(hash common.Hash) error {
+func (p *FakePeer) RequestPivot(origin uint64, height common.Hash) error {
 	return nil
 }
 func (p *FakePeer) RequestHeaderTdByNumber(uint64) error {

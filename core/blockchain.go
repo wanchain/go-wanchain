@@ -391,14 +391,22 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivotAndEpochGenesisHashes(hash common.Hash) ([]*types.Header, []*types.EpochGenesisHash) {
+func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Header, []*types.EpochGenesisSummary, *types.EpochGenesisSummary) {
 	headers := make([]*types.Header, 0)
-	hashes := make([]*types.EpochGenesisHash, 0)
+	// origin + 4 pivot
+	summaries := make([]*types.EpochGenesisSummary, 0)
+	originSummaries := &types.EpochGenesisSummary{ EpochHeader:new(types.EpochGenesisHeader), WhiteHeader:new(types.Header)}
 
 	if bc.epochGene.rbLeaderSelector == nil {
-		return headers, hashes
+		return headers, summaries, originSummaries
 	}
 	header := bc.hc.GetHeaderByHash(hash)
+	if header == nil {
+		return headers, summaries, originSummaries
+	}
+	if !posUtil.IsPosBlock(header.Number.Uint64()) {
+		return headers, summaries, originSummaries
+	}
 	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
 	// pivot == GetEpochLastBlkNumber(eid - 1)
 	// incentive : eid - 3, eid - 4
@@ -411,19 +419,26 @@ func (bc *BlockChain) GetPosPivotAndEpochGenesisHashes(hash common.Hash) ([]*typ
 		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
 		h := bc.hc.GetHeaderByNumber(bn)
 		if h != nil {
-			headers = append(headers, h)
+			s := bc.epochGene.GetEpochSummary(uint64(dst))
+			if s != nil {
+				summaries = append(summaries, s)
+				headers = append(headers, h)
+			}
 		}
 
-		h = bc.hc.GetHeaderByNumber(bn + 1)
-		if h != nil {
-			hash := common.Hash{}
-			copy(hash[:], h.Extra[1:33])
-
-			hashes = append(hashes, &types.EpochGenesisHash{EpochId:uint64(dst), Hash:hash})
-		}
 		dst--
 	}
-	return headers,hashes
+
+
+	originHeader := bc.hc.GetHeaderByNumber(origin)
+	if originHeader != nil {
+		eid, _ := posUtil.CalEpochSlotID(originHeader.Time.Uint64())
+		s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
+		if s != nil {
+			return headers, summaries, s
+		}
+	}
+	return headers,summaries, originSummaries
 }
 
 // SetProcessor sets the processor required for making state modifications.
@@ -1883,7 +1898,7 @@ func (bc *BlockChain) SetSlSelector(sls SlLeadersSelInt) {
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, error) {
+func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
 	return bc.epochGene.GenerateEpochGenesis(epochid)
 }
 
@@ -1899,8 +1914,8 @@ func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool {
 	return bc.epochGene.IsExistEpochGenesis(epochid)
 }
 
-func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
-	return bc.epochGene.SetEpochGenesis(epochgen)
+func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
+	return bc.epochGene.SetEpochGenesis(epochgen, whiteHeader)
 }
 
 func (bc *BlockChain) GetEpochStartCh() chan uint64 {
