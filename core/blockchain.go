@@ -1874,15 +1874,12 @@ func (bc *BlockChain) IsInPosStage() (bool){
 func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	//diff := bc.checkCQStartSlot - bc.restartSlot
-	//
-	//
-	//
-	//if  diff > posconfig.K &&
-	//	bc.checkCQStartSlot > 0 &&
-	//	bc.restartSlot > 0 {
-	//	return true,bc.restartBlk
-	//}
+	diff := bc.checkCQStartSlot - bc.restartSlot
+	if  diff > posconfig.K &&
+		bc.checkCQStartSlot > 0 &&
+		bc.restartSlot > 0 {
+		return true,bc.restartBlk
+	}
 
 	return false,nil
 }
@@ -1960,6 +1957,8 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 		preSlots := preepid*posconfig.SlotCount + preslid
 
 		diff := curSlots - preSlots
+
+		log.Info("the slot diff","diff",diff)
 		if diff > posconfig.SlotSecurityParam {
 			idxs = append(idxs,uint(i))
 			//fmt.Println("restart point=",i)

@@ -34,6 +34,9 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 			log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 			s.initSma()
 			s.isRestarting = true
+
+			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+
 		}
 	}
 
