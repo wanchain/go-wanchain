@@ -49,7 +49,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
+	SlotTime = 5
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -98,7 +98,12 @@ var GenesisPK string
 //var GenesisPKInit = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
 //var GenesisPK = "046a5e1d2b8ca62accede9b8c7995dbd428ddbaf6a7f85673d426038b05bfdb428681046930a27b849a8f3541e71e8779948df95c78b2b303380769d0f4e8a753e"
 var GenesisPKInit = ""
-var PosOwnerAddr = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
+var PosOwnerAddr common.Address
+var WhiteList [210]string
+
+
+
+
 
 type Config struct {
 	PolymDegree   uint
@@ -169,12 +174,20 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 	return GenerateD3byKey2(c.MinerKey.PrivateKey2)
 }
 
-func Init(nodeCfg *node.Config) {
-	if IsDev { // --plutodev
-		WhiteList = WhiteListDev
+func Init(nodeCfg *node.Config, networkId uint64) {
+	if networkId == 1 {
+		// this is mainnet. *****
+		WhiteList = WhiteListMainnet
+		PosOwnerAddr = PosOwnerAddrMainnet
 	} else {
-		WhiteList = WhiteListOrig
+		PosOwnerAddr = PosOwnerAddrTest
+		if IsDev { // --plutodev
+			WhiteList = WhiteListDev
+		} else {
+			WhiteList = WhiteListOrig
+		}
 	}
+
 	EpochLeadersHold = make([][]byte, len(WhiteList))
 	for i := 0; i < len(WhiteList); i++ {
 		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
