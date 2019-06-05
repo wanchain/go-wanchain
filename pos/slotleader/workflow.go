@@ -199,8 +199,6 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	switch workStage {
 	case slotLeaderSelectionInit:
 		s.doInit(epochID)
-
-		// TODO this is wrong. map is empty.
 		if !s.isLocalPkInCurrentEpochLeaders() {
 			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		} else {

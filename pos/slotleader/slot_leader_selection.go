@@ -533,13 +533,14 @@ func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bo
 
 func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	epochIDGet := epochID
-	// get pre sma
-	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
 	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
 	if !canBeContinue {
-		log.Warn("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
+		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
+	// get pre sma
+	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
+
 	if (err != nil && epochID > 1) || isGenesis {
 		if !isGenesis {
 			log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
