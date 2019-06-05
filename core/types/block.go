@@ -473,11 +473,6 @@ type EpochGenesisSummary struct {
 	WhiteHeader *Header
 }
 
-type EpochSync struct {
-	EpochId uint64
-	IsEnd	bool
-}
-
 type HeaderTdData struct {
 	Header 	*Header
 	Td 		*big.Int
