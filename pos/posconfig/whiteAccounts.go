@@ -1,5 +1,10 @@
 package posconfig
-var WhiteList [210]string
+
+import "github.com/wanchain/go-wanchain/common"
+
+
+var PosOwnerAddrTest = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
+
 
 //0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e
 var WhiteListOrig = [...]string{
