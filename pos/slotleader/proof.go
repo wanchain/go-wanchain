@@ -27,17 +27,10 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 
 	if epochID > posconfig.FirstEpochId+2 {
 
-		res, restartBlk := s.blockChain.ChainRestartStatus()
+		res,_ := s.blockChain.ChainRestartStatus()
 
-		if res && restartBlk != nil {
-
-			curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
-			if  s.restartEpochid != curEpochId {
-				s.restartEpochid = curEpochId
-			}
-
+		if res {
 			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
-
 		}
 	}
 
