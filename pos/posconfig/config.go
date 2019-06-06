@@ -179,13 +179,19 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		// this is mainnet. *****
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
-	} else {
+	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrTest
 		if IsDev { // --plutodev
-			WhiteList = WhiteListDev
+			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
 			WhiteList = WhiteListOrig
 		}
+	}else if networkId == 4 {
+		PosOwnerAddr = PosOwnerAddrTest
+		WhiteList = WhiteListOrig
+	}else  { // testnet
+		PosOwnerAddr = PosOwnerAddrTest
+		WhiteList = WhiteListOrig
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))
