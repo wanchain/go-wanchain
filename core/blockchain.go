@@ -959,8 +959,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			}
 		} else {
 
-			_,restartBlk := bc.ChainRestartStatus()
-			if restartBlk != nil {
+			res,restartBlk := bc.ChainRestartStatus()
+			if restartBlk != nil && res {
 				restartEpid, _ := posUtil.CalEpochSlotID(restartBlk.Time().Uint64())
 				if epid-restartEpid > 2 {
 					bc.SetChainRestarted()

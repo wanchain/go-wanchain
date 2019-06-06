@@ -120,9 +120,9 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	_, err = s.getPreEpochLeadersPK(epochID)
 
-	res,_ := s.blockChain.ChainRestartStatus()
+	//res,_ := s.blockChain.ChainRestartStatus()
 
-	if epochID <= posconfig.FirstEpochId+2  || res || err!=nil {
+	if epochID <= posconfig.FirstEpochId+2 /* || res */|| err!=nil {
 		return s.getSlotLeader(0,slotID)
 	} else {
 		return s.getSlotLeader(epochID,slotID)
