@@ -19,16 +19,12 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
-func (d *Downloader) fetchEpochGenesises(origin uint64, latest *types.Header) error {
-	localBlk := d.blockchain.GetBlockByNumber(origin)
-	beginEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(localBlk)
-
-
+func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header) error {
 
 	endblk := types.NewBlockWithHeader(latest)
-	endEpid,_:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
+	endEpid, _:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
 
-	return d.fetchEpochGenesisesBetween(beginEpid, endEpid - 1)
+	return d.fetchEpochGenesisesBetween(startEpoch, endEpid - 1)
 }
 
 func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {

@@ -449,8 +449,8 @@ func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) 
 type EpochGenesis struct {
 	ProtocolMagic       []byte      //magic number
 	EpochId             uint64      //current epochId
-	PreEpochLastBlkNumber     uint64      // pre epoch last block number
-	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
+	EpochLastBlkNumber     uint64      // pre epoch last block number
+	EpochLastBlkHash common.Hash //the hash of last block of previous epoch
 	Random              []byte
 	EpochLeaders		[][]byte
 	SlotLeaders         []common.Address    //current epoch slotleaders
@@ -464,8 +464,8 @@ type EpochGenesis struct {
 
 type EpochGenesisHeader struct {
 	EpochId             uint64
-	PreEpochLastBlkNumber     uint64
-	PreEpochLastBlkHash common.Hash //the hash of last block of previous epoch
+	EpochLastBlkNumber     uint64
+	EpochLastBlkHash common.Hash //the hash of last block of previous epoch
 }
 
 type EpochGenesisSummary struct {

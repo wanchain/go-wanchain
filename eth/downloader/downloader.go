@@ -651,7 +651,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 		}
 		log.Info("fetch pivot finished")
 
-		err = d.fetchEpochGenesises(origin, heightHeader)
+		err = d.fetchEpochGenesises(pivotData.StartEpoch, heightHeader)
 		if err != nil {
 			return err
 		}
