@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/mpc_3.0_release/kms"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 
@@ -31,8 +31,8 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/console"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -485,7 +485,7 @@ func accountEncrypt(ctx *cli.Context) error {
 		}
 
 		desFile := fa.URL.Path + awsKMSCiphertextFileExt
-		err = kms.EncryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2], keyVal[3])
+		err = awskms.EncryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2], keyVal[3])
 		if err != nil {
 			return err
 		}
@@ -530,7 +530,7 @@ func accountDecrypt(ctx *cli.Context) error {
 		}
 
 		desFile := fa.URL.Path + awsKMSPlaintextFileExt
-		err = kms.DecryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2])
+		err = awskms.DecryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2])
 		if err != nil {
 			return err
 		}
