@@ -18,11 +18,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/awskms"
-	"github.com/wanchain/mpc_3.0_release/kms"
 	"io/ioutil"
 	"strings"
 
@@ -536,7 +535,7 @@ func accountEncrypt(ctx *cli.Context) error {
 		}
 
 		desFile := fa.URL.Path + keystore.AwsKMSCiphertextFileExt
-		err = kms.EncryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2], keyVals[3])
+		err = awskms.EncryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2], keyVals[3])
 		if err != nil {
 			return err
 		}
@@ -579,7 +578,7 @@ func accountDecrypt(ctx *cli.Context) error {
 			desFile = fa.URL.Path + "-plain"
 		}
 
-		err = kms.DecryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2])
+		err = awskms.DecryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2])
 		if err != nil {
 			return err
 		}
