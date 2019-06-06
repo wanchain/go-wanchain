@@ -234,7 +234,11 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	pid := dkg1Param.ProposerId
 
 	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  errors.New("invalid rb stage")
+	}
+	pks := ep.GetRBProposerG1(eid)
 
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
@@ -296,7 +300,11 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	pid := dkg2Param.ProposerId
 
 	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  errors.New("invalid rb stage")
+	}
+	pks := ep.GetRBProposerG1(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -349,7 +357,11 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	pid := sigShareParam.ProposerId
 
 	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  nil, nil, errors.New("invalid rb stage")
+	}
+	pks := ep.GetRBProposerG1(eid)
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
 		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -435,7 +447,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 	}
 	r := GetStateR(db, epochId)
 	if r == nil {
-		if epochId != posconfig.FirstEpochId+1 && epochId != posconfig.FirstEpochId+2 {
+		if epochId <= posconfig.FirstEpochId+2 {
 			log.SyslogWarning("***Can not found random r just use the first epoch R", "epochId", epochId)
 		}
 		r = GetStateR(db, posconfig.FirstEpochId)
@@ -793,7 +805,11 @@ func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address 
 	if len(pks) <= int(proposerId) {
 		return false
 	}
-	pk1 := util.GetEpocherInst().GetProposerBn256PK(epochId, uint64(proposerId), address)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return false
+	}
+	pk1 := ep.GetProposerBn256PK(epochId, uint64(proposerId), address)
 	if pk1 != nil {
 		return bytes.Equal(pk1, pks[proposerId].Marshal())
 	}

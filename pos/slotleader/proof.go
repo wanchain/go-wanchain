@@ -165,9 +165,11 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-
+	if epochID <= posconfig.FirstEpochId+2 {
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+	}
 	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
-	if epochID <= posconfig.FirstEpochId+2 || err != nil {
+	if err != nil {
 		if err != nil {
 			log.Warn("getSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
 		}

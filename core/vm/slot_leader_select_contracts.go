@@ -302,7 +302,11 @@ func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, p
 	}
 	//Dleq
 
-	buff := util.GetEpocherInst().GetEpochLeaders(epochID)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return ErrEpochID
+	}
+	buff := ep.GetEpochLeaders(epochID)
 	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
 	for i := 0; i < len(buff); i++ {
 		epochLeaders[i] = crypto.ToECDSAPub(buff[i])
@@ -397,10 +401,14 @@ func PackStage1Data(input []byte, abiString string) ([]byte, error) {
 }
 
 func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddress common.Address) bool {
-	epochLeaders := util.GetEpocherInst().GetEpochLeaders(epochID)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return false
+	}
+	epochLeaders := ep.GetEpochLeaders(epochID)
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
 		log.SyslogWarning("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
-		epochLeaders = util.GetEpocherInst().GetEpochLeaders(0)
+		epochLeaders = ep.GetEpochLeaders(0)
 	}
 
 	if int64(selfIndex) < 0 || int64(selfIndex) >= posconfig.EpochLeaderCount {
