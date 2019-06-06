@@ -252,7 +252,7 @@ func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
 	epochGenesis, whiteHeader, err := bc.GenerateEpochGenesis(epochid)
 	if err != nil {
-		log.Info("error to generate epoch genesis")
+		log.Info("error to generate epoch genesis " + err.Error())
 		return err
 	}
 

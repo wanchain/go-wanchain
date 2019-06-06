@@ -123,7 +123,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				err := d.blockchain.SetEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
 
 				if err != nil {
-					log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
+					log.Warn("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
 					d.epochGenesisSyncStart <- req.epochid.Uint64()
 				} else {
 					if d.epochGenesisFbCh != nil {

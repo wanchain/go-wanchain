@@ -827,6 +827,26 @@ func (f * EpochGenesisBlock) checkSlotLeadersAndWhiteHeader(eg *types.EpochGenes
 	return true, nil
 }
 
+// epoch - 1
+func (f *EpochGenesisBlock) GetStartEpoch(blockNumber uint64) uint64 {
+	num, ok := f.GetEpoch0()
+	if blockNumber < posconfig.Pow2PosUpgradeBlockNumber {
+		if ok {
+			return num
+		} else {
+			return missingNumber
+		}
+	}
+	header := f.bc.GetHeaderByNumber(blockNumber)
+	if header != nil {
+		eid,_ := posUtil.CalEpochSlotID(header.Time.Uint64())
+		if eid >= num {
+			return eid
+		}
+	}
+	return missingNumber
+}
+
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 	log.Debug("begin EpochGenesisBlock ValidateBody")
 	extraSeal := 65

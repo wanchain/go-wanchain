@@ -505,7 +505,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		if origin < posFirst {
 			if height >= posFirst {
 				fastSyncMode = 1 + 2
-				fastSyncHeight = posFirst
+				fastSyncHeight = posFirst - 1
 				posOrigin = fastSyncHeight
 				fastSyncHeightHeader, fastSyncTd, err = d.fetchHeaderTd(p, fastSyncHeight)
 				if err != nil {
@@ -590,7 +590,7 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
-	err = d.spawnSync(fetchers)
+	err = d.spawnSync(fetchers, false)
 	if err != nil && d.mode == FastSync && d.fsPivotLock != nil {
 		// If sync failed in the critical section, bump the fail counter.
 		atomic.AddUint32(&d.fsPivotFails, 1)
@@ -614,10 +614,14 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	// TODO: get epoch genesis hashes, and pivot
 	var posPivot uint64 = missingNumber
 	if d.mode == FastSync || d.mode == LightSync {
-		pivotData, err := d.fetchPivot(p, origin + 1, heightHeader.Hash())
+		pivotData, err := d.fetchPivot(p, origin, heightHeader.Hash())
 		if err != nil {
 			log.Error("fetch pivot error", "err", err)
 			return err
+		}
+		if pivotData.StartEpoch == missingNumber {
+			log.Error(".StartEpoch...missingNumber")
+			return errors.New(".StartEpoch...missingNumber")
 		}
 
 		err = core.CheckSummaries(pivotData.Summaries)
@@ -701,7 +705,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
-	err = d.spawnSync(fetchers)
+	err = d.spawnSync(fetchers, true)
 	if err != nil && d.mode == FastSync && d.fsPivotLock != nil {
 		// If sync failed in the critical section, bump the fail counter.
 		atomic.AddUint32(&d.fsPivotFails, 1)
@@ -737,7 +741,7 @@ func (d *Downloader) fullSyncWithPeer(p *peerConnection, origin uint64, height u
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
-	err = d.spawnSync(fetchers)
+	err = d.spawnSync(fetchers, true)
 	if err != nil && d.mode == FastSync && d.fsPivotLock != nil {
 		// If sync failed in the critical section, bump the fail counter.
 		atomic.AddUint32(&d.fsPivotFails, 1)
@@ -747,7 +751,7 @@ func (d *Downloader) fullSyncWithPeer(p *peerConnection, origin uint64, height u
 
 //spawnSync runs d.process and all given fetcher functions to completion in
 //separate goroutines, returning the first error that appears.
-func (d *Downloader) spawnSync(fetchers []func() error) error {
+func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 	var wg sync.WaitGroup
 	errc := make(chan error, len(fetchers))
 	wg.Add(len(fetchers))
@@ -772,8 +776,10 @@ func (d *Downloader) spawnSync(fetchers []func() error) error {
 		}
 
 	}
-	d.queue.Close()
-	d.Cancel()
+	if err != nil || close {
+		d.queue.Close()
+		d.Cancel()
+	}
 	wg.Wait()
 	return err
 }

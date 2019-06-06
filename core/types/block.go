@@ -482,4 +482,5 @@ type PivotData struct {
 	Headers []*Header
 	Summaries []*EpochGenesisSummary
 	OriginSummaries []*EpochGenesisSummary
+	StartEpoch uint64
 }

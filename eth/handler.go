@@ -751,7 +751,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 		pivotData := new(types.PivotData)
-		pivotData.Headers, pivotData.Summaries, pivotData.OriginSummaries = pm.blockchain.GetPosPivot(query.Origin, query.Height)
+		pivotData.Headers, pivotData.Summaries, pivotData.OriginSummaries, pivotData.StartEpoch = pm.blockchain.GetPosPivot(query.Origin, query.Height)
 
 		return p.SendPivot(pivotData)
 
