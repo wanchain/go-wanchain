@@ -182,21 +182,21 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		posconfig.FirstEpochId = epochID
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
 
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
-		if err == nil {
-			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-			log.Info("leader ","leader",leader)
-			if leader == localPublicKey {
-				//set current block as the restart condition
-				s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
-				//reset initial sma
-				sls := slotleader.GetSlotLeaderSelection()
-				res,_ := s.BlockChain().ChainRestartStatus()
-				if res  {
-					sls.Init(s.BlockChain(), nil, nil)
-				}
-			}
-		}
+		//leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
+		//if err == nil {
+		//	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+		//	log.Info("leader ","leader",leader)
+		//	if leader == localPublicKey {
+		//		//set current block as the restart condition
+		//		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
+		//		//reset initial sma
+		//		sls := slotleader.GetSlotLeaderSelection()
+		//		res,_ := s.BlockChain().ChainRestartStatus()
+		//		if res  {
+		//			sls.Init(s.BlockChain(), nil, nil)
+		//		}
+		//	}
+		//}
 
 	}
 

@@ -61,11 +61,12 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	}
 
 	s.sendTransactionFn = util.SendPosTx
-	res, restartBlk := s.blockChain.ChainRestartStatus()
-	if res  {
-		curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
-		s.restartEpochid = curEpochId
-	}
+
+	//res, restartBlk := s.blockChain.ChainRestartStatus()
+	//if res  {
+	//	curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
+	//	s.restartEpochid = curEpochId
+	//}
 
 	//var pks []*ecdsa.PublicKey
 	//if s.blockChain.CurrentEpochId == -1 {
