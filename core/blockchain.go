@@ -962,7 +962,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 			res,_ := bc.ChainRestartStatus()
 			if res {
-				restartEpid := bc.restartSlot/posconfig.SlotCount
+				restartEpid := bc.checkCQStartSlot/posconfig.SlotCount
 				if epid-restartEpid > 2 {
 					bc.SetChainRestarted()
 				}
