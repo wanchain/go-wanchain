@@ -61,9 +61,10 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	}
 
 	s.sendTransactionFn = util.SendPosTx
-	res,_ := s.blockChain.ChainRestartStatus()
+	res, restartBlk := s.blockChain.ChainRestartStatus()
 	if res  {
-		s.isRestarting = true
+		curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
+		s.restartEpochid = curEpochId
 	}
 	//var pks []*ecdsa.PublicKey
 	//if s.blockChain.CurrentEpochId == -1 {
@@ -292,8 +293,6 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		if len(rbleaders) == posconfig.RandomProperCount &&
 		   len(epleaders) == posconfig.EpochLeaderCount &&
 			err == nil {
-
-			s.isRestarting = false
 			s.blockChain.SetChainRestarted()
 		}
 

@@ -88,7 +88,7 @@ type SLS struct {
 
 	sendTransactionFn SendTxFn
 
-	isRestarting	bool
+	restartEpochid	  uint64
 }
 
 var slotLeaderSelection *SLS
