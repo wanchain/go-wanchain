@@ -66,6 +66,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 		curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
 		s.restartEpochid = curEpochId
 	}
+
 	//var pks []*ecdsa.PublicKey
 	//if s.blockChain.CurrentEpochId == -1 {
 	//	// in the switchEngine process. the lock is holded.
@@ -220,6 +221,10 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		}
 	}
 
+	if (epochID - s.restartEpochid) > 2 && epochID > posconfig.FirstEpochId {
+		s.blockChain.SetChainRestarted()
+	}
+
 	switch workStage {
 	case slotLeaderSelectionInit:
 		s.doInit(epochID)
@@ -281,20 +286,20 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
 
-		selector := util.GetEpocherInst()
-		if selector == nil {
-			return
-		}
-
-		rbleaders := selector.GetRBProposerG1(epochID)
-		epleaders := selector.GetEpochLeaders(epochID)
-		_, err := s.getRandom(nil, epochID)
-
-		if len(rbleaders) == posconfig.RandomProperCount &&
-		   len(epleaders) == posconfig.EpochLeaderCount &&
-			err == nil {
-			s.blockChain.SetChainRestarted()
-		}
+		//selector := util.GetEpocherInst()
+		//if selector == nil {
+		//	return
+		//}
+		//
+		//rbleaders := selector.GetRBProposerG1(epochID)
+		//epleaders := selector.GetEpochLeaders(epochID)
+		//_, err := s.getRandom(nil, epochID)
+		//
+		//if len(rbleaders) == posconfig.RandomProperCount &&
+		//   len(epleaders) == posconfig.EpochLeaderCount &&
+		//	err == nil {
+		//	s.blockChain.SetChainRestarted()
+		//}
 
 	default:
 	}
