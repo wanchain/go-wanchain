@@ -122,23 +122,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	//todo:`switch pos from pow,the time is not 1?
 	var epochID, slotID uint64
 	//curBlkNum := uint64(0)
-	res := false
-
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 
-	res, _ = s.BlockChain().ChainRestartStatus()
-	if h != nil && !res {
-		//set current block as the restart condition
 
-		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(), nil, true)
-		res, _ = s.BlockChain().ChainRestartStatus()
-		//curBlkNum = s.BlockChain().CurrentHeader().Number.Uint64()
-
-		//if res {
-		//	h = nil
-		//}
-
-	}
 
 	if nil == h {
 
@@ -219,9 +205,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	} else {
 
 		//util.CalEpochSlotIDByNow()
-		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
-		posconfig.FirstEpochId = epochID
-		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
+			epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
+			posconfig.FirstEpochId = epochID
+			log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
+
+			s.BlockChain().SetRestartBlock(nil, nil, true)
 	}
 
 	for {
