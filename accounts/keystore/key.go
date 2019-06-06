@@ -19,11 +19,13 @@ package keystore
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +43,9 @@ import (
 
 const (
 	version = 3
+	StoremanWanAcc = "WAN"
+	StoremanEthAcc = "ETH"
+	StoremanBtcAcc = "BTC"
 )
 
 type Key struct {
@@ -54,6 +59,8 @@ type Key struct {
 	PrivateKey2 *ecdsa.PrivateKey
 	// compact wanchain address format
 	WAddress common.WAddress
+	// extended info
+	Exten string
 }
 
 // Used to import and export raw keypair
@@ -87,6 +94,7 @@ type encryptedKeyJSONV3 struct {
 	Id       string     `json:"id"`
 	Version  int        `json:"version"`
 	WAddress string     `json:"waddress"`
+	Exten    string     `json:"exten"`
 }
 
 type encryptedKeyJSONV1 struct {
@@ -215,6 +223,42 @@ func newKey(rand io.Reader) (*Key, error) {
 	return newKeyFromECDSA(privateKeyECDSA, privateKeyECDSA2), nil
 }
 
+func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accType string) (*Key, error) {
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = crypto.S256()
+	priv.D = pShare
+	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(pShare.Bytes())
+	id := uuid.NewRandom()
+
+	exten := ""
+	addr := common.Address{}
+	if accType == StoremanBtcAcc {
+		addr = crypto.PubkeyToRipemd160(pKey)
+		exten = common.Bytes2Hex(ECDSAPKCompression(pKey))
+
+
+	} else {
+		addr = crypto.PubkeyToAddress(*pKey)
+	}
+
+	key := &Key{
+		Id:          id,
+		Address:     addr,
+		PrivateKey:  priv,
+		PrivateKey2: priv,
+		Exten:       exten,
+	}
+
+	//3 bytes for every seed
+	for i,seed := range seeds{
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b,seed)
+		copy(key.WAddress[i*3:],b[5:])
+	}
+
+	return key , nil
+}
+
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
@@ -225,6 +269,21 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 		zeroKey(key.PrivateKey)
 		return nil, a, err
 	}
+	return key, a, err
+}
+
+func storeStoremanKey(ks keyStore, pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string)(*Key, accounts.Account, error){
+	key, err := newStoremanKey(pKey, pShare, seeds, accType)
+	if err!= nil {
+		return nil, accounts.Account{}, err
+	}
+
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileNameWithType(key.Address, accType))}}
+	if err := ks.StoreKey(a.URL.Path, key, passphrase); err != nil {
+		zeroKey(key.PrivateKey)
+		return nil, a, err
+	}
+
 	return key, a, err
 }
 
@@ -255,6 +314,13 @@ func writeKeyFile(file string, content []byte) error {
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.Hex()[2:])
+}
+
+// keyFileName implements the naming convention for keyfiles:
+// UTC--<created_at UTC ISO8601>-<account type>-<address hex>
+func keyFileNameWithType(keyAddr common.Address, accType string) string {
+	ts := time.Now().UTC()
+	return fmt.Sprintf("UTC--%s--%s--%s", toISO8601(ts), accType, keyAddr.Hex()[2:])
 }
 
 func toISO8601(t time.Time) string {

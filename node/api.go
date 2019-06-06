@@ -221,6 +221,21 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
+func (api *PrivateAdminAPI) GetStoremans() ([]string) {
+	var s []string
+	// Make sure the server is running, fail otherwise
+	server := api.node.Server()
+	if server == nil {
+		return s
+	}
+	for _, n := range server.StoremanNodes {
+		if n!= nil {
+			s = append(s, n.String())
+		}
+	}
+	return s
+}
+
 // PublicAdminAPI is the collection of administrative API methods exposed over
 // both secure and unsecure RPC channels.
 type PublicAdminAPI struct {

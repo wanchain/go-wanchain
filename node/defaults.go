@@ -43,7 +43,7 @@ var DefaultConfig = Config{
 	P2P: p2p.Config{
 		ListenAddr:      ":17717",
 		DiscoveryV5Addr: ":17718",
-		MaxPeers:        25,
+		MaxPeers:        50,
 		NAT:             nat.Any(),
 	},
 }

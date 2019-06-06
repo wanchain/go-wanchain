@@ -44,7 +44,7 @@ const (
 	maxAcceptConns = 50
 
 	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 16
+	maxActiveDialTasks = 37
 
 	// Maximum time allowed for reading a complete message.
 	// This is effectively the amount of time a connection can be idle.
@@ -73,6 +73,9 @@ type Config struct {
 	// NoDiscovery can be used to disable the peer discovery mechanism.
 	// Disabling is useful for protocol debugging (manual topology).
 	NoDiscovery bool
+
+	StoremanEnabled bool
+	StoremanNodes  []*discover.Node
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
@@ -187,6 +190,7 @@ type connFlag int
 const (
 	dynDialedConn connFlag = 1 << iota
 	staticDialedConn
+	storemanDialedConn
 	inboundConn
 	trustedConn
 )
@@ -407,7 +411,7 @@ func (srv *Server) Start() (err error) {
 	if srv.NoDiscovery {
 		dynPeers = 0
 	}
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
+	dialer := newDialState(srv.StaticNodes, srv.StoremanNodes[:], srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -457,6 +461,8 @@ type dialer interface {
 	taskDone(task, time.Time)
 	addStatic(*discover.Node)
 	removeStatic(*discover.Node)
+	addStoreman(*discover.Node)
+	removeStoreman(*discover.Node)
 }
 
 func (srv *Server) run(dialstate dialer) {
@@ -627,7 +633,7 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn
 
 func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
+	case !c.is(trustedConn|staticDialedConn|storemanDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected

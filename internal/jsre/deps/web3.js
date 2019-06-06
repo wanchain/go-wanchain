@@ -2510,6 +2510,7 @@ var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
 var Eth = require('./web3/methods/eth');
 var Wan = require('./web3/methods/wan');
+var Storeman = require('./web3/methods/storeman');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
@@ -2533,6 +2534,7 @@ function Web3 (provider) {
     this.currentProvider = provider;
     this.eth = new Eth(this);
     this.wan = new Wan(this);
+    this.storeman = new Storeman(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
@@ -2634,7 +2636,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/wan":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/wan":87,"./web3/methods/storeman":88,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -13726,6 +13728,81 @@ module.exports = XMLHttpRequest;
         return [];
     };
 module.exports = Wan;
+  },{"../formatters":30,"../method":36}],88:[function(require,module,exports){
+    /* storeman.js */
+    var Method = require('../method');
+    var formatters = require('../formatters');
+
+    function Storeman(web3) {
+      this._requestManager = web3._requestManager;
+
+      var self = this;
+
+      methods().forEach(function(method) {
+        method.attachToObject(self);
+        method.setRequestManager(self._requestManager);
+      });
+
+      properties().forEach(function(p) {
+        p.attachToObject(self);
+        p.setRequestManager(self._requestManager);
+      });
+    }
+
+    var methods = function () {
+      var version = new Method({
+        name: 'version',
+        call: 'storeman_version',
+        params: 0
+      });
+      var createMpcAccount = new Method ({
+        name: 'createMpcAccount',
+        call: 'storeman_createMpcAccount',
+        params: 1,
+        inputFormatter: [null]
+      });
+      var signMpcTransaction = new Method ({
+        name: 'signMpcTransaction',
+        call: 'storeman_signMpcTransaction',
+        params: 1,
+        inputFormatter: [null]
+      });
+      var signMpcBtcTransaction = new Method ({
+        name: 'signMpcBtcTransaction',
+        call: 'storeman_signMpcBtcTransaction',
+        params: 1,
+        inputFormatter: [null]
+      });
+      var addValidMpcTx = new Method ({
+        name: 'addValidMpcTx',
+        call: 'storeman_addValidMpcTx',
+        params: 1,
+        inputFormatter: [formatters.inputTransactionFormatter]
+      });
+      var addValidMpcBtcTx = new Method ({
+        name: 'addValidMpcBtcTx',
+        call: 'storeman_addValidMpcBtcTx',
+        params: 1
+      });
+      var peers = new Method ({
+        name: 'peers',
+        call: 'storeman_peers',
+        params: 0
+      });
+      return [
+        version,
+        createMpcAccount,
+        signMpcTransaction,
+        signMpcBtcTransaction,
+        addValidMpcTx,
+        addValidMpcBtcTx,
+        peers,
+      ];
+    };
+    var properties = function () {
+      return [];
+    };
+    module.exports = Storeman;
 },{"../formatters":30,"../method":36}],"bignumber.js":[function(require,module,exports){
 'use strict';
 

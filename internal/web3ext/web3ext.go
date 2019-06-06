@@ -423,6 +423,11 @@ web3._extend({
 			name: 'stopWS',
 			call: 'admin_stopWS'
 		}),
+		new web3._extend.Method({
+			name: 'getStoremans',
+			call: 'admin_getStoremans',
+			params: 0
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

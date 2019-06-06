@@ -24,6 +24,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -45,6 +48,7 @@ import (
 
 var (
 	secp256k1_N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	Secp256k1_N = secp256k1_N
 	secp256k1_halfN = new(big.Int).Div(secp256k1_N, big.NewInt(2))
 )
 
@@ -199,6 +203,20 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
+}
+
+func PubkeyToRipemd160(p *ecdsa.PublicKey) common.Address  {
+	pk := (*btcec.PublicKey)(p).SerializeCompressed()
+	address, err := btcutil.NewAddressPubKeyHash(
+		btcutil.Hash160(pk), &chaincfg.TestNet3Params)
+	if err != nil {
+		log.Error("get btc address from pubkey fail.", "err", err)
+		return common.Address{}
+	}
+
+	var ret common.Address
+	copy(ret[:], address.Hash160()[:])
+	return ret
 }
 
 func zeroBytes(bytes []byte) {
@@ -370,6 +388,11 @@ func Rsa_decrypt(random io.Reader, priv *rsa.PrivateKey, c *big.Int) (m *big.Int
 	}
 
 	return
+}
+
+//cranelv Export randFieldElement2528
+func RandFieldElement2528(rand io.Reader) (k *big.Int, err error) {
+	return randFieldElement2528(rand)
 }
 
 // randFieldElement2528 returns a random element of the field

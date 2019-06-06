@@ -140,8 +140,8 @@ func CheckOTALongAddrExist(statedb StateDB, otaLongAddr []byte) (exist bool, bal
 	mptAddr := OTABalance2ContractAddr(balance)
 	otaStored := statedb.GetStateByteArray(mptAddr, common.BytesToHash(otaAX))
 
-	fmt.Println(common.ToHex(mptAddr.Bytes()))
-	fmt.Println(common.ToHex(otaLongAddr))
+	//fmt.Println(common.ToHex(mptAddr.Bytes()))
+	//fmt.Println(common.ToHex(otaLongAddr))
 
 	if otaStored == nil {
 		return false, nil, nil

@@ -28,6 +28,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/cmd/fullfaucet"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/console"
@@ -35,11 +36,10 @@ import (
 	"github.com/wanchain/go-wanchain/ethclient"
 	"github.com/wanchain/go-wanchain/internal/debug"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/wanchain/go-wanchain/cmd/fullfaucet"
 )
 
 const (
@@ -123,6 +123,9 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
+
+		utils.StoremanFlag,
+		utils.AwsKmsFlag,
 	}
 
 	rpcFlags = []cli.Flag{

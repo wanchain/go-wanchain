@@ -396,6 +396,10 @@ func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	return a, err
 }
 
+func (ks *KeyStore) GetDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
+	return ks.getDecryptedKey(a,auth)
+}
+
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
 	a, err := ks.Find(a)
 	if err != nil {
@@ -443,6 +447,18 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 // encrypting it with the passphrase.
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+	if err != nil {
+		return accounts.Account{}, err
+	}
+	// Add the account to the cache immediately rather
+	// than waiting for file system notifications to pick it up.
+	ks.cache.add(account)
+	ks.refreshWallets()
+	return account, nil
+}
+
+func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (accounts.Account, error) {
+	_, account, err := storeStoremanKey(ks.storage, pKey, pShare, seeds, passphrase, accType)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -522,6 +538,27 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	}
 	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
+}
+
+func (ks *KeyStore) UpdateStoreman(a accounts.Account, passphrase, newPassphrase string) error {
+	fa, err := ks.Find(a)
+	if err != nil {
+		return errors.New("storeman keystore file doesn't exist")
+	}
+
+	fmt.Println("find keystore file : ", fa.URL.Path)
+	keyjson, err := ioutil.ReadFile(fa.URL.Path)
+	if err != nil {
+		return err
+	}
+
+	key, err := DecryptKey(keyjson, passphrase)
+	if err != nil {
+		return err
+	}
+
+	key.Address = a.Address
+	return ks.storage.StoreKey(fa.URL.Path, key, newPassphrase)
 }
 
 // ImportPreSaleKey decrypts the given Ethereum presale wallet and stores

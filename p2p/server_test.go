@@ -302,6 +302,10 @@ func (tg taskgen) addStatic(*discover.Node) {
 }
 func (tg taskgen) removeStatic(*discover.Node) {
 }
+func (tg taskgen) addStoreman(*discover.Node) {
+}
+func (tg taskgen) removeStoreman(*discover.Node){
+}
 
 type testTask struct {
 	index  int

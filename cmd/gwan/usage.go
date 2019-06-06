@@ -82,7 +82,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.LightServFlag,
 			utils.LightPeersFlag,
 			utils.LightKDFFlag,
-			utils.SysLogFlag,
+			utils.StoremanFlag,
 		},
 	},
 	{
@@ -123,6 +123,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
+			utils.AwsKmsFlag,
 		},
 	},
 	{
@@ -192,6 +193,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsEnabledFlag,
 			utils.FakePoWFlag,
 			utils.NoCompactionFlag,
+			utils.SysLogFlag,
 		}, debug.Flags...),
 	},
 	{

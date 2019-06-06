@@ -19,7 +19,9 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
+	"github.com/wanchain/go-wanchain/storeman"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -540,8 +542,14 @@ var (
 		Usage: "syslog tag",
 		Value: "gwan_pos",
 	}
-
-
+	StoremanFlag = cli.BoolFlag{
+		Name:  "storeman",
+		Usage: "Enable storeman feature",
+	}
+	AwsKmsFlag = cli.BoolFlag{
+		Name:  "kms",
+		Usage: "Enable kms feature",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -845,6 +853,32 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || ctx.GlobalBool(LightModeFlag.Name) {
 		cfg.NoDiscovery = true
 	}
+	if ctx.GlobalBool(StoremanFlag.Name) {
+		cfg.StoremanEnabled = true
+		smDataPath := GetActualDataDir(ctx)
+		smspath := filepath.Join(smDataPath, "storemans.json");
+		b, err := ioutil.ReadFile(smspath)
+		if err != nil {
+			panic(err)
+		}
+		var SIDs []string
+		errUnmarshal := json.Unmarshal(b, &SIDs)
+		if(errUnmarshal != nil) {
+			log.Error("Unmarshal error","errUnmarshal", errUnmarshal)
+			panic(errUnmarshal)
+		} else {
+			fmt.Println(SIDs);
+			for _, url := range SIDs {
+				node, err := discover.ParseNode(url)
+				if err != nil {
+					log.Error("Storeman URL _4.invalid", "enode", url, "err", err)
+					continue
+				}
+				cfg.StoremanNodes = append(cfg.StoremanNodes, node)
+			}
+			log.Debug("target is ", "storemanNodes", cfg.StoremanNodes)
+		}
+	}
 
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
@@ -874,6 +908,25 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
+func GetActualDataDir(ctx *cli.Context) string {
+	switch {
+	case ctx.GlobalIsSet(DataDirFlag.Name):
+		return ctx.GlobalString(DataDirFlag.Name)
+	case ctx.GlobalBool(DevModeFlag.Name):
+		return filepath.Join(os.TempDir(), "ethereum_dev_mode")
+	case ctx.GlobalBool(TestnetFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(DevInternalFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "internal")
+	case ctx.GlobalBool(PlutoFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "pluto")
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		return filepath.Join(node.DefaultDataDir(), "pluto")
+	}
+
+	return node.DefaultDataDir()
+}
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
@@ -881,21 +934,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
-
-	switch {
-	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(DevInternalFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "internal")
-	case ctx.GlobalBool(PlutoFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
-	case ctx.GlobalBool(PlutoDevFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
-	}
+	cfg.DataDir = GetActualDataDir(ctx)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
@@ -1113,6 +1152,16 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 		return whisper.New(cfg), nil
 	}); err != nil {
 		Fatalf("Failed to register the Whisper service: %v", err)
+	}
+}
+
+// RegisterSmService configure Storeman and adds it to the given node
+func RegisterSmService(stack *node.Node, cfg *storeman.Config, aKID, secretKey, region string) {
+	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
+
+		return storeman.New(cfg, stack.AccountManager(), aKID, secretKey, region), nil
+	}); err != nil {
+		Fatalf("Failed to register the Storeman service: %v", err)
 	}
 }
 
