@@ -954,12 +954,19 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//confirm chain quality confirm security
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId {
+
 		if !bc.isWriteBlockSecure(block) {
 			if bc.restarted {
 				return NonStatTy, ErrInsufficientCQ
 			}
 		} else {
-			bc.restarted = true
+
+			_,restartBlk := bc.ChainRestartStatus()
+			restartEpid,_ := posUtil.CalEpochSlotID(restartBlk.Time().Uint64())
+			if epid - restartEpid > 2 {
+				bc.SetChainRestarted()
+			}
+
 		}
 	}
 
