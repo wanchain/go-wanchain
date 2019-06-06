@@ -926,12 +926,12 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64,error)
 	}
 
 	//if the gap is empty block,then the quality is 0
-	diff := expSlots - checkSlots + 1
+	diff := expSlots - checkSlots
 	if uint64(diff) >= posconfig.SlotSecurityParam {
 		return uint64(0),nil
 	} else {
 
-		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam - diff)
+		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam - diff + 1)
 
 		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
 
@@ -950,10 +950,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	cq,_:= bc.ChainQuality(epid,slid)
 	log.Info("current chain","quality",cq,"block number",block.NumberU64())
 
-
-
 	//confirm chain quality confirm security
-	if bc.config.IsPosActive && epid > posconfig.FirstEpochId {
+	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber + posconfig.Stage2K{
 
 		if !bc.isWriteBlockSecure(block) {
 			if bc.restarted {
@@ -1944,7 +1942,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 	idxs := make([]uint,0)
 	for i, block := range chain {
 
-		if block.NumberU64() <= 2 {
+		if block.NumberU64() <= posconfig.Pow2PosUpgradeBlockNumber + 2 && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber  {
 			continue
 		}
 		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot

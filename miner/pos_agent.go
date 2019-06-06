@@ -128,7 +128,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		}
 		h0Time := h0.Time.Uint64()
 		if h0Time == 0 {
-			h0Time = uint64(time.Now().Unix())
+		//	h0Time = uint64(time.Now().Unix())
 		}
 		epochID, slotID = util.CalEpochSlotID(h0Time)
 		if slotID == posconfig.SlotCount-1 {
