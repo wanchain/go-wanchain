@@ -88,9 +88,9 @@ func SetEpocherInst(sor SelectLead) {
 }
 
 func GetEpocherInst() SelectLead {
-	// TODO: can't be nil
+	// if haven't switch to pos, it could be nil
 	if selecter == nil {
-		panic("GetEpocherInst")
+		return nil
 	}
 	return selecter
 }

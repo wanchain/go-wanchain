@@ -447,7 +447,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 	}
 	r := GetStateR(db, epochId)
 	if r == nil {
-		if epochId <= posconfig.FirstEpochId+2 {
+		if epochId > posconfig.FirstEpochId+2 {
 			log.SyslogWarning("***Can not found random r just use the first epoch R", "epochId", epochId)
 		}
 		r = GetStateR(db, posconfig.FirstEpochId)
