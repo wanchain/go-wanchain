@@ -209,7 +209,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			posconfig.FirstEpochId = epochID
 			log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
 
-			s.BlockChain().SetRestartBlock(nil, nil, true)
+			s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(), nil, true)
 	}
 
 	for {
