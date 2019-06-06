@@ -954,14 +954,15 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber + posconfig.Stage2K{
 
 		if !bc.isWriteBlockSecure(block) {
+
 			if bc.restarted {
 				return NonStatTy, ErrInsufficientCQ
 			}
 		} else {
 
-			_,restartBlk := bc.ChainRestartStatus()
-			if restartBlk != nil {
-				restartEpid, _ := posUtil.CalEpochSlotID(restartBlk.Time().Uint64())
+			res,_ := bc.ChainRestartStatus()
+			if res {
+				restartEpid := bc.restartSlot/posconfig.SlotCount
 				if epid-restartEpid > 2 {
 					bc.SetChainRestarted()
 				}
@@ -1902,12 +1903,9 @@ func (bc *BlockChain) SetChainRestarted() {
 
 func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,useLocalTime bool ) {
 
-	if block != nil {
-
-
-		bc.restartBlk = block
 
 		if useLocalTime {
+
 			epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 			//record the restarting slot point
 			bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
@@ -1915,9 +1913,11 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 			lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 			bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
 
-		} else {
+			bc.restarted = false
 
+		} else if block != nil {
 
+				bc.restartBlk = block
 				epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 				//record the restarting slot point
 				bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
@@ -1928,13 +1928,14 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 				}
 				bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
 
+				res,_ := bc.ChainRestartStatus()
+				if  res {
+					bc.restarted = false
+				}
 		}
 
-		res,_ := bc.ChainRestartStatus()
-		if  res {
-			bc.restarted = false
-		}
-	}
+
+
 }
 
 
