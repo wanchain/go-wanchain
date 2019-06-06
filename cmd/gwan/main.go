@@ -261,12 +261,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
 			if ctx.IsSet(utils.AwsKmsFlag.Name) {
-				kmsInfo := getAwsKmsInfo()
-				if kmsInfo == nil {
-					utils.Fatalf("invalid AWS KMS info")
-				}
-
-				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, kmsInfo, i, passwords)
+				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, i, passwords)
 			} else {
 				unlockAccount(ctx, ks, trimmed, i, passwords)
 			}

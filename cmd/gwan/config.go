@@ -21,8 +21,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/console"
 	"io"
 	"os"
 	"reflect"
@@ -220,23 +218,5 @@ func dumpConfig(ctx *cli.Context) error {
 	return nil
 }
 
-
-func getAwsKmsInfo() *keystore.AwsKmsInfo {
-	var keyVal [3]string
-	keyName := [3]string{"aKID", "secretKey", "region"}
-
-	fmt.Println("")
-	fmt.Println("begin collect AWS KMS info and keystore file password...")
-	for i, name := range keyName {
-		input, err := console.Stdin.PromptPassword("please input aws kms " + name +": ")
-		if err != nil {
-			utils.Fatalf("Failed to read input: %v", err)
-		}
-
-		keyVal[i] = input
-	}
-
-	return &keystore.AwsKmsInfo{keyVal[0], keyVal[1], keyVal[2]}
-}
 
 

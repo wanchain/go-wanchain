@@ -26,7 +26,6 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/mpc_3.0_release/kms"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -341,8 +340,8 @@ func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 	return ks.TimedUnlock(a, passphrase, 0)
 }
 
-func (ks *KeyStore) UnlockAwsKms(a accounts.Account, info *AwsKmsInfo, passphrase string) error {
-	return ks.TimedUnlockAwsKms(a, info, passphrase, 0)
+func (ks *KeyStore) UnlockMemKey(a accounts.Account, keyjson []byte, passphrase string) error {
+	return ks.TimedUnlockMemKey(a, keyjson, passphrase, 0)
 }
 
 
@@ -394,8 +393,8 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	return nil
 }
 
-func (ks *KeyStore) TimedUnlockAwsKms(a accounts.Account, info *AwsKmsInfo, passphrase string, timeout time.Duration) error {
-	a, key, err := ks.getDecryptedKeyFromKms(a, info, passphrase)
+func (ks *KeyStore) TimedUnlockMemKey(a accounts.Account, keyjson []byte, passphrase string, timeout time.Duration) error {
+	a, key, err := ks.getDecryptedKeyFromMemJson(a, keyjson, passphrase)
 	if err != nil {
 		return err
 	}
@@ -441,21 +440,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
-func (ks *KeyStore) getDecryptedKeyFromKms(a accounts.Account, info *AwsKmsInfo, auth string) (accounts.Account, *Key, error) {
-	a, err := ks.Find(a)
-	if err != nil {
-		return a, nil, err
-	}
-
-	if info == nil {
-		return a, nil, ErrInvalidKmsInfo
-	}
-
-	keyjson, err := kms.DecryptFileToBuffer(a.URL.Path, info.AKID, info.SecretKey, info.Region)
-	if err != nil {
-		return a, nil, err
-	}
-
+func (ks *KeyStore) getDecryptedKeyFromMemJson(a accounts.Account, keyjson []byte, auth string) (accounts.Account, *Key, error) {
 	key, err := ks.storage.GetKeyFromKeyJson(a.Address, keyjson, auth)
 	return a, key, err
 }
