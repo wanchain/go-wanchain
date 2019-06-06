@@ -121,9 +121,9 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	_, err = s.getPreEpochLeadersPK(epochID)
 
-	//res,_ := s.blockChain.ChainRestartStatus()
+	res,_ := s.blockChain.ChainRestartStatus()
 
-	if epochID <= posconfig.FirstEpochId+2  /*|| res */ || err!=nil {
+	if epochID <= posconfig.FirstEpochId+2  || res || err!=nil {
 		return s.getDefaultSlotLeader(slotID),nil
 	} else {
 		return s.getSlotLeader(epochID,slotID)
@@ -134,15 +134,6 @@ func (s *SLS) getDefaultSlotLeader(slotID uint64) (slotLeader *ecdsa.PublicKey) 
 }
 func (s *SLS) getSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
-	//res,_ := s.blockChain.ChainRestartStatus()
-	//if epochID <= posconfig.FirstEpochId+2  || res {
-	//	s.generateSlotLeadsGroup(epochID)
-	//	//epochLeaderPKs := s.GetEpochDefaultLeadersPK(0)
-	//	//return epochLeaderPKs[slotID%posconfig.EpochLeaderCount], nil
-	//	//b := common.FromHex(posconfig.GenesisPK)
-	//	//log.Info("use genesisPK", "GenesisPK",posconfig.GenesisPK)
-	//	//return crypto.ToECDSAPub(b), nil
-	//}
 
 	if slotID >= posconfig.SlotCount {
 		return nil, vm.ErrSlotIDOutOfRange

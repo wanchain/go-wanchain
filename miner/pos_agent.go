@@ -118,10 +118,28 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 
 
+
 	//todo:`switch pos from pow,the time is not 1?
 	var epochID, slotID uint64
+	curBlkNum := uint64(0)
+	res := false
+
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+
+
+	if h != nil {
+		//set current block as the restart condition
+		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(), nil, true)
+		res, _ = s.BlockChain().ChainRestartStatus()
+		curBlkNum = s.BlockChain().CurrentHeader().Number.Uint64()
+
+		if res {
+			h = nil
+		}
+	}
+
 	if nil == h {
+
 		h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64()-1)
 		if h0 == nil {
 			panic("last ppow block can't find")
@@ -153,9 +171,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			posconfig.FirstEpochId = epochID
 			log.Info("backendTimerLoop :", "FirstEpochId", posconfig.FirstEpochId)
 			self.worker.chainSlotTimer <- slotTime
+
 		}
 
 		for {
+
 			if nil == h {
 				select {
 				case <-self.timerStop:
@@ -169,31 +189,20 @@ func (self *Miner) backendTimerLoop(s Backend) {
 				log.Info("backendTimerLoop download the first pos block :", "FirstEpochId", posconfig.FirstEpochId)
 				break
 			}
-			h = s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+
+			if res {
+				h = s.BlockChain().GetHeaderByNumber(curBlkNum + 1)
+			} else {
+				h = s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+			}
 		}
+
 	} else {
 
 		//util.CalEpochSlotIDByNow()
 		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochID
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
-
-		//leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
-		//if err == nil {
-		//	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-		//	log.Info("leader ","leader",leader)
-		//	if leader == localPublicKey {
-		//		//set current block as the restart condition
-		//		s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
-		//		//reset initial sma
-		//		sls := slotleader.GetSlotLeaderSelection()
-		//		res,_ := s.BlockChain().ChainRestartStatus()
-		//		if res  {
-		//			sls.Init(s.BlockChain(), nil, nil)
-		//		}
-		//	}
-		//}
-
 	}
 
 	for {
