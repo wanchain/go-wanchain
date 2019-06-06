@@ -82,6 +82,7 @@ type EpochGenesisBlock struct {
 	epochLeaderCache map[uint64]map[common.Address]bool
 
 	epgGenesis *types.EpochGenesis
+	epgWhite   *types.Header
 
 	// get: epoch genesis block, white header
 	// summary: epoch header list, white header list
@@ -137,19 +138,19 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 //	}
 //}
 
-func (f *EpochGenesisBlock) GetEpochGenesisZero(eid0 uint64) *types.EpochGenesis {
+func (f *EpochGenesisBlock) GetEpochGenesisZero(eid0 uint64) (*types.EpochGenesis, *types.Header, error) {
 	if f.epgGenesis == nil {
 		rb := big.NewInt(1)
-		epgGenesis, _, err  := f.generateEpochGenesis(eid0, nil, rb.Bytes(), common.Hash{})
+		epgGenesis, whiteHeader, err  := f.generateEpochGenesis(eid0, nil, rb.Bytes(), common.Hash{})
 		if err != nil {
 			log.Error("NewEpochGenesisBlock failed epgGenesis error")
 		}
 		//epgGenesis.SlotLeaders = posconfig.GenesisPK
 		f.epgGenesis = epgGenesis
-		f.updateCache(epgGenesis)
+		f.epgWhite = whiteHeader
 	}
 
-	return f.epgGenesis
+	return f.epgGenesis, f.epgWhite, nil
 }
 
 func (f *EpochGenesisBlock) GetBlockEpochIdAndSlotId(header *types.Header) (blkEpochId uint64, blkSlotId uint64, err error) {
@@ -178,23 +179,16 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGe
 	if epg != nil {
 		return epg, header, nil
 	} else {
-		return f.generateChainedEpochGenesis(epochid)
+		return f.generateChainedEpochGenesis(epochid, false)
 	}
 }
 
 func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error) {
-	epgPre, _ := f.GetEpochGenesis(epochid - 1)
-	if epgPre == nil {
-		epoch0, ok := f.GetEpoch0()
-		if !ok || epochid <= epoch0 {
-			return nil, errors.New("not in pos stage")
-		}
-		if epochid == epoch0 + 1 {
-			return f.GetEpochGenesisZero(epoch0), nil
-		} else {
-			return nil, errors.New("epoch genesis not exist")
-		}
+	epoch0, ok := f.GetEpoch0()
+	if !ok || epochid <= epoch0 {
+		return nil, errors.New("generate should from epoch0 + 1")
 	}
+	epgPre, _ := f.GetEpochGenesis(epochid - 1)
 
 	var rb 			*big.Int
 	var blk 		*types.Block
@@ -207,7 +201,7 @@ func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (
 }
 
 // TODO: test generate un exist epoch
-func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
+func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64, seal bool) (*types.EpochGenesis, *types.Header, error) {
 	//it is the first block of this epoch
 	var rb *big.Int
 	var blk *types.Block
@@ -216,40 +210,41 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 	var whiteHeader *types.Header
 
 	epoch0, ok := f.GetEpoch0()
-	if !ok || epochid <= epoch0 {
+	if !ok || epochid < epoch0 {
 		return nil, nil, errors.New("error epochid")
 	}
+
 	curEpid, _, err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
-	if curEpid <= epochid || err != nil || epochid <= epoch0 {
+	if curEpid < epochid || err != nil {
 		return nil, nil, errors.New("error epochid")
 	}
-
+	if curEpid == epochid && !seal {
+		return nil, nil, errors.New("error epochid")
+	}
 
 	epgPre, _ = f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
-		for i := epoch0 + uint64(1); i <= epochid; i++ {
+		for i := epoch0 ; i <= epochid; i++ {
 
-			epg, _ = f.GetEpochGenesis(i)
-			if epg != nil {
-				continue
-			}
-
-			if i == epoch0 + 1 {
-				epgPre = f.GetEpochGenesisZero(epoch0)
-
+			if i == epoch0 {
+				epg, whiteHeader, err = f.GetEpochGenesisZero(epoch0)
 			} else {
+				epg, _ = f.GetEpochGenesis(i)
+				if epg != nil {
+					continue
+				}
+
 				epgPre, _ = f.GetEpochGenesis(i - 1)
 
+				rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
+
+				if epgPre == nil {
+					return nil, nil, errors.New("pre epg is nil")
+				}
+
+				epg, whiteHeader, err = f.generateEpochGenesis(i, blk, rb.Bytes(), epgPre.GenesisBlkHash)
 			}
-
-			rb, blk = f.getEpochRandomAndPreEpLastBlk(i)
-
-			if epgPre == nil {
-				return nil, nil, errors.New("pre epg is nil")
-			}
-
-			epg, whiteHeader, err = f.generateEpochGenesis(i, blk, rb.Bytes(), epgPre.GenesisBlkHash)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -300,7 +295,7 @@ func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, pa
 	if !ok {
 		return false
 	}
-	if epochId > epoch0 + 1 && blocknum > posconfig.Pow2PosUpgradeBlockNumber {
+	if epochId > epoch0 {
 		var head *types.Header = nil
 		size := len(parents)
 		if size > 0 {
@@ -342,7 +337,7 @@ func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) 
 	if epkGnss == nil {
 		log.Error("***dirty epoch genesis block data")
 	}
-	epkGnss, _, err := f.generateChainedEpochGenesis(epochid)
+	epkGnss, _, err := f.generateChainedEpochGenesis(epochid, true)
 	if err != nil {
 		return common.Hash{},errors.New("fail to generate epoch genesis " + err.Error())
 	}
@@ -375,7 +370,7 @@ func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.H
 	var epkGnss *types.EpochGenesis = nil
 	var err error
 	if bGenerate {
-		epkGnss, _, err = f.generateChainedEpochGenesis(epochid)
+		epkGnss, _, err = f.generateChainedEpochGenesis(epochid, false)
 		if err != nil {
 			return errors.New("VerifyEpochGenesisHash error, can't generate epoch genesis, id=" + strconv.Itoa(int(epochid)))
 		}
@@ -402,8 +397,8 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	epGen.EpochId = epochid
 
 	if lastblk == nil {
-		epGen.PreEpochLastBlkHash = f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber).Hash()
-		epGen.PreEpochLastBlkNumber = posconfig.Pow2PosUpgradeBlockNumber
+		epGen.PreEpochLastBlkHash = f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber - 1).Hash()
+		epGen.PreEpochLastBlkNumber = posconfig.Pow2PosUpgradeBlockNumber - 1
 	} else {
 		epGen.PreEpochLastBlkHash = lastblk.Hash()
 		epGen.PreEpochLastBlkNumber = lastblk.NumberU64()
@@ -489,36 +484,29 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 
 func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
 	epoch0, ok := f.GetEpoch0()
-	if !ok || epochId <= epoch0 {
+	if !ok || epochId < epoch0 {
 		return false
 	}
-	if epochId == epoch0 + 1 {
-		eg := f.GetEpochGenesisZero(epoch0)
+
+	eg, _ := f.GetEpochGenesis(epochId)
+	if eg != nil {
 		f.updateCache(eg)
 	} else {
-		eg, _ := f.GetEpochGenesis(epochId)
-		if eg != nil {
-			f.updateCache(eg)
-		} else {
-			return false
-		}
+		return false
 	}
 	return true
 }
 
 func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
-	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber + 1)
+	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
 	if firstPosHeader != nil {
 		epochId0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
-		return epochId0, true
+		return epochId0 + 1, true
 	}
 	return 0, false
 }
 
 func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
-	if eid < 1 {
-		return nil
-	}
 	f.epgGenmu.RLock()
 	slotLeaderMap, ok := f.slotLeaderCache[eid]
 	f.epgGenmu.RUnlock()
@@ -558,17 +546,16 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	var err error
 
 	epoch0, ok := f.GetEpoch0()
-	if !ok || epGen.EpochId <= epoch0 {
+	if !ok || epGen.EpochId < epoch0 {
 		return false
 	}
 
-	if epGen.EpochId == epoch0 + 1 {
-		epgPre = f.GetEpochGenesisZero(epoch0)
-	} else {
-		epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
-		if epgPre == nil {
-			return false
-		}
+	if epGen.EpochId == epoch0 {
+		f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
+	}
+	epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
+	if epgPre == nil {
+		return false
 	}
 
 	res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
@@ -943,7 +930,7 @@ func CheckSummaries(ss []*types.EpochGenesisSummary) error {
 }
 
 func CheckSummary(s *types.EpochGenesisSummary, upBound uint64) error {
-	if !posUtil.IsPosBlock(s.WhiteHeader.Number.Uint64()) {
+	if s.WhiteHeader.Number.Uint64() < posconfig.Pow2PosUpgradeBlockNumber {
 		return errors.New("white header is not in pos stage")
 	}
 	if s.WhiteHeader.Number.Uint64() <= s.EpochHeader.PreEpochLastBlkNumber ||
