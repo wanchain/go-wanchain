@@ -25,14 +25,14 @@ import (
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	// genesis or not
 
-	//if epochID > posconfig.FirstEpochId+2 {
-	//
-	//	res,_ := s.blockChain.ChainRestartStatus()
-	//
-	//	if res {
-	//		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
-	//	}
-	//}
+	if epochID > posconfig.FirstEpochId+2 {
+
+		res,_ := s.blockChain.ChainRestartStatus()
+
+		if res {
+			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		}
+	}
 
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
 	if epochID <= posconfig.FirstEpochId+2 || errGenesis != nil {
@@ -149,10 +149,6 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
-	//res,_ := s.blockChain.ChainRestartStatus()
-	//if res  {
-	//	s.initSma()
-	//}
 
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis

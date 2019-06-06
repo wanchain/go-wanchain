@@ -222,9 +222,6 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		}
 	}
 
-	if (epochID - s.restartEpochid) > 2 && epochID > posconfig.FirstEpochId {
-		s.blockChain.SetChainRestarted()
-	}
 
 	switch workStage {
 	case slotLeaderSelectionInit:
