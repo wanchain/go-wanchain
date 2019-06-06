@@ -35,11 +35,10 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 			if  s.restartEpochid != curEpochId {
 
 				s.restartEpochid = curEpochId
-				pks := s.getDefaultLeadersPK(epochID)
-				posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-				log.Info("restart producer", "address", crypto.PubkeyToAddress(*pks[0]))
-				s.initSma()
-
+				//pks := s.getDefaultLeadersPK(epochID)
+				//posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+				//log.Info("restart producer", "address", crypto.PubkeyToAddress(*pks[0]))
+				//s.initSma()
 			}
 
 			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
@@ -164,9 +163,9 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 
 	res,_ := s.blockChain.ChainRestartStatus()
 	if res  {
-		pks := s.getDefaultLeadersPK(epochID)
-		posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-		log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
+		//pks := s.getDefaultLeadersPK(epochID)
+		//posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
+		//log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
 		s.initSma()
 	}
 
