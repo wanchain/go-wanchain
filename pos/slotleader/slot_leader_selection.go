@@ -122,12 +122,15 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 	if epochID <= posconfig.FirstEpochId+2  {
 		return s.getDefaultSlotLeader(slotID),nil
 	}
-
+	res,_ := s.blockChain.ChainRestartStatus()
+	if res {
+		log.Info("GetSlotLeader use getDefaultSlotLeader", "ChainRestartStatus", res)
+		return s.getDefaultSlotLeader(slotID),nil
+	}
 	_, isGenesis, _ := s.getSMAPieces(epochID)
 	if  isGenesis {
 		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
 		return s.getDefaultSlotLeader(slotID),nil
-
 	}
 
 	return s.getSlotLeader(epochID,slotID)
