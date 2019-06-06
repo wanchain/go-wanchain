@@ -196,7 +196,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	//SMA PRE
 	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
-		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 
 	//RB PRE
