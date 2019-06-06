@@ -37,9 +37,10 @@ import (
 // Minimum amount of time between cache reloads. This limit applies if the platform does
 // not support change notifications. It also applies if the keystore directory does not
 // exist yet, the code will attempt to create a watcher at most this often.
-const minReloadInterval = 2 * time.Second
-
-var AwsKMSCiphertextFileExt = "-cipher"
+const (
+	minReloadInterval = 2 * time.Second
+	AwsKMSCiphertextFileExt = "-cipher"
+)
 
 
 type accountsByURL []accounts.Account

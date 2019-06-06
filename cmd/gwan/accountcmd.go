@@ -21,6 +21,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/mpc_3.0_release/kms"
 	"io/ioutil"
 	"strings"
@@ -304,7 +305,7 @@ func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, addres
 			utils.Fatalf("Failed to read input: %v", err)
 		}
 
-		keyjson, err = kms.DecryptFileToBuffer(a.URL.Path, kmsInfo[0], kmsInfo[1], kmsInfo[2])
+		keyjson, err = awskms.DecryptFileToBuffer(a.URL.Path, kmsInfo[0], kmsInfo[1], kmsInfo[2])
 		if err != nil {
 			fmt.Println("invalid AWS KMS info, decrypt keystore file fail: ", err)
 			continue

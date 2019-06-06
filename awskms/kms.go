@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/wanchain/mpc_3.0_release/log"
+	"github.com/wanchain/go-wanchain/log"
 	"io/ioutil"
 	"os"
 	"path/filepath"
