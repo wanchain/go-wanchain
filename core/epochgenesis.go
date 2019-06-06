@@ -296,7 +296,11 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochid uint64) (*big.
 
 
 func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, parents []*types.Header) bool {
-	if epochId > 1 && blocknum > 1 {
+	epoch0, ok := bc.epochgen.GetEpoch0()
+	if !ok {
+		return false
+	}
+	if epochId > epoch0 + 1 && blocknum > posconfig.Pow2PosUpgradeBlockNumber {
 		var head *types.Header = nil
 		size := len(parents)
 		if size > 0 {
