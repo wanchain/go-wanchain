@@ -958,17 +958,17 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			if bc.restarted {
 				return NonStatTy, ErrInsufficientCQ
 			}
-		} else {
-
-			res,_ := bc.ChainRestartStatus()
-			if res {
-				restartEpid := bc.checkCQStartSlot/posconfig.SlotCount
-				if epid-restartEpid > 2 {
-					bc.SetChainRestarted()
-				}
-			}
-
-		}
+		}// else {
+		//
+		//	res,_ := bc.ChainRestartStatus()
+		//	if res {
+		//		restartEpid := bc.checkCQStartSlot/posconfig.SlotCount
+		//		if epid-restartEpid > 2 {
+		//			bc.SetChainRestarted()
+		//		}
+		//	}
+		//
+		//}
 	}
 
 
