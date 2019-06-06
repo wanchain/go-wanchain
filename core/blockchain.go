@@ -391,11 +391,11 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Header, []*types.EpochGenesisSummary, *types.EpochGenesisSummary) {
+func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Header, []*types.EpochGenesisSummary, []*types.EpochGenesisSummary) {
 	headers := make([]*types.Header, 0)
 	// origin + 4 pivot
 	summaries := make([]*types.EpochGenesisSummary, 0)
-	originSummaries := &types.EpochGenesisSummary{ EpochHeader:new(types.EpochGenesisHeader), WhiteHeader:new(types.Header)}
+	originSummaries := make([]*types.EpochGenesisSummary, 0)
 
 	if bc.epochGene.rbLeaderSelector == nil {
 		return headers, summaries, originSummaries
@@ -430,12 +430,17 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Hea
 	}
 
 
-	originHeader := bc.hc.GetHeaderByNumber(origin)
-	if originHeader != nil {
-		eid, _ := posUtil.CalEpochSlotID(originHeader.Time.Uint64())
-		s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
-		if s != nil {
-			return headers, summaries, s
+	if origin > posconfig.Pow2PosUpgradeBlockNumber {
+		originHeader := bc.hc.GetHeaderByNumber(origin)
+		if originHeader != nil {
+			eidOrigin, _ := posUtil.CalEpochSlotID(originHeader.Time.Uint64())
+			if eid > eidOrigin {
+				s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
+				if s != nil {
+					originSummaries = append(originSummaries, s)
+				}
+			}
+
 		}
 	}
 	return headers,summaries, originSummaries

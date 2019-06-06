@@ -481,5 +481,5 @@ type HeaderTdData struct {
 type PivotData struct {
 	Headers []*Header
 	Summaries []*EpochGenesisSummary
-	OriginSummaries *EpochGenesisSummary
+	OriginSummaries []*EpochGenesisSummary
 }

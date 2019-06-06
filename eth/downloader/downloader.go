@@ -505,7 +505,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		if origin < posFirst {
 			if height >= posFirst {
 				fastSyncMode = 1 + 2
-				fastSyncHeight = posFirst - 1
+				fastSyncHeight = posFirst
 				posOrigin = fastSyncHeight
 				fastSyncHeightHeader, fastSyncTd, err = d.fetchHeaderTd(p, fastSyncHeight)
 				if err != nil {
@@ -621,6 +621,11 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 		}
 
 		err = core.CheckSummaries(pivotData.Summaries)
+		if err != nil {
+			return err
+		}
+
+		err = core.CheckOriginSummary(pivotData.OriginSummaries)
 		if err != nil {
 			return err
 		}

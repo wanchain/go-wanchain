@@ -137,10 +137,10 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 //	}
 //}
 
-func (f *EpochGenesisBlock) GetEpochGenesisZero() *types.EpochGenesis {
+func (f *EpochGenesisBlock) GetEpochGenesisZero(eid0 uint64) *types.EpochGenesis {
 	if f.epgGenesis == nil {
 		rb := big.NewInt(1)
-		epgGenesis, _, err  := f.generateEpochGenesis(0, nil, rb.Bytes(), common.Hash{})
+		epgGenesis, _, err  := f.generateEpochGenesis(eid0, nil, rb.Bytes(), common.Hash{})
 		if err != nil {
 			log.Error("NewEpochGenesisBlock failed epgGenesis error")
 		}
@@ -185,8 +185,12 @@ func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGe
 func (f *EpochGenesisBlock) DoGenerateEpochGenesis(epochid uint64, isEnd bool) (*types.EpochGenesis,error) {
 	epgPre, _ := f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
-		if epochid == 1 {
-			return f.GetEpochGenesisZero(), nil
+		epoch0, ok := f.GetEpoch0()
+		if !ok || epochid <= epoch0 {
+			return nil, errors.New("not in pos stage")
+		}
+		if epochid == epoch0 + 1 {
+			return f.GetEpochGenesisZero(epoch0), nil
 		} else {
 			return nil, errors.New("epoch genesis not exist")
 		}
@@ -211,24 +215,28 @@ func (f *EpochGenesisBlock) generateChainedEpochGenesis(epochid uint64) (*types.
 	var epg *types.EpochGenesis
 	var whiteHeader *types.Header
 
+	epoch0, ok := f.GetEpoch0()
+	if !ok || epochid <= epoch0 {
+		return nil, nil, errors.New("error epochid")
+	}
 	curEpid, _, err := f.GetBlockEpochIdAndSlotId(f.bc.currentBlock.Header())
 
-	if curEpid <= epochid || err != nil || epochid == 0 {
+	if curEpid <= epochid || err != nil || epochid <= epoch0 {
 		return nil, nil, errors.New("error epochid")
 	}
 
+
 	epgPre, _ = f.GetEpochGenesis(epochid - 1)
 	if epgPre == nil {
-		//start from ep1
-		for i := uint64(1); i <= epochid; i++ {
+		for i := epoch0 + uint64(1); i <= epochid; i++ {
 
 			epg, _ = f.GetEpochGenesis(i)
 			if epg != nil {
 				continue
 			}
 
-			if i == 1 {
-				epgPre = f.GetEpochGenesisZero()
+			if i == epoch0 + 1 {
+				epgPre = f.GetEpochGenesisZero(epoch0)
 
 			} else {
 				epgPre, _ = f.GetEpochGenesis(i - 1)
@@ -476,8 +484,12 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 }
 
 func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
-	if epochId == 0 {
-		eg := f.GetEpochGenesisZero()
+	epoch0, ok := f.GetEpoch0()
+	if !ok || epochId <= epoch0 {
+		return false
+	}
+	if epochId == epoch0 + 1 {
+		eg := f.GetEpochGenesisZero(epoch0)
 		f.updateCache(eg)
 	} else {
 		eg, _ := f.GetEpochGenesis(epochId)
@@ -488,6 +500,15 @@ func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
 		}
 	}
 	return true
+}
+
+func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
+	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber + 1)
+	if firstPosHeader != nil {
+		epochId0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
+		return epochId0, true
+	}
+	return 0, false
 }
 
 func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
@@ -532,12 +553,13 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	var epgPre *types.EpochGenesis
 	var err error
 
-	if epGen.EpochId <= 0 {
+	epoch0, ok := f.GetEpoch0()
+	if !ok || epGen.EpochId <= epoch0 {
 		return false
 	}
 
-	if epGen.EpochId == 1 {
-		epgPre = f.GetEpochGenesisZero()
+	if epGen.EpochId == epoch0 + 1 {
+		epgPre = f.GetEpochGenesisZero(epoch0)
 	} else {
 		epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
 		if epgPre == nil {
@@ -938,8 +960,14 @@ func CheckSummary(s *types.EpochGenesisSummary, upBound uint64) error {
 
 // epoch = 1--> generate 0
 // os must be the same with local
-func CheckOriginSummary(os *types.EpochGenesisSummary) error {
-
+func CheckOriginSummary(os []*types.EpochGenesisSummary) error {
+	//if os == nil {
+	//	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber + 1)
+	//	if firstPosHeader != nil {
+	//		epochId0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
+	//		return epochId0, true
+	//	}
+	//}
 	return nil
 }
 
