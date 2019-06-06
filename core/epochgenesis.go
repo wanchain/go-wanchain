@@ -144,6 +144,7 @@ func (f *EpochGenesisBlock) GetEpochGenesisZero(eid0 uint64) (*types.EpochGenesi
 		epgGenesis, whiteHeader, err  := f.generateEpochGenesis(eid0, nil, rb.Bytes(), common.Hash{})
 		if err != nil {
 			log.Error("NewEpochGenesisBlock failed epgGenesis error")
+			return nil, nil, errors.New("NewEpochGenesisBlock failed epgGenesis error")
 		}
 		//epgGenesis.SlotLeaders = posconfig.GenesisPK
 		f.epgGenesis = epgGenesis
@@ -334,7 +335,7 @@ func (hc *HeaderChain) IsSignerValid(addr *common.Address, header *types.Header)
 
 func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	epkGnss, _ := f.GetEpochGenesis(epochid)
-	if epkGnss == nil {
+	if epkGnss != nil {
 		log.Error("***dirty epoch genesis block data")
 	}
 	epkGnss, _, err := f.generateChainedEpochGenesis(epochid, true)
@@ -551,20 +552,27 @@ func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) boo
 	}
 
 	if epGen.EpochId == epoch0 {
-		f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
-	}
-	epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
-	if epgPre == nil {
-		return false
+		header := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber - 1)
+		if header == nil {
+			return false
+		}
+		if epGen.PreEpochLastBlkNumber != header.Number.Uint64() || epGen.PreEpochLastBlkHash != header.Hash() {
+			return false
+		}
+	} else {
+		epgPre, _ = f.GetEpochGenesis(epGen.EpochId - 1)
+		if epgPre == nil {
+			return false
+		}
+
+		res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
+		if !res {
+			log.Debug("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
+			return false
+		}
 	}
 
-	res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
-	if !res {
-		log.Debug("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
-		return false
-	}
-
-	res = bytes.Equal(epGen.ProtocolMagic, []byte("wanchainpos"))
+	res := bytes.Equal(epGen.ProtocolMagic, []byte("wanchainpos"))
 	if !res {
 		return false
 	}
@@ -762,14 +770,16 @@ func (f *EpochGenesisBlock) GetEpochGenesis(epochid uint64) (*types.EpochGenesis
 
 // slot leaders should in pre epoch leader, and must have a member in white list
 func (f * EpochGenesisBlock) checkSlotLeadersAndWhiteHeader(eg *types.EpochGenesis, whiteHeader *types.Header) (bool, error) {
-	if eg.EpochId == 0 {
-		// may be we should check, slot leader == posConfig.genesisPk
-		return false, nil
+	epoch0, ok := f.GetEpoch0()
+	if !ok || eg.EpochId < epoch0 {
+		return false, errors.New("eg.EpochId, is too small")
 	}
 
 	preEpochLeaderMap := f.getEpochLeaderMap(eg.EpochId - 1)
-	if preEpochLeaderMap == nil {
-		return false, errors.New("get pre epoch leader map error")
+	if eg.EpochId > epoch0 {
+		if preEpochLeaderMap == nil {
+			return false, errors.New("get pre epoch leader map error")
+		}
 	}
 
 	//opks,_ := hex.DecodeString(posconfig.GenesisPK)
@@ -797,9 +807,11 @@ func (f * EpochGenesisBlock) checkSlotLeadersAndWhiteHeader(eg *types.EpochGenes
 				}
 			}
 		}
-		_, ok := (*preEpochLeaderMap)[addr]
-		if !ok {
-			return false, errors.New("slot leader should in pre epoch leader group ")
+		if preEpochLeaderMap != nil {
+			_, ok := (*preEpochLeaderMap)[addr]
+			if !ok {
+				return false, errors.New("slot leader should in pre epoch leader group ")
+			}
 		}
 	}
 
