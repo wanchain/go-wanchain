@@ -228,14 +228,17 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		log.Debug("get current period", "epochid", epochID, "slotid", slotID)
 
 		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochID, slotID)
-
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
-		if err == nil {
-			slotTime := (epochID*posconfig.SlotCount+slotID)*posconfig.SlotTime
-			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-			log.Info("leader ","leader",leader)
-			if leader == localPublicKey {
+		exist, err := slotleader.GetSlotLeaderSelection().IsLocalPkInPreEpochLeaders(epochID)
+		if exist && err == nil {
+			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
+			if err == nil {
+				slotTime := (epochID*posconfig.SlotCount+slotID)*posconfig.SlotTime
+				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+				log.Info("leader ","leader",leader)
 				self.worker.chainSlotTimer <- slotTime
+				if leader == localPublicKey {
+					self.worker.chainSlotTimer <- slotTime
+				}
 			}
 		}
 
