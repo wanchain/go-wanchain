@@ -126,11 +126,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		if h0 == nil {
 			panic("last ppow block can't find")
 		}
-		h0Time := h0.Time.Uint64()
-		if h0Time == 0 {
-		//	h0Time = uint64(time.Now().Unix())
-		}
-		epochID, slotID = util.CalEpochSlotID(h0Time)
+		epochID, slotID = util.CalEpochSlotID(h0.Time.Uint64())
 		if slotID == posconfig.SlotCount-1 {
 			epochID += 1
 			slotID = 0

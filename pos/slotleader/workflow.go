@@ -47,7 +47,7 @@ func (s *SLS)GenerateDefaultSlotLeaders() error {
 	}
 
 	for index, val := range slotLeadersPtr {
-		s.slotLeadersPtrArray[index] = val
+		s.defaultSlotLeadersPtrArray[index] = val
 	}
 	return nil
 }

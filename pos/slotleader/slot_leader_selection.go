@@ -65,6 +65,7 @@ type SLS struct {
 	epochLeadersMap   map[string][]uint64 // key: pki value: []uint64 the indexes of this pki. hex.EncodeToString
 
 	slotLeadersPtrArray  [posconfig.SlotCount]*ecdsa.PublicKey
+	defaultSlotLeadersPtrArray  [posconfig.SlotCount]*ecdsa.PublicKey
 	slotLeadersIndex     [posconfig.SlotCount]uint64
 	epochLeadersPtrArray [posconfig.EpochLeaderCount]*ecdsa.PublicKey
 	// true: can be used to slot leader false: can not be used to slot leader
@@ -123,10 +124,13 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 	//res,_ := s.blockChain.ChainRestartStatus()
 
 	if epochID <= posconfig.FirstEpochId+2  /*|| res */ || err!=nil {
-		return s.getSlotLeader(0,slotID)
+		return s.getDefaultSlotLeader(slotID),nil
 	} else {
 		return s.getSlotLeader(epochID,slotID)
 	}
+}
+func (s *SLS) getDefaultSlotLeader(slotID uint64) (slotLeader *ecdsa.PublicKey) {
+	return s.defaultSlotLeadersPtrArray[slotID]
 }
 func (s *SLS) getSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
 	//todo maybe the start epochid is not 0
