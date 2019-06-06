@@ -119,19 +119,21 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 }
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	_, err = s.getPreEpochLeadersPK(epochID)
-	_, isGenesis, _ := s.getSMAPieces(epochID)
-
-	res,_ := s.blockChain.ChainRestartStatus()
-	if epochID <= posconfig.FirstEpochId+2  || err!=nil || isGenesis ||res{
-
-		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis,"getPreEpochLeadersPK",err)
-
+	if epochID <= posconfig.FirstEpochId+2  {
 		return s.getDefaultSlotLeader(slotID),nil
-
-	} else {
-		return s.getSlotLeader(epochID,slotID)
 	}
+	res,_ := s.blockChain.ChainRestartStatus()
+	if res {
+		log.Info("GetSlotLeader use getDefaultSlotLeader", "ChainRestartStatus", res)
+		return s.getDefaultSlotLeader(slotID),nil
+	}
+	_, isGenesis, _ := s.getSMAPieces(epochID)
+	if  isGenesis {
+		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
+		return s.getDefaultSlotLeader(slotID),nil
+	}
+
+	return s.getSlotLeader(epochID,slotID)
 }
 func (s *SLS) getDefaultSlotLeader(slotID uint64) (slotLeader *ecdsa.PublicKey) {
 	return s.defaultSlotLeadersPtrArray[slotID]
@@ -323,7 +325,7 @@ func (s *SLS) GetEpochDefaultLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 // isLocalPkInPreEpochLeaders check if local pk is in pre epoch leader.
 // If get pre epoch leader length is 0, return true,err to use epoch 0 info
-func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
+func (s *SLS) IsLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
 
 	localPk, err := s.getLocalPublicKey()
 	if err != nil {
@@ -553,7 +555,7 @@ func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bo
 
 func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	epochIDGet := epochID
-	canBeContinue, err := s.isLocalPkInPreEpochLeaders(epochID)
+	canBeContinue, err := s.IsLocalPkInPreEpochLeaders(epochID)
 	if !canBeContinue {
 		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
