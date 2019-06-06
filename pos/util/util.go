@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
 	"strconv"
 	"strings"
@@ -204,4 +205,28 @@ func IsPosBlock(number uint64) bool {
 
 func FirstPosBlockNumber() uint64 {
 	return posconfig.Pow2PosUpgradeBlockNumber + 1
+}
+
+var (
+	whiteMap map[common.Address] bool
+)
+func init() {
+	whiteMap = make(map[common.Address] bool)
+	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
+		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
+		addr := crypto.PubkeyToAddress(*pk)
+		whiteMap[addr]= true
+	}
+}
+
+func IsWhiteAddr(addr *common.Address) bool {
+	if addr == nil {
+		return false
+	}
+
+	if _, ok := whiteMap[*addr]; ok {
+		return true
+	}
+
+	return false
 }

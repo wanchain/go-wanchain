@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/core"
 	"math"
 	"math/big"
 	"sync"
@@ -618,9 +619,13 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 			log.Error("fetch pivot error", "err", err)
 			return err
 		}
-		// todo verify pivot Data
-		// signer is
 
+		err = core.CheckSummaries(pivotData.Summaries)
+		if err != nil {
+			return err
+		}
+
+		// check originSummary is the same with local summary
 		for i, header := range pivotData.Headers {
 			if header != nil {
 				log.Info("syncState", "i", i, "number", header.Number.Uint64())

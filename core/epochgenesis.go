@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
 	"strconv"
 	"sync"
@@ -77,8 +76,6 @@ type EpochGenesisBlock struct {
 	epgSetmu   sync.RWMutex
 	epgGenmu   sync.RWMutex
 
-	// white list map
-	whiteMap map[common.Address] bool
 	// epochId => slotId -> signer address
 	slotLeaderCache map[uint64]map[uint64]common.Address
 	//
@@ -100,19 +97,10 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 	f.lastEpochId = 0
 
 	f.epochGenDb = posdb.NewDb("epochGendb")
-	f.whiteMap = make(map[common.Address] bool)
 
 	f.slotLeaderCache = make(map[uint64]map[uint64] common.Address)
 	f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
 
-	// init white list
-	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
-		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
-		addr := crypto.PubkeyToAddress(*pk)
-		f.whiteMap[addr]= true
-	}
-
-	f.epgGenesis = nil
 
 	//f.InitSummaryListAndMap()
 	return f
@@ -185,7 +173,6 @@ func (f *EpochGenesisBlock) SelfGenerateEpochGenesis(blk *types.Block) {
 }
 
 func (f *EpochGenesisBlock) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
-
 	log.Debug("generate epg", "", epochid)
 	epg, header := f.GetEpochGenesis(epochid)
 	if epg != nil {
@@ -403,8 +390,8 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	epGen.EpochId = epochid
 
 	if lastblk == nil {
-		epGen.PreEpochLastBlkHash = common.Hash{}
-		epGen.PreEpochLastBlkNumber = 0
+		epGen.PreEpochLastBlkHash = f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber).Hash()
+		epGen.PreEpochLastBlkNumber = posconfig.Pow2PosUpgradeBlockNumber
 	} else {
 		epGen.PreEpochLastBlkHash = lastblk.Hash()
 		epGen.PreEpochLastBlkNumber = lastblk.NumberU64()
@@ -646,14 +633,13 @@ func (f *EpochGenesisBlock) getAllSlotLeaders(epochID uint64) ([]common.Address,
 	endBlkNum := posUtil.GetEpochBlock(epochID)
 	for i := startBlkNum; i <= endBlkNum; i++ {
 		header := f.bc.GetHeaderByNumber(i)
-		signer, err := f.recoverSigner(header)
+		signer, err := RecoverSigner(header)
 		if err != nil {
 			log.Error(err.Error())
 			break
 		}
 		if whiteHeader == nil {
-			_, ok := f.whiteMap[*signer]
-			if ok {
+			if posUtil.IsWhiteAddr(signer) {
 				whiteHeader = header
 			}
 		}
@@ -711,7 +697,8 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 
 	posUtil.SetEpochBlock(epochgen.EpochId, epochgen.PreEpochLastBlkNumber, epochgen.PreEpochLastBlkHash)
 
-	f.updateCache(epochgen)
+	f.dropCache(epochgen.EpochId)
+
 	log.Info("successfully input epochGenesis", "", epochgen.EpochId)
 
 	return nil
@@ -783,11 +770,10 @@ func (f * EpochGenesisBlock) checkSlotLeadersAndWhiteHeader(eg *types.EpochGenes
 		addr := eg.SlotLeaders[i]
 
 		if !bHasWhite {
-			_, ok := f.whiteMap[addr]
-			if ok {
+			if posUtil.IsWhiteAddr(&addr) {
 				// check same with white header
 				if whiteHeader.Difficulty != nil {
-					whiteAddr, err := f.recoverSigner(whiteHeader)
+					whiteAddr, err := RecoverSigner(whiteHeader)
 					if err != nil {
 						return false, errors.New("checkSlotLeaders whiteHeader un right")
 					}
@@ -847,7 +833,7 @@ func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
 	log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 	pk := proofMeg[0]
 
-	signer, err := f.recoverSigner(header)
+	signer, err := RecoverSigner(header)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -889,7 +875,7 @@ func (f *EpochGenesisBlock) ValidateState(block, parent *types.Block, state *sta
 	return nil
 }
 
-func (f *EpochGenesisBlock) recoverSigner(header *types.Header) (*common.Address, error) {
+func RecoverSigner(header *types.Header) (*common.Address, error) {
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	log.Debug("signature", "hex", hex.EncodeToString(signature))
@@ -910,7 +896,51 @@ func (f *EpochGenesisBlock) recoverSigner(header *types.Header) (*common.Address
 	log.Debug("signer in ecrecover", "signer", signer.Hex())
 
 	return &signer, nil
+}
 
+func CheckSummaries(ss []*types.EpochGenesisSummary) error {
+	l := len(ss)
+	var upBound uint64
+	for i:=0; i<l; i++ {
+		if i < l - 1 {
+			upBound = ss[i + 1].EpochHeader.PreEpochLastBlkNumber
+		} else {
+			upBound = ss[i].EpochHeader.PreEpochLastBlkNumber + posconfig.SlotCount
+		}
+		err := CheckSummary(ss[i], upBound)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func CheckSummary(s *types.EpochGenesisSummary, upBound uint64) error {
+	if !posUtil.IsPosBlock(s.WhiteHeader.Number.Uint64()) {
+		return errors.New("white header is not in pos stage")
+	}
+	if s.WhiteHeader.Number.Uint64() <= s.EpochHeader.PreEpochLastBlkNumber ||
+		s.WhiteHeader.Number.Uint64() > upBound {
+		return errors.New("white header is not in right epoch")
+	}
+
+	addr, err := RecoverSigner(s.WhiteHeader)
+	if err != nil {
+		return err
+	}
+
+	if !posUtil.IsWhiteAddr(addr) {
+		return errors.New("white addr is not in white list")
+	}
+	return nil
+}
+
+// epoch = 1--> generate 0
+// os must be the same with local
+func CheckOriginSummary(os *types.EpochGenesisSummary) error {
+
+	return nil
 }
 
 func sigHash(header *types.Header) (hash common.Hash) {
