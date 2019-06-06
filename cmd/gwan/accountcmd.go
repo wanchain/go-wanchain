@@ -297,7 +297,7 @@ func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, addres
 	var trials int
 	var keyjson []byte
 	for ; trials < 3; trials++ {
-		prompt := fmt.Sprintf("AWS KMS decrypt account %s | Attempt %d/%d", address, trials+1, 3)
+		prompt := fmt.Sprintf("AWS KMS decrypting account %s | Attempt %d/%d", address, trials+1, 3)
 		keyNames := [3]string{"aKID", "secretKey", "region"}
 		kmsInfo, err := getAwsKmsSecretInfo(prompt, keyNames[:])
 		if err != nil {
@@ -314,9 +314,10 @@ func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, addres
 	}
 
 	if trials == 3 || len(keyjson) == 0 {
-		utils.Fatalf("AWS KMS decrypt fail")
+		utils.Fatalf("AWS KMS decrypt failed")
 	}
 
+	fmt.Println("AWS KMS decrypt successful")
 	for trials := 0; trials < 3; trials++ {
 		prompt := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", address, trials+1, 3)
 		password := getPassPhrase(prompt, false, i, passwords)
@@ -592,7 +593,7 @@ func getAwsKmsSecretInfo(notice string, items []string) ([]string, error) {
 	inputs := make([]string, len(items))
 	fmt.Println(notice)
 	for i, name := range items {
-		input, err := console.Stdin.PromptPassword("please input AWS KMS " + name +": ")
+		input, err := console.Stdin.PromptPassword(name + ": ")
 		if err != nil {
 			return nil, err
 		}
