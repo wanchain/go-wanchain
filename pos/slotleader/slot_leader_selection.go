@@ -563,7 +563,8 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 			log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
 				"preEpochID", epochID-1)
 		}
-		epochIDGet = posconfig.FirstEpochId
+		//epochIDGet = posconfig.FirstEpochId
+		epochIDGet = 0
 	}
 	// get random
 	random, err := s.getRandom(nil, epochIDGet)
