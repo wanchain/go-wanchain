@@ -119,14 +119,12 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 }
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	if epochID <= posconfig.FirstEpochId+2  {
-		return s.getDefaultSlotLeader(slotID),nil
-	}
 	res,_ := s.blockChain.ChainRestartStatus()
-	if res {
-		log.Info("GetSlotLeader use getDefaultSlotLeader", "ChainRestartStatus", res)
+	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.getDefaultSlotLeader(slotID),nil
 	}
+
+
 	_, isGenesis, _ := s.getSMAPieces(epochID)
 	if  isGenesis {
 		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
@@ -288,7 +286,8 @@ func (s *SLS) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 
 func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
-	if epochID <= posconfig.FirstEpochId+2 {
+	res,_ := s.blockChain.ChainRestartStatus()
+	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.GetEpochDefaultLeadersPK(0), nil
 	}
 
@@ -332,8 +331,8 @@ func (s *SLS) IsLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 		log.Error("SLS.IsLocalPkInPreEpochLeaders getLocalPublicKey error", "error", err)
 		return false, err
 	}
-
-	if epochID <= posconfig.FirstEpochId+2 {
+    res,_ := s.blockChain.ChainRestartStatus()
+	if epochID <= posconfig.FirstEpochId+2 || res{
 		for _, value := range s.epochLeadersPtrArrayGenesis {
 			if util.PkEqual(localPk, value) {
 				return true, nil
@@ -527,7 +526,8 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 // It had been +1 when save into db, so do not -1 in get.
 func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
-	if epochID <= posconfig.FirstEpochId+2 {
+	res,_ := s.blockChain.ChainRestartStatus()
+	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.smaGenesis[:], true, nil
 	} else {
 		// pieces: alpha[1]*G, alpha[2]*G, .....
@@ -581,7 +581,8 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	// return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
 	var epochLeadersPtrArray []*ecdsa.PublicKey
-	if epochIDGet <= posconfig.FirstEpochId+2 {
+	res,_ := s.blockChain.ChainRestartStatus()
+	if epochIDGet <= posconfig.FirstEpochId+2 || res{
 		epochLeadersPtrArray = s.GetEpochDefaultLeadersPK(0)
 	} else {
 		epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
