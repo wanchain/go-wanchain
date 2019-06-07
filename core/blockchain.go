@@ -954,21 +954,21 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//confirm chain quality confirm security
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber + posconfig.Stage2K{
 
+		res,_ := bc.ChainRestartStatus()
+
+		if res {
+			restartEpid := bc.checkCQStartSlot/posconfig.SlotCount
+			if epid-restartEpid > 2 {
+				log.Info("set restart success","current epid",epid,"restart epochid",restartEpid)
+				bc.SetChainRestartSuccess()
+			}
+		}
+
 		if !bc.isWriteBlockSecure(block) {
 
 			if bc.restartSucess {
 				return NonStatTy, ErrInsufficientCQ
 			}
-		} else {
-
-			res,_ := bc.ChainRestartStatus()
-			if res {
-				restartEpid := bc.checkCQStartSlot/posconfig.SlotCount
-				if epid-restartEpid > 2 {
-					bc.SetChainRestarted()
-				}
-			}
-
 		}
 	}
 
@@ -1895,7 +1895,10 @@ func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 
 
-func (bc *BlockChain) SetChainRestarted() {
+func (bc *BlockChain) SetChainRestartSuccess() {
+
+	log.Info("")
+
 	bc.checkCQBlk = nil
 	bc.checkCQStartSlot = 0
 	bc.stopSlot = 0
