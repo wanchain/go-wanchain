@@ -131,10 +131,11 @@ type BlockChain struct {
 	slotValidator Validator
 
 	checkCQStartSlot uint64  //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
+	checkCQBlk  	*types.Block
 
-	restartSlot 	uint64	//the best peer's latest slot
-	restarted   	bool
-	restartBlk  	*types.Block
+	stopSlot 	uint64	//the best peer's latest slot
+	restartSucess   	bool
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -161,7 +162,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restarted:    false,
+		restartSucess:    false,
 	}
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
@@ -955,7 +956,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 		if !bc.isWriteBlockSecure(block) {
 
-			if bc.restarted {
+			if bc.restartSucess {
 				return NonStatTy, ErrInsufficientCQ
 			}
 		} else {
@@ -1882,11 +1883,11 @@ func (bc *BlockChain) IsInPosStage() (bool){
 func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	diff := bc.checkCQStartSlot - bc.restartSlot
+	diff := bc.checkCQStartSlot - bc.stopSlot
 	if  diff > posconfig.K &&
 		bc.checkCQStartSlot > 0 &&
-		bc.restartSlot > 0 {
-		return true,bc.restartBlk
+		bc.stopSlot > 0 {
+		return true,bc.checkCQBlk
 	}
 
 	return false,nil
@@ -1895,10 +1896,10 @@ func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 
 func (bc *BlockChain) SetChainRestarted() {
-	bc.restartBlk = nil
+	bc.checkCQBlk = nil
 	bc.checkCQStartSlot = 0
-	bc.restartSlot = 0
-	bc.restarted = true
+	bc.stopSlot = 0
+	bc.restartSucess = true
 }
 
 func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,useLocalTime bool ) {
@@ -1911,26 +1912,25 @@ func (bc *BlockChain) SetRestartBlock(block *types.Block,preBlock *types.Block,u
 			bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 
 			lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
-			bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+			bc.stopSlot = lastepid*posconfig.SlotCount + lastlslid
 
-			bc.restarted = false
+			bc.restartSucess = false
 
-		} else if block != nil {
+		} else if block != nil && preBlock != nil {
 
-				bc.restartBlk = block
+				bc.checkCQBlk = block
 				epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 				//record the restarting slot point
 				bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 
-				lastepid, lastlslid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
-				if preBlock != nil {
-					lastepid, lastlslid = posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
-				}
-				bc.restartSlot = lastepid*posconfig.SlotCount + lastlslid
+
+
+				stopepid, stoplslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+				bc.stopSlot = stopepid*posconfig.SlotCount + stoplslid
 
 				res,_ := bc.ChainRestartStatus()
 				if  res {
-					bc.restarted = false
+					bc.restartSucess = false
 				}
 		}
 
