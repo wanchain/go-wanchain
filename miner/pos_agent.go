@@ -257,8 +257,7 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
 	if !res {
 		return
 	}
-	//recovred restart initial status
-	s.BlockChain().SetChainRestartSuccess()
+
 
 	//else restart process
 	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
