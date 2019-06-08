@@ -132,7 +132,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		posconfig.FirstEpochId = epochID
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
 
-		self.posRestartInit(s, localPublicKey)
+		epochID, _ = util.CalEpochSlotID(uint64(time.Now().Unix()))
+
+		if epochID > posconfig.FirstEpochId + 2 {
+			self.posRestartInit(s, localPublicKey)
+		}
 
 	}
 
@@ -255,6 +259,7 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
 	//if stop time is short,then follow normally processs
 	res, _ = s.BlockChain().ChainRestartStatus()
 	if !res {
+		s.BlockChain().SetChainRestartSuccess()
 		return
 	}
 
