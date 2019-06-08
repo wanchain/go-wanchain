@@ -1946,7 +1946,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 	idxs := make([]uint,0)
 	for i, block := range chain {
 
-		if block.NumberU64() <= posconfig.Pow2PosUpgradeBlockNumber + 2 && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber  {
+		if block.NumberU64() <= posconfig.Pow2PosUpgradeBlockNumber + 2  {
 			continue
 		}
 		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
@@ -1963,6 +1963,7 @@ func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint,error) {
 		if preBlock == nil {
 			return nil,errors.New("can not find parent block in check restart")
 		}
+
 
 		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
 		preSlots := preepid*posconfig.SlotCount + preslid
