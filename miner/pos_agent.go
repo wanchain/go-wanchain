@@ -209,6 +209,8 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) {
 
 	if leader == localPublicKey {
 		cur := uint64(time.Now().Unix())
+		epochID, slotID := util.CalEpochSlotID(cur)
+
 		slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 		if slotTime > cur {
 			select {
