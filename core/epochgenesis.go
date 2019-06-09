@@ -965,8 +965,8 @@ func CheckSummaries(ss []*types.EpochGenesisSummary) error {
 	l := len(ss)
 	var startBound int64
 	for i:=0; i<l; i++ {
-		if i > 0 {
-			startBound = int64(ss[i - 1].EpochHeader.EpochLastBlkNumber) + 1
+		if i < l - 1 {
+			startBound = int64(ss[i + 1].EpochHeader.EpochLastBlkNumber) + 1
 		} else {
 			startBound = int64(ss[i].EpochHeader.EpochLastBlkNumber) - posconfig.SlotCount + 1
 			if startBound < 0 {

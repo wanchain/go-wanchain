@@ -24,7 +24,7 @@ func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header
 	endblk := types.NewBlockWithHeader(latest)
 	endEpid, _:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
 
-	return d.fetchEpochGenesisesBetween(startEpoch, endEpid - 1)
+	return d.fetchEpochGenesisesBetween(startEpoch, endEpid )
 }
 
 func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {

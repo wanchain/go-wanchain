@@ -22,8 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/core"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -526,6 +529,33 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			}
 		}
 		if fastSyncMode & 2 != 0 {
+			if fastSyncMode == 3 {
+				d.queue.Reset()
+				d.peers.Reset()
+
+				for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
+					select {
+					case <-ch:
+					default:
+					}
+				}
+				for _, ch := range []chan dataPack{d.headerCh, d.bodyCh, d.receiptCh} {
+					for empty := false; !empty; {
+						select {
+						case <-ch:
+						default:
+							empty = true
+						}
+					}
+				}
+				for empty := false; !empty; {
+					select {
+					case <-d.headerProcCh:
+					default:
+						empty = true
+					}
+				}
+			}
 			err = d.fastSyncWithPeerPos(p, posOrigin, height, latest, td)
 		}
 	} else {
@@ -610,8 +640,33 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	d.syncStatsChainHeight = height
 	d.syncStatsLock.Unlock()
 
+	if origin == posconfig.Pow2PosUpgradeBlockNumber - 1 {
+		firstPosHeader, _, err := d.fetchHeaderTd(p, posconfig.Pow2PosUpgradeBlockNumber)
+		if err != nil {
+			return err
+		}
+		if firstPosHeader != nil {
+
+		}
+		headers := make([]*types.Header,0)
+		headers = append(headers, firstPosHeader)
+		num, err := d.lightchain.InsertHeaderChain(headers, 1)
+		if err != nil {
+			return err
+		}
+		log.Info("num=" + strconv.Itoa(num))
+		epochId,_ := util.CalEpSlbyTd(firstPosHeader.Difficulty.Uint64())
+		posconfig.FirstEpochId = epochId
+
+		//s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
+		////reset initial sma
+		//sls := slotleader.GetSlotLeaderSelection()
+		//res,_ := s.BlockChain().ChainRestartStatus()
+		//if res  {
+		//	sls.Init(s.BlockChain(), nil, nil)
+		//}
+	}
 	pivot := uint64(0)
-	// TODO: get epoch genesis hashes, and pivot
 	var posPivot uint64 = missingNumber
 	if d.mode == FastSync || d.mode == LightSync {
 		pivotData, err := d.fetchPivot(p, origin, heightHeader.Hash())
@@ -638,12 +693,12 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 		for i, header := range pivotData.Headers {
 			if header != nil {
 				log.Info("syncState", "i", i, "number", header.Number.Uint64())
-				if i > 0 {
+				//if i > 0 {
 					if err := d.syncState(header.Root).Wait(); err != nil {
 						log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
 						return err
 					}
-				}
+				//}
 				if i == 1 {
 					posPivot = header.Number.Uint64()
 				}
@@ -684,6 +739,9 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 			} else {
 				origin = 0
 			}
+		}
+		if origin < posconfig.Pow2PosUpgradeBlockNumber - 1{
+			origin = posconfig.Pow2PosUpgradeBlockNumber - 1
 		}
 		log.Debug("Fast syncing until pivot block", "pivot", pivot)
 	}
