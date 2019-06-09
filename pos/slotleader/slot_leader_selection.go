@@ -287,18 +287,18 @@ func (s *SLS) getEpochLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 	return pks
 }
 
-func (s *SLS) getPreEpochLeadersPK(epochID uint64) ([]*ecdsa.PublicKey, error) {
+func (s *SLS) GetPreEpochLeadersPK(epochID uint64) (pks []*ecdsa.PublicKey, isDefault bool) {
 	if epochID <= posconfig.FirstEpochId+2 {
-		return s.GetEpochDefaultLeadersPK(0), nil
+		return s.GetEpochDefaultLeadersPK(0), true
 	}
 
-	pks := s.getEpochLeadersPK(epochID - 1)
+	pks = s.getEpochLeadersPK(epochID - 1)
 	if len(pks) == 0 {
 		log.Warn("Can not found pre epoch leaders return epoch default", "epochIDPre", epochID-1)
-		return s.GetEpochDefaultLeadersPK(0), vm.ErrInvalidPreEpochLeaders
+		return s.GetEpochDefaultLeadersPK(0), true
 	}
 
-	return pks, nil
+	return pks, false
 }
 
 //func (s *SLS) GetEpochFirstLeadersPK() []*ecdsa.PublicKey {
@@ -323,9 +323,24 @@ func (s *SLS) GetEpochDefaultLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 
 	return pks
 }
+func (s *SLS) IsLocalPkInEpochLeaders(pks []*ecdsa.PublicKey) (bool) {
+	localPk, err := s.getLocalPublicKey()
+	if err != nil {
+		log.Error("IsLocalPkInEpochLeaders", "error", err)
+		return false
+	}
+	for _, value := range pks {
+		if util.PkEqual(localPk, value) {
+			return true
+		}
+	}
+	return false
+}
+
 // isLocalPkInPreEpochLeaders check if local pk is in pre epoch leader.
 // If get pre epoch leader length is 0, return true,err to use epoch 0 info
-func (s *SLS) IsLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
+// todo delete it
+func (s *SLS) isLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, err error) {
 
 	localPk, err := s.getLocalPublicKey()
 	if err != nil {
@@ -342,8 +357,8 @@ func (s *SLS) IsLocalPkInPreEpochLeaders(epochID uint64) (canBeContinue bool, er
 		return false, nil
 	}
 
-	prePks, err := s.getPreEpochLeadersPK(epochID)
-	if err != nil {
+	prePks, isDefault := s.GetPreEpochLeadersPK(epochID)
+	if isDefault {
 		return true, vm.ErrInvalidPreEpochLeaders
 	}
 
@@ -555,19 +570,21 @@ func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bo
 
 func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	epochIDGet := epochID
-	canBeContinue, err := s.IsLocalPkInPreEpochLeaders(epochID)
-	if !canBeContinue {
+	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
+	if isDefault && epochID > posconfig.FirstEpochId+2 {
+		log.Info("generateSlotLeadsGroup use default epochLeader", "epochID", epochID)
+		epochIDGet = 0
+	}
+	if !s.IsLocalPkInEpochLeaders(epochLeadersPtrArray) {
 		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
 		return nil
 	}
+
 	// get pre sma
 	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
-
-	if (err != nil && epochID > 1) || isGenesis {
-		if !isGenesis {
-			log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
+	if isGenesis {
+		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
 				"preEpochID", epochID-1)
-		}
 		//epochIDGet = posconfig.FirstEpochId
 		epochIDGet = 0
 	}
@@ -580,16 +597,6 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 
 	// return slot leaders pointers.
 	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
-	var epochLeadersPtrArray []*ecdsa.PublicKey
-	if epochIDGet <= posconfig.FirstEpochId+2 {
-		epochLeadersPtrArray = s.GetEpochDefaultLeadersPK(0)
-	} else {
-		epochLeadersPtrArray, err = s.getPreEpochLeadersPK(epochIDGet)
-		if err != nil {
-			log.Error("generateSlotLeadsGroup", "err", err.Error())
-		}
-	}
-
 	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
 		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
 		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)

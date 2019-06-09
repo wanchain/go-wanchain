@@ -23,19 +23,17 @@ import (
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
-	// genesis or not
-
-	if epochID > posconfig.FirstEpochId+2 {
-
-		res,_ := s.blockChain.ChainRestartStatus()
-
-		if res {
-			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
-		}
+	if epochID <= posconfig.FirstEpochId+2 {
+		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
-	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
-	if epochID <= posconfig.FirstEpochId+2 || errGenesis != nil {
+	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
+	if isDefault {
+		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+	}
+
+	res,_ := s.blockChain.ChainRestartStatus()
+	if res {
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
@@ -168,11 +166,9 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	if epochID <= posconfig.FirstEpochId+2 {
 		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
-	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
-	if err != nil {
-		if err != nil {
-			log.Warn("getSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
-		}
+	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
+	if isDefault {
+		log.Warn("getSlotLeaderProof", "isDefault", isDefault)
 		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 
@@ -184,12 +180,7 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 
 	//RB PRE
 	var rbPtr *big.Int
-	rbPtr, err = s.getRandom(nil, epochID)
-	if err != nil {
-		log.Error("getSlotLeaderProof", "getRandom error", err.Error())
-		return nil, nil, err
-	}
-
+	rbPtr, _ = s.getRandom(nil, epochID)
 	rbBytes := rbPtr.Bytes()
 
 	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID)

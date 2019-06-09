@@ -227,20 +227,29 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		epochID, slotID = util.GetEpochSlotID()
 		log.Debug("get current period", "epochid", epochID, "slotid", slotID)
 
-		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochID, slotID)
-		exist, err := slotleader.GetSlotLeaderSelection().IsLocalPkInPreEpochLeaders(epochID)
-		if exist && err == nil {
-			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
+		sls := slotleader.GetSlotLeaderSelection()
+		sls.Loop(rc, key, epochID, slotID)
+
+		prePks, isDefault := sls.GetPreEpochLeadersPK(epochID)
+		targetEpochLeaderID := epochID
+		if isDefault {
+			if epochID > posconfig.FirstEpochId+2 {
+				log.Info("backendTimerLoop use default epoch leader.")
+			}
+			targetEpochLeaderID = 0
+		}
+		if sls.IsLocalPkInEpochLeaders(prePks) {
+			leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
 				slotTime := (epochID*posconfig.SlotCount+slotID)*posconfig.SlotTime
 				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				log.Info("leader ","leader",leader)
-				self.worker.chainSlotTimer <- slotTime
 				if leader == localPublicKey {
 					self.worker.chainSlotTimer <- slotTime
 				}
 			}
 		}
+
 
 		// get state of k blocks ahead the last block
 		stateDb, err := s.BlockChain().State()
