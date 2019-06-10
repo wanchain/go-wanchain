@@ -119,7 +119,7 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 }
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	res,_ := s.blockChain.ChainRestartStatus()
+	res,_ := s.blockChain.ChainRestartStatus2()
 	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.getDefaultSlotLeader(slotID),nil
 	}
@@ -289,8 +289,9 @@ func (s *SLS) GetPreEpochLeadersPK(epochID uint64) (pks []*ecdsa.PublicKey, isDe
 	if epochID <= posconfig.FirstEpochId+2 {
 		return s.GetEpochDefaultLeadersPK(0), true
 	}
-	res,_ := s.blockChain.ChainRestartStatus()
+	res,_ := s.blockChain.ChainRestartStatus2()
 	if res {
+		log.Error("VerifySlotProof", "ChainRestartStatus", res,"epochID", epochID)
 		return s.GetEpochDefaultLeadersPK(0), true
 	}
 	pks = s.getEpochLeadersPK(epochID - 1)
@@ -558,7 +559,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 // It had been +1 when save into db, so do not -1 in get.
 func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
 	piecesPtr := make([]*ecdsa.PublicKey, 0)
-	res,_ := s.blockChain.ChainRestartStatus()
+	res,_ := s.blockChain.ChainRestartStatus2()
 	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.smaGenesis[:], true, nil
 	} else {
