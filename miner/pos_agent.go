@@ -144,13 +144,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - cur%posconfig.SlotTime
-		if sleepTime > 0 {
-			select {
-			case <-self.timerStop:
-				randombeacon.GetRandonBeaconInst().Stop()
-				return
-			case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
-			}
+		select {
+		case <-self.timerStop:
+			randombeacon.GetRandonBeaconInst().Stop()
+			return
+		case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 		}
 
 		util.CalEpochSlotIDByNow()
