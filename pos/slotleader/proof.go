@@ -163,7 +163,9 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-	if epochID <= posconfig.FirstEpochId+2 {
+
+	res,_ := s.blockChain.ChainRestartStatus()
+	if epochID <= posconfig.FirstEpochId+2 || res {
 		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)

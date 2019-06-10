@@ -284,20 +284,20 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
 
-		selector := util.GetEpocherInst()
-		if selector == nil {
-			return
-		}
-
-		rbleaders := selector.GetRBProposerG1(epochID-1)
-		epleaders := selector.GetEpochLeaders(epochID-1)
-		_, err := s.getRandom(nil, epochID-1)
-
-		if len(rbleaders) == posconfig.RandomProperCount &&
-		  len(epleaders) == posconfig.EpochLeaderCount &&
-			err == nil {
-			s.blockChain.SetChainRestarted()
-		}
+		//selector := util.GetEpocherInst()
+		//if selector == nil {
+		//	return
+		//}
+		//
+		//rbleaders := selector.GetRBProposerG1(epochID-1)
+		//epleaders := selector.GetEpochLeaders(epochID-1)
+		//_, err := s.getRandom(nil, epochID-1)
+		//
+		//if len(rbleaders) == posconfig.RandomProperCount &&
+		//  len(epleaders) == posconfig.EpochLeaderCount &&
+		//	err == nil {
+		//	s.blockChain.SetChainRestarted()
+		//}
 
 	default:
 	}
