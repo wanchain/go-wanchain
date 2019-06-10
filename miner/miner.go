@@ -19,6 +19,7 @@ package miner
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -50,7 +51,7 @@ type Backend interface {
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux *event.TypeMux
-
+	mu sync.Mutex
 	worker *worker
 
 	coinbase common.Address

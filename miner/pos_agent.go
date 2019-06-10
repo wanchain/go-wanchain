@@ -84,6 +84,9 @@ func posInitMiner(s Backend, key *keystore.Key) {
 
 // backendTimerLoop is pos main time loop
 func (self *Miner) backendTimerLoop(s Backend) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	log.Debug("backendTimerLoop is running")
 	// get wallet
 	eb, errb := s.Etherbase()
