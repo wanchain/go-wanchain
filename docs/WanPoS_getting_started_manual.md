@@ -369,7 +369,7 @@ You can run a node in two different modes, staking and non staking.
 ### 5.3.1. Non-staking node
 
 ```
-$ gwan --pluto --rpc --syncmode "full"
+$ gwan --pluto --syncmode "full"
 ```
 
 ### 5.3.2. Staking-node
@@ -377,7 +377,7 @@ $ gwan --pluto --rpc --syncmode "full"
 In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` with your own account address and replace the `/tmp/pw.txt` file with your own password file with your password string in it.
 
 ```
-$ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
+$ gwan --pluto --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
 # 6. Common Operations

@@ -325,7 +325,7 @@ $ make
 ### 5.2.1. 同步节点
 
 ```
-$ gwan --pluto --rpc --syncmode "full"
+$ gwan --pluto --syncmode "full"
 ```
 
 ### 5.2.2. 验证节点（矿工）
@@ -333,7 +333,7 @@ $ gwan --pluto --rpc --syncmode "full"
 在下面命令中请替换地址为您的个人地址 `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` ，并替换 `/tmp/pw.txt` 为您地址的密码文本文件。
 
 ```
-$ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
+$ gwan --pluto --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
 # 6. 常用操作
