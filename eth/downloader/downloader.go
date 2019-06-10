@@ -1038,9 +1038,12 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
 	}
+
+	max := ceil
 	if ceil >= MaxForkAncestry {
 		floor = int64(ceil - MaxForkAncestry)
 	}
+
 	// Request the topmost blocks to short circuit binary ancestor lookup
 	head := ceil
 	if head > height {
@@ -1049,6 +1052,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	from := int64(head) - int64(MaxHeaderFetch)
 	if from < 0 {
 		from = 0
+	}
+	if max >= posconfig.Pow2PosUpgradeBlockNumber {
+		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
+			from = int64(posconfig.Pow2PosUpgradeBlockNumber)
+		}
 	}
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
