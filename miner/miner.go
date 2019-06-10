@@ -19,8 +19,9 @@ package miner
 
 import (
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"sync/atomic"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -33,6 +34,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	//"time"
 )
 
@@ -75,6 +77,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
 	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
+	epochLeader.NewEpocher(eth.BlockChain())
 	go miner.update()
 	return miner
 }
@@ -126,7 +129,7 @@ func (self *Miner) Start(coinbase common.Address) {
 	self.worker.start()
 	if self.eth.BlockChain().Config().IsPosActive {
 		go self.backendTimerLoop(self.eth)
-	} else 	if !self.eth.BlockChain().IsInPosStage()  {
+	} else if !self.eth.BlockChain().IsInPosStage() {
 		self.worker.commitNewWork(true, 0)
 	} else {
 		go self.backendTimerLoop(self.eth)
@@ -199,7 +202,7 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 	self.worker.setEtherbase(addr)
 }
 
-func (self *Miner) SwitchEngine(engine consensus.Engine){
+func (self *Miner) SwitchEngine(engine consensus.Engine) {
 	self.engine = engine
 	//time.Sleep(1000*time.Millisecond)
 	log.Info("SwitchEngine")
