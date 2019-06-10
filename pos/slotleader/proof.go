@@ -38,7 +38,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 
 
 	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
-	if epochID == 0 || errGenesis != nil {
+	if epochID == posconfig.FirstEpochId || errGenesis != nil {
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
