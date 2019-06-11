@@ -44,7 +44,7 @@ const (
 	RandomProperCount = 25
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold         = 30
-	MinEpHold         = 10
+	MinEpHold         = 0
 	Key3Suffix		  = "bn256KeySuffix"
 )
 const (
