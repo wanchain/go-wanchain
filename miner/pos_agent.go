@@ -134,26 +134,20 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 
 	if nil == h {
-
-		self.posStartInit(s, localPublicKey)
-
+		stop := self.posStartInit(s, localPublicKey)
+		if stop {
+			return
+		}
 	} else {
-
-		//util.CalEpochSlotIDByNow()
 		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochID
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
-
-		epochID, _ = util.CalEpochSlotID(uint64(time.Now().Unix()))
-
 		if epochID > posconfig.FirstEpochId+2 {
 			self.posRestartInit(s, localPublicKey)
 		}
-
 	}
 
 	for {
-
 		cur := uint64(time.Now().Unix())
 		sleepTime := posconfig.SlotTime - cur%posconfig.SlotTime
 		select {
@@ -204,7 +198,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	return
 }
 
-func (self *Miner) posStartInit(s Backend, localPublicKey string) {
+func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 
 	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
 	if h0 == nil {
@@ -232,7 +226,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) {
 		if slotTime > cur {
 			select {
 			case <-self.timerStop:
-				return
+				return true
 			case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
 			}
 		}
@@ -251,7 +245,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) {
 		if nil == h {
 			select {
 			case <-self.timerStop:
-				return
+				return true
 			case <-time.After(time.Duration(time.Second)):
 			}
 			log.Info("backendTimerLoop sleep,", "FirstEpochId", epochID)
@@ -264,6 +258,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) {
 		}
 
 	}
+	return false
 }
 
 func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
@@ -282,84 +277,85 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
 		return
 	}
 
-	//else restart process
-	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
-	if h0 == nil {
-		panic("last ppow block can't find")
-	}
-
-	epochID, slotID := util.CalEpochSlotID(h0.Time.Uint64())
-
-	if slotID == posconfig.SlotCount-1 {
-		epochID += 1
-		slotID = 0
-	} else {
-		slotID += 1
-	}
-
-	leaderPub, _ := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, slotID)
-	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	log.Info("leader ", "leader", leader)
-
-	if leader == localPublicKey {
-
-		cur := uint64(time.Now().Unix())
-
-		epochID, slotID := util.CalEpochSlotID(cur)
-		if slotID == posconfig.SlotCount-1 {
-			epochID += 1
-			slotID = 0
-		} else {
-			slotID += 1
-		}
-
-		slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
-
-		if slotTime > cur {
-			select {
-			case <-self.timerStop:
-				return
-			case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
-			}
-		}
-
-		self.worker.chainSlotTimer <- slotTime
-
-		for {
-
-			h := s.BlockChain().GetHeaderByNumber(curBlk.NumberU64() + 1)
-
-			if nil == h {
-				select {
-				case <-self.timerStop:
-					return
-				case <-time.After(time.Duration(time.Second)):
-				}
-
-			} else {
-				preBlk := curBlk
-				curBlk := s.BlockChain().CurrentBlock()
-				s.BlockChain().SetRestartBlock(curBlk, preBlk, false)
-				//if stop time is short,then follow normally processs
-				res, _ = s.BlockChain().ChainRestartStatus()
-				log.Info("restart", "result", res)
-				return
-			}
-
-		}
-	} else {
-
-		for {
-			res, _ = s.BlockChain().ChainRestartStatus()
-			if !res {
-				select {
-				case <-self.timerStop:
-					return
-				case <-time.After(time.Duration(time.Second)):
-				}
-			} else {
-				return
-			}
-		}
-	}
+	//
+	////else restart process
+	//h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
+	//if h0 == nil {
+	//	panic("last ppow block can't find")
+	//}
+	//
+	//epochID, slotID := util.CalEpochSlotID(h0.Time.Uint64())
+	//
+	//if slotID == posconfig.SlotCount-1 {
+	//	epochID += 1
+	//	slotID = 0
+	//} else {
+	//	slotID += 1
+	//}
+	//
+	//leaderPub, _ := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, slotID)
+	//leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+	//log.Info("leader ", "leader", leader)
+	//
+	//if leader == localPublicKey {
+	//
+	//	cur := uint64(time.Now().Unix())
+	//
+	//	epochID, slotID := util.CalEpochSlotID(cur)
+	//	if slotID == posconfig.SlotCount-1 {
+	//		epochID += 1
+	//		slotID = 0
+	//	} else {
+	//		slotID += 1
+	//	}
+	//
+	//	slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
+	//
+	//	if slotTime > cur {
+	//		select {
+	//		case <-self.timerStop:
+	//			return
+	//		case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
+	//		}
+	//	}
+	//
+	//	self.worker.chainSlotTimer <- slotTime
+	//
+	//	for {
+	//
+	//		h := s.BlockChain().GetHeaderByNumber(curBlk.NumberU64() + 1)
+	//
+	//		if nil == h {
+	//			select {
+	//			case <-self.timerStop:
+	//				return
+	//			case <-time.After(time.Duration(time.Second)):
+	//			}
+	//
+	//		} else {
+	//			preBlk := curBlk
+	//			curBlk := s.BlockChain().CurrentBlock()
+	//			s.BlockChain().SetRestartBlock(curBlk, preBlk, false)
+	//			//if stop time is short,then follow normally processs
+	//			res, _ = s.BlockChain().ChainRestartStatus()
+	//			log.Info("restart", "result", res)
+	//			return
+	//		}
+	//
+	//	}
+	//} else {
+	//
+	//	for {
+	//		res, _ = s.BlockChain().ChainRestartStatus()
+	//		if !res {
+	//			select {
+	//				case <-self.timerStop:
+	//					return
+	//				case <-time.After(time.Duration(time.Second)):
+	//			}
+	//		} else {
+	//			return
+	//		}
+	//	}
+	//}
 }
