@@ -1035,6 +1035,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	p.log.Debug("Looking for common ancestor", "local", ceil, "remote", height)
 	if d.mode == FullSync {
 		ceil = d.blockchain.CurrentBlock().NumberU64()
+		if d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber {
+			if ceil < posconfig.Pow2PosUpgradeBlockNumber {
+				return ceil, nil
+			}
+		}
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
 	}
