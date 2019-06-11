@@ -10,8 +10,8 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
 	"math/big"
 	"os"
 	"path"
@@ -178,8 +178,8 @@ func TestIsInValidStage(t *testing.T) {
 
 	nowTime := uint64(time.Now().Unix())
 
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + 1*posconfig.SlotCount*posconfig.SlotTime + 2*posconfig.K*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
@@ -218,7 +218,7 @@ func TestIsInValidStage(t *testing.T) {
 		t.Fail()
 	}
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 	evm = nil
 }
 func TestAddSlotScCallTimes(t *testing.T) {
@@ -430,8 +430,8 @@ func TestHandleStgOne(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
@@ -452,7 +452,7 @@ func TestHandleStgOne(t *testing.T) {
 		t.Fail()
 	}
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestGetStg1StateDbInfo(t *testing.T) {
@@ -475,8 +475,8 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
@@ -494,7 +494,7 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 		t.Fail()
 	}
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestGetStg2TxAlphaPki(t *testing.T) {
@@ -525,8 +525,8 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
@@ -564,7 +564,7 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 
 	c.handleStgTwo(stg2Bytes[:], nil, evm)
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestHandleStgTwo(t *testing.T) {
@@ -595,8 +595,8 @@ func TestHandleStgTwo(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
@@ -640,5 +640,5 @@ func TestHandleStgTwo(t *testing.T) {
 	if err != nil || ret != nil {
 		t.Fail()
 	}
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
