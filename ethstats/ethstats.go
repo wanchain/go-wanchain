@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"log/syslog"
 	"math/big"
 	"net"
@@ -451,7 +450,7 @@ func (s *Service) isPos() bool {
 		return false
 	}
 
-	return util.IsPosBlock(block.NumberU64())
+	return block.Number().Cmp(bc.Config().PosFirstBlock) >= 0
 }
 
 // readLoop loops as long as the connection is alive and retrieves data packets
