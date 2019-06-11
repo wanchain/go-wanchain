@@ -35,7 +35,6 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	//"time"
 )
 
@@ -50,8 +49,8 @@ type Backend interface {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	mux *event.TypeMux
-	mu sync.Mutex
+	mux    *event.TypeMux
+	mu     sync.Mutex
 	worker *worker
 
 	coinbase common.Address
@@ -78,7 +77,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
 	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
-	epochLeader.NewEpocher(eth.BlockChain())
+	posPreInit(eth)
 	go miner.update()
 	return miner
 }

@@ -3,11 +3,15 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus/pluto"
+
 	//"github.com/wanchain/go-wanchain/common/hexutil"
+	"time"
+
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -18,12 +22,17 @@ import (
 	"github.com/wanchain/go-wanchain/pos/slotleader"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rpc"
-	"time"
 )
 
 func posWhiteList() {
 
 }
+
+func posPreInit(s Backend) {
+	posconfig.Pow2PosUpgradeBlockNumber = s.BlockChain().Config().PosFirstBlock.Uint64()
+	epochLeader.NewEpocher(s.BlockChain())
+}
+
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
 
@@ -137,7 +146,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		epochID, _ = util.CalEpochSlotID(uint64(time.Now().Unix()))
 
-		if epochID > posconfig.FirstEpochId + 2 {
+		if epochID > posconfig.FirstEpochId+2 {
 			self.posRestartInit(s, localPublicKey)
 		}
 
@@ -273,7 +282,6 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
 		return
 	}
 
-
 	//else restart process
 	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
 	if h0 == nil {
@@ -345,9 +353,9 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) {
 			res, _ = s.BlockChain().ChainRestartStatus()
 			if !res {
 				select {
-					case <-self.timerStop:
-						return
-					case <-time.After(time.Duration(time.Second)):
+				case <-self.timerStop:
+					return
+				case <-time.After(time.Duration(time.Second)):
 				}
 			} else {
 				return
