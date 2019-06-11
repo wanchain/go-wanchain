@@ -145,7 +145,7 @@ func TestStakeIn(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doStakeIn()
+	err := doStakeIn(200000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -156,15 +156,53 @@ func TestDelegateIn(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doStakeIn()
+	err := doStakeIn(200000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 	clearDb()
+}
+
+func TestPartnerIn(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err := doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
+	if err == nil {
+		t.Fatal("should be error, stake + partner < 50000")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
+	if err != nil {
+		t.Fatal("should be error, stake > 10,500,000")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 500000)
+	if err == nil {
+		t.Fatal("should be error, stake > 10*(stake + partner)")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err != nil {
+		t.Fatal("should be success")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9430001)
+	if err == nil {
+		t.Fatal("should be error, stake > 10,500,000")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9430000)
+	if err != nil {
+		t.Fatal("should be success2")
+	}
 }
 
 // go test -test.bench=“.×”
@@ -172,7 +210,7 @@ func TestMultiDelegateIn(b *testing.T) {
 	if !reset() {
 		b.Fatal("pos staking db init error")
 	}
-	err := doStakeIn()
+	err := doStakeIn(200000)
 	if err != nil {
 		b.Fatal(err.Error())
 	}
@@ -185,7 +223,7 @@ func TestMultiDelegateIn(b *testing.T) {
 		}
 		key,_ := crypto.GenerateKey()
 		address := crypto.PubkeyToAddress(key.PublicKey)
-		err = doDelegateOne(address)
+		err = doDelegateOne(address, 10000)
 		if err != nil {
 			b.Fatal(err.Error())
 		}
@@ -197,12 +235,14 @@ func TestMultiDelegateIn(b *testing.T) {
 	clearDb()
 }
 
-func doStakeIn() error {
+func doStakeIn(amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
-	a := new(big.Int).Mul(big.NewInt(200000), ether)
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
+	contract.self = &dummyContractRef{}
 	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	stakerevm.BlockNumber = big.NewInt(10)
 
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -241,23 +281,23 @@ func doStakeIn() error {
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
 		info.Amount.Cmp(a) != 0 ||
-		info.StakingEpoch != eidNow {
+		info.StakingEpoch != eidNow + 2 {
 		return errors.New("stakeIn from amount epoch address saved wrong")
 	}
 	return nil
 }
 
-func doDelegateOne(from common.Address) error {
+func doDelegateOne(from common.Address, amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	contract.CallerAddress = from
-	a := new(big.Int).Mul(big.NewInt(20000), ether)
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
-	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
 
-	var input DelegateInParam
-	input.DelegateAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	var input common.Address
+	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 
-	bytes, err := cscAbi.Pack("delegateIn", input.DelegateAddress)
+	bytes, err := cscAbi.Pack("delegateIn", input)
 	if err != nil {
 		return errors.New("delegateIn pack failed")
 	}
@@ -268,7 +308,7 @@ func doDelegateOne(from common.Address) error {
 		return errors.New("delegateIn called failed")
 	}
 	// check
-	key := GetStakeInKeyHash(input.DelegateAddress)
+	key := GetStakeInKeyHash(input)
 	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
 	var infoS StakerInfo
 	err = rlp.DecodeBytes(bytes2, &infoS)
@@ -281,10 +321,53 @@ func doDelegateOne(from common.Address) error {
 		return errors.New("delegateIn save error")
 	}
 	info := infoS.Clients[lenth-1]
-	if info.StakingEpoch != eidNow ||
-		info.Amount.Cmp(a) != 0 ||
+	if info.QuitEpoch != 0 ||
+		info.Amount.Cmp(a) < 0 ||
 		info.Address != contract.CallerAddress {
 		return errors.New("delegateIn fields save error")
+	}
+	return nil
+}
+
+
+func doPartnerOne(from common.Address, amount int64) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	contract.CallerAddress = from
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
+	contract.Value().Set(a)
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+
+	var input PartnerInParam
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.Renewal = false
+
+	bytes, err := cscAbi.Pack("partnerIn", input.Addr,input.Renewal)
+	if err != nil {
+		return errors.New("partnerIn pack failed")
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("partnerIn called failed")
+	}
+	// check
+	key := GetStakeInKeyHash(input.Addr)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var infoS StakerInfo
+	err = rlp.DecodeBytes(bytes2, &infoS)
+	if err != nil {
+		return errors.New("partnerIn rlp decode failed")
+	}
+
+	lenth := len(infoS.Partners)
+	if lenth <= 0 {
+		return errors.New("partnerIn save error")
+	}
+	info := infoS.Partners[lenth-1]
+	if info.Amount.Cmp(a) < 0 ||
+		info.Address != contract.CallerAddress {
+		return errors.New("partnerIn fields save error")
 	}
 	return nil
 }

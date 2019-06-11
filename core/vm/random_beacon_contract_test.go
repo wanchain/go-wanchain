@@ -155,7 +155,7 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 
 	for i := 0; i < nr; i++ {
 		sshare[i] = make([]big.Int, nr, nr)
-		poly[i] = rbselection.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
+		poly[i],_ = rbselection.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
 		for j := 0; j < nr; j++ {
 			sshare[i][j], _ = rbselection.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
