@@ -452,7 +452,8 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 	if number == posBootstrapBlockNum {
 		ppowWindowLen := (len(s.UsedSigners)-1) / 2
 		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
-		if slotheader.Coinbase != header.Coinbase {
+		// TODO why slotheader is nil???
+		if slotheader!=nil &&  slotheader.Coinbase != header.Coinbase {
 			return errors.New("invalid leader")
 		}
 	}
