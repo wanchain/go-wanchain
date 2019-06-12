@@ -158,10 +158,6 @@ func (c *RandomBeaconContract) RequiredGas(input []byte) uint64 {
 }
 
 func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	// TODO should we check?
-	if posconfig.FirstEpochId == 0 {
-		return nil, errParameters
-	}
 	// check data
 	if len(input) < 4 {
 		return nil, errParameters
@@ -183,6 +179,10 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	// TODO should we check?
+	if posconfig.FirstEpochId == 0 {
+		return  errParameters
+	}
 	// in order to improve the transmission speed, return nil directly.
 	return nil
 }
