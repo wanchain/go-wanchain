@@ -125,6 +125,10 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	if len(in) < 4 {
 		return nil, errParameters
 	}
+	// TODO should we check?
+	if posconfig.FirstEpochId == 0 {
+		return nil, errParameters
+	}
 
 	var methodId [4]byte
 	copy(methodId[:], in[:4])

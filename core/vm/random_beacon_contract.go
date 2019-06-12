@@ -158,6 +158,10 @@ func (c *RandomBeaconContract) RequiredGas(input []byte) uint64 {
 }
 
 func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// TODO should we check?
+	if posconfig.FirstEpochId == 0 {
+		return nil, errParameters
+	}
 	// check data
 	if len(input) < 4 {
 		return nil, errParameters
