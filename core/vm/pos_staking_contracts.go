@@ -510,6 +510,19 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
+
+	total := big.NewInt(0).Set(stakerInfo.Amount)
+	for i := 0; i < len(stakerInfo.Clients); i++ {
+		total.Add(total, stakerInfo.Clients[i].Amount)
+	}
+	for i := 0; i < len(stakerInfo.Partners); i++ {
+		total.Add(total, stakerInfo.Partners[i].Amount)
+	}
+	// check stake + partner + delegate <= 10,500,000
+	if total.Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("StakeAppend in failed, too much stake")
+	}
+
 	weight := CalLocktimeWeight(realLockEpoch)
 	stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)

@@ -205,6 +205,40 @@ func TestPartnerIn(t *testing.T) {
 	}
 }
 
+func TestStakeAppend(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err := doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
+	if err == nil {
+		t.Fatal("should not delegate")
+	}
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
+	if err != nil {
+		t.Fatal("should delegate")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9420001)
+	if err == nil {
+		t.Fatal("should delegate failed, stake > 10,500,000")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9420000)
+	if err != nil {
+		t.Fatal("should delegate failed, stake > 10,500,000")
+	}
+}
+
 // go test -test.bench=“.×”
 func TestMultiDelegateIn(b *testing.T) {
 	if !reset() {
@@ -368,6 +402,42 @@ func doPartnerOne(from common.Address, amount int64) error {
 	if info.Amount.Cmp(a) < 0 ||
 		info.Address != contract.CallerAddress {
 		return errors.New("partnerIn fields save error")
+	}
+	return nil
+}
+
+func doStakeAppend(from common.Address, amount int64) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	contract.CallerAddress = from
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
+	contract.Value().Set(a)
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+
+	var input common.Address
+	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+
+	bytes, err := cscAbi.Pack("stakeAppend", input)
+	if err != nil {
+		return errors.New("stakeAppend pack failed")
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("stakeAppend called failed")
+	}
+	// check
+	key := GetStakeInKeyHash(input)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var infoS StakerInfo
+	err = rlp.DecodeBytes(bytes2, &infoS)
+	if err != nil {
+		return errors.New("stakeAppend rlp decode failed")
+	}
+
+	if infoS.Amount.Cmp(a) < 0 ||
+		infoS.Address != contract.CallerAddress {
+		return errors.New("stakeAppend fields save error")
 	}
 	return nil
 }
