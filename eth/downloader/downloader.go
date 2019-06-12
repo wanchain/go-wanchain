@@ -738,7 +738,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 				origin = 0
 			}
 		}
-		if origin < posconfig.Pow2PosUpgradeBlockNumber {
+		if origin < posconfig.Pow2PosUpgradeBlockNumber - 1 {
 			origin = posconfig.Pow2PosUpgradeBlockNumber - 1
 			pivot = origin + 1
 		}
