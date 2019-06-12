@@ -176,6 +176,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		return nil, err
 	}
 	bc.RegisterSwitchEngine(bc.hc)
+	bc.hc.epochgen = bc.epochGene
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -216,6 +217,9 @@ func PeekChainHeight(db ethdb.Database) (uint64){
 	return GetBlockNumber(db, head)
 }
 
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
+}
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
@@ -386,6 +390,63 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	defer bc.mu.RUnlock()
 
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
+}
+
+func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Header, []*types.EpochGenesisSummary, []*types.EpochGenesisSummary, uint64) {
+	headers := make([]*types.Header, 0)
+	// origin + 4 pivot
+	summaries := make([]*types.EpochGenesisSummary, 0)
+	originSummaries := make([]*types.EpochGenesisSummary, 0)
+
+	startEpoch := bc.epochGene.GetStartEpoch(origin)
+
+	if bc.epochGene.rbLeaderSelector == nil {
+		return headers, summaries, originSummaries, startEpoch
+	}
+	header := bc.hc.GetHeaderByHash(hash)
+	if header == nil {
+		return headers, summaries, originSummaries, startEpoch
+	}
+	if !posUtil.IsPosBlock(header.Number.Uint64()) {
+		return headers, summaries, originSummaries, startEpoch
+	}
+	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
+	// pivot == GetEpochLastBlkNumber(eid - 1)
+	// incentive : eid - 3, eid - 4
+
+	dst := int64(eid) - 1
+	for i:=0; i<4; i++ {
+		if dst < 0 {
+			break
+		}
+		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
+		h := bc.hc.GetHeaderByNumber(bn)
+		if h != nil {
+			s := bc.epochGene.GetEpochSummary(uint64(dst))
+			if s != nil {
+				summaries = append(summaries, s)
+				headers = append(headers, h)
+			}
+		}
+
+		dst--
+	}
+
+
+	if origin > posconfig.Pow2PosUpgradeBlockNumber {
+		originHeader := bc.hc.GetHeaderByNumber(origin)
+		if originHeader != nil {
+			eidOrigin, _ := posUtil.CalEpochSlotID(originHeader.Time.Uint64())
+			if eid > eidOrigin {
+				s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
+				if s != nil {
+					originSummaries = append(originSummaries, s)
+				}
+			}
+
+		}
+	}
+	return headers,summaries, originSummaries, startEpoch
 }
 
 // SetProcessor sets the processor required for making state modifications.
@@ -1830,7 +1891,7 @@ func (bc *BlockChain) SetSlSelector(sls SlLeadersSelInt) {
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, error) {
+func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
 	return bc.epochGene.GenerateEpochGenesis(epochid)
 }
 
@@ -1846,12 +1907,16 @@ func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool {
 	return bc.epochGene.IsExistEpochGenesis(epochid)
 }
 
-func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis) error {
-	return bc.epochGene.SetEpochGenesis(epochgen)
+func (bc *BlockChain) SetEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
+	return bc.epochGene.SetEpochGenesis(epochgen, whiteHeader)
 }
 
 func (bc *BlockChain) GetEpochStartCh() chan uint64 {
 	return bc.epochGene.epochGenesisCh
+}
+
+func (bc *BlockChain) GetEpochGene() *EpochGenesisBlock {
+	return bc.epochGene
 }
 
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
@@ -1878,6 +1943,9 @@ func (bc *BlockChain) IsInPosStage() (bool){
 	return bc.config.IsPosBlockNumber(currentBlockNumber)
 }
 
+func (bc *BlockChain) GetFirstPosBlockNumber() uint64 {
+	return bc.Config().PosFirstBlock.Uint64()
+}
 
 func (bc *BlockChain) ChainRestartStatus2() (bool,*types.Block){
 

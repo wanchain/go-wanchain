@@ -452,6 +452,18 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 	if number == posBootstrapBlockNum {
 		ppowWindowLen := (len(s.UsedSigners)-1) / 2
 		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
+		if slotheader == nil {
+			for i:=len(parents); i>0; i-- {
+				if parents[i - 1] != nil {
+					if parents[i - 1].Number.Uint64() == posBootstrapBlockNum - uint64(ppowWindowLen+1) {
+						slotheader = parents[i - 1]
+						break
+					}
+				} else {
+					return errors.New("invalid leader")
+				}
+			}
+		}
 		if slotheader.Coinbase != header.Coinbase {
 			return errors.New("invalid leader")
 		}

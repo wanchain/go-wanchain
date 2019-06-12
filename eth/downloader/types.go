@@ -83,8 +83,26 @@ func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
 type epochGenesisPack struct {
 	peerId  string
 	epochGenesis *types.EpochGenesis
+	whiteHeader  *types.Header
 }
 
 func (p *epochGenesisPack) PeerId() string { return p.peerId }
 func (p *epochGenesisPack) Items() int     { return 1 }
 func (p *epochGenesisPack) Stats() string  { return fmt.Sprintf("%d", 1) }
+
+type epochPivotPack struct {
+	peerId string
+	pivotData *types.PivotData
+}
+
+func (p *epochPivotPack) PeerId() string { return p.peerId}
+func (p *epochPivotPack) Items() int { return 1}
+func (p *epochPivotPack) Stats() string { return fmt.Sprintf("%d", 1)}
+
+type headerTdPack struct {
+	peerId string
+	headerTd *types.HeaderTdData
+}
+func (p *headerTdPack) PeerId() string { return p.peerId }
+func (p *headerTdPack) Items() int     { return 1 }
+func (p *headerTdPack) Stats() string  { return fmt.Sprintf("%d", 1) }

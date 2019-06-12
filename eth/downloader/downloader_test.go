@@ -1472,7 +1472,7 @@ func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int
 		}()
 	}
 	// Deliver the actual requested headers.
-	go ftp.peer.RequestHeadersByNumber(from, count, skip, reverse)
+	go ftp.peer.RequestHeadersByNumber(from, count, skip, reverse, uint64(0))
 	// None of the extra deliveries should block.
 	timeout := time.After(15 * time.Second)
 	for i := 0; i < cap(deliveriesDone); i++ {

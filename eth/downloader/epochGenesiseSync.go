@@ -2,11 +2,12 @@
 package downloader
 
 import (
-	"time"
+	"errors"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
-	"errors"
+	"time"
 )
 
 const repeatLimit  = 10
@@ -18,8 +19,15 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
+func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header) error {
 
-func (d *Downloader) fetchEpochGenesises(startEpochid uint64,endEpochid uint64) (error) {
+	endblk := types.NewBlockWithHeader(latest)
+	endEpid, _:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
+
+	return d.fetchEpochGenesisesBetween(startEpoch, endEpid )
+}
+
+func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {
 
 	if d.epochGenesisFbCh != nil {
 		return nil
@@ -108,10 +116,10 @@ func (d *Downloader) epochGenesisFetcher() {
 				response := pack.(*epochGenesisPack).epochGenesis
 				log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
 
-				err := d.blockchain.SetEpochGenesis(response)
+				err := d.blockchain.SetEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
 
 				if err != nil {
-					log.Debug("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
+					log.Warn("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
 					d.epochGenesisSyncStart <- req.epochid.Uint64()
 				} else {
 					if d.epochGenesisFbCh != nil {
