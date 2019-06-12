@@ -24,19 +24,18 @@ import (
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	if epochID <= posconfig.FirstEpochId+2 {
-		log.Error("VerifySlotProof", "epochID", epochID)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
 	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
 	if isDefault {
-		log.Error("VerifySlotProof", "isDefault", isDefault,"epochID", epochID)
+		log.Debug("VerifySlotProof", "isDefault", isDefault,"epochID", epochID)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
 	res,_ := s.blockChain.ChainRestartStatus2()
 	if res {
-		log.Error("VerifySlotProof", "ChainRestartStatus2", res)
+		log.Debug("VerifySlotProof", "ChainRestartStatus2", res)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 

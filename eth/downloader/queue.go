@@ -22,6 +22,7 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"sync"
 	"time"
 
@@ -379,9 +380,11 @@ func (q *queue) countProcessableItems() int {
 		// doing this could leave us unable to download the required
 		// amount of headers.
 		if q.mode == FastSync && result.Header.Number.Uint64() == q.fastSyncPivot {
-			for j := 0; j < fsHeaderForceVerify; j++ {
-				if i+j+1 >= len(q.resultCache) || q.resultCache[i+j+1] == nil {
-					return i
+			if q.fastSyncPivot < posconfig.Pow2PosUpgradeBlockNumber {
+				for j := 0; j < fsHeaderForceVerify; j++ {
+					if i+j+1 >= len(q.resultCache) || q.resultCache[i+j+1] == nil {
+						return i
+					}
 				}
 			}
 		}

@@ -525,6 +525,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		}
 		if fastSyncMode & 2 != 0 {
 			if fastSyncMode == 3 {
+				if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
+					log.Info("Block synchronisation started")
+				}
 				d.queue.Reset()
 				d.peers.Reset()
 
@@ -768,6 +771,9 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 }
 
 func (d *Downloader) fullSyncWithPeer(p *peerConnection, origin uint64, height uint64, heightHeader *types.Header, td *big.Int) (err error) {
+	log.Info("fullSyncWithPeer", "current block", d.blockchain.CurrentBlock().NumberU64())
+	log.Info("fullSyncWithPeer", "current header", d.blockchain.CurrentHeader().Number.Uint64())
+	log.Info("fullSyncWithPeer", "current fast block", d.blockchain.CurrentFastBlock().NumberU64())
 	log.Info("fullSyncWithPeer", "origin", origin, "height", height)
 	d.syncStatsLock.Lock()
 	if d.syncStatsChainHeight <= origin || d.syncStatsChainOrigin > origin {
@@ -1048,7 +1054,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	if from < 0 {
 		from = 0
 	}
-	if max >= posconfig.Pow2PosUpgradeBlockNumber {
+	if max >= posconfig.Pow2PosUpgradeBlockNumber || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber{
 		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
 			from = int64(posconfig.Pow2PosUpgradeBlockNumber)
 		}

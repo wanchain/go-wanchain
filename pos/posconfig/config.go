@@ -188,7 +188,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		}
 	}else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrTest
-		WhiteList = WhiteListOrig
+		WhiteList = WhiteListDev
 	}else  { // testnet
 		PosOwnerAddr = PosOwnerAddrTest
 		WhiteList = WhiteListOrig
