@@ -154,6 +154,10 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	var methodId [4]byte
 	copy(methodId[:], tx.Data()[:4])
 
+	// TODO should we check?
+	if posconfig.FirstEpochId == 0 {
+		return  errParameters
+	}
 	if methodId == stgOneIdArr {
 		return c.validTxStg1(stateDB, signer, tx)
 	} else if methodId == stgTwoIdArr {

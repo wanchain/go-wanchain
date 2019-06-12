@@ -179,6 +179,9 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	if posconfig.FirstEpochId == 0 {
+		return  errParameters
+	}
 	if stateDB == nil || signer == nil || tx == nil {
 		return errParameters
 	}
