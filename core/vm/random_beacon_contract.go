@@ -233,12 +233,14 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
-	// todo : check pks element validity
 	ep := util.GetEpocherInst()
 	if ep == nil {
 		return nil,  errors.New("invalid rb stage")
 	}
 	pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, errors.New("invalid rb proposer array")
+	}
 
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
@@ -299,12 +301,15 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
-	// todo : check pks element validity
 	ep := util.GetEpocherInst()
 	if ep == nil {
 		return nil,  errors.New("invalid rb stage")
 	}
 	pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, errors.New("invalid rb proposer array")
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -356,12 +361,15 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
-	// todo : check pks element validity
 	ep := util.GetEpocherInst()
 	if ep == nil {
 		return nil,  nil, nil, errors.New("invalid rb stage")
 	}
 	pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, nil, nil, errors.New("invalid rb proposer array")
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
 		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
