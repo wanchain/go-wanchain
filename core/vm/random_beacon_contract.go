@@ -179,8 +179,21 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// in order to improve the transmission speed, return nil directly.
-	return nil
+	if stateDB == nil || signer == nil || tx == nil {
+		return errParameters
+	}
+
+	payload := tx.Data()
+	if len(payload) < 4 {
+		return errParameters
+	}
+
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return err
+	}
+
+	return ValidPosRBTx(stateDB, from, payload)
 }
 
 //
