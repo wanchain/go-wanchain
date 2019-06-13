@@ -335,8 +335,6 @@ func (hc *HeaderChain) IsSignerValid(addr *common.Address, header *types.Header)
 //	return hc.epochgen.GetOrGenerateEGHash(epochid)
 //}
 
-
-
 func (f *EpochGenesisBlock) GenerateEGHash(epochid uint64) (common.Hash, error) {
 	epkGnss, _ := f.GetEpochGenesis(epochid)
 	if epkGnss != nil {
@@ -374,16 +372,16 @@ func (f *EpochGenesisBlock) IsSignerValid(addr *common.Address, header *types.He
 func (f *EpochGenesisBlock) VerifyEpochGenesisHash(epochid uint64, hash common.Hash, bGenerate bool) error {
 	var epkGnss *types.EpochGenesis = nil
 	var err error
-	if bGenerate {
-		epkGnss, _, err = f.generateChainedEpochGenesis(epochid, false)
-		if err != nil {
-			return errors.New("VerifyEpochGenesisHash error, can't generate epoch genesis, id=" + strconv.Itoa(int(epochid)))
-		}
-	} else {
-		epkGnss,_ = f.GetEpochGenesis(epochid)
-	}
+	epkGnss,_ = f.GetEpochGenesis(epochid)
 	if epkGnss == nil{
-		return errors.New("VerifyEpochGenesisHash error, can't get epoch genesis, id=" + strconv.FormatUint(epochid, 10))
+		if bGenerate {
+			epkGnss, _, err = f.generateChainedEpochGenesis(epochid, true)
+			if err != nil {
+				return errors.New("VerifyEpochGenesisHash error, can't generate epoch genesis, id=" + strconv.Itoa(int(epochid)))
+			}
+		} else {
+			return errors.New("VerifyEpochGenesisHash error, can't get epoch genesis, id=" + strconv.FormatUint(epochid, 10))
+		}
 	}
 
 	epkGnssHash := epkGnss.GenesisBlkHash
@@ -487,6 +485,7 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 	defer f.epgGenmu.Unlock()
 
 	delete(f.slotLeaderCache, epochId)
+	delete(f.egHeaderMap, epochId)
 	//delete(f.epochLeaderCache, epochId)
 }
 
@@ -750,9 +749,14 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 	if err != nil {
 		return err
 	}
+	valHeader, err := rlp.EncodeToBytes(summary.EpochHeader)
+	if err != nil {
+		return err
+	}
 
 	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochgenesis", val)
 	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochsummary", valSummary)
+	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochheader", valHeader)
 	_ = f.saveToPosDb(epochgen)
 
 	posUtil.SetEpochBlock(epochgen.EpochId, epochgen.EpochLastBlkNumber, epochgen.EpochLastBlkHash)
@@ -762,6 +766,43 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 	log.Info("successfully input epochGenesis", "", epochgen.EpochId)
 
 	return nil
+}
+
+func (f *EpochGenesisBlock) GetEpochHeaders(from, to uint64) []*types.EpochGenesisHeader {
+	epoch0, ok := f.GetEpoch0()
+	if !ok || from < epoch0 {
+		return nil
+	}
+
+	headers := make([]*types.EpochGenesisHeader, 0)
+	for i := from; i <= to; i++ {
+		h, ok := f.egHeaderMap[i]
+		if !ok {
+			h = f.getEpochHeader(i)
+		}
+		if h != nil {
+			headers = append(headers, h)
+			f.egHeaderMap[i] = h
+		} else {
+			return nil
+		}
+	}
+
+	return headers
+}
+
+func (f *EpochGenesisBlock) getEpochHeader(i uint64) *types.EpochGenesisHeader {
+	val, err := f.epochGenDb.Get(i, "epochheader")
+	if err != nil || val == nil {
+		return nil
+	}
+	header := new (types.EpochGenesisHeader)
+	err = rlp.DecodeBytes(val, header)
+	if err != nil {
+		log.Debug(err.Error())
+		return nil
+	}
+	return header
 }
 
 func (f *EpochGenesisBlock) GetEpochSummary(epochId uint64) *types.EpochGenesisSummary {

@@ -453,6 +453,10 @@ func (c *Clique) VerifyUncles(chain consensus.ChainReader, block *types.Block) e
 	return nil
 }
 
+func (c *Clique) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	return nil
+}
+
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Clique) VerifySeal(chain consensus.ChainReader, header *types.Header) error {

@@ -336,6 +336,10 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	return nil
 }
 
+func (c *Ethash) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	return nil
+}
+
 // verifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
