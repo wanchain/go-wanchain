@@ -57,27 +57,6 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	s.GenerateDefaultSlotLeaders()
 }
 
-func (s *SLS) getLastRandom() *big.Int {
-	curepid, _ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
-	db, err := s.blockChain.State()
-	if err != nil {
-		return big.NewInt(0)
-	}
-
-	i := curepid
-	for i > 0 {
-
-		rb := vm.GetR(db, i)
-		if rb != nil {
-			return rb
-		}
-
-		i--
-	}
-
-	return big.NewInt(0)
-}
-
 func (s *SLS) initSma() {
 
 	s.randomGenesis = big.NewInt(1)
