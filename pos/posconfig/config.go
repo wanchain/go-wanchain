@@ -191,7 +191,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		WhiteList = WhiteListOrig
 	}else  { // testnet
 		PosOwnerAddr = PosOwnerAddrTest
-		WhiteList = WhiteListOrig
+		WhiteList = WhiteListTestnet
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

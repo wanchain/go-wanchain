@@ -600,10 +600,10 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 		}
 	}
 	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
-	probability6 := big.NewInt(0).Set(totalPartnerProbability)
-	probability6.Mul(probability6, big.NewInt(vm.MaxTimeDelegate + 1))
-	if totalProbability.Cmp(probability6) > 0 {
-		totalProbability = probability6
+	probabilityMax := big.NewInt(0).Set(totalPartnerProbability)
+	probabilityMax.Mul(probabilityMax, big.NewInt(vm.MaxTimeDelegate + 1))
+	if totalProbability.Cmp(probabilityMax) > 0 {
+		totalProbability = probabilityMax
 	}
 	return infors, totalProbability, nil
 }

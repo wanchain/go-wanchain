@@ -28,22 +28,13 @@ var (
 )
 
 func (s *SLS)GenerateDefaultSlotLeaders() error {
-	epochLeader := s.GetEpochDefaultLeadersPK(0)
+	//epochLeader := s.GetEpochDefaultLeadersPK(0)
 
 	slotLeadersPtr, _, _, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(s.smaGenesis[:],
-		epochLeader, s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
+		s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
 	if err != nil {
 		log.SyslogAlert("generateSlotLeadsGroup", "epochid", 0, "error", err.Error())
 		return err
-	}
-
-	// insert slot address to local DB
-	for index, val := range slotLeadersPtr {
-		_, err = posdb.GetDb().PutWithIndex(uint64(0), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
-		if err != nil {
-			log.SyslogAlert("generateSlotLeadsGroup:PutWithIndex", "epochid", 0, "error", err.Error())
-			return err
-		}
 	}
 
 	for index, val := range slotLeadersPtr {
@@ -195,8 +186,8 @@ func (s *SLS) initSma() {
 		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
 
-	log.Debug("slot_leader_selection:init", "genesis sma pieces", smaPiecesHexStr)
-	log.SyslogInfo("SLS SlsInit success")
+	log.Debug("initSma:init", "genesis sma pieces", smaPiecesHexStr)
+	log.SyslogInfo("SLS initSma success")
 }
 
 //Loop check work every Slot time. Called by backend loop.

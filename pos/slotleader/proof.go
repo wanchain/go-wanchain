@@ -33,12 +33,6 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
-	res,_ := s.blockChain.ChainRestartStatus2()
-	if res {
-		log.Debug("VerifySlotProof", "ChainRestartStatus2", res)
-		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
-	}
-
 	rbPtr, err := s.getRandom(block, epochID)
 	if err != nil {
 		log.SyslogErr(err.Error())
@@ -165,9 +159,7 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-
-	res,_ := s.blockChain.ChainRestartStatus2()
-	if epochID <= posconfig.FirstEpochId+2 || res {
+	if epochID <= posconfig.FirstEpochId+2 {
 		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)

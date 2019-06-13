@@ -1947,19 +1947,6 @@ func (bc *BlockChain) GetFirstPosBlockNumber() uint64 {
 	return bc.Config().PosFirstBlock.Uint64()
 }
 
-func (bc *BlockChain) ChainRestartStatus2() (bool,*types.Block){
-
-	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
-	//diff := bc.checkCQStartSlot - bc.stopSlot
-	//if  diff > posconfig.K &&
-	//	bc.checkCQStartSlot > 0 &&
-	//	bc.stopSlot > 0 {
-	//	return true,bc.checkCQBlk
-	//}
-
-	return false,nil
-}
-
 func (bc *BlockChain) ChainRestartStatus() (bool,*types.Block){
 
 	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot

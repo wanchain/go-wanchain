@@ -36,12 +36,6 @@ func posPreInit(s Backend) {
 func PosInit(s Backend) *epochLeader.Epocher {
 	log.Debug("PosInit is running")
 
-	//if posconfig.EpochBaseTime == 0 {
-	//	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
-	//	if nil != h {
-	//		posconfig.EpochBaseTime = h.Time.Uint64()
-	//	}
-	//}
 	posconfig.Pow2PosUpgradeBlockNumber = s.BlockChain().Config().PosFirstBlock.Uint64()
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil != h {
@@ -142,12 +136,13 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochID
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
-		if epochID > posconfig.FirstEpochId+2 {
-			stop := self.posRestartInit(s, localPublicKey)
-			if stop {
-				return
-			}
-		}
+		// todo: need not reset the slot leader.
+		//if epochID > posconfig.FirstEpochId+2 {
+		//	stop := self.posRestartInit(s, localPublicKey)
+		//	if stop {
+		//		return
+		//	}
+		//}
 	}
 
 	for {
@@ -264,11 +259,12 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 	return false
 }
 
+// todo, reture true or false ,
 func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool)  {
 	//if chain is in restarting status,then return
 	res, _ := s.BlockChain().ChainRestartStatus()
 	if res {
-		return true
+		return false
 	}
 
 	curBlk := s.BlockChain().CurrentBlock()
@@ -277,11 +273,12 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) 
 	res, _ = s.BlockChain().ChainRestartStatus()
 	if !res {
 		s.BlockChain().SetChainRestartSuccess()
-		return true
+		return false
 	}
 
 
 	//else restart process
+	// todo why dont use fir pos's epochID
 	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
 	if h0 == nil {
 		panic("last ppow block can't find")
@@ -349,6 +346,7 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) 
 		}
 	} else {
 		for {
+
 			res, _ = s.BlockChain().ChainRestartStatus()
 			if !res {
 				select {
@@ -357,7 +355,7 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) 
 					case <-time.After(time.Duration(time.Second)):
 				}
 			} else {
-				return true
+				return false
 			}
 		}
 	}
