@@ -100,6 +100,7 @@ var (
 	ErrInvalidTx1Range                 = errors.New("slot leader tx1 is not in invalid range")
 	ErrInvalidTx2Range                 = errors.New("slot leader tx2 is not in invalid range")
 	ErrInvalidProof                    = errors.New("proof is bigZero")
+	ErrPowRcvPosTrans                  = errors.New("pow phase receive pos protocol trans")
 )
 
 func init() {
@@ -154,9 +155,9 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	var methodId [4]byte
 	copy(methodId[:], tx.Data()[:4])
 
-	// TODO should we check?
 	if posconfig.FirstEpochId == 0 {
-		return  errParameters
+		log.SyslogErr("slotLeaderSC:ValidTx", "", ErrPowRcvPosTrans.Error())
+		return ErrPowRcvPosTrans
 	}
 	if methodId == stgOneIdArr {
 		return c.validTxStg1(stateDB, signer, tx)
@@ -427,7 +428,7 @@ func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddres
 	addr1 := crypto.PubkeyToAddress(*crypto.ToECDSAPub(epochLeaders[selfIndex])).Hex()
 	addr2 := senderAddress.Hex()
 
-	log.Info("epochleader not match","epochleader array address",addr1,"sender",addr2)
+	log.Info("epochleader not match", "epochleader array address", addr1, "sender", addr2)
 	return false
 }
 
