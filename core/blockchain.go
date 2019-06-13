@@ -415,7 +415,7 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Hea
 	// incentive : eid - 3, eid - 4
 
 	dst := int64(eid) - 1
-	for i:=0; i<4; i++ {
+	for i:=0; i<5; i++ {
 		if dst < 0 {
 			break
 		}
@@ -447,6 +447,10 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Hea
 		}
 	}
 	return headers,summaries, originSummaries, startEpoch
+}
+
+func (bc *BlockChain) VerifyPivot(data *types.PivotData, peerId string) error {
+	return bc.epochGene.VerifyPivot(data, peerId)
 }
 
 // SetProcessor sets the processor required for making state modifications.

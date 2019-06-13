@@ -20,7 +20,6 @@ type epochGenesisReq struct {
 }
 
 func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header) error {
-
 	endblk := types.NewBlockWithHeader(latest)
 	endEpid, _:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
 
@@ -28,13 +27,8 @@ func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header
 }
 
 func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {
-
 	if d.epochGenesisFbCh != nil {
 		return nil
-	}
-
-	if startEpochid == 0 {
-		startEpochid = 1
 	}
 
 	fbchan  := make(chan int64,1)
@@ -65,7 +59,6 @@ func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid u
 }
 
 func (d *Downloader) epochGenesisFetcher() {
-
 	var (
 		active   = make(map[string]*epochGenesisReq) // Currently in-flight requests
 		timeout  = make(chan *epochGenesisReq)       // Timed out active requests
@@ -80,10 +73,8 @@ func (d *Downloader) epochGenesisFetcher() {
 	for {
 
 		select {
-
 			case epochid := <-d.epochGenesisSyncStart:
-
-				log.Debug("****fetching", "epochId", epochid)
+				log.Info("****fetching", "epochId", epochid)
 				if repeatCount[epochid] > repeatLimit {
 
 					if d.epochGenesisFbCh != nil {
@@ -169,7 +160,6 @@ func (d *Downloader) epochGenesisFetcher() {
 
 
 func (d *Downloader) sendEpochGenesisReq(epochid uint64,active map[string]*epochGenesisReq) *epochGenesisReq {
-
 	newPeer := make(chan *peerConnection, 1024)
 	peerSub := d.peers.SubscribeNewPeers(newPeer)
 	defer peerSub.Unsubscribe()

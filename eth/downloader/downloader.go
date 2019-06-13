@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"math"
@@ -31,7 +30,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -234,6 +233,8 @@ type BlockChain interface {
 	GetFirstPosBlockNumber() uint64
 
 	GetBlockByNumber(number uint64) *types.Block
+
+	VerifyPivot(data *types.PivotData, peerId string) error
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -491,7 +492,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		return err
 	}
 
-	// TODO: adjust height to pow end
 	// 0 full sync; 	1 pow sync; 	2 pos sync;		3 pow + pow sync
 	var fastSyncMode = 0
 	var fastSyncHeight = height
@@ -668,22 +668,13 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	var posPivot uint64 = missingNumber
 	if d.mode == FastSync || d.mode == LightSync {
 		pivotData, err := d.fetchPivot(p, origin, heightHeader.Hash())
-		if err != nil {
+		if err != nil || pivotData == nil {
 			log.Error("fetch pivot error", "err", err)
 			return err
 		}
-		if pivotData.StartEpoch == missingNumber {
-			log.Error(".StartEpoch...missingNumber")
-			return errors.New(".StartEpoch...missingNumber")
-		}
-
-		err = core.CheckSummaries(pivotData.Summaries)
+		err = d.blockchain.VerifyPivot(pivotData, p.id)
 		if err != nil {
-			return err
-		}
-
-		err = core.CheckOriginSummary(pivotData.OriginSummaries)
-		if err != nil {
+			log.Error("verify pivot error", "err", err)
 			return err
 		}
 
@@ -691,12 +682,12 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 		for i, header := range pivotData.Headers {
 			if header != nil {
 				log.Info("syncState", "i", i, "number", header.Number.Uint64())
-				//if i > 0 {
+				if i > 0 {
 					if err := d.syncState(header.Root).Wait(); err != nil {
 						log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
 						return err
 					}
-				//}
+				}
 				if i == 1 {
 					posPivot = header.Number.Uint64()
 				}

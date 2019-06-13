@@ -79,7 +79,7 @@ type EpochGenesisBlock struct {
 	// epochId => slotId -> signer address
 	slotLeaderCache map[uint64]map[uint64]common.Address
 	//
-	epochLeaderCache map[uint64]map[common.Address]bool
+	//epochLeaderCache map[uint64]map[common.Address]bool
 
 	epgGenesis *types.EpochGenesis
 	epgWhite   *types.Header
@@ -89,6 +89,10 @@ type EpochGenesisBlock struct {
 	// save : epoch genesis block,  list summary[100]
 	//summaryList [][]*types.EpochGenesisSummary
 	//summaryMap map[uint64]*types.EpochGenesisSummary
+	egHeaderMap map[uint64]*types.EpochGenesisHeader
+
+	lastPivotData *types.PivotData
+	lastBestPeerId string
 }
 
 func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
@@ -100,7 +104,7 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 	f.epochGenDb = posdb.NewDb("epochGendb")
 
 	f.slotLeaderCache = make(map[uint64]map[uint64] common.Address)
-	f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
+	//f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
 
 
 	//f.InitSummaryListAndMap()
@@ -473,7 +477,7 @@ func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64
 	defer f.epgGenmu.Unlock()
 
 	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
-	f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
+	//f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
 
 	return &slotLeaderMap
 }
@@ -483,7 +487,7 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 	defer f.epgGenmu.Unlock()
 
 	delete(f.slotLeaderCache, epochId)
-	delete(f.epochLeaderCache, epochId)
+	//delete(f.epochLeaderCache, epochId)
 }
 
 func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
@@ -511,15 +515,29 @@ func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
 }
 
 func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
-	f.epgGenmu.RLock()
+	f.epgGenmu.Lock()
+	defer f.epgGenmu.Unlock()
+
 	slotLeaderMap, ok := f.slotLeaderCache[eid]
-	f.epgGenmu.RUnlock()
 	if !ok {
-		if f.tryCache(eid) {
-			slotLeaderMap, ok = f.slotLeaderCache[eid]
-			if !ok {
-				return nil
+		for k := range f.slotLeaderCache {
+			delete(f.slotLeaderCache, k)
+		}
+
+		epoch0, ok := f.GetEpoch0()
+		if !ok || eid < epoch0 {
+			return nil
+		}
+
+		eg, _ := f.GetEpochGenesis(eid)
+		if eg != nil {
+			slotLeaderMap = make(map[uint64] common.Address)
+			sz := len(eg.SlotLeaders)
+			for i:=0; i<sz; i++ {
+				addr := eg.SlotLeaders[i]
+				slotLeaderMap[eg.EpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = addr
 			}
+			f.slotLeaderCache[eid] = slotLeaderMap
 		} else {
 			return nil
 		}
@@ -529,20 +547,22 @@ func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Addr
 }
 
 func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
-	f.epgGenmu.RLock()
-	epochLeaderMap, ok := f.epochLeaderCache[eid]
-	f.epgGenmu.RUnlock()
-	if !ok {
-		if f.tryCache(eid) {
-			epochLeaderMap, ok = f.epochLeaderCache[eid]
-			if !ok {
-				return nil
-			}
-		} else {
-			return nil
-		}
+	epoch0, ok := f.GetEpoch0()
+	if !ok || eid < epoch0 {
+		return nil
 	}
-	return &epochLeaderMap
+
+	eg, _ := f.GetEpochGenesis(eid)
+	if eg != nil {
+		epochLeaderMap := make(map[common.Address] bool)
+		sz := len(eg.EpochLeaders)
+		for i:=0; i<sz; i++ {
+			pk := crypto.ToECDSAPub(eg.EpochLeaders[i])
+			epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+		}
+		return &epochLeaderMap
+	}
+	return nil
 }
 
 func (f *EpochGenesisBlock) preVerifyEpochGenesis(epGen *types.EpochGenesis) bool {
@@ -713,6 +733,8 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 		return errors.New("slot leader has no one on white list")
 	}
 
+	// check with pivot
+
 	val, err := rlp.EncodeToBytes(epochgen)
 	if err != nil {
 		return err
@@ -729,7 +751,6 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 		return err
 	}
 
-	// TODO: data batch
 	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochgenesis", val)
 	_, _ = f.epochGenDb.Put(epochgen.EpochId, "epochsummary", valSummary)
 	_ = f.saveToPosDb(epochgen)
@@ -860,9 +881,31 @@ func (f *EpochGenesisBlock) GetStartEpoch(blockNumber uint64) uint64 {
 		eid,_ := posUtil.CalEpochSlotID(header.Time.Uint64())
 		if eid >= num {
 			return eid
+		} else {
+			return num
 		}
 	}
 	return missingNumber
+}
+func (f *EpochGenesisBlock) VerifyPivot(pivotData *types.PivotData, peerId string) (err error) {
+	if pivotData.StartEpoch == missingNumber {
+		log.Error(".StartEpoch...missingNumber")
+		return errors.New(".StartEpoch...missingNumber")
+	}
+
+	err = CheckSummaries(pivotData.Summaries)
+	if err != nil {
+		return err
+	}
+
+	err = CheckOriginSummary(pivotData.OriginSummaries)
+	if err != nil {
+		return err
+	}
+
+	f.lastBestPeerId = peerId
+	f.lastPivotData = pivotData
+	return nil
 }
 
 func (f *EpochGenesisBlock) ValidateBody(block *types.Block) error {
