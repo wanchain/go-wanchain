@@ -392,23 +392,24 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 	return bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64()), bc.currentBlock.Hash(), bc.genesisBlock.Hash()
 }
 
-func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Header, []*types.EpochGenesisSummary, []*types.EpochGenesisSummary, uint64) {
-	headers := make([]*types.Header, 0)
+func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotData {
+	pivotData := new(types.PivotData)
+	pivotData.Headers = make([]*types.Header, 0)
 	// origin + 4 pivot
-	summaries := make([]*types.EpochGenesisSummary, 0)
-	originSummaries := make([]*types.EpochGenesisSummary, 0)
+	pivotData.Summaries = make([]*types.EpochGenesisSummary, 0)
+	pivotData.OriginSummaries = make([]*types.EpochGenesisSummary, 0)
 
-	startEpoch := bc.epochGene.GetStartEpoch(origin)
+	pivotData.StartEpoch = bc.epochGene.GetStartEpoch(origin)
 
 	if bc.epochGene.rbLeaderSelector == nil {
-		return headers, summaries, originSummaries, startEpoch
+		return pivotData
 	}
 	header := bc.hc.GetHeaderByHash(hash)
 	if header == nil {
-		return headers, summaries, originSummaries, startEpoch
+		return pivotData
 	}
 	if !posUtil.IsPosBlock(header.Number.Uint64()) {
-		return headers, summaries, originSummaries, startEpoch
+		return pivotData
 	}
 	eid, _ := posUtil.CalEpochSlotID(header.Time.Uint64())
 	// pivot == GetEpochLastBlkNumber(eid - 1)
@@ -424,8 +425,10 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Hea
 		if h != nil {
 			s := bc.epochGene.GetEpochSummary(uint64(dst))
 			if s != nil {
-				summaries = append(summaries, s)
-				headers = append(headers, h)
+				pivotData.Summaries = append(pivotData.Summaries, s)
+			}
+			if h.Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber {
+				pivotData.Headers = append(pivotData.Headers, h)
 			}
 		}
 
@@ -433,20 +436,26 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) ([]*types.Hea
 	}
 
 
+	eidOrigin := uint64(0)
 	if origin > posconfig.Pow2PosUpgradeBlockNumber {
 		originHeader := bc.hc.GetHeaderByNumber(origin)
 		if originHeader != nil {
-			eidOrigin, _ := posUtil.CalEpochSlotID(originHeader.Time.Uint64())
+			eidOrigin, _ = posUtil.CalEpochSlotID(originHeader.Time.Uint64())
 			if eid > eidOrigin {
 				s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
 				if s != nil {
-					originSummaries = append(originSummaries, s)
+					pivotData.OriginSummaries = append(pivotData.OriginSummaries, s)
 				}
 			}
 
 		}
 	}
-	return headers,summaries, originSummaries, startEpoch
+
+	//egHeaders := bc.epochGene.GetEpochHeaders(eidOrigin, eid - 1)
+	//if egHeaders != nil {
+	//	pivotData.EgHeaders = egHeaders
+	//}
+	return pivotData
 }
 
 func (bc *BlockChain) VerifyPivot(data *types.PivotData, peerId string) error {

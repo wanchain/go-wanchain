@@ -73,14 +73,15 @@ type EpochGenesisBlock struct {
 	lastEpochId        uint64
 
 	epochGenDb *posdb.Db
-	epgSetmu   sync.RWMutex
-	epgGenmu   sync.RWMutex
+	epgSetmu sync.RWMutex
 
 	// epochId => slotId -> signer address
+	slotLeaderMu sync.RWMutex
 	slotLeaderCache map[uint64]map[uint64]common.Address
 	//
 	//epochLeaderCache map[uint64]map[common.Address]bool
 
+	// epoch0
 	epgGenesis *types.EpochGenesis
 	epgWhite   *types.Header
 
@@ -89,6 +90,7 @@ type EpochGenesisBlock struct {
 	// save : epoch genesis block,  list summary[100]
 	//summaryList [][]*types.EpochGenesisSummary
 	//summaryMap map[uint64]*types.EpochGenesisSummary
+	egHeaderMu sync.Mutex
 	egHeaderMap map[uint64]*types.EpochGenesisHeader
 
 	lastPivotData *types.PivotData
@@ -455,54 +457,54 @@ func (f *EpochGenesisBlock) generateEpochGenesis(epochid uint64,lastblk *types.B
 	return epGen, whiteHeader, nil
 }
 
-func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64]common.Address {
-	slotLeaderMap := make(map[uint64] common.Address)
-	sz := len(epkGnss.SlotLeaders)
-	for i:=0; i<sz; i++ {
-		addr := epkGnss.SlotLeaders[i]
-		slotLeaderMap[epkGnss.EpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = addr
-	}
-
-	epochLeaderMap := make(map[common.Address] bool)
-	sz = len(epkGnss.EpochLeaders)
-	for i:=0; i<sz; i++ {
-		pubkey := epkGnss.EpochLeaders[i]
-		pk := crypto.ToECDSAPub(pubkey)
-		epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
-	}
-
-	f.epgGenmu.Lock()
-	defer f.epgGenmu.Unlock()
-
-	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
-	//f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
-
-	return &slotLeaderMap
-}
+//func (f *EpochGenesisBlock) updateCache(epkGnss *types.EpochGenesis) *map[uint64]common.Address {
+//	slotLeaderMap := make(map[uint64] common.Address)
+//	sz := len(epkGnss.SlotLeaders)
+//	for i:=0; i<sz; i++ {
+//		addr := epkGnss.SlotLeaders[i]
+//		slotLeaderMap[epkGnss.EpochLastBlkNumber - uint64(sz) + uint64(i + 1)] = addr
+//	}
+//
+//	epochLeaderMap := make(map[common.Address] bool)
+//	sz = len(epkGnss.EpochLeaders)
+//	for i:=0; i<sz; i++ {
+//		pubkey := epkGnss.EpochLeaders[i]
+//		pk := crypto.ToECDSAPub(pubkey)
+//		epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+//	}
+//
+//	f.slotLeaderMu.Lock()
+//	defer f.slotLeaderMu.Unlock()
+//
+//	f.slotLeaderCache[epkGnss.EpochId] = slotLeaderMap
+//	//f.epochLeaderCache[epkGnss.EpochId] = epochLeaderMap
+//
+//	return &slotLeaderMap
+//}
 
 func (f *EpochGenesisBlock) dropCache(epochId uint64) {
-	f.epgGenmu.Lock()
-	defer f.epgGenmu.Unlock()
+	f.slotLeaderMu.Lock()
+	defer f.slotLeaderMu.Unlock()
 
 	delete(f.slotLeaderCache, epochId)
 	delete(f.egHeaderMap, epochId)
 	//delete(f.epochLeaderCache, epochId)
 }
 
-func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
-	epoch0, ok := f.GetEpoch0()
-	if !ok || epochId < epoch0 {
-		return false
-	}
-
-	eg, _ := f.GetEpochGenesis(epochId)
-	if eg != nil {
-		f.updateCache(eg)
-	} else {
-		return false
-	}
-	return true
-}
+//func (f *EpochGenesisBlock) tryCache(epochId uint64) bool {
+//	epoch0, ok := f.GetEpoch0()
+//	if !ok || epochId < epoch0 {
+//		return false
+//	}
+//
+//	eg, _ := f.GetEpochGenesis(epochId)
+//	if eg != nil {
+//		f.updateCache(eg)
+//	} else {
+//		return false
+//	}
+//	return true
+//}
 
 func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
 	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
@@ -514,8 +516,8 @@ func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
 }
 
 func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
-	f.epgGenmu.Lock()
-	defer f.epgGenmu.Unlock()
+	f.slotLeaderMu.Lock()
+	defer f.slotLeaderMu.Unlock()
 
 	slotLeaderMap, ok := f.slotLeaderCache[eid]
 	if !ok {
@@ -770,8 +772,11 @@ func (f *EpochGenesisBlock) SetEpochGenesis(epochgen *types.EpochGenesis, whiteH
 
 func (f *EpochGenesisBlock) GetEpochHeaders(from, to uint64) []*types.EpochGenesisHeader {
 	epoch0, ok := f.GetEpoch0()
-	if !ok || from < epoch0 {
+	if !ok {
 		return nil
+	}
+	if from < epoch0 {
+		from = epoch0
 	}
 
 	headers := make([]*types.EpochGenesisHeader, 0)
