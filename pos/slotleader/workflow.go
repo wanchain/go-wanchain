@@ -27,7 +27,7 @@ var (
 	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
 
-func (s *SLS)GenerateDefaultSlotLeaders() error {
+func (s *SLS) GenerateDefaultSlotLeaders() error {
 	//epochLeader := s.GetEpochDefaultLeadersPK(0)
 
 	slotLeadersPtr, _, _, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(s.smaGenesis[:],
@@ -42,6 +42,7 @@ func (s *SLS)GenerateDefaultSlotLeaders() error {
 	}
 	return nil
 }
+
 // Init use to initial slotleader module and input some params.
 func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key) {
 	s.blockChain = blockChain
@@ -52,65 +53,19 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 	}
 
 	s.sendTransactionFn = util.SendPosTx
-
-	//res, restartBlk := s.blockChain.ChainRestartStatus()
-	//if res  {
-	//	curEpochId, _ := util.CalEpSlbyTd(restartBlk.Difficulty().Uint64())
-	//	s.restartEpochid = curEpochId
-	//}
-
-	//var pks []*ecdsa.PublicKey
-	//if s.blockChain.CurrentEpochId == -1 {
-	//	// in the switchEngine process. the lock is holded.
-	//	pks = s.GetEpochDefaultLeadersPK(0)
-	//} else {
-	//	// normal restart. no lock hold.
-	//	curEpochId, _ := util.CalEpSlbyTd(blockChain.CurrentBlock().Difficulty().Uint64())
-	//	pks = s.GetEpochDefaultLeadersPK(curEpochId)
-	//}
-	//posconfig.GenesisPK = common.ToHex(crypto.FromECDSAPub(pks[0]))
-	//log.Info("restart producer","address",crypto.PubkeyToAddress(*pks[0]))
-
 	s.initSma()
 	s.GenerateDefaultSlotLeaders()
 }
 
-// dup with GetEpochDefaultLeadersPK
-//func (s *SLS) getDefaultLeadersPK(curepid uint64) []*ecdsa.PublicKey {
-//	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
-//
-//	selector := epochLeader.GetEpocher()
-//
-//	initPksStr,err := selector.GetWhiteByEpochId(curepid)
-//
-//	pksl := uint64(len(initPksStr))
-//	if err != nil || pksl == 0{
-//		return nil
-//	}
-//
-//	idx := 0 //(curepid)%pksl
-//
-//	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-//		pkStr := initPksStr[idx]
-//		pkBuf := common.FromHex(pkStr)
-//		pks[i] = crypto.ToECDSAPub(pkBuf)
-//	}
-//
-//	log.Info("select producer","address",crypto.PubkeyToAddress(*pks[0]),"idx",idx)
-//
-//	return pks
-//}
-
-
 func (s *SLS) getLastRandom() *big.Int {
-	curepid,_ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
+	curepid, _ := util.CalEpSlbyTd(s.blockChain.CurrentBlock().Difficulty().Uint64())
 	db, err := s.blockChain.State()
 	if err != nil {
 		return big.NewInt(0)
 	}
 
 	i := curepid
-	for i>0 {
+	for i > 0 {
 
 		rb := vm.GetR(db, i)
 		if rb != nil {
@@ -123,14 +78,11 @@ func (s *SLS) getLastRandom() *big.Int {
 	return big.NewInt(0)
 }
 
-
 func (s *SLS) initSma() {
 
 	s.randomGenesis = big.NewInt(1)
 
-
 	epochDefaultLeaders := s.GetEpochDefaultLeadersPK(0)
-
 
 	for index, value := range epochDefaultLeaders {
 		s.epochLeadersPtrArrayGenesis[index] = value
@@ -149,7 +101,7 @@ func (s *SLS) initSma() {
 		mi0 := new(ecdsa.PublicKey)
 		mi0.Curve = crypto.S256()
 		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
-		alphas[i].Bytes())
+			alphas[i].Bytes())
 		s.stageOneMiGenesis[i] = mi0
 
 		// G
@@ -164,13 +116,13 @@ func (s *SLS) initSma() {
 		s.smaGenesis[i] = smaPiece
 
 		for j := 0; j < posconfig.EpochLeaderCount; j++ {
-		// AlphaIPki stage2Genesis, used to verify genesis proof
-		alphaIPkj := new(ecdsa.PublicKey)
-		alphaIPkj.Curve = crypto.S256()
-		alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
-		s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+			// AlphaIPki stage2Genesis, used to verify genesis proof
+			alphaIPkj := new(ecdsa.PublicKey)
+			alphaIPkj.Curve = crypto.S256()
+			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+				s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
 
-		s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
+			s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
 		}
 
 	}
@@ -207,12 +159,11 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	workStage := s.getWorkStage(epochID)
 
 	//If the gwan restart, try to recover the epoch leader and slot leader
-	if workStage != slotLeaderSelectionInit &&  workStage != slotLeaderSelectionStageFinished{
+	if workStage != slotLeaderSelectionInit && workStage != slotLeaderSelectionStageFinished {
 		if !s.isEpochLeaderMapReady() {
 			s.doInit(epochID)
 		}
 	}
-
 
 	switch workStage {
 	case slotLeaderSelectionInit:
@@ -274,21 +225,6 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
-
-		//selector := util.GetEpocherInst()
-		//if selector == nil {
-		//	return
-		//}
-		//
-		//rbleaders := selector.GetRBProposerG1(epochID-1)
-		//epleaders := selector.GetEpochLeaders(epochID-1)
-		//_, err := s.getRandom(nil, epochID-1)
-		//
-		//if len(rbleaders) == posconfig.RandomProperCount &&
-		//  len(epleaders) == posconfig.EpochLeaderCount &&
-		//	err == nil {
-		//	s.blockChain.SetChainRestarted()
-		//}
 
 	default:
 	}

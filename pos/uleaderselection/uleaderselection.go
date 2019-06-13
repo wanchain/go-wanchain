@@ -120,61 +120,6 @@ func RandomProposerSelection(r []byte, nr int, PublicKeys []*ecdsa.PublicKey, Pr
 	return randomProposerPublicKeys, nil
 }
 
-//samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func EpochLeaderSelection(r []byte, ne int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
-	if r == nil || ne <= 0 || len(PublicKeys) == 0 || len(Probabilities) == 0 || len(PublicKeys) != len(Probabilities) {
-		return nil, ErrInvalidRandomProposerSelection
-	}
-	for _, publicKey := range PublicKeys {
-		if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
-			return nil, ErrInvalidRandomProposerSelection
-		}
-	}
-	for _, probability := range Probabilities {
-		if probability == nil {
-			return nil, ErrInvalidRandomProposerSelection
-		}
-	}
-
-	probabilitiesBig, _ := ProbabilityFloat2big(Probabilities) //transform probabilities from float64 to bigint
-	tp := new(big.Int).SetInt64(0)                             //total probability of probabilities_big
-	EpochLeaderPublicKeys := make([]*ecdsa.PublicKey, 0)       //store the selected publickeys
-	n := len(probabilitiesBig)
-
-	for _, probabilityBig := range probabilitiesBig {
-		tp.Add(tp, probabilityBig)
-	}
-	var Byte1 = []byte{byte(1)}
-	var buffer bytes.Buffer
-	buffer.Write(Byte1)
-	buffer.Write(r)
-	r1 := buffer.Bytes()       //r1 = 1||r
-	cr := crypto.Keccak256(r1) //cr = hash(r1)
-
-	for i := 0; i < ne; i++ {
-
-		crBig := new(big.Int).SetBytes(cr)
-		crBig.Mod(crBig, tp) //cr_big = cr mod tp
-
-		//select pki whose probability bigger than cr_big left
-		sumtemp := new(big.Int).SetInt64(0)
-		for j := 0; j < n; j++ {
-			sumtemp.Add(sumtemp, probabilitiesBig[j])
-			if sumtemp.Cmp(crBig) == 1 {
-				pkselected := new(ecdsa.PublicKey) //new publickey to store the selected one
-				pkselected.Curve = crypto.S256()
-				pkselected.X = new(big.Int).Set(PublicKeys[j].X)
-				pkselected.Y = new(big.Int).Set(PublicKeys[j].Y)
-				EpochLeaderPublicKeys = append(EpochLeaderPublicKeys, pkselected)
-				break
-			}
-		}
-		cr = crypto.Keccak256(cr)
-	}
-
-	return EpochLeaderPublicKeys, nil
-}
-
 /*_________________________________________________Secret Message Array Construction___________________________________________________*/
 
 //GenerateCommitment compute the commitment of PublicKey, Commitment = PublicKey || alpha * PublicKey
@@ -773,11 +718,9 @@ func GenerateSlotLeaderSeqAndIndex(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.P
 
 	//calculate the slot leader sequence
 	SlotLeaderSeq := make([]*ecdsa.PublicKey, 0)
-	// TODO: odd slot solution choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)/2))
 	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
 	//cs[i] = cr[i] mod n, n is the number of PublicKeys
 	for i = 0; i < epochlen; i++ {
-		// TODO: odd slot solution cstemp := new(big.Int).Mod(cr[i], choicelen).Int64()+(int64)((int)(i%2)*len(PublicKeys)/2)
 		cstemp := new(big.Int).Mod(cr[i], choicelen).Int64()
 		tempsl := new(ecdsa.PublicKey)
 		tempsl.Curve = crypto.S256()
@@ -821,7 +764,6 @@ func GenerateSlotLeaderProof2(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicK
 		return nil, nil, ErrSortPublicKey
 	}
 	//if it is the leader of slt slot, then calculate ProofMeg = [PK , Gt , skGt] and Proof = [e ,z]
-	// TODO: odd slot solution choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)/2))
 	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
 	smaLen := new(big.Int).SetInt64(int64(len(SMA)))
 
@@ -851,7 +793,6 @@ func GenerateSlotLeaderProof2(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicK
 	bigTemp := new(big.Int).SetInt64(int64(0))
 	bigTemp.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(Gt)))
 	csbigtemp := new(big.Int).Mod(bigTemp, choicelen)
-	// TODO: odd slot solution tempint := csbigtemp.Int64()+(int64)(int64(slt%2)*int64(len(PublicKeys)/2))
 	tempint := csbigtemp.Int64()
 
 	if PublicKeyEqual(&PrivateKey.PublicKey, PublicKeys[tempint]) {
