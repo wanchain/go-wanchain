@@ -180,17 +180,17 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
 	} else if networkId == 6 {
-		PosOwnerAddr = PosOwnerAddrTest
+		PosOwnerAddr = PosOwnerAddrInternal
 		if IsDev { // --plutodev
 			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
 			WhiteList = WhiteListOrig
 		}
 	}else if networkId == 4 {
-		PosOwnerAddr = PosOwnerAddrTest
+		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
 	}else  { // testnet
-		PosOwnerAddr = PosOwnerAddrTest
+		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
 	}
 
