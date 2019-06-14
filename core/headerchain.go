@@ -277,13 +277,6 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 	stats := struct{ processed, ignored int }{}
 	// All headers passed verification, import them into the database
 	for i, header := range chain {
-
-		// TODO:ppow2pos set posconfig.EpochBaseTime when switch engine
-		//if header.Number.Uint64() == 1 {
-		//	if posconfig.EpochBaseTime == 0 {
-		//		posconfig.EpochBaseTime = header.Time.Uint64()
-		//	}
-		//}
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")

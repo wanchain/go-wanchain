@@ -957,7 +957,6 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block,secPara uint64)
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block,posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
-	//// TODO this looks not enough
 	if epochId == posconfig.FirstEpochId {
 		return true
 	}
@@ -1122,18 +1121,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)
-		// TODO: update epoch ->blockNumber
-		//if bc.config.Pluto != nil {
 		if bc.config.IsPosActive{
-			//TODO:ppow2pos change next as
-			//if block.NumberU64() == bc.config.PosFirstBlock.Uint64() {
-			//	posconfig.EpochBaseTime = block.Time().Uint64()
-			//}
-
-			//if bc.slotValidator != bc.epochGene {
-			//	bc.epochGene.SelfGenerateEpochGenesis(block)
-			//}
-
 			posUtil.UpdateEpochBlock(block)
 		}
 	}

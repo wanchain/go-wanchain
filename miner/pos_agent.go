@@ -44,13 +44,6 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
-	//todo,maybe init do not need epochid
-	err := epochSelector.SelectLeadersLoop(0)
-	//todo system should not startup if there are error,jia
-	if err != nil {
-		panic("PosInit")
-	}
-
 	cfm.InitCFM(s.BlockChain())
 
 	slotleader.SlsInit()
@@ -122,7 +115,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		panic(err)
 	}
 
-	//todo:`switch pos from pow,the time is not 1?
 	var epochID, slotID uint64
 	//curBlkNum := uint64(0)
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())

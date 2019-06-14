@@ -127,14 +127,12 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 		epochIdIn--
 	}
 	rb := vm.GetR(stateDb, epochIdIn)
-
 	if rb == nil {
 		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
-		rb = big.NewInt(1)
+		rb = new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 
 	r := rb.Bytes()
-
 	err = e.selectLeaders(r, stateDb, epochId)
 	if err != nil {
 		return err
