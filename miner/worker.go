@@ -268,7 +268,6 @@ func (self *worker) update() {
 			if !self.chain.IsInPosStage() {
 				self.commitNewWork(true, 0)
 			} else {
-				// TODO two block.
 				self.commitNewWork(false, 0)
 			}
 		case slotTime := <-self.chainSlotTimer:

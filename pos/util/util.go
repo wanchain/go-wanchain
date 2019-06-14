@@ -205,6 +205,7 @@ func IsPosBlock(number uint64) bool {
 }
 
 func FirstPosBlockNumber() uint64 {
+	// TODO why +1?
 	return posconfig.Pow2PosUpgradeBlockNumber + 1
 }
 
