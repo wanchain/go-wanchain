@@ -130,7 +130,10 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 6=Pluto)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
-
+	FirstPos = cli.Uint64Flag{
+		Name:  "firstPos",
+		Usage: "firstPos",
+	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Wan test network: pre-configured proof-of-work test network",
@@ -1046,10 +1049,15 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
-
+	if ctx.GlobalIsSet(FirstPos.Name) {
+		params.MainnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
+	}
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
+		if ctx.GlobalIsSet(FirstPos.Name) {
+			params.TestnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
+		}
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
@@ -1057,6 +1065,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	case ctx.GlobalBool(DevInternalFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 4
+		}
+		if ctx.GlobalIsSet(FirstPos.Name) {
+			params.InternalChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
 		}
 		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):

@@ -104,6 +104,7 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
+		utils.FirstPos,
 		utils.DevInternalFlag,
 
 		utils.PlutoFlag,
