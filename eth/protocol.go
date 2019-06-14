@@ -39,10 +39,10 @@ const (
 var ProtocolName = "wan"
 
 // Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{wan64, eth63, eth62}
+var ProtocolVersions = []uint{ eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{25, 17, 8}
+var ProtocolLengths = []uint64{25,  8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -138,7 +138,7 @@ type getBlockHeadersData struct {
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
-	To      uint64        // destination, if to == -1 ignore this param
+	//To      uint64        // destination, if to == -1 ignore this param
 }
 
 type getHeaderTdData struct {

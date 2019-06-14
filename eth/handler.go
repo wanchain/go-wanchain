@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
@@ -323,6 +324,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
+	var stage int = 0 // -1 pow stage 0: uninit 1: pos
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -366,11 +368,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				break
 			}
 
-
 			number := origin.Number.Uint64()
-			if query.To == 0 || number <= uint64(query.To) {
-				headers = append(headers, origin)
+			if stage == 0 {
+				if number < posconfig.Pow2PosUpgradeBlockNumber {
+					stage = -1
+				} else {
+					stage = 1
+				}
 			}
+			if stage == -1 {
+				if number < posconfig.Pow2PosUpgradeBlockNumber {
+					headers = append(headers, origin)
+				}
+			} else {
+				if number >= posconfig.Pow2PosUpgradeBlockNumber {
+					headers = append(headers, origin)
+				}
+			}
+
 			bytes += estHeaderRlpSize
 
 			// Advance to the next header of the query
