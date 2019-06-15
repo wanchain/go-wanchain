@@ -248,9 +248,9 @@ func (p *peer) RequestEpochGenesisData(epochids uint64) error {
 }
 
 //send epoch genesis
-func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
-	p.Log().Debug("Fetching epoch genesis", "epochid", epochid)
-	epochGenesis, whiteHeader, err := bc.GenerateEpochGenesis(epochid)
+func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochId uint64) error {
+	p.Log().Debug("Fetching epoch genesis", "epochId", epochId)
+	epochGenesis, whiteHeader, err := bc.GetEpochGenesisAndWhiteHeader(epochId)
 	if err != nil {
 		log.Info("error to generate epoch genesis " + err.Error())
 		return err
@@ -259,11 +259,11 @@ func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochid uint64) error {
 	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis, WhiteHeader:whiteHeader})
 }
 
-func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
-	p.Log().Debug("Setting epoch genesis", "epochid", epochgen.EpochId)
-	bc.SetEpochGenesis(epochgen, whiteHeader)
-	return nil
-}
+//func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
+//	p.Log().Debug("Setting epoch genesis", "epochId", epochgen.EpochId)
+//	bc.SetEpochGenesis(epochgen, whiteHeader)
+//	return nil
+//}
 ////////////////////////////////////////////////////////////////
 
 // Handshake executes the eth protocol handshake, negotiating version number,

@@ -5,15 +5,17 @@ import (
 	"errors"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 const repeatLimit  = 10
 
 type epochGenesisReq struct {
-	epochid  *big.Int              			// epochid items to download
+	epochId  *big.Int              			// epochId items to download
 	timeout  time.Duration              	// Maximum round trip time for this to complete
 	timer    *time.Timer                	// Timer to fire when the RTT timeout expires
 	peer     *peerConnection            	// Peer that we're requesting from
@@ -21,7 +23,7 @@ type epochGenesisReq struct {
 
 func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header) error {
 	endblk := types.NewBlockWithHeader(latest)
-	endEpid, _:= d.blockchain.GetBlockEpochIdAndSlotId(endblk)
+	endEpid, _:= util.CalEpSlbyTd(endblk.Difficulty().Uint64())
 
 	return d.fetchEpochGenesisesBetween(startEpoch, endEpid )
 }
@@ -73,9 +75,9 @@ func (d *Downloader) epochGenesisFetcher() {
 	for {
 
 		select {
-			case epochid := <-d.epochGenesisSyncStart:
-				log.Info("****fetching", "epochId", epochid)
-				if repeatCount[epochid] > repeatLimit {
+			case epochId := <-d.epochGenesisSyncStart:
+				log.Info("****fetching", "epochId", epochId)
+				if repeatCount[epochId] > repeatLimit {
 
 					if d.epochGenesisFbCh != nil {
 						d.epochGenesisFbCh <- int64(-1)
@@ -84,9 +86,9 @@ func (d *Downloader) epochGenesisFetcher() {
 					continue
 				}
 
-				repeatCount[epochid] = repeatCount[epochid] + 1
+				repeatCount[epochId] = repeatCount[epochId] + 1
 
-				req := d.sendEpochGenesisReq(epochid,active)
+				req := d.sendEpochGenesisReq(epochId,active)
 				// Start a timer to notify the sync loop if the peer stalled.
 				req.timer = time.AfterFunc(req.timeout, func() {
 					select {
@@ -105,24 +107,32 @@ func (d *Downloader) epochGenesisFetcher() {
 				}
 
 				response := pack.(*epochGenesisPack).epochGenesis
-				log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochid", response.EpochId)
+				log.Info("got epoch genesis data", "peer", pack.PeerId(), "epochId", response.EpochId)
 
-				err := d.blockchain.SetEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
+				var err error = nil
+				rt := d.blockchain.PreVerifyEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
+				if rt < 0 {
+					err = errors.New("PreVerifyEpochGenesis failed rt=" + strconv.Itoa(int(rt)) + " epochId" + strconv.FormatUint(response.EpochId, 10))
+				} else if rt == 0 {
+					err = d.blockchain.SetEpochGenesis(response, pack.(*epochGenesisPack).whiteHeader)
+				} else {
+					err = errors.New("p")
+				}
 
 				if err != nil {
 					log.Warn("epoch genesis data error,try again", "peer", pack.PeerId(), "len", pack.Items())
-					d.epochGenesisSyncStart <- req.epochid.Uint64()
+					d.epochGenesisSyncStart <- req.epochId.Uint64()
 				} else {
 					if d.epochGenesisFbCh != nil {
 						d.epochGenesisFbCh <- int64(response.EpochId)
 					}
 				}
-
 				// Finalize the request and queue up for processing
 				req.timer.Stop()
 				req.peer.SetEpochGenesisDataIdle(1)
 
 				delete(active, pack.PeerId())
+
 
 				// Handle dropped peer connections:
 			case p := <-peerDrop:
@@ -137,7 +147,7 @@ func (d *Downloader) epochGenesisFetcher() {
 				delete(active, req.peer.id)
 				req.peer.SetEpochGenesisDataIdle(1)
 
-				d.epochGenesisSyncStart <- req.epochid.Uint64()
+				d.epochGenesisSyncStart <- req.epochId.Uint64()
 				// Handle timed-out requests:
 			case req := <-timeout:
 				// If the peer is already requesting something else, ignore the stale timeout.
@@ -149,7 +159,7 @@ func (d *Downloader) epochGenesisFetcher() {
 
 				delete(active, req.peer.id)
 				req.peer.SetEpochGenesisDataIdle(1)
-				d.epochGenesisSyncStart <- req.epochid.Uint64()
+				d.epochGenesisSyncStart <- req.epochId.Uint64()
 
 			case <-d.quitCh:
 				return
@@ -159,12 +169,12 @@ func (d *Downloader) epochGenesisFetcher() {
 }
 
 
-func (d *Downloader) sendEpochGenesisReq(epochid uint64,active map[string]*epochGenesisReq) *epochGenesisReq {
+func (d *Downloader) sendEpochGenesisReq(epochId uint64,active map[string]*epochGenesisReq) *epochGenesisReq {
 	newPeer := make(chan *peerConnection, 1024)
 	peerSub := d.peers.SubscribeNewPeers(newPeer)
 	defer peerSub.Unsubscribe()
 
-	req := &epochGenesisReq{epochid: big.NewInt(int64(epochid)), timeout: d.requestTTL()}
+	req := &epochGenesisReq{epochId: big.NewInt(int64(epochId)), timeout: d.requestTTL()}
 	for {
 
 		peers, _ := d.peers.EpochGenesisIdlePeers()
@@ -175,7 +185,7 @@ func (d *Downloader) sendEpochGenesisReq(epochid uint64,active map[string]*epoch
 		idx := rand.Intn(len(peers))
 		req.peer = peers[idx]
 
-		err := req.peer.FetchEpochGenesisData(epochid)
+		err := req.peer.FetchEpochGenesisData(epochId)
 		if err != nil {
 			continue
 		} else {

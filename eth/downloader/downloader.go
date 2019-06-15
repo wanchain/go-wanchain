@@ -224,11 +224,11 @@ type BlockChain interface {
 
 	SetEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) error
 
-	GetBlockEpochIdAndSlotId(header *types.Block) (uint64, uint64)
+	PreVerifyEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) int64
 
 	GetEpochStartCh() (chan	uint64)
 
-	IsExistEpochGenesis(epochid uint64) bool
+	IsExistEpochGenesis(epochId uint64) bool
 
 	GetFirstPosBlockNumber() uint64
 
@@ -682,13 +682,11 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 		for i, header := range pivotData.Headers {
 			if header != nil {
 				log.Info("syncState", "i", i, "number", header.Number.Uint64())
-				if i > 0 {
-					if err := d.syncState(header.Root).Wait(); err != nil {
-						log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
-						return err
-					}
+				if err := d.syncState(header.Root).Wait(); err != nil {
+					log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
+					return err
 				}
-				if i == 1 {
+				if i == 0 {
 					posPivot = header.Number.Uint64()
 				}
 			}

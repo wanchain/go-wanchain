@@ -24,13 +24,14 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	//if epochID == 0 {
 	//	return nil
 	//}
-	extraType := header.Extra[0]
-	start := 1
-	if extraType == 'g' {
-		start = 33
-	}
 
-	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[start:len(header.Extra)-extraSeal])
+	//extraType := header.Extra[0]
+	//start := 1
+	//if extraType == 'g' {
+	//	start = 33
+	//}
+
+	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[32:len(header.Extra)-extraSeal])
 
 	if err != nil {
 		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())

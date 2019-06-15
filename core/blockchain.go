@@ -396,8 +396,8 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotD
 	pivotData := new(types.PivotData)
 	pivotData.Headers = make([]*types.Header, 0)
 	// origin + 4 pivot
-	pivotData.Summaries = make([]*types.EpochGenesisSummary, 0)
-	pivotData.OriginSummaries = make([]*types.EpochGenesisSummary, 0)
+	//pivotData.Summaries = make([]*types.EpochGenesisSummary, 0)
+	//pivotData.OriginSummaries = make([]*types.EpochGenesisSummary, 0)
 
 	pivotData.StartEpoch = bc.epochGene.GetStartEpoch(origin)
 
@@ -415,17 +415,17 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotD
 	// pivot == GetEpochLastBlkNumber(eid - 1)
 	// incentive : eid - 3, eid - 4
 
-	dst := int64(eid) - 1
-	for i:=0; i<5; i++ {
+	dst := int64(eid) - 2
+	for i := 0; i < 4; i++ {
 		if dst < 0 {
 			break
 		}
 		bn := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(uint64(dst))
 		h := bc.hc.GetHeaderByNumber(bn)
 		if h != nil {
-			s := bc.epochGene.GetEpochSummary(uint64(dst))
+			s := bc.epochGene.GetWhiteHeader(uint64(dst + 1))
 			if s != nil {
-				pivotData.Summaries = append(pivotData.Summaries, s)
+				pivotData.WhiteHeaders = append(pivotData.WhiteHeaders, s)
 			}
 			if h.Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber {
 				pivotData.Headers = append(pivotData.Headers, h)
@@ -436,20 +436,20 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotD
 	}
 
 
-	eidOrigin := uint64(0)
-	if origin > posconfig.Pow2PosUpgradeBlockNumber {
-		originHeader := bc.hc.GetHeaderByNumber(origin)
-		if originHeader != nil {
-			eidOrigin, _ = posUtil.CalEpochSlotID(originHeader.Time.Uint64())
-			if eid > eidOrigin {
-				s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
-				if s != nil {
-					pivotData.OriginSummaries = append(pivotData.OriginSummaries, s)
-				}
-			}
-
-		}
-	}
+	//eidOrigin := uint64(0)
+	//if origin > posconfig.Pow2PosUpgradeBlockNumber {
+	//	originHeader := bc.hc.GetHeaderByNumber(origin)
+	//	if originHeader != nil {
+	//		eidOrigin, _ = posUtil.CalEpochSlotID(originHeader.Time.Uint64())
+	//		if eid > eidOrigin {
+	//			s := bc.epochGene.GetEpochSummary(uint64(eid - 1))
+	//			if s != nil {
+	//				pivotData.OriginSummaries = append(pivotData.OriginSummaries, s)
+	//			}
+	//		}
+	//
+	//	}
+	//}
 
 	//egHeaders := bc.epochGene.GetEpochHeaders(eidOrigin, eid - 1)
 	//if egHeaders != nil {
@@ -1614,7 +1614,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	newChainLen := len(newChain)
-	epochId, slotid, _:= bc.epochGene.GetBlockEpochIdAndSlotId(newChain[newChainLen-1].Header())
+	epochId, slotid:= posUtil.CalEpSlbyTd(newChain[newChainLen-1].Header().Difficulty.Uint64())
 	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
 	go bc.reorgFeed.Send(ReorgEvent{epochId, slotid, uint64(len(oldChain))})
 
@@ -1892,16 +1892,8 @@ func (bc *BlockChain) SetSlSelector(sls SlLeadersSelInt) {
 	bc.epochGene.slotLeaderSelector = sls
 }
 
-func (bc *BlockChain) GenerateEpochGenesis(epochid uint64) (*types.EpochGenesis, *types.Header, error) {
-	return bc.epochGene.GenerateEpochGenesis(epochid)
-}
-
-func (bc *BlockChain) GetBlockEpochIdAndSlotId(blk *types.Block) (uint64, uint64) {
-	blkEpochId, blkSlotId, err := bc.epochGene.GetBlockEpochIdAndSlotId(blk.Header())
-	if err != nil {
-		return 0, 0
-	}
-	return blkEpochId, blkSlotId
+func (bc *BlockChain) GetEpochGenesisAndWhiteHeader(epochId uint64) (*types.EpochGenesis, *types.Header, error) {
+	return bc.epochGene.GetEpochGenesisAndWhiteHeader(epochId)
 }
 
 func (bc *BlockChain) IsExistEpochGenesis(epochid uint64) bool {
