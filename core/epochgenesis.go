@@ -81,6 +81,9 @@ type EpochGenesisBlock struct {
 	epochLeaderMu sync.RWMutex
 	epochLeaderCache map[uint64]map[common.Address]bool
 
+	epochHeaderMu sync.RWMutex
+	epochHeaderCache map[uint64] *types.EpochGenesisHeader
+
 	// epoch0
 	epgGenesis *types.EpochGenesis
 	epgWhite   *types.Header
@@ -107,6 +110,7 @@ func NewEpochGenesisBlock(bc *BlockChain) *EpochGenesisBlock {
 
 	//f.slotLeaderCache = make(map[uint64]map[uint64] common.Address)
 	f.epochLeaderCache = make(map[uint64]map[common.Address] bool)
+	f.epochHeaderCache = make(map[uint64] *types.EpochGenesisHeader)
 
 
 	//f.InitSummaryListAndMap()
@@ -519,9 +523,13 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 	//defer f.egHeaderMu.Unlock()
 	//delete(f.egHeaderMap, epochId)
 
-	f.epochLeaderMu.Lock()
-	defer f.epochLeaderMu.Unlock()
-	delete(f.epochLeaderCache, epochId)
+	//f.epochLeaderMu.Lock()
+	//defer f.epochLeaderMu.Unlock()
+	//delete(f.epochLeaderCache, epochId)
+
+	f.epochHeaderMu.Lock()
+	defer f.epochHeaderMu.Unlock()
+	delete(f.epochHeaderCache, epochId)
 }
 
 func (f *EpochGenesisBlock) deleteDb(epochId uint64) {
@@ -571,34 +579,34 @@ func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
 //	return &slotLeaderMap
 //}
 
-func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
-	f.epochLeaderMu.Lock()
-	defer f.epochLeaderMu.Unlock()
-
-	epochLeaderMap, ok := f.epochLeaderCache[eid]
-	if !ok {
-		for k := range f.epochLeaderCache {
-			delete(f.epochLeaderCache, k)
-		}
-
-		epoch0, ok := f.GetEpoch0()
-		if !ok || eid < epoch0 {
-			return nil
-		}
-
-		eg := f.GetEpochGenesis(eid)
-		if eg != nil {
-			epochLeaderMap := make(map[common.Address] bool)
-			sz := len(eg.EpochLeaders)
-			for i:=0; i<sz; i++ {
-				pk := crypto.ToECDSAPub(eg.EpochLeaders[i])
-				epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
-			}
-			f.epochLeaderCache[eid] = epochLeaderMap
-		}
-	}
-	return &epochLeaderMap
-}
+//func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
+//	f.epochLeaderMu.Lock()
+//	defer f.epochLeaderMu.Unlock()
+//
+//	epochLeaderMap, ok := f.epochLeaderCache[eid]
+//	if !ok {
+//		for k := range f.epochLeaderCache {
+//			delete(f.epochLeaderCache, k)
+//		}
+//
+//		epoch0, ok := f.GetEpoch0()
+//		if !ok || eid < epoch0 {
+//			return nil
+//		}
+//
+//		eg := f.GetEpochGenesis(eid)
+//		if eg != nil {
+//			epochLeaderMap := make(map[common.Address] bool)
+//			sz := len(eg.EpochLeaders)
+//			for i:=0; i<sz; i++ {
+//				pk := crypto.ToECDSAPub(eg.EpochLeaders[i])
+//				epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+//			}
+//			f.epochLeaderCache[eid] = epochLeaderMap
+//		}
+//	}
+//	return &epochLeaderMap
+//}
 
 func (f *EpochGenesisBlock) PreVerifyEpochGenesis(epGen *types.EpochGenesis, whiteHeader *types.Header) int64 {
 	if epGen == nil || epGen.EpochId <= 0 {
@@ -862,18 +870,62 @@ func (f *EpochGenesisBlock) SetEpochWhiteHeader(epochId uint64, whiteHeader *typ
 //	return headers
 //}
 
+func (f *EpochGenesisBlock) getEpochLeaderMap(eid uint64) *map[common.Address]bool {
+	f.epochLeaderMu.Lock()
+	defer f.epochLeaderMu.Unlock()
+
+	epochLeaderMap, ok := f.epochLeaderCache[eid]
+	if !ok {
+		for k := range f.epochLeaderCache {
+			delete(f.epochLeaderCache, k)
+		}
+
+		epoch0, ok := f.GetEpoch0()
+		if !ok || eid < epoch0 {
+			return nil
+		}
+
+		eg := f.GetEpochGenesis(eid)
+		if eg != nil {
+			epochLeaderMap := make(map[common.Address] bool)
+			sz := len(eg.EpochLeaders)
+			for i:=0; i<sz; i++ {
+				pk := crypto.ToECDSAPub(eg.EpochLeaders[i])
+				epochLeaderMap[crypto.PubkeyToAddress(*pk)] = true
+			}
+			f.epochLeaderCache[eid] = epochLeaderMap
+		}
+	}
+	return &epochLeaderMap
+}
 func (f *EpochGenesisBlock) getEpochHeader(epochId uint64) *types.EpochGenesisHeader {
-	val, err := f.epochGenDb.Get(epochId, "epochheader")
-	if err != nil || val == nil {
-		return nil
+	f.epochHeaderMu.Lock()
+	defer f.epochHeaderMu.Unlock()
+
+	epochHeader, ok := f.epochHeaderCache[epochId]
+	if !ok {
+		for k := range f.epochHeaderCache {
+			delete(f.epochHeaderCache, k)
+		}
+		epoch0, ok := f.GetEpoch0()
+		if !ok || epochId < epoch0 {
+			return nil
+		}
+
+		val, err := f.epochGenDb.Get(epochId, "epochheader")
+		if err != nil || val == nil {
+			return nil
+		}
+		header := new (types.EpochGenesisHeader)
+		err = rlp.DecodeBytes(val, header)
+		if err != nil {
+			log.Error("load epoch header error " + err.Error())
+			return nil
+		}
+		epochHeader = header
+		f.epochHeaderCache[epochId] = epochHeader
 	}
-	header := new (types.EpochGenesisHeader)
-	err = rlp.DecodeBytes(val, header)
-	if err != nil {
-		log.Debug(err.Error())
-		return nil
-	}
-	return header
+	return epochHeader
 }
 
 func (f *EpochGenesisBlock) GetWhiteHeader(epochId uint64) *types.Header {
