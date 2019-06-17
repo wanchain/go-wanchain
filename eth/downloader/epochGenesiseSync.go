@@ -3,9 +3,7 @@ package downloader
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"math/rand"
 	"strconv"
@@ -21,11 +19,8 @@ type epochGenesisReq struct {
 	peer     *peerConnection            	// Peer that we're requesting from
 }
 
-func (d *Downloader) fetchEpochGenesises(startEpoch uint64, latest *types.Header) error {
-	endblk := types.NewBlockWithHeader(latest)
-	endEpid, _:= util.CalEpSlbyTd(endblk.Difficulty().Uint64())
-
-	return d.fetchEpochGenesisesBetween(startEpoch, endEpid )
+func (d *Downloader) fetchEpochGenesises(startEpoch uint64, endEpoch uint64) error {
+	return d.fetchEpochGenesisesBetween(startEpoch, endEpoch )
 }
 
 func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid uint64) (error) {
@@ -36,7 +31,7 @@ func (d *Downloader) fetchEpochGenesisesBetween(startEpochid uint64,endEpochid u
 	fbchan  := make(chan int64,1)
 	d.epochGenesisFbCh = fbchan
 
-	for i := startEpochid;i < endEpochid;i++ {
+	for i := startEpochid;i <= endEpochid;i++ {
 
 		if i==0 || d.blockchain.IsExistEpochGenesis(i) {
 			continue

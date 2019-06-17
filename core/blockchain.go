@@ -395,6 +395,7 @@ func (bc *BlockChain) Status() (td *big.Int, currentBlock common.Hash, genesisBl
 func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotData {
 	pivotData := new(types.PivotData)
 	pivotData.Headers = make([]*types.Header, 0)
+	pivotData.WhiteHeaders = make([]*types.Header, 0)
 	// origin + 4 pivot
 	//pivotData.Summaries = make([]*types.EpochGenesisSummary, 0)
 	//pivotData.OriginSummaries = make([]*types.EpochGenesisSummary, 0)
@@ -416,7 +417,7 @@ func (bc *BlockChain) GetPosPivot(origin uint64, hash common.Hash) *types.PivotD
 	// incentive : eid - 3, eid - 4
 
 	dst := int64(eid) - 2
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		if dst < 0 {
 			break
 		}

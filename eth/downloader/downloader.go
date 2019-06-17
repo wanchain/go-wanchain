@@ -489,6 +489,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	origin, err := d.findAncestor(p, height)
 	if err != nil {
+		log.Error("find ancestor error")
 		return err
 	}
 
@@ -518,7 +519,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 	if fastSyncMode > 0 {
 		if fastSyncMode & 1 != 0 {
-			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd)
+			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, fastSyncMode == 1)
 			if err != nil {
 				return err
 			}
@@ -562,7 +563,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	return err
 }
 
-func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, height uint64, heightHeader *types.Header, td *big.Int) (err error) {
+func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, height uint64, heightHeader *types.Header, td *big.Int, bClose bool) (err error) {
 	log.Info("fastSyncWithPeerPow", "origin", origin, "height", height)
 	d.syncStatsLock.Lock()
 	if d.syncStatsChainHeight <= origin || d.syncStatsChainOrigin > origin {
@@ -618,7 +619,7 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
-	err = d.spawnSync(fetchers, false)
+	err = d.spawnSync(fetchers, bClose)
 	if err != nil && d.mode == FastSync && d.fsPivotLock != nil {
 		// If sync failed in the critical section, bump the fail counter.
 		atomic.AddUint32(&d.fsPivotFails, 1)
@@ -678,22 +679,32 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 			return err
 		}
 
+		endEpoch := uint64(0)
 		// check originSummary is the same with local summary
 		for i, header := range pivotData.Headers {
 			if header != nil {
 				log.Info("syncState", "i", i, "number", header.Number.Uint64())
-				if err := d.syncState(header.Root).Wait(); err != nil {
-					log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
-					return err
-				}
-				if i == 0 {
-					posPivot = header.Number.Uint64()
+				if i > 0 {
+					if err := d.syncState(header.Root).Wait(); err != nil {
+						log.Error("syncState", "i", i, "number", header.Number.Uint64(), "err", err)
+						return err
+					}
+					if i == 1 {
+						posPivot = header.Number.Uint64()
+					}
+				} else {
+					endEpoch,_ = util.CalEpSlbyTd(header.Difficulty.Uint64())
+					heightHeader, td, err = d.fetchHeaderTd(p, header.Number.Uint64())
+					if err != nil {
+						return err
+					}
+					height = heightHeader.Number.Uint64()
 				}
 			}
 		}
 		log.Info("fetch pivot finished")
 
-		err = d.fetchEpochGenesises(pivotData.StartEpoch, heightHeader)
+		err = d.fetchEpochGenesises(pivotData.StartEpoch, endEpoch)
 		if err != nil {
 			return err
 		}
@@ -804,9 +815,15 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 	var wg sync.WaitGroup
 	errc := make(chan error, len(fetchers))
 	wg.Add(len(fetchers))
-	for _, fn := range fetchers {
+	for i, fn := range fetchers {
 		fn := fn
-		go func() { defer wg.Done(); errc <- fn() }()
+		go func() {
+			defer func() {
+				log.Info("fetchers done " + strconv.Itoa(i))
+				wg.Done()
+			}()
+			errc <- fn()
+		}()
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
@@ -815,7 +832,9 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 			// Close the queue when all fetchers have exited.
 			// This will cause the block processor to end when
 			// it has processed the queue.
-			d.queue.Close()
+			if close {
+				d.queue.Close()
+			}
 		}
 
 		log.Debug("spawnSync finished","",i)
@@ -1201,8 +1220,8 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 // can fill in the skeleton - not even the origin peer - it's assumed invalid and
 // the origin is dropped.
 func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) error {
-	p.log.Debug("Directing header downloads", "origin", from)
-	defer p.log.Debug("Header download terminated")
+	p.log.Info("Directing header downloads", "origin", from)
+	defer p.log.Info("Header download terminated")
 	// Create a timeout timer, and the associated header fetcher
 	skeleton := true            // Skeleton assembly phase or finishing up
 	request := time.Now()       // time of the last skeleton fetch request
@@ -1280,8 +1299,19 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 				}
 				from += uint64(len(headers))
 			}
-
-			getHeaders(from)
+			if to == 0 || from <= to {
+				getHeaders(from)
+			} else {
+				if from > to {
+					p.log.Debug("No more headers available")
+					select {
+					case d.headerProcCh <- nil:
+						return nil
+					case <-d.cancelCh:
+						return errCancelHeaderFetch
+					}
+				}
+			}
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
@@ -1349,7 +1379,8 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header, t
 // available peers, reserving a chunk of blocks for each, waiting for delivery
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchBodies(from uint64) error {
-	log.Debug("Downloading block bodies", "origin", from)
+	log.Info("Downloading block bodies begin", "origin", from)
+	defer log.Info("Downloading block bodies end", "origin", from)
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*bodyPack)
@@ -1364,7 +1395,7 @@ func (d *Downloader) fetchBodies(from uint64) error {
 		d.queue.PendingBlocks, d.queue.InFlightBlocks, d.queue.ShouldThrottleBlocks, d.queue.ReserveBodies,
 		d.bodyFetchHook, fetch, d.queue.CancelBodies, capacity, d.peers.BodyIdlePeers, setIdle, "bodies")
 
-	log.Debug("Block body download terminated", "err", err)
+	log.Info("Block body download terminated", "err", err)
 	return err
 }
 
@@ -1372,7 +1403,8 @@ func (d *Downloader) fetchBodies(from uint64) error {
 // available peers, reserving a chunk of receipts for each, waiting for delivery
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchReceipts(from uint64) error {
-	log.Debug("Downloading transaction receipts", "origin", from)
+	log.Info("Downloading transaction receipts begin", "origin", from)
+	log.Info("Downloading transaction receipts end", "origin", from)
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -1387,7 +1419,7 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 		d.queue.PendingReceipts, d.queue.InFlightReceipts, d.queue.ShouldThrottleReceipts, d.queue.ReserveReceipts,
 		d.receiptFetchHook, fetch, d.queue.CancelReceipts, capacity, d.peers.ReceiptIdlePeers, setIdle, "receipts")
 
-	log.Debug("Transaction receipt download terminated", "err", err)
+	log.Info("Transaction receipt download terminated", "err", err)
 	return err
 }
 
@@ -1576,7 +1608,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 // keeps processing and scheduling them into the header chain and downloader's
 // queue until the stream ends or a failure occurs.
 func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
-
+	log.Info("processHeaders begin")
 	defer log.Info("processHeaders terminated")
 	// Calculate the pivoting point for switching from fast to slow sync
 	pivot := d.queue.FastSyncPivot()
@@ -1775,6 +1807,8 @@ func (d *Downloader) tryGetSwitchEnginePosition(headers []*types.Header) (uint64
 
 // processFullSyncContent takes fetch results from the queue and imports them into the chain.
 func (d *Downloader) processFullSyncContent() error {
+	log.Info("processFullSyncContent begin")
+	defer log.Info("processFullSyncContent end")
 	for {
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
@@ -1831,7 +1865,9 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
-	log.Debug("===fast sync block", "num", latest.Number.Uint64())
+	log.Info("===fast sync block begin", "num", latest.Number.Uint64())
+	defer log.Info("===fast sync block finish", "num", latest.Number.Uint64())
+
 	stateSync := d.syncState(latest.Root)
 	defer stateSync.Cancel()
 	go func() {

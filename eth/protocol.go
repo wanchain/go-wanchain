@@ -32,7 +32,6 @@ import (
 const (
 	eth62 = 62
 	eth63 = 63
-	wan64 = 64
 )
 
 // Official short name of the protocol used during capability negotiation.

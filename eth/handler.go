@@ -369,11 +369,19 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 
 			number := origin.Number.Uint64()
+			originNumber := number
+			if !hashMode {
+				originNumber = query.Origin.Number
+			}
 			if stage == 0 {
-				if number < posconfig.Pow2PosUpgradeBlockNumber {
+				if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
 					stage = -1
 				} else {
-					stage = 1
+					if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
+						stage = -1
+					} else {
+						stage = 1
+					}
 				}
 			}
 			if stage == -1 {
@@ -709,7 +717,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
-	case p.version >= wan64 && msg.Code == GetEpochGenesisMsg:
+	case p.version >= eth63 && msg.Code == GetEpochGenesisMsg:
 		var epochid uint64
 		if err := msg.Decode(&epochid); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -717,18 +725,21 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		return p.SendEpochGenesis(pm.blockchain,epochid)
 
-	case p.version >= wan64 && msg.Code == EpochGenesisMsg:
+	case p.version >= eth63 && msg.Code == EpochGenesisMsg:
 		var epBody epochGenesisBody
 		if err := msg.Decode(&epBody); err != nil {
 			log.Debug("Failed to decode epoch genesis data", "err", err)
 			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		if epBody.EpochGenesis.EpochId == uint64(2601143) {
+			log.Debug("epoch id == 2601143")
 		}
 
 		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis, epBody.WhiteHeader); err != nil {
 			log.Debug("Failed to deliver epoch genesis data", "err", err)
 		}
 
-	case p.version >= wan64 && msg.Code == GetBlockHeaderTdMsg:
+	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -751,7 +762,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		return p.SendBlockHeaderTd(origin, td)
 
-	case p.version >= wan64 && msg.Code == BlockHeaderTdMsg:
+	case p.version >= eth63 && msg.Code == BlockHeaderTdMsg:
 		var headerTd types.HeaderTdData
 		if err := msg.Decode(&headerTd); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -760,7 +771,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Debug("Failed to deliver header td", "err", err)
 		}
 
-	case p.version >= wan64 && msg.Code == GetPivotMsg:
+	case p.version >= eth63 && msg.Code == GetPivotMsg:
 		var query getPivotData
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -769,7 +780,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		return p.SendPivot(pivotData)
 
-	case p.version >= wan64 && msg.Code == PivotMsg:
+	case p.version >= eth63 && msg.Code == PivotMsg:
 		var pivotData = types.PivotData{}
 		if err := msg.Decode(&pivotData); err != nil {
 			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
