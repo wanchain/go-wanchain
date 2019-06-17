@@ -191,10 +191,16 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
 	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)
 
+	if atomic.LoadUint32(&pm.fastSync) == 1 {
+		// Disable fast sync if we indeed have something in our chain
+		if pm.blockchain.CurrentBlock().NumberU64() > 0 {
+			log.Info("Fast sync complete, auto disabling")
+			atomic.StoreUint32(&pm.fastSync, 0)
+		}
+	}
 	if err != nil {
 		return
 	}
-
 	atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done
 	if head := pm.blockchain.CurrentBlock(); head.NumberU64() > 0 {
 		// We've completed a sync cycle, notify all peers of new state. This path is
@@ -204,13 +210,5 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
 		go pm.BroadcastBlock(head, false)
-	}
-
-	if atomic.LoadUint32(&pm.fastSync) == 1 {
-		// Disable fast sync if we indeed have something in our chain
-		if pm.blockchain.CurrentBlock().NumberU64() > 0 {
-			log.Info("Fast sync complete, auto disabling")
-			atomic.StoreUint32(&pm.fastSync, 0)
-		}
 	}
 }

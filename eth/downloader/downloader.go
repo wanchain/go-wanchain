@@ -1720,12 +1720,12 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 					limit = len(headers)
 				}
 				//firstPosBlockNumber := d.blockchain.GetFirstPosBlockNumber()
-				if d.mode == FastSync || d.mode == LightSync {
-					lastPowPosition, bSwitchEngine := d.tryGetSwitchEnginePosition(headers)
-					if bSwitchEngine {
-						limit = int(lastPowPosition)
-					}
-				}
+				//if d.mode == FastSync || d.mode == LightSync {
+				//	lastPowPosition, bSwitchEngine := d.tryGetSwitchEnginePosition(headers)
+				//	if bSwitchEngine {
+				//		limit = int(lastPowPosition)
+				//	}
+				//}
 				chunk := headers[:limit]
 
 				// In case of header only syncing, validate the chunk immediately
