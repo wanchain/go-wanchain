@@ -44,6 +44,12 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 
+	//TODO: later to repair.
+	err := epochSelector.SelectLeadersLoop(0)
+	if err != nil {
+		panic("PosInit failed.")
+	}
+
 	cfm.InitCFM(s.BlockChain())
 
 	slotleader.SlsInit()
@@ -252,7 +258,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 }
 
 // todo, reture true or false ,
-func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool)  {
+func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) {
 	//if chain is in restarting status,then return
 	res, _ := s.BlockChain().ChainRestartStatus()
 	if res {
@@ -267,7 +273,6 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) 
 		s.BlockChain().SetChainRestartSuccess()
 		return false
 	}
-
 
 	//else restart process
 	// todo why dont use fir pos's epochID
@@ -342,9 +347,9 @@ func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool) 
 			res, _ = s.BlockChain().ChainRestartStatus()
 			if !res {
 				select {
-					case <-self.timerStop:
-						return true
-					case <-time.After(time.Duration(time.Second)):
+				case <-self.timerStop:
+					return true
+				case <-time.After(time.Duration(time.Second)):
 				}
 			} else {
 				return false
