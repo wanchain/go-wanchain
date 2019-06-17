@@ -534,7 +534,7 @@ func (f *EpochGenesisBlock) dropCache(epochId uint64) {
 
 func (f *EpochGenesisBlock) deleteDb(epochId uint64) {
 	_, _ = f.epochGenDb.Put(epochId, "epochgenesis", nil)
-	_, _ = f.epochGenDb.Put(epochId, "epochsummary", nil)
+	_, _ = f.epochGenDb.Put(epochId, "epochheader", nil)
 	f.dropCache(epochId)
 }
 
