@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/rlp"
@@ -101,6 +102,8 @@ var (
 	ErrInvalidTx2Range                 = errors.New("slot leader tx2 is not in invalid range")
 	ErrInvalidProof                    = errors.New("proof is bigZero")
 	ErrPowRcvPosTrans                  = errors.New("pow phase receive pos protocol trans")
+	ErrDuplicateStg1                   = errors.New("stage one transaction exists")
+	ErrDuplicateStg2                   = errors.New("stage two transaction exists")
 )
 
 func init() {
@@ -133,17 +136,21 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	from = contract.CallerAddress
 
 	if methodId == stgOneIdArr {
-		err := c.validTxStg1ByData(evm.StateDB, from, in[:])
-		if err != nil {
-			return nil, err
+		vldReset := validStg1Reset(evm.StateDB, from, in[:], evm.Time.Uint64())
+		vldService := validStg1Service(from, in[:])
+
+		if !(vldReset && vldService) {
+			return nil, errors.New("ValidTx stg1")
 		}
-		return c.handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
+		return handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
-		err := c.validTxStg2ByData(evm.StateDB, from, in[:])
-		if err != nil {
-			return nil, err
+		vldReset := validStg2Reset(evm.StateDB, from, in[:], evm.Time.Uint64())
+		vldService := validStg2Service(evm.StateDB, from, in[:])
+
+		if !(vldReset && vldService) {
+			return nil, errors.New("ValidTx stg2")
 		}
-		return c.handleStgTwo(in[:], contract, evm)
+		return handleStgTwo(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	}
 
 	functrace.Exit()
@@ -152,17 +159,43 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 }
 
 func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	var methodId [4]byte
-	copy(methodId[:], tx.Data()[:4])
 
 	if posconfig.FirstEpochId == 0 {
 		log.SyslogErr("slotLeaderSC:ValidTx", "", ErrPowRcvPosTrans.Error())
 		return ErrPowRcvPosTrans
 	}
+
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return err
+	}
+
+	payload := tx.Data()
+	if len(payload) < 4 {
+		return errParameters
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], payload[:4])
+
 	if methodId == stgOneIdArr {
-		return c.validTxStg1(stateDB, signer, tx)
+		vldReset := validStg1Reset(stateDB, from, payload, uint64(time.Now().Unix()))
+		vldService := validStg1Service(from, payload)
+
+		if vldReset && vldService {
+			return nil
+		} else {
+			return errors.New("ValidTx stg1")
+		}
 	} else if methodId == stgTwoIdArr {
-		return c.validTxStg2(stateDB, signer, tx)
+		vldReset := validStg2Reset(stateDB, from, payload, uint64(time.Now().Unix()))
+		vldService := validStg2Service(stateDB, from, payload)
+
+		if vldReset && vldService {
+			return nil
+		} else {
+			return errors.New("ValidTx stg2")
+		}
 	} else {
 		log.SyslogErr("slotLeaderSC:ValidTx", "", errMethodId.Error())
 		return errMethodId
@@ -170,19 +203,160 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 	return nil
 }
 
-func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+// valid common data
+func ValidPosELTx(stateDB StateDB, from common.Address, payload []byte) error {
+
+	if len(payload) < 4 {
+		return errParameters
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], payload[:4])
+
+	if methodId == stgOneIdArr {
+		if validStg1Reset(stateDB, from, payload, uint64(time.Now().Unix())) {
+			return nil
+		} else {
+			return errors.New("ValidPosELTx stage1 error")
+		}
+	} else if methodId == stgTwoIdArr {
+		if validStg2Reset(stateDB, from, payload, uint64(time.Now().Unix())) {
+			return nil
+		} else {
+			return errors.New("ValidPosELTx stage2 error")
+		}
+	} else {
+		log.SyslogErr("slotLeaderSC:ValidTx", "", errMethodId.Error())
+		return errMethodId
+	}
+	return nil
+}
+
+func validStg1Reset(stateDB StateDB, from common.Address, payload []byte, time uint64) bool {
+	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(payload)
+	if err != nil {
+		log.Error("validStg1Reset failed")
+		return false
+	}
+
+	// epoch stage
+	invalidStage := isInValidStage(convert.BytesToUint64(epochIDBuf), time, posconfig.Sma1Start, posconfig.Sma1End)
+	if !invalidStage {
+		return false
+	}
+	// duplicated
+	dup := isDuplicateTrans(stateDB, convert.BytesToUint64(epochIDBuf), convert.BytesToUint64(selfIndexBuf), SlotLeaderStag1)
+	if dup {
+		return false
+	}
+
+	return true
+}
+
+func validStg2Reset(stateDB StateDB, from common.Address, payload []byte, time uint64) bool {
+	epochIDBuf, selfIndexBuf, err := RlpGetStage2IDFromTx(payload)
+	if err != nil {
+		log.Error("validStg1Reset failed")
+		return false
+	}
+
+	// epoch stage
+	invalidStage := isInValidStage(convert.BytesToUint64(epochIDBuf), time, posconfig.Sma2Start, posconfig.Sma2End)
+	if !invalidStage {
+		return false
+	}
+
+	//duplicated
+	dup := isDuplicateTrans(stateDB, convert.BytesToUint64(epochIDBuf), convert.BytesToUint64(selfIndexBuf), SlotLeaderStag2)
+	if dup {
+		return false
+	}
+
+	return true
+}
+
+func validStg1Service(from common.Address, payload []byte) bool {
+	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(payload[:])
+	if err != nil {
+		log.Error("validStg1Service failed")
+		return false
+	}
+
+	if !InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), convert.BytesToUint64(selfIndexBuf), from) {
+		log.SyslogErr(ErrIllegalSender.Error())
+		return false
+	}
+
+	_, _, _, err = RlpUnpackStage1DataForTx(payload[:])
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	return true
+}
+
+func validStg2Service(stateDB StateDB, from common.Address, payload []byte) bool {
+	epochID, selfIndex, _, alphaPkis, proofs, err := RlpUnpackStage2DataForTx(payload[:])
+	if err != nil {
+		log.Error("validTxStg2:RlpUnpackStage2DataForTx failed")
+		return false
+	}
+
+	if !InEpochLeadersOrNotByAddress(epochID, selfIndex, from) {
+		log.SyslogErr("validTxStg2:InEpochLeadersOrNotByAddress failed")
+		return false
+	}
+
+	for _, proof := range proofs {
+		if proof.Cmp(bigZero) == 0 {
+			log.SyslogErr("validTxStg2ByData", "proofs", ErrInvalidProof.Error())
+			return false
+		}
+	}
+
+	//log.Info("validTxStg2 success")
+
+	mi, err := GetStg1StateDbInfo(stateDB, epochID, selfIndex)
+	if err != nil {
+		log.Error("validTxStg2", "GetStg1StateDbInfo error", err.Error())
+		return false
+	}
+
+	//mi
+	if len(mi) == 0 || len(alphaPkis) != posconfig.EpochLeaderCount {
+		log.SyslogErr("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
+		return false
+	}
+	if !util.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
+		log.SyslogErr("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
+		return false
+	}
+	//Dleq
+
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		log.Error(ErrEpochID.Error())
+		return false
+	}
+	buff := ep.GetEpochLeaders(epochID)
+	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
+	for i := 0; i < len(buff); i++ {
+		epochLeaders[i] = crypto.ToECDSAPub(buff[i])
+	}
+
+	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
+		log.SyslogErr("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
+		return false
+	}
+	return true
+}
+
+func handleStgOne(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("slotLeaderSC handleStgOne is called")
 
 	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(in)
 	if err != nil {
 		return nil, err
-	}
-
-	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma1Start, posconfig.Sma1End) {
-
-		log.Warn("epid cal", "", convert.BytesToUint64(epochIDBuf))
-		log.Warn("Not in range handleStgOne", "hash", crypto.Keccak256Hash(in).Hex())
-		return nil, ErrInvalidTx1Range
 	}
 
 	keyHash := GetSlotLeaderStage1KeyHash(epochIDBuf, selfIndexBuf)
@@ -205,16 +379,11 @@ func (c *slotLeaderSC) handleStgOne(in []byte, contract *Contract, evm *EVM) ([]
 	return nil, nil
 }
 
-func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	epochIDBuf, selfIndexBuf, err := RlpGetStage2IDFromTx(in)
 	if err != nil {
 		return nil, err
-	}
-
-	if !isInValidStage(convert.BytesToUint64(epochIDBuf), evm, posconfig.Sma2Start, posconfig.Sma2End) {
-		log.SyslogWarning("Not in range handleStgTwo", "hash", crypto.Keccak256Hash(in).Hex())
-		return nil, ErrInvalidTx2Range
 	}
 
 	keyHash := GetSlotLeaderStage2KeyHash(epochIDBuf, selfIndexBuf)
@@ -235,102 +404,6 @@ func (c *slotLeaderSC) handleStgTwo(in []byte, contract *Contract, evm *EVM) ([]
 
 	functrace.Exit()
 	return nil, nil
-}
-
-func (c *slotLeaderSC) validTxStg1(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	sender, err := signer.Sender(tx)
-	if err != nil {
-		log.SyslogErr("slotLeaderSC:validTxStg1", "", err.Error())
-		return err
-	}
-
-	return c.validTxStg1ByData(stateDB, sender, tx.Data())
-}
-
-func (c *slotLeaderSC) validTxStg1ByData(stateDB StateDB, from common.Address, payload []byte) error {
-
-	epochIDBuf, selfIndexBuf, err := RlpGetStage1IDFromTx(payload[:])
-	if err != nil {
-		log.Error("validTxStg1 failed")
-		return err
-	}
-
-	if !InEpochLeadersOrNotByAddress(convert.BytesToUint64(epochIDBuf), convert.BytesToUint64(selfIndexBuf), from) {
-		log.SyslogErr("validTxStg1 failed")
-		return ErrIllegalSender
-	}
-
-	_, _, _, err = RlpUnpackStage1DataForTx(payload[:])
-	if err != nil {
-		return err
-	}
-
-	//log.Info("validTxStg1 success")
-	return nil
-}
-
-func (c *slotLeaderSC) validTxStg2ByData(stateDB StateDB, from common.Address, payload []byte) error {
-	epochID, selfIndex, _, alphaPkis, proofs, err := RlpUnpackStage2DataForTx(payload[:])
-	if err != nil {
-		log.Error("validTxStg2:RlpUnpackStage2DataForTx failed")
-		return err
-	}
-
-	if !InEpochLeadersOrNotByAddress(epochID, selfIndex, from) {
-		log.SyslogErr("validTxStg2:InEpochLeadersOrNotByAddress failed")
-		return ErrIllegalSender
-	}
-
-	for _, proof := range proofs {
-		if proof.Cmp(bigZero) == 0 {
-			log.SyslogErr("validTxStg2ByData", "proofs", ErrInvalidProof.Error())
-			return ErrInvalidProof
-		}
-	}
-
-	//log.Info("validTxStg2 success")
-
-	mi, err := GetStg1StateDbInfo(stateDB, epochID, selfIndex)
-	if err != nil {
-		log.Error("validTxStg2", "GetStg1StateDbInfo error", err.Error())
-		return err
-	}
-
-	//mi
-	if len(mi) == 0 || len(alphaPkis) != posconfig.EpochLeaderCount {
-		log.SyslogErr("validTxStg2", "len(mi)==0 or len(alphaPkis) not equal", len(alphaPkis))
-		return ErrInvalidTxLen
-	}
-	if !util.PkEqual(crypto.ToECDSAPub(mi), alphaPkis[selfIndex]) {
-		log.SyslogErr("validTxStg2", "mi is not equal alphaPkis[index]", selfIndex)
-		return ErrTx1AndTx2NotConsistent
-	}
-	//Dleq
-
-	ep := util.GetEpocherInst()
-	if ep == nil {
-		return ErrEpochID
-	}
-	buff := ep.GetEpochLeaders(epochID)
-	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
-	for i := 0; i < len(buff); i++ {
-		epochLeaders[i] = crypto.ToECDSAPub(buff[i])
-	}
-
-	if !(uleaderselection.VerifyDleqProof(epochLeaders, alphaPkis, proofs)) {
-		log.SyslogErr("validTxStg2", "VerifyDleqProof false self Index", selfIndex)
-		return ErrDleqProof
-	}
-	return nil
-}
-
-func (c *slotLeaderSC) validTxStg2(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	sender, err := signer.Sender(tx)
-	if err != nil {
-		log.SyslogErr("slotLeaderSC:validTxStg1", "", err.Error())
-		return err
-	}
-	return c.validTxStg2ByData(stateDB, sender, tx.Data())
 }
 
 // GetSlotLeaderStage2KeyHash use to get SlotLeader Stage 1 KeyHash by epochid and selfindex
@@ -682,8 +755,9 @@ func addSlotScCallTimes(epochID uint64) error {
 	return nil
 }
 
-func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
-	eid, sid := util.CalEpochSlotID(evm.Time.Uint64())
+func isInValidStage(epochID uint64, time uint64, kStart uint64, kEnd uint64) bool {
+	//eid, sid := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, sid := util.CalEpochSlotID(time)
 	if epochID != eid {
 		log.SyslogWarning("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)
 
@@ -698,6 +772,31 @@ func isInValidStage(epochID uint64, evm *EVM, kStart uint64, kEnd uint64) bool {
 	}
 
 	return true
+}
+
+func isDuplicateTrans(stateDb StateDB, epochID uint64, index uint64, stageName string) bool {
+	slotLeaderPrecompileAddr := GetSlotLeaderSCAddress()
+	var keyHash common.Hash
+	if stageName == SlotLeaderStag1 {
+		keyHash = GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(index))
+		data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+		if data == nil {
+			return false
+		}
+		log.SyslogWarning("isDuplicateTrans", "epochID", epochID, "index", index, "stageName", stageName)
+		return true
+	}
+
+	if stageName == SlotLeaderStag2 {
+		keyHash = GetSlotLeaderStage2KeyHash(convert.Uint64ToBytes(epochID), convert.Uint64ToBytes(index))
+		data := stateDb.GetStateByteArray(slotLeaderPrecompileAddr, keyHash)
+		if data == nil {
+			return false
+		}
+		log.SyslogWarning("isDuplicateTrans", "epochID", epochID, "index", index, "stageName", stageName)
+		return true
+	}
+	return false
 }
 
 func updateSlotLeaderStageIndex(evm *EVM, epochID []byte, slotLeaderStageIndexes string, index uint64) error {

@@ -78,12 +78,7 @@ func (c *CFM) GetMaxStableBlkNumber() uint64 {
 	if maxStableBlkNumber >= posconfig.Pow2PosUpgradeBlockNumber {
 		return maxStableBlkNumber
 	}
-
-	if posconfig.Pow2PosUpgradeBlockNumber > uint64(1) {
-		return posconfig.Pow2PosUpgradeBlockNumber - 1
-	} else {
-		return 0
-	}
+	return posconfig.Pow2PosUpgradeBlockNumber
 }
 
 func (c *CFM) getCurrentBlkNumber() uint64 {
