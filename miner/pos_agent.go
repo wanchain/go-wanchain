@@ -43,6 +43,11 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
+	//TODO: later to repair.
+	err := epochSelector.SelectLeadersLoop(0)
+	if err != nil {
+		panic("PosInit failed.")
+	}
 
 	cfm.InitCFM(s.BlockChain())
 
@@ -147,11 +152,10 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		//case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 		//}
 		time.Sleep(time.Second * time.Duration(sleepTime))
-		if ! self.Mining() {
+		if !self.Mining() {
 			randombeacon.GetRandonBeaconInst().Stop()
 			return
 		}
-
 
 		util.CalEpochSlotIDByNow()
 		epochID, slotID = util.GetEpochSlotID()
@@ -227,7 +231,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 			//case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
 			//}
 		}
-		if ! self.Mining() {
+		if !self.Mining() {
 			return true
 		}
 		posconfig.FirstEpochId = epochID
@@ -248,7 +252,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 			//case <-time.After(time.Duration(time.Second)):
 			//}
 			time.Sleep(time.Duration(time.Second))
-			if ! self.Mining() {
+			if !self.Mining() {
 				return true
 			}
 
