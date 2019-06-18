@@ -10,7 +10,7 @@ import (
 )
 
 func TestCalcBaseSubsidy(t *testing.T) {
-	base, _ := big.NewInt(0).SetString("95129375951293759512", 10)
+	base, _ := big.NewInt(0).SetString("47564687975646879756", 10)
 
 	subsidy := calcBaseSubsidy(firstPeriodReward)
 	fmt.Println(subsidy.String())
