@@ -721,7 +721,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 					staker.Partners[j].LockEpochs = staker.NextLockEpochs
 					weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
 					staker.Partners[j].StakeAmount = big.NewInt(0)
-					staker.Partners[j].StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
+					staker.Partners[j].StakeAmount.Mul(staker.Partners[j].Amount, big.NewInt(int64(weight)))
 					staker.Partners[j].StakingEpoch = epochID + vm.JoinDelay
 					changed = true
 				}
