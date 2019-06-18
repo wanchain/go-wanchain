@@ -166,7 +166,6 @@ var (
 		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
 	}
 
-
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
@@ -543,8 +542,6 @@ var (
 		Usage: "syslog tag",
 		Value: "gwan_pos",
 	}
-
-
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -759,16 +756,16 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
+	if err := raiseFdLimitToMax(); err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
 	}
 	limit, err := getFdLimit()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
-	}
+	// if limit > 2048 { // cap database file descriptors even if more is available
+	// 	limit = 2048
+	// }
 	return limit / 2 // Leave half for networking and other stuff
 }
 
@@ -1050,13 +1047,13 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 	if ctx.GlobalIsSet(FirstPos.Name) {
-		params.MainnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
+		params.MainnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
 	}
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		if ctx.GlobalIsSet(FirstPos.Name) {
-			params.TestnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
+			params.TestnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
 		}
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
@@ -1067,7 +1064,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 4
 		}
 		if ctx.GlobalIsSet(FirstPos.Name) {
-			params.InternalChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64( FirstPos.Name))
+			params.InternalChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
 		}
 		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):

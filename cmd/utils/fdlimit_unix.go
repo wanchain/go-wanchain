@@ -39,6 +39,20 @@ func raiseFdLimit(max uint64) error {
 	return nil
 }
 
+func raiseFdLimitToMax() error {
+	var limit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return err
+	}
+	// Try to update the limit to the max allowance
+	limit.Cur = limit.Max
+
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return err
+	}
+	return nil
+}
+
 // getFdLimit retrieves the number of file descriptors allowed to be opened by this
 // process.
 func getFdLimit() (int, error) {
