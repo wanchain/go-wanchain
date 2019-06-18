@@ -1085,7 +1085,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
 
 	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
-	if (!bc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) || (bc.config.IsPosActive && (bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64())) {
+	if (!bc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) ||
+		(bc.config.IsPosActive && (bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64())) {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -1107,6 +1108,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	} else {
 		//if incoming block humber is smaller than or equal local block number,then keep current
 		status = SideStatTy
+		log.Info("block to a SideStatTy", "Number", block.NumberU64())
 	}
 
 	if err := batch.Write(); err != nil {
