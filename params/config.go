@@ -427,8 +427,19 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 
 func (c *ChainConfig) SetPosActive() {
 	c.IsPosActive = true
+	SetPosActive(c.IsPosActive)
 }
 
 func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 	return n.Cmp(c.PosFirstBlock) >= 0
+}
+
+var isPosActive = false
+
+func IsPosActive() bool {
+	return isPosActive
+}
+
+func SetPosActive(active bool) {
+	isPosActive = active
 }
