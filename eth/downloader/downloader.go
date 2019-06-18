@@ -463,6 +463,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	d.mux.Post(StartEvent{})
 	defer func() {
 		// reset on error
+		log.Info("syncWithPeer", "err", err)
 		if err != nil {
 			d.mux.Post(FailedEvent{err})
 		} else {
