@@ -1086,12 +1086,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
 	if (!bc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) || (bc.config.IsPosActive && (bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64())) {
-
-		//TODO: Wait Jia check, Mo Lin 2019/6/18
-		if block.Hash() == bc.currentBlock.Hash() && block.NumberU64() == bc.currentBlock.NumberU64() {
-			return SideStatTy, nil
-		}
-
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -1536,6 +1530,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			}
 		}
 	)
+
+	log.Info("reorg", "oldBlock", oldBlock.NumberU64(), "newBlock", newBlock.NumberU64())
 
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
