@@ -160,10 +160,12 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	//if !worker.chain.IsInPosStage() {
-	//	worker.commitNewWork(true)
-	//}
-	worker.commitNewWork(false, 0)
+	if !worker.chain.IsInPosStage() {
+		worker.commitNewWork(true, 0)
+	} else {
+		worker.commitNewWork(false, 0)
+	}
+	
 
 	eth.BlockChain().RegisterSwitchEngine(worker)
 
