@@ -1018,7 +1018,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	epid, slid := posUtil.CalEpochSlotID(block.Time().Uint64())
 	cq, _ := bc.ChainQuality(epid, slid)
-	log.Info("current chain", "quality", cq, "block number", block.NumberU64())
+	log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
 
 	//confirm chain quality confirm security
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber+posconfig.Stage2K {

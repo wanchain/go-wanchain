@@ -491,13 +491,10 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		return err
 	}
 	onlyPow := 0
-	posconfig.FastSyncContinue = 0
 	posFirst := d.blockchain.GetFirstPosBlockNumber()
 	if origin+1 < posFirst  {
 		if height > posFirst {
 			height = posFirst-1
-			// currently, we only fast sync pow.
-			posconfig.FastSyncContinue = 0
 		}
 		onlyPow = 1
 	}
@@ -506,21 +503,19 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	var fastSyncHeight = height
 	var fastSyncHeightHeader = latest
 	var fastSyncTd = td
-	var posOrigin = origin
 	if d.mode == FastSync || d.mode == LightSync {
 		if onlyPow == 1 {
 			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, true)
 			log.Info("fastSyncWithPeerPow", "err:", err)
 			if err != nil {
-				posconfig.FastSyncContinue = 0
+				return err
 			}
-		}else {
-			err = d.fastSyncWithPeerPos(p, posOrigin, height, latest, td)
-			log.Info("fastSyncWithPeerPos", "err:", err)
+		} else {
+			// currently don't support pos fast sync
+			//err = d.fastSyncWithPeerPos(p, origin, height, latest, td)
+			//log.Info("fastSyncWithPeerPos", "err:", err)
 		}
-		if err != nil {
-			return err
-		}
+
 	} else {
 		err = d.fullSyncWithPeer(p, origin, height, latest, td)
 	}

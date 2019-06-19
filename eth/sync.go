@@ -17,7 +17,6 @@
 package eth
 
 import (
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -25,8 +24,8 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/eth/downloader"
-	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/p2p/discover"
 )
 
 const (
@@ -197,7 +196,8 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	}
 	if atomic.LoadUint32(&pm.fastSync) == 1 {
 		// Disable fast sync if we indeed have something in our chain
-		if pm.blockchain.CurrentBlock().NumberU64() > 0 && posconfig.FastSyncContinue == 0 {
+		//if pm.blockchain.CurrentBlock().NumberU64() > 0 && posconfig.FastSyncContinue == 0 {
+		if pm.blockchain.CurrentBlock().NumberU64() > 0 {
 			log.Info("Fast sync complete, auto disabling")
 			atomic.StoreUint32(&pm.fastSync, 0)
 		}
