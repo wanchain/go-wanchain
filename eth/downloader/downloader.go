@@ -493,70 +493,28 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		log.Error("find ancestor error")
 		return err
 	}
+	onlyPow := 0
+	posFirst := d.blockchain.GetFirstPosBlockNumber()
+	if origin < posFirst  {
+		if height > posFirst {
+			height = posFirst-1
+		}
+		onlyPow = 1
+	}
 
 	// 0 full sync; 	1 pow sync; 	2 pos sync;		3 pow + pow sync
-	var fastSyncMode = 0
 	var fastSyncHeight = height
 	var fastSyncHeightHeader = latest
 	var fastSyncTd = td
 	var posOrigin = origin
 	if d.mode == FastSync || d.mode == LightSync {
-		posFirst := d.blockchain.GetFirstPosBlockNumber()
-		if origin < posFirst {
-			if height >= posFirst {
-				fastSyncMode = 1 + 2
-				fastSyncHeight = posFirst - 1
-				posOrigin = fastSyncHeight
-				fastSyncHeightHeader, fastSyncTd, err = d.fetchHeaderTd(p, fastSyncHeight)
-				if err != nil {
-					return err
-				}
-			} else {
-				fastSyncMode = 1
-			}
-		} else {
-			fastSyncMode = 2
-		}
-	}
-	if fastSyncMode > 0 {
-		if fastSyncMode & 1 != 0 {
-			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, fastSyncMode == 1)
-			if err != nil {
-				return err
-			}
-		}
-		if fastSyncMode & 2 != 0 {
-			if fastSyncMode == 3 {
-				if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
-					log.Info("Block synchronisation started")
-				}
-				d.queue.Reset()
-				d.peers.Reset()
-
-				for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
-					select {
-					case <-ch:
-					default:
-					}
-				}
-				for _, ch := range []chan dataPack{d.headerCh, d.bodyCh, d.receiptCh} {
-					for empty := false; !empty; {
-						select {
-						case <-ch:
-						default:
-							empty = true
-						}
-					}
-				}
-				for empty := false; !empty; {
-					select {
-					case <-d.headerProcCh:
-					default:
-						empty = true
-					}
-				}
-			}
+		if onlyPow == 1 {
+			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, true)
+		}else {
 			err = d.fastSyncWithPeerPos(p, posOrigin, height, latest, td)
+		}
+		if err != nil {
+			return err
 		}
 	} else {
 		err = d.fullSyncWithPeer(p, origin, height, latest, td)
@@ -1047,6 +1005,10 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		ceil = d.blockchain.CurrentBlock().NumberU64()
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
+		ceilFull := d.blockchain.CurrentBlock().NumberU64()
+		if ceilFull > ceil {
+			ceil = ceilFull
+		}
 	}
 
 	max := ceil
@@ -1697,11 +1659,11 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// This check cannot be executed "as is" for full imports, since blocks may still be
 				// queued for processing when the header download completes. However, as long as the
 				// peer gave us something useful, we're already happy/progressed (above check).
-				if d.mode == FastSync || d.mode == LightSync {
-					if td.Cmp(d.lightchain.GetTdByHash(d.lightchain.CurrentHeader().Hash())) > 0 {
-						return errStallingPeer
-					}
-				}
+				//if d.mode == FastSync || d.mode == LightSync {
+				//	if td.Cmp(d.lightchain.GetTdByHash(d.lightchain.CurrentHeader().Hash())) > 0 {
+				//		return errStallingPeer
+				//	}
+				//}
 				// Disable any rollback and return
 				rollback = nil
 				return nil
