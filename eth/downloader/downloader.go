@@ -1801,30 +1801,23 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			"firstnum", first.Number, "firsthash", first.Hash(),
 			"lastnum", last.Number, "lasthash", last.Hash(),
 		)
-
 		blocks := make([]*types.Block, items)
-
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
-
-
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
 			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
-
 		// Shift the results to the next batch
 		results = results[items:]
 	}
-
 	return nil
 }
 
 // processFastSyncContent takes fetch results from the queue and writes them to the
 // database. It also controls the synchronisation of state nodes of the pivot block.
 func (d *Downloader) processFastSyncContent(latest *types.Header) error {
-
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
 	log.Info("===fast sync block begin", "num", latest.Number.Uint64())
@@ -1841,38 +1834,27 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	pivot := d.queue.FastSyncPivot()
 	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
-
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
 			return stateSync.Cancel()
 		}
-
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}
-
 		P, beforeP, afterP := splitAroundPivot(pivot, results)
-
 		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
 			return err
 		}
-
 		if P != nil {
 			stateSync.Cancel()
 			if err := d.commitPivotBlock(P); err != nil {
 				return err
 			}
 		}
-
 		if err := d.importBlockResults(afterP); err != nil {
 			return err
 		}
-
-		if d.blockchain.CurrentBlock().NumberU64() >= latest.Number.Uint64() {
-			return nil
-		}
 	}
-
 }
 
 func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, before, after []*fetchResult) {
