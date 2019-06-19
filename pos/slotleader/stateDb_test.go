@@ -53,5 +53,6 @@ func TestGetCurrentStateDb(t *testing.T) {
 	}
 
 	fmt.Println(epochID, slotID)
+	RmDB("epochGendb")
 	posconfig.SelfTestMode = false
 }

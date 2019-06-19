@@ -239,6 +239,7 @@ func TestArraySave(t *testing.T) {
 		t.Error(err.Error())
 	}
 	fmt.Println(sendtransGet)
+	RmDB("testArraySave")
 	os.RemoveAll("sl_leader_test")
 }
 
@@ -630,6 +631,7 @@ func TestGetRandom(t *testing.T) {
 
 	ret, err := s.getRandom(nil, 0)
 	fmt.Printf("ret of get randome 0x%v\n", hex.EncodeToString(ret.Bytes()))
+	RmDB("epochGendb")
 }
 
 func TestBuildStage2TxPayload(t *testing.T) {
@@ -844,5 +846,6 @@ func TestGenerateSecurityMsg(t *testing.T) {
 		t.Fail()
 	}
 	// un init
+	RmDB("epochGendb")
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
