@@ -1612,7 +1612,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	go bc.reorgFeed.Send(ReorgEvent{epochId, slotid, uint64(len(oldChain))})
 
 	//if reorg length is bigger than k,do not let reorg happen
-	if uint(newChainLen) > posconfig.Cfg().K {
+	if params.IsPosActive() && uint(newChainLen) > posconfig.Cfg().K {
 		log.Error("Impossible reorg because reorg length is bigger than K setting", "reorg length", newChainLen, "old chain rollback lenght", len(oldChain))
 		return ErrSecurityViolated
 

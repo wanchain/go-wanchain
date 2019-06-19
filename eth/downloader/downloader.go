@@ -557,7 +557,7 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 		// If the point is below the origin, move origin back to ensure state download
 		if pivot < origin {
 			if pivot > 0 {
-				origin = pivot - 1
+				origin = pivot
 			} else {
 				origin = 0
 			}
