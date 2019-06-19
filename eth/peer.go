@@ -237,7 +237,7 @@ func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *peer) RequestBodies(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
+	p.Log().Info("Fetching batch of block bodies", "count", len(hashes))
 	return p2p.Send(p.rw, GetBlockBodiesMsg, hashes)
 }
 
@@ -250,7 +250,7 @@ func (p *peer) RequestNodeData(hashes []common.Hash) error {
 
 // RequestReceipts fetches a batch of transaction receipts from a remote node.
 func (p *peer) RequestReceipts(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
+	p.Log().Info("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 

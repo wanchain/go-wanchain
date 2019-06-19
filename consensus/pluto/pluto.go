@@ -516,6 +516,7 @@ func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Bl
 	if block.Header().Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
 		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
 	}
+
 	egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), true)
 	if err != nil {
 		return err

@@ -1298,7 +1298,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 			if skeleton {
 				filled, proced, err := d.fillHeaderSkeleton(from, headers, to)
 				if err != nil {
-					p.log.Info("Skeleton chain invalid", "err", err)
+					p.log.Info("Skeleton chain invalid", "from", from, "to", to, "err", err)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -1330,7 +1330,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
-			p.log.Debug("Header request timed out", "elapsed", ttl)
+			p.log.Info("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
 			d.dropPeer(p.id)
 
@@ -1362,7 +1362,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 // The method returs the entire filled skeleton and also the number of headers
 // already forwarded for processing.
 func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header, to uint64) ([]*types.Header, int, error) {
-	log.Debug("Filling up skeleton", "from", from)
+	log.Info("Filling up skeleton", "from", from, "to", to)
 	d.queue.ScheduleSkeleton(from, skeleton)
 
 	var (
@@ -1383,7 +1383,7 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header, t
 		d.queue.PendingHeaders, d.queue.InFlightHeaders, throttle, reserve,
 		nil, fetch, d.queue.CancelHeaders, capacity, d.peers.HeaderIdlePeers, setIdle, "headers")
 
-	log.Debug("Skeleton fill terminated", "err", err)
+	log.Info("Skeleton fill terminated", "from", from, "to", to, "err", err)
 
 	filled, proced := d.queue.RetrieveHeaders()
 	return filled, proced, err
@@ -1995,6 +1995,11 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 // DeliverHeaders injects a new batch of block headers received from a remote
 // node into the download schedule.
 func (d *Downloader) DeliverHeaders(id string, headers []*types.Header) (err error) {
+	if len(headers) > 0 {
+		log.Info("DeliverHeaders", "id", id, "from", headers[0].Number.Uint64(), "to", headers[len(headers) - 1])
+	} else {
+		log.Info("DeliverHeaders", "id", id)
+	}
 	return d.deliver(id, d.headerCh, &headerPack{id, headers}, headerInMeter, headerDropMeter)
 }
 
