@@ -513,6 +513,9 @@ func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Bl
 	//		}
 	//	}
 	//}
+	if block.Header().Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
+		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
+	}
 	egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), true)
 	if err != nil {
 		return err
@@ -627,17 +630,19 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 		//		proofStart = 33
 		//	}
 		//}
-		if !isSlotVerify && !bGenerate {
-			egHashPre, err := hc.GetEgHash(epochID - 1, number, false)
-			if err != nil {
-				return err
-			}
-			egHashHeader := common.BytesToHash(header.Extra[0:32])
-			if egHashPre != egHashHeader {
-				log.Error("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
-				return errors.New("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
-			}
-		}
+
+		//if !isSlotVerify && !bGenerate {
+		//	egHashPre, err := hc.GetEgHash(epochID - 1, number, false)
+		//	if err != nil {
+		//		log.Error("Get eg hash failed, epoch id="+ strconv.FormatUint(epochID , 10))
+		//		return err
+		//	}
+		//	egHashHeader := common.BytesToHash(header.Extra[0:32])
+		//	if egHashPre != egHashHeader {
+		//		log.Error("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
+		//		return errors.New("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
+		//	}
+		//}
 
 		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[32:len(header.Extra)-extraSeal])
 
@@ -933,6 +938,9 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	//	extra[0] = byte(0)
 	//	copy(extra[1:], buf)
 	//}
+	if header.Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
+		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(header.Difficulty.Uint64())
+	}
 	egHash, err := bc.GetHc().GetEgHash(epochId - 1, number, true)
 	if err != nil {
 		return nil, err
