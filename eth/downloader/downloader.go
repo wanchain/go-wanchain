@@ -456,7 +456,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 
 	return err
 }
-
 // syncWithPeer starts a block synchronization based on the hash chain from the
 // specified peer and head hash.
 func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.Int) (err error) {
@@ -494,10 +493,12 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		return err
 	}
 	onlyPow := 0
+	posconfig.FastSyncContinue = 0
 	posFirst := d.blockchain.GetFirstPosBlockNumber()
-	if origin < posFirst  {
+	if origin+1 < posFirst  {
 		if height > posFirst {
 			height = posFirst-1
+			posconfig.FastSyncContinue = 1
 		}
 		onlyPow = 1
 	}
@@ -510,8 +511,13 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if d.mode == FastSync || d.mode == LightSync {
 		if onlyPow == 1 {
 			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, true)
+			log.Info("fastSyncWithPeerPow", "err:", err)
+			if err != nil {
+				posconfig.FastSyncContinue = 0
+			}
 		}else {
 			err = d.fastSyncWithPeerPos(p, posOrigin, height, latest, td)
+			log.Info("fastSyncWithPeerPos", "err:", err)
 		}
 		if err != nil {
 			return err
@@ -604,7 +610,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 			return err
 		}
 		if firstPosHeader != nil {
-
+			log.Info("firstPosHeader != nil")
 		}
 		headers := make([]*types.Header,0)
 		headers = append(headers, firstPosHeader)
@@ -791,22 +797,19 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 			// Close the queue when all fetchers have exited.
 			// This will cause the block processor to end when
 			// it has processed the queue.
-			if close {
 				d.queue.Close()
-			}
 		}
 
 		log.Debug("spawnSync finished","",i)
 
 		if err = <-errc; err != nil {
+			log.Info("spawnSync fetchers", "err", err)
 			break
 		}
 
 	}
-	if err != nil || close {
 		d.queue.Close()
 		d.Cancel()
-	}
 	wg.Wait()
 	return err
 }
@@ -1026,9 +1029,9 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	if max >= posconfig.Pow2PosUpgradeBlockNumber || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber{
+	if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
 		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
-			from = int64(posconfig.Pow2PosUpgradeBlockNumber)
+			from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
 		}
 	}
 	// Span out with 15 block gaps into the future to catch bad head reports

@@ -24,6 +24,7 @@ var (
 	SelfTestMode = false
 	IsDev        = false
 	MineEnabled  = false
+	FastSyncContinue = 0
 )
 
 const (
