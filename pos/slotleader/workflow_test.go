@@ -44,6 +44,8 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
+func (t *TestSelectLead) GetEpochLastBlkNumber(targetEpochId uint64) uint64 { return 0 }
+
 func generateTestAddrs() {
 	for i := 0; i < addrsCount; i++ {
 		key, _ := crypto.GenerateKey()
@@ -52,9 +54,11 @@ func generateTestAddrs() {
 	}
 }
 
+
+
 func TestLoop(t *testing.T) {
+	posconfig.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
-	posconfig.SelfTestMode = false
 	SlsInit()
 	generateTestAddrs()
 	testInitSlotleader()
@@ -73,9 +77,11 @@ func TestLoop(t *testing.T) {
 	for i := 0; i < posconfig.SlotCount; i++ {
 		s.Loop(&rpc.Client{}, key, uint64(epochIDStart+1), uint64(i))
 	}
+	posconfig.SelfTestMode = false
 }
 
 func TestGenerateCommitmentSuccess(t *testing.T) {
+	posconfig.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
@@ -118,9 +124,11 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	fmt.Println("epochID: ", epID)
 	fmt.Println("selfIndex: ", selfIndex)
 	fmt.Println("Alpha: ", alpha)
+	posconfig.SelfTestMode = false
 }
 
 func TestGenerateCommitmentFailed(t *testing.T) {
+	posconfig.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
@@ -162,13 +170,17 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+
+	posconfig.SelfTestMode = false
 }
 
 func TestStartStage1Work(t *testing.T) {
+	posconfig.SelfTestMode = true
 	TestLoop(t)
 
 	err := s.startStage1Work()
 	if err != nil {
 		t.FailNow()
 	}
+	posconfig.SelfTestMode = false
 }

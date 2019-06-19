@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"math/big"
 
@@ -23,7 +24,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -296,16 +297,28 @@ func (s *SLS) GetPreEpochLeadersPK(epochID uint64) (pks []*ecdsa.PublicKey, isDe
 }
 func (s *SLS) GetEpochDefaultLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 	pks := make([]*ecdsa.PublicKey, posconfig.EpochLeaderCount)
-	selector := epochLeader.GetEpocher()
-	initPksStr, err := selector.GetWhiteByEpochId(epochID)
-	if err != nil {
-		log.SyslogErr("GetEpochDefaultLeadersPK error", "err", err)
-	}
-	for i := 0; i < posconfig.EpochLeaderCount; i++ {
-		pkBuf := common.FromHex(initPksStr[i%len(initPksStr)])
-		pks[i] = crypto.ToECDSAPub(pkBuf)
-	}
+	if posconfig.SelfTestMode {
+		var initPksStr []*ecdsa.PublicKey
+		for _, value := range posconfig.WhiteListOrig {
 
+			b := hexutil.MustDecode(value)
+			initPksStr = append(initPksStr,crypto.ToECDSAPub(b))
+		}
+
+		for i := 0; i < posconfig.EpochLeaderCount; i++ {
+			pks[i] = initPksStr[i%len(initPksStr)]
+		}
+	}else{
+		selector := epochLeader.GetEpocher()
+		initPksStr, err := selector.GetWhiteByEpochId(epochID)
+		if err != nil {
+			log.SyslogErr("GetEpochDefaultLeadersPK error", "err", err)
+		}
+		for i := 0; i < posconfig.EpochLeaderCount; i++ {
+			pkBuf := common.FromHex(initPksStr[i%len(initPksStr)])
+			pks[i] = crypto.ToECDSAPub(pkBuf)
+		}
+	}
 	return pks
 }
 func (s *SLS) IsLocalPkInEpochLeaders(pks []*ecdsa.PublicKey) bool {
@@ -326,12 +339,13 @@ func (s *SLS) isLocalPkInCurrentEpochLeaders() bool {
 	selfPublicKey, _ := s.getLocalPublicKey()
 	locakPk := crypto.FromECDSAPub(selfPublicKey)
 	epochID, _ := util.GetEpochSlotID()
-	epleaders := epochLeader.GetEpocher().GetEpochLeaders(epochID)
-	if len(epleaders) == 0 {
-		epleaders = epochLeader.GetEpocher().GetEpochLeaders(0)
+	pks := s.getEpochLeadersPK(epochID)
+
+	if len(pks) == 0 {
+		pks = s.getEpochLeadersPK(0)
 	}
-	for i := 0; i < len(epleaders); i++ {
-		if hex.EncodeToString(locakPk) == hex.EncodeToString(epleaders[i]) {
+	for i := 0; i < len(pks); i++ {
+		if hex.EncodeToString(locakPk) == hex.EncodeToString(crypto.FromECDSAPub(pks[i])) {
 			return true
 		}
 	}
