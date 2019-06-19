@@ -496,7 +496,8 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if origin+1 < posFirst  {
 		if height > posFirst {
 			height = posFirst-1
-			posconfig.FastSyncContinue = 1
+			// currently, we only fast sync pow.
+			posconfig.FastSyncContinue = 0
 		}
 		onlyPow = 1
 	}
