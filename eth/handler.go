@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
@@ -324,7 +323,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
-	var stage int = 0 // -1 pow stage 0: uninit 1: pos
+	//var stage int = 0 // -1 pow stage 0: uninit 1: pos
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -369,30 +368,31 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 
 			number := origin.Number.Uint64()
-			originNumber := number
-			if !hashMode {
-				originNumber = query.Origin.Number
-			}
-			if stage == 0 {
-				if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
-					stage = -1
-				} else {
-					if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
-						stage = -1
-					} else {
-						stage = 1
-					}
-				}
-			}
-			if stage == -1 {
-				if number < posconfig.Pow2PosUpgradeBlockNumber {
-					headers = append(headers, origin)
-				}
-			} else {
-				if number >= posconfig.Pow2PosUpgradeBlockNumber {
-					headers = append(headers, origin)
-				}
-			}
+			headers = append(headers, origin)
+			//originNumber := number
+			//if !hashMode {
+			//	originNumber = query.Origin.Number
+			//}
+			//if stage == 0 {
+			//	if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
+			//		stage = -1
+			//	} else {
+			//		if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
+			//			stage = -1
+			//		} else {
+			//			stage = 1
+			//		}
+			//	}
+			//}
+			//if stage == -1 {
+			//	if number < posconfig.Pow2PosUpgradeBlockNumber {
+			//		headers = append(headers, origin)
+			//	}
+			//} else {
+			//	if number >= posconfig.Pow2PosUpgradeBlockNumber {
+			//		headers = append(headers, origin)
+			//	}
+			//}
 
 			bytes += estHeaderRlpSize
 

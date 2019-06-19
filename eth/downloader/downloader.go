@@ -506,6 +506,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 				posOrigin = fastSyncHeight
 				fastSyncHeightHeader, fastSyncTd, err = d.fetchHeaderTd(p, fastSyncHeight)
 				if err != nil {
+					log.Error("fetchHeaderTd ", "err", err.Error())
 					return err
 				}
 			} else {
@@ -516,13 +517,14 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		}
 	}
 	if fastSyncMode > 0 {
-		if fastSyncMode&1 != 0 {
+		if fastSyncMode & 1 != 0 {
 			err = d.fastSyncWithPeerPow(p, origin, fastSyncHeight, fastSyncHeightHeader, fastSyncTd, fastSyncMode == 1)
 			if err != nil {
+				log.Error("fastSyncWithPeerPow ", "err", err.Error())
 				return err
 			}
 		}
-		if fastSyncMode&2 != 0 {
+		if fastSyncMode & 2 != 0 {
 			if fastSyncMode == 3 {
 				if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
 					log.Info("Block synchronisation started")
@@ -554,9 +556,15 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 				}
 			}
 			err = d.fastSyncWithPeerPos(p, posOrigin, height, latest, td)
+			if err != nil {
+				log.Error("fastSyncWithPeerPos ", "err", err.Error())
+			}
 		}
 	} else {
 		err = d.fullSyncWithPeer(p, origin, height, latest, td)
+		if err != nil {
+			log.Error("fullSyncWithPeer ", "err", err.Error())
+		}
 	}
 	return err
 }
@@ -637,22 +645,19 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 	d.syncStatsChainHeight = height
 	d.syncStatsLock.Unlock()
 
-	if origin == posconfig.Pow2PosUpgradeBlockNumber-1 {
+	if origin == posconfig.Pow2PosUpgradeBlockNumber - 1 {
 		firstPosHeader, _, err := d.fetchHeaderTd(p, posconfig.Pow2PosUpgradeBlockNumber)
 		if err != nil {
 			return err
 		}
-		if firstPosHeader != nil {
-
-		}
-		headers := make([]*types.Header, 0)
-		headers = append(headers, firstPosHeader)
-		num, err := d.lightchain.InsertHeaderChain(headers, 1)
-		if err != nil {
-			return err
-		}
-		log.Info("num=" + strconv.Itoa(num))
-		epochId, _ := util.CalEpSlbyTd(firstPosHeader.Difficulty.Uint64())
+		//headers := make([]*types.Header,0)
+		//headers = append(headers, firstPosHeader)
+		//num, err := d.lightchain.InsertHeaderChain(headers, 1)
+		//if err != nil {
+		//	return err
+		//}
+		//log.Info("num=" + strconv.Itoa(num))
+		epochId,_ := util.CalEpSlbyTd(firstPosHeader.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochId
 
 		//s.BlockChain().SetRestartBlock(s.BlockChain().CurrentBlock(),nil,true)
@@ -691,12 +696,12 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 						posPivot = header.Number.Uint64()
 					}
 				} else {
-					endEpoch, _ = util.CalEpSlbyTd(header.Difficulty.Uint64())
-					heightHeader, td, err = d.fetchHeaderTd(p, header.Number.Uint64())
-					if err != nil {
-						return err
-					}
-					height = heightHeader.Number.Uint64()
+					endEpoch,_ = util.CalEpSlbyTd(header.Difficulty.Uint64())
+					//heightHeader, td, err = d.fetchHeaderTd(p, header.Number.Uint64())
+					//if err != nil {
+					//	return err
+					//}
+					//height = heightHeader.Number.Uint64()
 				}
 			}
 		}
@@ -736,7 +741,7 @@ func (d *Downloader) fastSyncWithPeerPos(p *peerConnection, origin uint64, heigh
 				origin = 0
 			}
 		}
-		if origin < posconfig.Pow2PosUpgradeBlockNumber-1 {
+		if origin < posconfig.Pow2PosUpgradeBlockNumber - 1 {
 			origin = posconfig.Pow2PosUpgradeBlockNumber - 1
 			pivot = origin + 1
 		}
@@ -1037,14 +1042,14 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	// Figure out the valid ancestor range to prevent rewrite attacks
 	floor, ceil := int64(-1), d.lightchain.CurrentHeader().Number.Uint64()
 
-	p.log.Debug("Looking for common ancestor", "local", ceil, "remote", height)
+	p.log.Info("Looking for common ancestor", "local", ceil, "remote", height)
 	if d.mode == FullSync {
 		ceil = d.blockchain.CurrentBlock().NumberU64()
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
 	}
 
-	max := ceil
+	//max := ceil
 	if ceil >= MaxForkAncestry {
 		floor = int64(ceil - MaxForkAncestry)
 	}
@@ -1059,12 +1064,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	if max >= posconfig.Pow2PosUpgradeBlockNumber || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber {
-		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
-			from = int64(posconfig.Pow2PosUpgradeBlockNumber)
-		}
-	}
-
+	//if max >= posconfig.Pow2PosUpgradeBlockNumber || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber{
+	//	if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
+	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)
+	//	}
+	//}
 	if d.mode == FastSync {
 		if params.IsPosActive() {
 			if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber-1 {
@@ -1294,7 +1298,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 			if skeleton {
 				filled, proced, err := d.fillHeaderSkeleton(from, headers, to)
 				if err != nil {
-					p.log.Debug("Skeleton chain invalid", "err", err)
+					p.log.Info("Skeleton chain invalid", "err", err)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -1310,19 +1314,19 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 				}
 				from += uint64(len(headers))
 			}
-			if to == 0 || from <= to {
+			//if to == 0 || from <= to {
 				getHeaders(from)
-			} else {
-				if from > to {
-					p.log.Debug("No more headers available")
-					select {
-					case d.headerProcCh <- nil:
-						return nil
-					case <-d.cancelCh:
-						return errCancelHeaderFetch
-					}
-				}
-			}
+			//} else {
+			//	if from > to {
+			//		p.log.Debug("No more headers available")
+			//		select {
+			//		case d.headerProcCh <- nil:
+			//			return nil
+			//		case <-d.cancelCh:
+			//			return errCancelHeaderFetch
+			//		}
+			//	}
+			//}
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
@@ -1414,7 +1418,7 @@ func (d *Downloader) fetchBodies(from uint64) error {
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchReceipts(from uint64) error {
 	log.Info("Downloading transaction receipts begin", "origin", from)
-	log.Info("Downloading transaction receipts end", "origin", from)
+	defer log.Info("Downloading transaction receipts end", "origin", from)
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -1730,12 +1734,13 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 					limit = len(headers)
 				}
 				//firstPosBlockNumber := d.blockchain.GetFirstPosBlockNumber()
-				//if d.mode == FastSync || d.mode == LightSync {
-				//	lastPowPosition, bSwitchEngine := d.tryGetSwitchEnginePosition(headers)
-				//	if bSwitchEngine {
-				//		limit = int(lastPowPosition)
-				//	}
-				//}
+				if d.mode == FastSync || d.mode == LightSync {
+					lastPowPosition, bSwitchEngine := d.tryGetSwitchEnginePosition(headers)
+					if bSwitchEngine {
+						limit = int(lastPowPosition)
+					}
+				}
+				log.Info("return header", "from", strconv.FormatUint(headers[0].Number.Uint64(), 10), "to", strconv.FormatUint(headers[len(headers)-1].Number.Uint64(), 10))
 				chunk := headers[:limit]
 
 				// In case of header only syncing, validate the chunk immediately
@@ -1757,7 +1762,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 						if n > 0 {
 							rollback = append(rollback, chunk[:n]...)
 						}
-						log.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
+						log.Info("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
 						return errInvalidChain
 					}
 					// All verifications passed, store newly found uncertain headers
@@ -1856,8 +1861,9 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
 
+
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
-			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 
@@ -1963,7 +1969,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 			receipts[i] = result.Receipts
 		}
 		if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
-			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch

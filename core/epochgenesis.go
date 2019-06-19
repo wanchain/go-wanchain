@@ -378,30 +378,24 @@ func (f *EpochGenesisBlock) GenerateEGHash(epochId uint64) (common.Hash, error) 
 
 func (f *EpochGenesisBlock) GetEgHash(epochId uint64, blockNumber uint64, bGenerate bool) (common.Hash, error) {
 	// block number should >= posconfig.Pow2PosUpgradeBlockNumber
-	if blockNumber <= posconfig.Pow2PosUpgradeBlockNumber {
+	if epochId < posconfig.FirstEpochId + 2 {
 		header := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber - 1)
 		return header.Hash(), nil
 	}
+
 	epochHeader := f.getEpochHeader(epochId)
 	if epochHeader != nil {
 		return epochHeader.GenesisBlkHash, nil
 	} else {
-		firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
-		if firstPosHeader != nil {
-			epoch0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
-			if epochId < epoch0 + 2 {
-				header := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber - 1)
-				return header.Hash(), nil
+		if bGenerate {
+			epkGnss, _, err := f.generateChainedEpochGenesis(epochId, true)
+			if err != nil {
+				log.Error("GetEGHash fail to generate epoch genesis " + err.Error(), "epochId", epochId, "blockNumber", blockNumber)
+				return common.Hash{},errors.New("GetEGHash fail to generate epoch genesis " + err.Error())
 			}
-
-			if bGenerate {
-				epkGnss, _, err := f.generateChainedEpochGenesis(epochId, true)
-				if err != nil {
-					return common.Hash{},errors.New("GetEGHash fail to generate epoch genesis " + err.Error())
-				}
-				return epkGnss.GenesisBlkHash, nil
-			}
+			return epkGnss.GenesisBlkHash, nil
 		}
+		log.Error("wrong chain no header of first pos header ", "epochId", epochId, "blockNumber", blockNumber)
 		// this must be an error
 		return common.Hash{}, errors.New("wrong chain no header of first pos header")
 	}
@@ -539,12 +533,13 @@ func (f *EpochGenesisBlock) deleteDb(epochId uint64) {
 }
 
 func (f *EpochGenesisBlock) GetEpoch0() (uint64, bool) {
-	firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
-	if firstPosHeader != nil {
-		epochId0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
-		return epochId0 + 2, true
-	}
-	return 0, false
+	//firstPosHeader := f.bc.GetHeaderByNumber(posconfig.Pow2PosUpgradeBlockNumber)
+	//if firstPosHeader != nil {
+	//	epochId0, _ := posUtil.CalEpochSlotID(firstPosHeader.Time.Uint64())
+	//	return epochId0 + 2, true
+	//}
+
+	return posconfig.FirstEpochId + 2, true
 }
 
 //func (f *EpochGenesisBlock) getSlotLeaderMap(eid uint64) *map[uint64]common.Address {
@@ -654,7 +649,7 @@ func (f *EpochGenesisBlock) PreVerifyEpochGenesis(epGen *types.EpochGenesis, whi
 
 		res := epGen.PreEpochGenHash == epgPre.GenesisBlkHash
 		if !res {
-			log.Debug("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
+			log.Info("Failed to verify preEpoch hash", "", common.ToHex(epGen.PreEpochGenHash[:]), common.ToHex(epgPre.GenesisBlkHash[:]))
 			return -7
 		}
 	}
@@ -688,7 +683,7 @@ func (f *EpochGenesisBlock) PreVerifyEpochGenesis(epGen *types.EpochGenesis, whi
 	//log.Info("verify genesis data","",common.ToHex(byteVal))
 
 	if err != nil {
-		log.Debug("Failed to marshal epoch genesis data", "err", err)
+		log.Info("Failed to marshal epoch genesis data", "err", err)
 		return -9
 	}
 
