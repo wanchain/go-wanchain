@@ -18,7 +18,9 @@
 
 package utils
 
-import "syscall"
+import (
+	"syscall"
+)
 
 // raiseFdLimit tries to maximize the file descriptor allowance of this process
 // to the maximum hard-limit allowed by the OS.
@@ -33,20 +35,6 @@ func raiseFdLimit(max uint64) error {
 	if limit.Cur > max {
 		limit.Cur = max
 	}
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return err
-	}
-	return nil
-}
-
-func raiseFdLimitToMax() error {
-	var limit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return err
-	}
-	// Try to update the limit to the max allowance
-	limit.Cur = limit.Max
-
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
 		return err
 	}
