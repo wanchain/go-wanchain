@@ -149,7 +149,7 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 	if !fake {
 		engine = ethash.NewTester(db)
 	}
-	blockchain, err := core.NewBlockChain(db, gspec.Config, engine, vm.Config{})
+	blockchain, err := core.NewBlockChain(db, gspec.Config, engine, vm.Config{},nil)
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +160,9 @@ func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
 }
 
 func TestGetEpochLeaders(t *testing.T) {
-	posconfig.Init(nil)
+	var networkId uint64
+	networkId = 6
+	posconfig.Init(nil,networkId)
 	epochID, slotID := util.GetEpochSlotID()
 	fmt.Println("epochID:", epochID, " slotID:", slotID)
 
