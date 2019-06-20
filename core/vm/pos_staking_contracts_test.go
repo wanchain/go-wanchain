@@ -160,7 +160,39 @@ func TestDelegateIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 200000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1800001)
+	if err == nil {
+		t.Fatal("should only delegate ten times")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1800000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 300001)
+	if err == nil {
+		t.Fatal("should only delegate ten times")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 300000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"),730000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 7240001)
+	if err == nil {
+		t.Fatal("should only delegate ten times")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 7240000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -293,7 +325,7 @@ func doStakeIn(amount int64) error {
 	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
-		return errors.New("stakeIn called failed")
+		return errors.New("stakeIn called failed " + err.Error())
 	}
 
 	// check
