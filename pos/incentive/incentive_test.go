@@ -19,7 +19,7 @@ var (
 )
 
 func TestRun(t *testing.T) {
-	posconfig.Init(nil)
+	posconfig.Init(nil, 4)
 	Init(getInfo, setInfo, testGetRBAddress)
 	TestSetActivityInterface(t)
 	TestSetStakerInterface(t)

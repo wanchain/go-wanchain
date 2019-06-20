@@ -750,7 +750,7 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 
 func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
 	if bc, ok := a.chain.(*core.BlockChain); ok {
-		eg,_ := bc.GetEpochGene().GetEpochGenesis(epochId)
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
 		return eg, nil
 	}
 
@@ -772,7 +772,7 @@ func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
 			return false, errors.New("GenerateEpochGenesis failed")
 		}
 
-		eg,_ := bc.GetEpochGene().GetEpochGenesis(epochId)
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
 
 		if eg != nil && geg != nil {
 			if eg.GenesisBlkHash == geg.GenesisBlkHash {

@@ -4,11 +4,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/common/hexutil"
 
 	"sync"
 
@@ -112,7 +113,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		lastEpochId = epochID
 	}
 	// there is 2K slot, so need not think about reorg  // selec epoch leader from the whole epoch.
-	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 && epochID != posconfig.FirstEpochId  {
+	if slotID >= 2*posconfig.K+1 && selectedEpochId != epochID+1 && epochID != posconfig.FirstEpochId {
 		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
@@ -133,14 +134,13 @@ func GetEpochBlock(epochID uint64) uint64 {
 	lbe.Lock()
 	b := lastBlockEpoch[epochID]
 	lbe.Unlock()
-	
+
 	if b == 0 {
 		b = selecter.GetEpochLastBlkNumber(epochID)
 	}
-	
+
 	return b
 }
-
 
 func GetEpochBlockHash(epochID uint64) common.Hash {
 	lbe.Lock()
@@ -201,23 +201,23 @@ func FromWin(win *big.Int) float64 {
 }
 
 func IsPosBlock(number uint64) bool {
-	return number > posconfig.Pow2PosUpgradeBlockNumber
+	return number >= posconfig.Pow2PosUpgradeBlockNumber
 }
 
 func FirstPosBlockNumber() uint64 {
-	// TODO why +1?
-	return posconfig.Pow2PosUpgradeBlockNumber + 1
+	return posconfig.Pow2PosUpgradeBlockNumber
 }
 
 var (
-	whiteMap map[common.Address] bool
+	whiteMap map[common.Address]bool
 )
+
 func init() {
-	whiteMap = make(map[common.Address] bool)
-	for i:=0; i<len(posconfig.WhiteListOrig); i++ {
+	whiteMap = make(map[common.Address]bool)
+	for i := 0; i < len(posconfig.WhiteListOrig); i++ {
 		pk := crypto.ToECDSAPub(hexutil.MustDecode(posconfig.WhiteListOrig[i]))
 		addr := crypto.PubkeyToAddress(*pk)
-		whiteMap[addr]= true
+		whiteMap[addr] = true
 	}
 }
 
