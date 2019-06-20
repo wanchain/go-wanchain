@@ -156,7 +156,7 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 		return []common.Address{}, []int{}, float64(0), 0
 	}
 	miners := make(map[common.Address]int)
-	for i := currentNumber - 1; i >= util.FirstPosBlockNumber(); i-- {
+	for i := currentNumber - 1; (i >= util.FirstPosBlockNumber()) && (i != 0); i-- {
 		header := chain.GetHeaderByNumber(i)
 		if header == nil {
 			continue
