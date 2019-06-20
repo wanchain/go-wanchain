@@ -34,6 +34,7 @@ import (
 // DefaultConfig contains default settings for use on the Ethereum main net.
 var DefaultConfig = Config{
 	SyncMode:             downloader.FullSync,
+	DownTo: uint64(0),
 	EthashCacheDir:       "wanhash",
 	EthashCachesInMem:    2,
 	EthashCachesOnDisk:   3,
@@ -75,6 +76,7 @@ type Config struct {
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
 	SyncMode  downloader.SyncMode
+	DownTo    uint64 // download to
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests

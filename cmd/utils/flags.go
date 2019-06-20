@@ -194,6 +194,10 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
+	DownToFlag = cli.Uint64Flag{
+		Name:  "downto",
+		Usage: "download to some position",
+	}
 
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
@@ -1012,6 +1016,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.SyncMode = downloader.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.SyncMode = downloader.LightSync
+	}
+	if ctx.GlobalIsSet(DownToFlag.Name) {
+		cfg.DownTo = ctx.GlobalUint64(DownToFlag.Name)
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)

@@ -105,6 +105,7 @@ var (
 
 type Downloader struct {
 	mode SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
+	downTo uint64		// download to block number
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	queue   *queue   // Scheduler for selecting the hashes to download
@@ -237,13 +238,14 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
+func New(mode SyncMode, downTo uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
 
 	dl := &Downloader{
 		mode:          mode,
+		downTo:        downTo,
 		stateDB:       stateDb,
 		mux:           mux,
 		queue:         newQueue(),
@@ -482,6 +484,21 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		return err
 	}
 	height := latest.Number.Uint64()
+
+	if d.downTo != uint64(0) {
+		if d.blockchain.CurrentBlock().NumberU64() >= d.downTo {
+			return nil
+		}
+
+		if height > d.downTo {
+			log.Info("down to" + strconv.FormatUint(d.downTo, 10))
+			height = d.downTo
+			latest, td, err = d.fetchHeaderTd(p, d.downTo)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	log.Info("the lastest block number", "height", height)
 
@@ -745,8 +762,16 @@ func (d *Downloader) fullSyncWithPeer(p *peerConnection, origin uint64, height u
 		d.syncInitHook(origin, height)
 	}
 
+	to := uint64(0)
+	if d.downTo != uint64(0) {
+		to = height
+		if height > d.downTo {
+			to = d.downTo
+		}
+	}
+
 	fetchers := []func() error{
-		func() error { return d.fetchHeaders(p, origin+1, uint64(0)) }, // Headers are always retrieved
+		func() error { return d.fetchHeaders(p, origin+1, to) }, // Headers are always retrieved
 		func() error { return d.fetchBodies(origin + 1) },              // Bodies are retrieved during normal and fast sync
 		func() error { return d.fetchReceipts(origin + 1) },            // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
