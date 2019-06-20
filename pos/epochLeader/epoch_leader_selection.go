@@ -662,6 +662,11 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if staker.LockEpochs == 0 {
 			continue
 		}
+		// handle the staker registed in pow phase. only once
+		if  staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+			staker.StakingEpoch = posconfig.FirstEpochId+2
+			changed = true
+		}
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
 		clientChanged := false

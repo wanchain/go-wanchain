@@ -1690,6 +1690,10 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// In case of header only syncing, validate the chunk immediately
 				if d.mode == FastSync || d.mode == LightSync {
 					// Collect the yet unknown headers to mark them as uncertain
+					if len(chunk) == 0 {
+						log.Info("Invalid header encountered: len(chunk) == 0")
+						return errInvalidChain
+					}
 					unknown := make([]*types.Header, 0, len(headers))
 					for _, header := range chunk {
 						if !d.lightchain.HasHeader(header.Hash(), header.Number.Uint64()) {
