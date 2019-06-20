@@ -495,6 +495,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if origin+1 < posFirst  {
 		if height > posFirst {
 			height = posFirst-1
+			latest, td, err = d.fetchHeaderTd(p, height)
 		}
 		onlyPow = 1
 	}
@@ -1652,11 +1653,11 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// This check cannot be executed "as is" for full imports, since blocks may still be
 				// queued for processing when the header download completes. However, as long as the
 				// peer gave us something useful, we're already happy/progressed (above check).
-				//if d.mode == FastSync || d.mode == LightSync {
-				//	if td.Cmp(d.lightchain.GetTdByHash(d.lightchain.CurrentHeader().Hash())) > 0 {
-				//		return errStallingPeer
-				//	}
-				//}
+				if d.mode == FastSync || d.mode == LightSync {
+					if td.Cmp(d.lightchain.GetTdByHash(d.lightchain.CurrentHeader().Hash())) > 0 {
+						return errStallingPeer
+					}
+				}
 				// Disable any rollback and return
 				rollback = nil
 				return nil
