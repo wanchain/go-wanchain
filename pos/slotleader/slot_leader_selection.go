@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"
 
@@ -24,7 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/rpc"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -302,13 +303,13 @@ func (s *SLS) GetEpochDefaultLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 		for _, value := range posconfig.WhiteListOrig {
 
 			b := hexutil.MustDecode(value)
-			initPksStr = append(initPksStr,crypto.ToECDSAPub(b))
+			initPksStr = append(initPksStr, crypto.ToECDSAPub(b))
 		}
 
 		for i := 0; i < posconfig.EpochLeaderCount; i++ {
 			pks[i] = initPksStr[i%len(initPksStr)]
 		}
-	}else{
+	} else {
 		selector := epochLeader.GetEpocher()
 		initPksStr, err := selector.GetWhiteByEpochId(epochID)
 		if err != nil {
@@ -487,14 +488,14 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		db, err = s.getCurrentStateDb()
 		if err != nil {
 			log.SyslogErr("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
-			rb := big.NewInt(1)
+			rb := posconfig.GetRandomGenesis()
 			return rb, nil
 		}
 	} else {
 		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
 		if err != nil {
 			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
-			rb := big.NewInt(1)
+			rb := posconfig.GetRandomGenesis()
 			return rb, nil
 		}
 	}
@@ -502,7 +503,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 	rb := vm.GetR(db, epochID)
 	if rb == nil {
 		log.SyslogErr("vm.GetR return nil, use a default value", "epochID", epochID)
-		rb = big.NewInt(1)
+		rb = posconfig.GetRandomGenesis()
 	}
 	return rb, nil
 }

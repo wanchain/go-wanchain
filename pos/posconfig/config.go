@@ -198,3 +198,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 	}
 	DefaultConfig.NodeCfg = nodeCfg
 }
+
+func GetRandomGenesis() *big.Int {
+	return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
+}

@@ -59,7 +59,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 
 func (s *SLS) initSma() {
 
-	s.randomGenesis = big.NewInt(1)
+	s.randomGenesis = posconfig.GetRandomGenesis()
 
 	epochDefaultLeaders := s.GetEpochDefaultLeadersPK(0)
 
