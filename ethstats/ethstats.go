@@ -562,6 +562,7 @@ type authMsg struct {
 	NodeId        string   `json:"nodeId"`
 	ValidatorAddr string   `json:"validatorAddr"`
 	Signature     string   `json:"signature"`
+	GenesisHash   string   `json:"genesisHash"`
 }
 
 // login tries to authorize the client at the remote server.
@@ -571,6 +572,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 	clientTime := time.Now().Unix()
 	validatorAddr := ""
 	signature := ""
+	genesisHash := ""
 
 	if s.eth != nil {
 		coinBase, err := s.eth.Etherbase()
@@ -595,6 +597,11 @@ func (s *Service) login(conn *websocket.Conn) error {
 					signature = common.ToHex(signed)
 				}
 			}
+		}
+
+		gBlk := s.eth.BlockChain().GetBlockByNumber(0)
+		if gBlk != nil {
+			genesisHash = gBlk.Hash().String()
 		}
 	}
 
@@ -625,6 +632,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 		NodeId: infos.ID,
 		ValidatorAddr: validatorAddr,
 		Signature: signature,
+		GenesisHash: genesisHash,
 	}
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
