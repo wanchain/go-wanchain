@@ -1108,7 +1108,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	} else {
 		//if incoming block humber is smaller than or equal local block number,then keep current
 		status = SideStatTy
-		log.Info("block to a SideStatTy", "Number", block.NumberU64())
 	}
 
 	if err := batch.Write(); err != nil {
@@ -1532,8 +1531,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			}
 		}
 	)
-
-	log.Info("reorg", "oldBlock", oldBlock.NumberU64(), "newBlock", newBlock.NumberU64())
 
 	// first reduce whoever is higher bound
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
