@@ -556,6 +556,9 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
+	if  staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+		staker.StakingEpoch = posconfig.FirstEpochId+2
+	}
 	// check validator is exiting.
 	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
 		return nil, nil, errors.New("Validator is exiting")

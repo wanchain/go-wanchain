@@ -3,6 +3,7 @@ package vm
 import (
 	"crypto/ecdsa"
 	"errors" // this is not match with other
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"strings"
 
@@ -578,6 +579,9 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		//NextFeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow + JoinDelay,
+	}
+	if posconfig.FirstEpochId == 0 {
+		stakerInfo.StakingEpoch = 0
 	}
 	stakerInfo.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)

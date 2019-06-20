@@ -33,7 +33,7 @@ var (
 )
 
 const MainnetPow2PosUpgradeBlockNumber = 4000000
-const TestnetPow2PosUpgradeBlockNumber = 3520000
+const TestnetPow2PosUpgradeBlockNumber = 3570000
 const InternalPow2PosUpgradeBlockNumber = 200
 
 var (
