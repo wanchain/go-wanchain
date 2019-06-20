@@ -630,7 +630,7 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 		}
 	}
 	// check self + partner + delegate <= 10,500,000
-	if totalDelegated.Add(totalDelegated, total).Cmp(maxTotalStake) > 0 {
+	if new(big.Int).Add(totalDelegated, total).Cmp(maxTotalStake) > 0 {
 		return nil, errors.New("delegate over total stake limitation")
 	}
 	// check the totalDelegated <= 10*stakerInfo.Amount
