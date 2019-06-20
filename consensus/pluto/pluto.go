@@ -488,6 +488,9 @@ func (c *Pluto) VerifyUncles(chain consensus.ChainReader, block *types.Block) er
 }
 
 func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	//passed verify default,need to remove if open verify
+	return nil
+
 	epochId, _ := posUtil.CalEpochSlotID(block.Header().Time.Uint64())
 	hc, ok := chain.(*core.HeaderChain)
 	if !ok {
@@ -618,37 +621,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			bGenerate = true
 			hc = bc.GetHc()
 		}
-		//if hc.IsEpochFirstBlkNumber(epochID, number, parents) {
-		//	extraType := header.Extra[0]
-		//	if extraType == 'g' {
-		//		if len(header.Extra) > extraSeal + 33 {
-		//			egHash := common.BytesToHash(header.Extra[1:33])
-		//			if !isSlotVerify && !bGenerate {
-		//				if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, false); err != nil {
-		//					return err
-		//				}
-		//			}
-		//
-		//		} else {
-		//			log.Warn("Header extra info length is too short for epochGenesisHeadHash")
-		//			return errors.New("header extra info length is too short for epochGenesisHeadHash")
-		//		}
-		//		proofStart = 33
-		//	}
-		//}
 
-		//if !isSlotVerify && !bGenerate {
-		//	egHashPre, err := hc.GetEgHash(epochID - 1, number, false)
-		//	if err != nil {
-		//		log.Error("Get eg hash failed, epoch id="+ strconv.FormatUint(epochID , 10))
-		//		return err
-		//	}
-		//	egHashHeader := common.BytesToHash(header.Extra[0:32])
-		//	if egHashPre != egHashHeader {
-		//		log.Error("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
-		//		return errors.New("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochID, 10))
-		//	}
-		//}
 
 		_, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[32:len(header.Extra)-extraSeal])
 
@@ -924,33 +897,25 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		return nil, err
 	}
 
-	bc, ok := chain.(*core.BlockChain)
-	if !ok {
-		log.Error("chain is not block chain")
-		return nil, errors.New("seal param chain is not a block chain")
-	}
-
-	//var extra []byte = nil
-	//if bc.GetHc().IsEpochFirstBlkNumber(epochId, number, nil) {
-	//	hash,err := bc.GetHc().GenerateEGHash(epochId - 1)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	extra = make([]byte, len(buf) + 32 +extraSeal)
-	//	copy(extra[0:], hash[:])
-	//	copy(extra[32:], buf)
-	//} else {
-	//	extra = make([]byte, len(buf)+ 1 + extraSeal)
-	//	extra[0] = byte(0)
-	//	copy(extra[1:], buf)
+	//bc, ok := chain.(*core.BlockChain)
+	//if !ok {
+	//	log.Error("chain is not block chain")
+	//	return nil, errors.New("seal param chain is not a block chain")
 	//}
-	if header.Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
+
+
+
+	if  header.Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber {
 		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(header.Difficulty.Uint64())
 	}
-	egHash, err := bc.GetHc().GetEgHash(epochId - 1, number, true)
-	if err != nil {
-		return nil, err
-	}
+
+	egHash := common.Hash{}
+	//egHash, err := bc.GetHc().GetEgHash(epochId - 1, number, true)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+
 	extra := make([]byte, len(buf) + 32 +extraSeal)
 	copy(extra[0:], egHash[:])
 	copy(extra[32:], buf)
