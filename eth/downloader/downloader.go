@@ -1996,7 +1996,7 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 // node into the download schedule.
 func (d *Downloader) DeliverHeaders(id string, headers []*types.Header) (err error) {
 	if len(headers) > 0 {
-		log.Info("DeliverHeaders", "id", id, "from", headers[0].Number.Uint64(), "to", headers[len(headers) - 1])
+		log.Info("DeliverHeaders", "id", id, "from", headers[0].Number.Uint64(), "to", headers[len(headers) - 1].Number.Uint64())
 	} else {
 		log.Info("DeliverHeaders", "id", id)
 	}

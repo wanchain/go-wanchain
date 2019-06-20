@@ -321,24 +321,31 @@ func (f *EpochGenesisBlock) getEpochRandomAndPreEpLastBlk(epochId uint64) (*big.
 
 
 func (bc *HeaderChain) IsEpochFirstBlkNumber(epochId uint64, blocknum uint64, parents []*types.Header) bool {
-	epoch0, ok := bc.epochgen.GetEpoch0()
-	if !ok {
-		return false
-	}
-	if epochId > epoch0 {
-		var head *types.Header = nil
-		size := len(parents)
-		if size > 0 {
-			head = parents[ size - 1]
-		} else {
-			head = bc.GetHeaderByNumber(blocknum - 1)
-		}
-		if head != nil {
-			eid := head.Difficulty.Uint64() >> 32
-			if eid + 1 == epochId {
-				//log.Info(" IsEpochFirstBlkNumber", "epoch", epochId, "first", blocknum)
-				return true
-			}
+	//epoch0, ok := bc.epochgen.GetEpoch0()
+	//if !ok {
+	//	return false
+	//}
+	//if epochId > epoch0 {
+	//	var head *types.Header = nil
+	//	size := len(parents)
+	//	if size > 0 {
+	//		head = parents[ size - 1]
+	//	} else {
+	//		head = bc.GetHeaderByNumber(blocknum - 1)
+	//	}
+	//	if head != nil {
+	//		eid := head.Difficulty.Uint64() >> 32
+	//		if eid + 1 == epochId {
+	//			//log.Info(" IsEpochFirstBlkNumber", "epoch", epochId, "first", blocknum)
+	//			return true
+	//		}
+	//	}
+	//}
+	head := bc.GetHeaderByNumber(blocknum - 1)
+	if head != nil {
+		eid, _ := util.CalEpSlbyTd(head.Difficulty.Uint64())
+		if eid  < epochId {
+			return true
 		}
 	}
 
@@ -383,18 +390,19 @@ func (f *EpochGenesisBlock) GetEgHash(epochId uint64, blockNumber uint64, bGener
 		return header.Hash(), nil
 	}
 
+	if bGenerate {
+		epkGnss, _, err := f.generateChainedEpochGenesis(epochId, true)
+		if err != nil {
+			log.Error("GetEGHash fail to generate epoch genesis " + err.Error(), "epochId", epochId, "blockNumber", blockNumber)
+			return common.Hash{},errors.New("GetEGHash fail to generate epoch genesis " + err.Error())
+		}
+		return epkGnss.GenesisBlkHash, nil
+	}
+
 	epochHeader := f.getEpochHeader(epochId)
 	if epochHeader != nil {
 		return epochHeader.GenesisBlkHash, nil
 	} else {
-		if bGenerate {
-			epkGnss, _, err := f.generateChainedEpochGenesis(epochId, true)
-			if err != nil {
-				log.Error("GetEGHash fail to generate epoch genesis " + err.Error(), "epochId", epochId, "blockNumber", blockNumber)
-				return common.Hash{},errors.New("GetEGHash fail to generate epoch genesis " + err.Error())
-			}
-			return epkGnss.GenesisBlkHash, nil
-		}
 		log.Error("wrong chain no header of first pos header ", "epochId", epochId, "blockNumber", blockNumber)
 		// this must be an error
 		return common.Hash{}, errors.New("wrong chain no header of first pos header")

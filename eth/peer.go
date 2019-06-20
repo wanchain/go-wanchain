@@ -215,7 +215,7 @@ func (p *peer) RequestHeadersByHash(origin common.Hash, amount int, skip int, re
 // RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the number of an origin block.
 func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool, to uint64) error {
-	p.Log().Info("Fetching batch of headers", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
+	p.Log().Debug("Fetching batch of headers", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	if to > 0 {
 		if !reverse {
 			if origin <= to {
@@ -227,7 +227,7 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 			}
 		}
 	}
-	p.Log().Info("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
+	p.Log().Debug("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
@@ -237,7 +237,7 @@ func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *peer) RequestBodies(hashes []common.Hash) error {
-	p.Log().Info("Fetching batch of block bodies", "count", len(hashes))
+	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
 	return p2p.Send(p.rw, GetBlockBodiesMsg, hashes)
 }
 
@@ -250,7 +250,7 @@ func (p *peer) RequestNodeData(hashes []common.Hash) error {
 
 // RequestReceipts fetches a batch of transaction receipts from a remote node.
 func (p *peer) RequestReceipts(hashes []common.Hash) error {
-	p.Log().Info("Fetching batch of receipts", "count", len(hashes))
+	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 

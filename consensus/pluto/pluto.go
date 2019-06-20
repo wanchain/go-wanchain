@@ -517,7 +517,12 @@ func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Bl
 		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
 	}
 
-	egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), true)
+	bGenerate := false
+	if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+		bGenerate = true
+	}
+
+	egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), bGenerate)
 	if err != nil {
 		return err
 	}
@@ -942,7 +947,11 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	if header.Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
 		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(header.Difficulty.Uint64())
 	}
-	egHash, err := bc.GetHc().GetEgHash(epochId - 1, number, true)
+	bGenerate := false
+	if bc.GetHc().IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+		bGenerate = true
+	}
+	egHash, err := bc.GetHc().GetEgHash(epochId - 1, number, bGenerate)
 	if err != nil {
 		return nil, err
 	}
