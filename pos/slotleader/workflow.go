@@ -29,9 +29,9 @@ var (
 
 func (s *SLS) GenerateDefaultSlotLeaders() error {
 	//epochLeader := s.GetEpochDefaultLeadersPK(0)
-
+	epochLeader := s.epochLeadersPtrArrayGenesis
 	slotLeadersPtr, _, _, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(s.smaGenesis[:],
-		s.epochLeadersPtrArrayGenesis[:], s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
+		epochLeader[:], s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
 	if err != nil {
 		log.SyslogAlert("generateSlotLeadsGroup", "epochid", 0, "error", err.Error())
 		return err
@@ -59,7 +59,7 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 
 func (s *SLS) initSma() {
 
-	s.randomGenesis = posconfig.GetRandomGenesis()
+	s.randomGenesis = big.NewInt(1)
 
 	epochDefaultLeaders := s.GetEpochDefaultLeadersPK(0)
 

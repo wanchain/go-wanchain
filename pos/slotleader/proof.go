@@ -230,7 +230,8 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		log.Debug("verifySlotProofByGenesis", "epochID", epochID, "slotID", slotID, "slotLeaderRb",
 			hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("verifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
-		skGt := s.getSkGtFromTrans(s.epochLeadersPtrArrayGenesis[:], 0, slotID, s.randomGenesis.Bytes()[:],
+		eps:= s.epochLeadersPtrArrayGenesis
+		skGt := s.getSkGtFromTrans(eps[:], 0, slotID, s.randomGenesis.Bytes()[:],
 			smaPieces[:])
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true
@@ -242,7 +243,8 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		return false
 	}
 	log.Debug("verifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
-	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:],
+	eps:= s.epochLeadersPtrArrayGenesis
+	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], eps[:],
 		s.randomGenesis.Bytes()[:])
 }
 
