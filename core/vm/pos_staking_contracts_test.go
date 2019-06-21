@@ -96,6 +96,9 @@ func initDb() bool {
 
 func reset() bool {
 	clearDb()
+	t := time.Now().Unix()
+	posconfig.FirstEpochId, _ = util.CalEpochSlotID(uint64(t))
+	evmtime = 0
 	return initDb()
 }
 
@@ -169,6 +172,16 @@ func TestStakeIn(t *testing.T) {
 		t.Fatal("should not stakeIn twice")
 	}
 
+	// if posconfig.FirstEpochId == 0
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	posconfig.FirstEpochId = 0
+	err = doStakeIn(10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
@@ -214,6 +227,27 @@ func TestDelegateIn(t *testing.T) {
 	if err == nil {
 		t.Fatal("should failed, fee == 10000")
 	}
+	// contract.value.Cmp(minDelegatorStake) < 0
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doStakeIn(PSMinValidatorStake)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 99)
+	if err == nil {
+		t.Fatal("first delegate stake should >= 100")
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 100)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	////////////////////////////
 	if !reset() {
 		t.Fatal("pos staking db init error")
@@ -267,18 +301,82 @@ func TestPartnerIn(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
+	// stake holder not exist
 	err := doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
 	if err == nil {
 		t.Fatal("should be failed if there is no stake holder")
+	}
+	// realLockEpoch < 0
+	if !reset() {
+		t.Fatal("pos staking db init error")
 	}
 	err = doStakeIn(20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	//err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
-	//if err == nil {
-	//	t.Fatal("should be failed if caller address != stake holder")
-	//}
+	setEpochTime(posconfig.FirstEpochId + 11)
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err == nil {
+		t.Fatal("should be failed if realLockEpoch < 0")
+	}
+	setEpochTime(posconfig.FirstEpochId + 10)
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// realLockEpoch > PSMaxEpochNum
+	// TODO: li hua check
+	setEpochTime(posconfig.FirstEpochId - 90 + 10 - 1)
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 0)
+	if err == nil {
+		t.Fatal("should be failed if realLockEpoch > PSMaxEpochNum")
+	}
+	setEpochTime(posconfig.FirstEpochId- 90 + 10)
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// if length >= maxPartners
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err == nil {
+		t.Fatal("Too many partners, should fail")
+	}
+	///////////////////////
+	// amount check
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("should be error, stake + partner < 50000")
@@ -313,7 +411,56 @@ func TestStakeAppend(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doStakeIn(20000)
+	// stake holder should exist
+	err := doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// contract.CallerAddress != stakerInfo.From
+	err = doStakeAppend(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err == nil {
+		t.Fatal("should be failed if caller address != stake holder")
+	}
+	// realLockEpoch < 0
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	setEpochTime(posconfig.FirstEpochId + 11)
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err == nil {
+		t.Fatal("should be failed if realLockEpoch < 0")
+	}
+	setEpochTime(posconfig.FirstEpochId + 10)
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// realLockEpoch > PSMaxEpochNum
+	// TODO: li hua check
+	setEpochTime(posconfig.FirstEpochId - 90 + 10 - 1)
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err == nil {
+		t.Fatal("should be failed if realLockEpoch > PSMaxEpochNum")
+	}
+	setEpochTime(posconfig.FirstEpochId - 90 + 10)
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	///////////////////////////////////////
+	// amount check
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doStakeIn(20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -426,6 +573,9 @@ func TestStakeInParam(t *testing.T) {
 
 func doStakeInWithParam(amount int64, feeRate int) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
@@ -490,6 +640,9 @@ func doStakeIn(amount int64) error {
 
 func doDelegateOne(from common.Address, amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
@@ -532,6 +685,9 @@ func doDelegateOne(from common.Address, amount int64) error {
 
 func doPartnerOne(from common.Address, amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
@@ -574,6 +730,9 @@ func doPartnerOne(from common.Address, amount int64) error {
 
 func doStakeAppend(from common.Address, amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
@@ -629,4 +788,10 @@ func getStakeInParam() StakeInParam {
 	input.FeeRate = big.NewInt(int64(100))
 
 	return input
+}
+
+var evmtime int64
+func setEpochTime(epochId uint64) {
+	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
+	evmtime = int64(epochId * epochTimespan)
 }

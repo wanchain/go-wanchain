@@ -443,14 +443,14 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
 	if stakerInfo.StakingEpoch == 0 {
-		realLockEpoch = stakerInfo.LockEpochs
+		realLockEpoch = int64(stakerInfo.LockEpochs)
 	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
-	weight := CalLocktimeWeight(realLockEpoch)
+	weight := CalLocktimeWeight(uint64(realLockEpoch))
 
 	total := big.NewInt(0).Set(stakerInfo.Amount)
 	for i := 0; i < len(stakerInfo.Clients); i++ {
@@ -482,7 +482,7 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			Amount:       contract.Value(),
 			Renewal:      info.Renewal,
 			StakingEpoch: eidNow + JoinDelay,
-			LockEpochs:   realLockEpoch,
+			LockEpochs:   uint64(realLockEpoch),
 		}
 		if posconfig.FirstEpochId == 0 {
 			partner.StakingEpoch = 0
@@ -514,9 +514,9 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	// add origen Amount
 	stakerInfo.Amount.Add(stakerInfo.Amount, contract.Value())
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
 	if stakerInfo.StakingEpoch == 0 {
-		realLockEpoch = stakerInfo.LockEpochs
+		realLockEpoch = int64(stakerInfo.LockEpochs)
 	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
@@ -534,7 +534,7 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 		return nil, errors.New("StakeAppend in failed, too much stake")
 	}
 
-	weight := CalLocktimeWeight(realLockEpoch)
+	weight := CalLocktimeWeight(uint64(realLockEpoch))
 	stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)
 	if err != nil {
