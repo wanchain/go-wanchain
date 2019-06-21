@@ -484,6 +484,9 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			StakingEpoch: eidNow + JoinDelay,
 			LockEpochs:   realLockEpoch,
 		}
+		if posconfig.FirstEpochId == 0 {
+			partner.StakingEpoch = 0
+		}
 		partner.StakeAmount = big.NewInt(0).Mul(partner.Amount, big.NewInt(int64(weight)))
 		stakerInfo.Partners = append(stakerInfo.Partners, partner)
 	}
