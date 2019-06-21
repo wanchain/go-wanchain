@@ -106,7 +106,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	targetBlkNum := curNum
 	epochid, _ := util.GetEpochSlotID()
-	if(targetEpochId < epochid && targetEpochId >=posconfig.FirstEpochId ) {
+	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
 
@@ -556,8 +556,11 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
-	if  staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
-		staker.StakingEpoch = posconfig.FirstEpochId+2
+	if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+		staker.StakingEpoch = posconfig.FirstEpochId + 2
+		for j := 0; j < len(staker.Partners); j++ {
+			staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+		}
 	}
 	// check validator is exiting.
 	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
@@ -602,7 +605,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 	}
 	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
 	probabilityMax := big.NewInt(0).Set(totalPartnerProbability)
-	probabilityMax.Mul(probabilityMax, big.NewInt(vm.MaxTimeDelegate + 1))
+	probabilityMax.Mul(probabilityMax, big.NewInt(vm.MaxTimeDelegate+1))
 	if totalProbability.Cmp(probabilityMax) > 0 {
 		totalProbability = probabilityMax
 	}
@@ -663,8 +666,11 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			continue
 		}
 		// handle the staker registed in pow phase. only once
-		if  staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
-			staker.StakingEpoch = posconfig.FirstEpochId+2
+		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+			staker.StakingEpoch = posconfig.FirstEpochId + 2
+			for j := 0; j < len(staker.Partners); j++ {
+				staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+			}
 			changed = true
 		}
 		// check if delegator want to quit.
