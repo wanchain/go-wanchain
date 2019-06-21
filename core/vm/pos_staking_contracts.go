@@ -3,9 +3,10 @@ package vm
 import (
 	"crypto/ecdsa"
 	"errors" // this is not match with other
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
@@ -34,7 +35,7 @@ const (
 	PSMinEpochNum = 7
 	PSMaxEpochNum = 90
 
-	PSMaxStake 			  = 10500000
+	PSMaxStake            = 10500000
 	PSMinStakeholderStake = 10000
 	PSMinValidatorStake   = 50000
 	PSMinDelegatorStake   = 100
@@ -443,6 +444,9 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	if stakerInfo.StakingEpoch == 0 {
+		realLockEpoch = stakerInfo.LockEpochs
+	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
@@ -508,6 +512,9 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	stakerInfo.Amount.Add(stakerInfo.Amount, contract.Value())
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	if stakerInfo.StakingEpoch == 0 {
+		realLockEpoch = stakerInfo.LockEpochs
+	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}

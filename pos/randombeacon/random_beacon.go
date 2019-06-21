@@ -362,6 +362,10 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 }
 
 func (rb *RandomBeacon) isTaskAllDone() bool {
+	if posconfig.SelfTestMode {
+		return true
+	}
+
 	if len(rb.taskTags) == 0 {
 		return true
 	}
