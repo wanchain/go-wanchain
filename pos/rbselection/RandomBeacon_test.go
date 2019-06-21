@@ -62,7 +62,7 @@ func TestRandomBeacon(t *testing.T) {
 	var sshare [Nr][Nr]big.Int
 
 	for i := 0; i < Nr; i++ {
-		poly[i] = RandPoly(Degree, *s[i]) // fi(x), set si as its constant term
+		poly[i],_ = RandPoly(Degree, *s[i]) // fi(x), set si as its constant term
 		for j := 0; j < Nr; j++ {
 			sshare[i][j], _ = EvaluatePoly(poly[i], &x[j], Degree) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
