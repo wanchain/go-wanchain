@@ -297,6 +297,41 @@ func TestDelegateIn(t *testing.T) {
 	clearDb()
 }
 
+func TestDelegateOut(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// stake holder not exist
+	err := doDelegateOut(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	if err == nil {
+		t.Fatal("should not find stake holder")
+	}
+
+	err = doStakeIn(200000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// !found
+	err = doDelegateOut(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	if err == nil {
+		t.Fatal("should not find delegate")
+	}
+	// good
+	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 500)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doDelegateOut(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// delegator has existed
+	err = doDelegateOut(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"))
+	if err == nil {
+		t.Fatal("should failed if delegator has existed")
+	}
+}
+
 func TestPartnerIn(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
@@ -490,6 +525,38 @@ func TestStakeAppend(t *testing.T) {
 	}
 }
 
+func TestStakeUpdate(t *testing.T)  {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// stake holder == nil
+	err := doStakeUpdate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000, 0)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doStakeUpdate(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000, 0)
+	if err == nil {
+		t.Fatal("should be failed if contract.CallerAddress != stakeInfo.From")
+	}
+	// cannot change at the last 3 epoch
+	setEpochTime(posconfig.FirstEpochId + 2 + 10 - UpdateDelay + 1)
+	err = doStakeUpdate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 0, 0)
+	if err == nil {
+		t.Fatal("should be failed if contract.CallerAddress != stakeInfo.From")
+	}
+	// normal
+	setEpochTime(posconfig.FirstEpochId + 2 + 10 - UpdateDelay)
+	err = doStakeUpdate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 0, 10)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 // go test -test.bench=“.×”
 func TestMultiDelegateIn(b *testing.T) {
 	if !reset() {
@@ -499,16 +566,17 @@ func TestMultiDelegateIn(b *testing.T) {
 	if err != nil {
 		b.Fatal(err.Error())
 	}
+	count := 100 // 10000
 
 	begin := time.Now()
 	begin1 := time.Now()
-	for i:=0; i<10005; i++ {
-		if i== 10000 {
+	for i:=0; i<count + 5; i++ {
+		if i== count {
 			begin1 = time.Now()
 		}
 		key,_ := crypto.GenerateKey()
 		address := crypto.PubkeyToAddress(key.PublicKey)
-		err = doDelegateOne(address, 10000)
+		err = doDelegateOne(address, 100)
 		if err != nil {
 			b.Fatal(err.Error())
 		}
@@ -568,6 +636,42 @@ func TestStakeInParam(t *testing.T) {
 	err = doStakeInParam(input)
 	if err == nil {
 		t.Fatal("FeeRate should <=  10000")
+	}
+}
+
+func TestStakeUpdateParam(t *testing.T) {
+	var input StakeUpdateParam
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.LockEpochs = big.NewInt(0)
+	// LockEpochs = 0
+	err := doStakeUpdateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// LockEpochs == min
+	input.LockEpochs = minEpochNum
+	err = doStakeUpdateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	// LockEpochs == max
+	input.LockEpochs = maxEpochNum
+	err = doStakeUpdateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	one := big.NewInt(1)
+	// LockEpochs < min
+	input.LockEpochs = new(big.Int).Sub(minEpochNum, one)
+	err = doStakeUpdateParam(input)
+	if err == nil {
+		t.Fatal("LockEpochs < min should failed")
+	}
+	// LockEpochs > max
+	input.LockEpochs = new(big.Int).Add(maxEpochNum, one)
+	err = doStakeUpdateParam(input)
+	if err == nil {
+		t.Fatal("LockEpochs > max should failed")
 	}
 }
 
@@ -683,6 +787,53 @@ func doDelegateOne(from common.Address, amount int64) error {
 	return nil
 }
 
+func doDelegateOut(from common.Address) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
+	contract.CallerAddress = from
+	a := new(big.Int).Mul(big.NewInt(0), ether)
+	contract.Value().Set(a)
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+
+	var input common.Address
+	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+
+	bytes, err := cscAbi.Pack("delegateOut", input)
+	if err != nil {
+		return errors.New("delegateOut pack failed")
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("delegateOut called failed " + err.Error())
+	}
+	// check
+	key := GetStakeInKeyHash(input)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var infoS StakerInfo
+	err = rlp.DecodeBytes(bytes2, &infoS)
+	if err != nil {
+		return errors.New("delegateOut rlp decode failed")
+	}
+
+	l := len(infoS.Clients)
+	if l <= 0 {
+		return errors.New("delegateOut save error")
+	}
+	for i := 0; i < l; i++ {
+		info := infoS.Clients[i]
+		if info.Address == contract.CallerAddress {
+			if info.QuitEpoch == eidNow + QuitDelay {
+				return nil
+			}
+		}
+	}
+	return errors.New("delegateOut fields save error")
+}
+
 func doPartnerOne(from common.Address, amount int64) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
@@ -767,12 +918,65 @@ func doStakeAppend(from common.Address, amount int64) error {
 	return nil
 }
 
+func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
+	contract.CallerAddress = from
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
+	contract.Value().Set(a)
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+
+	var input StakeUpdateParam
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.LockEpochs = big.NewInt(deltaEpoch)
+
+	bytes, err := cscAbi.Pack("stakeUpdate", input.Addr, input.LockEpochs)
+	if err != nil {
+		return errors.New("stakeUpdate pack failed " + err.Error())
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("stakeUpdate called failed " + err.Error())
+	}
+	// check
+	key := GetStakeInKeyHash(input.Addr)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var infoS StakerInfo
+	err = rlp.DecodeBytes(bytes2, &infoS)
+	if err != nil {
+		return errors.New("stakeUpdate rlp decode failed")
+	}
+
+	if infoS.Amount.Cmp(a) < 0 ||
+		infoS.NextLockEpochs < uint64(deltaEpoch) ||
+		infoS.Address != contract.CallerAddress {
+		return errors.New("stakeUpdate fields save error")
+	}
+	return nil
+}
+
 func doStakeInParam(input StakeInParam) error {
 	bytes, err := cscAbi.Pack("stakeIn", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate)
 	if err != nil {
 		return err
 	}
 	_, err = stakercontract.stakeInParseAndValid(bytes[4:])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func doStakeUpdateParam(input StakeUpdateParam) error {
+	bytes, err := cscAbi.Pack("stakeUpdate", input.Addr, input.LockEpochs)
+	if err != nil {
+		return err
+	}
+	_, err = stakercontract.stakeUpdateParseAndValid(bytes[4:])
 	if err != nil {
 		return err
 	}
