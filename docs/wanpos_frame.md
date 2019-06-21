@@ -24,9 +24,9 @@ Staking delegate contract used for deposit wancoin and the user node will become
  
 
 
-# Wanpos POC 的启动
+# Wanpos testnet 的启动
 
-## 启动参数 --pluto
+## 启动参数 --testnet
 指定使用的共识协议
 *  datadir和ipc路径
 *  genesis的选择

@@ -52,15 +52,15 @@ $ exit
 
 **Step 2:** Start GWAN with Docker and create account:
 ```
-$ docker pull wanchain/wanpos
+$ docker pull wanchain/client-go:2.0.0-beta.2
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -148,7 +148,7 @@ console.log("tx=" + tx)
 If you have not closed the Docker script from **Step 2**, continue with the commands below, otherwise restart the Docker script.
 
 ```
-$ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
+$ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
 > loadScript("/root/.wanchain/minerRegister.js")
 
@@ -156,7 +156,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -180,13 +180,13 @@ $ exit
 
 **Step 2:** Start GWAN with Docker, create account, and view delegate node list:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -282,15 +282,15 @@ For a non-staking node:
 
 ```
 //On MacOS:
-$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
 
 //On Ubuntu
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
 ```
 
 For a staking-node, you should create a account and start like this:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
 ```
 
 The `YourPasswordTxtFile` is a txt file with your miner account password in it in Docker.
@@ -300,7 +300,7 @@ Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt`
 You should start Docker with this command:
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 ```
 
 ## 5.2. Download
@@ -369,7 +369,7 @@ You can run a node in two different modes, staking and non staking.
 ### 5.3.1. Non-staking node
 
 ```
-$ gwan --pluto --syncmode "full"
+$ gwan --testnet --syncmode "full"
 ```
 
 ### 5.3.2. Staking-node
@@ -377,7 +377,7 @@ $ gwan --pluto --syncmode "full"
 In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` with your own account address and replace the `/tmp/pw.txt` file with your own password file with your password string in it.
 
 ```
-$ gwan --pluto --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
+$ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
 # 6. Common Operations
@@ -387,7 +387,7 @@ $ gwan --pluto --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock
 Before you run a PoS node you should create an account.
 
 ```
-$ gwan --pluto console --exec "personal.newAccount('Your Password')"
+$ gwan --testnet console --exec "personal.newAccount('Your Password')"
 
 // Or run after ipc attach
 $ personal.newAccount('Your Password')
@@ -395,12 +395,12 @@ $ personal.newAccount('Your Password')
 
 You can see your address created and printed in the screen, then you can press `Ctrl+C` to exit.
 
-You will get a keystore file with three crypto key words in your path `~/.wanchain/pluto/keystore/` in Ubuntu or `~/Library/Wanchain/pluto/keystore/` in Mac OS.
+You will get a keystore file with three crypto key words in your path `~/.wanchain/testnet/keystore/` in Ubuntu or `~/Library/Wanchain/testnet/keystore/` in Mac OS.
 
 And you can use a command to get the `Address Public Key` and `G1 Public Key` of your account.
 
 ```
-$ gwan --pluto console --exec "personal.showPublicKey('Your Address', 'Your Password')"
+$ gwan --testnet console --exec "personal.showPublicKey('Your Address', 'Your Password')"
 
 // Or run after ipc attach
 $ personal.showPublicKey('Your Address', 'Your Password')
@@ -414,10 +414,10 @@ You can check your balance in the address when you attach a GWAN console in the 
 
 ```
 // In ubuntu
-$ gwan attach ~/.wanchain/pluto/gwan.ipc
+$ gwan attach ~/.wanchain/testnet/gwan.ipc
 
 // In MacOS
-$ gwan attach ~/Library/Wanchain/pluto/gwan.ipc
+$ gwan attach ~/Library/Wanchain/testnet/gwan.ipc
 
 ```
 
