@@ -7,6 +7,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"io/ioutil"
@@ -194,8 +195,8 @@ func TestDelegateIn(t *testing.T) {
 	}
 	// FeeRate == 10000
 	err = doStakeInWithParam(200000, 10000)
-	if err == nil {
-		t.Fatal("delegateIn should failed when fee rate == 100")
+	if err != nil {
+		t.Fatal(err.Error())
 	}
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10000)
 	if err == nil {
@@ -266,10 +267,18 @@ func TestPartnerIn(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doStakeIn(20000)
+	err := doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	if err == nil {
+		t.Fatal("should be failed if there is no stake holder")
+	}
+	err = doStakeIn(20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	//err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
+	//if err == nil {
+	//	t.Fatal("should be failed if caller address != stake holder")
+	//}
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("should be error, stake + partner < 50000")
@@ -460,9 +469,17 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 	}
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
-		info.Amount.Cmp(a) != 0 ||
-		info.StakingEpoch != eidNow + 2 {
+		info.Amount.Cmp(a) != 0  {
 		return errors.New("stakeIn from amount epoch address saved wrong")
+	}
+	if posconfig.FirstEpochId == 0 {
+		if info.StakingEpoch != 0 {
+			return errors.New("StakingEpoch saved wrong, should eq 0")
+		}
+	} else {
+		if info.StakingEpoch != eidNow + 2 {
+			return errors.New("StakingEpoch saved wrong")
+		}
 	}
 	return nil
 }
@@ -573,7 +590,7 @@ func doStakeAppend(from common.Address, amount int64) error {
 	_, err = stakercontract.Run(bytes, contract, stakerevm)
 
 	if err != nil {
-		return errors.New("stakeAppend called failed")
+		return errors.New("stakeAppend called failed " + err.Error())
 	}
 	// check
 	key := GetStakeInKeyHash(input)
