@@ -1684,7 +1684,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 						limit = int(lastPowPosition)
 					}
 				}
-				log.Info("return header", "from", strconv.FormatUint(headers[0].Number.Uint64(), 10), "to", strconv.FormatUint(headers[len(headers)-1].Number.Uint64(), 10))
+				log.Debug("return header", "from", strconv.FormatUint(headers[0].Number.Uint64(), 10), "to", strconv.FormatUint(headers[len(headers)-1].Number.Uint64(), 10))
 				chunk := headers[:limit]
 
 				// In case of header only syncing, validate the chunk immediately

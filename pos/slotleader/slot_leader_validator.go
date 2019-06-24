@@ -31,7 +31,7 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	//	start = 33
 	//}
 
-	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[32:len(header.Extra)-extraSeal])
+	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 	if err != nil {
 		log.Error("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
