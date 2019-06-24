@@ -116,7 +116,9 @@ root> exit
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
+// tranValue is the value you want to stake
+// non-delegate mode validator - minValue is 10000
+// delegate mode validator - minValue is 50000  
 var tranValue = "50000"
 
 // secpub is the miner node's secpub value

@@ -98,8 +98,10 @@ And after receiving test WAN, continue to step 4.
 
 //-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
 
-// tranValue is the value you want to stake - minValue is 100000 
-var tranValue = "100000"
+// tranValue is the value you want to stake
+// non-delegate mode validator - minValue is 10000
+// delegate mode validator - minValue is 50000 
+var tranValue = "50000"
 
 // secpub is the miner node's secpub value
 var secpub    = "YourPK1"
