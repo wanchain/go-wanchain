@@ -337,6 +337,9 @@ func validStg2Service(stateDB StateDB, from common.Address, payload []byte) bool
 		return false
 	}
 	buff := ep.GetEpochLeaders(epochID)
+	if buff==nil || len(buff) == 0 {
+		return false
+	}
 	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
 	for i := 0; i < len(buff); i++ {
 		epochLeaders[i] = crypto.ToECDSAPub(buff[i])
@@ -483,8 +486,8 @@ func InEpochLeadersOrNotByAddress(epochID uint64, selfIndex uint64, senderAddres
 	}
 	epochLeaders := ep.GetEpochLeaders(epochID)
 	if len(epochLeaders) != posconfig.EpochLeaderCount {
-		log.SyslogWarning("epoch leader is not ready use epoch 0 at InEpochLeadersOrNotByAddress", "epochID", epochID)
-		epochLeaders = ep.GetEpochLeaders(0)
+		log.SyslogWarning("epoch leader is not ready  at InEpochLeadersOrNotByAddress", "epochID", epochID)
+		return false
 	}
 
 	if int64(selfIndex) < 0 || int64(selfIndex) >= posconfig.EpochLeaderCount {
