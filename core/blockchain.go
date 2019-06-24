@@ -140,7 +140,8 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngine consensus.Engine) (*BlockChain, error) {
+//func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngine consensus.Engine) (*BlockChain, error) {
+func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngines ...consensus.Engine) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -157,12 +158,18 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		blockCache:       blockCache,
 		futureBlocks:     futureBlocks,
 		engine:           engine,
-		posEngine:        posEngine,
+		//posEngine:        posEngine,
 		vmConfig:         vmConfig,
 		badBlocks:        badBlocks,
 		checkCQStartSlot: INITRESTARTING,
 		restartSucess:    false,
 	}
+	if len(posEngines) >0 {
+		bc.posEngine = 	posEngines[0]
+	}else{
+		bc.posEngine = nil
+	}
+
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
 

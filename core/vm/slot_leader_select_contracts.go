@@ -200,7 +200,6 @@ func (c *slotLeaderSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.T
 		log.SyslogErr("slotLeaderSC:ValidTx", "", errMethodId.Error())
 		return errMethodId
 	}
-	return nil
 }
 
 // valid common data
@@ -229,7 +228,6 @@ func ValidPosELTx(stateDB StateDB, from common.Address, payload []byte) error {
 		log.SyslogErr("slotLeaderSC:ValidTx", "", errMethodId.Error())
 		return errMethodId
 	}
-	return nil
 }
 
 func validStg1Reset(stateDB StateDB, from common.Address, payload []byte, time uint64) bool {

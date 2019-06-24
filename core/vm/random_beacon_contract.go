@@ -198,6 +198,17 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 
 	return ValidPosRBTx(stateDB, from, payload)
 }
+func getRBProposerGroup(eid uint64)([]bn256.G1,error){
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  errors.New("GetEpocherInst() == nil")
+	}
+		pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, errors.New("len(pks) == 0")
+	}
+	return pks,nil
+}
 
 //
 // params or gas check functions
@@ -249,15 +260,10 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
-	ep := util.GetEpocherInst()
-	if ep == nil {
-		return nil,  errors.New("invalid rb stage")
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
 	}
-	pks := ep.GetRBProposerG1(eid)
-	if len(pks) == 0 {
-		return nil, errors.New("invalid rb proposer array")
-	}
-
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg1Stage. epochId " + strconv.FormatUint(eid, 10)))
@@ -317,13 +323,9 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
-	ep := util.GetEpocherInst()
-	if ep == nil {
-		return nil,  errors.New("invalid rb stage")
-	}
-	pks := ep.GetRBProposerG1(eid)
-	if len(pks) == 0 {
-		return nil, errors.New("invalid rb proposer array")
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
 	}
 
 	// 1. EpochId: weather in a wrong time
@@ -377,13 +379,9 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
-	ep := util.GetEpocherInst()
-	if ep == nil {
-		return nil,  nil, nil, errors.New("invalid rb stage")
-	}
-	pks := ep.GetRBProposerG1(eid)
-	if len(pks) == 0 {
-		return nil, nil, nil, errors.New("invalid rb proposer array")
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// 1. EpochId: weather in a wrong time
@@ -876,6 +874,7 @@ func setSignorsNum(epochId uint64, num uint32, evm *EVM) {
 var getRBMVar = GetRBM
 var isValidEpochStageVar = isValidEpochStage
 var isInRandomGroupVar = isInRandomGroup
+var getRBProposerGroupVar = getRBProposerGroup
 
 //
 // contract abi methods
