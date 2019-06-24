@@ -824,7 +824,7 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 }
 
 func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
-	if len(pks) <= int(proposerId) {
+	if len(pks) <= int(proposerId) || int(proposerId)<0 {
 		return false
 	}
 	ep := util.GetEpocherInst()
