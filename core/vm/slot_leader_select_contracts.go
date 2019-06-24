@@ -337,7 +337,8 @@ func validStg2Service(stateDB StateDB, from common.Address, payload []byte) bool
 		return false
 	}
 	buff := ep.GetEpochLeaders(epochID)
-	if buff==nil || len(buff) == 0 {
+	if buff == nil || len(buff) == 0 {
+		log.SyslogWarning("epoch leader is not ready  at validStg2Service", "epochID", epochID)
 		return false
 	}
 	epochLeaders := make([]*ecdsa.PublicKey, len(buff))
