@@ -33,7 +33,6 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
     - [6.4. Registration and delegation](#64-registration-and-delegation)
     - [6.5. Check rewards](#65-check-rewards)
     - [6.6. Unregister and Unlock](#66-unregister-and-unlock)
-- [7. Results of internal testing](#7-results-of-internal-testing)
 
 <!-- /TOC -->
 
@@ -82,11 +81,9 @@ root> exit
 
 **Step 3:** Get test WAN for "YourAccountAddress":
 
-Follow [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test WAN.
+Follow [6.3. Get test WAN](#63-get-test-wan) to get test WAN.
 
 And after receiving test WAN, continue to step 4.
-
-![img](./img_get_start/4.png)
 
 **Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/minerRegister.js`
 
@@ -170,6 +167,10 @@ Setup is now complete, mining will begin as soon as syncing is finished.
 ![img](./img_get_start/6.png)
 
 ## 4.2. Step by step delegation guide
+
+You can use the [wan-wallet-desktop](https://github.com/wanchain/wan-wallet-desktop/releases) for delegation easily.
+
+Also, you can use script as below, too.
 
 **Step 1:** Install Docker (Ubuntu):
 ```
@@ -267,6 +268,8 @@ Load the script in GWAN to complete delegation.
 ```
 
 # 5. Download and run
+
+Below is some other ways to download and run gwan.
 
 ## 5.1. Run from Docker
 
@@ -434,7 +437,7 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 ## 6.3. Get test WAN
 
-If you want to get some test WAN to experiment with Galaxy Consensus, you can send an email with your WAN PoS test account address to the email shown below with your request, and we will transfer the test WAN to you within 3 working days.
+If you want to get some test WAN to experiment with Galaxy Consensus, you can fill a form on this URL: (Waiting to update...)
 
 
 | Index            | Email         | 
@@ -462,7 +465,7 @@ In the smart contract input parameters, the `feeRate` indicates the percentage o
 
 If you want to be an delegator and accept delegations from others, you need to set a reasonable percentage for your `feeRate` to attract others to invest.
 
-The `feeRate`'s value ranges from 0 to 100 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
+The `feeRate`'s value ranges from 0 to 10000 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
 
 You can register your stake with a custom script or just modify the module's script in `loadScript/minerRegister.js`.
 
@@ -476,61 +479,17 @@ In the script file, the password should be replaced with your own in `personal.u
 
 The `tranValue` should be filled with the amount of WAN you want to lock in the smart contract for stake registration. You can't get it back until the locking time is up.
 
-This script can be run in an attached IPC session.
-
-```
-// This path is a relative path for your run.
-$ loadScript('loadScript/register.js')
-```
-
-If you don't want to be a validator, you can delegate WAN to a validator who will stake for you and share the block rewards.
-
-The reward percent is related to the stake amount and the `feeRate`.
-
-The delegation method is also in `register.js`, it is in the last 3 lines.
-
-You can input the delegator's address to make a delegation.
-
-The lock time for delegations does not work in the proof of concept version, it will follow the delegator's lock time.
-
 ## 6.5. Check rewards
 
 You can check your balance as shown above to verify whether you have received a reward, and you can use the commands shown below to see which address was awarded and the reward amount for the specified epoch ID.
 
 ```
-// In an attached IPC session to run for epoch 123.
-$ pos.getEpochIncentivePayDetail(123)
+// In an attached IPC session to run for epoch 19000.
+$ pos.getEpochIncentivePayDetail(19000)
 ```
 
 ## 6.6. Unregister and Unlock
 
-Your locked WAN will be automatically sent back when the time is up. 
+Validators can use `stakeUpdate.js` to set lock time to 0. It will be un-register at next period. 
 
-# 7. Results of internal testing
-
-We depolyed some PoS validator nodes to participate in staking.
-
-We used different stake values and different locktimes to test.
-
-The locktime is measured by epoch counts.
-
-The epoch time is 20 minutes for one epoch. So 6 epochs means 120 minutes.
-
-(Attention: In alpha testnet the epoch time is 2 days and slot count is 1440*12 in every epoch)
-
-The total stake is about 6000000 ~ 8000000 WAN on the testnet.
-
-The reward sent to the addresses is shown below:
-
-| Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
-| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
-|0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
-|0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
-|0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
-|0x52eee1ccb29adc742449a3e87fe7acaad605bd4c| 200000 | 12 |1.93 |4.81 |1.08 |1.17 |0.32 |9.31 |
-
-
-If the epoch incentive is 0, it means that address has not been selected.
-
-
-![img](./img_get_start/7.png)
+Delegators can use Wan wallet to delegate In or delegate Out.
