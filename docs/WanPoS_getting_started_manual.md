@@ -335,7 +335,7 @@ $ go get github.com/wanchain/go-wanchain
 
 $ cd $GOPATH/src/github.com/wanchain/go-wanchain
 
-$ git checkout posalpha
+$ git checkout develop
 
 $ git pull
 
@@ -353,7 +353,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout posalpha
+$ git checkout develop
 
 $ git pull
 
