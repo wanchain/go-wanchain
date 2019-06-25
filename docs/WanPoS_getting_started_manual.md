@@ -439,6 +439,7 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 If you want to get some test WAN to experiment with Galaxy Consensus, you can fill a form on this URL: (Waiting to update...)
 
+[Wanchain-Faucet](http://54.201.62.90/)
 
 | Index            | Email         | 
 | --------------  | :------------  | 
