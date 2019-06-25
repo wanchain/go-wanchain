@@ -47,6 +47,9 @@ Beta相对于Alpha版主要更新内容包括（暂定）：
     - [6.2. 查询余额](#62-查询余额)
     - [6.3. 获取测试币](#63-获取测试币)
     - [6.4. Stake注册和代理流程](#64-stake注册和代理流程)
+    - [6.5. 退本金方法](#65-退本金方法)
+        - [6.5.1. 验证节点退本金](#651-验证节点退本金)
+        - [6.5.2. 委托人退本金](#652-委托人退本金)
 
 <!-- /TOC -->
 
@@ -423,3 +426,20 @@ www.wanchain.org
 用户注册一个节点服务器为星系共识验证节点（矿工）的步骤如下图所示：
 
 ![img](./img_get_start/99.png)
+
+## 6.5. 退本金方法
+
+### 6.5.1. 验证节点退本金
+
+验证人可使用[stakeUpdate.js](https://github.com/wanchain/go-wanchain/blob/develop/loadScript/stakeUpdate.js)脚本，将locktime设成0，来实现退款。本金将在下个周期开始时，自动退回来源账户。
+
+默认情况下，验证人会自动续期。需要手动操作才能退本金。
+
+
+
+### 6.5.2. 委托人退本金
+
+通过钱包投注的委托人，可直接通过钱包的退款按钮退款。
+
+通过脚本注册的委托人，可通过[delegateOut.js](https://github.com/wanchain/go-wanchain/blob/develop/loadScript/delegateOut.js)脚本完成退本金操作。
+
