@@ -1009,7 +1009,7 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 		return uint64(0), nil
 	} else {
 
-		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam-diff+1)
+		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam-diff)
 
 		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
 
