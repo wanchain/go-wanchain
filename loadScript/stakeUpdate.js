@@ -2,11 +2,11 @@
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// This is update miner address.
-var minerAddr = ""
+// This is update validator address.
+var validatorAddr = ""
 
 // Next period lock epochs.
-var lockTime = 45
+var lockTime = 0
 
 // baseAddr is the fund source account.(wallet)
 var baseAddr = ""
@@ -23,7 +23,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
-var payload5 = coinContract.stakeUpdate.getData(minerAddr, lockTime)
+var payload5 = coinContract.stakeUpdate.getData(validatorAddr, lockTime)
 console.log("payload5: ", payload5)
 var tx = eth.sendTransaction({from:baseAddr, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)});
 console.log("tx5= " + tx)

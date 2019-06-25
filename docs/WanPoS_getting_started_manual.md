@@ -51,9 +51,9 @@ $ exit
 
 **Step 2:** Start GWAN with Docker and create account:
 ```
-$ docker pull wanchain/client-go:2.0.0-beta.2
+$ docker pull wanchain/client-go:2.0.0-beta.4
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 
 YourContainerID
 
@@ -85,10 +85,10 @@ Follow [6.3. Get test WAN](#63-get-test-wan) to get test WAN.
 
 And after receiving test WAN, continue to step 4.
 
-**Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/minerRegister.js`
+**Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
-//minerRegister.js
+//validatorRegister.js
 
 // If you want to register as a miner you can modify and use this script.
 
@@ -149,13 +149,13 @@ If you have not closed the Docker script from **Step 2**, continue with the comm
 ```
 $ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
-> loadScript("/root/.wanchain/minerRegister.js")
+> loadScript("/root/.wanchain/validatorRegister.js")
 
 > exit
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -183,7 +183,7 @@ $ exit
 
 **Step 2:** Start GWAN with Docker, create account, and view delegate node list:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 
 YourContainerID
 
@@ -287,15 +287,15 @@ For a non-staking node:
 
 ```
 //On MacOS:
-$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
+$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 
 //On Ubuntu
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 ```
 
 For a staking-node, you should create a account and start like this:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
 ```
 
 The `YourPasswordTxtFile` is a txt file with your miner account password in it in Docker.
@@ -305,7 +305,7 @@ Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt`
 You should start Docker with this command:
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.2 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 ```
 
 ## 5.2. Download
@@ -467,7 +467,7 @@ If you want to be an delegator and accept delegations from others, you need to s
 
 The `feeRate`'s value ranges from 0 to 10000 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
 
-You can register your stake with a custom script or just modify the module's script in `loadScript/minerRegister.js`.
+You can register your stake with a custom script or just modify the module's script in `loadScript/validatorRegister.js`.
 
 The JavaScript file `loadScript/register.js` is used by validators for registration, and `loadScript/sendDelegate.js` is used by test WAN holders for sending their delegation.
 
