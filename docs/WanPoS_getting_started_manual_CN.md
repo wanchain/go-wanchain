@@ -107,6 +107,8 @@ root> exit
 
 （待完善链接）
 
+如果已经使用钱包账号申请过测试币，可以手动将测试币转账到上文创建的validator账号中，完成后续步骤。
+
 4） 创建一个矿工注册脚本文件: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
