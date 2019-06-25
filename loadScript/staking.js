@@ -3,7 +3,7 @@
 var tranValue = 100000
 var passwd = "wanglu"
 
-var secAddr = "0x23fc2eda99667fd3df3caa7ce7e798d94eec06eb"
+var secAddr = "0x23fc2eda99667fd3df3caa7ce7e798d94eec06eb" // this is a testnet validator
 var wallet = "0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8"
 //var secAddr = personal.newAccount(passwd)
 console.log("secAddr: ", secAddr)
@@ -26,10 +26,6 @@ var cscDefinition = [
 			},
 			{
 				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
 				"type": "uint256"
 			}
 		],
@@ -149,7 +145,7 @@ console.log("tx4=" + tx)
 
 
 
-// update validator
+// update validator in pow phase, this can't work.
 var payload5 = coinContract.stakeUpdate.getData(secAddr, 0)
 console.log("payload5: ", payload5)
 var tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
