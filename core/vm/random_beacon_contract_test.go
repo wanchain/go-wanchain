@@ -13,7 +13,6 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"math/big"
 	mrand "math/rand"
@@ -108,8 +107,10 @@ var (
 	ref = &dummyCtRef{}
 	evm = NewEVM(Context{Time:big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
+
 	rbcontract = &RandomBeaconContract{}
-	rbcontractParam = &Contract{}
+	rbcontractParam = &Contract{self:&dummyCtRef{false}}
+
 
 	pubs, pris, hpubs = generateKeyPairs()
 	_, _, enshareA, commitA, proofA = prepareDkg(pubs, hpubs)
@@ -282,11 +283,10 @@ func buildSig(payloadBytes [] byte) []byte {
 
 func TestRBDkg1(t *testing.T) {
 
-	util.CalEpochSlotIDByNow()
-	rbepochId,_ := util.GetEpochSlotID()
+	rbepochId = 0
 	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
 	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg1End-2))
-
+	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
 
 	rbgroupdb[rbepochId] = pubs
 
@@ -321,9 +321,7 @@ func TestRBDkg1(t *testing.T) {
 
 func TestRBDkg2(t *testing.T) {
 	clearDB()
-
-	util.CalEpochSlotIDByNow()
-	rbepochId,_ := util.GetEpochSlotID()
+	rbepochId = 0
 	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
 	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg1End-2))
 
@@ -365,8 +363,7 @@ func TestRBDkg2(t *testing.T) {
 func TestRBSig(t *testing.T)  {
 	clearDB()
 
-	util.CalEpochSlotIDByNow()
-	rbepochId,_ := util.GetEpochSlotID()
+	rbepochId = 0
 	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
 	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg2End-2))
 
@@ -410,6 +407,7 @@ func TestRBSig(t *testing.T)  {
 
 func TestValidPosTx(t *testing.T) {
 	clearDB()
+	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
