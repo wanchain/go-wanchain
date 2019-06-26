@@ -772,7 +772,7 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 	var wg sync.WaitGroup
 	errc := make(chan error, len(fetchers))
 	wg.Add(len(fetchers))
-	for i, fn := range fetchers {
+	for _, fn := range fetchers {
 		fn := fn
 		go func() {
 			defer func() {
