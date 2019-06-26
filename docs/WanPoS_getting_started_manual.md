@@ -159,9 +159,19 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@54.193.4.239:80
 
 ```
+
+The "--wanstats your-node-name:admin@54.193.4.239:80" part in parameters is for collection of statistics information of node's operational status and network status in the PoS Beta Testnet.
+
+Please customize "your-node-name" part with the node name you prefer, i.e. "Community-WAN-node_EMEA1". Please avoid using characters other than alphanumeric, dash and underscore, for example do not use spaces in node name.
+
+You can refer to WanStats website to check your node's status and network status. 
+
+The link to WanStats in Beta testing phase is:
+
+http://54.193.4.239/
 
 Setup is now complete, mining will begin as soon as syncing is finished.
 
