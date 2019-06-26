@@ -776,7 +776,6 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 		fn := fn
 		go func() {
 			defer func() {
-				log.Info("fetchers done " + strconv.Itoa(i))
 				wg.Done()
 			}()
 			errc <- fn()

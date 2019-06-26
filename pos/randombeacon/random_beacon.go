@@ -358,7 +358,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		}
 	}
 
-	return nil
+	//return nil
 }
 
 func (rb *RandomBeacon) isTaskAllDone() bool {
@@ -485,7 +485,7 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		commitBytes[i] = commit[i].Marshal()
 	}
 
-	txPayload := vm.RbDKG1FlatTxPayload{rb.epochId, proposerId, commitBytes}
+	txPayload := vm.RbDKG1FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, Commit:commitBytes}
 
 	return &txPayload, nil
 }
@@ -576,7 +576,7 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 		proofBytes[i] = rbselection.ProofToProofFlat(&proof[i])
 	}
 
-	txPayload := vm.RbDKG2FlatTxPayload{rb.epochId, proposerId, enshareBytes, proofBytes}
+	txPayload := vm.RbDKG2FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, EnShare:enshareBytes, Proof:proofBytes}
 
 	return &txPayload, nil
 }
@@ -656,7 +656,7 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return &vm.RbSIGTxPayload{rb.epochId, proposerId, gsigshare}, nil
+	return &vm.RbSIGTxPayload{EpochId:rb.epochId, ProposerId:proposerId, GSignShare:gsigshare}, nil
 }
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
