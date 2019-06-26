@@ -222,7 +222,7 @@ docker logs -f `docker ps -q`
 
 可通过Wan Wallet轻钱包方便的完成委托投注。
 
-轻钱包下载地址：（待更新）
+轻钱包下载地址：https://github.com/wanchain/wan-wallet-desktop/releases
 
 也可按照如下命令执行投注。
 
