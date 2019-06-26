@@ -18,7 +18,7 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
 - [4. Quick start from Docker](#4-quick-start-from-docker)
     - [4.1. Step by step node setup](#41-step-by-step-node-setup)
     - [4.2. Step by step delegation guide](#42-step-by-step-delegation-guide)
-- [5. Download and run](#5-download-and-run)
+- [5. Other ways to Download and run](#5-other-ways-to-download-and-run)
     - [5.1. Run from Docker](#51-run-from-docker)
     - [5.2. Download](#52-download)
         - [5.2.1. Download BIN](#521-download-bin)
@@ -85,12 +85,16 @@ Follow [6.3. Get test WAN](#63-get-test-wan) to get test WAN.
 
 And after receiving test WAN, continue to step 4.
 
-**Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
+**Step 4:** Validator Registration
+
+The validator registration can be done visually using the community-developed [mywanwallet] (https://mywanwallet.io/#contracts) web wallet. You can also use script registration as follows.
+
+Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
 //validatorRegister.js
 
-// If you want to register as a miner you can modify and use this script.
+// If you want to register as a validator you can modify and use this script.
 
 
 //-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
@@ -100,10 +104,10 @@ And after receiving test WAN, continue to step 4.
 // delegate mode validator - minValue is 50000 
 var tranValue = "50000"
 
-// secpub is the miner node's secpub value
+// secpub is the validator node's secpub value
 var secpub    = "YourPK1"
 
-// g1pub is the miner node's g1pub value
+// g1pub is the validator node's g1pub value
 var g1pub     = "YourPK2"
 
 // feeRate is the percent of the reward kept by the node in delegation - 10000 indicates the node does not accept delegation.
@@ -267,46 +271,13 @@ Load the script in GWAN to complete delegation.
 
 ```
 
-# 5. Download and run
+# 5. Other ways to Download and run
 
 Below is some other ways to download and run gwan.
 
 ## 5.1. Run from Docker
 
-You can run a node from a Docker image.
-
-```
-// Install the Docker service
-
-$ sudo wget -qO- https://get.docker.com/ | sh
-
-$ sudo usermod -aG docker YourUserName
-```
-
-For a non-staking node:
-
-```
-//On MacOS:
-$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
-
-//On Ubuntu
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
-```
-
-For a staking-node, you should create a account and start like this:
-```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
-```
-
-The `YourPasswordTxtFile` is a txt file with your miner account password in it in Docker.
-
-Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt` 
-
-You should start Docker with this command:
-
-```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
-```
+You can run a node from a Docker image. Same to 4.1.
 
 ## 5.2. Download
 
@@ -449,7 +420,7 @@ If you want to get some test WAN to experiment with Galaxy Consensus, you can fi
 
 ## 6.4. Registration and delegation
 
-If you have an account with WAN coins and you want to create a Galaxy Consensus miner, you should do it as in the diagram below:
+If you have an account with WAN coins and you want to create a Galaxy Consensus validator, you should do it as in the diagram below:
 
 ![img](./img_get_start/99.png)
 
