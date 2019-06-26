@@ -149,27 +149,26 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	badBlocks, _ := lru.New(badBlockLimit)
 
 	bc := &BlockChain{
-		config:           config,
-		chainDb:          chainDb,
-		stateCache:       state.NewDatabase(chainDb),
-		quit:             make(chan struct{}),
-		bodyCache:        bodyCache,
-		bodyRLPCache:     bodyRLPCache,
-		blockCache:       blockCache,
-		futureBlocks:     futureBlocks,
-		engine:           engine,
+		config:       config,
+		chainDb:      chainDb,
+		stateCache:   state.NewDatabase(chainDb),
+		quit:         make(chan struct{}),
+		bodyCache:    bodyCache,
+		bodyRLPCache: bodyRLPCache,
+		blockCache:   blockCache,
+		futureBlocks: futureBlocks,
+		engine:       engine,
 		//posEngine:        posEngine,
 		vmConfig:         vmConfig,
 		badBlocks:        badBlocks,
 		checkCQStartSlot: INITRESTARTING,
 		restartSucess:    false,
 	}
-	if len(posEngines) >0 {
-		bc.posEngine = 	posEngines[0]
-	}else{
+	if len(posEngines) > 0 {
+		bc.posEngine = posEngines[0]
+	} else {
 		bc.posEngine = nil
 	}
-
 
 	bc.epochGene = NewEpochGenesisBlock(bc)
 
@@ -1023,9 +1022,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	epid, slid := posUtil.CalEpochSlotID(block.Time().Uint64())
-	cq, _ := bc.ChainQuality(epid, slid)
-	log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
+	epid, _ := posUtil.CalEpochSlotID(block.Time().Uint64())
+	// cq, _ := bc.ChainQuality(epid, slid)
+	// log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
 
 	//confirm chain quality confirm security
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber+posconfig.Stage2K {

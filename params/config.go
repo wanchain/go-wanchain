@@ -154,6 +154,8 @@ var (
 		ChainId:        big.NewInt(1),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
+		PosFirstBlock:  big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
 	}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
