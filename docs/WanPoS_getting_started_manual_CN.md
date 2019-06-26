@@ -20,7 +20,7 @@ Beta相对于Alpha版主要更新内容包括（暂定）：
 - Epoch时间由2天缩短为1天
 - 委托费率取值范围从0 ~ 100更新为0 ~ 10000，精度更高（百分之几更新为万分之几）
 - 验证节点可接受的最大委托上限从本金的5倍调整为10倍（1:10）
-- docker镜像名称更新为：wanchain/client-go:2.0.0-beta.4
+- docker镜像名称更新为：wanchain/client-go:2.0.0-beta.5
 - 启动参数和指令中的pluto, 更换为testnet
 - staking预编译合约地址更新
 
@@ -77,9 +77,9 @@ $ exit
 - YourPK1、2：返回的你账号的2个公钥信息，注册validator时需要；
 
 ```
-$ docker pull wanchain/client-go:2.0.0-beta.4
+$ docker pull wanchain/client-go:2.0.0-beta.5
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
@@ -193,7 +193,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
@@ -234,7 +234,7 @@ $ exit
 验证人信息可以通过命令行查找，也可以通过浏览器查找。请注意，在使用pos.getStakerInfo获取验证节点信息前，请确认当前已经同步到最新块。可通过eth.blockNumber来查看。
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
