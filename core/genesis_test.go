@@ -104,7 +104,7 @@ func TestSetupGenesis(t *testing.T) {
 			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   params.MainnetGenesisHash,
+			wantHash:   MainnetGenesisHashMock,
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
@@ -113,7 +113,7 @@ func TestSetupGenesis(t *testing.T) {
 				DefaultGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   params.MainnetGenesisHash,
+			wantHash:   MainnetGenesisHashMock,
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
@@ -132,7 +132,7 @@ func TestSetupGenesis(t *testing.T) {
 				return SetupGenesisBlock(db, DefaultTestnetGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.TestnetGenesisHash},
-			wantHash:   params.TestnetGenesisHash,
+			wantHash:   TestnetGenesisHashMock,
 			wantConfig: params.TestnetChainConfig,
 		},
 		{
