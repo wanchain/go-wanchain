@@ -691,8 +691,6 @@ func TestUnpackEvent(t *testing.T) {
 	err = abi.Unpack(&ev, "received", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), ev)
 	}
 
 	type ReceivedAddrEvent struct {
@@ -702,8 +700,6 @@ func TestUnpackEvent(t *testing.T) {
 	err = abi.Unpack(&receivedAddrEv, "receivedAddr", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), receivedAddrEv)
 	}
 }
 
