@@ -62,13 +62,13 @@ func TestDefaultGenesisBlock(t *testing.T) {
 
 func TestDefaultTestnetGenesisBlock(t *testing.T) {
 	block, _ := DefaultGenesisBlock().ToBlock()
-	if block.Hash() != params.MainnetGenesisHash {
-		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
+	if block.Hash() != MainnetGenesisHashMock {
+		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), MainnetGenesisHashMock)
 	}
 
 	block, _ = DefaultTestnetGenesisBlock().ToBlock()
-	if block.Hash() != params.TestnetGenesisHash {
-		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	if block.Hash() != TestnetGenesisHashMock {
+		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), TestnetGenesisHashMock)
 	}
 }
 
