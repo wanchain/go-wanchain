@@ -298,8 +298,16 @@ func doTest(cmdline []string) {
 	}
 	packages = build.ExpandPackagesNoVendor(packages)
 
+	var vetArgs []string
+	vetArgs = append(vetArgs,"--composites=false")
+	vetArgs = append(vetArgs,"--unreachable=false")
+	vetArgs = append(vetArgs,"--rangeloops=false")
+	
+	vetArgs = append(vetArgs,packages...)
+
 	// Run analysis tools before the tests.
-	build.MustRun(goTool("vet", packages...))
+	//build.MustRun(goTool("vet", packages...))
+	build.MustRun(goTool("vet", vetArgs...))
 
 	// Run the actual tests.
 	gotest := goTool("test", buildFlags(env)...)

@@ -1,152 +1,117 @@
 package rbselection
 
-
 import (
-	Rand "crypto/rand"
-	"math/big"
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/log"
+	"math/big"
 )
 
 // Generate a random polynomial, its constant item is nominated
-func RandPoly(degree int, constant big.Int) Polynomial {
+func RandPoly(degree int, constant big.Int) (Polynomial, error) {
 	if degree < 0 {
-		return nil
+		err := errors.New("invalid poly degree")
+		log.SyslogErr("get rand poly fail", "err", err.Error())
+		return nil, err
 	}
 
 	poly := make(Polynomial, degree+1)
 	poly[0].Mod(&constant, bn256.Order)
 	for i := 1; i < degree+1; i++ {
-		temp, _ := Rand.Int(Rand.Reader, bn256.Order)
-		
+		temp, err := rand.Int(rand.Reader, bn256.Order)
+		if err != nil {
+			log.SyslogErr("get rand poly fail", "err", err.Error())
+			return nil, err
+		}
+
 		// in case of polynomial degenerating
 		poly[i] = *temp.Add(temp, bigOne)
 	}
 
-	return poly
+	return poly, nil
 }
-
 
 // Calculate polynomial's evaluation at some point
 func EvaluatePoly(f Polynomial, x *big.Int, degree int) (big.Int, error) {
-	if len(f) < 1 || degree != len(f) - 1 {
-		return *new(big.Int), errors.New("invalid polynomial len")
+	if len(f) < 1 || degree != len(f)-1 {
+		err := errors.New("invalid polynomial len")
+		log.SyslogErr("evaluate poly fail", "err", err.Error())
+		return *new(big.Int), err
 	}
 
 	sum := big.NewInt(0)
-
 	for i := 0; i < degree+1; i++ {
-
 		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), bn256.Order)
-
 		temp1.Mod(temp1, bn256.Order)
-
 		temp2 := new(big.Int).Mul(&f[i], temp1)
-
 		temp2.Mod(temp2, bn256.Order)
-
 		sum.Add(sum, temp2)
-
 		sum.Mod(sum, bn256.Order)
 	}
 
 	return *sum, nil
 }
 
-
-
 // Calculate the b coefficient in Lagrange's polynomial interpolation algorithm
-
 func evaluateB(x []big.Int, degree int) []big.Int {
-
-	//k := len(x)
-
 	k := degree + 1
-
 	b := make([]big.Int, k)
-
 	for i := 0; i < k; i++ {
 		b[i] = evaluateb(x, i, degree)
 	}
+
 	return b
 }
 
-
-
 // sub-function for evaluateB
-
 func evaluateb(x []big.Int, i int, degree int) big.Int {
-
-	//k := len(x)
-
 	k := degree + 1
-
 	sum := big.NewInt(1)
-
 	for j := 0; j < k; j++ {
-
 		if j != i {
-
 			temp1 := new(big.Int).Sub(&x[j], &x[i])
-
 			temp1.ModInverse(temp1, bn256.Order)
-
 			temp2 := new(big.Int).Mul(&x[j], temp1)
-
 			sum.Mul(sum, temp2)
-
 			sum.Mod(sum, bn256.Order)
-
-		} else {
-			continue
 		}
 	}
+
 	return *sum
 }
 
-
-
 // Lagrange's polynomial interpolation algorithm
 func Lagrange(f []big.Int, x []big.Int, degree int) big.Int {
-
 	b := evaluateB(x, degree)
-
 	s := big.NewInt(0)
-
 	for i := 0; i < degree+1; i++ {
-
 		temp1 := new(big.Int).Mul(&f[i], &b[i])
-
 		s.Add(s, temp1)
-
 		s.Mod(s, bn256.Order)
 	}
+
 	return *s
 }
 
 // Lagrange's polynomial interpolation algorithm: group signature share --> group signature
 func LagrangeSig(sig []bn256.G1, x []big.Int, degree int) bn256.G1 {
-
 	b := evaluateB(x, degree)
-
 	sum := new(bn256.G1).ScalarBaseMult(big.NewInt(int64(0)))
-
 	for i := 0; i < degree+1; i++ {
 		temp := new(bn256.G1).ScalarMult(&sig[i], &b[i])
 		sum.Add(sum, temp)
 	}
+
 	return *sum
 }
 
 // Lagrange's polynomial interpolation algorithm: group public key share --> group public key
 func LagrangePub(cmt []bn256.G2, x []big.Int, degree int) bn256.G2 {
-
 	b := evaluateB(x, degree)
-
 	sum := new(bn256.G2).ScalarBaseMult(big.NewInt(int64(0)))
-
 	for i := 0; i < degree+1; i++ {
 		temp := new(bn256.G2).ScalarMult(&cmt[i], &b[i])
 		sum.Add(sum, temp)
@@ -156,12 +121,18 @@ func LagrangePub(cmt []bn256.G2, x []big.Int, degree int) bn256.G2 {
 }
 
 // Generate a DLEQ proof, i.e. exit sk, s.t x = sk*G1 and y = sk*G2
-func DLEQ(gbase bn256.G1, hbase bn256.G2, sk *big.Int) DLEQproof {
+func DLEQ(gbase bn256.G1, hbase bn256.G2, sk *big.Int) (DLEQproof, error) {
 	if sk == nil {
-		return DLEQproof{nil, nil, nil}
+		err := errors.New("invalid DLEQ input param")
+		log.SyslogErr("generate DKEQ proof fail", "err", err.Error())
+		return DLEQproof{nil, nil, nil}, err
 	}
 
-	w, _ := Rand.Int(Rand.Reader, bn256.Order)
+	w, err := rand.Int(rand.Reader, bn256.Order)
+	if err != nil {
+		log.SyslogErr("generate DKEQ proof fail", "err", err.Error())
+		return DLEQproof{nil, nil, nil}, err
+	}
 
 	var a1 bn256.G1
 	var a2 bn256.G2
@@ -179,7 +150,7 @@ func DLEQ(gbase bn256.G1, hbase bn256.G2, sk *big.Int) DLEQproof {
 	var temp big.Int
 	temp.SetBytes(crypto.Keccak256(ret)) //e=Hash(a1||a2)
 	e := temp.Mod(&temp, bn256.Order)
-	
+
 	var z big.Int
 	z.Mul(sk, e)
 	z.Sub(w, &z)
@@ -188,13 +159,13 @@ func DLEQ(gbase bn256.G1, hbase bn256.G2, sk *big.Int) DLEQproof {
 	var proof DLEQproof
 	proof.a1 = &a1
 	proof.a2 = &a2
-	proof.z= &z
+	proof.z = &z
 
-	return proof
+	return proof, nil
 }
 
 // to verify DLEQ proof
-func VerifyDLEQ (proof DLEQproof, gbase bn256.G1, hbase bn256.G2, x bn256.G1, y bn256.G2) bool {
+func VerifyDLEQ(proof DLEQproof, gbase bn256.G1, hbase bn256.G2, x bn256.G1, y bn256.G2) bool {
 	if proof.a1 == nil || proof.a2 == nil || proof.z == nil {
 		return false
 	}
@@ -235,40 +206,29 @@ func VerifyDLEQ (proof DLEQproof, gbase bn256.G1, hbase bn256.G2, x bn256.G1, y 
 }
 
 // The comparison function of G1
-func CompareG1 (a bn256.G1, b bn256.G1) bool {
+func CompareG1(a bn256.G1, b bn256.G1) bool {
 	return a.String() == b.String()
 }
 
 // The comparison function of G2
-func CompareG2 (a bn256.G2, b bn256.G2) bool {
+func CompareG2(a bn256.G2, b bn256.G2) bool {
 	return a.String() == b.String()
 }
 
 // Subfunction for rscoffGenerate to compute vi: vi = (1-i)^-1 * (2-i)^-1 * ... * (Nr-i)^-1
 func rscoffGeneratei(x []big.Int, i int) big.Int {
-
 	k := len(x)
-
 	sum := big.NewInt(1)
-
 	for j := 0; j < k; j++ {
-
 		if j != i {
-
 			temp1 := new(big.Int).Sub(&x[i], &x[j])
-
 			temp1.Mod(temp1, bn256.Order)
-
 			temp1.ModInverse(temp1, bn256.Order)
-
 			sum.Mul(sum, temp1)
-
 			sum.Mod(sum, bn256.Order)
-
-		} else {
-			continue
 		}
 	}
+
 	return *sum
 }
 
@@ -280,7 +240,6 @@ func rscoffGenerate(x []big.Int) []big.Int {
 	}
 
 	b := make([]big.Int, k)
-
 	for i := 0; i < k; i++ {
 		b[i] = rscoffGeneratei(x, i)
 	}
@@ -288,16 +247,16 @@ func rscoffGenerate(x []big.Int) []big.Int {
 	return b
 }
 
-// Genetate RScode 
+// Genetate RScode
 func rscodeGenerate(x []big.Int, degree int) []big.Int {
 	if len(x) < 2 || degree < 1 {
 		return nil
 	}
 
 	k := len(x)
-	constant, _ := Rand.Int(Rand.Reader, bn256.Order)
-	poly := RandPoly(degree, *constant)
-	if poly == nil {
+	constant, _ := rand.Int(rand.Reader, bn256.Order)
+	poly, err := RandPoly(degree, *constant)
+	if err != nil {
 		return nil
 	}
 
@@ -318,7 +277,7 @@ func rscodeGenerate(x []big.Int, degree int) []big.Int {
 
 // RScode Verification function
 func RScodeVerify(P []bn256.G2, x []big.Int, deg int) bool {
-	if P == nil || x == nil || len(P) != len(x) || len(P) <= deg + 2 {
+	if P == nil || x == nil || len(P) != len(x) || len(P) <= deg+2 {
 		return false
 	}
 
@@ -330,11 +289,10 @@ func RScodeVerify(P []bn256.G2, x []big.Int, deg int) bool {
 	}
 
 	sum := new(bn256.G2).ScalarBaseMult(big.NewInt(int64(0)))
-
 	for i := 0; i < k; i++ {
 		temp := new(bn256.G2).ScalarMult(&P[i], &C[i])
 		sum.Add(sum, temp)
 	}
-	
+
 	return sum.IsInfinity()
 }

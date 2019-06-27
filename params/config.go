@@ -25,12 +25,16 @@ import (
 )
 
 var (
-	MainnetGenesisHash = common.HexToHash("0x0376899c001618fc7d5ab4f31cfd7f57ca3a896ccc1581a57d8f129ecf40b840") // Mainnet genesis hash to enforce below configs on
+	MainnetGenesisHash = common.HexToHash("0x54bc7ab58a435b2dedf20b3ea07d33746576f4af1d043ff0e2a8e1f95d754798") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0xa37b811609a9d1e898fb49b3901728023e5e72e18e58643d9a7a82db483bfeb0") // Testnet genesis hash to enforce below configs on
 	PlutoGenesisHash   = common.HexToHash("0x4ff7e18e5842c540f49d827e67894c39783ef1e0494ea52f569db0bcf63786e6") // Pluto genesis hash to enforce below configs on
 
 	InternalGenesisHash = common.HexToHash("0xb1dc31a86510003c23b9ddee0e194775807262529b8dafa6dc23d9315364d2b3")
 )
+
+const MainnetPow2PosUpgradeBlockNumber = 4000000
+const TestnetPow2PosUpgradeBlockNumber = 3560000
+const InternalPow2PosUpgradeBlockNumber = 200
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
@@ -48,6 +52,12 @@ var (
 		//ByzantiumBlock: big.NewInt(4370000),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
+		PosFirstBlock:  big.NewInt(MainnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	WanchainChainConfig = &ChainConfig{
@@ -61,6 +71,12 @@ var (
 		//EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
+		PosFirstBlock:  big.NewInt(MainnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,                                        // when pos running, the state changed to true by program
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
@@ -75,7 +91,13 @@ var (
 		//EIP158Block:    big.NewInt(10),
 		ByzantiumBlock: big.NewInt(0),
 
-		Ethash: new(EthashConfig),
+		Ethash:        new(EthashConfig),
+		PosFirstBlock: big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:   false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
@@ -90,7 +112,13 @@ var (
 		//EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(0),
 
-		Ethash: new(EthashConfig),
+		Ethash:        new(EthashConfig),
+		PosFirstBlock: big.NewInt(InternalPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:   false,
+		Pluto: &PlutoConfig{
+			Period: 10,
+			Epoch:  100,
+		},
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
@@ -103,6 +131,8 @@ var (
 		//EIP155Block:    big.NewInt(3),
 		//EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(0),
+		PosFirstBlock:  big.NewInt(1),
+		IsPosActive:    true,
 
 		Pluto: &PlutoConfig{
 			Period: 10,
@@ -118,12 +148,14 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337) /* big.NewInt(0),*/ /*nil, false,*/ /* big.NewInt(0), common.Hash{},*/ /*big.NewInt(0),*/ /*big.NewInt(0),*/, big.NewInt(0), new(EthashConfig), nil, nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(100), false, new(EthashConfig), nil, nil}
 
 	TestChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(1),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
+		PosFirstBlock:  big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+		IsPosActive:    false,
 	}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
@@ -150,6 +182,8 @@ type ChainConfig struct {
 	//EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
 	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	PosFirstBlock  *big.Int `json:"posFirstBlock,omitempty"`
+	IsPosActive    bool     `json:"isPosActive,omitempty"`
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -391,4 +425,23 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	//return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: /*c.IsHomestead(num)*/false, IsEIP150: false/*c.IsEIP150(num)*/, IsEIP155: false/*c.IsEIP155(num)*/, IsEIP158:false/* c.IsEIP158(num)*/, IsByzantium: c.IsByzantium(num)}
 
 	return Rules{ChainId: new(big.Int).Set(chainId)}
+}
+
+func (c *ChainConfig) SetPosActive() {
+	c.IsPosActive = true
+	SetPosActive(c.IsPosActive)
+}
+
+func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
+	return n.Cmp(c.PosFirstBlock) >= 0
+}
+
+var isPosActive = false
+
+func IsPosActive() bool {
+	return isPosActive
+}
+
+func SetPosActive(active bool) {
+	isPosActive = active
 }

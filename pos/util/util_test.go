@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -32,4 +33,19 @@ func TestPkCompress(t *testing.T) {
 	if hex.EncodeToString(crypto.FromECDSAPub(pk)) != hex.EncodeToString(crypto.FromECDSAPub(pkUncompress)) {
 		t.Fail()
 	}
+}
+
+func TestGetEpochIDFromDifficulty(t *testing.T) {
+	GetEpochSlotIDFromDifficulty(nil)
+
+	ep, sl := GetEpochSlotIDFromDifficulty(big.NewInt(3<<32 | 4<<8 | 1))
+	if ep != 3 || sl != 4 {
+		t.FailNow()
+	}
+}
+
+func TestFromWin(t *testing.T) {
+	a, _ := big.NewInt(0).SetString("83713850837138508370", 10)
+	f := FromWin(a)
+	fmt.Println(f)
 }

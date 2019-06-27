@@ -173,7 +173,8 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 			genesis = DefaultGenesisBlock()
 		} else if genesis.Config.ChainId.Cmp(big.NewInt(3)) == 0 {
 			log.Info("Writing default  test net genesis block")
-			genesis = DefaultTestnetGenesisBlock()
+			// TODO is this used???
+			//genesis = DefaultTestnetGenesisBlock()
 		} else {
 			log.Info("Writing custom genesis block")
 		}
@@ -254,6 +255,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				panic("Invalid genesis.")
 			}
 			secAddr := crypto.PubkeyToAddress(*pub)
+			weight := vm.CalLocktimeWeight(vm.PSMinEpochNum)
 			staker := &vm.StakerInfo{
 				PubSec256:    account.Staking.S256pk,
 				PubBn256:     account.Staking.Bn256pk,
@@ -262,9 +264,10 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				Address:      secAddr,
 				LockEpochs:   0, // never expired
 				StakingEpoch: uint64(0),
-				FeeRate:      uint64(100),
+				FeeRate:      uint64(10000),
 			}
-
+			staker.StakeAmount = big.NewInt(0)
+			staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
 			infoArray, err := rlp.EncodeToBytes(staker)
 			if err != nil {
 				panic(err)
@@ -400,9 +403,9 @@ func DefaultInternalGenesisBlock() *Genesis {
 		Config:     params.InternalChainConfig,
 		Nonce:      20,
 		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
-		GasLimit:   0x2fefd8,
+		GasLimit:   0x5F5E100, // 100000000
 		Difficulty: big.NewInt(1),
-		Alloc:      jsonPrealloc(wanchainTestAllocJson),
+		Alloc:      jsonPrealloc(wanchainInternalAllocJson),
 	}
 }
 
@@ -410,13 +413,23 @@ func DefaultInternalGenesisBlock() *Genesis {
 
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:    params.PlutoChainConfig,
-		Timestamp: 0x59f83144,
-		ExtraData: hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
-		//GasLimit:   0x47b760,	// 4700000
-		GasLimit:   0x4B1A1300, //0x7829b80,
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x0,
+		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
+		GasLimit:   0x47b760, // 4700000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
+	}
+}
+
+func PlutoDevGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x0,
+		ExtraData:  hexutil.MustDecode("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"),
+		GasLimit:   0x47b760, // 4700000
+		Difficulty: big.NewInt(1),
+		Alloc:      jsonPrealloc(PlutoDevAllocJson),
 	}
 }
 

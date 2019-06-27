@@ -8,13 +8,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/wanchain/go-wanchain/common"
+
 	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
 )
 
 //Db is the wanpos leveldb class
@@ -248,16 +249,17 @@ type Proposer struct {
 	Probabilities *big.Int
 }
 
-func GetRBProposerGroup(epochId uint64) []bn256.G1 {
+func GetRBProposerGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.RbLocalDB)
 	if db == nil {
-		log.Error("GetRBProposerGroup create db error")
+		// todo : os.Exit ??
+		log.SyslogErr("GetRBProposerGroup create db error")
 		return nil
 	}
 
 	proposersArray := db.GetStorageByteArray(epochId)
 	length := len(proposersArray)
-	g1s := make([]bn256.G1, length, length)
+	g1s := make([][]byte, length, length)
 
 	for i := 0; i < length; i++ {
 		proposer := Proposer{}
@@ -265,17 +267,31 @@ func GetRBProposerGroup(epochId uint64) []bn256.G1 {
 		if err != nil {
 			log.Error("can't rlp decode:", err)
 		}
-		g1s[i] = *new(bn256.G1)
-		g1s[i].Unmarshal(proposer.PubBn256)
+		g1s[i] = proposer.PubBn256
 	}
 
 	return g1s
 
 }
+
+func GetStakerInfoBytes(epochId uint64, addr common.Address) []byte {
+	db := NewDb(posconfig.StakerLocalDB)
+	if db == nil {
+		log.SyslogErr("GetStakerInfo create db error")
+		return nil
+	}
+	stakerBytes, err := db.GetWithIndex(epochId, 0, common.ToHex(addr[:]))
+	if err != nil {
+		return nil
+	}
+
+	return stakerBytes
+}
+
 func GetEpochLeaderGroup(epochId uint64) [][]byte {
 	db := NewDb(posconfig.EpLocalDB)
 	if db == nil {
-		log.Error("GetEpochLeaderGroup create db error")
+		log.SyslogErr("GetEpochLeaderGroup create db error")
 		return nil
 	}
 

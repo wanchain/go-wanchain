@@ -4,29 +4,25 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
-	"math"
 	"math/big"
 	"sort"
+
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/rlp"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 var (
-	safeK = uint64(1)
-	Nr    = posconfig.RandomProperCount //num of random proposers
-	Ne    = posconfig.EpochLeaderCount  //num of epoch leaders, limited <= 256 now
-
-	Big1                                   = big.NewInt(1)
 	Big0                                   = big.NewInt(0)
 	ErrInvalidRandomProposerSelection      = errors.New("Invalid Random Proposer Selection")                  //Invalid Random Proposer Selection
 	ErrInvalidEpochProposerSelection       = errors.New("Invalid Epoch Proposer Selection")                   //Invalid Random Proposer Selection
@@ -42,17 +38,12 @@ var (
 )
 
 type Epocher struct {
-	rbLeadersDb     *posdb.Db
-	epochLeadersDb  *posdb.Db
-	blkChain        *core.BlockChain
+	rbLeadersDb    *posdb.Db
+	epochLeadersDb *posdb.Db
+	blkChain       *core.BlockChain
 }
 
 var epocherInst *Epocher = nil
-
-type puksInfo struct {
-	PubSec256 []byte //staker’s ethereum public key
-	PubBn256  []byte //staker’s bn256 public key
-}
 
 func NewEpocher(blc *core.BlockChain) *Epocher {
 
@@ -75,7 +66,7 @@ func NewEpocherWithLBN(blc *core.BlockChain, rbn string, epdbn string) *Epocher 
 
 	rbdb := posdb.NewDb(rbn)
 	epdb := posdb.NewDb(epdbn)
-	inst := &Epocher{rbdb,  epdb, blc}
+	inst := &Epocher{rbdb, epdb, blc}
 
 	util.SetEpocherInst(inst)
 	return inst
@@ -86,28 +77,42 @@ func (e *Epocher) GetBlkChain() *core.BlockChain {
 }
 
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
-	// TODO how to get thee target blockNumber
 	if epochId < 2 {
 		return uint64(0)
 	}
-	targetEpochId := epochId - 2
-	targetBlkNum := util.GetEpochBlock(targetEpochId)
-	if targetBlkNum == 0 {
-		curNum := e.blkChain.CurrentBlock().NumberU64()
-		for {
-			curBlock := e.blkChain.GetBlockByNumber(curNum)
-			curEpochId := curBlock.Header().Difficulty.Uint64() >> 32
-			if curEpochId <= targetEpochId {
-				break
-			}
-			curNum--
-		}
-		targetBlkNum = curNum
-		util.SetEpochBlock(targetEpochId, targetBlkNum)
-	}
-	return targetBlkNum
 
+	targetEpochId := epochId - 2
+
+	//return e.GetEpochLastBlkNumber(targetEpochId)
+	return util.GetEpochBlock(targetEpochId)
 }
+
+/*
+NOTE: if the targetEpochId is future, will return current blockNumber.
+*/
+func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
+
+	var curBlock *types.Block
+
+	curNum := e.blkChain.CurrentBlock().NumberU64()
+	for {
+		curBlock = e.blkChain.GetBlockByNumber(curNum)
+		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		if curEpochId <= targetEpochId {
+			break
+		}
+		curNum--
+	}
+
+	targetBlkNum := curNum
+	epochid, _ := util.GetEpochSlotID()
+	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
+		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
+	}
+
+	return targetBlkNum
+}
+
 func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
@@ -122,36 +127,73 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 		epochIdIn--
 	}
 	rb := vm.GetR(stateDb, epochIdIn)
-
 	if rb == nil {
 		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
-		rb = big.NewInt(1)
+		rb = new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 
 	r := rb.Bytes()
-
-	err = e.selectLeaders(r, Ne, Nr, stateDb, epochId)
+	err = e.selectLeaders(r, stateDb, epochId)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-func (e *Epocher) selectLeaders(r []byte, ne int, nr int, statedb *state.StateDB, epochId uint64) error {
 
-	log.Debug("select randoms", epochId, common.ToHex(r))
+func (e *Epocher) reportSelectELFailed(epochId uint64) {
+	failedTimes := 1
+	if epochId > 0 {
+		if !e.IsGenerateELSuc(epochId - 1) {
+			failedTimes = 2
+		}
+	}
+
+	// print the failed log
+	if failedTimes == 1 {
+		log.SyslogCrit("select EL failed", "epochid", epochId)
+	} else if failedTimes == 2 {
+		log.SyslogAlert("select EL failed in two consecutive epoch", "epochid", epochId)
+	}
+}
+
+func (e *Epocher) reportSelectRBPFailed(epochId uint64) {
+	failedTimes := 1
+	if epochId > 0 {
+		if !e.IsGenerateRBPSuc(epochId - 1) {
+			failedTimes = 2
+		}
+	}
+
+	// print the failed log
+	if failedTimes == 1 {
+		log.SyslogCrit("select RNP failed", "epochid", epochId)
+	} else if failedTimes == 2 {
+		log.SyslogAlert("select RNP failed in two consecutive epoch", "epochid", epochId)
+	}
+}
+
+func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64) error {
+	log.Debug("select randoms", "epochId", epochId, "r", common.ToHex(r))
 
 	pa, err := e.createStakerProbabilityArray(statedb, epochId)
 	if pa == nil || err != nil {
+		e.reportSelectELFailed(epochId)
+		e.reportSelectRBPFailed(epochId)
 		return err
 	}
 
-	e.epochLeaderSelection(r, ne, pa, epochId)
+	err = e.epochLeaderSelection(r, pa, epochId)
+	if err != nil {
+		e.reportSelectELFailed(epochId)
+	}
 
-	e.randomProposerSelection(r, nr, pa, epochId)
+	err = e.randomProposerSelection(r, pa, epochId)
+	if err != nil {
+		e.reportSelectRBPFailed(epochId)
+	}
 
 	return nil
-
 }
 
 type Proposer struct {
@@ -181,69 +223,21 @@ func (s ProposerSorter) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func Round(f float64, n int) float64 {
-	n10 := math.Pow10(n)
-	return math.Trunc((f+0.5/n10)*n10) / n10
-}
-
-const Accuracy float64 = 1024.0 //accuracy to magnificate
-/*
-A stakeHolder register in epoch startEpochId,
-it will be included in epochLeader/RbGroup selection at Epoch startEpochId+1
-if selected, it could send pos tx at Epoch startEpochId +2
-if selected as slot Leader, it could seal block at Epoch startEpochId +3
-A stakeHolder register N epoch, means it could receive max to N time incentive, and send max to N-1 pos tx, and seal blocks in max to N-1 epochs
-Probability = Amount * (10 + lockEpoch/(maxEpoch/10)) * (2-exp(t-1))
-*/
-func (e *Epocher) CalProbability(epochId uint64, amountWin *big.Int, lockTime uint64, startEpochId uint64) *big.Int {
-	amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
+func (e *Epocher) CalProbability(amountWin *big.Int, lockTime uint64) *big.Int {
+	//amount := big.NewInt(0).Div(amountWin, big.NewInt(params.Wan))
 	pb := big.NewInt(0)
-	var leftTimePercent float64
-	if lockTime == 0  {
-		leftTimePercent = 1
-
-	} else if epochId <= startEpochId+1 || epochId >= startEpochId+2+(lockTime-1) {
-		// A stakeholder register at Epoch startEpochId,  luckiest he could send pos tx at startEpochId+2 ~ startEpochId+1+(lockTime-1), total lockTime-1 epochs
-		leftTimePercent = 0
-		return pb
-	} else {
-		leftTimePercent = (float64(startEpochId+2 +(lockTime-1)-epochId) / float64(lockTime-1))
-	}
-	fpercent := 2 - Round(math.Exp(leftTimePercent-1), 4)
-
-	epercent := big.NewInt(int64(fpercent * Accuracy))
 
 	lockWeight := vm.CalLocktimeWeight(lockTime)
 	timeBig := big.NewInt(int64(lockWeight))
 
-	pb.Mul(amount, epercent)
-	pb.Mul(pb, timeBig)
+	pb.Mul(amountWin, timeBig)
 
 	log.Debug("CalProbability ", "pb: ", pb)
 
 	return pb
 }
 
-//wanhumber*locktime*(exp-(t) ),t=(locktime - passedtime/locktime)
-func (e *Epocher) GenerateProblility(pstaker *vm.StakerInfo, epochId uint64) (*Proposer, error) {
-
-	pb := e.CalProbability(epochId, pstaker.Amount, pstaker.LockEpochs, pstaker.StakingEpoch)
-	for i := 0; i < len(pstaker.Clients); i++ {
-		lockEpoch := pstaker.LockEpochs - (pstaker.Clients[i].StakingEpoch - pstaker.StakingEpoch)
-		pb.Add(pb, e.CalProbability(epochId, pstaker.Clients[i].Amount, lockEpoch, pstaker.Clients[i].StakingEpoch))
-	}
-	p := &Proposer{
-		PubSec256:     pstaker.PubSec256,
-		PubBn256:      pstaker.PubBn256,
-		Probabilities: pb,
-	}
-
-	return p, nil
-
-}
-
-func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId uint64) (ProposerSorter, error) {
-
+func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochID uint64) (ProposerSorter, error) {
 	if statedb == nil {
 		return nil, vm.ErrUnknown
 	}
@@ -251,34 +245,25 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 	listAddr := vm.StakersInfoAddr
 	ps := newProposerSorter()
 
-	//blkTime := epochId*(posconfig.SlotTime*posconfig.SlotCount) + posconfig.EpochBaseTime
-
 	statedb.ForEachStorageByteArray(listAddr, func(key common.Hash, value []byte) bool {
-
 		staker := vm.StakerInfo{}
-		// TODO RLP?
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
 			log.Error(err.Error())
 			return true
 		}
-
-		if staker.Amount.Cmp(Big0) == 0 {
-			//log.Info("staker ",common.ToHex(staker.PubSec256),"stake out already")
+		_, p, err := CalEpochProbabilityStaker(&staker, epochID)
+		if err != nil || p == nil {
+			// this validator has no enough
 			return true
 		}
-
-		pitem, err := e.GenerateProblility(&staker, epochId)
-		if err != nil {
-			log.Error(err.Error())
-			return true
+		item := Proposer{
+			PubSec256:     staker.PubSec256,
+			PubBn256:      staker.PubBn256,
+			Probabilities: p,
 		}
-
-		if  pitem.Probabilities.Cmp(Big0) > 0 {
-			ps = append(ps, *pitem)
-			log.Debug(common.ToHex((*pitem).Probabilities.Bytes()))
-		}
-
+		ps = append(ps, item)
+		log.Debug(common.ToHex(item.Probabilities.Bytes()))
 		return true
 	})
 
@@ -292,14 +277,14 @@ func (e *Epocher) createStakerProbabilityArray(statedb *state.StateDB, epochId u
 		ps[idx].Probabilities = big.NewInt(0).Add(ps[idx].Probabilities, ps[idx-1].Probabilities)
 	}
 
-	log.Debug("get createStakerProbabilityArray len=", len(ps))
+	log.Debug("get createStakerProbabilityArray", "len", len(ps))
 
 	return ps, nil
 }
 
-//samples nr random proposers by random number r（Random Beacon) from PublicKeys based on proportion of Probabilities
-func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epochId uint64) error {
-	if r == nil || nr <= 0 || len(ps) == 0 {
+//select epoch leader from PublicKeys based on proportion of Probabilities
+func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint64) error {
+	if r == nil || len(ps) == 0 {
 		return ErrInvalidRandomProposerSelection
 	}
 
@@ -315,7 +300,12 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
 	log.Debug("epochLeaderSelection selecting")
-	for i := 0; i < nr; i++ {
+	selectionCount := posconfig.EpochLeaderCount
+	info, err := e.GetWhiteInfo(epochId)
+	if err == nil {
+		selectionCount = posconfig.EpochLeaderCount - int(info.WlCount.Uint64())
+	}
+	for i := 0; i < selectionCount; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
@@ -338,10 +328,42 @@ func (e *Epocher) epochLeaderSelection(r []byte, nr int, ps ProposerSorter, epoc
 	return nil
 }
 
+func (e *Epocher) GetWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
+	targetBlkNum := e.GetTargetBlkNumber(epochId)
+	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	if block == nil {
+		return nil, errors.New("Unkown block")
+	}
+	stateDb, err := e.GetBlkChain().StateAt(block.Root())
+	if err != nil {
+		return nil, err
+	}
+	info := vm.GetEpochWLInfo(stateDb, epochId)
+	return info, nil
+
+}
+
+func (e *Epocher) GetWhiteByEpochId(epochId uint64) ([]string, error) {
+	info, err := e.GetWhiteInfo(epochId)
+	if err != nil {
+		return nil, err
+	}
+	return posconfig.WhiteList[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+}
+
+func (e *Epocher) GetWhiteArrayByEpochId(epochId uint64) ([][]byte, error) {
+	info, err := e.GetWhiteInfo(epochId)
+	if err != nil {
+		return nil, err
+	}
+	return posconfig.EpochLeadersHold[info.WlIndex.Uint64() : info.WlIndex.Uint64()+info.WlCount.Uint64()], nil
+
+}
+
 //*bn256.G1
 //samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, epochId uint64) error {
-	if r == nil || nr <= 0 || len(ps) == 0 {
+func (e *Epocher) randomProposerSelection(r []byte, ps ProposerSorter, epochId uint64) error {
+	if r == nil || len(ps) == 0 {
 		return ErrInvalidEpochProposerSelection
 	}
 
@@ -356,7 +378,7 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	cr := crypto.Keccak256(r1) //cr = hash(r1)
 
 	log.Info("random proposer selecting...\n")
-	for i := 0; i < nr; i++ {
+	for i := 0; i < posconfig.RandomProperCount; i++ {
 
 		crBig := new(big.Int).SetBytes(cr)
 		crBig = crBig.Mod(crBig, tp) //cr_big = cr mod tp
@@ -378,17 +400,56 @@ func (e *Epocher) randomProposerSelection(r []byte, nr int, ps ProposerSorter, e
 	return nil
 }
 
+func (e *Epocher) IsGenerateELSuc(epochID uint64) bool {
+	epArray := posdb.GetEpochLeaderGroup(epochID)
+	return len(epArray) != 0
+}
+
+func (e *Epocher) IsGenerateRBPSuc(epochID uint64) bool {
+	rbArray := posdb.GetRBProposerGroup(epochID)
+	return len(rbArray) != 0
+}
+
 //get epochLeaders of epochID in localdb
 func (e *Epocher) GetEpochLeaders(epochID uint64) [][]byte {
 
 	// TODO: how to cache these
-	ksarray := posdb.GetEpochLeaderGroup(epochID)
+	epArray := posdb.GetEpochLeaderGroup(epochID)
+	wa, err := e.GetWhiteArrayByEpochId(epochID)
+	if err == nil {
+		if len(epArray) == posconfig.EpochLeaderCount-len(wa) {
+			epArray = append(epArray, wa...)
+		}
+	}
+	return epArray
 
-	return ksarray
+}
+func (e *Epocher) GetRBProposer(epochID uint64) [][]byte {
+	// TODO: how to cache these
+	rbArray := posdb.GetRBProposerGroup(epochID)
+	return rbArray
+
+}
+func (e *Epocher) GetRBProposerG1(epochID uint64) []bn256.G1 {
+
+	rbArray := e.GetRBProposer(epochID)
+	length := len(rbArray)
+
+	g1s := make([]bn256.G1, length, length)
+
+	for i := 0; i < length; i++ {
+		g1s[i] = *new(bn256.G1)
+		_, err := g1s[i].Unmarshal(rbArray[i])
+		if err != nil {
+			log.Error("G1 unmarshal failed: ", "err", err)
+		}
+	}
+
+	return g1s
 
 }
 
-//get rbLeaders of epochID in localdb only for incentive.
+//get rbLeaders of epochID in localdb only for incentive. for incentive.
 func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 	proposersArray := e.rbLeadersDb.GetStorageByteArray(epochID)
 	length := len(proposersArray)
@@ -398,8 +459,9 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		proposer := Proposer{}
 		err := rlp.DecodeBytes(proposersArray[i], &proposer)
 		if err != nil {
-			log.Error("can't rlp decode:", err)
+			log.Error("can't rlp decode:", "err", err)
 		}
+		g1s[i].Type = 1
 		g1s[i].PubSec256 = proposer.PubSec256
 		g1s[i].PubBn256 = proposer.PubBn256
 		pub := crypto.ToECDSAPub(proposer.PubSec256)
@@ -408,12 +470,58 @@ func (e *Epocher) GetRBProposerGroup(epochID uint64) []vm.Leader {
 		}
 
 		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
-		//g1s[i].Probabilities = proposer.Probabilities
 	}
 
 	return g1s
 }
 
+func (e *Epocher) GetEpLeaderGroup(epochID uint64) []vm.Leader {
+	epLeaderArray := e.epochLeadersDb.GetStorageByteArray(epochID)
+	length := len(epLeaderArray)
+	if length == 0 {
+		return make([]vm.Leader, 0)
+	}
+	g1s := make([]vm.Leader, posconfig.EpochLeaderCount)
+
+	for i := 0; i < length; i++ {
+		proposer := Proposer{}
+		err := rlp.DecodeBytes(epLeaderArray[i], &proposer)
+		if err != nil {
+			log.Error("can't rlp decode:", "err", err)
+		}
+		g1s[i].Type = 0
+		g1s[i].PubSec256 = proposer.PubSec256
+		g1s[i].PubBn256 = proposer.PubBn256
+		pub := crypto.ToECDSAPub(proposer.PubSec256)
+		if nil == pub {
+			continue
+		}
+
+		g1s[i].SecAddr = crypto.PubkeyToAddress(*pub)
+	}
+	wa, err := e.GetWhiteArrayByEpochId(epochID)
+	if err == nil && length < posconfig.EpochLeaderCount {
+		for i := 0; i < posconfig.EpochLeaderCount-length; i++ {
+			g1s[i+length].Type = 0
+			g1s[i+length].PubSec256 = wa[i]
+			g1s[i+length].PubBn256 = ([]byte)("")
+			pub := crypto.ToECDSAPub(wa[i])
+			if nil == pub {
+				continue
+			}
+			g1s[i+length].SecAddr = crypto.PubkeyToAddress(*pub)
+		}
+	}
+	return g1s
+}
+func (e *Epocher) GetLeaderGroup(epochID uint64) []vm.Leader {
+	eps := e.GetEpLeaderGroup(epochID)
+	rbs := e.GetRBProposerGroup(epochID)
+	leaders := make([]vm.Leader, 0)
+	leaders = append(leaders, eps...)
+	leaders = append(leaders, rbs...)
+	return leaders
+}
 func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	valSet := e.rbLeadersDb.GetStorageByteArray(epochID)
 
@@ -426,7 +534,9 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	proposer := Proposer{}
 	err := rlp.DecodeBytes(psValue, &proposer)
 	if err != nil {
-		log.Error("can't rlp decode:", err)
+		log.Error("can't rlp decode:", "err", err)
+
+		// todo : return ??
 	}
 
 	pub := crypto.ToECDSAPub(proposer.PubSec256)
@@ -444,13 +554,72 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 	}
 }
 
-func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (infors []vm.ClientProbability, feeRate uint64, totalProbability *big.Int, err error) {
+// TODO Is this  right?
+func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
+	if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+		staker.StakingEpoch = posconfig.FirstEpochId + 2
+		for j := 0; j < len(staker.Partners); j++ {
+			staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+		}
+	}
+	// check validator is exiting.
+	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
+		return nil, nil, errors.New("Validator is exiting")
+	}
+
+	// check if the validator's amount(include partner) is not enough, can't delegatein
+	totalAmount := big.NewInt(0).Set(staker.Amount)
+	for i := 0; i < len(staker.Partners); i++ {
+		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
+			totalAmount.Add(totalAmount, staker.Partners[i].Amount)
+		}
+	}
+	if staker.FeeRate != vm.PSNodeleFeeRate && totalAmount.Cmp(vm.MinValidatorStake) < 0 {
+		return nil, nil, errors.New("Validator don't have enough amount.")
+	}
+
+	totalPartnerProbability := big.NewInt(0).Set(staker.StakeAmount)
+	for i := 0; i < len(staker.Partners); i++ {
+		if epochID < staker.Partners[i].StakingEpoch+staker.Partners[i].LockEpochs-1 { // the last epoch only miner, don't send tx.
+			totalPartnerProbability.Add(totalPartnerProbability, staker.Partners[i].StakeAmount)
+		}
+	}
+
+	infors = make([]vm.ClientProbability, 1)
+	infors[0].ValidatorAddr = staker.Address
+	infors[0].WalletAddr = staker.From
+	infors[0].Probability = big.NewInt(0).Set(totalPartnerProbability)
+
+	totalProbability = big.NewInt(0).Set(totalPartnerProbability)
+	for i := 0; i < len(staker.Clients); i++ {
+		if staker.Clients[i].QuitEpoch == 0 ||
+			epochID < staker.Clients[i].QuitEpoch-1 {
+			c := staker.Clients[i]
+			info := vm.ClientProbability{}
+			info.ValidatorAddr = staker.Address
+			info.WalletAddr = c.Address
+			info.Probability = c.StakeAmount
+			totalProbability.Add(totalProbability, info.Probability)
+			infors = append(infors, info)
+		}
+	}
+	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
+	probabilityMax := big.NewInt(0).Set(totalPartnerProbability)
+	probabilityMax.Mul(probabilityMax, big.NewInt(vm.MaxTimeDelegate+1))
+	if totalProbability.Cmp(probabilityMax) > 0 {
+		totalProbability = probabilityMax
+	}
+	return infors, totalProbability, nil
+}
+
+// incentive  use it.
+func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.ValidatorInfo, error) {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
 	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, err
 	}
 
 	addrHash := common.BytesToHash(addr[:])
@@ -459,23 +628,22 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (info
 	staker := vm.StakerInfo{}
 	err = rlp.DecodeBytes(stakerBytes, &staker)
 	if nil != err {
-		return nil, 0, nil, err
+		log.Error("GetEpochProbability DecodeBytes failed", "addr", addr)
+		return nil, err
 	}
-	infors = make([]vm.ClientProbability, 1)
-	infors[0].Addr = addr
-	infors[0].Probability = big.NewInt(0).Set(e.CalProbability(epochId, staker.Amount, staker.LockEpochs, staker.StakingEpoch))
-	totalProbability = big.NewInt(0).Set(infors[0].Probability)
-	for i:=0; i<len(staker.Clients); i++ {
-		c := staker.Clients[i]
-		info := vm.ClientProbability{}
-		info.Addr = c.Address
-		lockEpoch := staker.LockEpochs - (staker.Clients[i].StakingEpoch - staker.StakingEpoch)
-		info.Probability = big.NewInt(0).Set(e.CalProbability(epochId, c.Amount, lockEpoch, c.StakingEpoch))
-		totalProbability = totalProbability.Add(totalProbability, info.Probability)
-		infors = append(infors, info)
+
+	infors, totalProbability, err := CalEpochProbabilityStaker(&staker, epochId)
+	if err != nil {
+		return nil, err
 	}
-	feeRate = staker.FeeRate
-	return infors, feeRate, totalProbability, nil
+	validator := &vm.ValidatorInfo{
+		FeeRate:          staker.FeeRate,
+		ValidatorAddr:    staker.Address,
+		WalletAddr:       staker.From,
+		TotalProbability: totalProbability,
+		Infos:            infors,
+	}
+	return validator, nil
 }
 
 func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentive) (err error) {
@@ -492,16 +660,96 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
 		staker := stakers[i]
-		if staker.LockEpochs==0 || epochID < staker.StakingEpoch+staker.LockEpochs+2 {
+		var changed = false
+		// LockEpochs==0 means NO expire
+		if staker.LockEpochs == 0 {
 			continue
 		}
+		// handle the staker registed in pow phase. only once
+		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+			staker.StakingEpoch = posconfig.FirstEpochId + 2
+			for j := 0; j < len(staker.Partners); j++ {
+				staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+			}
+			changed = true
+		}
+		// check if delegator want to quit.
+		newClients := make([]vm.ClientInfo, 0)
+		clientChanged := false
 		for j := 0; j < len(staker.Clients); j++ {
-			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+			// edit the validator Amount
+			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				clientChanged = true
+			} else {
+				newClients = append(newClients, staker.Clients[j])
+			}
+		}
+		if clientChanged {
+			staker.Clients = newClients
 		}
 
-		core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
+		// check if partner want to quit.
+		newPartners := make([]vm.PartnerInfo, 0)
+		partnerchanged := false
+		for j := 0; j < len(staker.Partners); j++ {
+			// edit the validator Amount
+			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				partnerchanged = true
+			} else {
+				newPartners = append(newPartners, staker.Partners[j])
+			}
+		}
+		if partnerchanged {
+			staker.Partners = newPartners
+		}
 
-		vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+		if epochID >= staker.StakingEpoch+staker.LockEpochs {
+			for j := 0; j < len(staker.Clients); j++ {
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+			}
+			for j := 0; j < len(staker.Partners); j++ {
+				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+			}
+			// quit the validator
+			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+			continue
+		}
+
+		// check the renew
+		if epochID+vm.QuitDelay >= staker.StakingEpoch+staker.LockEpochs {
+			if staker.NextLockEpochs != 0 {
+				staker.LockEpochs = staker.NextLockEpochs
+				//staker.FeeRate = staker.NextFeeRate
+				// recalculate the staker.
+				weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
+				staker.StakeAmount = big.NewInt(0)
+				staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
+				staker.StakingEpoch = epochID + vm.JoinDelay
+				changed = true
+			}
+			for j := 0; j < len(staker.Partners); j++ {
+				if staker.Partners[j].Renewal {
+					staker.Partners[j].LockEpochs = staker.NextLockEpochs
+					weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
+					staker.Partners[j].StakeAmount = big.NewInt(0)
+					staker.Partners[j].StakeAmount.Mul(staker.Partners[j].Amount, big.NewInt(int64(weight)))
+					staker.Partners[j].StakingEpoch = epochID + vm.JoinDelay
+					changed = true
+				}
+			}
+		}
+		if changed || partnerchanged || clientChanged {
+			stakerBytes, err := rlp.EncodeToBytes(staker)
+			if err != nil {
+				// this will rollback. next slot will retry.
+				log.SyslogErr("StakeOutRun Failed: ", "err", err)
+				return false
+			}
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
+		}
 	}
 	return true
 }

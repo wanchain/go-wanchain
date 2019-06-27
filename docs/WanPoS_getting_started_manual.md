@@ -1,45 +1,46 @@
-# 1. WanPoS Getting started manual
+# 1. Galaxy Consensus getting started manual
 
 # 2. Introduction
+This is a guide for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus. Please join our [Gitter chat room](https://gitter.im/wandevs/community) if you have any questions about this guide. Members of our official dev team and Wanchain community developers are there to help out with any issues you might have.  
 
-WanPoS Getting started manual can help users to download a pos node and perform as a pos miner or pos synchronizer.
-
-You can follow the getting started manual to experience the POC version of WanPOS.
+**Software Environment**
+- We recommend using Linux or MacOS
+- Docker services
+- Install Golang from https://golang.org/ and set GO environment variables `$GOPATH` and `$GOROOT`
 
 # 3. Contents
 
 <!-- TOC -->
 
-- [1. WanPoS Getting started manual](#1-wanpos-getting-started-manual)
+- [1. Galaxy Consensus getting started manual](#1-galaxy-consensus-getting-started-manual)
 - [2. Introduction](#2-introduction)
 - [3. Contents](#3-contents)
-- [4. Quick start from docker](#4-quick-start-from-docker)
-  - [4.1. Step by step to be a miner](#41-step-by-step-to-be-a-miner)
-  - [4.2. Step by step to delegate wan coins](#42-step-by-step-to-delegate-wan-coins)
-- [5. Download and Run](#5-download-and-run)
-  - [5.1. Run from Docker](#51-run-from-docker)
-  - [5.2. Download](#52-download)
-    - [5.2.1. Download BIN](#521-download-bin)
-    - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
-  - [5.3. Run](#53-run)
-    - [5.3.1. Run as a synchronize node](#531-run-as-a-synchronize-node)
-    - [5.3.2. Run as a miner node](#532-run-as-a-miner-node)
-- [6. Operations](#6-operations)
-  - [6.1. PoS account creation](#61-pos-account-creation)
-  - [6.2. Check balance](#62-check-balance)
-  - [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos)
-  - [6.4. Stake register and Delegate](#64-stake-register-and-delegate)
-  - [6.5. Check Incentive](#65-check-incentive)
-  - [6.6. Stake unregister and Unlock](#66-stake-unregister-and-unlock)
-- [7. Test result of incentive](#7-test-result-of-incentive)
+- [4. Quick start from Docker](#4-quick-start-from-docker)
+    - [4.1. Step by step node setup](#41-step-by-step-node-setup)
+    - [4.2. Step by step delegation guide](#42-step-by-step-delegation-guide)
+- [5. Other ways to Download and run](#5-other-ways-to-download-and-run)
+    - [5.1. Run from Docker](#51-run-from-docker)
+    - [5.2. Download](#52-download)
+        - [5.2.1. Download BIN](#521-download-bin)
+        - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
+    - [5.3. Run](#53-run)
+        - [5.3.1. Non-staking node](#531-non-staking-node)
+        - [5.3.2. Staking-node](#532-staking-node)
+- [6. Common Operations](#6-common-operations)
+    - [6.1. PoS account creation](#61-pos-account-creation)
+    - [6.2. Check balance](#62-check-balance)
+    - [6.3. Get test WAN](#63-get-test-wan)
+    - [6.4. Registration and delegation](#64-registration-and-delegation)
+    - [6.5. Check rewards](#65-check-rewards)
+    - [6.6. Unregister and Unlock](#66-unregister-and-unlock)
 
 <!-- /TOC -->
 
-# 4. Quick start from docker
+# 4. Quick start from Docker
 
-## 4.1. Step by step to be a miner
+## 4.1. Step by step node setup
 
-Step 1 install docker (Ubuntu):
+**Step 1:** Install docker (Ubuntu):
 ```
 $ sudo wget -qO- https://get.docker.com/ | sh
 
@@ -48,23 +49,21 @@ $ sudo usermod -aG docker YourUserName
 $ exit
 ```
 
-Step 2 start gwan with docker and create account:
+**Step 2:** Start GWAN with Docker and create account:
 ```
-$ docker pull molin0000/wanpos_poc_node
+$ docker pull wanchain/client-go:2.0.0-beta.4
 
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
 "YourAccountAddress"
-
-> personal.unlockAccount(eth.accounts[0], "YourPassword", 3600*24*365)
 
 > personal.showPublicKey("YourAccountAddress", 'YourPassword')
 
@@ -80,53 +79,60 @@ root> exit
 
 ![img](./img_get_start/1.png)
 
-Step 3 get some test wan coins for "YourAccountAddress", such as 100100.
+**Step 3:** Get test WAN for "YourAccountAddress":
 
-You can follow the descript in [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test coins.
+Follow [6.3. Get test WAN](#63-get-test-wan) to get test WAN.
 
-And after you received the test coins, you can do step 4.
+And after receiving test WAN, continue to step 4.
 
-![img](./img_get_start/4.png)
+**Step 4:** Validator Registration
 
-Step 4 create a script file in path: `/home/YourUserName/.wanchain/minerRegister.js`
+The validator registration can be done visually using the community-developed [mywanwallet] (https://mywanwallet.io/#contracts) web wallet. You can also use script registration as follows.
+
+Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
-//minerRegister.js
+//validatorRegister.js
 
-// If you want to register to be a miner you can modify and use this script to run.
+// If you want to register as a validator you can modify and use this script.
 
 
-//-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
+//-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 100000
+// tranValue is the value you want to stake
+// non-delegate mode validator - minValue is 10000
+// delegate mode validator - minValue is 50000 
+var tranValue = "50000"
 
-// secpub is the miner node's secpub value
+// secpub is the validator node's secpub value
 var secpub    = "YourPK1"
 
-// g1pub is the miner node's g1pub value
+// g1pub is the validator node's g1pub value
 var g1pub     = "YourPK2"
 
-// feeRate is the delegate dividend ratio if set to 100, means it's a single miner do not accept delegate in.
-var feeRate   = 100
+// feeRate is the percent of the reward kept by the node in delegation - 10000 indicates the node does not accept delegation.
+// feeRate range is 0~10000, means 0~100.00%
+var feeRate   = 2000
 
-// lockTime is the time for miner works which measures in epoch count. And must larger than 5.
+// lockTime is the length of stake locking time measured in epochs - minimum required locking time of 5 epochs
 var lockTime  = 30
 
-// baseAddr is the fund source account.
+// baseAddr is the stake funding source account
 var baseAddr  = "YourAccountAddress"
 
-// passwd is the fund source account password.
+// passwd is the stake funding source account password
 var passwd    = "YourPassword"
 
-//-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
+//-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
 
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}];
+
+
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d2";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
@@ -140,33 +146,37 @@ console.log("tx=" + tx)
 
 ![img](./img_get_start/3.png)
 
-Step 5 run the register script in gwan
+**Step 5:** Run the registration script in GWAN
 
-Follow the step 2's command line: 
+If you have not closed the Docker script from **Step 2**, continue with the commands below, otherwise restart the Docker script.
 
 ```
-> loadScript("/root/.wanchain/minerRegister.js")
+$ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
+
+> loadScript("/root/.wanchain/validatorRegister.js")
 
 > exit
 
-root> exit
-
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
 
 ```
 
-Finish!
+Setup is now complete, mining will begin as soon as syncing is finished.
 
 ![img](./img_get_start/5.png)
 
 
 ![img](./img_get_start/6.png)
 
-## 4.2. Step by step to delegate wan coins
+## 4.2. Step by step delegation guide
 
-Step 1 install docker (Ubuntu):
+You can use the [wan-wallet-desktop](https://github.com/wanchain/wan-wallet-desktop/releases) for delegation easily.
+
+Also, you can use script as below, too.
+
+**Step 1:** Install Docker (Ubuntu):
 ```
 $ sudo wget -qO- https://get.docker.com/ | sh
 
@@ -175,15 +185,15 @@ $ sudo usermod -aG docker YourUserName
 $ exit
 ```
 
-Step 2 start gwan with docker and create account and select delegate:
+**Step 2:** Start GWAN with Docker, create account, and view delegate node list:
 ```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.4 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -206,26 +216,26 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 ]
 ```
 
-You get `YourAccountAddress` and a good delegate `DelegateAddress` from above step which is selected by a nice `FeeRate`.
+`YourAccountAddress` and `DelegateAddress` are found from the step above along with the `FeeRate`.
 
-Step 3 get some test wan coins for "YourAccountAddress", such as 100100.
+**Step 3:** Get test WAN for "YourAccountAddress"
 
-You can follow the descript in [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test coins.
+Follow [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test WAN.
 
-Step 4 create a script file in path: `/home/YourUserName/.wanchain/sendDelegate.js`
+**Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/sendDelegate.js`
 
 ```
 //sendDelegate.js
 
-// If you want to send to a delegate you can modify and use this script to run.
+// If you want to send to a delegate you can modify and use this script.
 
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
-var tranValue = 100000
+// tranValue is the value you want to stake in minValue is 100
+var tranValue = "100000"
 
-// rewardAddr is the reward receive accounts which create nearly.
+// delegateAddr is the validator address copied from the list of validators generated in Step 4
 var delegateAddr = "DelegateAddress"
 
 // baseAddr is the fund source account.
@@ -234,14 +244,16 @@ var baseAddr  = "YourAccountAddress"
 // passwd is the fund source account password.
 var passwd    = "YourPassword"
 
-//-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
+//-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
 
 
 //------------------RUN CODE DO NOT MODIFY------------------
 personal.unlockAccount(baseAddr, passwd)
-var cscDefinition = [{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}];
+
+
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d2";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payloadDelegate = coinContract.delegateIn.getData(delegateAddr)
@@ -250,62 +262,30 @@ console.log("tx2=" + tx2)
 //------------------RUN CODE DO NOT MODIFY------------------
 ```
 
-Step 5 run the register script in gwan
+**Step 5:** Run the registration script in GWAN
 
-Follow the step 2's command line: 
+Load the script in GWAN to complete delegation.
+
 ```
 > loadScript("/root/.wanchain/sendDelegate.js")
 
 ```
 
-Finish!
+# 5. Other ways to Download and run
 
-
-# 5. Download and Run
+Below is some other ways to download and run gwan.
 
 ## 5.1. Run from Docker
 
-You can run a node from a docker image.
-
-```
-// Install the docker service
-
-$ sudo wget -qO- https://get.docker.com/ | sh
-
-$ sudo usermod -aG docker YourUserName
-```
-
-You can run a node as a sync node as below:
-
-```
-//On MacOS:
-$ docker run -d -p 17717:17717 -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
-
-//On Ubuntu
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto
-```
-
-If you want to be a miner, you should create a account and start like this:
-```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
-```
-
-The `YourPasswordTxtFile` is a txt file with your miner account password in it in docker.
-
-Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt` , you should start docker like this:
-
-```
-$ docker run -d -p 17717:17717 -v /home/YourUserName/.wanchain:/root/.wanchain molin0000/wanpos_poc_node /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
-```
-
+You can run a node from a Docker image. Same to 4.1.
 
 ## 5.2. Download
 
-You can download a binary file or code to perform a node.
+You can download a binary file or code to run a node.
 
 ### 5.2.1. Download BIN
 
-You can download the compiled binary file to run. The download link is in below:
+You can download the compiled binary file from the download links below:
 
 (Not ready now, please use docker)
 
@@ -316,15 +296,13 @@ You can download the compiled binary file to run. The download link is in below:
 |MacOS|gwan.tar.gz| XXXXXXXXXXXXXXXX |XXXXXXXXXXXXXXXXXXXXXXXXX
 
 
-
 ### 5.2.2. Download Code and Compile
 
-If you want to compile WanPoS code, you should first to install golang develop environment and config $GOPATH and $GOROOT:
+If you want to compile the Galaxy Consensus code, you should first to install the Golang development environment and config $GOPATH and $GOROOT:
 
 https://golang.org/
 
-
-You can download code file and compile to run as following steps.
+You can download the code file and compile to run with the following steps:
 
 If you already have a golang compile and run environment, and you have configured $GOPATH , you can get the code as below:
 
@@ -333,7 +311,7 @@ $ go get github.com/wanchain/go-wanchain
 
 $ cd $GOPATH/src/github.com/wanchain/go-wanchain
 
-$ git checkout pos
+$ git checkout develop
 
 $ git pull
 
@@ -345,47 +323,47 @@ Or you can clone from github.com as below:
 ```
 $ mkdir -p $GOPATH/src/github.com/wanchain/
 
-$ cd $GO_PATH/src/github.com/wanchain/
+$ cd $GOPATH/src/github.com/wanchain/
 
 $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout pos
+$ git checkout develop
 
 $ git pull
 
 $ make
 ```
 
-Then you can find the binary file in the path of `build/bin/gwan`
+Then you can find the binary file in path `build/bin/gwan`
 
 ## 5.3. Run
 
-You can start a node run in two different roles as follow.
+You can run a node in two different modes, staking and non staking.
 
-### 5.3.1. Run as a synchronize node
-
-```
-$ gwan --pluto --rpc --syncmode "full"
-```
-
-### 5.3.2. Run as a miner node
-
-In the following command. You should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` to you own pos account address and replace `/tmp/pw.txt` file to your own password file with your password string in it.
+### 5.3.1. Non-staking node
 
 ```
-$ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
+$ gwan --testnet --syncmode "full"
 ```
 
-# 6. Operations
+### 5.3.2. Staking-node
+
+In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` with your own account address and replace the `/tmp/pw.txt` file with your own password file with your password string in it.
+
+```
+$ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
+```
+
+# 6. Common Operations
 
 ## 6.1. PoS account creation
 
-Before you run a PoS node you should create an account for work.
+Before you run a PoS node you should create an account.
 
 ```
-$ gwan --pluto console --exec "personal.newAccount('Your Password')"
+$ gwan --testnet console --exec "personal.newAccount('Your Password')"
 
 // Or run after ipc attach
 $ personal.newAccount('Your Password')
@@ -393,33 +371,33 @@ $ personal.newAccount('Your Password')
 
 You can see your address created and printed in the screen, then you can press `Ctrl+C` to exit.
 
-You will get a keystore file with three crypto key words in your path `~/.wanchain/pluto/keystore/` in Ubuntu or `~/Library/Wanchain/pluto/keystore/` in Mac OS.
+You will get a keystore file with three crypto key words in your path `~/.wanchain/testnet/keystore/` in Ubuntu or `~/Library/Wanchain/testnet/keystore/` in Mac OS.
 
-And you can use a command to get your `Address Public Key` and `G1 Public Key` of your account.
+And you can use a command to get the `Address Public Key` and `G1 Public Key` of your account.
 
 ```
-$ gwan --pluto console --exec "personal.showPublicKey('Your Address', 'Your Password')"
+$ gwan --testnet console --exec "personal.showPublicKey('Your Address', 'Your Password')"
 
 // Or run after ipc attach
 $ personal.showPublicKey('Your Address', 'Your Password')
 ```
 
-These public keys will be used in the stake register.
+These public keys will be used in staking registration.
 
 ## 6.2. Check balance
 
-You can check your balance in address when you attach a gwan console in `ipc` file or use a console mode at gwan start.
+You can check your balance in the address when you attach a GWAN console in the `ipc` file or use a console mode at GWAN start.
 
 ```
 // In ubuntu
-$ gwan attach ~/.wanchain/pluto/gwan.ipc
+$ gwan attach ~/.wanchain/testnet/gwan.ipc
 
 // In MacOS
-$ gwan attach ~/Library/Wanchain/pluto/gwan.ipc
+$ gwan attach ~/Library/Wanchain/testnet/gwan.ipc
 
 ```
 
-After the node synchronizes finished. You can check balance use follow command.
+After the node synchronization is finished you can check your balance using the following command.
 
 ```
 $ eth.getBalance("Your Address Fill Here")
@@ -428,9 +406,11 @@ $ eth.getBalance("Your Address Fill Here")
 $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 ```
 
-## 6.3. Get test wan coins of PoS
+## 6.3. Get test WAN
 
-If you want to get some test wan coins to experient WanPoS, you can send an email with your wan pos account test address to emails shown below to tell us. And we will pay to you in three work days. 
+If you want to get some test WAN to experiment with Galaxy Consensus, you can fill a form on this URL: (Waiting to update...)
+
+[Wanchain-Faucet](http://54.201.62.90/)
 
 | Index            | Email         | 
 | --------------  | :------------  | 
@@ -438,141 +418,50 @@ If you want to get some test wan coins to experient WanPoS, you can send an emai
 
 
 
-## 6.4. Stake register and Delegate
+## 6.4. Registration and delegation
 
-If you have an account with WAN coins and you want to create a WanPoS miner, you should do it like the diagram below:
+If you have an account with WAN coins and you want to create a Galaxy Consensus validator, you should do it as in the diagram below:
 
 ![img](./img_get_start/99.png)
 
-You can register as a mining node through Stake register.
+You can register as a staking node through Stake register.
 
-We have given a smart contract for register and unregister.
+We have given a smart contract for registration and unregistration.
 
-Its contract interface is shown as below.
+The contract interface is shown below.
 ```
-var cscDefinition = [
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "secPk",
-				"type": "bytes"
-			},
-			{
-				"name": "bn256Pk",
-				"type": "bytes"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "delegateAddr",
-				"type": "address"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			}
-		],
-		"name": "delegateIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	}
-]
+var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 ```
 
-In the smart contract input parameters, the `feeRate` means the delegate dividend ratio, which is used for the delegator node. If set it to 100 means do not accept others delegate in and it's a independent mining node.
+In the smart contract input parameters, the `feeRate` indicates the percentage of reward kept by the validator from the delegators' reward. 10000 indicates that the validator does not accept delegations. 
 
-If you want to be an delegator and accept bets from others, you need to set a reasonable percentage of dividends `feeRate` to attract others to invest.
+If you want to be an delegator and accept delegations from others, you need to set a reasonable percentage for your `feeRate` to attract others to invest.
 
-`feeRate`'s value range is from 0 to 100. Means percent to pay to delegator.
+The `feeRate`'s value ranges from 0 to 10000 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
 
-You can stake in use your custom script or just modify the module script in `loadScript/minerRegister.js`.
+You can register your stake with a custom script or just modify the module's script in `loadScript/validatorRegister.js`.
 
-The JavaScript file `loadScript/register.js` shows how to stake in and delegate stake in.
+The JavaScript file `loadScript/register.js` is used by validators for registration, and `loadScript/sendDelegate.js` is used by test WAN holders for sending their delegation.
 
-In the script file, the password should be replaced to your own in `personal.unlockAccount`.
+In the script file, the password should be replaced with your own in `personal.unlockAccount`.
 
-And `secpub`, `secAddr`, `g1pub` should be filled with your account address public key, account address, and G1 public key. These public keys could get in function `personal.showPublicKey` shown above.
+`secpub`, `secAddr`, `g1pub` should be filled with your account's address public key, account address, and G1 public key. These public keys can be found using the function `personal.showPublicKey` shown above.
 
-The `lockTime` should be filled with the time you want to stake in and locked. The unit of time is epoch. A epoch time is equal to SlotTime * SlotCount. 
+`lockTime` should be filled with the stake locking time. The unit of time is epoch. Epoch time is equal to SlotTime * SlotCount. 
 
-The `tranValue` should be filled with the amount in wan coins you want to lock in a smart contract for stake register. You can't get it back until the lock time is up.
+The `tranValue` should be filled with the amount of WAN you want to lock in the smart contract for stake registration. You can't get it back until the locking time is up.
 
-This script can be run in an attached IPC session.
+## 6.5. Check rewards
 
-```
-// This path is a relative path for your run.
-$ loadScript('loadScript/register.js')
-```
-
-If you don't want to be a miner, you can bet on the delegator node, who will mine for you and share the block incentive.
-
-The incentive percent is related to the stake amount and `feeRate`.
-
-The delegate bet method is also in `register.js`, it is in the last 3 lines.
-
-You can input the delegator's address to bet.
-
-The lock time for delegate in does not work in PoC stage, it will follow the delegator's lock time.
-
-## 6.5. Check Incentive
-
-You can check your balance as shown above to verify whether you have got an incentive.
-
-And you can use the commands shown below to see which address was awarded and its incentive amount for specified input epoch ID.
+You can check your balance as shown above to verify whether you have received a reward, and you can use the commands shown below to see which address was awarded and the reward amount for the specified epoch ID.
 
 ```
-// In an attached IPC session to run for epoch 123.
-$ pos.getEpochIncentivePayDetail(123)
+// In an attached IPC session to run for epoch 19000.
+$ pos.getEpochIncentivePayDetail(19000)
 ```
 
-## 6.6. Stake unregister and Unlock
+## 6.6. Unregister and Unlock
 
-Your locked wan coins will automate send back when time up. 
+Validators can use `stakeUpdate.js` to set lock time to 0. It will be un-register at next period. 
 
-Do not need any manual operation.
-
-# 7. Test result of incentive
-
-We depolyed some pos miner nodes to mine.
-
-Use different stake value and different locktime to test.
-
-The locktime is measured by epoch count.
-
-The epoch time is 20 minutes of one epoch. So 6 epoch means 120 minutes.
-
-And the total stake is about 6000000 ~ 8000000 wan coins on the test blockchain.
-
-The incentive reward to the address is shown below:
-
-| Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
-| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
-|0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
-|0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
-|0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
-|0x52eee1ccb29adc742449a3e87fe7acaad605bd4c| 200000 | 12 |1.93 |4.81 |1.08 |1.17 |0.32 |9.31 |
-
-
-If the epoch incentive is 0, means it has not been selected by its probility.
-
-
-![img](./img_get_start/7.png)
+Delegators can use Wan wallet to delegate In or delegate Out.

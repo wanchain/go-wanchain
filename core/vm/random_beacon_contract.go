@@ -19,7 +19,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -174,16 +173,41 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		log.Error("No match id found")
+		log.SyslogErr("random beacon contract no match id found")
 		return nil, errors.New("no function")
 	}
-
-	return nil, nil
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// in order to improve the transmission speed, return nil directly.
-	return nil
+	if posconfig.FirstEpochId == 0 {
+		return  errParameters
+	}
+	if stateDB == nil || signer == nil || tx == nil {
+		return errParameters
+	}
+
+	payload := tx.Data()
+	if len(payload) < 4 {
+		return errParameters
+	}
+
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return err
+	}
+
+	return ValidPosRBTx(stateDB, from, payload)
+}
+func getRBProposerGroup(eid uint64)([]bn256.G1,error){
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  errors.New("GetEpocherInst() == nil")
+	}
+		pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, errors.New("len(pks) == 0")
+	}
+	return pks,nil
 }
 
 //
@@ -236,8 +260,10 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
-
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
+	}
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg1Stage. epochId " + strconv.FormatUint(eid, 10)))
@@ -297,7 +323,11 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -349,7 +379,11 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
-	pks := getRBProposerGroupVar(eid)
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
 		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -411,7 +445,7 @@ func GetSigShareId() []byte {
 
 // get key hash
 func GetRBKeyHash(kind []byte, epochId uint64, proposerId uint32) *common.Hash {
-	keyBytes := make([]byte, 12+len(kind))
+	keyBytes := make([]byte, 16)
 	copy(keyBytes, kind)
 	copy(keyBytes[4:], UIntToByteSlice(epochId))
 	copy(keyBytes[12:], UInt32ToByteSlice(proposerId))
@@ -430,17 +464,22 @@ func GetRBRKeyHash(epochId uint64) *common.Hash {
 
 // get r of one epoch, if not exist return r in epoch 0
 func GetR(db StateDB, epochId uint64) *big.Int {
+	if epochId == posconfig.FirstEpochId {
+		return GetStateR(db, posconfig.FirstEpochId)
+	}
 	r := GetStateR(db, epochId)
 	if r == nil {
-		log.Warn("***Can not found random r just use epoch 0 R", "epochID", epochId)
-		r = GetStateR(db, 0)
+		if epochId > posconfig.FirstEpochId+2 {
+			log.SyslogWarning("***Can not found random r just use the first epoch R", "epochId", epochId)
+		}
+		r = GetStateR(db, posconfig.FirstEpochId)
 	}
 	return r
 }
 
 // get r of one epoch
 func GetStateR(db StateDB, epochId uint64) *big.Int {
-	if epochId == 0 {
+	if epochId == posconfig.FirstEpochId {
 		return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 	hash := GetRBRKeyHash(epochId)
@@ -456,14 +495,12 @@ func GetStateR(db StateDB, epochId uint64) *big.Int {
 func GetSig(db StateDB, epochId uint64, proposerId uint32) (*RbSIGTxPayload, error) {
 	hash := GetRBKeyHash(sigShareId[:], epochId, proposerId)
 	payloadBytes := db.GetStateByteArray(randomBeaconPrecompileAddr, *hash)
-
 	if len(payloadBytes) == 0 {
 		return nil, nil
 	}
 
 	var sigParam RbSIGTxPayload
 	err := rlp.DecodeBytes(payloadBytes, &sigParam)
-
 	if err != nil {
 		return nil, errSigParse
 	}
@@ -495,6 +532,7 @@ func GetCji(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) 
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
+
 	cij := make([][]byte, 0)
 	err := rlp.DecodeBytes(dkgBytes, &cij)
 	if err != nil {
@@ -511,6 +549,7 @@ func GetEncryptShare(db StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1
 	if len(dkgBytes) == 0 {
 		return nil, nil
 	}
+
 	enShare := make([][]byte, 0)
 	err := rlp.DecodeBytes(dkgBytes, &enShare)
 	if err != nil {
@@ -526,6 +565,7 @@ func IsJoinDKG2(db StateDB, epochId uint64, proposerId uint32) bool {
 	if len(dkgBytes) == 0 {
 		return false
 	}
+
 	return true
 }
 
@@ -741,6 +781,7 @@ func Dkg2FlatToDkg2(d *RbDKG2FlatTxPayload) (*RbDKG2TxPayload, error) {
 	for i := 0; i < l; i++ {
 		(&dkg2Param.Proof[i]).ProofFlatToProof(&d.Proof[i])
 	}
+
 	return &dkg2Param, nil
 }
 
@@ -783,10 +824,14 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 }
 
 func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
-	if len(pks) <= int(proposerId) {
+	if len(pks) <= int(proposerId) || int(proposerId)<0 {
 		return false
 	}
-	pk1 := util.GetEpocherInst().GetProposerBn256PK(epochId, uint64(proposerId), address)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return false
+	}
+	pk1 := ep.GetProposerBn256PK(epochId, uint64(proposerId), address)
 	if pk1 != nil {
 		return bytes.Equal(pk1, pks[proposerId].Marshal())
 	}
@@ -798,7 +843,7 @@ func buildError(err string, epochId uint64, proposerId uint32) error {
 }
 
 func logError(err error) error {
-	log.Error(err.Error())
+	log.SyslogErr(err.Error())
 	return err
 }
 
@@ -826,10 +871,10 @@ func setSignorsNum(epochId uint64, num uint32, evm *EVM) {
 //
 // variables for mock
 //
-var getRBProposerGroupVar = posdb.GetRBProposerGroup
 var getRBMVar = GetRBM
 var isValidEpochStageVar = isValidEpochStage
 var isInRandomGroupVar = isInRandomGroup
+var getRBProposerGroupVar = getRBProposerGroup
 
 //
 // contract abi methods
@@ -880,7 +925,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 	return nil, nil
 }
 
-// sigShare: sign, happens in 8k~10k-1 slots, send the proof, enShare to chain
+// sigShare: sign, happens in 8k~10k-1 slots, generate R if enough signers
 func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("sigShare")
 	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
@@ -904,7 +949,13 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 		if r != nil && err == nil {
 			hashR := GetRBRKeyHash(eid + 1)
 			evm.StateDB.SetStateByteArray(randomBeaconPrecompileAddr, *hashR, r.Bytes())
-			log.Debug("generate random", "epochId", eid+1, "r", r)
+			evm.StateDB.AddLog(&types.Log{
+				Address: contract.Address(),
+				Topics:  []common.Hash{common.BigToHash(new(big.Int).SetUint64(eid)), common.BytesToHash(r.Bytes())},
+				// This is a non-consensus field, but assigned here because
+				// core/state doesn't know the current block number.
+				BlockNumber: evm.BlockNumber.Uint64(),
+			})
 		}
 	}
 
@@ -985,6 +1036,55 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 		return nil, logError(errors.New("final pairing check failed"))
 	}
 
-	log.Debug("compute random success", "epochId", epochId+1, "random", common.Bytes2Hex(random))
+	log.SyslogInfo("compute random success", "epochId", epochId+1, "random", common.ToHex(random))
 	return big.NewInt(0).SetBytes(random), nil
+}
+
+
+func GetValidDkg1Cnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetCji(db, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func GetValidDkg2Cnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetEncryptShare(db, epochId, uint32(i))
+		if err == nil && len(c) != 0 {
+			count++
+		}
+	}
+
+	return count
+}
+
+func GetValidSigCnt(db StateDB, epochId uint64) uint64 {
+	if db == nil {
+		return 0
+	}
+
+	count := uint64(0)
+	for i := 0; i < posconfig.RandomProperCount; i++ {
+		c, err := GetSig(db, epochId, uint32(i))
+		if err == nil && c != nil {
+			count++
+		}
+	}
+
+	return count
 }

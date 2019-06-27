@@ -25,6 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -44,7 +45,12 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 		engine: engine,
 		bc:     blockchain,
 	}
+	blockchain.RegisterSwitchEngine(validator)
 	return validator
+}
+
+func (v *BlockValidator) SwitchEngine(engine consensus.Engine) {
+	v.engine = engine
 }
 
 // ValidateBody validates the given block's uncles and verifies the the block
@@ -69,6 +75,21 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+
+	//Verify only allow one block in a slot
+	if block.NumberU64() > v.bc.config.PosFirstBlock.Uint64() {
+		parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time.Uint64())
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlock.Header().Time.Uint64())
+		if (slotIDNew == slotIDOld) && (epIDNew == epIDOld) {
+			return fmt.Errorf("Multi blocks in one slot")
+		}
+	}
+
+	if err := v.engine.VerifyGenesisBlocks(v.bc, block); err != nil {
+		return err
+	}
+
 	return nil
 }
 

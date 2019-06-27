@@ -4,9 +4,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 
@@ -36,8 +39,19 @@ func (t *TestSelectLead) GetEpochLeaders(epochID uint64) [][]byte {
 	}
 	return buf
 }
+
 func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
 	return nil
+}
+
+func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
+
+func (t *TestSelectLead) GetEpochLastBlkNumber(targetEpochId uint64) uint64 { return 0 }
+
+func RmDB(dbName string){
+	var dbPath string
+	dbPath = path.Join(dbPath, "gwan",dbName)
+	os.RemoveAll(dbPath)
 }
 
 func generateTestAddrs() {
@@ -48,9 +62,12 @@ func generateTestAddrs() {
 	}
 }
 
-func TestLoop(t *testing.T) {
-	posdb.GetDb().DbInit("test")
 
+
+func TestLoop(t *testing.T) {
+	posconfig.SelfTestMode = true
+	posdb.GetDb().DbInit("test")
+	SlsInit()
 	generateTestAddrs()
 	testInitSlotleader()
 	util.SetEpocherInst(&TestSelectLead{})
@@ -68,9 +85,12 @@ func TestLoop(t *testing.T) {
 	for i := 0; i < posconfig.SlotCount; i++ {
 		s.Loop(&rpc.Client{}, key, uint64(epochIDStart+1), uint64(i))
 	}
+	RmDB("test")
+	posconfig.SelfTestMode = false
 }
 
 func TestGenerateCommitmentSuccess(t *testing.T) {
+	posconfig.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
@@ -113,9 +133,14 @@ func TestGenerateCommitmentSuccess(t *testing.T) {
 	fmt.Println("epochID: ", epID)
 	fmt.Println("selfIndex: ", selfIndex)
 	fmt.Println("Alpha: ", alpha)
+
+	RmDB("test")
+	posconfig.SelfTestMode = false
 }
 
+
 func TestGenerateCommitmentFailed(t *testing.T) {
+	posconfig.SelfTestMode = true
 	posdb.GetDb().DbInit("test")
 	slot := GetSlotLeaderSelection()
 
@@ -157,13 +182,18 @@ func TestGenerateCommitmentFailed(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+
+	RmDB("test")
+	posconfig.SelfTestMode = false
 }
 
 func TestStartStage1Work(t *testing.T) {
+	posconfig.SelfTestMode = true
 	TestLoop(t)
 
 	err := s.startStage1Work()
 	if err != nil {
 		t.FailNow()
 	}
+	posconfig.SelfTestMode = false
 }

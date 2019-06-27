@@ -117,3 +117,7 @@ func (self *CpuAgent) GetHashRate() int64 {
 	}
 	return 0
 }
+
+func (self *CpuAgent) SwitchEngine (engine consensus.Engine){
+	self.engine = engine
+}

@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
@@ -33,11 +35,13 @@ func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header       
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
 
 func TestGetSlotLeaderActivity(t *testing.T) {
+	posconfig.Init(nil, 4)
+	activityInit()
 	generateTestAddrs()
 	generateTestStaker()
 
 	chain := &TestChainReader{}
-	addrs, blks, activity := getSlotLeaderActivity(chain, 0, 100)
+	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100)
 	fmt.Println(addrs, blks, activity)
 
 	if activity != 0.99 {
@@ -76,12 +80,23 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 	return nil
 }
 
-func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
+func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
+func (t *TestSelectLead) GetEpochLastBlkNumber(epochID uint64) uint64 { return 0 }
+
+func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
+	posconfig.Init(nil, 4)
+	activityInit()
 	epochID := uint64(0)
 	util.SetEpocherInst(&TestSelectLead{})
+
+	//test bad input
+	clearTestAddrs()
+	getEpochLeaderActivity(statedb, epochID)
+
+	//test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	for i := 0; i < len(epAddrs); i++ {
 		epochIDBuf := convert.Uint64ToBytes(epochID)
@@ -126,11 +141,21 @@ func testSimulateData(epochID uint64, index uint32) {
 }
 
 func TestGetRandomProposerActivity(t *testing.T) {
-	generateTestAddrs()
-	generateTestStaker()
+	posconfig.Init(nil, 4)
+	activityInit()
+	//test bad input
+	clearTestAddrs()
+	epochID := 0
+
+	getRandomProposerActivity(statedb, uint64(epochID))
+
 	setRBAddressInterface(testGetRBAddress)
 
-	epochID := 0
+	getRandomProposerActivity(statedb, uint64(epochID))
+
+	// test good input
+	generateTestAddrs()
+	generateTestStaker()
 
 	addrs, activity := getRandomProposerActivity(statedb, uint64(epochID))
 
@@ -156,5 +181,17 @@ func TestGetRandomProposerActivity(t *testing.T) {
 		if activity[i] == 0 {
 			t.FailNow()
 		}
+	}
+}
+
+func TestWhiteList(t *testing.T) {
+	posconfig.Init(nil, 4)
+	activityInit()
+	if isInWhiteList(common.HexToAddress("0xb0Daf2a0a61B0f721486D3B88235a0714D60bAa6")) {
+		t.FailNow()
+	}
+
+	if !isInWhiteList(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")) {
+		t.FailNow()
 	}
 }

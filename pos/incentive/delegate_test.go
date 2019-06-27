@@ -2,11 +2,8 @@ package incentive
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"testing"
-
-	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // delegatesCalc can calc the delegate division
@@ -32,7 +29,7 @@ func TestDelegate(t *testing.T) {
 	for i := 0; i < len(finalIncentive); i++ {
 		fmt.Println("group:", i)
 		for m := 0; m < len(finalIncentive[i]); m++ {
-			fmt.Println(finalIncentive[i][m].Addr.Hex())
+			fmt.Println(finalIncentive[i][m].WalletAddr.Hex())
 			fmt.Println("-------->")
 			fmt.Println(finalIncentive[i][m].Incentive.String())
 			if m == 0 {
@@ -84,22 +81,6 @@ func TestCeilingCalc(t *testing.T) {
 
 	if calcValue.Int64() != 75 {
 		fmt.Println(calcValue)
-		t.FailNow()
-	}
-}
-
-func TestCalcTotalPercent(t *testing.T) {
-	testValues := make([]vm.ClientProbability, 3)
-	testValues[0].Probability = big.NewInt(100)
-	testValues[1].Probability = big.NewInt(200)
-	testValues[2].Probability = big.NewInt(300)
-
-	totalProb := big.NewInt(1200)
-
-	percent := calcTotalPercent(testValues, totalProb)
-
-	if math.Abs(percent-50) > 0.001 {
-		fmt.Println(percent)
 		t.FailNow()
 	}
 }

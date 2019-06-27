@@ -38,10 +38,10 @@ const (
 var ProtocolName = "wan"
 
 // Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+var ProtocolVersions = []uint{ eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{25,  8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -57,17 +57,19 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
-	//GET Epoch genesis
-	GetEpochGenesisMsg = 0x08
-	EpochGenesisMsg    = 0x09
-
 	// Protocol messages belonging to eth/63
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
 
-
+	// Protocol messages belonging to wan/64
+	GetEpochGenesisMsg 	= 0x11
+	EpochGenesisMsg    	= 0x12
+	GetPivotMsg    		= 0x13
+	PivotMsg       		= 0x14
+	GetBlockHeaderTdMsg = 0x15
+	BlockHeaderTdMsg 	= 0x16
 )
 
 type errCode int
@@ -135,6 +137,16 @@ type getBlockHeadersData struct {
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
+	//To      uint64        // destination, if to == -1 ignore this param
+}
+
+type getHeaderTdData struct {
+	Origin hashOrNumber
+}
+
+type getPivotData struct {
+	Origin uint64
+	Height common.Hash
 }
 
 // hashOrNumber is a combined field for specifying an origin block.
@@ -195,4 +207,5 @@ type getEpochGenesisData struct {
 
 type epochGenesisBody struct {
 	EpochGenesis 	*types.EpochGenesis
+	WhiteHeader		*types.Header
 }

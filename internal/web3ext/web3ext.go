@@ -133,6 +133,17 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getEpochLeadersAddrByEpochID',
+			call: 'pos_getEpochLeadersAddrByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getLeaderGroupByEpochID',
+			call: 'pos_getLeaderGroupByEpochID',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getSmaByEpochID',
 			call: 'pos_getSmaByEpochID',
 			params: 1
@@ -141,6 +152,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRandomProposersByEpochID',
 			call: 'pos_getRandomProposersByEpochID',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getRandomProposersAddrByEpochID',
+			call: 'pos_getRandomProposersAddrByEpochID',
 			params: 1
 		}),
 
@@ -157,19 +174,30 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'random',
-			call: 'pos_random',
+			name: 'getRandom',
+			call: 'pos_getRandom',
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getSijCount',
-			call: 'pos_getSijCount',
+			name: 'getRbSignatureCount',
+			call: 'pos_getRbSignatureCount',
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getReorg',
-			call: 'pos_getReorg',
+			name: 'getChainQuality',
+			call: 'pos_getChainQuality',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getReorgState',
+			call: 'pos_getReorgState',
 			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getPosInfo',
+			call: 'pos_getPosInfo',
+			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'getEpochStakerInfo',
@@ -190,6 +218,16 @@ web3._extend({
 			name: 'getBootNodePK',
 			call: 'pos_getBootNodePK',
 			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getWhiteListConfig',
+			call: 'pos_getWhiteListConfig',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getWhiteListbyEpochID',
+			call: 'pos_getWhiteListbyEpochID',
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getEpochIncentivePayDetail',
@@ -229,7 +267,22 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getStakerInfo',
 			call: 'pos_getStakerInfo',
-			params: 1
+			params: 1,
+            outputFormatter: function(stakers) {
+                for(var i=0; i<stakers.length; i++) {
+                    stakers[i].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].stakeAmount)
+                    stakers[i].amount = web3._extend.utils.toBigNumber(stakers[i].amount)
+                    for(var k=0; k<stakers[i].clients.length; k++) {
+                        stakers[i].clients[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].clients[k].stakeAmount)
+                        stakers[i].clients[k].amount = web3._extend.utils.toBigNumber(stakers[i].clients[k].amount)
+                    }
+                    for(var k=0; k<stakers[i].partners.length; k++) {
+                        stakers[i].partners[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].partners[k].stakeAmount)
+                        stakers[i].partners[k].amount = web3._extend.utils.toBigNumber(stakers[i].partners[k].amount)
+                    }
+                }
+                return stakers
+            }
 		}),
 		new web3._extend.Method({
 			name: 'getRBAddress',
@@ -239,6 +292,102 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getIncentivePool',
 			call: 'pos_getIncentivePool',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getActivity',
+			call: 'pos_getActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochID',
+			call: 'pos_getEpochID',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotID',
+			call: 'pos_getSlotID',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotCount',
+			call: 'pos_getSlotCount',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getSlotTime',
+			call: 'pos_getSlotTime',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getMaxStableBlkNumber',
+			call: 'pos_getMaxStableBlkNumber',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'calProbability',
+			call: 'pos_calProbability',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIDByTime',
+			call: 'pos_getEpochIDByTime',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSlotIDByTime',
+			call: 'pos_getSlotIDByTime',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTimeByEpochID',
+			call: 'pos_getTimeByEpochID',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochBlkCnt',
+			call: 'pos_getEpochBlkCnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidSMACnt',
+			call: 'pos_getValidSMACnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSlStage',
+			call: 'pos_getSlStage',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidRBCnt',
+			call: 'pos_getValidRBCnt',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRbStage',
+			call: 'pos_getRbStage',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIdByBlockNumber',
+			call: 'pos_getEpochIdByBlockNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochGenesis',
+			call: 'pos_getEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'generateEpochGenesis',
+			call: 'pos_generateEpochGenesis',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'isEqualEpochGenesis',
+			call: 'pos_isEqualEpochGenesis',
 			params: 1
 		}),
 	]

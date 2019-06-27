@@ -28,6 +28,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
+
 	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -38,6 +41,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
+
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -331,15 +335,12 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1 string, password string) (common.Address, error) {
 	if strings.HasPrefix(privkey0, "0x") {
 		privkey0 = privkey0[2:]
 	}
 	if strings.HasPrefix(privkey1, "0x") {
 		privkey1 = privkey1[2:]
-	}
-	if strings.HasPrefix(privkey2, "0x") {
-		privkey2 = privkey2[2:]
 	}
 
 	r0, err := hex.DecodeString(privkey0)
@@ -348,11 +349,6 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, pa
 	}
 
 	r1, err := hex.DecodeString(privkey1)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	r2, err := hex.DecodeString(privkey2)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -367,12 +363,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey0, privkey1, privkey2 string, pa
 		return common.Address{}, nil
 	}
 
-	sk2, err := bn256.ToBn256(r2)
-	if err != nil {
-		return common.Address{}, nil
-	}
-
-	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, sk2, password)
+	acc, err := fetchKeystore(s.am).ImportECDSA(sk0, sk1, password)
 	return acc.Address, err
 }
 
@@ -1041,7 +1032,11 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-
+	if head.Number.Uint64() >= s.b.ChainConfig().PosFirstBlock.Uint64() {
+		epochid, slotid := posutil.CalEpSlbyTd(head.Difficulty.Uint64())
+		fields["epochId"] = epochid
+		fields["slotId"] = slotid
+	}
 	return fields, nil
 }
 
@@ -1865,24 +1860,26 @@ func (s *PrivateAccountAPI) ShowPublicKey(addr common.Address, passwd string) ([
 	lenth := len(all)
 
 	pubs := make([]string, 0)
+	var exisit bool
 	for i := 0; i < lenth; i++ {
 		if all[i].Address == addr {
 			key, err := ks.GetKey(all[i], passwd)
 			if err != nil {
-				return nil, errors.New("Error failed to load keyfile ")
+				return nil, err
 			}
 
 			if key.PrivateKey != nil {
 				pubs = append(pubs, common.ToHex(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
 			}
-
-			if key.PrivateKey3 != nil {
-				pubs = append(pubs, common.ToHex(key.PrivateKey3.G1.Marshal()))
-			}
-
+			D3 := posconfig.GenerateD3byKey2(key.PrivateKey2)
+			G1 := new(bn256.G1).ScalarBaseMult(D3)
+			pubs = append(pubs, common.ToHex(G1.Marshal()))
+			exisit = true
 			break
 		}
 	}
-
+	if !exisit {
+		return nil, errors.New("invalid address")
+	}
 	return pubs, nil
 }

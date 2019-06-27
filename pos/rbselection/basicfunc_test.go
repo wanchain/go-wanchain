@@ -1,13 +1,13 @@
 package rbselection
 
 import (
-	"testing"
-	"math/big"
 	"crypto/rand"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"math/big"
+	"testing"
 )
 
-func TestCompareG1(t *testing.T){
+func TestCompareG1(t *testing.T) {
 
 	_, Ga, err := bn256.RandomG1(rand.Reader)
 
@@ -22,8 +22,7 @@ func TestCompareG1(t *testing.T){
 	}
 }
 
-
-func TestCompareG2(t *testing.T){
+func TestCompareG2(t *testing.T) {
 
 	_, Ga, err := bn256.RandomG2(rand.Reader)
 
@@ -46,11 +45,11 @@ func TestDLEQ1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof := DLEQ(*gbase, *hbase, Pri)
+	proof, _ := DLEQ(*gbase, *hbase, Pri)
 
 	commit := new(bn256.G2).ScalarBaseMult(Pri)
 
-	if !VerifyDLEQ(proof, *gbase, *hbase, *Pub, *commit){
+	if !VerifyDLEQ(proof, *gbase, *hbase, *Pub, *commit) {
 		t.Fatal("DLEQ process Failed ")
 	}
 }
@@ -67,11 +66,11 @@ func TestDLEQ2(t *testing.T) {
 
 	sPub := new(bn256.G1).ScalarMult(Pub, s)
 
-	proof := DLEQ(*Pub, *hbase, s)
+	proof, _ := DLEQ(*Pub, *hbase, s)
 
 	commit := new(bn256.G2).ScalarBaseMult(s)
 
-	if !VerifyDLEQ(proof, *Pub, *hbase, *sPub, *commit){
+	if !VerifyDLEQ(proof, *Pub, *hbase, *sPub, *commit) {
 		t.Fatal("DLEQ process Failed ")
 	}
 }
@@ -87,19 +86,19 @@ func TestRScode(t *testing.T) {
 	// the value point
 	x := make([]big.Int, Nr)
 	for i := 0; i < Nr; i++ {
-		x[i] = *big.NewInt(int64(i+1))
+		x[i] = *big.NewInt(int64(i + 1))
 	}
 
 	sshare := make([]big.Int, Nr)
 
 	commit := make([]bn256.G2, Nr)
 
-	poly := RandPoly(Thres-1, *s)
+	poly, _ := RandPoly(Thres-1, *s)
 
 	for i := 0; i < Nr; i++ {
 		sshare[i], _ = EvaluatePoly(poly, &x[i], Thres-1)
 		sshare[i].Mod(&sshare[i], bn256.Order)
-		commit[i] = *new(bn256.G2).ScalarBaseMult(&sshare[i])	
+		commit[i] = *new(bn256.G2).ScalarBaseMult(&sshare[i])
 	}
 
 	if !RScodeVerify(commit, x, Thres-1) {

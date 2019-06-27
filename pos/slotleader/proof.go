@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/pos/util"
+
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 
@@ -13,23 +15,27 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 )
 
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
-	// genesis or not
-	epochLeadersPtrPre, errGenesis := s.getPreEpochLeadersPK(epochID)
-	if epochID == 0 || errGenesis != nil {
+	if epochID <= posconfig.FirstEpochId+2 {
+		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+	}
+
+	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
+	if isDefault {
+		log.Debug("VerifySlotProof", "isDefault", isDefault,"epochID", epochID)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
 	rbPtr, err := s.getRandom(block, epochID)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return false
 	}
 
@@ -37,7 +43,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	// stage two info from trans
 	validEpochLeadersIndex, stageTwoAlphaPKi, err := s.getStageTwoFromTrans(epochID)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		// no stage2 trans on the block chain.
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
@@ -79,7 +85,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		}
 
 		if len(smaPieces) == 0 {
-			log.Error("len(smaPieces) == 0 in proof.go")
+			log.SyslogErr("len(smaPieces) == 0 in proof.go")
 			return false
 		}
 
@@ -127,7 +133,7 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 	var info Pack
 	err := rlp.DecodeBytes(input, &info)
 	if err != nil {
-		log.Error("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
+		log.SyslogErr("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
 		return nil, nil, err
 	}
 
@@ -136,6 +142,8 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 
 func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
+
+
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis
 	epochLeadersPtrPre := s.epochLeadersPtrArrayGenesis
@@ -151,29 +159,24 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-
-	epochLeadersPtrPre, err := s.getPreEpochLeadersPK(epochID)
-	if epochID == uint64(0) || err != nil {
-		if err != nil {
-			log.Warn("getSlotLeaderProof", "getPreEpochLeadersPK error", err.Error())
-		}
-		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+	if epochID <= posconfig.FirstEpochId+2 {
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+	}
+	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
+	if isDefault {
+		log.Warn("getSlotLeaderProof", "isDefault", isDefault)
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 
 	//SMA PRE
 	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
-		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
+		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
 	}
 
 	//RB PRE
 	var rbPtr *big.Int
-	rbPtr, err = s.getRandom(nil, epochID)
-	if err != nil {
-		log.Error("getSlotLeaderProof", "getRandom error", err.Error())
-		return nil, nil, err
-	}
-
+	rbPtr, _ = s.getRandom(nil, epochID)
 	rbBytes := rbPtr.Bytes()
 
 	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID)
@@ -227,7 +230,8 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		log.Debug("verifySlotProofByGenesis", "epochID", epochID, "slotID", slotID, "slotLeaderRb",
 			hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("verifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
-		skGt := s.getSkGtFromTrans(s.epochLeadersPtrArrayGenesis[:], epochID, slotID, s.randomGenesis.Bytes()[:],
+		eps:= s.epochLeadersPtrArrayGenesis
+		skGt := s.getSkGtFromTrans(eps[:], 0, slotID, s.randomGenesis.Bytes()[:],
 			smaPieces[:])
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true
@@ -239,7 +243,8 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		return false
 	}
 	log.Debug("verifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
-	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], s.epochLeadersPtrArrayGenesis[:],
+	eps:= s.epochLeadersPtrArrayGenesis
+	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], eps[:],
 		s.randomGenesis.Bytes()[:])
 }
 
@@ -284,25 +289,41 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 	indexesSentTran, err := s.getSlotLeaderStage2TxIndexes(epochID - 1)
 	log.Debug("VerifySlotProof", "indexesSentTran", indexesSentTran)
 	if err != nil {
-		log.Error("getStageTwoFromTrans", "indexesSentTran error", err.Error())
+		log.SyslogErr("getStageTwoFromTrans", "indexesSentTran error", err.Error())
 		return validEpochLeadersIndex, stageTwoAlphaPKi, err
 	}
 
+	hash := util.GetEpochBlockHash(epochID - 1)
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		if !indexesSentTran[i] {
 			validEpochLeadersIndex[i] = false
 			continue
 		}
-		alphaPki, _, err := vm.GetStage2TxAlphaPki(s.stateDb, epochID-1, uint64(i))
-		if err != nil {
-			log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
-			validEpochLeadersIndex[i] = false
-			continue
-		} else {
-			for j := 0; j < posconfig.EpochLeaderCount; j++ {
-				stageTwoAlphaPKi[i][j] = alphaPki[j]
+		// TODO:
+		bkey := make([]byte, 0)
+		bkey = append(bkey, hash[:]...)
+		bkey = append(bkey, big.NewInt(int64(i)).Bytes()...)
+		ckey := crypto.Keccak256Hash(bkey)
+
+		var alphaPki []*ecdsa.PublicKey
+		alphaPkiCached, ok := APkiCache.Get(ckey)
+		if !ok {
+			var err error
+			statedb, _ := s.getCurrentStateDb()
+			alphaPki, _, err = vm.GetStage2TxAlphaPki(statedb, epochID-1, uint64(i))
+			if err != nil {
+				log.Debug("VerifySlotProof:GetStage2TxAlphaPki", "index", i, "error", err.Error())
+				validEpochLeadersIndex[i] = false
+				continue
 			}
+			APkiCache.Add(ckey, alphaPki)
+		} else {
+			alphaPki = alphaPkiCached.([]*ecdsa.PublicKey)
 		}
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+			stageTwoAlphaPKi[i][j] = alphaPki[j]
+		}
+
 	}
 	return validEpochLeadersIndex, stageTwoAlphaPKi, nil
 }

@@ -1,15 +1,13 @@
 package incentive
 
 import (
-	"math/big"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/vm"
 )
 
 // GetStakerInfoFn is a function use to get staker info
-type GetStakerInfoFn func(uint64, common.Address) ([]vm.ClientProbability, uint64, *big.Int, error)
+type GetStakerInfoFn func(uint64, common.Address) (*vm.ValidatorInfo,  error)
 
 // SetStakerInfoFn is a function use to set payment info
 type SetStakerInfoFn func(uint64, [][]vm.ClientIncentive) error
@@ -21,7 +19,7 @@ type GetEpochLeaderInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Add
 type GetRandomProposerInfoFn func(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int)
 
 // GetSlotLeaderInfoFn is use to get slotleader address and activity
-type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64)
+type GetSlotLeaderInfoFn func(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int)
 
 // GetRandomProposerAddressFn is use to get rb group address
 type GetRandomProposerAddressFn func(epochID uint64) []vm.Leader

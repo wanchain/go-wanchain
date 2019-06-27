@@ -5,15 +5,16 @@ API module supply the interface about pos
 *  getEpochLeadersByEpochID,
 *  getEpochStakerInfo,
 *  getRandomProposersByEpochID,
-*  getReorg,
-*  getSijCount,
+*  GetChainQuality,
+*  getReorgState,
+*  getRbSignatureCount,
 *  getSlotCreateStatusByEpochID,
 *  getSlotErrorCount,
 *  getSlotLeadersByEpochID,
 *  getSlotScCallTimesByEpochID,
 *  getSlotWarnCount,
 *  getSmaByEpochID,
-*  random,
+*  getRandom,
 *  version
 
 ## version
@@ -215,3 +216,52 @@ for example, to get the Epoch 6 RB group
 ## getEpochIncentivePayDetail
 getEpochIncentivePayDetail() display a epoch's detail incentive information.
 
+## getSlotCount
+getSlotCount() get the configed slot count in a epoch.
+
+## getEpochID
+getEpochID() get the current epoch id by time now.
+
+## getSlotID
+getSlotID() get the current slot id by time now.
+
+## getActivity
+getActivity() get the address and activity of epoch leader, random proposer, slot leader.
+
+for example to get activty of epoch 365:
+```
+> pos.getActivity(365)
+{
+  EpActivity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  EpLeader: ["0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xbec1f01f5cbe494279a3c1455644a16aebfd700d", "0xbec1f01f5cbe494279a3c1455644a16aebfd700d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc"],
+  RpActivity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  RpLeader: ["0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xa039e5f765d4c954de8cbda3eceb1df9f654ccfc", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xd1d1079cdb7249eee955ce34d90f215571c0781d"],
+  SlActivity: 1,
+  SlBlocks: [83, 20, 10, 7],
+  SltLeader: ["0xcf696d8eea08a311780fb89b20d4f0895198a489", "0x6e6f37b8463b541fd6d07082f30f0296c5ac2118", "0xd1d1079cdb7249eee955ce34d90f215571c0781d", "0xbec1f01f5cbe494279a3c1455644a16aebfd700d"]
+}
+>
+```
+
+## calProbability
+calProbability(amount, locktime) use to calc the probability of a staker with amount by stake wan coins.
+
+Such as CalProbability(10000, 60) means lock amount 10000 wan and lock time 60 epoch's probability.
+
+## getRandom
+GetRandom(epochId uint64, blockNr int64) get pos Random number in epochId-th epoch at blockNr-th block.
+
+if blockNr = -1, it will use the latest block number
+```
+> pos.getRandom(0, -1)
+"0x5fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2"
+```
+
+## getRbSignatureCount
+GetRbSignatureCount(epochId uint64, blockNr int64) get signatures count in Random Beacon Generation process in epochId-th epoch at blockNr-th block.
+
+if blockNr = -1, it will use the latest block number
+```
+> pos.getRbSignatureCount(0,-1)
+17
+```

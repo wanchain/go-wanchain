@@ -3,18 +3,17 @@ package vm
 import (
 	"bytes"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/rbselection"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"math/big"
 	mrand "math/rand"
 	"testing"
@@ -108,8 +107,10 @@ var (
 	ref = &dummyCtRef{}
 	evm = NewEVM(Context{Time:big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
+
 	rbcontract = &RandomBeaconContract{}
-	rbcontractParam = &Contract{}
+	rbcontractParam = &Contract{self:&dummyCtRef{false}}
+
 
 	pubs, pris, hpubs = generateKeyPairs()
 	_, _, enshareA, commitA, proofA = prepareDkg(pubs, hpubs)
@@ -155,7 +156,7 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 
 	for i := 0; i < nr; i++ {
 		sshare[i] = make([]big.Int, nr, nr)
-		poly[i] = rbselection.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
+		poly[i],_ = rbselection.RandPoly(int(thres-1), *s[i])	// fi(x), set si as its constant term
 		for j := 0; j < nr; j++ {
 			sshare[i][j], _ = rbselection.EvaluatePoly(poly[i], &x[j], int(thres-1)) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
 		}
@@ -184,7 +185,7 @@ func prepareDkg(Pubkey []bn256.G1, x []big.Int) ([]*big.Int, [][]big.Int, [][]*b
 	for i := 0; i < nr; i++ {
 		proof[i] = make([]rbselection.DLEQproof, nr, nr)
 		for j := 0; j < nr; j++ { // proof = (a1, a2, z)
-			proof[i][j] = rbselection.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
+			proof[i][j], _ = rbselection.DLEQ(Pubkey[j], *hBase, &sshare[i][j])
 		}
 	}
 
@@ -220,18 +221,18 @@ func prepareSig(Prikey []big.Int, enshare [][]*bn256.G1) ([]*bn256.G1)  {
 	return gSigShare
 }
 
-func getRBProposerGroupMock(epochId uint64) []bn256.G1 {
-	return rbgroupdb[epochId]
+func getRBProposerGroupMock(epochId uint64) ([]bn256.G1,error){
+	return rbgroupdb[epochId],nil
 }
 
 
 func getRBMMock(_ StateDB, epochId uint64) ([]byte, error) {
 	nextEpochId := big.NewInt(int64(epochId + 1))
-	preRandom := rbranddb[epochId]
-	if epochId == 0 {
+
+	preRandom, exisit := rbranddb[epochId]
+
+	if preRandom == nil || !exisit {
 		preRandom = new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
-	} else if preRandom == nil {
-		return nil, errors.New("getRBMMock")
 	}
 
 	//buf := make([]byte, len(nextEpochId.Bytes()) + len(preRandom.Bytes()))
@@ -251,31 +252,6 @@ func isValidEpochStageMock(_ uint64, _ int, _ uint64) bool {
 func isInRandomGroupMock(_ []bn256.G1, _ uint64, _ uint32, _ common.Address) bool {
 	return true
 }
-
-
-//func intrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
-//	igas := new(big.Int)
-//	if contractCreation && homestead {
-//		igas.SetUint64(params.TxGasContractCreation)
-//	} else {
-//		igas.SetUint64(params.TxGas)
-//	}
-//	if len(data) > 0 {
-//		var nz int64
-//		for _, byt := range data {
-//			if byt != 0 {
-//				nz++
-//			}
-//		}
-//		m := big.NewInt(nz)
-//		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
-//		igas.Add(igas, m)
-//		m.SetInt64(int64(len(data)) - nz)
-//		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
-//		igas.Add(igas, m)
-//	}
-//	return igas
-//}
 
 // test cases runs in testMain
 func init() {
@@ -306,6 +282,12 @@ func buildSig(payloadBytes [] byte) []byte {
 }
 
 func TestRBDkg1(t *testing.T) {
+
+	rbepochId = 0
+	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
+	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg1End-2))
+	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
+
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
@@ -336,10 +318,17 @@ func TestRBDkg1(t *testing.T) {
 		}
 	}
 }
+
 func TestRBDkg2(t *testing.T) {
 	clearDB()
+	rbepochId = 0
+	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
+	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg1End-2))
+
 	rbgroupdb[rbepochId] = pubs
 	TestRBDkg1(t)
+
+	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg2End-2))
 
 	for i := 0; i < nr; i++ {
 		var dkgParam RbDKG2TxPayload
@@ -373,7 +362,15 @@ func TestRBDkg2(t *testing.T) {
 
 func TestRBSig(t *testing.T)  {
 	clearDB()
+
+	rbepochId = 0
+	epochTimeSpan := uint64(posconfig.SlotTime * posconfig.SlotCount)*rbepochId
+	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().Dkg2End-2))
+
 	TestRBDkg2(t)
+
+	evm.Time = big.NewInt(0).SetUint64(epochTimeSpan+posconfig.SlotTime*(posconfig.Cfg().SignBegin+2))
+
 	gsigshareA := prepareSig(pris, enshareA)
 	for i := 0; i < nr; i++ {
 		var sigShareParam RbSIGTxPayload
@@ -410,6 +407,7 @@ func TestRBSig(t *testing.T)  {
 
 func TestValidPosTx(t *testing.T) {
 	clearDB()
+	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
@@ -480,25 +478,26 @@ func TestValidPosTx(t *testing.T) {
 }
 
 func TestGetRBStage(t *testing.T) {
+	k := posconfig.K
 	data := [][]int{
-		{0, RbDkg1Stage, 0, int(2*posconfig.K-1)},
-		{9, RbDkg1Stage, 9, int(2*posconfig.K-10)},
-		{19, RbDkg1Stage, 19, 0},
-		{20, RbDkg1ConfirmStage, 0, int(2*posconfig.K-1)},
-		{29, RbDkg1ConfirmStage, 9, int(2*posconfig.K-10)},
-		{39, RbDkg1ConfirmStage, 19, 0},
-		{40, RbDkg2Stage, 0, int(2*posconfig.K-1)},
-		{49, RbDkg2Stage, 9, int(2*posconfig.K-10)},
-		{59, RbDkg2Stage, 19, 0},
-		{60, RbDkg2ConfirmStage, 0, int(2*posconfig.K-1)},
-		{69, RbDkg2ConfirmStage, 9, int(2*posconfig.K-10)},
-		{79, RbDkg2ConfirmStage, 19, 0},
-		{80, RbSignStage, 0, int(2*posconfig.K-1)},
-		{89, RbSignStage, 9, int(2*posconfig.K-10)},
-		{99, RbSignStage, 19, 0},
-		{100, RbSignConfirmStage, 0, int(2*posconfig.K-1)},
-		{109, RbSignConfirmStage, 9, int(2*posconfig.K-10)},
-		{119, RbSignConfirmStage, 19, 0},
+		{0, 		RbDkg1Stage, 			0, 		int(2*k-1)},
+		{k-1, 		RbDkg1Stage, 			k-1, 	int(k)},
+		{2*k-1, 	RbDkg1Stage, 			2*k-1, 	0},
+		{2*k, 		RbDkg1ConfirmStage, 	0, 		int(2*k-1)},
+		{3*k-1, 	RbDkg1ConfirmStage, 	k-1, 	int(k)},
+		{4*k-1, 	RbDkg1ConfirmStage, 	2*k-1, 	0},
+		{4*k, 		RbDkg2Stage, 			0, 		int(2*k-1)},
+		{5*k-1, 	RbDkg2Stage, 			k-1, 	int(k)},
+		{6*k-1, 	RbDkg2Stage, 			2*k-1, 	0},
+		{6*k, 		RbDkg2ConfirmStage, 	0, 		int(2*k-1)},
+		{7*k-1, 	RbDkg2ConfirmStage, 	k-1, 	int(k)},
+		{8*k-1, 	RbDkg2ConfirmStage, 	2*k-1, 	0},
+		{8*k, 		RbSignStage, 			0, 		int(2*k-1)},
+		{9*k-1, 	RbSignStage, 			k-1, 	int(k)},
+		{10*k-1, 	RbSignStage, 			2*k-1, 	0},
+		{10*k, 		RbSignConfirmStage, 	0, 		int(2*k-1)},
+		{11*k-1, 	RbSignConfirmStage, 	k-1, 	int(k)},
+		{12*k-1, 	RbSignConfirmStage, 	2*k-1, 	0},
 	}
 
 	for i := range data {
@@ -509,4 +508,3 @@ func TestGetRBStage(t *testing.T) {
 		}
 	}
 }
-

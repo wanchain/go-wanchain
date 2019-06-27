@@ -11,35 +11,39 @@ import (
 
 // delegate can calc the delegate division
 func delegate(addrs []common.Address, values []*big.Int, epochID uint64) ([][]vm.ClientIncentive, *big.Int, error) {
-	finalIncentive := make([][]vm.ClientIncentive, len(addrs))
+	finalIncentive := make([][]vm.ClientIncentive, 0)
 	remain := big.NewInt(0)
 	for i := 0; i < len(addrs); i++ {
 		stakers, division, totalProbility, err := getStakerInfoAndCheck(epochID, addrs[i])
 		if err != nil {
-			return nil, nil, err
+			log.SyslogErr(err.Error())
+			continue
 		}
 
-		var subRemain *big.Int
-		finalIncentive[i], subRemain = delegateDivision(addrs[i], values[i], stakers, division, totalProbility)
+		incentive, subRemain := delegateDivision(addrs[i], values[i], stakers, division, totalProbility)
+		finalIncentive = append(finalIncentive, incentive)
 		remain.Add(remain, subRemain)
 	}
 	return finalIncentive, remain, nil
 }
 
 func getStakerInfoAndCheck(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
-	stakers, division, totalProbility, err := getStakerInfo(epochID, addr)
+	//stakers, division, totalProbility, err
+	validator, err := getStakerInfo(epochID, addr)
 	if err != nil {
-		log.Error("getStakerInfo error", "error", err.Error())
+		log.SyslogErr("getStakerInfo error", "error", err.Error())
 		return nil, 0, nil, err
 	}
-
+	stakers := validator.Infos
+	division := validator.FeeRate
+	totalProbility := validator.TotalProbability
 	if (stakers == nil) || (len(stakers) == 0) {
-		log.Error("getStakerInfo get stakers error")
+		log.SyslogErr("getStakerInfo get stakers error")
 		return nil, 0, nil, errors.New("getStakerInfo get stakers error")
 	}
 
-	if division > 100 {
-		log.Error("getStakerInfo get division error")
+	if division > 10000 {
+		log.SyslogErr("getStakerInfo get division error")
 		return nil, 0, nil, errors.New("getStakerInfo get division error")
 	}
 
@@ -64,16 +68,6 @@ func ceilingCalc(value *big.Int, totalPercent float64) *big.Int {
 	return calcPercent(value, percent*100.0)
 }
 
-func calcTotalPercent(stakers []vm.ClientProbability, totalProbility *big.Int) float64 {
-	totalCalc := big.NewInt(0)
-	for i := 0; i < len(stakers); i++ {
-		totalCalc.Add(totalCalc, stakers[i].Probability)
-	}
-	totalCalc.Mul(totalCalc, big.NewInt(100))
-	percent := totalCalc.Div(totalCalc, totalProbility)
-	return float64(percent.Uint64())
-}
-
 func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 	sumValue := big.NewInt(0)
 	for i := 0; i < len(inputs); i++ {
@@ -84,28 +78,29 @@ func sumStakerProbility(inputs []vm.ClientProbability) *big.Int {
 
 func delegateDivision(addr common.Address, value *big.Int, stakers []vm.ClientProbability,
 	divisionPercent uint64, totalProbility *big.Int) ([]vm.ClientIncentive, *big.Int) {
-	//totalPercent := calcTotalPercent(stakers, totalProbility)
-	//valueCeiling := ceilingCalc(value, totalPercent)
 	valueCeiling := value
 
 	remain := big.NewInt(0).Sub(value, valueCeiling)
 
 	//commission for delegator
-	commission := calcPercent(valueCeiling, float64(divisionPercent))
+	commission := calcPercent(valueCeiling, float64(divisionPercent)/100.0)
 	lastValue := big.NewInt(0).Sub(valueCeiling, commission)
 	tp := sumStakerProbility(stakers)
 	result := make([]vm.ClientIncentive, len(stakers))
 
 	for i := 0; i < len(stakers); i++ {
-		result[i].Addr = stakers[i].Addr
+		result[i].ValidatorAddr = stakers[i].ValidatorAddr
+		result[i].WalletAddr = stakers[i].WalletAddr
+
 		result[i].Incentive = big.NewInt(0).Mul(lastValue, stakers[i].Probability)
 
 		if result[i].Incentive.Cmp(big.NewInt(0)) != 0 {
 			result[i].Incentive.Div(result[i].Incentive, tp)
 		}
 
-		if stakers[i].Addr.String() == addr.String() {
-			result[i].Incentive.Add(result[i].Incentive, commission)
+		// Position O is validator
+		if i == 0 {
+			result[0].Incentive.Add(result[0].Incentive, commission)
 		}
 
 		//Add check of incentive positive

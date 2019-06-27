@@ -971,6 +971,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pendingNofundsCounter.Inc(1)
 		}
 
+		// Remove all invalid EL pos transactions
+		invalidPosEL := list.InvalidPosELTx(pool.currentState, pool.signer)
+		for _, tx := range invalidPosEL {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos EL transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
@@ -1152,6 +1162,16 @@ func (pool *TxPool) demoteUnexecutables() {
 		for _, tx := range invalidPos {
 			hash := tx.Hash()
 			log.Trace("Removed invalid pos transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
+		// Remove all invalid EL pos transactions
+		invalidPosEL := list.InvalidPosELTx(pool.currentState, pool.signer)
+		for _, tx := range invalidPosEL {
+			hash := tx.Hash()
+			log.Trace("Removed invalid pos EL transaction", "hash", hash)
 			delete(pool.all, hash)
 			pool.priced.Removed()
 			pendingNofundsCounter.Inc(1)

@@ -18,23 +18,13 @@
 package miner
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common/hexutil"
+	"sync"
 	"sync/atomic"
 
-	"github.com/wanchain/go-wanchain/pos/util"
-
-	"github.com/wanchain/go-wanchain/crypto"
-
-	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
-
-	"time"
 
 	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core"
@@ -45,9 +35,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/rpc"
+	//"time"
 )
 
 // Backend wraps all methods required for mining.
@@ -61,8 +49,8 @@ type Backend interface {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	mux *event.TypeMux
-
+	mux    *event.TypeMux
+	mu     sync.Mutex
 	worker *worker
 
 	coinbase common.Address
@@ -72,7 +60,7 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
-	timerStop   chan interface{}
+	//timerStop   chan interface{}
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
@@ -82,153 +70,16 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		engine:    engine,
 		worker:    newWorker(config, engine, common.Address{}, eth, mux),
 		canStart:  1,
-		timerStop: make(chan interface{}),
+		//timerStop: make(chan interface{}),
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	cpuAgent := NewCpuAgent(eth.BlockChain(), engine)
+	miner.Register(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
+	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
+	posPreInit(eth)
 	go miner.update()
 	return miner
-}
-
-func PosInit(s Backend) *epochLeader.Epocher {
-	log.Info("backendTimerLoop is running!!!!!!")
-	g := s.BlockChain().GetHeaderByNumber(0)
-	posconfig.GenesisPK = hexutil.Encode(g.Extra)[2:]
-	slotleader.SlsInit()
-
-	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(1)
-		if nil != h {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-		}
-	}
-
-	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-
-
-	eerr := epochSelector.SelectLeadersLoop(0)
-
-	sls := slotleader.GetSlotLeaderSelection()
-	sls.Init(s.BlockChain(), nil, nil)
-
-	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
-	fmt.Println("posInit: ", eerr)
-
-	s.BlockChain().SetSlSelector(sls)
-	s.BlockChain().SetRbSelector(epochSelector)
-
-	s.BlockChain().SetSlotValidator(sls)
-
-	return epochSelector
-}
-func posInitMiner(s Backend, key *keystore.Key) {
-	log.Info("timer backendTimerLoop is running!!!!!!")
-
-	// config
-	if key != nil {
-		posconfig.Cfg().MinerKey = key
-	}
-	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-	randombeacon.GetRandonBeaconInst().Init(epochSelector)
-	if posconfig.EpochBaseTime == 0 {
-		h := s.BlockChain().GetHeaderByNumber(1)
-		if nil != h {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-		}
-	}
-}
-
-// backendTimerLoop is pos main time loop
-func (self *Miner) backendTimerLoop(s Backend) {
-	log.Info("backendTimerLoop is running!!!!!!")
-	// get wallet
-	eb, errb := s.Etherbase()
-	if errb != nil {
-		panic(errb)
-	}
-	wallet, errf := s.AccountManager().Find(accounts.Account{Address: eb})
-	if wallet == nil || errf != nil {
-		panic(errf)
-	}
-	type getKey interface {
-		GetUnlockedKey(address common.Address) (*keystore.Key, error)
-	}
-	key, err := wallet.(getKey).GetUnlockedKey(eb)
-	if key == nil || err != nil {
-		panic(err)
-	}
-	log.Debug("Get unlocked key success address:" + eb.Hex())
-	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
-	posInitMiner(s, key)
-	// get rpcClient
-	url := posconfig.Cfg().NodeCfg.IPCEndpoint()
-	rc, err := rpc.Dial(url)
-	if err != nil {
-		fmt.Println("err:", err)
-		panic(err)
-	}
-
-	for {
-		// wait until block1
-		h := s.BlockChain().GetHeaderByNumber(1)
-		if nil == h {
-			select {
-			case <-self.timerStop:
-				randombeacon.GetRandonBeaconInst().Stop()
-				return
-			case <-time.After(time.Duration(time.Second)):
-				continue
-			}
-
-			continue
-		} else {
-			posconfig.EpochBaseTime = h.Time.Uint64()
-			cur := uint64(time.Now().Unix())
-			if cur < posconfig.EpochBaseTime+posconfig.SlotTime {
-				time.Sleep(time.Duration((posconfig.EpochBaseTime + posconfig.SlotTime - cur)) * time.Second)
-			}
-		}
-
-		util.CalEpochSlotIDByNow()
-		epochid, slotid := util.GetEpochSlotID()
-		log.Debug("get current period", "epochid", epochid, "slotid", slotid)
-
-		slotleader.GetSlotLeaderSelection().Loop(rc, key, epochid, slotid)
-
-		leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochid, slotid)
-		if err == nil {
-			leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-			if leader == localPublicKey {
-				self.worker.chainSlotTimer <- struct{}{}
-			}
-		}
-
-		// get state of k blocks ahead the last block
-		lastBlockNum := s.BlockChain().CurrentBlock().NumberU64()
-		root := s.BlockChain().GetBlockByNumber(lastBlockNum).Root()
-		stateDb, err2 := s.BlockChain().StateAt(root)
-		if err2 != nil {
-			log.Error("Failed to get stateDb", "err", err2)
-		}
-
-		if stateDb != nil {
-			randombeacon.GetRandonBeaconInst().Loop(stateDb, rc, epochid, slotid)
-		}
-		cur := uint64(time.Now().Unix())
-		sleepTime := posconfig.SlotTime - (cur - posconfig.EpochBaseTime - (epochid*posconfig.SlotCount+slotid)*posconfig.SlotTime)
-		log.Debug("timeloop sleep", "sleepTime", sleepTime)
-		if sleepTime < 0 {
-			sleepTime = 0
-		}
-		select {
-		case <-self.timerStop:
-			randombeacon.GetRandonBeaconInst().Stop()
-			return
-		case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
-			continue
-		}
-	}
-	return
 }
 
 // update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
@@ -239,15 +90,21 @@ func (self *Miner) update() {
 	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
 out:
 	for ev := range events.Chan() {
+		log.Info("miner update start", "ev", ev)
 		switch ev.Data.(type) {
 		case downloader.StartEvent:
 			atomic.StoreInt32(&self.canStart, 0)
+			log.Info("miner update start downloader.StartEvent")
+			log.Info("miner update", "mining", self.Mining())
 			if self.Mining() {
+				log.Info("befor stop: miner update", "mining", self.Mining())
 				self.Stop()
+				log.Info("after stop: miner update", "mining", self.Mining())
 				atomic.StoreInt32(&self.shouldStart, 1)
 				log.Info("Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
+			log.Info("downloader.DoneEvent, downloader.FailedEvent:")
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
@@ -276,8 +133,11 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
-	if self.worker.config.Pluto != nil {
+	if self.eth.BlockChain().Config().IsPosActive {
+		go self.backendTimerLoop(self.eth)
+	} else if !self.eth.BlockChain().IsInPosStage() {
+		self.worker.commitNewWork(true, 0)
+	} else {
 		go self.backendTimerLoop(self.eth)
 	}
 }
@@ -286,9 +146,9 @@ func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
-	if self.worker.config.Pluto != nil {
-		self.timerStop <- nil
-	}
+	//if self.worker.config.Pluto != nil && posconfig.FirstEpochId != 0{
+	//	self.timerStop <- nil
+	//}
 }
 
 func (self *Miner) Register(agent Agent) {
@@ -346,4 +206,14 @@ func (self *Miner) PendingBlock() *types.Block {
 func (self *Miner) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
 	self.worker.setEtherbase(addr)
+}
+
+func (self *Miner) SwitchEngine(engine consensus.Engine) {
+	self.engine = engine
+	//time.Sleep(1000*time.Millisecond)
+	log.Info("SwitchEngine")
+	if posconfig.MineEnabled {
+		log.Info("SwitchEngine, start backendTimerLoop")
+		go self.backendTimerLoop(self.eth)
+	}
 }

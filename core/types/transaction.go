@@ -372,7 +372,12 @@ func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 type TxByPrice Transactions
 
 func (s TxByPrice) Len() int           { return len(s) }
-func (s TxByPrice) Less(i, j int) bool { return s[i].data.Price.Cmp(s[j].data.Price) > 0 }
+func (s TxByPrice) Less(i, j int) bool {
+	if s[j].data.Txtype != POS_TX && s[i].data.Txtype == POS_TX {
+		return true
+	}
+	return s[i].data.Price.Cmp(s[j].data.Price) > 0
+}
 func (s TxByPrice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func (s *TxByPrice) Push(x interface{}) {
@@ -529,7 +534,7 @@ const (
 )
 
 func IsNormalTransaction(txType uint64) bool {
-	return txType == NORMAL_TX
+	return txType == NORMAL_TX || txType == 0 ||  txType == 2// some of old tx used , which is allowed.
 }
 func IsPosTransaction(txType uint64) bool {
 	return txType == POS_TX

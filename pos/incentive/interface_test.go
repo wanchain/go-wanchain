@@ -34,8 +34,25 @@ func testgetRProposer(stateDb vm.StateDB, epochID uint64) ([]common.Address, []i
 	return rpAddrs, rpActs
 }
 
-func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64) {
-	return epAddrs, slBlks, 1
+func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int) {
+	return epAddrs, slBlks, 1, 0
+}
+
+func clearTestAddrs() {
+	for i := 0; i < addrsCount; i++ {
+		epAddrs[i] = common.Address{}
+		epPks[i] = nil
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		rpAddrs[i] = common.Address{}
+		rpActs[i] = 0
+	}
+
+	for i := 0; i < addrsCount; i++ {
+		slAddrs[i] = epAddrs[i]
+		slBlks[i] = 0
+	}
 }
 
 func generateTestAddrs() {
@@ -72,23 +89,28 @@ var (
 	delegateStakerProbilityMap = make(map[common.Address][]*big.Int)
 )
 
-func getInfo(epochID uint64, addr common.Address) ([]vm.ClientProbability, uint64, *big.Int, error) {
+func getInfo(epochID uint64, addr common.Address) (*vm.ValidatorInfo, error) {
 
 	addrs := delegateStakerMap[addr]
 	probs := delegateStakerProbilityMap[addr]
 	count := len(addrs)
 	if count == 0 {
 		fmt.Println("Do not found address")
-		return nil, 0, nil, errors.New("Do not found address")
+		return nil, errors.New("Do not found address")
 	}
 
 	client := make([]vm.ClientProbability, count)
 	for i := 0; i < count; i++ {
-		client[i].Addr = addrs[i]
+		client[i].ValidatorAddr = addrs[i]
+		client[i].WalletAddr = addrs[i]
 		client[i].Probability = probs[i]
 	}
 
-	return client, 10, big.NewInt(int64(100 * count * 10)), nil
+	validator := &vm.ValidatorInfo{}
+	validator.FeeRate = 1000
+	validator.Infos = client
+
+	return validator, nil
 }
 
 func setInfo(uint64, [][]vm.ClientIncentive) error { return nil }

@@ -7,6 +7,10 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/log"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 )
 
 func (s *SLS) ValidateBody(block *types.Block) error {
@@ -17,9 +21,15 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	epochID := (blkTd >> 32)
 	slotID := ((blkTd & 0xffffffff) >> 8)
 
-	if epochID == 0 {
-		return nil
-	}
+	//if epochID == 0 {
+	//	return nil
+	//}
+
+	//extraType := header.Extra[0]
+	//start := 1
+	//if extraType == 'g' {
+	//	start = 33
+	//}
 
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
@@ -38,4 +48,23 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 
 func (s *SLS) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	return nil
+}
+
+
+func (s *SLS) GetAllSlotLeaders(epochID uint64) (slotLeader []*ecdsa.PublicKey) {
+	if epochID == 0 {
+		return nil
+	}
+
+	slotLeadersPtrArray := make([]*ecdsa.PublicKey,0)
+	// read from local db
+	for i := 0; i < posconfig.SlotCount; i++ {
+		pkByte, err := posdb.GetDb().GetWithIndex(epochID, uint64(i), SlotLeader)
+		if err != nil {
+			return nil
+		}
+		slotLeadersPtrArray = append(slotLeadersPtrArray,crypto.ToECDSAPub(pkByte))
+	}
+
+	return slotLeadersPtrArray
 }

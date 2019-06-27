@@ -1,6 +1,13 @@
 package convert
 
-import "testing"
+import (
+	"crypto/ecdsa"
+	"encoding/hex"
+	"math/big"
+	"testing"
+
+	"github.com/wanchain/go-wanchain/crypto"
+)
 
 func TestUint64Convert(t *testing.T) {
 	value := uint64(0)
@@ -47,5 +54,35 @@ func TestUint64Convert(t *testing.T) {
 	v3 := StringToUint64("aaff")
 	if v3 != 0 {
 		t.Fail()
+	}
+}
+
+func TestOtherConvert(t *testing.T) {
+	biArray := make([]*big.Int, 100)
+	for i := 0; i < 100; i++ {
+		biArray[i] = big.NewInt(int64(i))
+	}
+
+	buf2Array := BigIntArrayToByteArray(biArray)
+
+	biArray2 := ByteArrayToBigIntArray(buf2Array)
+	for i := 0; i < 100; i++ {
+		if biArray2[i].String() != biArray[i].String() {
+			t.FailNow()
+		}
+	}
+
+	keys := make([]*ecdsa.PublicKey, 100)
+	for i := 0; i < 100; i++ {
+		key, _ := crypto.GenerateKey()
+		keys[i] = &key.PublicKey
+	}
+
+	bufKey := PkArrayToByteArray(keys)
+	pk2 := ByteArrayToPkArray(bufKey)
+	for i := 0; i < 100; i++ {
+		if hex.EncodeToString(crypto.FromECDSAPub(pk2[i])) != hex.EncodeToString(crypto.FromECDSAPub(keys[i])) {
+			t.FailNow()
+		}
 	}
 }

@@ -25,9 +25,9 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
-	WanCscPrecompileAddr = common.BytesToAddress([]byte{210})
-	StakersInfoAddr      = common.BytesToAddress(big.NewInt(400).Bytes())
-	StakingCommonAddr      = common.BytesToAddress(big.NewInt(401).Bytes())
+	WanCscPrecompileAddr  = common.BytesToAddress([]byte{218})
+	StakersInfoAddr       = common.BytesToAddress(big.NewInt(400).Bytes())
+	StakingCommonAddr     = common.BytesToAddress(big.NewInt(401).Bytes())
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
@@ -60,9 +60,10 @@ var (
 	//pos
 	slotLeaderPrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
 
-	incentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+	IncentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
 
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
+	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
@@ -107,6 +108,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 	//pos
 	WanCscPrecompileAddr:       &PosStaking{},
+	PosControlPrecompileAddr:   &PosControl{},
 	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 }
@@ -117,7 +119,7 @@ func IsPosPrecompiledAddr(addr *common.Address) bool {
 	}
 
 	if (*addr) == slotLeaderPrecompileAddr ||
-		(*addr) == incentivePrecompileAddr ||
+		(*addr) == IncentivePrecompileAddr ||
 		(*addr) == randomBeaconPrecompileAddr {
 		return true
 	}

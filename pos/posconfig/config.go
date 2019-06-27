@@ -1,35 +1,55 @@
 package posconfig
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256"
+	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/crypto"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+
 	"github.com/wanchain/go-wanchain/node"
 )
 
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
-	EpochBaseTime = uint64(0)
+	//EpochBaseTime = uint64(0)
+	FirstEpochId              = uint64(0)
+	CurrentEpochId            = uint64(0)
+	Pow2PosUpgradeBlockNumber = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
+	IsDev        = false
+	MineEnabled  = false
 )
 
 const (
-	RbLocalDB  = "rblocaldb"
-	EpLocalDB  = "eplocaldb"
-	PosLocalDB = "pos"
+	RbLocalDB        = "rblocaldb"
+	EpLocalDB        = "eplocaldb"
+	StakerLocalDB    = "stlocaldb"
+	PosLocalDB       = "pos"
+	IncentiveLocalDB = "incentive"
+	ReorgLocalDB     = "forkdb"
 )
+
+var EpochLeadersHold [][]byte
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
 	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 21
+	RandomProperCount = 25
+	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
+	MaxEpHold         = 30
+	MinEpHold         = 0
+	Key3Suffix        = "bn256KeySuffix"
+)
+const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 10
-	// GenesisPK is the epoch0 pk
+	SlotTime = 5
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -37,7 +57,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 2400 // 8 hours each epoch
+	K      = 1440
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -55,15 +75,33 @@ const (
 	Stage11K = Stage1K * 11
 	Stage12K = Stage1K * 12
 
-	Sma1Start = 0
-	Sma1End   = Stage3K
+	Sma1Start = Stage2K
+	Sma1End   = Stage4K
 	Sma2Start = Stage6K
 	Sma2End   = Stage8K
 	Sma3Start = Stage10K
 	Sma3End   = Stage12K
+
+	// parameters for security and chain quality
+	BlockSecurityParam = K
+	SlotSecurityParam  = 2 * K
+
+	MinimumChainQuality     = 0.5 //BlockSecurityParam / SlotSecurityParam
+	CriticalReorgThreshold  = 3
+	CriticalChainQuality    = 0.618
+	NonCriticalChainQuality = 0.8
 )
 
-var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+var TxDelay = K
+
+var GenesisPK string
+
+//var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
+//var GenesisPKInit = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
+//var GenesisPK = "046a5e1d2b8ca62accede9b8c7995dbd428ddbaf6a7f85673d426038b05bfdb428681046930a27b849a8f3541e71e8779948df95c78b2b303380769d0f4e8a753e"
+var GenesisPKInit = ""
+var PosOwnerAddr common.Address
+var WhiteList [210]string
 
 type Config struct {
 	PolymDegree   uint
@@ -82,9 +120,9 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	10,
+	12,
 	K,
-	11,
+	13,
 	0,
 	0,
 	nil,
@@ -110,17 +148,57 @@ func (c *Config) GetMinerAddr() common.Address {
 }
 
 func (c *Config) GetMinerBn256PK() *bn256.G1 {
-	if c.MinerKey == nil {
-		return nil
-	}
+	D3 := GenerateD3byKey2(c.MinerKey.PrivateKey2)
+	return new(bn256.G1).ScalarBaseMult(D3)
+}
 
-	return new(bn256.G1).Set(c.MinerKey.PrivateKey3.PublicKeyBn256.G1)
+func GenerateD3byKey2(PrivateKey *ecdsa.PrivateKey) *big.Int {
+	var one = new(big.Int).SetInt64(1)
+	params := crypto.S256().Params()
+	var ebuffer bytes.Buffer
+	ebuffer.Write(PrivateKey.D.Bytes())
+	ebuffer.Write(([]byte)(Key3Suffix))
+
+	ebyte := crypto.Keccak256(ebuffer.Bytes())
+	d3 := new(big.Int).SetBytes(ebyte)
+
+	n := new(big.Int).Sub(params.N, one)
+	d3.Mod(d3, n)
+	d3.Add(d3, one)
+	return d3
 }
 
 func (c *Config) GetMinerBn256SK() *big.Int {
-	if c.MinerKey == nil {
-		return nil
+	return GenerateD3byKey2(c.MinerKey.PrivateKey2)
+}
+
+func Init(nodeCfg *node.Config, networkId uint64) {
+	if networkId == 1 {
+		// this is mainnet. *****
+		WhiteList = WhiteListMainnet
+		PosOwnerAddr = PosOwnerAddrMainnet
+	} else if networkId == 6 {
+		PosOwnerAddr = PosOwnerAddrInternal
+		if IsDev { // --plutodev
+			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
+		} else {
+			WhiteList = WhiteListOrig
+		}
+	} else if networkId == 4 {
+		PosOwnerAddr = PosOwnerAddrInternal
+		WhiteList = WhiteListOrig
+	} else { // testnet
+		PosOwnerAddr = PosOwnerAddrTestnet
+		WhiteList = WhiteListTestnet
 	}
 
-	return new(big.Int).Set(c.MinerKey.PrivateKey3.D)
+	EpochLeadersHold = make([][]byte, len(WhiteList))
+	for i := 0; i < len(WhiteList); i++ {
+		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
+	}
+	DefaultConfig.NodeCfg = nodeCfg
+}
+
+func GetRandomGenesis() *big.Int {
+	return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 }

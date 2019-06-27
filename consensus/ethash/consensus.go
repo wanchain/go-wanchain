@@ -55,8 +55,6 @@ var (
 	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 
-        // TODO: change in mainnet
-	posBootstrapBlockNum  uint64        = 40
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -338,6 +336,10 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	return nil
 }
 
+func (c *Ethash) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	return nil
+}
+
 // verifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
@@ -449,16 +451,29 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-        // Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
+	// Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
+	posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
 	if number == posBootstrapBlockNum {
 		ppowWindowLen := (len(s.UsedSigners)-1) / 2
 		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
+		if slotheader == nil {
+			for i:=len(parents); i>0; i-- {
+				if parents[i - 1] != nil {
+					if parents[i - 1].Number.Uint64() == posBootstrapBlockNum - uint64(ppowWindowLen+1) {
+						slotheader = parents[i - 1]
+						break
+					}
+				} else {
+					return errors.New("invalid leader")
+				}
+			}
+		}
 		if slotheader.Coinbase != header.Coinbase {
 			return errors.New("invalid leader")
 		}
 	}
 	if number > posBootstrapBlockNum {
-		//
+		return errors.New("consensus engines should switched")
 	}
 	if err = s.isLegal4Sign(header.Coinbase); err != nil {
 		return err
@@ -593,7 +608,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	if x.Cmp(params.MinimumDifficulty) < 0 {
 		x.Set(params.MinimumDifficulty)
 	}
-/*
+
 	// calculate a fake block numer for the ice-age delay:
 	//   https://github.com/ethereum/EIPs/pull/669
 	//   fake_block_number = min(0, block.number - 3_000_000
@@ -612,7 +627,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 		y.Exp(big2, y, nil)
 		x.Add(x, y)
 	}
-*/
+
 	return x
 }
 
@@ -760,6 +775,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 			return err
 		}
 
+		posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
 		if header.Number.Uint64() == posBootstrapBlockNum {
 			ppowWindowLen := (len(snap.UsedSigners)-1) / 2
 			slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
@@ -771,7 +787,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 		}
 
 		if header.Number.Uint64() > posBootstrapBlockNum{			
-			// 
+			return errors.New("consensus engine switched")
 		}
 
 		err = snap.isLegal4Sign(header.Coinbase)

@@ -144,7 +144,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 
 	//Init wanpos private db
 	posdb.DbInitAll(cfg.Node.DataDir)
-	posconfig.Cfg().NodeCfg = &cfg.Node
+	posconfig.Init(&cfg.Node, cfg.Eth.NetworkId)
 
 	return stack, cfg
 }

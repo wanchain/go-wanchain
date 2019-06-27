@@ -3,6 +3,10 @@ package incentive
 import (
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/consensus"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
 	"github.com/wanchain/go-wanchain/core/state"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -41,7 +45,7 @@ func saveIncentiveHistory(epochID uint64, payments [][]vm.ClientIncentive) {
 
 	buf, err := rlp.EncodeToBytes(payments)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return
 	}
 	localDb.Put(epochID, dictEpochPayDetail, buf)
@@ -86,7 +90,7 @@ func saveOtherInfomation(epochID uint64, incentives [][]vm.ClientIncentive) {
 func localDbGetValue(epochID uint64, key string) (*big.Int, error) {
 	total, err := localDb.Get(epochID, key)
 	if err != nil && err.Error() != "leveldb: not found" {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
@@ -100,7 +104,7 @@ func localDbGetValue(epochID uint64, key string) (*big.Int, error) {
 func localDbAddValue(epochID uint64, key string, value *big.Int) {
 	total, err := localDb.Get(epochID, key)
 	if err != nil && err.Error() != "leveldb: not found" {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return
 	}
 	totalNum := big.NewInt(0)
@@ -115,7 +119,7 @@ func localDbAddValue(epochID uint64, key string, value *big.Int) {
 func GetEpochPayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
 	buf, err := localDb.Get(epochID, dictEpochPayDetail)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
@@ -123,7 +127,7 @@ func GetEpochPayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
 
 	err = rlp.DecodeBytes(buf, &payment)
 	if err != nil {
-		log.Error(err.Error())
+		log.SyslogErr(err.Error())
 		return nil, err
 	}
 
@@ -188,4 +192,9 @@ func GetEpochLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addres
 // GetEpochRBLeaderActivity can get the address and activity of RB leaders
 func GetEpochRBLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Address, []int) {
 	return getRandomProposerActivity(stateDb, epochID)
+}
+
+// GetSlotLeaderActivity can get the address, blockCnt, and activity of slotleader
+func GetSlotLeaderActivity(chain consensus.ChainReader, epochID uint64) ([]common.Address, []int, float64, int) {
+	return getSlotLeaderActivity(chain, epochID, posconfig.SlotCount)
 }

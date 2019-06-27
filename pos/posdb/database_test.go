@@ -2,62 +2,16 @@ package posdb
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"testing"
+
+	"github.com/wanchain/go-wanchain/common"
 
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
-
-func TestUint64Convert(t *testing.T) {
-	value := uint64(0)
-	buf := convert.Uint64ToBytes(value)
-	if len(buf) != 1 || buf[0] != 0 {
-		t.Fail()
-	}
-
-	buf = convert.Uint64ToBytes(uint64(0x12345678))
-	if buf[0] != 0x12 || buf[1] != 0x34 || buf[2] != 0x56 || buf[3] != 0x78 {
-		t.Fail()
-	}
-
-	buf = convert.Uint64StringToByte("0")
-	if len(buf) != 1 || buf[0] != 0 {
-		t.Fail()
-	}
-
-	str := convert.Uint64ToString(value)
-	if str != "00" && str != "0" {
-		t.Fail()
-	}
-
-	if convert.StringToUint64("0") != uint64(0) {
-		t.Fail()
-	}
-
-	if convert.StringToUint64("00") != uint64(0) {
-		t.Fail()
-	}
-
-	if convert.BytesToUint64([]byte{0x00}) != uint64(0) {
-		t.Fail()
-	}
-
-	str = convert.Uint64ToString(uint64(102400000))
-
-	v1 := convert.StringToUint64("257")
-	v2 := convert.BytesToUint64([]byte{0x01, 0x01})
-	if v1+v2 != uint64(0x202) {
-		t.Fail()
-	}
-
-	v3 := convert.StringToUint64("aaff")
-	if v3 != 0 {
-		t.Fail()
-	}
-}
 
 func TestDbInitAll(t *testing.T) {
 	os.RemoveAll("/tmp/gwan")
@@ -181,4 +135,15 @@ func TestDbInitAll(t *testing.T) {
 	if buf[0] != 3 || buf[1] != 4 || buf[2] != 5 || err != nil {
 		t.Fail()
 	}
+
+	db.DbClose()
+}
+
+func TestInfomationGet(t *testing.T) {
+	buf := GetRBProposerGroup(0)
+	fmt.Println(buf)
+	buf2 := GetStakerInfoBytes(0, common.Address{})
+	fmt.Println(buf2)
+	buf4 := GetEpochLeaderGroup(0)
+	fmt.Println(buf4)
 }

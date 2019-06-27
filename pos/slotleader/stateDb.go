@@ -2,9 +2,9 @@ package slotleader
 
 import (
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/log"
 )
 
 var (
@@ -17,19 +17,10 @@ func (s *SLS) GetCurrentStateDb() (stateDb *state.StateDB, err error) {
 }
 
 func (s *SLS) getCurrentStateDb() (stateDb *state.StateDB, err error) {
-	s.updateToLastStateDb()
-	if s.stateDb == nil {
-		return nil, errNoStateDbInstance
+	if posconfig.SelfTestMode {
+		return s.stateDbTest, nil
 	}
-	return s.stateDb, nil
-}
-
-func (s *SLS) updateToLastStateDb() {
-	stateDb, err := s.blockChain.StateAt(s.blockChain.CurrentBlock().Root())
-	if err != nil {
-		log.Error("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
-	}
-	s.stateDb = stateDb
+	return s.blockChain.StateAt(s.blockChain.CurrentBlock().Root())
 }
 
 func (s *SLS) getLastEpochIDFromChain() uint64 {

@@ -9,7 +9,6 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/core/vm"
-
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
@@ -20,13 +19,29 @@ import (
 	"github.com/wanchain/go-wanchain/functrace"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/rpc"
 	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/rpc"
 )
 
 var (
 	errInvalidCommitParameter = errors.New("invalid input parameters")
 )
+
+func (s *SLS) GenerateDefaultSlotLeaders() error {
+	//epochLeader := s.GetEpochDefaultLeadersPK(0)
+	epochLeader := s.epochLeadersPtrArrayGenesis
+	slotLeadersPtr, _, _, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(s.smaGenesis[:],
+		epochLeader[:], s.randomGenesis.Bytes(), posconfig.SlotCount, 0)
+	if err != nil {
+		log.SyslogAlert("generateSlotLeadsGroup", "epochid", 0, "error", err.Error())
+		return err
+	}
+
+	for index, val := range slotLeadersPtr {
+		s.defaultSlotLeadersPtrArray[index] = val
+	}
+	return nil
+}
 
 // Init use to initial slotleader module and input some params.
 func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Key) {
@@ -37,7 +52,73 @@ func (s *SLS) Init(blockChain *core.BlockChain, rc *rpc.Client, key *keystore.Ke
 		log.Info("SLS init success")
 	}
 
-	s.sendTransactionFn = util.SendTx
+	s.sendTransactionFn = util.SendPosTx
+	s.initSma()
+	s.GenerateDefaultSlotLeaders()
+}
+
+func (s *SLS) initSma() {
+
+	s.randomGenesis = posconfig.GetRandomGenesis()
+
+	epochDefaultLeaders := s.GetEpochDefaultLeadersPK(0)
+
+	for index, value := range epochDefaultLeaders {
+		s.epochLeadersPtrArrayGenesis[index] = value
+	}
+
+	alphas := make([]*big.Int, 0)
+	for _, value := range epochDefaultLeaders {
+		tempInt := new(big.Int).SetInt64(0)
+		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
+		alphas = append(alphas, tempInt)
+	}
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+
+		// AlphaPK  stage1Genesis
+		mi0 := new(ecdsa.PublicKey)
+		mi0.Curve = crypto.S256()
+		mi0.X, mi0.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[i].X, s.epochLeadersPtrArrayGenesis[i].Y,
+			alphas[i].Bytes())
+		s.stageOneMiGenesis[i] = mi0
+
+		// G
+		BasePoint := new(ecdsa.PublicKey)
+		BasePoint.Curve = crypto.S256()
+		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
+
+		// alphaG SMAGenesis
+		smaPiece := new(ecdsa.PublicKey)
+		smaPiece.Curve = crypto.S256()
+		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
+		s.smaGenesis[i] = smaPiece
+
+		for j := 0; j < posconfig.EpochLeaderCount; j++ {
+			// AlphaIPki stage2Genesis, used to verify genesis proof
+			alphaIPkj := new(ecdsa.PublicKey)
+			alphaIPkj.Curve = crypto.S256()
+			alphaIPkj.X, alphaIPkj.Y = crypto.S256().ScalarMult(s.epochLeadersPtrArrayGenesis[j].X,
+				s.epochLeadersPtrArrayGenesis[j].Y, alphas[i].Bytes())
+
+			s.stageTwoAlphaPKiGenesis[i][j] = alphaIPkj
+		}
+
+	}
+
+	epochLeadersPreHexStr := make([]string, 0)
+	for _, value := range s.epochLeadersPtrArrayGenesis {
+		epochLeadersPreHexStr = append(epochLeadersPreHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+	log.Debug("slot_leader_selection:init", "genesis epoch leaders", epochLeadersPreHexStr)
+
+	smaPiecesHexStr := make([]string, 0)
+	for _, value := range s.smaGenesis {
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+	}
+
+	log.Debug("initSma:init", "genesis sma pieces", smaPiecesHexStr)
+	log.SyslogInfo("SLS initSma success")
 }
 
 //Loop check work every Slot time. Called by backend loop.
@@ -56,11 +137,27 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	s.checkNewEpochStart(epochID)
 	workStage := s.getWorkStage(epochID)
 
+	//If the gwan restart, try to recover the epoch leader and slot leader
+	if workStage != slotLeaderSelectionInit && workStage != slotLeaderSelectionStageFinished {
+		if !s.isEpochLeaderMapReady() {
+			s.doInit(epochID)
+		}
+	}
+
 	switch workStage {
 	case slotLeaderSelectionInit:
 		s.doInit(epochID)
-		s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		if !s.isLocalPkInCurrentEpochLeaders() {
+			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+		} else {
+			s.setWorkStage(epochID, slotLeaderSelectionStage1)
+		}
+
 	case slotLeaderSelectionStage1:
+		if slotID < (posconfig.Sma1Start + 1) {
+			break
+		}
+
 		if slotID > (posconfig.Sma1End - 1) {
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 			log.Warn("Passed the moment of slotLeaderSelectionStage1 wait for next epoch", "epochID",
@@ -68,13 +165,9 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 			break
 		}
 
-		if !s.isLocalPkInCurrentEpochLeaders() {
-			s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
-		}
-
 		err := s.startStage1Work()
 		if err != nil {
-			log.Error(err.Error())
+			log.SyslogErr(err.Error())
 			s.setWorkStage(epochID, slotLeaderSelectionStage3)
 		} else {
 			s.setWorkStage(epochID, slotLeaderSelectionStage2)
@@ -111,6 +204,7 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 		s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
 		errorRetry = 3
 	case slotLeaderSelectionStageFinished:
+
 	default:
 	}
 }
@@ -124,7 +218,9 @@ func (s *SLS) doInit(epochID uint64) {
 	err := s.generateSlotLeadsGroup(epochID)
 	if err != nil {
 		log.Error(err.Error())
-		panic("generateSlotLeadsGroup error")
+		// no slot leaders are created, it leads that no one proposal block
+		// comment panic, because let node live to used for others node synchronization.
+		// panic("generateSlotLeadsGroup error")
 	}
 }
 
@@ -212,7 +308,7 @@ func (s *SLS) generateCommitment(publicKey *ecdsa.PublicKey,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
+	//fmt.Println("alpha:", hex.EncodeToString(alpha.Bytes()))
 
 	commitment, err := uleaderselection.GenerateCommitment(publicKey, alpha)
 	if err != nil {
@@ -237,11 +333,6 @@ func (s *SLS) checkNewEpochStart(epochID uint64) {
 	if epochID > workingEpochID {
 		s.setWorkStage(epochID, slotLeaderSelectionInit)
 	}
-}
-
-func (s *SLS) setCurrentWorkStage(workStage int) {
-	currentEpochID := s.getWorkingEpochID()
-	s.setWorkStage(currentEpochID, workStage)
 }
 
 func (s *SLS) getWorkingEpochID() uint64 {

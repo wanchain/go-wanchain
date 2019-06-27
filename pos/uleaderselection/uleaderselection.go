@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"io"
 	"math/big"
 
@@ -119,61 +120,6 @@ func RandomProposerSelection(r []byte, nr int, PublicKeys []*ecdsa.PublicKey, Pr
 	return randomProposerPublicKeys, nil
 }
 
-//samples ne epoch leaders by random number r from PublicKeys based on proportion of Probabilities
-func EpochLeaderSelection(r []byte, ne int, PublicKeys []*ecdsa.PublicKey, Probabilities []*float64) ([]*ecdsa.PublicKey, error) {
-	if r == nil || ne <= 0 || len(PublicKeys) == 0 || len(Probabilities) == 0 || len(PublicKeys) != len(Probabilities) {
-		return nil, ErrInvalidRandomProposerSelection
-	}
-	for _, publicKey := range PublicKeys {
-		if publicKey == nil || publicKey.X == nil || publicKey.Y == nil {
-			return nil, ErrInvalidRandomProposerSelection
-		}
-	}
-	for _, probability := range Probabilities {
-		if probability == nil {
-			return nil, ErrInvalidRandomProposerSelection
-		}
-	}
-
-	probabilitiesBig, _ := ProbabilityFloat2big(Probabilities) //transform probabilities from float64 to bigint
-	tp := new(big.Int).SetInt64(0)                             //total probability of probabilities_big
-	EpochLeaderPublicKeys := make([]*ecdsa.PublicKey, 0)       //store the selected publickeys
-	n := len(probabilitiesBig)
-
-	for _, probabilityBig := range probabilitiesBig {
-		tp.Add(tp, probabilityBig)
-	}
-	var Byte1 = []byte{byte(1)}
-	var buffer bytes.Buffer
-	buffer.Write(Byte1)
-	buffer.Write(r)
-	r1 := buffer.Bytes()       //r1 = 1||r
-	cr := crypto.Keccak256(r1) //cr = hash(r1)
-
-	for i := 0; i < ne; i++ {
-
-		crBig := new(big.Int).SetBytes(cr)
-		crBig.Mod(crBig, tp) //cr_big = cr mod tp
-
-		//select pki whose probability bigger than cr_big left
-		sumtemp := new(big.Int).SetInt64(0)
-		for j := 0; j < n; j++ {
-			sumtemp.Add(sumtemp, probabilitiesBig[j])
-			if sumtemp.Cmp(crBig) == 1 {
-				pkselected := new(ecdsa.PublicKey) //new publickey to store the selected one
-				pkselected.Curve = crypto.S256()
-				pkselected.X = new(big.Int).Set(PublicKeys[j].X)
-				pkselected.Y = new(big.Int).Set(PublicKeys[j].Y)
-				EpochLeaderPublicKeys = append(EpochLeaderPublicKeys, pkselected)
-				break
-			}
-		}
-		cr = crypto.Keccak256(cr)
-	}
-
-	return EpochLeaderPublicKeys, nil
-}
-
 /*_________________________________________________Secret Message Array Construction___________________________________________________*/
 
 //GenerateCommitment compute the commitment of PublicKey, Commitment = PublicKey || alpha * PublicKey
@@ -260,10 +206,12 @@ func PublicKeyEqual(PublicKey1 *ecdsa.PublicKey, PublicKey2 *ecdsa.PublicKey) bo
 //need to sort the array received based on PublicKeys in advance
 func GenerateSMA(PrivateKey *ecdsa.PrivateKey, ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
 	if PrivateKey == nil || PrivateKey.D == nil || len(ArrayPiece) == 0 {
+		log.SyslogErr("uleaderselection", "GenerateSMA error", ErrInvalidSecretMessageArrayGeneration.Error())
 		return nil, ErrInvalidSecretMessageArrayGeneration
 	}
 	for _, piece := range ArrayPiece {
 		if piece == nil || piece.X == nil || piece.Y == nil {
+			log.SyslogErr("uleaderselection", "GenerateSMA pieces error", ErrInvalidSecretMessageArrayGeneration.Error())
 			return nil, ErrInvalidSecretMessageArrayGeneration
 		}
 	}
