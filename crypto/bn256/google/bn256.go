@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bn256 implements a particular bilinear group at the 128-bit security level.
+// Package bn256 implements a particular bilinear group.
 //
 // Bilinear groups are the basis of many of the new cryptographic protocols
 // that have been proposed over the past decade. They consist of a triplet of
@@ -14,10 +14,15 @@
 // Barreto-Naehrig curve as described in
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
 // with the implementation described in that paper.
+//
+// (This package previously claimed to operate at a 128-bit security level.
+// However, recent improvements in attacks mean that is no longer true. See
+// https://moderncrypto.org/mail-archive/curves/2016/000740.html.)
 package bn256
 
 import (
 	"crypto/rand"
+	"errors"
 	"io"
 	"math/big"
 )
@@ -49,8 +54,8 @@ func RandomG1(r io.Reader) (*big.Int, *G1, error) {
 	return k, new(G1).ScalarBaseMult(k), nil
 }
 
-func (g *G1) String() string {
-	return "bn256.G1" + g.p.String()
+func (e *G1) String() string {
+	return "bn256.G1" + e.p.String()
 }
 
 // CurvePoints returns p's curve points in big integer
@@ -97,14 +102,18 @@ func (e *G1) Neg(a *G1) *G1 {
 }
 
 // Marshal converts n to a byte slice.
-func (n *G1) Marshal() []byte {
-	n.p.MakeAffine(nil)
-
-	xBytes := new(big.Int).Mod(n.p.x, P).Bytes()
-	yBytes := new(big.Int).Mod(n.p.y, P).Bytes()
-
+func (e *G1) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
+	if e.p.IsInfinity() {
+		return make([]byte, numBytes*2)
+	}
+
+	e.p.MakeAffine(nil)
+
+	xBytes := new(big.Int).Mod(e.p.x, P).Bytes()
+	yBytes := new(big.Int).Mod(e.p.y, P).Bytes()
 
 	ret := make([]byte, numBytes*2)
 	copy(ret[1*numBytes-len(xBytes):], xBytes)
@@ -115,21 +124,25 @@ func (n *G1) Marshal() []byte {
 
 // Unmarshal sets e to the result of converting the output of Marshal back into
 // a group element and then returns e.
-func (e *G1) Unmarshal(m []byte) (*G1, bool) {
+func (e *G1) Unmarshal(m []byte) ([]byte, error) {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
-
 	if len(m) != 2*numBytes {
-		return nil, false
+		return nil, errors.New("bn256: not enough data")
 	}
-
+	// Unmarshal the points and check their caps
 	if e.p == nil {
 		e.p = newCurvePoint(nil)
 	}
-
 	e.p.x.SetBytes(m[0*numBytes : 1*numBytes])
+	if e.p.x.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
 	e.p.y.SetBytes(m[1*numBytes : 2*numBytes])
-
+	if e.p.y.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
+	// Ensure the point is on the curve
 	if e.p.x.Sign() == 0 && e.p.y.Sign() == 0 {
 		// This is the point at infinity.
 		e.p.y.SetInt64(1)
@@ -140,11 +153,10 @@ func (e *G1) Unmarshal(m []byte) (*G1, bool) {
 		e.p.t.SetInt64(1)
 
 		if !e.p.IsOnCurve() {
-			return nil, false
+			return nil, errors.New("bn256: malformed point")
 		}
 	}
-
-	return e, true
+	return m[2*numBytes:], nil
 }
 
 // G2 is an abstract cyclic group. The zero value is suitable for use as the
@@ -171,8 +183,8 @@ func RandomG2(r io.Reader) (*big.Int, *G2, error) {
 	return k, new(G2).ScalarBaseMult(k), nil
 }
 
-func (g *G2) String() string {
-	return "bn256.G2" + g.p.String()
+func (e *G2) String() string {
+	return "bn256.G2" + e.p.String()
 }
 
 // CurvePoints returns the curve points of p which includes the real
@@ -212,15 +224,19 @@ func (e *G2) Add(a, b *G2) *G2 {
 
 // Marshal converts n into a byte slice.
 func (n *G2) Marshal() []byte {
+	// Each value is a 256-bit number.
+	const numBytes = 256 / 8
+
+	if n.p.IsInfinity() {
+		return make([]byte, numBytes*4)
+	}
+
 	n.p.MakeAffine(nil)
 
 	xxBytes := new(big.Int).Mod(n.p.x.x, P).Bytes()
 	xyBytes := new(big.Int).Mod(n.p.x.y, P).Bytes()
 	yxBytes := new(big.Int).Mod(n.p.y.x, P).Bytes()
 	yyBytes := new(big.Int).Mod(n.p.y.y, P).Bytes()
-
-	// Each value is a 256-bit number.
-	const numBytes = 256 / 8
 
 	ret := make([]byte, numBytes*4)
 	copy(ret[1*numBytes-len(xxBytes):], xxBytes)
@@ -233,23 +249,33 @@ func (n *G2) Marshal() []byte {
 
 // Unmarshal sets e to the result of converting the output of Marshal back into
 // a group element and then returns e.
-func (e *G2) Unmarshal(m []byte) (*G2, bool) {
+func (e *G2) Unmarshal(m []byte) ([]byte, error) {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
-
 	if len(m) != 4*numBytes {
-		return nil, false
+		return nil, errors.New("bn256: not enough data")
 	}
-
+	// Unmarshal the points and check their caps
 	if e.p == nil {
 		e.p = newTwistPoint(nil)
 	}
-
 	e.p.x.x.SetBytes(m[0*numBytes : 1*numBytes])
+	if e.p.x.x.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
 	e.p.x.y.SetBytes(m[1*numBytes : 2*numBytes])
+	if e.p.x.y.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
 	e.p.y.x.SetBytes(m[2*numBytes : 3*numBytes])
+	if e.p.y.x.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
 	e.p.y.y.SetBytes(m[3*numBytes : 4*numBytes])
-
+	if e.p.y.y.Cmp(P) >= 0 {
+		return nil, errors.New("bn256: coordinate exceeds modulus")
+	}
+	// Ensure the point is on the curve
 	if e.p.x.x.Sign() == 0 &&
 		e.p.x.y.Sign() == 0 &&
 		e.p.y.x.Sign() == 0 &&
@@ -263,11 +289,10 @@ func (e *G2) Unmarshal(m []byte) (*G2, bool) {
 		e.p.t.SetOne()
 
 		if !e.p.IsOnCurve() {
-			return nil, false
+			return nil, errors.New("bn256: malformed point")
 		}
 	}
-
-	return e, true
+	return m[4*numBytes:], nil
 }
 
 // GT is an abstract cyclic group. The zero value is suitable for use as the
