@@ -347,7 +347,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout develop
+$ git checkout betarelease
 
 $ git pull
 

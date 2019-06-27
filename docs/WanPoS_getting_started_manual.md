@@ -321,7 +321,7 @@ $ go get github.com/wanchain/go-wanchain
 
 $ cd $GOPATH/src/github.com/wanchain/go-wanchain
 
-$ git checkout develop
+$ git checkout betarelease
 
 $ git pull
 
