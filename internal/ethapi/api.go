@@ -31,7 +31,7 @@ import (
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
 
-	"github.com/wanchain/go-wanchain/accounts/keystore/bn256"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -41,7 +41,6 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
