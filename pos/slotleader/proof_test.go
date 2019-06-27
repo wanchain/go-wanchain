@@ -137,7 +137,7 @@ func TestGetSlotLeaderProof(t *testing.T) {
 
 	}
 
-	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(prvKey,
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(prvKey,
 		s.smaGenesis[:],
 		s.epochLeadersPtrArrayGenesis[:],
 		s.randomGenesis.Bytes(), 0, 0)
@@ -212,7 +212,7 @@ func TestVerifySlotProofByGenesis(t *testing.T) {
 
 	}
 
-	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(prvKey,
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(prvKey,
 		s.smaGenesis[:],
 		s.epochLeadersPtrArrayGenesis[:],
 		s.randomGenesis.Bytes(), 0, 0)
