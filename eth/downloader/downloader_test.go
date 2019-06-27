@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package downloader
-
+/*
 import (
 	"errors"
 	"fmt"
@@ -1706,3 +1706,4 @@ func testFastCriticalRestarts(t *testing.T, protocol int, progress bool) {
 	// completed using a single mode of operation, whereas fast-then-slow can result
 	// in arbitrary intermediate state that's not cleanly verifiable.
 }
+*/
