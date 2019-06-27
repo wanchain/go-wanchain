@@ -12,6 +12,20 @@ import (
 type SyslogFun func(m string) error
 type LocallogFun func(msg string, ctx ...interface{})
 
+const (
+	// Severity.
+	// From /usr/include/sys/syslog.h.
+	// These are the same on Linux, BSD, and OS X.
+	LOG_EMERG = iota
+	LOG_ALERT
+	LOG_CRIT
+	LOG_ERR
+	LOG_WARNING
+	LOG_NOTICE
+	LOG_INFO
+	LOG_DEBUG
+)
+
 type LogInfo struct {
 	Lvl syslog.Priority	`json:"level"`
 	Msg string			`json:"msg"`

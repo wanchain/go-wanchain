@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
-	"log/syslog"
 	"math/big"
 	"net"
 	"regexp"
@@ -1415,30 +1414,30 @@ func (s *Service) updateEpochId() uint64 {
 	return oldEpochId
 }
 
-func log2PosAlarm(log *log.LogInfo) pos_alarm {
-	if log == nil {
+func log2PosAlarm(plog *log.LogInfo) pos_alarm {
+	if plog == nil {
 		return pos_alarm{}
 	}
 
 	lvlStr := ""
-	switch log.Lvl {
-	case syslog.LOG_EMERG:
+	switch plog.Lvl {
+	case log.LOG_EMERG:
 		lvlStr = "EMERG"
-	case syslog.LOG_ALERT:
+	case log.LOG_ALERT:
 		lvlStr = "ALERT"
-	case syslog.LOG_CRIT:
+	case log.LOG_CRIT:
 		lvlStr = "CRIT"
-	case syslog.LOG_ERR:
+	case log.LOG_ERR:
 		lvlStr = "ERR"
-	case syslog.LOG_WARNING:
+	case log.LOG_WARNING:
 		lvlStr = "WARNING"
-	case syslog.LOG_NOTICE:
+	case log.LOG_NOTICE:
 		lvlStr = "NOTICE"
-	case syslog.LOG_INFO:
+	case log.LOG_INFO:
 		lvlStr = "INFO"
-	case syslog.LOG_DEBUG:
+	case log.LOG_DEBUG:
 		lvlStr = "DEBUG"
 	}
 
-	return pos_alarm{lvlStr, log.Msg}
+	return pos_alarm{lvlStr, plog.Msg}
 }

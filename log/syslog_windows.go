@@ -132,3 +132,8 @@ func writeSyslog(level uint32, a ...interface{}) {
 func SubscribeAlarm(ch chan<- LogInfo) event.Subscription {
 	return syslogger.scope.Track(new(event.Feed).Subscribe(ch))
 }
+
+
+func GetWarnAndWrongLogCount() (uint64, uint64) {
+	return 0, 0
+}
