@@ -17,15 +17,12 @@
 package les
 
 import (
-	"context"
-	"testing"
-	"time"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/light"
+	"testing"
 )
 
 var testBankSecureTrieKey = secAddr(testBankAddress)
@@ -66,59 +63,65 @@ func tfCodeAccess(db ethdb.Database, bhash common.Hash, number uint64) light.Odr
 	return &light.CodeRequest{Id: ci, Hash: crypto.Keccak256Hash(testContractCodeDeployed)}
 }
 
+//func testAccess(t *testing.T, protocol int, fn accessTestFn) {
+//	// Assemble the test environment
+//	peers := newPeerSet()
+//	dist := newRequestDistributor(peers, make(chan struct{}))
+//	rm := newRetrieveManager(peers, dist, nil)
+//	db, _ := ethdb.NewMemDatabase()
+//	ldb, _ := ethdb.NewMemDatabase()
+//	odr := NewLesOdr(ldb, rm)
+//
+//	pm := newTestProtocolManagerMust(t, false, 4, testChainGen, nil, nil, db)
+//	lpm := newTestProtocolManagerMust(t, true, 0, nil, peers, odr, ldb)
+//	_, err1, lpeer, err2 := newTestPeerPair("peer", protocol, pm, lpm)
+//	select {
+//	case <-time.After(time.Millisecond * 100):
+//	case err := <-err1:
+//		t.Fatalf("peer 1 handshake error: %v", err)
+//	case err := <-err2:
+//		t.Fatalf("peer 1 handshake error: %v", err)
+//	}
+//
+//	lpm.synchronise(lpeer)
+//
+//	test := func(expFail uint64) {
+//		for i := uint64(0); i <= pm.blockchain.CurrentHeader().Number.Uint64(); i++ {
+//			bhash := core.GetCanonicalHash(db, i)
+//			if req := fn(ldb, bhash, i); req != nil {
+//				ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+//				defer cancel()
+//
+//				err := odr.Retrieve(ctx, req)
+//				got := err == nil
+//				exp := i < expFail
+//				if exp && !got {
+//					t.Errorf("object retrieval failed")
+//				}
+//				if !exp && got {
+//					t.Errorf("unexpected object retrieval success")
+//				}
+//			}
+//		}
+//	}
+//
+//	// temporarily remove peer to test odr fails
+//	peers.Unregister(lpeer.id)
+//	time.Sleep(time.Millisecond * 10) // ensure that all peerSetNotify callbacks are executed
+//	// expect retrievals to fail (except genesis block) without a les peer
+//	test(0)
+//
+//	peers.Register(lpeer)
+//	time.Sleep(time.Millisecond * 10) // ensure that all peerSetNotify callbacks are executed
+//	lpeer.lock.Lock()
+//	lpeer.hasBlock = func(common.Hash, uint64) bool { return true }
+//	lpeer.lock.Unlock()
+//	// expect all retrievals to pass
+//	test(5)
+//}
+
+
 func testAccess(t *testing.T, protocol int, fn accessTestFn) {
 	// Assemble the test environment
-	peers := newPeerSet()
-	dist := newRequestDistributor(peers, make(chan struct{}))
-	rm := newRetrieveManager(peers, dist, nil)
-	db, _ := ethdb.NewMemDatabase()
-	ldb, _ := ethdb.NewMemDatabase()
-	odr := NewLesOdr(ldb, rm)
-
-	pm := newTestProtocolManagerMust(t, false, 4, testChainGen, nil, nil, db)
-	lpm := newTestProtocolManagerMust(t, true, 0, nil, peers, odr, ldb)
-	_, err1, lpeer, err2 := newTestPeerPair("peer", protocol, pm, lpm)
-	select {
-	case <-time.After(time.Millisecond * 100):
-	case err := <-err1:
-		t.Fatalf("peer 1 handshake error: %v", err)
-	case err := <-err2:
-		t.Fatalf("peer 1 handshake error: %v", err)
-	}
-
-	lpm.synchronise(lpeer)
-
-	test := func(expFail uint64) {
-		for i := uint64(0); i <= pm.blockchain.CurrentHeader().Number.Uint64(); i++ {
-			bhash := core.GetCanonicalHash(db, i)
-			if req := fn(ldb, bhash, i); req != nil {
-				ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-				defer cancel()
-
-				err := odr.Retrieve(ctx, req)
-				got := err == nil
-				exp := i < expFail
-				if exp && !got {
-					t.Errorf("object retrieval failed")
-				}
-				if !exp && got {
-					t.Errorf("unexpected object retrieval success")
-				}
-			}
-		}
-	}
-
-	// temporarily remove peer to test odr fails
-	peers.Unregister(lpeer.id)
-	time.Sleep(time.Millisecond * 10) // ensure that all peerSetNotify callbacks are executed
-	// expect retrievals to fail (except genesis block) without a les peer
-	test(0)
-
-	peers.Register(lpeer)
-	time.Sleep(time.Millisecond * 10) // ensure that all peerSetNotify callbacks are executed
-	lpeer.lock.Lock()
-	lpeer.hasBlock = func(common.Hash, uint64) bool { return true }
-	lpeer.lock.Unlock()
-	// expect all retrievals to pass
-	test(5)
+	// TODO comment test case about downloader
 }
