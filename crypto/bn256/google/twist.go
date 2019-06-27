@@ -76,7 +76,13 @@ func (c *twistPoint) IsOnCurve() bool {
 	yy.Sub(yy, xxx)
 	yy.Sub(yy, twistB)
 	yy.Minimal()
-	return yy.x.Sign() == 0 && yy.y.Sign() == 0
+
+	if yy.x.Sign() != 0 || yy.y.Sign() != 0 {
+		return false
+	}
+	cneg := newTwistPoint(pool)
+	cneg.Mul(c, Order, pool)
+	return cneg.z.IsZero()
 }
 
 func (c *twistPoint) SetInfinity() {
@@ -219,11 +225,19 @@ func (c *twistPoint) Mul(a *twistPoint, scalar *big.Int, pool *bnPool) *twistPoi
 	return c
 }
 
+// MakeAffine converts c to affine form and returns c. If c is ∞, then it sets
+// c to 0 : 1 : 0.
 func (c *twistPoint) MakeAffine(pool *bnPool) *twistPoint {
 	if c.z.IsOne() {
 		return c
 	}
-
+	if c.IsInfinity() {
+		c.x.SetZero()
+		c.y.SetOne()
+		c.z.SetZero()
+		c.t.SetZero()
+		return c
+	}
 	zInv := newGFp2(pool).Invert(c.z, pool)
 	t := newGFp2(pool).Mul(c.y, zInv, pool)
 	zInv2 := newGFp2(pool).Square(zInv, pool)
