@@ -58,7 +58,7 @@ const (
 
 	// txChanSize is the size of channel listening to TxPreEvent.
 	// The number is referenced from the size of tx pool.
-	txChanSize = 4096 * 1024
+	txChanSize = 4096
 	// rmLogsChanSize is the size of channel listening to RemovedLogsEvent.
 	rmLogsChanSize = 10
 	// logsChanSize is the size of channel listening to LogsEvent.

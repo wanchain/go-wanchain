@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"log/syslog"
 	"math/big"
 	"net"
@@ -32,6 +30,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
 
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posapi"
@@ -57,7 +58,7 @@ const (
 
 	// txChanSize is the size of channel listening to TxPreEvent.
 	// The number is referenced from the size of tx pool.
-	txChanSize = 4096 * 1024
+	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 	// alarmLogChanSize is the size of channel listening to AlarmLogEvent
@@ -179,7 +180,7 @@ func (s *Service) loop() {
 		accEventCh := make(chan bool, 1)
 		accSub := am.SubscribeStartupUnlock(accEventCh)
 		log.Info("wanstats begin wait unlock account finish event")
-		<- accEventCh
+		<-accEventCh
 		log.Info("wanstats got the unlock account finish event")
 		accSub.Unsubscribe()
 	}
@@ -627,12 +628,12 @@ func (s *Service) login(conn *websocket.Conn) error {
 			Client:   "0.1.1",
 			History:  true,
 		},
-		Secret: s.pass,
-		ClientTime: clientTime,
-		NodeId: infos.ID,
+		Secret:        s.pass,
+		ClientTime:    clientTime,
+		NodeId:        infos.ID,
 		ValidatorAddr: validatorAddr,
-		Signature: signature,
-		GenesisHash: genesisHash,
+		Signature:     signature,
+		GenesisHash:   genesisHash,
 	}
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
