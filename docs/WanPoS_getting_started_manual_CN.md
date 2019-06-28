@@ -115,7 +115,9 @@ root> exit
 
 4） 验证节点注册
 
-可使用社区开发的[mywanwallet](https://mywanwallet.io/#contracts)网页版钱包以可视化的方式完成验证人注册。也可以按照下文方式使用脚本注册。
+使用社区开发的[mywanwallet](https://mywanwallet.io/#contracts)网页版钱包以可视化的方式完成验证人注册。也可以按照下文方式使用脚本注册。
+
+！！！注意！！！为了保障账户安全，在使用脚本注册时，请一定不要开启--rpc选项，请反复核查后继续。（推荐使用钱包注册）
 
 创建一个验证节点注册脚本文件: `/home/YourUserName/.wanchain/validatorRegister.js`
 

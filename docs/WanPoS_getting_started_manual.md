@@ -89,6 +89,10 @@ And after receiving test WAN, continue to step 4.
 
 The validator registration can be done visually using the community-developed [mywanwallet] (https://mywanwallet.io/#contracts) web wallet. You can also use script registration as follows.
 
+!!!WARNING!!!
+
+In order to protect the security of the account, please do not enable the "--rpc" parameter when using script to register. Please verify before continue. (Recommended to use the GUI wallet for registration)
+
 Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
