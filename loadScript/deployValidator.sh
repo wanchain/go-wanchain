@@ -1,5 +1,9 @@
 #!/bin/bash
 # set -x
+echo ''
+echo ''
+echo ''
+echo ''
 echo '=========================================='
 echo '+     Welcome to Validator registion     +'
 echo ''
@@ -7,7 +11,11 @@ echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
 echo 'Please Enter your password of Validator account:'
 read PASSWD
-
+echo ''
+echo ''
+echo ''
+echo ''
+echo ''
 DOCKERIMG=wanchain/client-go:2.0.0-beta.5
 NETWORK=--testnet
 NETWORKPATH=testnet
@@ -34,6 +42,12 @@ addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
 sudo docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
 
+echo ''
+echo ''
+echo ''
+echo ''
+echo ''
+echo ''
 echo -e "\033[41;37m !!!!!!!!!!!!!!!Important!!!!!!!!!!!!!!! \033[0m"
 echo '=================================================='
 echo '      Please backup Your Validator Address'
