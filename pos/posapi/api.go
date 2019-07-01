@@ -3,9 +3,10 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core"
 	"sort"
 	"time"
+
+	"github.com/wanchain/go-wanchain/core"
 
 	"github.com/wanchain/go-wanchain/core/types"
 
@@ -323,7 +324,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
-func (a PosApi) GetPosInfo() (info PosInfoJson){
+func (a PosApi) GetPosInfo() (info PosInfoJson) {
 	info.FirstEpochId = posconfig.FirstEpochId
 	info.FirstBlockNumber = posconfig.Pow2PosUpgradeBlockNumber
 	return
@@ -387,7 +388,7 @@ func biToString(value *big.Int, err error) (string, error) {
 func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, error) {
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
-		return nil, err
+		return []ValidatorInfo{}, nil
 	}
 
 	ret := make([]ValidatorInfo, len(c))
@@ -460,7 +461,7 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
-		return make([]string,0), errors.New("epocher instance do not exist")
+		return make([]string, 0), errors.New("epocher instance do not exist")
 	}
 	return epocherInst.GetWhiteByEpochId(epochID)
 }
@@ -745,7 +746,7 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
 		return ep
 	}
-	return uint64(0)^uint64(0)
+	return uint64(0) ^ uint64(0)
 }
 
 func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
