@@ -12,7 +12,15 @@
 
 Beta版的explorer地址为：
 
-(待发布)
+http://testnet.wanscan.org/
+
+Wanstats地址为：
+
+http://54.193.4.239/
+
+Faucet地址为：
+
+http://54.201.62.90/
 
 Beta相对于Alpha版主要更新内容包括（暂定）：
 
@@ -109,7 +117,7 @@ root> exit
 
 申请测试币请填写下方的信息表格。
 
-（待完善链接）
+http://wanchain.mikecrm.com/USjDMuk
 
 如果已经使用钱包账号申请过测试币，可以手动将测试币转账到上文创建的validator账号中，完成后续步骤。
 
