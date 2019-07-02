@@ -18,7 +18,9 @@
 
 package utils
 
-import "syscall"
+import (
+	"syscall"
+)
 
 // raiseFdLimit tries to maximize the file descriptor allowance of this process
 // to the maximum hard-limit allowed by the OS.

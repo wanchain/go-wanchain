@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -199,7 +200,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Wanchain peer", "peer", id)
+	log.Trace("Removing Wanchain peer", "peer", id)
 
 	// Unregister the peer from the downloader and Ethereum peer set
 	pm.downloader.UnregisterPeer(id)
@@ -264,12 +265,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if pm.peers.Len() >= pm.maxPeers {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("Wanchain peer connected", "name", p.Name())
+	p.Log().Trace("Wanchain peer connected", "name", p.Name())
 
 	// Execute the Ethereum handshake
 	td, head, genesis := pm.blockchain.Status()
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
-		p.Log().Debug("Wanchain handshake failed", "err", err)
+		p.Log().Trace("Wanchain handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
@@ -312,7 +313,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("Wanchain message handling failed", "err", err)
+			p.Log().Trace("Wanchain message handling failed", "err", err)
 			return err
 		}
 	}
@@ -322,6 +323,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
+	//var stage int = 0 // -1 pow stage 0: uninit 1: pos
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -365,9 +367,33 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				break
 			}
 
-
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
+			//originNumber := number
+			//if !hashMode {
+			//	originNumber = query.Origin.Number
+			//}
+			//if stage == 0 {
+			//	if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
+			//		stage = -1
+			//	} else {
+			//		if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
+			//			stage = -1
+			//		} else {
+			//			stage = 1
+			//		}
+			//	}
+			//}
+			//if stage == -1 {
+			//	if number < posconfig.Pow2PosUpgradeBlockNumber {
+			//		headers = append(headers, origin)
+			//	}
+			//} else {
+			//	if number >= posconfig.Pow2PosUpgradeBlockNumber {
+			//		headers = append(headers, origin)
+			//	}
+			//}
+
 			bytes += estHeaderRlpSize
 
 			// Advance to the next header of the query
@@ -534,26 +560,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-	case msg.Code == GetEpochGenesisMsg:
-		var epochid uint64
-		if err := msg.Decode(&epochid); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		p.SendEpochGenesis(pm.blockchain,epochid)
-
-	case msg.Code == EpochGenesisMsg:
-		var epBody epochGenesisBody
-		if err := msg.Decode(&epBody); err != nil {
-			log.Debug("Failed to decode epoch genesis data", "err", err)
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		if err := pm.downloader.DeliverEpochGenesisData(p.id,epBody.EpochGenesis); err != nil {
-			log.Debug("Failed to deliver epoch genesis data", "err", err)
-		}
-
-
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
@@ -710,6 +716,79 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkTransaction(tx.Hash())
 		}
 		pm.txpool.AddRemotes(txs)
+
+	case p.version >= eth63 && msg.Code == GetEpochGenesisMsg:
+		var epochid uint64
+		if err := msg.Decode(&epochid); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+
+		return p.SendEpochGenesis(pm.blockchain,epochid)
+
+	case p.version >= eth63 && msg.Code == EpochGenesisMsg:
+		var epBody epochGenesisBody
+		if err := msg.Decode(&epBody); err != nil {
+			log.Debug("Failed to decode epoch genesis data", "err", err)
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		if epBody.EpochGenesis.EpochId == uint64(2601143) {
+			log.Debug("epoch id == 2601143")
+		}
+
+		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis, epBody.WhiteHeader); err != nil {
+			log.Debug("Failed to deliver epoch genesis data", "err", err)
+		}
+
+	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
+		var query getHeaderTdData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		hashMode := query.Origin.Hash != (common.Hash{})
+
+		var origin *types.Header
+		if hashMode {
+			origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
+		} else {
+			origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
+		}
+		if origin == nil {
+			return errors.New("GetBlockHeaderTdMsg header not exsit, height =" + strconv.FormatUint(query.Origin.Number, 10))
+		}
+		td := pm.blockchain.GetTd(origin.Hash(), origin.Number.Uint64())
+		if td == nil {
+			return errors.New("GetBlockHeaderTdMsg get td failed, height =" + strconv.FormatUint(origin.Number.Uint64(), 10))
+		}
+
+		return p.SendBlockHeaderTd(origin, td)
+
+	case p.version >= eth63 && msg.Code == BlockHeaderTdMsg:
+		var headerTd types.HeaderTdData
+		if err := msg.Decode(&headerTd); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		if err := pm.downloader.DeliverHeaderTd(p.id, &headerTd); err != nil {
+			log.Debug("Failed to deliver header td", "err", err)
+		}
+
+	case p.version >= eth63 && msg.Code == GetPivotMsg:
+		var query getPivotData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		pivotData := pm.blockchain.GetPosPivot(query.Origin, query.Height)
+
+		return p.SendPivot(pivotData)
+
+	case p.version >= eth63 && msg.Code == PivotMsg:
+		var pivotData = types.PivotData{}
+		if err := msg.Decode(&pivotData); err != nil {
+			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
+		}
+		err := pm.downloader.DeliverEpochPivot(p.id, &pivotData)
+		if err != nil {
+			log.Debug("Failed to deliver pivot headers", "err", err)
+		}
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)

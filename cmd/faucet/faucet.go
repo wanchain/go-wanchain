@@ -67,7 +67,7 @@ var (
 	ethPortFlag = flag.Int("ethport", 17717, "Listener port for the devp2p connection")
 	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
 	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
-	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+	statsFlag   = flag.String("wanstats", "", "Wanstats network monitoring auth string")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")

@@ -20,7 +20,6 @@ package pluto
 import (
 	"errors"
 	"math/big"
-
 	//"math/rand"
 	"sync"
 	"time"
@@ -485,6 +484,56 @@ func (c *Pluto) VerifyUncles(chain consensus.ChainReader, block *types.Block) er
 	return nil
 }
 
+func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Block) error {
+	//passed verify default,need to remove if open verify
+	return nil
+
+	//epochId, _ := posUtil.CalEpochSlotID(block.Header().Time.Uint64())
+	//hc, ok := chain.(*core.HeaderChain)
+	//if !ok {
+	//	bc,ok := chain.(*core.BlockChain)
+	//	if !ok {
+	//		log.Error("un support chain type")
+	//		return errors.New("un support chain type")
+	//	}
+	//
+	//	hc = bc.GetHc()
+	//}
+	////if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+	////	extraType := block.Header().Extra[0]
+	////	if extraType == 'g' {
+	////		if len(block.Header().Extra) > extraSeal + 33 {
+	////			egHash := common.BytesToHash(block.Header().Extra[1:33])
+	////			if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, true); err != nil {
+	////				return err
+	////			}
+	////
+	////		} else {
+	////			return fmt.Errorf("header extra info length is too short for epochGenesisHeadHash")
+	////		}
+	////	}
+	////}
+	//if block.Header().Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
+	//	posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
+	//}
+	//
+	//bGenerate := false
+	//if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+	//	bGenerate = true
+	//}
+	//
+	//egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), bGenerate)
+	//if err != nil {
+	//	return err
+	//}
+	//egHashHeader := common.BytesToHash(block.Header().Extra[0:32])
+	//if egHashPre != egHashHeader {
+	//	log.Error("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochId, 10))
+	//	return errors.New("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochId, 10))
+	//}
+	//return nil
+}
+
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Pluto) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
@@ -538,8 +587,8 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
 	if epidTime != epochID || slIdTime != slotID {
-		log.SyslogErr("epochid or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
-		return errors.New("epochid or slotid do not match")
+		log.SyslogErr("epochId or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
+		return errors.New("epochId or slotid do not match")
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
@@ -555,10 +604,10 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			log.SyslogErr("Can not GetInfoFromHeadExtra, verify failed", "error", err.Error())
 			return errUnauthorized
 		} else {
+
 			log.Debug("verifySeal GetInfoFromHeadExtra", "pk", hex.EncodeToString(crypto.FromECDSAPub(proofMeg[0])))
 
 			pk := proofMeg[0]
-
 			log.Debug("ecrecover(header, c.signatures)")
 			signer, err := ecrecover(header, c.signatures)
 			if err != nil {
@@ -573,6 +622,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 			}
 
 			if isSlotVerify {
+
 				err := s.ValidateBody(types.NewBlockWithHeader(header))
 				if err != nil {
 					return err
@@ -706,7 +756,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
-	if posconfig.FirstEpochId != 0 && epochID >= posconfig.FirstEpochId+2 && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
+	if posconfig.FirstEpochId != 0 && epochID > posconfig.FirstEpochId+2 && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
 		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
@@ -829,7 +879,6 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	log.Debug("signature", "hex", hex.EncodeToString(sighash))
 	log.Debug("sigHash(header)", "Bytes", hex.EncodeToString(sigHash(header).Bytes()))
 	log.Debug("Packed slotleader proof info success", "epochID", epochId, "slotID", slotId, "len", len(header.Extra), "pk", hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey)))
-
 
 	err = c.verifySeal(nil, header, nil, false)
 	if err != nil {

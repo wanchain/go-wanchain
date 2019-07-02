@@ -91,6 +91,7 @@ func TestVerifyDleqProof(t *testing.T) {
 func TestGetSlotLeaderProof(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
+
 	pks, isGenesis, err := s.getSMAPieces(0)
 	if err != nil {
 		t.Error(err.Error())
@@ -112,7 +113,31 @@ func TestGetSlotLeaderProof(t *testing.T) {
 		s.epochLeadersPtrArrayGenesis[i] = &prvKey.PublicKey
 	}
 
-	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(prvKey,
+	s.randomGenesis = big.NewInt(1)
+
+	alphas := make([]*big.Int, 0)
+	for _, value := range s.epochLeadersPtrArrayGenesis {
+		tempInt := new(big.Int).SetInt64(0)
+		tempInt.SetBytes(crypto.Keccak256(crypto.FromECDSAPub(value)))
+		alphas = append(alphas, tempInt)
+	}
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+
+		// G
+		BasePoint := new(ecdsa.PublicKey)
+		BasePoint.Curve = crypto.S256()
+		BasePoint.X, BasePoint.Y = crypto.S256().ScalarBaseMult(big.NewInt(1).Bytes())
+
+		// alphaG SMAGenesis
+		smaPiece := new(ecdsa.PublicKey)
+		smaPiece.Curve = crypto.S256()
+		smaPiece.X, smaPiece.Y = crypto.S256().ScalarMult(BasePoint.X, BasePoint.Y, alphas[i].Bytes())
+		s.smaGenesis[i] = smaPiece
+
+	}
+
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(prvKey,
 		s.smaGenesis[:],
 		s.epochLeadersPtrArrayGenesis[:],
 		s.randomGenesis.Bytes(), 0, 0)
@@ -141,6 +166,8 @@ func TestVerifySlotProofByGenesis(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+
+	s.randomGenesis = big.NewInt(1)
 
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
 		s.epochLeadersPtrArrayGenesis[i] = &prvKey.PublicKey
@@ -185,7 +212,7 @@ func TestVerifySlotProofByGenesis(t *testing.T) {
 
 	}
 
-	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof2(prvKey,
+	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(prvKey,
 		s.smaGenesis[:],
 		s.epochLeadersPtrArrayGenesis[:],
 		s.randomGenesis.Bytes(), 0, 0)

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/wanchain/go-wanchain/core"
+
 	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -322,7 +324,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
-func (a PosApi) GetPosInfo() (info PosInfoJson){
+func (a PosApi) GetPosInfo() (info PosInfoJson) {
 	info.FirstEpochId = posconfig.FirstEpochId
 	info.FirstBlockNumber = posconfig.Pow2PosUpgradeBlockNumber
 	return
@@ -386,7 +388,7 @@ func biToString(value *big.Int, err error) (string, error) {
 func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, error) {
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
-		return nil, err
+		return []ValidatorInfo{}, nil
 	}
 
 	ret := make([]ValidatorInfo, len(c))
@@ -459,7 +461,7 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
-		return make([]string,0), errors.New("epocher instance do not exist")
+		return make([]string, 0), errors.New("epocher instance do not exist")
 	}
 	return epocherInst.GetWhiteByEpochId(epochID)
 }
@@ -736,4 +738,50 @@ func (a PosApi) GetValidRBCnt(epochId uint64) ([]uint64, error) {
 func (a PosApi) GetRbStage(slotId uint64) uint64 {
 	stage, _, _ := vm.GetRBStage(slotId)
 	return uint64(stage)
+}
+
+func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
+	header := a.chain.GetHeaderByNumber(blockNumber)
+	if header != nil {
+		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
+		return ep
+	}
+	return uint64(0) ^ uint64(0)
+}
+
+func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+		return eg, nil
+	}
+
+	return nil, errors.New("PrintEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
+	}
+
+	return nil, errors.New("GenerateEpochGenesis failed, cast failed")
+}
+
+func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
+	if bc, ok := a.chain.(*core.BlockChain); ok {
+		geg, err := bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
+		if err != nil {
+			return false, errors.New("GenerateEpochGenesis failed")
+		}
+
+		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
+
+		if eg != nil && geg != nil {
+			if eg.GenesisBlkHash == geg.GenesisBlkHash {
+				return true, nil
+			}
+		}
+		return false, errors.New("GetEpochGenesis failed")
+	}
+
+	return false, errors.New("a.chain is not block chain")
 }

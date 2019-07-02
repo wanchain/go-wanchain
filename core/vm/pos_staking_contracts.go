@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -33,13 +35,14 @@ const (
 	PSMinEpochNum = 7
 	PSMaxEpochNum = 90
 
+	PSMaxStake            = 10500000
 	PSMinStakeholderStake = 10000
 	PSMinValidatorStake   = 50000
 	PSMinDelegatorStake   = 100
 	PSMinFeeRate          = 0
 	PSMaxFeeRate          = 10000
 	PSNodeleFeeRate       = 10000
-	maxTimeDelegate       = 5
+	MaxTimeDelegate       = 10
 	UpdateDelay           = 3
 	QuitDelay             = 3
 	JoinDelay             = 2
@@ -173,6 +176,7 @@ var (
 	minStakeholderStake        = new(big.Int).Mul(big.NewInt(PSMinStakeholderStake), ether)
 	MinValidatorStake          = new(big.Int).Mul(big.NewInt(PSMinValidatorStake), ether)
 	minDelegatorStake          = new(big.Int).Mul(big.NewInt(PSMinDelegatorStake), ether)
+	maxTotalStake              = new(big.Int).Mul(big.NewInt(PSMaxStake), ether)
 	minFeeRate                 = big.NewInt(PSMinFeeRate)
 	maxFeeRate                 = big.NewInt(PSMaxFeeRate)
 	noDelegateFeeRate          = big.NewInt(PSNodeleFeeRate)
@@ -426,6 +430,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 	p.stakeUpdateLog(contract, evm, stakerInfo)
 	return nil, nil
 }
+
 func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	info, err := p.partnerInParseAndValid(payload)
 	if err != nil {
@@ -438,23 +443,35 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
+	if stakerInfo.StakingEpoch == 0 {
+		realLockEpoch = int64(stakerInfo.LockEpochs)
+	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
-	weight := CalLocktimeWeight(realLockEpoch)
+	weight := CalLocktimeWeight(uint64(realLockEpoch))
 
+	total := big.NewInt(0).Set(stakerInfo.Amount)
+	for i := 0; i < len(stakerInfo.Clients); i++ {
+		total.Add(total, stakerInfo.Clients[i].Amount)
+	}
+	total.Add(total, contract.Value())
 	length := len(stakerInfo.Partners)
 	found := false
 	for i := 0; i < length; i++ {
+		total.Add(total, stakerInfo.Partners[i].Amount)
 		if stakerInfo.Partners[i].Address == contract.CallerAddress {
 			partner := &stakerInfo.Partners[i]
 			partner.Amount.Add(partner.Amount, contract.Value())
 			partner.StakeAmount.Add(partner.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
 			partner.Renewal = info.Renewal
 			found = true
-			break
 		}
+	}
+	// check stake + partner + delegate <= 10,500,000
+	if total.Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("partner in failed, too much stake")
 	}
 	if found == false {
 		if length >= maxPartners {
@@ -465,7 +482,10 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			Amount:       contract.Value(),
 			Renewal:      info.Renewal,
 			StakingEpoch: eidNow + JoinDelay,
-			LockEpochs:   realLockEpoch,
+			LockEpochs:   uint64(realLockEpoch),
+		}
+		if posconfig.FirstEpochId == 0 {
+			partner.StakingEpoch = 0
 		}
 		partner.StakeAmount = big.NewInt(0).Mul(partner.Amount, big.NewInt(int64(weight)))
 		stakerInfo.Partners = append(stakerInfo.Partners, partner)
@@ -494,11 +514,27 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	// add origen Amount
 	stakerInfo.Amount.Add(stakerInfo.Amount, contract.Value())
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	realLockEpoch := stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch)
+	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
+	if stakerInfo.StakingEpoch == 0 {
+		realLockEpoch = int64(stakerInfo.LockEpochs)
+	}
 	if realLockEpoch < 0 || realLockEpoch > PSMaxEpochNum {
 		return nil, errors.New("Wrong lock Epochs")
 	}
-	weight := CalLocktimeWeight(realLockEpoch)
+
+	total := big.NewInt(0).Set(stakerInfo.Amount)
+	for i := 0; i < len(stakerInfo.Clients); i++ {
+		total.Add(total, stakerInfo.Clients[i].Amount)
+	}
+	for i := 0; i < len(stakerInfo.Partners); i++ {
+		total.Add(total, stakerInfo.Partners[i].Amount)
+	}
+	// check stake + partner + delegate <= 10,500,000
+	if total.Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("StakeAppend in failed, too much stake")
+	}
+
+	weight := CalLocktimeWeight(uint64(realLockEpoch))
 	stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)
 	if err != nil {
@@ -518,6 +554,10 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	//  amount >= PSMinStakeholderStake,
 	if contract.value.Cmp(minStakeholderStake) < 0 {
 		return nil, errors.New("need more Wan to be a stake holder")
+	}
+	// TODO: or return value - 10,500,000 to the sender?
+	if contract.value.Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("max stake is 10,500,000")
 	}
 
 	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
@@ -549,6 +589,9 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		//NextFeeRate:      info.FeeRate.Uint64(),
 		From:         contract.CallerAddress,
 		StakingEpoch: eidNow + JoinDelay,
+	}
+	if posconfig.FirstEpochId == 0 {
+		stakerInfo.StakingEpoch = 0
 	}
 	stakerInfo.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	err = p.saveStakeInfo(evm, stakerInfo)
@@ -600,8 +643,12 @@ func (p *PosStaking) DelegateIn(payload []byte, contract *Contract, evm *EVM) ([
 			info.StakeAmount.Add(info.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
 		}
 	}
-	// check the totalDelegated <= 5*stakerInfo.Amount
-	if totalDelegated.Cmp(big.NewInt(0).Mul(total, big.NewInt(maxTimeDelegate))) > 0 {
+	// check self + partner + delegate <= 10,500,000
+	if new(big.Int).Add(totalDelegated, total).Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("delegate over total stake limitation")
+	}
+	// check the totalDelegated <= 10*stakerInfo.Amount
+	if totalDelegated.Cmp(big.NewInt(0).Mul(total, big.NewInt(MaxTimeDelegate))) > 0 {
 		return nil, errors.New("over delegate limitation")
 	}
 	if info == nil {

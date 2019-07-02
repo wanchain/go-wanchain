@@ -24,11 +24,11 @@ Staking delegate contract used for deposit wancoin and the user node will become
  
 
 
-# Wanpos POC start
+# Wanpos testnet start
 
-build/bin/gwan --pluto --nodiscover --etherbase  "0xcf696d8eea08a311780fb89b20d4f0895198a489"  --unlock "0xcf696d8eea08a311780fb89b20d4f0895198a489" --password ./pw.txt  --mine --minerthreads=1
+build/bin/gwan --testnet --nodiscover --etherbase  "0xcf696d8eea08a311780fb89b20d4f0895198a489"  --unlock "0xcf696d8eea08a311780fb89b20d4f0895198a489" --password ./pw.txt  --mine --minerthreads=1
 ## parameter 
-* --pluto: specify the consensus.
+* --testnet: specify the consensus.
 * --datadir: datadir and ipc path
 * --etherbase: specify the account used for mining.
 * --mine --minerthreads: specify enable mining and minerthreads is 1.

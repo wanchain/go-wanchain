@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain"
+	ethereum "github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -62,6 +62,7 @@ type SimulatedBackend struct {
 
 	env *core.ChainEnv
 
+	BlockEnv *core.ChainEnv
 	// config *params.ChainConfig
 }
 
@@ -77,6 +78,7 @@ func NewSimulatedBackend() *SimulatedBackend {
 	env := core.NewChainEnv(gspec.Config, gspec, ce, bc, db)
 
 	backend := &SimulatedBackend{env: env}
+	backend.BlockEnv = env
 	backend.rollback()
 	return backend
 }

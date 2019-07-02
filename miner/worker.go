@@ -160,10 +160,12 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	go worker.update()
 
 	go worker.wait()
-	//if !worker.chain.IsInPosStage() {
-	//	worker.commitNewWork(true)
-	//}
-	worker.commitNewWork(false, 0)
+	if !worker.chain.IsInPosStage() {
+		worker.commitNewWork(true, 0)
+	} else {
+		worker.commitNewWork(false, 0)
+	}
+	
 
 	eth.BlockChain().RegisterSwitchEngine(worker)
 
@@ -268,7 +270,6 @@ func (self *worker) update() {
 			if !self.chain.IsInPosStage() {
 				self.commitNewWork(true, 0)
 			} else {
-				// TODO two block.
 				self.commitNewWork(false, 0)
 			}
 		case slotTime := <-self.chainSlotTimer:
@@ -552,26 +553,11 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	var coalescedLogs []*types.Log
 
-	var rbCount  = 0
-	var slotCount = 0
 	for {
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
 			break
-		}
-		//fmt.Println(tx.To().String())
-		//fmt.Println(vm.RandomBeaconPrecompileAddr.String())
-		if tx.To()!=nil&&tx.To().String() == vm.RandomBeaconPrecompileAddr.String() {
-			rbCount++
-			if rbCount > 10 {
-				break
-			}
-		} else  if tx.To()!=nil&&tx.To().String() == vm.SlotLeaderPrecompileAddr.String() {
-			slotCount++
-			if slotCount > 20 {
-				break
-			}
 		}
 
 		// Error may be ignored here. The error has already been checked

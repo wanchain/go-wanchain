@@ -19,8 +19,10 @@ package miner
 
 import (
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"sync"
 	"sync/atomic"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
@@ -47,8 +49,8 @@ type Backend interface {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	mux *event.TypeMux
-
+	mux    *event.TypeMux
+	mu     sync.Mutex
 	worker *worker
 
 	coinbase common.Address
@@ -58,7 +60,7 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
-	timerStop   chan interface{}
+	//timerStop   chan interface{}
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
@@ -68,13 +70,14 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		engine:    engine,
 		worker:    newWorker(config, engine, common.Address{}, eth, mux),
 		canStart:  1,
-		timerStop: make(chan interface{}),
+		//timerStop: make(chan interface{}),
 	}
 	cpuAgent := NewCpuAgent(eth.BlockChain(), engine)
 	miner.Register(cpuAgent)
 	eth.BlockChain().RegisterSwitchEngine(cpuAgent)
 	eth.BlockChain().RegisterSwitchEngine(miner)
 	//posInit(eth, nil)
+	posPreInit(eth)
 	go miner.update()
 	return miner
 }
@@ -87,15 +90,21 @@ func (self *Miner) update() {
 	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
 out:
 	for ev := range events.Chan() {
+		log.Info("miner update start", "ev", ev)
 		switch ev.Data.(type) {
 		case downloader.StartEvent:
 			atomic.StoreInt32(&self.canStart, 0)
+			log.Info("miner update start downloader.StartEvent")
+			log.Info("miner update", "mining", self.Mining())
 			if self.Mining() {
+				log.Info("befor stop: miner update", "mining", self.Mining())
 				self.Stop()
+				log.Info("after stop: miner update", "mining", self.Mining())
 				atomic.StoreInt32(&self.shouldStart, 1)
 				log.Info("Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
+			log.Info("downloader.DoneEvent, downloader.FailedEvent:")
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
@@ -126,7 +135,7 @@ func (self *Miner) Start(coinbase common.Address) {
 	self.worker.start()
 	if self.eth.BlockChain().Config().IsPosActive {
 		go self.backendTimerLoop(self.eth)
-	} else 	if !self.eth.BlockChain().IsInPosStage()  {
+	} else if !self.eth.BlockChain().IsInPosStage() {
 		self.worker.commitNewWork(true, 0)
 	} else {
 		go self.backendTimerLoop(self.eth)
@@ -137,9 +146,9 @@ func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
-	if self.worker.config.Pluto != nil {
-		self.timerStop <- nil
-	}
+	//if self.worker.config.Pluto != nil && posconfig.FirstEpochId != 0{
+	//	self.timerStop <- nil
+	//}
 }
 
 func (self *Miner) Register(agent Agent) {
@@ -199,7 +208,7 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 	self.worker.setEtherbase(addr)
 }
 
-func (self *Miner) SwitchEngine(engine consensus.Engine){
+func (self *Miner) SwitchEngine(engine consensus.Engine) {
 	self.engine = engine
 	//time.Sleep(1000*time.Millisecond)
 	log.Info("SwitchEngine")

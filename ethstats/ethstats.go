@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"log/syslog"
+	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"math/big"
 	"net"
 	"regexp"
@@ -172,6 +172,17 @@ func (s *Service) Stop() error {
 // loop keeps trying to connect to the netstats server, reporting chain events
 // until termination.
 func (s *Service) loop() {
+	// Wait startup unlock account finish event
+	am := s.eth.AccountManager()
+	if am != nil {
+		accEventCh := make(chan bool, 1)
+		accSub := am.SubscribeStartupUnlock(accEventCh)
+		log.Info("wanstats begin wait unlock account finish event")
+		<- accEventCh
+		log.Info("wanstats got the unlock account finish event")
+		accSub.Unsubscribe()
+	}
+
 	// Subscribe to chain events to execute updates on
 	var blockchain blockChain
 	var txpool txPool
@@ -451,7 +462,7 @@ func (s *Service) isPos() bool {
 		return false
 	}
 
-	return util.IsPosBlock(block.NumberU64())
+	return block.Number().Cmp(bc.Config().PosFirstBlock) >= 0
 }
 
 // readLoop loops as long as the connection is alive and retrieves data packets
@@ -543,15 +554,55 @@ type nodeInfo struct {
 
 // authMsg is the authentication infos needed to login to a monitoring server.
 type authMsg struct {
-	Id     string   `json:"id"`
-	Info   nodeInfo `json:"info"`
-	Secret string   `json:"secret"`
+	Id            string   `json:"id"`
+	Info          nodeInfo `json:"info"`
+	Secret        string   `json:"secret"`
+	ClientTime    int64    `json:"clientTime"`
+	NodeId        string   `json:"nodeId"`
+	ValidatorAddr string   `json:"validatorAddr"`
+	Signature     string   `json:"signature"`
+	GenesisHash   string   `json:"genesisHash"`
 }
 
 // login tries to authorize the client at the remote server.
 func (s *Service) login(conn *websocket.Conn) error {
 	// Construct and send the login authentication
 	infos := s.server.NodeInfo()
+	clientTime := time.Now().Unix()
+	validatorAddr := ""
+	signature := ""
+	genesisHash := ""
+
+	if s.eth != nil {
+		coinBase, err := s.eth.Etherbase()
+		if err != nil {
+			log.Info("wanstats cant get coinbase", "err", err)
+		} else {
+			validatorAddr = coinBase.String()
+			account := accounts.Account{Address: coinBase}
+			wallet, err := s.eth.AccountManager().Find(account)
+			if err != nil {
+				log.Info("wanstats cant find wallet from account", "err", err)
+			} else {
+				signContent := fmt.Sprintf("%d%s%s", clientTime, infos.ID, validatorAddr)
+				hasher := sha3.NewKeccak256()
+				hasher.Write([]byte(signContent))
+				hash := common.Hash{}
+				hasher.Sum(hash[:0])
+				signed, err := wallet.SignHash(account, hash[:])
+				if err != nil {
+					log.Info("wanstats sign the hello msg fail", "err", err)
+				} else {
+					signature = common.ToHex(signed)
+				}
+			}
+		}
+
+		gBlk := s.eth.BlockChain().GetBlockByNumber(0)
+		if gBlk != nil {
+			genesisHash = gBlk.Hash().String()
+		}
+	}
 
 	var network, protocol string
 	if info := infos.Protocols["wan"]; info != nil {
@@ -576,6 +627,11 @@ func (s *Service) login(conn *websocket.Conn) error {
 			History:  true,
 		},
 		Secret: s.pass,
+		ClientTime: clientTime,
+		NodeId: infos.ID,
+		ValidatorAddr: validatorAddr,
+		Signature: signature,
+		GenesisHash: genesisHash,
 	}
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
@@ -673,10 +729,10 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 
 	preEpBlkCnt := uint64(0)
 	if s.epochId > 0 {
-		preEpBlkCnt, _ = s.api.GetEpochBlkCnt(s.epochId-1)
+		preEpBlkCnt, _ = s.api.GetEpochBlkCnt(s.epochId - 1)
 	}
 
-	posL := pos_leader{s.epochId,el, rnpl, preEpBlkCnt}
+	posL := pos_leader{s.epochId, el, rnpl, preEpBlkCnt}
 	stats := map[string]interface{}{
 		"id":         s.node,
 		"pos-leader": posL,
@@ -1001,6 +1057,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		}
 		// Ran out of blocks, cut the report short and send
 		history = history[len(history)-i:]
+		break
 	}
 	// Assemble the history report and send it to the server
 	if len(history) > 0 {
@@ -1059,6 +1116,7 @@ func (s *Service) reportPosHistory(conn *websocket.Conn, list []uint64) error {
 		}
 		// Ran out of blocks, cut the report short and send
 		history = history[len(history)-i:]
+		break
 	}
 	// Assemble the history report and send it to the server
 	if len(history) > 0 {
@@ -1356,30 +1414,30 @@ func (s *Service) updateEpochId() uint64 {
 	return oldEpochId
 }
 
-func log2PosAlarm(log *log.LogInfo) pos_alarm {
-	if log == nil {
+func log2PosAlarm(plog *log.LogInfo) pos_alarm {
+	if plog == nil {
 		return pos_alarm{}
 	}
 
 	lvlStr := ""
-	switch log.Lvl {
-	case syslog.LOG_EMERG:
+	switch plog.Lvl {
+	case log.LOG_EMERG:
 		lvlStr = "EMERG"
-	case syslog.LOG_ALERT:
+	case log.LOG_ALERT:
 		lvlStr = "ALERT"
-	case syslog.LOG_CRIT:
+	case log.LOG_CRIT:
 		lvlStr = "CRIT"
-	case syslog.LOG_ERR:
+	case log.LOG_ERR:
 		lvlStr = "ERR"
-	case syslog.LOG_WARNING:
+	case log.LOG_WARNING:
 		lvlStr = "WARNING"
-	case syslog.LOG_NOTICE:
+	case log.LOG_NOTICE:
 		lvlStr = "NOTICE"
-	case syslog.LOG_INFO:
+	case log.LOG_INFO:
 		lvlStr = "INFO"
-	case syslog.LOG_DEBUG:
+	case log.LOG_DEBUG:
 		lvlStr = "DEBUG"
 	}
 
-	return pos_alarm{lvlStr, log.Msg}
+	return pos_alarm{lvlStr, plog.Msg}
 }

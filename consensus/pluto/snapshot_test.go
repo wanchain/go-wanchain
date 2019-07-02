@@ -345,7 +345,8 @@ func TestVoting(t *testing.T) {
 		}
 		// Create the genesis block with the initial set of signers
 		genesis := &core.Genesis{
-			ExtraData: make([]byte, extraVanity+common.AddressLength*len(signers)+extraSeal),
+			//ExtraData: make([]byte, extraVanity+common.AddressLength*len(signers)+extraSeal),
+			ExtraData: make([]byte, extraVanity+common.AddressLength*len(signers)),
 		}
 		for j, signer := range signers {
 			copy(genesis.ExtraData[extraVanity+j*common.AddressLength:], signer[:])

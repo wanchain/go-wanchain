@@ -179,8 +179,35 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
-	// in order to improve the transmission speed, return nil directly.
-	return nil
+	if posconfig.FirstEpochId == 0 {
+		return  errParameters
+	}
+	if stateDB == nil || signer == nil || tx == nil {
+		return errParameters
+	}
+
+	payload := tx.Data()
+	if len(payload) < 4 {
+		return errParameters
+	}
+
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return err
+	}
+
+	return ValidPosRBTx(stateDB, from, payload)
+}
+func getRBProposerGroup(eid uint64)([]bn256.G1,error){
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return nil,  errors.New("GetEpocherInst() == nil")
+	}
+		pks := ep.GetRBProposerG1(eid)
+	if len(pks) == 0 {
+		return nil, errors.New("len(pks) == 0")
+	}
+	return pks,nil
 }
 
 //
@@ -233,9 +260,10 @@ func validDkg1(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg1Param.EpochId
 	pid := dkg1Param.ProposerId
 
-	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
-
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
+	}
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg1Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg1Stage. epochId " + strconv.FormatUint(eid, 10)))
@@ -295,8 +323,11 @@ func validDkg2(stateDB StateDB, time uint64, caller common.Address,
 	eid := dkg2Param.EpochId
 	pid := dkg2Param.ProposerId
 
-	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, err
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbDkg2Stage, time) {
 		return nil, logError(errors.New("invalid rb stage, expect RbDkg2Stage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -348,8 +379,11 @@ func validSigShare(stateDB StateDB, time uint64, caller common.Address,
 	eid := sigShareParam.EpochId
 	pid := sigShareParam.ProposerId
 
-	// todo : check pks element validity
-	pks := util.GetEpocherInst().GetRBProposerG1(eid)
+	pks, err := getRBProposerGroupVar(eid)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// 1. EpochId: weather in a wrong time
 	if !isValidEpochStageVar(eid, RbSignStage, time) {
 		return nil, nil, nil, logError(errors.New("invalid rb stage, expect RbSignStage. error epochId " + strconv.FormatUint(eid, 10)))
@@ -435,7 +469,7 @@ func GetR(db StateDB, epochId uint64) *big.Int {
 	}
 	r := GetStateR(db, epochId)
 	if r == nil {
-		if epochId != posconfig.FirstEpochId+1 && epochId != posconfig.FirstEpochId+2 {
+		if epochId > posconfig.FirstEpochId+2 {
 			log.SyslogWarning("***Can not found random r just use the first epoch R", "epochId", epochId)
 		}
 		r = GetStateR(db, posconfig.FirstEpochId)
@@ -790,10 +824,14 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 }
 
 func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
-	if len(pks) <= int(proposerId) {
+	if len(pks) <= int(proposerId) || int(proposerId)<0 {
 		return false
 	}
-	pk1 := util.GetEpocherInst().GetProposerBn256PK(epochId, uint64(proposerId), address)
+	ep := util.GetEpocherInst()
+	if ep == nil {
+		return false
+	}
+	pk1 := ep.GetProposerBn256PK(epochId, uint64(proposerId), address)
 	if pk1 != nil {
 		return bytes.Equal(pk1, pks[proposerId].Marshal())
 	}
@@ -836,6 +874,7 @@ func setSignorsNum(epochId uint64, num uint32, evm *EVM) {
 var getRBMVar = GetRBM
 var isValidEpochStageVar = isValidEpochStage
 var isInRandomGroupVar = isInRandomGroup
+var getRBProposerGroupVar = getRBProposerGroup
 
 //
 // contract abi methods

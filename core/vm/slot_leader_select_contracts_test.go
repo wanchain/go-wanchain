@@ -6,22 +6,21 @@ import (
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/ethdb"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/pos/uleaderselection"
 	"math/big"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 func TestStage1RlpCompress(t *testing.T) {
@@ -148,6 +147,7 @@ func TestGetSlotLeaderStage2KeyHash(t *testing.T) {
 		}
 	}
 }
+
 func TestGetSlotLeaderStageKeyHash(t *testing.T) {
 	epochID := convert.Uint64ToBytes(uint64(0))
 	selfIndex := convert.Uint64ToBytes(uint64(1))
@@ -159,6 +159,7 @@ func TestGetSlotLeaderStageKeyHash(t *testing.T) {
 	t.Logf("hash:0x%v", hex.EncodeToString(hash[:]))
 
 }
+
 func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
@@ -176,51 +177,28 @@ func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 func TestIsInValidStage(t *testing.T) {
 	evm := NewEVM(Context{}, nil, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
-	nowTime := uint64(time.Now().Unix())
+	util.CalEpochSlotIDByNow()
+	curEpId, _ := util.GetEpochSlotID()
 
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
 
-	testTime := nowTime + 1*posconfig.SlotCount*posconfig.SlotTime + 2*posconfig.K*posconfig.SlotTime
+	testTime := curEpId*posconfig.SlotCount*posconfig.SlotTime + 2*posconfig.K*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
 	kStart := uint64(2 * posconfig.K)
 	kEnd := uint64(3 * posconfig.K)
 
-	if isInValidStage(0, evm, kStart, kEnd) {
+	if isInValidStage(0, evm.Time.Uint64(), kStart, kEnd) {
 		t.Error("should out of range")
 		t.Fail()
 	}
 
-	if !isInValidStage(1, evm, kStart, kEnd) {
+	if !isInValidStage(curEpId, evm.Time.Uint64(), kStart, kEnd) {
 		t.Error("should in range")
 		t.Fail()
 	}
 
-	testTime = nowTime + 1*posconfig.SlotCount*posconfig.SlotTime + 2*posconfig.K*posconfig.SlotTime - 1
-	evm.Time = big.NewInt(0).SetUint64(testTime)
-	if isInValidStage(1, evm, kStart, kEnd) {
-		t.Error("should in range")
-		t.Fail()
-	}
-
-	testTime = nowTime + 1*posconfig.SlotCount*posconfig.SlotTime + 3*posconfig.K*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
-	if !isInValidStage(1, evm, kStart, kEnd) {
-		t.Error("should in range")
-		t.Fail()
-	}
-
-	testTime = nowTime + 1*posconfig.SlotCount*posconfig.SlotTime + (3*posconfig.K+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
-	if isInValidStage(1, evm, kStart, kEnd) {
-		t.Error("should out of range")
-		t.Fail()
-	}
-
-	posconfig.EpochBaseTime = baseTime
-	evm = nil
 }
+
 func TestAddSlotScCallTimes(t *testing.T) {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	t.Log("Current dir path ", dir)
@@ -430,14 +408,13 @@ func TestHandleStgOne(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
-	c := &slotLeaderSC{}
-	c.handleStgOne(rlpPackBytes, nil, evm)
+	handleStgOne(rlpPackBytes, nil, evm)
 
 	keyHash := GetSlotLeaderStage1KeyHash(convert.Uint64ToBytes(uint64(0)),
 		convert.Uint64ToBytes(uint64(0)))
@@ -452,7 +429,7 @@ func TestHandleStgOne(t *testing.T) {
 		t.Fail()
 	}
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestGetStg1StateDbInfo(t *testing.T) {
@@ -475,14 +452,13 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
-	c := &slotLeaderSC{}
-	c.handleStgOne(rlpPackBytes, nil, evm)
+	handleStgOne(rlpPackBytes, nil, evm)
 
 	// get data from state db
 	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
@@ -494,7 +470,7 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 		t.Fail()
 	}
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestGetStg2TxAlphaPki(t *testing.T) {
@@ -525,14 +501,13 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
-	c := &slotLeaderSC{}
-	c.handleStgOne(rlpPackBytes, nil, evm)
+	handleStgOne(rlpPackBytes, nil, evm)
 
 	// get data from state db
 	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
@@ -562,9 +537,9 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	proof[1] = big4
 	stg2Bytes, _ := RlpPackStage2DataForTx(0, 0, &pubKey, alphaPkis[:], proof[:], GetSlotLeaderScAbiString())
 
-	c.handleStgTwo(stg2Bytes[:], nil, evm)
+	handleStgTwo(stg2Bytes[:], nil, evm)
 
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }
 
 func TestHandleStgTwo(t *testing.T) {
@@ -595,14 +570,13 @@ func TestHandleStgTwo(t *testing.T) {
 	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
-	baseTime := posconfig.EpochBaseTime
-	posconfig.EpochBaseTime = nowTime
+	//baseTime := posconfig.EpochBaseTime
+	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
-	c := &slotLeaderSC{}
-	c.handleStgOne(rlpPackBytes, nil, evm)
+	handleStgOne(rlpPackBytes, nil, evm)
 
 	// get data from state db
 	bytesMi, err := GetStg1StateDbInfo(stateDb, 0, 0)
@@ -635,10 +609,10 @@ func TestHandleStgTwo(t *testing.T) {
 	testTime = nowTime + (posconfig.Sma2Start+1)*posconfig.SlotTime
 	evm.Time = big.NewInt(0).SetUint64(testTime)
 
-	ret, err := c.handleStgTwo(stg2Bytes[:], nil, evm)
+	ret, err := handleStgTwo(stg2Bytes[:], nil, evm)
 
 	if err != nil || ret != nil {
 		t.Fail()
 	}
-	posconfig.EpochBaseTime = baseTime
+	//posconfig.EpochBaseTime = baseTime
 }

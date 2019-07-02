@@ -106,7 +106,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	targetBlkNum := curNum
 	epochid, _ := util.GetEpochSlotID()
-	if(targetEpochId < epochid && targetEpochId >=posconfig.FirstEpochId ) {
+	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
 
@@ -127,14 +127,12 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 		epochIdIn--
 	}
 	rb := vm.GetR(stateDb, epochIdIn)
-
 	if rb == nil {
 		log.Error(fmt.Sprintln("vm.GetR return nil at epochId:", epochId))
-		rb = big.NewInt(1)
+		rb = new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 	}
 
 	r := rb.Bytes()
-
 	err = e.selectLeaders(r, stateDb, epochId)
 	if err != nil {
 		return err
@@ -558,6 +556,12 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
+	if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+		staker.StakingEpoch = posconfig.FirstEpochId + 2
+		for j := 0; j < len(staker.Partners); j++ {
+			staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+		}
+	}
 	// check validator is exiting.
 	if staker.LockEpochs != 0 && epochID >= staker.StakingEpoch+staker.LockEpochs-1 { // the last epoch only miner, don't send tx.
 		return nil, nil, errors.New("Validator is exiting")
@@ -600,10 +604,10 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 		}
 	}
 	// if totalProbability > (localAmount+partners)*5, use (localAmount+partners)*5
-	probability6 := big.NewInt(0).Set(totalPartnerProbability)
-	probability6.Mul(probability6, big.NewInt(6))
-	if totalProbability.Cmp(probability6) > 0 {
-		totalProbability = probability6
+	probabilityMax := big.NewInt(0).Set(totalPartnerProbability)
+	probabilityMax.Mul(probabilityMax, big.NewInt(vm.MaxTimeDelegate+1))
+	if totalProbability.Cmp(probabilityMax) > 0 {
+		totalProbability = probabilityMax
 	}
 	return infors, totalProbability, nil
 }
@@ -660,6 +664,14 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		// LockEpochs==0 means NO expire
 		if staker.LockEpochs == 0 {
 			continue
+		}
+		// handle the staker registed in pow phase. only once
+		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+			staker.StakingEpoch = posconfig.FirstEpochId + 2
+			for j := 0; j < len(staker.Partners); j++ {
+				staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2
+			}
+			changed = true
 		}
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
@@ -723,7 +735,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 					staker.Partners[j].LockEpochs = staker.NextLockEpochs
 					weight := vm.CalLocktimeWeight(staker.NextLockEpochs)
 					staker.Partners[j].StakeAmount = big.NewInt(0)
-					staker.Partners[j].StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
+					staker.Partners[j].StakeAmount.Mul(staker.Partners[j].Amount, big.NewInt(int64(weight)))
 					staker.Partners[j].StakingEpoch = epochID + vm.JoinDelay
 					changed = true
 				}

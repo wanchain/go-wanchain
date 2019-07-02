@@ -24,97 +24,35 @@ import (
 )
 
 var (
-	selfPrivate      *accBn256.PrivateKeyBn256
-	commityPrivate   *accBn256.PrivateKeyBn256
+	//selfPrivate      *accBn256.PrivateKeyBn256 = &accBn256.PrivateKeyBn256{}
+	//commityPrivate   *accBn256.PrivateKeyBn256
+
+	selfPrivate      = &accBn256.PrivateKeyBn256{}
+	commityPrivate   = &accBn256.PrivateKeyBn256{}
 	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 	ens              = make([][]*bn256.G1, 0)
 	commit           [][]bn256.G2
 )
 
-func TestRandomBeacon_Init(t *testing.T) {
-	var epocher epochLeader.Epocher
-	//var key keystore.Key
-	var rb RandomBeacon
 
-	//var err error
-	//key.PrivateKey3, err = accBn256.GenerateBn256()
-	//if err != nil {
-	//	t.Error("generate bn256 fail, ", err)
-	//}
-
-	rb.Init(&epocher)
-
-	if rb.epochStage != vm.RbDkg1Stage {
-		t.Error("invalid epoch stage")
-	}
-
-	if rb.epochId != maxUint64 {
-		t.Error("invalid init epoch id")
-	}
-
-	if rb.statedb != nil {
-		t.Error("invalid init statedb")
-	}
-
-	if rb.epocher != &epocher {
-		t.Error("invalid rb epocher")
-	}
-
-	if rb.rpcClient != nil {
-		t.Error("invalid rb rpc client")
-	}
-
-	rb.Init(&epocher)
-}
 
 func initKeystore(rb *RandomBeacon) error {
 	var key keystore.Key
 	var err error
 
-	key.PrivateKey3, err = accBn256.GenerateBn256()
+	key.PrivateKey2, err = crypto.GenerateKey()
 	if err != nil {
 		return err
 	}
 
-	selfPrivate = key.PrivateKey3
-	commityPrivate = selfPrivate
 	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	commityPrivate = selfPrivate
 
 	return nil
-}
-
-func BenchmarkRandomBeacon_Stop(b *testing.B) {
-	var (
-		epocher epochLeader.Epocher
-		key keystore.Key
-		rb RandomBeacon
-		wg sync.WaitGroup
-	)
-
-	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
-	if err != nil {
-		b.Error("generate bn256 fail, ", err)
-	}
-
-	selfPrivate = key.PrivateKey3
-	commityPrivate = selfPrivate
-	posconfig.Cfg().MinerKey = &key
-
-
-	rb.getRBProposerGroupF = tmpGetRBProposerGroup
-	rb.getCji = tmpGetCji
-
-	for i := 0; i < b.N; i++ {
-		fmt.Println("benchmark loop once")
-		rb.Init(&epocher)
-
-		wg.Add(1)
-		go callRBLoop(&rb, &wg)
-		time.Sleep(time.Second*3)
-		rb.Stop()
-		wg.Wait()
-	}
 }
 
 func callRBLoop(rb *RandomBeacon, wg *sync.WaitGroup) {
@@ -154,6 +92,116 @@ func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
 	}
 
 	return ret
+}
+
+
+var (
+	dkg1sCallTimes = 0
+	dkg2sCallTimes = 0
+	sigsCallTimes = 0
+)
+
+func DoDKG1sSuc() error {
+	dkg1sCallTimes++
+	return nil
+}
+
+func DoDKG1sFail() error {
+	dkg1sCallTimes++
+	return errors.New("fail")
+}
+
+func DoDKG2sSuc() error {
+	dkg2sCallTimes++
+	return nil
+}
+
+func DoDKG2sFail() error {
+	dkg2sCallTimes++
+	return errors.New("fail")
+}
+
+func DoSIGsSuc() error {
+	sigsCallTimes++
+	return nil
+}
+
+func DoSIGsFail() error {
+	sigsCallTimes++
+	return errors.New("fail")
+}
+
+
+func tmpGetEnsFunc(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
+	return ens[proposerId], nil
+}
+
+func tmpGetRBM(db vm.StateDB, epochId uint64) ([]byte, error) {
+	epochIdBigInt := big.NewInt(int64(epochId + 1))
+	buf := epochIdBigInt.Bytes()
+	return crypto.Keccak256(buf), nil
+}
+
+func tmpGetCji(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
+	ret := make([]*bn256.G2, len(commit[proposerId]))
+	for i, _ := range commit[proposerId] {
+		ret[i] = &commit[proposerId][i]
+	}
+
+	return ret, nil
+}
+
+func TestRandomBeacon_GetMyRBProposerId(t *testing.T) {
+	var epocher epochLeader.Epocher
+	var key keystore.Key
+	var rb RandomBeacon
+
+	var err error
+
+	// commityPrivate
+	key.PrivateKey2, err = crypto.GenerateKey()
+	if err != nil {
+		t.Error("generate sec256 fail, ", err)
+	}
+
+	posconfig.Cfg().MinerKey = &key
+	commityPrivate.D	 = posconfig.Cfg().GetMinerBn256SK()
+	commityPrivate.G1 	 = posconfig.Cfg().GetMinerBn256PK()
+
+	// commityPrivate not equal selfPrivate
+	key.PrivateKey2, err = crypto.GenerateKey()
+	if err != nil {
+		t.Error("generate sec256 fail, ", err)
+	}
+
+	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	rb.Init(&epocher)
+	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+
+	rb.myPropserIds = rb.getMyRBProposerId(0)
+	println("ids len:", len(rb.myPropserIds))
+	if len(rb.myPropserIds) != 0 {
+		t.Error("invalid my proposer id")
+	}
+	// commityPrivate equal selfPrivate
+	commityPrivate = selfPrivate
+	rb.myPropserIds = rb.getMyRBProposerId(0)
+	println("ids len:", len(rb.myPropserIds))
+	if len(rb.myPropserIds) != posconfig.RandomProperCount {
+		t.Error("invalid my proposer id group len. expect len:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+	}
+
+	for i := 0; i < len(rb.myPropserIds); i++ {
+		println("ids[", i, "]:", rb.myPropserIds[i])
+		if rb.myPropserIds[i] != uint32(i) {
+			t.Error("invalid my proposer id. expect:", i, ", acture:", rb.myPropserIds[i])
+			break
+		}
+	}
 }
 
 func TestRandomBeacon_updateEpochId(t *testing.T) {
@@ -222,484 +270,34 @@ func TestRandomBeacon_updateStage(t *testing.T) {
 	}
 }
 
-var (
-	dkg1sCallTimes = 0
-	dkg2sCallTimes = 0
-	sigsCallTimes = 0
-)
-
-func DoDKG1sSuc() error {
-	dkg1sCallTimes++
-	return nil
-}
-
-func DoDKG1sFail() error {
-	dkg1sCallTimes++
-	return errors.New("fail")
-}
-
-func DoDKG2sSuc() error {
-	dkg2sCallTimes++
-	return nil
-}
-
-func DoDKG2sFail() error {
-	dkg2sCallTimes++
-	return errors.New("fail")
-}
-
-func DoSIGsSuc() error {
-	sigsCallTimes++
-	return nil
-}
-
-func DoSIGsFail() error {
-	sigsCallTimes++
-	return errors.New("fail")
-}
-
-func TestRandomBeacon_doLoop(t *testing.T) {
-	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-		epochId    = uint64(0)
-		slotId     = uint64(0)
-		rc         = new(rpc.Client)
-		epocher    epochLeader.Epocher
-		actureDkg1sCallTimes = 0
-		actureDkg2sCallTimes = 0
-		actureSIGsCallTimes = 0
-	)
-
-	rb := GetRandonBeaconInst()
-	if rb == nil {
-		t.Error("invalid random beacon instance")
-	}
-
-	rb.Init(&epocher)
-	rb.getRBProposerGroupF = tmpGetRBProposerGroup
-	rb.fDoDKG1s = DoDKG1sSuc
-	rb.fDoDKG2s = DoDKG2sSuc
-	rb.fDoSIGs = DoSIGsSuc
-
-	{
-		private, err := accBn256.GenerateBn256()
-		if err != nil {
-			t.Error("generate Bn256 fail")
-		}
-
-		commityPrivate = private
-
-		err = rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != 0 {
-			t.Error("invalid my propserIds len, expect:", 0, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != 0 || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state, epochId:", rb.epochId, ", stage:", rb.epochStage)
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		err := initKeystore(rb)
-		if err != nil {
-			t.Error("init keystore fail. err:", err.Error())
-		}
-
-		epochId++
-		err = rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-	}
-
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureDkg1sCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-	}
-
-	{
-		epochId++
-		slotId = 0
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-	}
-
-	{
-		slotId++
-		rb.fDoDKG1s = DoDKG1sFail
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err == nil {
-			t.Error("doLoop success. expect fail")
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureDkg1sCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-		rb.fDoDKG1s = DoDKG1sSuc
-	}
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureDkg1sCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId = 40
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId++
-		rb.fDoDKG2s = DoDKG2sFail
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err == nil {
-			t.Error("doLoop success. expect fail")
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureDkg2sCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-		rb.fDoDKG2s = DoDKG2sSuc
-	}
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureDkg2sCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId = 80
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId++
-		rb.fDoSIGs = DoSIGsFail
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err == nil {
-			t.Error("doLoop success. expect fail")
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureSIGsCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-
-		rb.fDoSIGs = DoSIGsSuc
-	}
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignConfirmStage {
-			t.Error("invalid random beacon state")
-		}
-
-		actureSIGsCallTimes++
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		slotId++
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbSignConfirmStage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		epochId++
-		slotId = 0
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err != nil {
-			t.Error("doLoop fail. err:", err)
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-
-	{
-		epochId--
-		slotId = 0
-		err := rb.doLoop(statedb, rc, epochId, slotId)
-		if err == nil {
-			t.Error("doLoop success. expect fail")
-		}
-
-		if len(rb.myPropserIds) != posconfig.RandomProperCount {
-			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-		}
-
-		if rb.epochId != epochId + 1 || rb.epochStage != vm.RbDkg1Stage {
-			t.Error("invalid random beacon state")
-		}
-
-		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
-			t.Error("invalid stage work run times")
-		}
-	}
-}
-
-func TestRandomBeacon_GetMyRBProposerId(t *testing.T) {
+func TestRandomBeacon_Init(t *testing.T) {
 	var epocher epochLeader.Epocher
-	var key keystore.Key
+	//var key keystore.Key
 	var rb RandomBeacon
 
-	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
-	if err != nil {
-		t.Error("generate bn256 fail, ", err)
+	rb.Init(&epocher)
+
+	if rb.epochStage != vm.RbDkg1Stage {
+		t.Error("invalid epoch stage")
 	}
 
-	selfPrivate = key.PrivateKey3
-	posconfig.Cfg().MinerKey = &key
+	if rb.epochId != maxUint64 {
+		t.Error("invalid init epoch id")
+	}
 
-	commityPrivate, err = accBn256.GenerateBn256()
-	if err != nil {
-		t.Error("generate bn256 fail, ", err)
+	if rb.statedb != nil {
+		t.Error("invalid init statedb")
+	}
+
+	if rb.epocher != &epocher {
+		t.Error("invalid rb epocher")
+	}
+
+	if rb.rpcClient != nil {
+		t.Error("invalid rb rpc client")
 	}
 
 	rb.Init(&epocher)
-	rb.getRBProposerGroupF = tmpGetRBProposerGroup
-
-	rb.myPropserIds = rb.getMyRBProposerId(0)
-	println("ids len:", len(rb.myPropserIds))
-	if len(rb.myPropserIds) != 0 {
-		t.Error("invalid my proposer id")
-	}
-
-	commityPrivate = key.PrivateKey3
-	rb.myPropserIds = rb.getMyRBProposerId(0)
-	println("ids len:", len(rb.myPropserIds))
-	if len(rb.myPropserIds) != posconfig.RandomProperCount {
-		t.Error("invalid my proposer id group len. expect len:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
-	}
-
-	for i := 0; i < len(rb.myPropserIds); i++ {
-		println("ids[", i, "]:", rb.myPropserIds[i])
-		if rb.myPropserIds[i] != uint32(i) {
-			t.Error("invalid my proposer id. expect:", i, ", acture:", rb.myPropserIds[i])
-			break
-		}
-	}
 }
 
 func TestRandomBeacon_DoGenerateDKG1(t *testing.T) {
@@ -708,14 +306,18 @@ func TestRandomBeacon_DoGenerateDKG1(t *testing.T) {
 	var rb RandomBeacon
 
 	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
+
+	key.PrivateKey2, err = crypto.GenerateKey()
 	if err != nil {
-		t.Error("generate bn256 fail, ", err)
+		t.Error("generate sec256 fail, ", err)
 	}
 
-	selfPrivate = key.PrivateKey3
-	commityPrivate = selfPrivate
 	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	commityPrivate = selfPrivate
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
@@ -778,14 +380,18 @@ func TestRandomBeacon_GenerateDKG2(t *testing.T) {
 	dkg1s := make([]*vm.RbDKG1TxPayload, 0)
 
 	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
+
+	key.PrivateKey2, err = crypto.GenerateKey()
 	if err != nil {
-		t.Error("generate bn256 fail, ", err)
+		t.Error("generate sec256 fail, ", err)
 	}
 
-	selfPrivate = key.PrivateKey3
-	commityPrivate = selfPrivate
 	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	commityPrivate = selfPrivate
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
@@ -872,14 +478,18 @@ func TestRandomBeacon_GenerateSIG(t *testing.T) {
 	dkg2s := make([]*vm.RbDKG2TxPayload, 0)
 
 	var err error
-	key.PrivateKey3, err = accBn256.GenerateBn256()
+
+	key.PrivateKey2, err = crypto.GenerateKey()
 	if err != nil {
-		t.Error("generate bn256 fail, ", err)
+		t.Error("generate sec256 fail, ", err)
 	}
 
-	selfPrivate = key.PrivateKey3
-	commityPrivate = selfPrivate
 	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	commityPrivate = selfPrivate
 
 	rb.Init(&epocher)
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
@@ -973,23 +583,427 @@ func TestRandomBeacon_GenerateSIG(t *testing.T) {
 	}
 }
 
-func tmpGetEnsFunc(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
-	return ens[proposerId], nil
-}
+func TestRandomBeacon_doLoop(t *testing.T) {
+	posconfig.SelfTestMode = true
+	var (
+		db, _      = ethdb.NewMemDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		epochId    = uint64(0)
+		slotId     = uint64(0)
+		rc         = new(rpc.Client)
+		epocher    epochLeader.Epocher
+		actureDkg1sCallTimes = 0
+		actureDkg2sCallTimes = 0
+		actureSIGsCallTimes = 0
+	)
 
-func tmpGetRBM(db vm.StateDB, epochId uint64) ([]byte, error) {
-	epochIdBigInt := big.NewInt(int64(epochId + 1))
-	buf := epochIdBigInt.Bytes()
-	return crypto.Keccak256(buf), nil
-}
-
-func tmpGetCji(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G2, error) {
-	ret := make([]*bn256.G2, len(commit[proposerId]))
-	for i, _ := range commit[proposerId] {
-		ret[i] = &commit[proposerId][i]
+	rb := GetRandonBeaconInst()
+	if rb == nil {
+		t.Error("invalid random beacon instance")
 	}
 
-	return ret, nil
+	rb.Init(&epocher)
+	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+	rb.fDoDKG1s = DoDKG1sSuc
+	rb.fDoDKG2s = DoDKG2sSuc
+	rb.fDoSIGs = DoSIGsSuc
+
+	{
+		private, err := accBn256.GenerateBn256()
+		if err != nil {
+			t.Error("generate Bn256 fail")
+		}
+
+		commityPrivate = private
+
+		var key keystore.Key
+		key.PrivateKey2, err = crypto.GenerateKey()
+		if err != nil {
+			t.Error("generate sec256 fail, ", err)
+		}
+		posconfig.Cfg().MinerKey = &key
+
+		selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+		selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+		err = rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != 0 {
+			t.Error("invalid my propserIds len, expect:", 0, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != 0 || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state, epochId:", rb.epochId, ", stage:", rb.epochStage)
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		err := initKeystore(rb)
+		if err != nil {
+			t.Error("init keystore fail. err:", err.Error())
+		}
+
+		epochId++
+		err = rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+
+	}
+
+
+	{
+		slotId++
+
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureDkg1sCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+
+	}
+
+	{
+		epochId++
+		slotId = 0
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+
+	}
+
+	{
+		posconfig.SelfTestMode = false
+		slotId++
+		rb.fDoDKG1s = DoDKG1sFail
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err == nil {
+			t.Error("doLoop success. expect fail")
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureDkg1sCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+		posconfig.SelfTestMode = true
+		rb.fDoDKG1s = DoDKG1sSuc
+	}
+
+	{
+		slotId++
+		posconfig.SelfTestMode = true
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureDkg1sCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+
+	{
+		slotId++
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		slotId = 40
+		posconfig.SelfTestMode = true
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		slotId = posconfig.Cfg().Dkg2Begin + 1
+		rb.fDoDKG2s = DoDKG2sFail
+
+		posconfig.SelfTestMode = false
+
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err == nil {
+			t.Error("doLoop success. expect fail")
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg2Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureDkg2sCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+
+		rb.fDoDKG2s = DoDKG2sSuc
+	}
+
+	{
+		slotId++
+		posconfig.SelfTestMode = true
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureDkg2sCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		slotId++
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		slotId = 80
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		posconfig.SelfTestMode = false
+		slotId = posconfig.Cfg().SignBegin + 1
+		rb.fDoSIGs = DoSIGsFail
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err == nil {
+			t.Error("doLoop success. expect fail")
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignStage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureSIGsCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+
+		rb.fDoSIGs = DoSIGsSuc
+		posconfig.SelfTestMode = true
+	}
+
+	{
+		slotId++
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignConfirmStage {
+			t.Error("invalid random beacon state")
+		}
+
+		actureSIGsCallTimes++
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		slotId++
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbSignConfirmStage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		epochId++
+		slotId = 0
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err != nil {
+			t.Error("doLoop fail. err:", err)
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	{
+		epochId--
+		slotId = 0
+		err := rb.doLoop(statedb, rc, epochId, slotId)
+		if err == nil {
+			t.Error("doLoop success. expect fail")
+		}
+
+		if len(rb.myPropserIds) != posconfig.RandomProperCount {
+			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
+		}
+
+		if rb.epochId != epochId + 1 || rb.epochStage != vm.RbDkg1Stage {
+			t.Error("invalid random beacon state")
+		}
+
+		if dkg1sCallTimes != actureDkg1sCallTimes || dkg2sCallTimes != actureDkg2sCallTimes || sigsCallTimes != actureSIGsCallTimes {
+			t.Error("invalid stage work run times")
+		}
+	}
+
+	posconfig.SelfTestMode = false
 }
 
 func TestPolyMap_storePolys(t *testing.T) {
@@ -1104,5 +1118,43 @@ func TestPolyMap_DecodeRLP(t *testing.T) {
 				t.Error("rlp decode PolyMap fail, invalid poly value")
 			}
 		}
+	}
+}
+
+func BenchmarkRandomBeacon_Stop(b *testing.B) {
+	var (
+		epocher epochLeader.Epocher
+		key keystore.Key
+		rb RandomBeacon
+		wg sync.WaitGroup
+	)
+
+	var err error
+
+	key.PrivateKey2, err = crypto.GenerateKey()
+	if err != nil {
+		b.Error("generate sec256 fail, ", err)
+	}
+
+	posconfig.Cfg().MinerKey = &key
+
+	selfPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	selfPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
+
+	commityPrivate = selfPrivate
+
+
+	rb.getRBProposerGroupF = tmpGetRBProposerGroup
+	rb.getCji = tmpGetCji
+
+	for i := 0; i < b.N; i++ {
+		fmt.Println("benchmark loop once")
+		rb.Init(&epocher)
+
+		wg.Add(1)
+		go callRBLoop(&rb, &wg)
+		time.Sleep(time.Second*3)
+		rb.Stop()
+		wg.Wait()
 	}
 }

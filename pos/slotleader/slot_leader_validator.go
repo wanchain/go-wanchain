@@ -25,6 +25,12 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	//	return nil
 	//}
 
+	//extraType := header.Extra[0]
+	//start := 1
+	//if extraType == 'g' {
+	//	start = 33
+	//}
+
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 	if err != nil {

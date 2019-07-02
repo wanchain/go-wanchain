@@ -18,7 +18,7 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
 - [4. Quick start from Docker](#4-quick-start-from-docker)
     - [4.1. Step by step node setup](#41-step-by-step-node-setup)
     - [4.2. Step by step delegation guide](#42-step-by-step-delegation-guide)
-- [5. Download and run](#5-download-and-run)
+- [5. Other ways to Download and run](#5-other-ways-to-download-and-run)
     - [5.1. Run from Docker](#51-run-from-docker)
     - [5.2. Download](#52-download)
         - [5.2.1. Download BIN](#521-download-bin)
@@ -33,7 +33,6 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
     - [6.4. Registration and delegation](#64-registration-and-delegation)
     - [6.5. Check rewards](#65-check-rewards)
     - [6.6. Unregister and Unlock](#66-unregister-and-unlock)
-- [7. Results of internal testing](#7-results-of-internal-testing)
 
 <!-- /TOC -->
 
@@ -52,15 +51,15 @@ $ exit
 
 **Step 2:** Start GWAN with Docker and create account:
 ```
-$ docker pull wanchain/wanpos
+$ docker pull wanchain/client-go:2.0.0-beta.5
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -82,29 +81,37 @@ root> exit
 
 **Step 3:** Get test WAN for "YourAccountAddress":
 
-Follow [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) to get test WAN.
+Follow [6.3. Get test WAN](#63-get-test-wan) to get test WAN.
 
 And after receiving test WAN, continue to step 4.
 
-![img](./img_get_start/4.png)
+**Step 4:** Validator Registration
 
-**Step 4:** Create a script file in path: `/home/YourUserName/.wanchain/minerRegister.js`
+The validator registration can be done visually using the community-developed [mywanwallet] (https://mywanwallet.io/#contracts) web wallet. You can also use script registration as follows.
+
+!!!WARNING!!!
+
+In order to protect the security of the account, please do not enable the "--rpc" parameter when using script to register. Please verify before continue. (Recommended to use the GUI wallet for registration)
+
+Create a script file in path: `/home/YourUserName/.wanchain/validatorRegister.js`
 
 ```
-//minerRegister.js
+//validatorRegister.js
 
-// If you want to register as a miner you can modify and use this script.
+// If you want to register as a validator you can modify and use this script.
 
 
 //-------INPUT PARAMS SHOULD BE REPLACED WITH YOURS--------------------
 
-// tranValue is the value you want to stake - minValue is 100000 
-var tranValue = "100000"
+// tranValue is the value you want to stake
+// non-delegate mode validator - minValue is 10000
+// delegate mode validator - minValue is 50000 
+var tranValue = "50000"
 
-// secpub is the miner node's secpub value
+// secpub is the validator node's secpub value
 var secpub    = "YourPK1"
 
-// g1pub is the miner node's g1pub value
+// g1pub is the validator node's g1pub value
 var g1pub     = "YourPK2"
 
 // feeRate is the percent of the reward kept by the node in delegation - 10000 indicates the node does not accept delegation.
@@ -129,7 +136,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
@@ -148,17 +155,27 @@ console.log("tx=" + tx)
 If you have not closed the Docker script from **Step 2**, continue with the commands below, otherwise restart the Docker script.
 
 ```
-$ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
+$ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
-> loadScript("/root/.wanchain/minerRegister.js")
+> loadScript("/root/.wanchain/validatorRegister.js")
 
 > exit
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@54.193.4.239:80
 
 ```
+
+The "--wanstats your-node-name:admin@54.193.4.239:80" part in parameters is for collection of statistics information of node's operational status and network status in the PoS Beta Testnet.
+
+Please customize "your-node-name" part with the node name you prefer, i.e. "Community-WAN-node_EMEA1". Please avoid using characters other than alphanumeric, dash and underscore, for example do not use spaces in node name.
+
+You can refer to WanStats website to check your node's status and network status. 
+
+The link to WanStats in Beta testing phase is:
+
+http://54.193.4.239/
 
 Setup is now complete, mining will begin as soon as syncing is finished.
 
@@ -168,6 +185,10 @@ Setup is now complete, mining will begin as soon as syncing is finished.
 ![img](./img_get_start/6.png)
 
 ## 4.2. Step by step delegation guide
+
+You can use the [wan-wallet-desktop](https://github.com/wanchain/wan-wallet-desktop/releases) for delegation easily.
+
+Also, you can use script as below, too.
 
 **Step 1:** Install Docker (Ubuntu):
 ```
@@ -180,13 +201,13 @@ $ exit
 
 **Step 2:** Start GWAN with Docker, create account, and view delegate node list:
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -246,7 +267,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payloadDelegate = coinContract.delegateIn.getData(delegateAddr)
@@ -264,44 +285,13 @@ Load the script in GWAN to complete delegation.
 
 ```
 
-# 5. Download and run
+# 5. Other ways to Download and run
+
+Below is some other ways to download and run gwan.
 
 ## 5.1. Run from Docker
 
-You can run a node from a Docker image.
-
-```
-// Install the Docker service
-
-$ sudo wget -qO- https://get.docker.com/ | sh
-
-$ sudo usermod -aG docker YourUserName
-```
-
-For a non-staking node:
-
-```
-//On MacOS:
-$ docker run -d -v /Users/YourUserName/Library/Wanchain/:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
-
-//On Ubuntu
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
-```
-
-For a staking-node, you should create a account and start like this:
-```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password YourPasswordTxtFile --mine --minerthreads=1 
-```
-
-The `YourPasswordTxtFile` is a txt file with your miner account password in it in Docker.
-
-Such as the file put in the path `/home/YourUserName/.wanchain/pw.txt` 
-
-You should start Docker with this command:
-
-```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
-```
+You can run a node from a Docker image. Same to 4.1.
 
 ## 5.2. Download
 
@@ -335,7 +325,7 @@ $ go get github.com/wanchain/go-wanchain
 
 $ cd $GOPATH/src/github.com/wanchain/go-wanchain
 
-$ git checkout posalpha
+$ git checkout betarelease
 
 $ git pull
 
@@ -353,7 +343,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout posalpha
+$ git checkout develop
 
 $ git pull
 
@@ -369,7 +359,7 @@ You can run a node in two different modes, staking and non staking.
 ### 5.3.1. Non-staking node
 
 ```
-$ gwan --pluto --rpc --syncmode "full"
+$ gwan --testnet --syncmode "full"
 ```
 
 ### 5.3.2. Staking-node
@@ -377,7 +367,7 @@ $ gwan --pluto --rpc --syncmode "full"
 In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` with your own account address and replace the `/tmp/pw.txt` file with your own password file with your password string in it.
 
 ```
-$ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
+$ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
 # 6. Common Operations
@@ -387,7 +377,7 @@ $ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --
 Before you run a PoS node you should create an account.
 
 ```
-$ gwan --pluto console --exec "personal.newAccount('Your Password')"
+$ gwan --testnet console --exec "personal.newAccount('Your Password')"
 
 // Or run after ipc attach
 $ personal.newAccount('Your Password')
@@ -395,12 +385,12 @@ $ personal.newAccount('Your Password')
 
 You can see your address created and printed in the screen, then you can press `Ctrl+C` to exit.
 
-You will get a keystore file with three crypto key words in your path `~/.wanchain/pluto/keystore/` in Ubuntu or `~/Library/Wanchain/pluto/keystore/` in Mac OS.
+You will get a keystore file with three crypto key words in your path `~/.wanchain/testnet/keystore/` in Ubuntu or `~/Library/Wanchain/testnet/keystore/` in Mac OS.
 
 And you can use a command to get the `Address Public Key` and `G1 Public Key` of your account.
 
 ```
-$ gwan --pluto console --exec "personal.showPublicKey('Your Address', 'Your Password')"
+$ gwan --testnet console --exec "personal.showPublicKey('Your Address', 'Your Password')"
 
 // Or run after ipc attach
 $ personal.showPublicKey('Your Address', 'Your Password')
@@ -414,10 +404,10 @@ You can check your balance in the address when you attach a GWAN console in the 
 
 ```
 // In ubuntu
-$ gwan attach ~/.wanchain/pluto/gwan.ipc
+$ gwan attach ~/.wanchain/testnet/gwan.ipc
 
 // In MacOS
-$ gwan attach ~/Library/Wanchain/pluto/gwan.ipc
+$ gwan attach ~/Library/Wanchain/testnet/gwan.ipc
 
 ```
 
@@ -432,8 +422,9 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 ## 6.3. Get test WAN
 
-If you want to get some test WAN to experiment with Galaxy Consensus, you can send an email with your WAN PoS test account address to the email shown below with your request, and we will transfer the test WAN to you within 3 working days.
+If you want to get some test WAN to experiment with Galaxy Consensus, you can fill a form on this URL: (Waiting to update...)
 
+[Wanchain-Faucet](http://54.201.62.90/)
 
 | Index            | Email         | 
 | --------------  | :------------  | 
@@ -443,7 +434,7 @@ If you want to get some test WAN to experiment with Galaxy Consensus, you can se
 
 ## 6.4. Registration and delegation
 
-If you have an account with WAN coins and you want to create a Galaxy Consensus miner, you should do it as in the diagram below:
+If you have an account with WAN coins and you want to create a Galaxy Consensus validator, you should do it as in the diagram below:
 
 ![img](./img_get_start/99.png)
 
@@ -460,9 +451,9 @@ In the smart contract input parameters, the `feeRate` indicates the percentage o
 
 If you want to be an delegator and accept delegations from others, you need to set a reasonable percentage for your `feeRate` to attract others to invest.
 
-The `feeRate`'s value ranges from 0 to 100 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
+The `feeRate`'s value ranges from 0 to 10000 and indicates the amount of reward kept by the validator (1000 means the validator will take a 10% fee, and the delegator will keep 90% of the reward).
 
-You can register your stake with a custom script or just modify the module's script in `loadScript/minerRegister.js`.
+You can register your stake with a custom script or just modify the module's script in `loadScript/validatorRegister.js`.
 
 The JavaScript file `loadScript/register.js` is used by validators for registration, and `loadScript/sendDelegate.js` is used by test WAN holders for sending their delegation.
 
@@ -474,61 +465,17 @@ In the script file, the password should be replaced with your own in `personal.u
 
 The `tranValue` should be filled with the amount of WAN you want to lock in the smart contract for stake registration. You can't get it back until the locking time is up.
 
-This script can be run in an attached IPC session.
-
-```
-// This path is a relative path for your run.
-$ loadScript('loadScript/register.js')
-```
-
-If you don't want to be a validator, you can delegate WAN to a validator who will stake for you and share the block rewards.
-
-The reward percent is related to the stake amount and the `feeRate`.
-
-The delegation method is also in `register.js`, it is in the last 3 lines.
-
-You can input the delegator's address to make a delegation.
-
-The lock time for delegations does not work in the proof of concept version, it will follow the delegator's lock time.
-
 ## 6.5. Check rewards
 
 You can check your balance as shown above to verify whether you have received a reward, and you can use the commands shown below to see which address was awarded and the reward amount for the specified epoch ID.
 
 ```
-// In an attached IPC session to run for epoch 123.
-$ pos.getEpochIncentivePayDetail(123)
+// In an attached IPC session to run for epoch 19000.
+$ pos.getEpochIncentivePayDetail(19000)
 ```
 
 ## 6.6. Unregister and Unlock
 
-Your locked WAN will be automatically sent back when the time is up. 
+Validators can use `stakeUpdate.js` to set lock time to 0. It will be un-register at next period. 
 
-# 7. Results of internal testing
-
-We depolyed some PoS validator nodes to participate in staking.
-
-We used different stake values and different locktimes to test.
-
-The locktime is measured by epoch counts.
-
-The epoch time is 20 minutes for one epoch. So 6 epochs means 120 minutes.
-
-(Attention: In alpha testnet the epoch time is 2 days and slot count is 1440*12 in every epoch)
-
-The total stake is about 6000000 ~ 8000000 WAN on the testnet.
-
-The reward sent to the addresses is shown below:
-
-| Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
-| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
-|0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
-|0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
-|0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
-|0x52eee1ccb29adc742449a3e87fe7acaad605bd4c| 200000 | 12 |1.93 |4.81 |1.08 |1.17 |0.32 |9.31 |
-
-
-If the epoch incentive is 0, it means that address has not been selected.
-
-
-![img](./img_get_start/7.png)
+Delegators can use Wan wallet to delegate In or delegate Out.

@@ -2,6 +2,7 @@ package slotleader
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"testing"
 
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -16,6 +17,7 @@ import (
 var s *SLS
 
 func testInitSlotleader() {
+	SlsInit()
 	s = GetSlotLeaderSelection()
 
 	// Create the database in memory or in a temporary directory.
@@ -24,7 +26,7 @@ func testInitSlotleader() {
 	gspec.MustCommit(db)
 
 	ce := ethash.NewFaker(db)
-	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{})
+	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{},nil)
 
 	s.Init(bc, &rpc.Client{}, &keystore.Key{})
 
@@ -33,7 +35,11 @@ func testInitSlotleader() {
 }
 
 func TestGetCurrentStateDb(t *testing.T) {
+
+	posconfig.SelfTestMode = true
 	testInitSlotleader()
+
+	posconfig.SelfTestMode = false
 	stateDb, err := s.GetCurrentStateDb()
 	if err != nil || stateDb == nil {
 		t.FailNow()
@@ -47,4 +53,6 @@ func TestGetCurrentStateDb(t *testing.T) {
 	}
 
 	fmt.Println(epochID, slotID)
+	RmDB("epochGendb")
+	posconfig.SelfTestMode = false
 }

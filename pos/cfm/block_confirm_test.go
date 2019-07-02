@@ -15,7 +15,9 @@ func TestIsInWhiteList(t *testing.T) {
 		"0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786",
 		"0x0406a5c2c0524968089b8e7fdaddd642732e04e0f1da4c49dcb7810aa37dd471317b77936015a86e8efbc2002485e9d146ee392a3021e0c5bf53e5c0f6b158de09",
 	}
-	posconfig.Init(nil)
+	var networkId uint64
+	networkId = 6
+	posconfig.Init(nil,networkId)
 	InitCFM(nil)
 	c := GetCFM()
 	c.whiteList = make(map[common.Address]int, 0)
@@ -49,7 +51,9 @@ func TestGetCFM(t *testing.T) {
 }
 
 func TestInitCFM(t *testing.T) {
-	posconfig.Init(nil)
+	var networkId uint64
+	networkId = 6
+	posconfig.Init(nil,networkId)
 	InitCFM(nil)
 	c := GetCFM()
 
@@ -61,7 +65,9 @@ func TestInitCFM(t *testing.T) {
 }
 
 func TestGetSlotsCount(t *testing.T) {
-	posconfig.Init(nil)
+	var networkId uint64
+	networkId = 6
+	posconfig.Init(nil,networkId)
 	InitCFM(nil)
 	c := GetCFM()
 
@@ -89,7 +95,9 @@ func TestGetSlotsCount(t *testing.T) {
 }
 
 func TestGetMaxStableBlkNumber(t *testing.T) {
-	posconfig.Init(nil)
+	var networkId uint64
+	networkId = 6
+	posconfig.Init(nil,networkId)
 
 	blkStatusArr := make([]*BlkStatus, 0)
 	InitCFM(nil)

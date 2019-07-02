@@ -15,7 +15,8 @@ const (
 	// security block difference between main block chain and side block chain
 	SecBlkDiff = 50
 	//SecBlkDiff = 3
-	MaxUint64 = uint64(^(uint64(0)))
+	MaxUint64  = uint64(^(uint64(0)))
+	SecPowBlks = 12
 )
 
 var (
@@ -57,11 +58,43 @@ func GetCFM() *CFM {
 }
 
 func (c *CFM) GetMaxStableBlkNumber() uint64 {
-
+	// In pow phase
+	if posconfig.FirstEpochId == 0 {
+		return c.getPowMaxStableBlkNumber(c.getCurrentBlkNumber())
+	}
+	// In pos phase
 	timeNow := uint64(time.Now().Unix())
 	// stopNumber is the min block number, startNumber is max bock number
 	blkStatusArr, stopNumber, startNumber, err := c.scanAllBlockStatus(timeNow)
-	return c.getMaxStableBlkNumber(blkStatusArr, stopNumber, startNumber, err)
+
+	maxStableBlkNumber := c.getMaxStableBlkNumber(blkStatusArr, stopNumber, startNumber, err)
+
+	log.Debug("GetMaxStableBlkNumber",
+		"maxStableBlkNumber", maxStableBlkNumber,
+		"Pow2PosUpgradeBlockNumber", posconfig.Pow2PosUpgradeBlockNumber,
+		"FirstEpochId", posconfig.FirstEpochId)
+
+	// get max stable on block of pos phase
+	if maxStableBlkNumber >= posconfig.Pow2PosUpgradeBlockNumber {
+		return maxStableBlkNumber
+	}
+	return posconfig.Pow2PosUpgradeBlockNumber
+}
+
+func (c *CFM) getCurrentBlkNumber() uint64 {
+	curBlk := c.bc.CurrentBlock()
+	if curBlk == nil {
+		log.SyslogErr("confirm block", "scanAllBlockStatus get currentBlock", ErrNullBlk.Error())
+		return 0
+	}
+	return curBlk.NumberU64()
+}
+
+func (c *CFM) getPowMaxStableBlkNumber(curBlkNumber uint64) uint64 {
+	if curBlkNumber < uint64(SecPowBlks) {
+		return 0
+	}
+	return uint64(curBlkNumber - uint64(SecPowBlks))
 }
 
 func (c *CFM) getMaxStableBlkNumber(blkStatusArr []*BlkStatus, stopNumber uint64, startNumber uint64, err error) uint64 {

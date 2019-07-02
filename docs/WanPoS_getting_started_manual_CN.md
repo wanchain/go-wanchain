@@ -2,17 +2,36 @@
 
 # 2. 概述
 
-参考入门手册可帮助您快速的接入星系共识，参与挖矿或代理。
+参考入门手册可帮助您快速的接入星系共识，参与验证节点或代理。
 
 参与者主要分为验证人和委托人两种角色。
 
-验证人需要准备合适的节点服务器，在矿工模式下运行，执行星系共识协议，并参与挖矿。
+验证人需要准备合适的节点服务器，在验证节点模式下运行，执行星系共识协议，并参与验证节点。
 
-委托人不需要运行矿工节点，可以选择投注到验证人，分享奖励。
+委托人不需要运行验证节点节点，可以选择投注到验证人，分享奖励。
 
-Alpha版的explorer地址为：
+Beta版的explorer地址为：
 
-(待发布)
+http://testnet.wanscan.org/
+
+Wanstats地址为：
+
+http://54.193.4.239/
+
+Faucet地址为：
+
+http://54.201.62.90/
+
+Beta相对于Alpha版主要更新内容包括（暂定）：
+
+- Slot时间由10秒缩短为5秒
+- Epoch时间由2天缩短为1天
+- 委托费率取值范围从0 ~ 100更新为0 ~ 10000，精度更高（百分之几更新为万分之几）
+- 验证节点可接受的最大委托上限从本金的5倍调整为10倍（1:10）
+- docker镜像名称更新为：wanchain/client-go:2.0.0-beta.5
+- 启动参数和指令中的pluto, 更换为testnet
+- staking预编译合约地址更新
+
 
 后续功能会陆续更新。
 
@@ -26,17 +45,19 @@ Alpha版的explorer地址为：
 - [4. 通过Docker启动节点](#4-通过docker启动节点)
     - [4.1. 成为验证人](#41-成为验证人)
     - [4.2. 成为委托人](#42-成为委托人)
-- [5. 安装和运行教程](#5-安装和运行教程)
+- [5. 其它的安装和运行方式](#5-其它的安装和运行方式)
     - [5.1. 使用代码编译运行](#51-使用代码编译运行)
     - [5.2. 运行教程](#52-运行教程)
         - [5.2.1. 同步节点](#521-同步节点)
-        - [5.2.2. 验证节点（矿工）](#522-验证节点矿工)
+        - [5.2.2. 验证节点](#522-验证节点)
 - [6. 常用操作](#6-常用操作)
     - [6.1. 账号创建](#61-账号创建)
     - [6.2. 查询余额](#62-查询余额)
     - [6.3. 获取测试币](#63-获取测试币)
-    - [6.4. Stake注册和代理](#64-stake注册和代理)
-- [7. 测试数据](#7-测试数据)
+    - [6.4. Stake注册和代理流程](#64-stake注册和代理流程)
+    - [6.5. 退本金方法](#65-退本金方法)
+        - [6.5.1. 验证节点退本金](#651-验证节点退本金)
+        - [6.5.2. 委托人退本金](#652-委托人退本金)
 
 <!-- /TOC -->
 
@@ -54,16 +75,25 @@ $ exit
 ```
 
 2）使用docker中的gwan创建keystore账号:
-```
-$ docker pull wanchain/wanpos
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+注意：下文中的YourUserName，YourContainerID，YourAccountAddress，YourPassword，YourPK1，YourPK2均为替代词，并不是命令本身，应根据实际情况，替换成自己的定制值；
+
+- YourUserName：替换成你的用户名；
+- YourContainerID：返回的DockerID，这个不是输入的，是返回的输出信息；
+- YourAccountAddress：返回的创建好的地址；
+- YourPassword：设定你的自定义的合适的密码；
+- YourPK1、2：返回的你账号的2个公钥信息，注册validator时需要；
+
+```
+$ docker pull wanchain/client-go:2.0.0-beta.5
+
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -83,26 +113,36 @@ root> exit
 
 ![img](./img_get_start/1.png)
 
-3）为您的测试账号申请测试币 "YourAccountAddress", 例如申请： 100100个万币。
+3）为您的测试账号申请测试币 "YourAccountAddress"。
 
-可参考 [6.3. Get test wan coins of PoS](#63-get-test-wan-coins-of-pos) 教程申请万币。
+申请测试币请填写下方的信息表格。
 
-在收到万币后，再执行第4步。
+http://wanchain.mikecrm.com/USjDMuk
 
-![img](./img_get_start/4.png)
+如果已经使用钱包账号申请过测试币，可以手动将测试币转账到上文创建的validator账号中，完成后续步骤。
 
-4） 创建一个矿工注册脚本文件: `/home/YourUserName/.wanchain/minerRegister.js`
+4） 验证节点注册
+
+使用社区开发的[mywanwallet](https://mywanwallet.io/#contracts)网页版钱包以可视化的方式完成验证人注册。也可以按照下文方式使用脚本注册。
+
+！！！注意！！！为了保障账户安全，在使用脚本注册时，请一定不要开启--rpc选项，请反复核查后继续。（推荐使用钱包注册）
+
+创建一个验证节点注册脚本文件: `/home/YourUserName/.wanchain/validatorRegister.js`
+
+
 
 ```
-//minerRegister.js
+//validatorRegister.js
 
 // If you want to register to be a miner you can modify and use this script to run.
 
 
 //-------INPUT PARAMS YOU SHOULD MODIFY TO YOURS--------------------
 
-// tranValue is the value you want to stake in minValue is 100000 
-var tranValue = "100000"
+// tranValue is the value you want to stake
+// non-delegate mode validator - minValue is 10000
+// delegate mode validator - minValue is 50000  
+var tranValue = "50000"
 
 // secpub is the miner node's secpub value
 var secpub    = "YourPK1"
@@ -114,7 +154,7 @@ var g1pub     = "YourPK2"
 // range 0~10000 means 0%~100%
 var feeRate   = 1000
 
-// lockTime is the time for miner works which measures in epoch count. And must >= 7.
+// lockTime is the time for miner works which measures in epoch count. And must >= 7 and <= 90.
 var lockTime  = 30
 
 // baseAddr is the fund source account.
@@ -132,7 +172,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payload = coinContract.stakeIn.getData(secpub, g1pub, lockTime, feeRate)
@@ -155,19 +195,25 @@ console.log("tx=" + tx)
 如果第二步的docker没有关闭，可以直接按下述代码进入执行，如果已关闭，请再启动起来: 
 
 ```
-$ docker exec -it YourContainerID /bin/gwan attach .wanchain/pluto/gwan.ipc
+$ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
-> loadScript("/root/.wanchain/minerRegister.js")
+> loadScript("/root/.wanchain/validatorRegister.js")
 
 > exit
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@54.193.4.239:80
 
 ```
 
-执行完上述脚本，即可完成开启挖矿运行。
+其中参数中的“--wanstats your-node-name:admin@54.193.4.239:80”部分是PoS beta测试用于统计节点和PoS网络运行情况的。
+
+“your-node-name”请自定义为您想要的节点名称，例如“Community-WAN-node_EMEA1”，请避免使用大小写字母，数字，“-”，“_”以外的字符，例如空格。
+
+您可以通过WanStats网站来查看这些信息，Beta测试阶段WanStats的网址为：http://54.193.4.239/
+
+执行完上述脚本，即可完成开启验证节点运行。
 
 可通过:
 ```
@@ -175,7 +221,7 @@ docker logs -f `docker ps -q`
 ```
 命令查看工作日志。
 
-挖矿工作，将在所有块同步完成后正式开始。
+验证节点工作，将在所有块同步完成后正式开始。当前测试网数据较大，同步时间可能需要几个小时，请耐心等待。
 
 ![img](./img_get_start/5.png)
 
@@ -184,9 +230,11 @@ docker logs -f `docker ps -q`
 
 ## 4.2. 成为委托人
 
-在Beta版本发布后，可通过轻钱包方便的完成委托投注。
+可通过Wan Wallet轻钱包方便的完成委托投注。
 
-在Beta版本之前，可按照如下命令执行投注。
+轻钱包下载地址：https://github.com/wanchain/wan-wallet-desktop/releases
+
+也可按照如下命令执行投注。
 
 1）安装 docker (Ubuntu):
 ```
@@ -202,13 +250,13 @@ $ exit
 验证人信息可以通过命令行查找，也可以通过浏览器查找。请注意，在使用pos.getStakerInfo获取验证节点信息前，请确认当前已经同步到最新块。可通过eth.blockNumber来查看。
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/wanpos /bin/gwan --pluto
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
 
 YourContainerID
 
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > personal.newAccount('YourPassword')
 
@@ -267,7 +315,7 @@ var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"
 
 
 var contractDef = eth.contract(cscDefinition);
-var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
 var payloadDelegate = coinContract.delegateIn.getData(delegateAddr)
@@ -281,7 +329,7 @@ console.log("tx2=" + tx2)
 ```
 $ docker exec -it YourContainerID /bin/bash
 
-root> gwan attach .wanchain/pluto/gwan.ipc
+root> gwan attach .wanchain/testnet/gwan.ipc
 
 > loadScript("/root/.wanchain/sendDelegate.js")
 
@@ -290,7 +338,7 @@ root> gwan attach .wanchain/pluto/gwan.ipc
 委托人投注完成。
 
 
-# 5. 安装和运行教程
+# 5. 其它的安装和运行方式
 
 ## 5.1. 使用代码编译运行
 
@@ -309,7 +357,7 @@ $ git clone https://github.com/wanchain/go-wanchain.git
 
 $ cd go-wanchain
 
-$ git checkout posalpha
+$ git checkout betarelease
 
 $ git pull
 
@@ -325,15 +373,15 @@ $ make
 ### 5.2.1. 同步节点
 
 ```
-$ gwan --pluto --rpc --syncmode "full"
+$ gwan --testnet --syncmode "full"
 ```
 
-### 5.2.2. 验证节点（矿工）
+### 5.2.2. 验证节点
 
 在下面命令中请替换地址为您的个人地址 `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` ，并替换 `/tmp/pw.txt` 为您地址的密码文本文件。
 
 ```
-$ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt --rpc  --mine --minerthreads=1 --syncmode "full"
+$ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
 # 6. 常用操作
@@ -342,16 +390,16 @@ $ gwan --pluto --rpc --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --
 
 
 ```
-$ gwan --pluto account new
+$ gwan --testnet account new
 ```
 
 
-执行上述命令后，keystore文件会存储在默认目录 `~/.wanchain/pluto/keystore/` in Ubuntu 或者 `~/Library/Wanchain/pluto/keystore/` in Mac OS.
+执行上述命令后，keystore文件会存储在默认目录 `~/.wanchain/testnet/keystore/` in Ubuntu 或者 `~/Library/Wanchain/testnet/keystore/` in Mac OS.
 
 使用如下命令获取两个星系共识需要用到的公钥。
 
 ```
-$ gwan --pluto account pubkeys 'Your Address' 'Your Password'
+$ gwan --testnet account pubkeys 'Your Address' 'Your Password'
 ```
 
 星系共识需要使用key1和key3，作为SecPk和G1PK。
@@ -361,10 +409,10 @@ $ gwan --pluto account pubkeys 'Your Address' 'Your Password'
 
 ```
 // In ubuntu
-$ gwan attach ~/.wanchain/pluto/gwan.ipc
+$ gwan attach ~/.wanchain/testnet/gwan.ipc
 
 // In MacOS
-$ gwan attach ~/Library/Wanchain/pluto/gwan.ipc
+$ gwan attach ~/Library/Wanchain/testnet/gwan.ipc
 
 ```
 
@@ -379,7 +427,15 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 ## 6.3. 获取测试币
 
-测试申请当前为邮件申请，后续会推出faucet网页，自动发放测试币。
+验证节点请在网页中填表申请测试币。（地址）
+
+普通委托人请通过faucet申请少量测试币。[Wanchain-Faucet](http://54.201.62.90/)
+
+其它技术支持信息，还可以邮件联系。
+
+或加入官网上的Gitter/QQ/微信社区群。
+
+www.wanchain.org
 
 | Index            | Email         | 
 | --------------  | :------------  | 
@@ -387,61 +443,25 @@ $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 
 
 
-## 6.4. Stake注册和代理
+## 6.4. Stake注册和代理流程
 
-用户注册一个节点服务器为星系共识验证节点（矿工）的步骤如下图所示：
+用户注册一个节点服务器为星系共识验证节点的步骤如下图所示：
 
 ![img](./img_get_start/99.png)
 
-You can register as a mining node through Stake register.
+## 6.5. 退本金方法
 
-We have given a smart contract for register and unregister.
+### 6.5.1. 验证节点退本金
 
-Its contract interface is shown as below.
-```
-var cscDefinition = [{"constant":false,"inputs":[{"name":"addr","type":"address"},{"name":"lockEpochs","type":"uint256"}],"name":"stakeUpdate","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"stakeAppend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"secPk","type":"bytes"},{"name":"bn256Pk","type":"bytes"},{"name":"lockEpochs","type":"uint256"},{"name":"feeRate","type":"uint256"}],"name":"stakeIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateIn","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":false,"inputs":[{"name":"delegateAddress","type":"address"}],"name":"delegateOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
-```
+验证人可使用[stakeUpdate.js](https://github.com/wanchain/go-wanchain/blob/develop/loadScript/stakeUpdate.js)脚本，将locktime设成0，来实现退款。本金将在下个周期开始时，自动退回来源账户。
 
-在智能合约的参数中, `feeRate` 是接受委托后的分红费率，如果设置为10000，则为独立节点，不接受委托。
-
-如果您想成为可以接受委托的验证节点，则应设置友好的费率值 `feeRate` 来吸引用户投注。
-
-`feeRate`取值范围[ 0, 10000 ]. 表示分红的百分比0.00% ~ 100.00%.
-
-可以直接修改代码目录下的脚本文件来完成矿工注册 `loadScript/minerRegister.js`.
-
-委托人投注脚本`loadScript/sendDelegate.js`
-
-脚本可在IPC链接到节点后执行。
-
-```
-// This path is a relative path for your run.
-$ loadScript('loadScript/register.js')
-```
-
-收益信息，收益率预测，可在浏览器中查询。
-
-# 7. 测试数据
-
-下面展示了使用不同的锁定金额，不同的锁定时间的收益实测数据。
-
-锁定时间单位是epoch。
-
-测试时，epoch时间为20分钟，每个epoch有120个slot。6个epoch为120分钟。
-
-（注意！本测试不是在alpha测试网络开展的，是在少量节点的私链上进行，alpha网络的时间参数为每个epoch 2天，每个epoch有1440*12个slot）
-
-总stake约为 6000000 ~ 8000000 万币。
-
-| Address     | stake | locktime | ep 1| ep 2 | ep 3 | ep 4 | ep 5 | total incentive |
-| ----------  | ---- | :---: | --- | --- | ----| ---- | ---- | ---- | 
-|0xbec1f01f5cbe494279a3c1455644a16aebfd700d| 100000 | 6 |0 |0.32 |1.07 |1.02 |1.94 | 4.35|
-|0xa38c0aafc0b4ee45e006814e5769f17fda60f994| 200000 | 6 |0.32 |1.39 |4.40 |3.06 |2.33 |11.5 |
-|0x711a9967d0b61ab92a86e14102de1233d3de5ead| 500000 | 6 |2.49 |6.03 |9.62 |10.32 |5.14 |33.6 | 
-|0x52eee1ccb29adc742449a3e87fe7acaad605bd4c| 200000 | 12 |1.93 |4.81 |1.08 |1.17 |0.32 |9.31 |
+默认情况下，验证人会自动续期。需要手动操作才能退本金。
 
 
-如果收益为 0, 则意味着概率较低，没有被选中。
 
+### 6.5.2. 委托人退本金
 
-![img](./img_get_start/7.png)
+通过钱包投注的委托人，可直接通过钱包的退款按钮退款。
+
+通过脚本注册的委托人，可通过[delegateOut.js](https://github.com/wanchain/go-wanchain/blob/develop/loadScript/delegateOut.js)脚本完成退本金操作。
+

@@ -8,8 +8,8 @@ import (
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 
 	"github.com/wanchain/go-wanchain/node"
 )
@@ -17,13 +17,13 @@ import (
 var (
 	// EpochBaseTime is the pos start time such as: 2018-12-12 00:00:00 == 1544544000
 	//EpochBaseTime = uint64(0)
-	FirstEpochId = uint64(0)
-	CurrentEpochId = uint64(0)
+	FirstEpochId              = uint64(0)
+	CurrentEpochId            = uint64(0)
 	Pow2PosUpgradeBlockNumber = uint64(0)
 	// SelfTestMode config whether it is in a simlate tese mode
 	SelfTestMode = false
 	IsDev        = false
-	MineEnabled = false
+	MineEnabled  = false
 )
 
 const (
@@ -44,8 +44,8 @@ const (
 	RandomProperCount = 25
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold         = 30
-	MinEpHold         = 10
-	Key3Suffix		  = "bn256KeySuffix"
+	MinEpHold         = 0
+	Key3Suffix        = "bn256KeySuffix"
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
@@ -57,7 +57,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 10
+	K      = 1440
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -91,19 +91,17 @@ const (
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
 )
-var TxDelay  = K
+
+var TxDelay = K
 
 var GenesisPK string
+
 //var GenesisPK = "04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"
 //var GenesisPKInit = "04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70"
 //var GenesisPK = "046a5e1d2b8ca62accede9b8c7995dbd428ddbaf6a7f85673d426038b05bfdb428681046930a27b849a8f3541e71e8779948df95c78b2b303380769d0f4e8a753e"
 var GenesisPKInit = ""
 var PosOwnerAddr common.Address
 var WhiteList [210]string
-
-
-
-
 
 type Config struct {
 	PolymDegree   uint
@@ -179,13 +177,19 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		// this is mainnet. *****
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
-	} else {
-		PosOwnerAddr = PosOwnerAddrTest
+	} else if networkId == 6 {
+		PosOwnerAddr = PosOwnerAddrInternal
 		if IsDev { // --plutodev
-			WhiteList = WhiteListDev
+			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
 			WhiteList = WhiteListOrig
 		}
+	} else if networkId == 4 {
+		PosOwnerAddr = PosOwnerAddrInternal
+		WhiteList = WhiteListOrig
+	} else { // testnet
+		PosOwnerAddr = PosOwnerAddrTestnet
+		WhiteList = WhiteListTestnet
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))
@@ -193,4 +197,8 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		EpochLeadersHold[i] = hexutil.MustDecode(WhiteList[i])
 	}
 	DefaultConfig.NodeCfg = nodeCfg
+}
+
+func GetRandomGenesis() *big.Int {
+	return new(big.Int).SetBytes(crypto.Keccak256(big.NewInt(1).Bytes()))
 }

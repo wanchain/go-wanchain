@@ -104,6 +104,7 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
+		utils.FirstPos,
 		utils.DevInternalFlag,
 
 		utils.PlutoFlag,
@@ -264,6 +265,10 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			unlockAccount(ctx, ks, trimmed, i, passwords)
 		}
 	}
+
+	// Send unlock account finish event
+	stack.AccountManager().SendStartupUnlockFinish()
+
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
@@ -332,9 +337,10 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 
+
 	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
-		ctx.GlobalBool(utils.EtherbaseFlag.Name)&&
-		ctx.GlobalBool(utils.UnlockedAccountFlag.Name)&&
+		ctx.IsSet(utils.EtherbaseFlag.Name)&&
+		ctx.IsSet(utils.UnlockedAccountFlag.Name)&&
 		( ctx.GlobalBool(utils.PlutoFlag.Name) ||
 			ctx.GlobalBool(utils.TestnetFlag.Name)){
 

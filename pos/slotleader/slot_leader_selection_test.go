@@ -1,7 +1,6 @@
 package slotleader
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
@@ -17,10 +16,8 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
-	"github.com/wanchain/go-wanchain/rpc"
-
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -242,34 +239,8 @@ func TestArraySave(t *testing.T) {
 		t.Error(err.Error())
 	}
 	fmt.Println(sendtransGet)
-}
-
-func TestGetEpoch0LeadersPK(t *testing.T) {
-	SlsInit()
-	s := GetSlotLeaderSelection()
-	//getEpoch0LeadersPK
-	leadersPK := s.getEpoch0LeadersPK()
-	if len(leadersPK) != posconfig.EpochLeaderCount {
-		t.Fail()
-	}
-
-	for _, epLeader := range leadersPK {
-		if !crypto.S256().IsOnCurve(epLeader.X, epLeader.Y) {
-			t.Error("PK not on the S256 curve")
-		}
-	}
-}
-
-func TestGetPreEpochLeadersPK(t *testing.T) {
-	SlsInit()
-	s := GetSlotLeaderSelection()
-	pks, err := s.getPreEpochLeadersPK(0)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	if len(pks) != posconfig.EpochLeaderCount {
-		t.Fail()
-	}
+	RmDB("testArraySave")
+	os.RemoveAll("sl_leader_test")
 }
 
 func TestGetSMAPieces(t *testing.T) {
@@ -356,56 +327,24 @@ func TestGetSlotLeader(t *testing.T) {
 	t.Log("Current dir path ", dir)
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
-	//posdb.NewDb(path.Join(dir, "sl_leader_test"))
 
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	pk, err := s.GetSlotLeader(0, 1)
+
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		prvKey, _ := crypto.GenerateKey()
+		s.defaultSlotLeadersPtrArray[i] = &prvKey.PublicKey
+	}
+
+	_, err := s.GetSlotLeader(0, 1)
 	if err != nil {
 		t.Fail()
 	}
 
-	if pkBytes, _ := hex.DecodeString(posconfig.GenesisPK); !bytes.Equal(pkBytes, crypto.FromECDSAPub(pk)) {
-		t.Fail()
-	}
-
-	pkGenesisBytes, _ := hex.DecodeString(posconfig.GenesisPK)
-	// ErrSlotIDOutOfRange
-	_, err = s.GetSlotLeader(1, posconfig.SlotCount)
-	if err == nil {
-		t.Logf("should err:%v,but nil", err.Error())
-		t.Fail()
-	}
-
-	//ErrSlotLeaderGroupNotReady
-
-	_, err = s.GetSlotLeader(1, posconfig.SlotCount-1)
-	if err == nil {
-		t.Fail()
-	}
-
-	for i := 0; i < posconfig.SlotCount; i++ {
-		_, err = posdb.GetDb().PutWithIndex(1, uint64(i), SlotLeader, pkGenesisBytes)
-		if err != nil {
-			t.Error(err.Error())
-			t.Fail()
-		}
-	}
-
-	s.slotCreateStatus[1] = false
-
-	pkSelected, err := s.GetSlotLeader(1, uint64(posconfig.SlotCount-1))
+	////ErrSlotLeaderGroupNotReady
+	_, err = s.GetSlotLeader(4, posconfig.SlotCount-1)
 	if err != nil {
-		t.Error(err.Error())
 		t.Fail()
-	}
-
-	if !bytes.Equal(pkGenesisBytes, crypto.FromECDSAPub(pkSelected)) {
-		t.Logf("should pk:%v, now pk:%v", pkGenesisBytes, crypto.FromECDSAPub(pkSelected))
-		t.Fail()
-	} else {
-		t.Logf("\nshould pk:\t%v\nnow pk:\t%v", hex.EncodeToString(pkGenesisBytes),
-			hex.EncodeToString(crypto.FromECDSAPub(pkSelected)))
 	}
 
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
@@ -415,7 +354,7 @@ func TestGetSlotLeader(t *testing.T) {
 func TestGetLocalPublicKey(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fail()
@@ -511,21 +450,11 @@ func TestGetEpochLeaders(t *testing.T) {
 		t.Fail()
 	}
 	//getPreEpochLeadersPK
-	epochLeadersPks2, err := s.getPreEpochLeadersPK(uint64(2))
-	if err != nil {
-		t.Fail()
-	}
+	epochLeadersPks2 := s.getEpochLeadersPK(uint64(2))
 	if len(epochLeadersPks2) != posconfig.EpochLeaderCount {
 		t.Errorf("getPreEpochLeadersPK error!")
 		t.Fail()
 	}
-	// getEpoch0LeadersPK
-	pksGenesis := s.getEpoch0LeadersPK()
-	if len(pksGenesis) != posconfig.EpochLeaderCount {
-		t.Errorf("getEpoch0LeadersPK error!")
-		t.Fail()
-	}
-
 	posconfig.SelfTestMode = false
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
@@ -567,7 +496,7 @@ func TestGetAlpha(t *testing.T) {
 func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
 	posconfig.SelfTestMode = true
 
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -590,8 +519,8 @@ func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 			uint64(i))
 	}
 
-	posdb.GetDb().Put(2, EpochLeaders, epochLeaderAllBytes[:])
-	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(4, EpochLeaders, epochLeaderAllBytes[:])
+	posdb.GetDb().Put(3, EpochLeaders, epochLeaderAllBytes[:])
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -600,34 +529,17 @@ func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 	s.key.PrivateKey = key
 
 	//isLocalPkInPreEpochLeaders
-	inOrNot, err := s.isLocalPkInPreEpochLeaders(2)
-	if err != nil {
-		t.Fail()
-	}
-
-	if inOrNot == true {
-		t.Fail()
-	}
-
-	// isLocalPkInCurrentEpochLeaders false
-	inOrNot = s.isLocalPkInCurrentEpochLeaders()
+	pks, _ := s.GetPreEpochLeadersPK(4)
+	inOrNot:= s.IsLocalPkInEpochLeaders(pks)
 	if inOrNot == true {
 		t.Fail()
 	}
 
 	s.key.PrivateKey = prvKeyExist
 	//isLocalPkInPreEpochLeaders
-	inOrNot, err = s.isLocalPkInPreEpochLeaders(2)
-	if err != nil {
-		t.Fail()
-	}
+	pks, _ = s.GetPreEpochLeadersPK(4)
+	inOrNot= s.IsLocalPkInEpochLeaders(pks)
 
-	if inOrNot == false {
-		t.Fail()
-	}
-
-	// isLocalPkInCurrentEpochLeaders true
-	inOrNot = s.isLocalPkInCurrentEpochLeaders()
 	if inOrNot == false {
 		t.Fail()
 	}
@@ -639,7 +551,8 @@ func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 func TestBuildEpochLeaderGroup(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
+
 	posconfig.SelfTestMode = true
 
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -695,26 +608,6 @@ func TestBuildEpochLeaderGroup(t *testing.T) {
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
 
-func TestGetChainReader(t *testing.T) {
-
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("Panic info is: ", err)
-		} else {
-			t.Fail()
-		}
-	}()
-
-	SlsInit()
-	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
-	if s.blockChain != nil {
-		t.Fail()
-	}
-	chainReader := s.GetChainReader()
-	_ = chainReader.CurrentHeader()
-}
-
 func TestGetRandom(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()
@@ -729,7 +622,7 @@ func TestGetRandom(t *testing.T) {
 	vmcfg := vm.Config{}
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec.MustCommit(db)
-	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg)
+	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg,nil)
 	s.blockChain = chain
 
 	if err != nil {
@@ -738,12 +631,13 @@ func TestGetRandom(t *testing.T) {
 
 	ret, err := s.getRandom(nil, 0)
 	fmt.Printf("ret of get randome 0x%v\n", hex.EncodeToString(ret.Bytes()))
+	RmDB("epochGendb")
 }
 
 func TestBuildStage2TxPayload(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
 	posconfig.SelfTestMode = true
 
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -777,7 +671,7 @@ func TestBuildStage2TxPayload(t *testing.T) {
 func TestBuildSecurityPieces(t *testing.T) {
 	SlsInit()
 	s := GetSlotLeaderSelection()
-	s.Init(nil, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fail()
@@ -844,14 +738,14 @@ func TestGenerateSecurityMsg(t *testing.T) {
 	//gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec := core.DefaultGenesisBlock()
 	gspec.MustCommit(db)
-	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg)
+	_, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg,nil)
 
 	if err != nil {
 		t.Fail()
 	}
 
 	// build local key
-	s.Init(chain, &rpc.Client{}, &keystore.Key{})
+	s.key = &keystore.Key{}
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fail()
@@ -890,8 +784,18 @@ func TestGenerateSecurityMsg(t *testing.T) {
 
 		s.epochLeadersPtrArray[i] = &key.PublicKey
 	}
+
 	s.epochLeadersPtrArray[0] = &key.PublicKey
-	epochID := uint64(1)
+	epochID := uint64(0)
+
+	epochLeaderAllBytes := make([]byte, 65*posconfig.EpochLeaderCount)
+	for i := 0; i < posconfig.EpochLeaderCount; i++ {
+		pubKeyByes := crypto.FromECDSAPub(s.epochLeadersPtrArray[i])
+		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
+	}
+	posdb.GetDb().Put(epochID, EpochLeaders, epochLeaderAllBytes[:])
+
+
 
 	// build stg2 trans and input into state db
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {
@@ -942,5 +846,6 @@ func TestGenerateSecurityMsg(t *testing.T) {
 		t.Fail()
 	}
 	// un init
+	RmDB("epochGendb")
 	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }

@@ -148,7 +148,7 @@ function stakeRegisterTest() {
 
   /////////////////////////////////register staker////////////////////////////////////////////////////////////////////////
   var contractDef = eth.contract(cscDefinition);
-  var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+  var cscContractAddr = "0x00000000000000000000000000000000000000DA";
   var coinContract = contractDef.at(cscContractAddr);
 
   var lockEpochs = 10;
@@ -193,7 +193,7 @@ function stakeUnregister(address, index) {
   var datapks = secpub + '';//'' + g1pub
 
   var contractDef = eth.contract(cscDefinition);
-  var cscContractAddr = "0x00000000000000000000000000000000000000d8";
+  var cscContractAddr = "0x00000000000000000000000000000000000000DA";
   var coinContract = contractDef.at(cscContractAddr);
 
   //var lockTime = web3.toWin(lockTimeSecond)
