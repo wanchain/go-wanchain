@@ -133,6 +133,15 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 
 
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
+	if tx.To == nil ||
+		tx.Gas == nil ||
+		tx.GasPrice == nil ||
+		tx.Value == nil ||
+		tx.Nonce == nil ||
+		tx.ChainID == nil {
+		return nil, mpcprotocol.ErrInvalidMpcTx
+	}
+
 	mpcsyslog.Info("SignMpcTransaction begin, txInfo:%s", tx.String())
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
