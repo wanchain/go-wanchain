@@ -21,12 +21,6 @@
 			"revisionTime": "2016-08-11T21:22:31Z"
 		},
 		{
-			"checksumSHA1": "24EW3PGLGVSy/5joAOZdHzN/S2E=",
-			"path": "github.com/Azure/azure-storage-go",
-			"revision": "12ccaadb081cdd217702067d28da9a7ff4305239",
-			"revisionTime": "2017-03-02T22:15:08Z"
-		},
-		{
 			"checksumSHA1": "+sxS3YEvxf1VxlRskIdXFRWq9rY=",
 			"path": "github.com/Azure/go-autorest/autorest",
 			"revision": "ec5f4903f77ed9927ac95b19ab8e44ada64c1356",
@@ -262,6 +256,12 @@
 			"revisionTime": "2017-09-02T20:46:57Z"
 		},
 		{
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "5d4384ee4fb2527b0a1256a821ebfc92f91efefc",
+			"revisionTime": "2018-12-26T10:54:42Z"
+		},
+		{
 			"checksumSHA1": "WbbxCn2jUYIL5viqLo0BKXEdPrQ=",
 			"path": "github.com/prometheus/prometheus/util/flock",
 			"revision": "3101606756c53221ed58ba94ecba6b26adf89dcc",
@@ -338,6 +338,42 @@
 			"path": "github.com/rs/xhandler",
 			"revision": "ed27b6fd65218132ee50cd95f38474a3d8a2cd12",
 			"revisionTime": "2016-06-18T19:32:21Z"
+		},
+		{
+			"checksumSHA1": "tLHFmMOC2eMcXYaPXfifUVj3wX4=",
+			"path": "github.com/stretchr/objx",
+			"revision": "35313a95ee26395aa17d366c71a2ccf788fa69b6",
+			"revisionTime": "2019-04-15T11:18:23Z"
+		},
+		{
+			"checksumSHA1": "DBdcVxnvaINHhWyyGgih/Mel6gE=",
+			"path": "github.com/stretchr/testify",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "IIsn0Wdi5rHU8xca+FzDd+YeYlc=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "fg3TzS9/QK3wZbzei3Z6O8XPLHg=",
+			"path": "github.com/stretchr/testify/http",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "lsdl3fgOiM4Iuy7xjTQxiBtAwB0=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "IL+W0JvlL7zRZFsSVHiX2hectIs=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
 		},
 		{
 			"checksumSHA1": "yHbyLpI/Meh0DGrmi8x6FrDxxUY=",
