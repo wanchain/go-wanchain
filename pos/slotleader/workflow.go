@@ -141,6 +141,9 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	if workStage != slotLeaderSelectionInit && workStage != slotLeaderSelectionStageFinished {
 		if !s.isEpochLeaderMapReady() {
 			s.doInit(epochID)
+			if !s.isEpochLeaderMapReady() {
+				s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			}
 		}
 	}
 
