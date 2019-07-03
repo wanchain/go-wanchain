@@ -159,6 +159,8 @@ var (
 	}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
+
+	noStaking = false
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -444,4 +446,11 @@ func IsPosActive() bool {
 
 func SetPosActive(active bool) {
 	isPosActive = active
+}
+
+func IsNoStaking() bool {
+	return noStaking
+}
+func SetNoStaking()  {
+	noStaking = true
 }

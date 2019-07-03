@@ -83,6 +83,9 @@ var (
 
 	// ErrInvalidTxType is returned if input transaction's type is unknown.
 	ErrInvalidTxType = errors.New("invalid transaction type")
+
+	// ErrStakingTx is returned if pos_staking_contract tx called in noStaking mode
+	ErrStakingTx = errors.New("pos staking in staking mode")
 )
 
 var (
@@ -561,6 +564,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	isPosAddr := vm.IsPosPrecompiledAddr(tx.To())
 	if isPosType != isPosAddr {
 		return ErrInvalidTxType
+	}
+
+	if params.IsNoStaking() {
+		if *tx.To() == vm.WanCscPrecompileAddr {
+			return ErrStakingTx
+		}
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
