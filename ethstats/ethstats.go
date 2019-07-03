@@ -274,7 +274,7 @@ func (s *Service) loop() {
 	}()
 	// Loop reporting until termination
 	for {
-		log.Debug("wanstats report big loop begin..")
+		log.Info("wanstats report big loop begin..")
 		// Resolve the URL, defaulting to TLS, but falling back to none too
 		path := fmt.Sprintf("%s/api", s.host)
 		urls := []string{path}
@@ -294,6 +294,7 @@ func (s *Service) loop() {
 			}
 			conf.Dialer = &net.Dialer{Timeout: 5 * time.Second}
 			if conn, err = websocket.DialConfig(conf); err == nil {
+				log.Info("connect wanstats server successful", "url", url)
 				break
 			}
 		}
@@ -470,6 +471,7 @@ func (s *Service) isPos() bool {
 // it, if they themselves are requests it initiates a reply, and lastly it drops
 // unknown packets.
 func (s *Service) readLoop(conn *websocket.Conn) {
+	log.Info("wanstats readloop begin")
 	// If the read loop exists, close the connection
 	defer conn.Close()
 
@@ -596,6 +598,10 @@ func (s *Service) login(conn *websocket.Conn) error {
 					signature = common.ToHex(signed)
 				}
 			}
+		}
+
+		if len(signature) == 0 {
+			validatorAddr = ""
 		}
 
 		gBlk := s.eth.BlockChain().GetBlockByNumber(0)
