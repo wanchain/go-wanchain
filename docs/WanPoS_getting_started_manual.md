@@ -18,6 +18,7 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
 - [4. Quick start from Script](#4-quick-start-from-script)
     - [4.1. Run a command to create and run validator](#41-run-a-command-to-create-and-run-validator)
     - [4.2. Register validator from wallet](#42-register-validator-from-wallet)
+    - [4.3. Send Tx Gas Fee to Valdiator address](#43-send-tx-gas-fee-to-valdiator-address)
 - [5. Quick start from Docker](#5-quick-start-from-docker)
     - [5.1. Step by step node setup](#51-step-by-step-node-setup)
     - [5.2. Step by step delegation guide](#52-step-by-step-delegation-guide)
@@ -82,6 +83,14 @@ After filling out, select the wallet type and import the wallet.
 The amount locked is entered on the next page.
 
 Follow the prompts to complete the validator registration.
+
+## 4.3. Send Tx Gas Fee to Valdiator address
+
+After the registration is completed, a small transaction fee is also transferred to the verification node address for the execution of the POS protocol fee.
+
+The handling fee is generally not more than 0.01 wan per transaction, so a transfer of 50 wan to the validator account can support longe time use.
+
+Please check the balance of the validator address regularly through the browser to ensure that transaction fees are always available.
 
 # 5. Quick start from Docker
 
