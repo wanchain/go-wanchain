@@ -539,6 +539,7 @@ func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bo
 }
 
 func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
+	log.SyslogInfo("generateSlotLeadsGroup start")
 	epochIDGet := epochID
 	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
 	if isDefault && epochID > posconfig.FirstEpochId+2 {
