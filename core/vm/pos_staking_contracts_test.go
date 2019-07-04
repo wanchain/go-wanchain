@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -103,12 +104,18 @@ func reset() bool {
 }
 
 func (StakerStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
-	ret, _ := posStakingDB.Get(hs[:])
+	//ret, _ := posStakingDB.Get(hs[:])
+
+	key := append(addr[:], hs[:]...)
+	ret, _ := posStakingDB.Get(key)
 	return ret
 }
 
 func (StakerStateDB) SetStateByteArray(addr common.Address, hs common.Hash, data []byte) {
-	posStakingDB.Put(hs[:], data)
+	//posStakingDB.Put(hs[:], data)
+
+	key := append(addr[:], hs[:]...)
+	posStakingDB.Put(key, data)
 }
 
 type dummyStakerRef struct {
@@ -525,7 +532,7 @@ func TestStakeAppend(t *testing.T) {
 	}
 }
 
-func TestStakeUpdate(t *testing.T)  {
+func TestStakeUpdate(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
@@ -552,6 +559,25 @@ func TestStakeUpdate(t *testing.T)  {
 	// normal
 	setEpochTime(posconfig.FirstEpochId + 2 + 10 - UpdateDelay)
 	err = doStakeUpdate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 0, 10)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestUpdateFeeRate(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err := doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeIn(20000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -672,6 +698,37 @@ func TestStakeUpdateParam(t *testing.T) {
 	err = doStakeUpdateParam(input)
 	if err == nil {
 		t.Fatal("LockEpochs > max should failed")
+	}
+}
+
+func TestUpdateFeeRateParam(t *testing.T) {
+	var input UpdateFeeRateParam
+	input.FeeRate = big.NewInt(5)
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	err := doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal("update fee rate param failed " + err.Error())
+	}
+}
+
+func TestMaxFee(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	err := stakercontract.saveStakeMaxFee(stakerevm, 0xffffffffffffffff, contract.CallerAddress)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	fee, err := stakercontract.getStakeMaxFee(stakerevm, contract.CallerAddress)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	println("max fee = " + strconv.FormatUint(fee, 10))
+	if 0xffffffffffffffff != fee {
+		t.Fatal("fee not equal")
 	}
 }
 
@@ -959,6 +1016,34 @@ func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
 	return nil
 }
 
+func doUpdateFeeRate(from common.Address, feeRate uint64) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
+	contract.CallerAddress = from
+
+	var input UpdateFeeRateParam
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.FeeRate = big.NewInt(5)
+
+	bytes, err := cscAbi.Pack("updateFeeRate", input.Addr, input.FeeRate)
+	if err != nil {
+		return errors.New("updateFeeRate pack failed " + err.Error())
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("updateFeeRate called failed " + err.Error())
+	}
+	// check
+	//key := GetStakeInKeyHash(input.Addr)
+	//bytes := stakerevm.StateDB.GetStateByteArray(StakersFeeAddr, key)
+
+	return nil
+}
+
 func doStakeInParam(input StakeInParam) error {
 	bytes, err := cscAbi.Pack("stakeIn", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate)
 	if err != nil {
@@ -979,6 +1064,24 @@ func doStakeUpdateParam(input StakeUpdateParam) error {
 	_, err = stakercontract.stakeUpdateParseAndValid(bytes[4:])
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func doUpdateFeeRateParam(input UpdateFeeRateParam) error {
+	bytes, err := cscAbi.Pack("updateFeeRate", input.Addr, input.FeeRate)
+	if err != nil {
+		return err
+	}
+	feeParam, err := stakercontract.updateFeeRateParseAndValid(bytes[4:])
+	if err != nil {
+		return err
+	}
+	if feeParam.FeeRate.Cmp(input.FeeRate) != 0 {
+		return errors.New("fee rate not equal")
+	}
+	if feeParam.Addr != input.Addr {
+		return errors.New("addr not equal")
 	}
 	return nil
 }

@@ -720,6 +720,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 
 		// check the renew
 		if epochID+vm.QuitDelay >= staker.StakingEpoch+staker.LockEpochs {
+			// TODO: how to apply changed FeeRate
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				//staker.FeeRate = staker.NextFeeRate
