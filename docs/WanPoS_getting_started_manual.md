@@ -60,6 +60,12 @@ After the script is executed, the account address of the validator and the two p
 
 Next, you can complete the validator registration behavior through the wallet.
 
+Please make sure that there is enough WAN coins in your local light wallet, or keystore json accout, wanmask account and so on.
+
+In Beta stage is the test wan coins, the validator register require that at least 50,000 coins for delegating-validator, at least 10000 coins for non-delegating-validator.
+
+And make sure there are enough transaction fees outside.
+
 Register via web wallet: https://mywanwallet.io/
 
 When registering in the web wallet, you need to pay attention to first select the network in the upper right corner. The beta phase requires the selection of a testnet network.
