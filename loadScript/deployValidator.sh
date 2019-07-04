@@ -53,7 +53,7 @@ echo '=================================================='
 echo '      Please backup Your Validator Address'
 echo '     ' ${ADDR}
 echo '=================================================='
-echo '      Please backup Your Validator PK'
+echo '      Please backup Your Validator Public Key'
 echo ${PK}
 echo '=================================================='
 echo -e "\033[41;37m !!!!!!!!!!!!!!!Important!!!!!!!!!!!!!!! \033[0m"
