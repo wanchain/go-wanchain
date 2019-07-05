@@ -1321,7 +1321,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// faster than direct delivery and requires much less mutex
 	// acquiring.
 	var (
-		stats         = insertStats{startTime: mclock.Now()}
+		stats         = insertStats{startTime: mclock.Now(), blockTime: chain[0].Header().Time.Uint64()}
 		events        = make([]interface{}, 0, len(chain))
 		lastCanon     *types.Block
 		coalescedLogs []*types.Log
@@ -1471,6 +1471,7 @@ type insertStats struct {
 	usedGas                    uint64
 	lastIndex                  int
 	startTime                  mclock.AbsTime
+	blockTime                  uint64
 }
 
 // statsReportLimit is the time limit during import after which we always print
@@ -1482,8 +1483,9 @@ const statsReportLimit = 8 * time.Second
 func (st *insertStats) report(chain []*types.Block, index int) {
 	// Fetch the timings for the batch
 	var (
-		now     = mclock.Now()
-		elapsed = time.Duration(now) - time.Duration(st.startTime)
+		now          = mclock.Now()
+		elapsed      = time.Duration(now) - time.Duration(st.startTime)
+		timeFromMine = uint64(time.Now().Unix()/1000) - st.blockTime
 	)
 	// If we're at the last block of the batch or report period reached, log
 	if index == len(chain)-1 || elapsed >= statsReportLimit {
@@ -1495,6 +1497,7 @@ func (st *insertStats) report(chain []*types.Block, index int) {
 			"blocks", st.processed, "txs", txs, "mgas", float64(st.usedGas) / 1000000,
 			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(),
+			"mine_elapsed_s", timeFromMine,
 		}
 		if st.queued > 0 {
 			context = append(context, []interface{}{"queued", st.queued}...)
