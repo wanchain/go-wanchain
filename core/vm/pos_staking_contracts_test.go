@@ -14,7 +14,6 @@ import (
 	"math/big"
 	"os"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 )
@@ -711,26 +710,26 @@ func TestUpdateFeeRateParam(t *testing.T) {
 	}
 }
 
-func TestMaxFee(t *testing.T) {
-	if !reset() {
-		t.Fatal("pos staking db init error")
-	}
-	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
-	err := stakercontract.saveStakeMaxFee(stakerevm, 0xffffffffffffffff, contract.CallerAddress)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
-	fee, err := stakercontract.getStakeMaxFee(stakerevm, contract.CallerAddress)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
-	println("max fee = " + strconv.FormatUint(fee, 10))
-	if 0xffffffffffffffff != fee {
-		t.Fatal("fee not equal")
-	}
-}
+//func TestMaxFee(t *testing.T) {
+//	if !reset() {
+//		t.Fatal("pos staking db init error")
+//	}
+//	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+//	err := stakercontract.saveStakeMaxFee(stakerevm, 0xffffffffffffffff, contract.CallerAddress)
+//	if err != nil {
+//		t.Fatal(err.Error())
+//	}
+//
+//	fee, err := stakercontract.getStakeMaxFee(stakerevm, contract.CallerAddress)
+//	if err != nil {
+//		t.Fatal(err.Error())
+//	}
+//
+//	println("max fee = " + strconv.FormatUint(fee, 10))
+//	if 0xffffffffffffffff != fee {
+//		t.Fatal("fee not equal")
+//	}
+//}
 
 func doStakeInWithParam(amount int64, feeRate int) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
@@ -1027,7 +1026,7 @@ func doUpdateFeeRate(from common.Address, feeRate uint64) error {
 	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	input.FeeRate = big.NewInt(5)
 
-	bytes, err := cscAbi.Pack("updateFeeRate", input.Addr, input.FeeRate)
+	bytes, err := cscAbi.Pack("stakeUpdateFeeRate", input.Addr, input.FeeRate)
 	if err != nil {
 		return errors.New("updateFeeRate pack failed " + err.Error())
 	}
@@ -1069,7 +1068,7 @@ func doStakeUpdateParam(input StakeUpdateParam) error {
 }
 
 func doUpdateFeeRateParam(input UpdateFeeRateParam) error {
-	bytes, err := cscAbi.Pack("updateFeeRate", input.Addr, input.FeeRate)
+	bytes, err := cscAbi.Pack("stakeUpdateFeeRate", input.Addr, input.FeeRate)
 	if err != nil {
 		return err
 	}

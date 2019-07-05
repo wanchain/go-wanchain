@@ -687,10 +687,9 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 					newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
 				}
 
-				if newFee.EffectiveEpoch <= epochID {
+				if newFee.EffectiveEpoch <= epochID && staker.FeeRate != newFee.FeeRate {
 					staker.FeeRate = newFee.FeeRate
 					changed = true
-					vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
 				}
 			}
 		}
@@ -741,8 +740,9 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
-			vm.UpdateInfo(stateDb, vm.StakersMaxFeeAddr, key, nil)
-			vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
+			if newFeeBytes != nil {
+				vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
+			}
 			continue
 		}
 
