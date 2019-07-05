@@ -275,7 +275,12 @@ type UpdateFeeRate struct {
 	FeeRate uint64
 	EffectiveEpoch uint64
 }
-
+type UpdateFeeRate2 struct {
+	ValidatorAddr    common.Address
+	MaxFeeRate uint64
+	FeeRate uint64
+	EffectiveEpoch uint64
+}
 //
 // public helper structures
 //
