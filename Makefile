@@ -170,4 +170,6 @@ gwan-windows-amd64:
 	cp ./build/bin/gwan-windows-* ${windowsDir}/gwan.exe
 	zip ${windowsDir}.zip ${windowsDir}/gwan.exe
 
-release: clean gwan-linux-amd64 gwan-windows-amd64 gwan-darwin-amd64
+# release: clean gwan-linux-amd64 gwan-windows-amd64 gwan-darwin-amd64
+release: clean gwan-linux-amd64 gwan-darwin-amd64
+
