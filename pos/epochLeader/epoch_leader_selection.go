@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"time"
 
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -105,7 +106,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	}
 
 	targetBlkNum := curNum
-	epochid, _ := util.GetEpochSlotID()
+	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
