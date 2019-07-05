@@ -665,6 +665,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if staker.LockEpochs == 0 {
 			continue
 		}
+
 		// handle the staker registed in pow phase. only once
 		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
 			staker.StakingEpoch = posconfig.FirstEpochId + 2
@@ -673,6 +674,30 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			}
 			changed = true
 		}
+
+		// update new fee rate
+		key := vm.GetStakeInKeyHash(staker.Address)
+		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+		if err != nil && newFeeBytes != nil {
+			var newFee vm.UpdateFeeRate
+			err = rlp.DecodeBytes(newFeeBytes, &newFee)
+			if err != nil {
+				if newFee.EffectiveEpoch == 0 {
+					newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
+				}
+
+				if newFee.EffectiveEpoch <= epochID {
+					staker.FeeRate = newFee.FeeRate
+					changed = true
+					vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
+				}
+			}
+		}
+		if err != nil {
+			log.SyslogErr("update new fee rate Failed: ", "err", err)
+			return false
+		}
+
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
 		clientChanged := false
@@ -714,7 +739,9 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			}
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
-			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
+			vm.UpdateInfo(stateDb, vm.StakersMaxFeeAddr, key, nil)
+			vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
 			continue
 		}
 

@@ -271,6 +271,11 @@ type PartnerInfo struct {
 	StakingEpoch uint64
 }
 
+type UpdateFeeRate struct {
+	FeeRate uint64
+	EffectiveEpoch uint64
+}
+
 //
 // public helper structures
 //
@@ -463,22 +468,22 @@ func (p *PosStaking) getStakeMaxFee(evm *EVM, address common.Address) (uint64, e
 	return feeRate, nil
 }
 
-func (p *PosStaking) getStakerFeeRate(evm *EVM, address common.Address) (uint64, error) {
+func (p *PosStaking) getStakeFeeRate(evm *EVM, address common.Address) (*UpdateFeeRate, error) {
 	key := GetStakeInKeyHash(address)
 	feeBytes, err := GetInfo(evm.StateDB, StakersFeeAddr, key)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	var feeRate uint64
+	var feeRate UpdateFeeRate
 	err = rlp.DecodeBytes(feeBytes, &feeRate)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return feeRate, nil
+	return &feeRate, nil
 }
 
-func (p *PosStaking) saveStakeFeeRate(evm *EVM, feeRate uint64, address common.Address) error {
-	feeBytes, err := rlp.EncodeToBytes(feeRate)
+func (p *PosStaking) saveStakeFeeRate(evm *EVM, feeRate UpdateFeeRate, address common.Address) error {
+	feeBytes, err := rlp.EncodeToBytes(&feeRate)
 	if err != nil {
 		return err
 	}
@@ -685,11 +690,6 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if err != nil {
 		return nil, err
 	}
-	// save max
-	err = p.saveStakeMaxFee(evm, stakerInfo.FeeRate, stakerInfo.Address)
-	if err != nil {
-		return nil, err
-	}
 	p.stakeInLog(contract, evm, stakerInfo)
 	return nil, nil
 }
@@ -821,6 +821,7 @@ func (p *PosStaking) UpdateFeeRate(payload []byte, contract *Contract, evm *EVM)
 	////get max
 	maxFee, err := p.getStakeMaxFee(evm, stakeInfo.Address)
 	if err != nil {
+		maxFee = stakeInfo.FeeRate
 		err = p.saveStakeMaxFee(evm, stakeInfo.FeeRate, stakeInfo.Address)
 		if err != nil {
 			return nil, err
@@ -831,7 +832,13 @@ func (p *PosStaking) UpdateFeeRate(payload []byte, contract *Contract, evm *EVM)
 		return nil, errors.New("fee rate can't bigger than old")
 	}
 
-	err = p.saveStakeFeeRate(evm, feeRateParam.FeeRate.Uint64(), stakeInfo.Address)
+	var newFeeRate UpdateFeeRate
+	newFeeRate.FeeRate = feeRateParam.FeeRate.Uint64()
+	newFeeRate.EffectiveEpoch = stakeInfo.StakingEpoch + stakeInfo.LockEpochs
+	if stakeInfo.StakingEpoch == uint64(0) {
+		newFeeRate.EffectiveEpoch = 0
+	}
+	err = p.saveStakeFeeRate(evm, newFeeRate, stakeInfo.Address)
 	if err != nil {
 		return nil, err
 	}
