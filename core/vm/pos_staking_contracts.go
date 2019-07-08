@@ -1057,14 +1057,13 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
-	params := make([]common.Hash, 2)
+	params := make([]common.Hash, 5)
 	params[0] = common.BytesToHash(contract.Caller().Bytes())
 	params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
+	params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate))
+	params[3] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
+	params[4] = common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch))
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdateFeeRate"].Sig()))
-	bs, err := rlp.EncodeToBytes(feeInfo)
-	if err != nil {
-		return err
-	}
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, bs)
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 }
