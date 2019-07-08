@@ -73,6 +73,9 @@ type StakerJson struct {
 	//NextFeeRate  uint64
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
+
+	NextFeeRate uint64
+	MaxFeeRate uint64
 }
 type PosInfoJson struct {
 	FirstEpochId     uint64 `json:"firstEpochId"`
@@ -130,5 +133,9 @@ func ToStakerJson(staker *vm.StakerInfo) *StakerJson {
 	}
 	stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 	stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
+
+	stakeJson.NextFeeRate = uint64(0)
+	stakeJson.MaxFeeRate = uint64(0)
+
 	return &stakeJson
 }

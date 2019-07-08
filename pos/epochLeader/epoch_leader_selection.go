@@ -679,10 +679,10 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		// update new fee rate
 		key := vm.GetStakeInKeyHash(staker.Address)
 		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
-		if err != nil && newFeeBytes != nil {
+		if err == nil && newFeeBytes != nil {
 			var newFee vm.UpdateFeeRate
 			err = rlp.DecodeBytes(newFeeBytes, &newFee)
-			if err != nil {
+			if err == nil {
 				if newFee.EffectiveEpoch == 0 {
 					newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
 				}

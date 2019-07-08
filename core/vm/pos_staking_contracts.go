@@ -834,6 +834,11 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 			EffectiveEpoch: stakeInfo.StakingEpoch + stakeInfo.LockEpochs,
 		}
 	}
+
+	if feeRateParam.FeeRate.Cmp(maxFeeRate) > 0 {
+		return nil, errors.New("fee rate cannot > 10000")
+	}
+
 	// 0 <= fee <= maxFee
 	if feeRateParam.FeeRate.Uint64() > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
@@ -844,6 +849,10 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 		oldFee.EffectiveEpoch = 0
 	}
 	err = p.saveStakeFeeRate(evm, oldFee, stakeInfo.Address)
+	if err != nil {
+		return nil, err
+	}
+	err = p.stakeUpdateFeeRateLog(contract, evm, oldFee)
 	if err != nil {
 		return nil, err
 	}
@@ -1046,4 +1055,16 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 
 	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
 	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+}
+func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
+	params := make([]common.Hash, 2)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
+
+	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdateFeeRate"].Sig()))
+	bs, err := rlp.EncodeToBytes(feeInfo)
+	if err != nil {
+		return err
+	}
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, bs)
 }

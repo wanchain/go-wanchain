@@ -310,7 +310,6 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 		return stakers, err
 	}
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
-
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
@@ -318,6 +317,24 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 			return true
 		}
 		stakeJson := ToStakerJson(&staker)
+		// add NextFeeRate MaxFeeRate
+		keyFee := vm.GetStakeInKeyHash(staker.Address)
+		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, keyFee)
+		if err == nil && newFeeBytes != nil {
+			var newFee vm.UpdateFeeRate
+			err = rlp.DecodeBytes(newFeeBytes, &newFee)
+			if err != nil {
+				stakeJson.NextFeeRate = staker.FeeRate
+				stakeJson.MaxFeeRate = staker.FeeRate
+			} else {
+				stakeJson.NextFeeRate = newFee.FeeRate
+				stakeJson.MaxFeeRate = newFee.MaxFeeRate
+			}
+		} else {
+			stakeJson.NextFeeRate = staker.FeeRate
+			stakeJson.MaxFeeRate = staker.FeeRate
+		}
+
 		stakers = append(stakers, stakeJson)
 		return true
 	})
