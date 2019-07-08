@@ -87,9 +87,11 @@ wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/d
 
 首先确保自己的本地轻钱包，或keystore账号中有足够的wan币，beta阶段为测试币，可接受委托的验证节点需要至少50000，不可接受委托的节点至少10000。并确认账户中除此之外还有足够的交易手续费。
 
-在轻钱包上线之前，可通过web钱包配合keystore文件注册：https://mywanwallet.io/
+在轻钱包上线之前，可通过web钱包注册：https://mywanwallet.io/
 
 在轻钱包正式版上线后，推荐使用轻钱包注册，安全性更高。
+
+(注意，如果使用wan wallet的助记词在mywanwallet上注册，需要在填写助记词时，密码位置需要留空)
 
 在web钱包注册时，需要注意首先在右上角选取网络。beta阶段需要选择testnet网络。
 
