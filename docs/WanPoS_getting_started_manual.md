@@ -66,6 +66,10 @@ In Beta stage is the test wan coins, the validator register require that at leas
 
 And make sure there are enough transaction fees outside.
 
+Before the wan wallet (light wallet) release, it can be registered with the keystore file via web wallet: https://mywanwallet.io/
+
+After the official version of the wan wallet (light wallet) release, it is recommended to use the wan wallet to register, which is more secure.
+
 Register via web wallet: https://mywanwallet.io/
 
 When registering in the web wallet, you need to pay attention to first select the network in the upper right corner. The beta phase requires the selection of a testnet network.
