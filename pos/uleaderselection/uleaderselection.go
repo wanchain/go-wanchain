@@ -259,6 +259,7 @@ func VerifySlotLeaderProof(Proof []*big.Int, ProofMeg []*ecdsa.PublicKey, Public
 		Pks = append(Pks, ProofMeg[1])
 		skPks = append(skPks, ProofMeg[0])
 		skPks = append(skPks, ProofMeg[2])
+
 		return VerifyDleqProof(Pks, skPks, Proof)
 	}
 }

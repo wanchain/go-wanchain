@@ -94,6 +94,8 @@ type SLS struct {
 
 var slotLeaderSelection *SLS
 var APkiCache *lru.ARCCache
+var RndCache  *lru.ARCCache
+var ElsCache   *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -173,6 +175,17 @@ func SlsInit() {
 	if err != nil || APkiCache == nil {
 		log.SyslogErr("APkiCache failed")
 	}
+
+	RndCache, err = lru.NewARC(10)
+	if err != nil || RndCache == nil {
+		log.SyslogErr("RndCache failed")
+	}
+
+	ElsCache, err = lru.NewARC(10)
+	if err != nil || ElsCache == nil {
+		log.SyslogErr("RndCache failed")
+	}
+
 	slotLeaderSelection = &SLS{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
@@ -482,6 +495,12 @@ func (s *SLS) isEpochLeaderMapReady() bool {
 }
 
 func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+
+	rnd, ok := RndCache.Get(epochID)
+	if ok {
+		return rnd.(*big.Int),nil
+	}
+
 	// If db is nil, use current stateDB
 	var db *state.StateDB
 	if block == nil {
@@ -489,6 +508,9 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		if err != nil {
 			log.SyslogErr("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
 			rb := posconfig.GetRandomGenesis()
+
+			RndCache.Add(epochID,rb)
+
 			return rb, nil
 		}
 	} else {
@@ -496,6 +518,9 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		if err != nil {
 			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
 			rb := posconfig.GetRandomGenesis()
+
+			RndCache.Add(epochID,rb)
+
 			return rb, nil
 		}
 	}
@@ -505,6 +530,9 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		log.SyslogErr("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = posconfig.GetRandomGenesis()
 	}
+
+	RndCache.Add(epochID,rb)
+
 	return rb, nil
 }
 

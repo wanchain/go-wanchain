@@ -27,7 +27,18 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
-	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
+	var epochLeadersPtrPre []*ecdsa.PublicKey
+	var isDefault 			bool
+
+	epochLeadersPtrCache, ok := ElsCache.Get(epochID)
+
+	if ok {
+		epochLeadersPtrPre = epochLeadersPtrCache.([]*ecdsa.PublicKey)
+	} else {
+		epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
+		ElsCache.Add(epochID,epochLeadersPtrPre)
+	}
+
 	if isDefault {
 		log.Debug("VerifySlotProof", "isDefault", isDefault,"epochID", epochID)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
@@ -106,6 +117,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 			break
 		}
 	}
+
 	if !skGtValid {
 		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
 		return false
