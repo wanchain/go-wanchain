@@ -20,7 +20,7 @@ type Activity struct {
 
 type ValidatorInfo struct {
 	Address       common.Address        `json:"address"`
-	WalletAddress common.Address        `json:"walletAddress"`
+	WalletAddress common.Address        `json:"stakeInFromAddr"`
 	Incentive     *math.HexOrDecimal256 `json:"incentive"`
 	Type          string                `json:"type"`
 	Delegators    []DelegatorInfo       `json:"delegators"`
@@ -75,7 +75,7 @@ type StakerJson struct {
 	Partners []PartnerInfo `json:"partners"`
 }
 type PosInfoJson struct {
-	FirstEpochId uint64 `json:"firstEpochId"`
+	FirstEpochId     uint64 `json:"firstEpochId"`
 	FirstBlockNumber uint64 `json:"firstBlockNumber"`
 }
 type LeaderJson struct {
