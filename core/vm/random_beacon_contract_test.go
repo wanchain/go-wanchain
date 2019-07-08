@@ -209,7 +209,7 @@ func prepareSig(Prikey []big.Int, enshare [][]*bn256.G1) ([]*bn256.G1)  {
 
 	M, err := getRBMVar(statedb, rbepochId)
 	if err != nil {
-		fmt.Println("get rbm error id:%u", rbepochId)
+		fmt.Printf("get rbm error id:%u\n", rbepochId)
 	}
 	m := new(big.Int).SetBytes(M)
 
