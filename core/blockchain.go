@@ -57,7 +57,7 @@ var (
 
 const (
 	bodyCacheLimit      = 256
-	blockCacheLimit     = 256
+	blockCacheLimit     = posconfig.SlotSecurityParam
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
 	badBlockLimit       = 10
@@ -135,6 +135,7 @@ type BlockChain struct {
 
 	stopSlot      uint64 //the best peer's latest slot
 	restartSucess bool
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -164,6 +165,9 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		checkCQStartSlot: INITRESTARTING,
 		restartSucess:    false,
 	}
+
+
+
 	if len(posEngines) > 0 {
 		bc.posEngine = posEngines[0]
 	} else {
@@ -913,6 +917,9 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+
+
+
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
 //posconfig.SlotSecurityParam
@@ -931,8 +938,13 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 
 	n := 0
 	for {
+
+
 		blockHash := block.ParentHash()
+
+
 		block = bc.GetBlockByHash(blockHash)
+
 
 		if nil == block {
 			//never reached, because ppow blocks, safely remove this code?
