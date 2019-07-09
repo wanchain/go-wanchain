@@ -172,17 +172,6 @@ func (s *Service) Stop() error {
 // loop keeps trying to connect to the netstats server, reporting chain events
 // until termination.
 func (s *Service) loop() {
-	// Wait startup unlock account finish event
-	am := s.eth.AccountManager()
-	if am != nil {
-		accEventCh := make(chan bool, 1)
-		accSub := am.SubscribeStartupUnlock(accEventCh)
-		log.Info("wanstats begin wait unlock account finish event")
-		<- accEventCh
-		log.Info("wanstats got the unlock account finish event")
-		accSub.Unsubscribe()
-	}
-
 	// Subscribe to chain events to execute updates on
 	var blockchain blockChain
 	var txpool txPool
