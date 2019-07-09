@@ -546,6 +546,10 @@ var (
 		Usage: "syslog tag",
 		Value: "gwan_pos",
 	}
+	AwsKmsFlag = cli.BoolFlag{
+		Name:  "kms",
+		Usage: "Enable AWS KMS encrypted keystore file",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

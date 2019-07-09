@@ -45,6 +45,18 @@ func (ks keyStorePlain) GetKey(addr common.Address, filename, auth string) (*Key
 	return key, nil
 }
 
+func (ks keyStorePlain) GetKeyFromKeyJson(addr common.Address, keyjson []byte, auth string) (*Key, error) {
+	key := new(Key)
+	if err := json.Unmarshal(keyjson, key); err != nil {
+		return nil, err
+	}
+	if key.Address != addr {
+		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", key.Address, addr)
+	}
+	return key, nil
+}
+
+
 func (ks keyStorePlain) StoreKey(filename string, key *Key, auth string) error {
 	content, err := json.Marshal(key)
 	if err != nil {

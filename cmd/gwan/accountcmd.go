@@ -18,17 +18,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
+	"strings"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/cmd/utils"
 	"github.com/wanchain/go-wanchain/console"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -202,6 +204,40 @@ nodes.
 				Description: `
 Print public key of an address`,
 			},
+			{
+				Name:      "encrypt",
+				Usage:     "Encrypt an existing account with AWS KMS",
+				Action:    utils.MigrateFlags(accountEncrypt),
+				ArgsUsage: "<address>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
+    gwan account encrypt <address>
+
+Encrypt an existing account.
+
+The account will be encrypted by AWS KMS, and ciphertext will be saved into new file named as "<original-name>-cipher"
+`,
+			},
+			{
+				Name:      "decrypt",
+				Usage:     "Decrypt an existing AWS KMS encrypted account",
+				Action:    utils.MigrateFlags(accountDecrypt),
+				ArgsUsage: "<address>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
+    gwan account decrypt <address>
+
+Decrypt an existing account.
+
+The account will be decrypted by AWS KMS, and plaintext will be saved into new file named as "<original-name>"
+`,
+			},
 		},
 	}
 )
@@ -244,6 +280,64 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 	// All trials expended to unlock account, bail out
 	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
 
+	return accounts.Account{}, ""
+}
+
+func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
+	account, err := utils.MakeAddress(ks, address)
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+
+	a, err := ks.Find(account)
+	if err != nil {
+		utils.Fatalf("Could not find the account: %v", err)
+	}
+
+	var trials int
+	var keyjson []byte
+	for ; trials < 3; trials++ {
+		prompt := fmt.Sprintf("AWS KMS decrypting account %s | Attempt %d/%d", address, trials+1, 3)
+		keyNames := [3]string{"aKID", "secretKey", "region"}
+		kmsInfo, err := getAwsKmsSecretInfo(prompt, keyNames[:])
+		if err != nil {
+			utils.Fatalf("Failed to read input: %v", err)
+		}
+
+		keyjson, err = awskms.DecryptFileToBuffer(a.URL.Path, kmsInfo[0], kmsInfo[1], kmsInfo[2])
+		if err != nil {
+			fmt.Println("invalid AWS KMS info, decrypt keystore file fail: ", err)
+			continue
+		}
+
+		break
+	}
+
+	if trials == 3 || len(keyjson) == 0 {
+		utils.Fatalf("AWS KMS decrypt failed")
+	}
+
+	fmt.Println("AWS KMS decrypt successful")
+	for trials := 0; trials < 3; trials++ {
+		prompt := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", address, trials+1, 3)
+		password := getPassPhrase(prompt, false, i, passwords)
+		err = ks.UnlockMemKey(account, keyjson, password)
+		if err == nil {
+			log.Info("Unlocked account", "address", account.Address.Hex())
+			return account, password
+		}
+		if err, ok := err.(*keystore.AmbiguousAddrError); ok {
+			log.Info("Unlocked account", "address", account.Address.Hex())
+			return ambiguousAddrRecovery(ks, err, password), password
+		}
+		if err != keystore.ErrDecrypt {
+			// No need to prompt again if the error is not decryption-related.
+			break
+		}
+	}
+
+	// All trials expended to unlock account, bail out
+	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
 	return accounts.Account{}, ""
 }
 
@@ -415,3 +509,98 @@ func showPublicKey(ctx *cli.Context) error {
 	}
 	return nil
 }
+
+// accountEncrypt encrypt an account using AWS KMS,
+// and save ciphertext into new file named as "<original-name>-cipher"
+func accountEncrypt(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		utils.Fatalf("No accounts specified to encrypt")
+	}
+
+	keyNames := [4]string{"aKID", "secretKey", "region", "keyId"}
+	keyVals, err := getAwsKmsSecretInfo("", keyNames[:])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("begin encrypting...")
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	for _, addr := range ctx.Args() {
+		exceptAddr := common.HexToAddress(addr)
+		a := accounts.Account{Address:exceptAddr}
+		fa, err := ks.Find(a)
+		if err != nil {
+			return err
+		}
+
+		desFile := fa.URL.Path + keystore.AwsKMSCiphertextFileExt
+		err = awskms.EncryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2], keyVals[3])
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("encrypt account(",  addr, ") successfully into new keystore file : ", desFile)
+	}
+
+	return nil
+}
+
+// accountDecrypt decrypt an account using AWS KMS,
+// and save ciphertext into new file named as "<original-name>-plain"
+func accountDecrypt(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		utils.Fatalf("No accounts specified to decrypt")
+	}
+
+	keyNames := [3]string{"aKID", "secretKey", "region"}
+	keyVals, err := getAwsKmsSecretInfo("", keyNames[:])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("begin decrypting...")
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	for _, addr := range ctx.Args() {
+		exceptAddr := common.HexToAddress(addr)
+		a := accounts.Account{Address:exceptAddr}
+		fa, err := ks.Find(a)
+		if err != nil {
+			return err
+		}
+
+		desFile := ""
+		pot := strings.LastIndex(fa.URL.Path, keystore.AwsKMSCiphertextFileExt)
+		if pot != -1 {
+			desFile = fa.URL.Path[:pot]
+		} else {
+			desFile = fa.URL.Path + "-plain"
+		}
+
+		err = awskms.DecryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2])
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("decrypt account(",  addr, ") successfully into new keystore file : ", desFile)
+	}
+
+	return nil
+}
+
+func getAwsKmsSecretInfo(notice string, items []string) ([]string, error) {
+	inputs := make([]string, len(items))
+	fmt.Println(notice)
+	for i, name := range items {
+		input, err := console.Stdin.PromptPassword(name + ": ")
+		if err != nil {
+			return nil, err
+		}
+
+		inputs[i] = input
+	}
+
+	return inputs, nil
+}
+
