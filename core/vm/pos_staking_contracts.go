@@ -3,6 +3,7 @@ package vm
 import (
 	"crypto/ecdsa"
 	"errors" // this is not match with other
+	"github.com/wanchain/go-wanchain/params"
 	"math/big"
 	"strings"
 
@@ -366,6 +367,9 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 		return errors.New("parameter is too short")
 	}
 
+	if params.IsNoStaking() {
+		return errors.New("noStaking specified")
+	}
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 

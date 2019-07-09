@@ -196,7 +196,7 @@ var (
 	}
 	NoStakingFlag = cli.BoolFlag{
 		Name:  "noStaking",
-		Usage: "enable refuse staking txs, don't use",
+		Usage: "Disable staking",
 	}
 
 	LightServFlag = cli.IntFlag{

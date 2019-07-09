@@ -150,6 +150,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 
 	setStakerInfo(epochID, finalIncentive)
 	saveIncentiveHistory(epochID, finalIncentive)
+	localDbSetValue(epochID, dictEpochBlock, chain.CurrentHeader().Number)
 
 	finished(stateDb, epochID)
 	return true

@@ -438,7 +438,9 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
-
+func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (string, error) {
+	return biToString(incentive.GetEpochIncentiveBlockNumber(epochID))
+}
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochIncentive(epochID))
 }
@@ -774,7 +776,19 @@ func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
 
 	return nil, errors.New("PrintEpochGenesis failed, cast failed")
 }
-
+func (a PosApi) GetEpochStakeOut(epochID uint64) ( []RefundInfo, error) {
+	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
+	if err != nil {
+		return nil, err
+	}
+	stakeOut := make([]epochLeader.RefundInfo,0)
+	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
+	if err != nil {
+		return nil, err
+	}
+	refundInfo := convertReundInfo(stakeOut)
+	return refundInfo, nil
+}
 func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
 	if bc, ok := a.chain.(*core.BlockChain); ok {
 		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId)

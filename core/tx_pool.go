@@ -566,12 +566,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidTxType
 	}
 
-	if params.IsNoStaking() {
-		if *tx.To() == vm.WanCscPrecompileAddr {
-			return ErrStakingTx
-		}
-	}
-
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 320*1024 {
 		return ErrOversizedData
