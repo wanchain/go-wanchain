@@ -169,7 +169,12 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		restartSucess:    false,
 	}
 
+	c, e := lru.NewARC(posconfig.SlotSecurityParam)
+	if e != nil || c == nil {
 
+		log.SyslogErr("create slot cache failed")
+	}
+	bc.cqCache = c
 
 	if len(posEngines) > 0 {
 		bc.posEngine = posEngines[0]
@@ -968,19 +973,47 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 		}
 	}
 
+
 	return n
 }
 
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
+	var blocksIn2K int
 
-	blocksIn2K := bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	if epochId == posconfig.FirstEpochId {
 		return true
 	}
+
+
 	//because slot index starts from 0 //
 	totalSlots := (epochId-posconfig.FirstEpochId)*posconfig.SlotCount + slotId + 1
+
+
+	endFlatSlotId := epochId*posconfig.SlotCount + slotId
+	startId := endFlatSlotId - posconfig.SlotSecurityParam -1
+
+	if totalSlots > posconfig.SlotSecurityParam && bc.cqCache.Len() > posconfig.BlockSecurityParam{
+
+		if startId > bc.cqLastSlot {
+			bc.cqCache.Purge()
+		} else {
+			k := bc.cqLastSlot - posconfig.SlotSecurityParam
+			for ;k<= startId;k++ {
+				bc.cqCache.Remove(k)
+			}
+		}
+
+		blocksIn2K = bc.cqCache.Len() + 1
+
+	} else {
+		blocksIn2K = bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
+	}
+
+	bc.cqCache.Add(endFlatSlotId,blocksIn2K)
+	bc.cqLastSlot = endFlatSlotId
+
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
