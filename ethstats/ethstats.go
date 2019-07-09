@@ -708,10 +708,6 @@ func (s *Service) reportPos(conn *websocket.Conn) error {
 		if err := s.reportLeader(conn); err != nil {
 			return err
 		}
-
-		if err := s.reportAlarm(conn); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -749,32 +745,6 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 	return s.doSendReportData(conn, report)
 }
 
-func (s *Service) reportAlarm(conn *websocket.Conn) error {
-	// generate random
-	if s.api == nil {
-		return nil
-	}
-
-	failTimes := 0
-	_, err := s.api.GetRandom(s.epochId, -1)
-	if err != nil {
-		failTimes = 1
-		if s.epochId > 0 {
-			_, err = s.api.GetRandom(s.epochId-1, -1)
-			if err != nil {
-				failTimes = 2
-			}
-		}
-	}
-
-	if failTimes == 1 {
-		log.SyslogCrit("first generate random failed", "epochId", s.epochId)
-	} else if failTimes == 2 {
-		log.SyslogAlert("generate random failed in two consecutive epoch", "epochId", s.epochId)
-	}
-
-	return nil
-}
 
 // reportLatency sends a ping request to the server, measures the RTT time and
 // finally sends a latency update.

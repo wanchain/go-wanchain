@@ -288,7 +288,6 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 	rbStage, elapsedNum, leftNum := vm.GetRBStage(slotId)
 
-	log.SyslogInfo("get my RB proposer id", "ids", rb.myPropserIds)
 	log.SyslogInfo("get RB stage", "rbStage", rbStage, "elapsedNum", elapsedNum, "leftNum", leftNum)
 
 	// belong to RB proposer group
@@ -383,14 +382,17 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	pks := rb.getRBProposerGroupF(epochId)
 	rb.proposerPks = pks
 	if len(pks) == 0 {
+		log.SyslogInfo("get my RBP id, RBP group is empoty")
 		return nil
 	}
 
 	selfPk := posconfig.Cfg().GetMinerBn256PK()
 	if selfPk == nil {
+		log.SyslogInfo("get my RBP id, can't get miner bn256 pk")
 		return nil
 	}
 
+	log.SyslogInfo("get my RBP id", "self pk", selfPk.String())
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
 		if pk.String() == selfPk.String() {
@@ -398,6 +400,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		}
 	}
 
+	log.SyslogInfo("get my RBP id", "ids", ids)
 	return ids
 }
 
