@@ -30,13 +30,16 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	var epochLeadersPtrPre []*ecdsa.PublicKey
 	var isDefault 			bool
 
-	epochLeadersPtrCache, ok := ElsCache.Get(epochID)
-
-	if ok {
+	epochLeadersPtrCache, okel := ElsCache.Get(epochID)
+	flag,okflag := flagCache.Get(epochID)
+	if okel && okflag {
 		epochLeadersPtrPre = epochLeadersPtrCache.([]*ecdsa.PublicKey)
+		isDefault = flag.(bool)
+
 	} else {
 		epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
 		ElsCache.Add(epochID,epochLeadersPtrPre)
+		flagCache.Add(epochID,isDefault)
 	}
 
 	if isDefault {

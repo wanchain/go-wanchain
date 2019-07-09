@@ -57,7 +57,7 @@ var (
 
 const (
 	bodyCacheLimit      = 256
-	blockCacheLimit     = posconfig.SlotSecurityParam
+	blockCacheLimit     = 256
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
 	badBlockLimit       = 10
@@ -971,6 +971,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 }
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
+	/*
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	if epochId == posconfig.FirstEpochId {
@@ -983,7 +984,7 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	} else if totalSlots >= posconfig.K {
 		return blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
-
+*/
 	return true
 }
 
