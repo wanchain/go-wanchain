@@ -133,6 +133,9 @@ type BlockChain struct {
 	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 	checkCQBlk       *types.Block
 
+	cqCache  	  *lru.ARCCache
+	cqLastSlot    uint64
+
 	stopSlot      uint64 //the best peer's latest slot
 	restartSucess bool
 
@@ -923,6 +926,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
 //posconfig.SlotSecurityParam
+
 func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64) int {
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	endFlatSlotId := epochId*posconfig.SlotCount + slotId
@@ -941,10 +945,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 
 
 		blockHash := block.ParentHash()
-
-
 		block = bc.GetBlockByHash(blockHash)
-
 
 		if nil == block {
 			//never reached, because ppow blocks, safely remove this code?
@@ -970,8 +971,9 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 	return n
 }
 
+
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
-	/*
+
 	blocksIn2K := bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	if epochId == posconfig.FirstEpochId {
@@ -984,7 +986,7 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	} else if totalSlots >= posconfig.K {
 		return blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
-*/
+
 	return true
 }
 

@@ -94,9 +94,8 @@ type SLS struct {
 
 var slotLeaderSelection *SLS
 var APkiCache *lru.ARCCache
+
 var RndCache  *lru.ARCCache
-var ElsCache   *lru.ARCCache
-var flagCache   *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -180,16 +179,6 @@ func SlsInit() {
 	RndCache, err = lru.NewARC(10)
 	if err != nil || RndCache == nil {
 		log.SyslogErr("RndCache failed")
-	}
-
-	ElsCache, err = lru.NewARC(10)
-	if err != nil || ElsCache == nil {
-		log.SyslogErr("ElsCache failed")
-	}
-
-	flagCache, err = lru.NewARC(10)
-	if err != nil || flagCache == nil {
-		log.SyslogErr("flagCache failed")
 	}
 
 	slotLeaderSelection = &SLS{}
