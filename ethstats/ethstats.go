@@ -33,9 +33,6 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/crypto/sha3"
-
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posapi"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
