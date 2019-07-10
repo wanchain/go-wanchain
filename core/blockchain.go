@@ -171,8 +171,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 
 	c, e := lru.NewARC(posconfig.SlotSecurityParam)
 	if e != nil || c == nil {
-
-		log.SyslogErr("create slot cache failed")
+		panic("failed to create chain quality cache")
 	}
 	bc.cqCache = c
 
