@@ -5,6 +5,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 type Activity struct {
@@ -20,7 +21,7 @@ type Activity struct {
 
 type ValidatorInfo struct {
 	Address       common.Address        `json:"address"`
-	WalletAddress common.Address        `json:"walletAddress"`
+	WalletAddress common.Address        `json:"stakeInFromAddr"`
 	Incentive     *math.HexOrDecimal256 `json:"incentive"`
 	Type          string                `json:"type"`
 	Delegators    []DelegatorInfo       `json:"delegators"`
@@ -73,9 +74,28 @@ type StakerJson struct {
 	//NextFeeRate  uint64
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
+
+	NextFeeRate uint64
+	MaxFeeRate uint64
+}
+
+type RefundInfo struct {
+	Addr common.Address `json:"address"`
+	Amount         *math.HexOrDecimal256 `json:"amount"`
+}
+func convertReundInfo(info []epochLeader.RefundInfo)([]RefundInfo){
+	refund := make([]RefundInfo,0)
+	for i:=0; i<len(info); i++ {
+		record := RefundInfo{
+			Addr: info[i].Addr,
+			Amount: (*math.HexOrDecimal256)(info[i].Amount),
+		}
+		refund = append(refund, record)
+	}
+	return refund
 }
 type PosInfoJson struct {
-	FirstEpochId uint64 `json:"firstEpochId"`
+	FirstEpochId     uint64 `json:"firstEpochId"`
 	FirstBlockNumber uint64 `json:"firstBlockNumber"`
 }
 type LeaderJson struct {
@@ -130,5 +150,9 @@ func ToStakerJson(staker *vm.StakerInfo) *StakerJson {
 	}
 	stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 	stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
+
+	stakeJson.NextFeeRate = uint64(0)
+	stakeJson.MaxFeeRate = uint64(0)
+
 	return &stakeJson
 }

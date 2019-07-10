@@ -3,9 +3,10 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core"
 	"sort"
 	"time"
+
+	"github.com/wanchain/go-wanchain/core"
 
 	"github.com/wanchain/go-wanchain/core/types"
 
@@ -309,7 +310,6 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 		return stakers, err
 	}
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
-
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
@@ -317,13 +317,31 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 			return true
 		}
 		stakeJson := ToStakerJson(&staker)
+		// add NextFeeRate MaxFeeRate
+		keyFee := vm.GetStakeInKeyHash(staker.Address)
+		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, keyFee)
+		if err == nil && newFeeBytes != nil {
+			var newFee vm.UpdateFeeRate
+			err = rlp.DecodeBytes(newFeeBytes, &newFee)
+			if err != nil {
+				stakeJson.NextFeeRate = staker.FeeRate
+				stakeJson.MaxFeeRate = staker.FeeRate
+			} else {
+				stakeJson.NextFeeRate = newFee.FeeRate
+				stakeJson.MaxFeeRate = newFee.MaxFeeRate
+			}
+		} else {
+			stakeJson.NextFeeRate = staker.FeeRate
+			stakeJson.MaxFeeRate = staker.FeeRate
+		}
+
 		stakers = append(stakers, stakeJson)
 		return true
 	})
 	return stakers, nil
 }
 
-func (a PosApi) GetPosInfo() (info PosInfoJson){
+func (a PosApi) GetPosInfo() (info PosInfoJson) {
 	info.FirstEpochId = posconfig.FirstEpochId
 	info.FirstBlockNumber = posconfig.Pow2PosUpgradeBlockNumber
 	return
@@ -387,7 +405,7 @@ func biToString(value *big.Int, err error) (string, error) {
 func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, error) {
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
-		return nil, err
+		return []ValidatorInfo{}, nil
 	}
 
 	ret := make([]ValidatorInfo, len(c))
@@ -420,7 +438,9 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
-
+func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (string, error) {
+	return biToString(incentive.GetEpochIncentiveBlockNumber(epochID))
+}
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochIncentive(epochID))
 }
@@ -460,7 +480,7 @@ func (a PosApi) GetWhiteListConfig() ([]vm.UpgradeWhiteEpochLeaderParam, error) 
 func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
-		return make([]string,0), errors.New("epocher instance do not exist")
+		return make([]string, 0), errors.New("epocher instance do not exist")
 	}
 	return epocherInst.GetWhiteByEpochId(epochID)
 }
@@ -745,7 +765,7 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
 		return ep
 	}
-	return uint64(0)^uint64(0)
+	return uint64(0) ^ uint64(0)
 }
 
 func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
@@ -756,7 +776,19 @@ func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
 
 	return nil, errors.New("PrintEpochGenesis failed, cast failed")
 }
-
+func (a PosApi) GetEpochStakeOut(epochID uint64) ( []RefundInfo, error) {
+	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
+	if err != nil {
+		return nil, err
+	}
+	stakeOut := make([]epochLeader.RefundInfo,0)
+	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
+	if err != nil {
+		return nil, err
+	}
+	refundInfo := convertReundInfo(stakeOut)
+	return refundInfo, nil
+}
 func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
 	if bc, ok := a.chain.(*core.BlockChain); ok {
 		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId)

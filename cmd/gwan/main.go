@@ -83,6 +83,7 @@ var (
 		utils.FastSyncFlag,
 		utils.LightModeFlag,
 		utils.SyncModeFlag,
+		utils.NoStakingFlag,
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
@@ -124,6 +125,8 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
+
+		utils.AwsKmsFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -249,9 +252,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			ctx.GlobalString(utils.SyslogTagFlag.Name))
 	}
 
-	// Start up the node itself
-	utils.StartNode(stack)
-
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
@@ -259,12 +259,19 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
-			unlockAccount(ctx, ks, trimmed, i, passwords)
+			if ctx.IsSet(utils.AwsKmsFlag.Name) {
+				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, i, passwords)
+			} else {
+				unlockAccount(ctx, ks, trimmed, i, passwords)
+			}
 		}
 	}
 
 	// Send unlock account finish event
 	stack.AccountManager().SendStartupUnlockFinish()
+
+	// Start up the node itself
+	utils.StartNode(stack)
 
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)

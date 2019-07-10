@@ -121,6 +121,17 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
+			name: 'getEpochStakeOut',
+			call: 'pos_getEpochStakeOut',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIncentiveBlockNumber',
+			call: 'pos_getEpochIncentiveBlockNumber',
+			params: 1
+		}),
+
+		new web3._extend.Method({
 			name: 'getSlotLeadersByEpochID',
 			call: 'pos_getSlotLeadersByEpochID',
 			params: 1

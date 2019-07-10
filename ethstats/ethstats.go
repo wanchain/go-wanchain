@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/syslog"
 	"math/big"
 	"net"
 	"regexp"
@@ -30,6 +29,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/accounts"
+	"github.com/wanchain/go-wanchain/crypto/sha3"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
@@ -174,17 +176,6 @@ func (s *Service) Stop() error {
 // loop keeps trying to connect to the netstats server, reporting chain events
 // until termination.
 func (s *Service) loop() {
-	// Wait startup unlock account finish event
-	am := s.eth.AccountManager()
-	if am != nil {
-		accEventCh := make(chan bool, 1)
-		accSub := am.SubscribeStartupUnlock(accEventCh)
-		log.Info("wanstats begin wait unlock account finish event")
-		<-accEventCh
-		log.Info("wanstats got the unlock account finish event")
-		accSub.Unsubscribe()
-	}
-
 	// Subscribe to chain events to execute updates on
 	var blockchain blockChain
 	var txpool txPool
@@ -276,7 +267,7 @@ func (s *Service) loop() {
 	}()
 	// Loop reporting until termination
 	for {
-		log.Debug("wanstats report big loop begin..")
+		log.Info("wanstats report big loop begin..")
 		// Resolve the URL, defaulting to TLS, but falling back to none too
 		path := fmt.Sprintf("%s/api", s.host)
 		urls := []string{path}
@@ -296,6 +287,7 @@ func (s *Service) loop() {
 			}
 			conf.Dialer = &net.Dialer{Timeout: 5 * time.Second}
 			if conn, err = websocket.DialConfig(conf); err == nil {
+				log.Info("connect wanstats server successful", "url", url)
 				break
 			}
 		}
@@ -472,6 +464,7 @@ func (s *Service) isPos() bool {
 // it, if they themselves are requests it initiates a reply, and lastly it drops
 // unknown packets.
 func (s *Service) readLoop(conn *websocket.Conn) {
+	log.Info("wanstats readloop begin")
 	// If the read loop exists, close the connection
 	defer conn.Close()
 
@@ -600,6 +593,10 @@ func (s *Service) login(conn *websocket.Conn) error {
 			}
 		}
 
+		if len(signature) == 0 {
+			validatorAddr = ""
+		}
+
 		gBlk := s.eth.BlockChain().GetBlockByNumber(0)
 		if gBlk != nil {
 			genesisHash = gBlk.Hash().String()
@@ -704,10 +701,6 @@ func (s *Service) reportPos(conn *websocket.Conn) error {
 		if err := s.reportLeader(conn); err != nil {
 			return err
 		}
-
-		if err := s.reportAlarm(conn); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -743,33 +736,6 @@ func (s *Service) reportLeader(conn *websocket.Conn) error {
 		"emit": {"pos-leader", stats},
 	}
 	return s.doSendReportData(conn, report)
-}
-
-func (s *Service) reportAlarm(conn *websocket.Conn) error {
-	// generate random
-	if s.api == nil {
-		return nil
-	}
-
-	failTimes := 0
-	_, err := s.api.GetRandom(s.epochId, -1)
-	if err != nil {
-		failTimes = 1
-		if s.epochId > 0 {
-			_, err = s.api.GetRandom(s.epochId-1, -1)
-			if err != nil {
-				failTimes = 2
-			}
-		}
-	}
-
-	if failTimes == 1 {
-		log.SyslogCrit("first generate random failed", "epochId", s.epochId)
-	} else if failTimes == 2 {
-		log.SyslogAlert("generate random failed in two consecutive epoch", "epochId", s.epochId)
-	}
-
-	return nil
 }
 
 // reportLatency sends a ping request to the server, measures the RTT time and
@@ -1416,30 +1382,30 @@ func (s *Service) updateEpochId() uint64 {
 	return oldEpochId
 }
 
-func log2PosAlarm(log *log.LogInfo) pos_alarm {
-	if log == nil {
+func log2PosAlarm(plog *log.LogInfo) pos_alarm {
+	if plog == nil {
 		return pos_alarm{}
 	}
 
 	lvlStr := ""
-	switch log.Lvl {
-	case syslog.LOG_EMERG:
+	switch plog.Lvl {
+	case log.LOG_EMERG:
 		lvlStr = "EMERG"
-	case syslog.LOG_ALERT:
+	case log.LOG_ALERT:
 		lvlStr = "ALERT"
-	case syslog.LOG_CRIT:
+	case log.LOG_CRIT:
 		lvlStr = "CRIT"
-	case syslog.LOG_ERR:
+	case log.LOG_ERR:
 		lvlStr = "ERR"
-	case syslog.LOG_WARNING:
+	case log.LOG_WARNING:
 		lvlStr = "WARNING"
-	case syslog.LOG_NOTICE:
+	case log.LOG_NOTICE:
 		lvlStr = "NOTICE"
-	case syslog.LOG_INFO:
+	case log.LOG_INFO:
 		lvlStr = "INFO"
-	case syslog.LOG_DEBUG:
+	case log.LOG_DEBUG:
 		lvlStr = "DEBUG"
 	}
 
-	return pos_alarm{lvlStr, log.Msg}
+	return pos_alarm{lvlStr, plog.Msg}
 }

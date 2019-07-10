@@ -88,6 +88,15 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 	if err != nil {
 		return nil, err
 	}
+
+	return ks.GetKeyFromKeyJson(addr, keyjson, auth)
+}
+
+func (ks keyStorePassphrase) GetKeyFromKeyJson(addr common.Address, keyjson []byte, auth string) (*Key, error) {
+	if len(keyjson) == 0 {
+		return nil, fmt.Errorf("key content invalid")
+	}
+
 	key, err := DecryptKey(keyjson, auth)
 	if err != nil {
 		return nil, err

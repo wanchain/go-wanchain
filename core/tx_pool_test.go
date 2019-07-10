@@ -75,6 +75,10 @@ func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) even
 func transaction(nonce uint64, gaslimit *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	return pricedTransaction(nonce, gaslimit, big.NewInt(1), key)
 }
+func transaction2(nonce uint64, to common.Address, gaslimit *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
+	tx, _ := types.SignTx(types.NewTransaction(nonce, to, big.NewInt(100), gaslimit, big.NewInt(1), nil), types.HomesteadSigner{}, key)
+	return tx
+}
 
 func pricedTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil), types.HomesteadSigner{}, key)
@@ -235,6 +239,21 @@ func TestInvalidTransactions(t *testing.T) {
 		t.Error("expected", ErrUnderpriced, "got", err)
 	}
 	if err := pool.AddLocal(tx); err != nil {
+		t.Error("expected", nil, "got", err)
+	}
+
+	tx = transaction2(2, vm.WanCscPrecompileAddr, big.NewInt(100000), key)
+	if err := pool.AddRemote(tx); err != nil && err.Error() !="parameter is too short" {
+		t.Error("expected", ErrUnderpriced, "got", err)
+	}
+	if err := pool.AddLocal(tx); err != nil &&  err.Error() !="parameter is too short" {
+		t.Error("expected", nil, "got", err)
+	}
+	params.SetNoStaking()
+	if err := pool.AddRemote(tx); err != ErrStakingTx {
+		t.Error("expected", ErrUnderpriced, "got", err)
+	}
+	if err := pool.AddLocal(tx); err != ErrStakingTx {
 		t.Error("expected", nil, "got", err)
 	}
 }

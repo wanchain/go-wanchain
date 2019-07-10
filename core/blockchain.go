@@ -133,8 +133,12 @@ type BlockChain struct {
 	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 	checkCQBlk       *types.Block
 
+	cqCache  	  *lru.ARCCache
+	cqLastSlot    uint64
+
 	stopSlot      uint64 //the best peer's latest slot
 	restartSucess bool
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -164,6 +168,13 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		checkCQStartSlot: INITRESTARTING,
 		restartSucess:    false,
 	}
+
+	c, e := lru.NewARC(posconfig.SlotSecurityParam)
+	if e != nil || c == nil {
+		panic("failed to create chain quality cache")
+	}
+	bc.cqCache = c
+
 	if len(posEngines) > 0 {
 		bc.posEngine = posEngines[0]
 	} else {
@@ -913,9 +924,13 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+
+
+
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
 //posconfig.SlotSecurityParam
+
 func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64) int {
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	endFlatSlotId := epochId*posconfig.SlotCount + slotId
@@ -931,6 +946,8 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 
 	n := 0
 	for {
+
+
 		blockHash := block.ParentHash()
 		block = bc.GetBlockByHash(blockHash)
 
@@ -955,17 +972,47 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 		}
 	}
 
+
 	return n
 }
 
+
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
-	blocksIn2K := bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
+	var blocksIn2K int
+
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	if epochId == posconfig.FirstEpochId {
 		return true
 	}
+
+
 	//because slot index starts from 0 //
 	totalSlots := (epochId-posconfig.FirstEpochId)*posconfig.SlotCount + slotId + 1
+
+
+	endFlatSlotId := epochId*posconfig.SlotCount + slotId
+	startId := endFlatSlotId - posconfig.SlotSecurityParam -1
+
+	if totalSlots > posconfig.SlotSecurityParam && bc.cqCache.Len() > posconfig.BlockSecurityParam{
+
+		if startId > bc.cqLastSlot {
+			bc.cqCache.Purge()
+		} else {
+			k := bc.cqLastSlot - posconfig.SlotSecurityParam
+			for ;k<= startId;k++ {
+				bc.cqCache.Remove(k)
+			}
+		}
+
+		blocksIn2K = bc.cqCache.Len() + 1
+
+	} else {
+		blocksIn2K = bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
+	}
+
+	bc.cqCache.Add(endFlatSlotId,blocksIn2K)
+	bc.cqLastSlot = endFlatSlotId
+
 	if totalSlots >= posconfig.SlotSecurityParam {
 		return blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {

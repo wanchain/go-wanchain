@@ -20,9 +20,6 @@ package pluto
 import (
 	"errors"
 	"math/big"
-	"strconv"
-
-	"github.com/wanchain/go-wanchain/core"
 
 	//"math/rand"
 	"sync"
@@ -492,50 +489,50 @@ func (c *Pluto) VerifyGenesisBlocks(chain consensus.ChainReader, block *types.Bl
 	//passed verify default,need to remove if open verify
 	return nil
 
-	epochId, _ := posUtil.CalEpochSlotID(block.Header().Time.Uint64())
-	hc, ok := chain.(*core.HeaderChain)
-	if !ok {
-		bc, ok := chain.(*core.BlockChain)
-		if !ok {
-			log.Error("un support chain type")
-			return errors.New("un support chain type")
-		}
-
-		hc = bc.GetHc()
-	}
-	//if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
-	//	extraType := block.Header().Extra[0]
-	//	if extraType == 'g' {
-	//		if len(block.Header().Extra) > extraSeal + 33 {
-	//			egHash := common.BytesToHash(block.Header().Extra[1:33])
-	//			if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, true); err != nil {
-	//				return err
-	//			}
-	//
-	//		} else {
-	//			return fmt.Errorf("header extra info length is too short for epochGenesisHeadHash")
-	//		}
+	//epochId, _ := posUtil.CalEpochSlotID(block.Header().Time.Uint64())
+	//hc, ok := chain.(*core.HeaderChain)
+	//if !ok {
+	//	bc,ok := chain.(*core.BlockChain)
+	//	if !ok {
+	//		log.Error("un support chain type")
+	//		return errors.New("un support chain type")
 	//	}
+	//
+	//	hc = bc.GetHc()
 	//}
-	if block.Header().Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber {
-		posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
-	}
-
-	bGenerate := false
-	if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
-		bGenerate = true
-	}
-
-	egHashPre, err := hc.GetEgHash(epochId-1, block.Header().Number.Uint64(), bGenerate)
-	if err != nil {
-		return err
-	}
-	egHashHeader := common.BytesToHash(block.Header().Extra[0:32])
-	if egHashPre != egHashHeader {
-		log.Error("VerifyGenesisBlocks failed, epoch id=" + strconv.FormatUint(epochId, 10))
-		return errors.New("VerifyGenesisBlocks failed, epoch id=" + strconv.FormatUint(epochId, 10))
-	}
-	return nil
+	////if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+	////	extraType := block.Header().Extra[0]
+	////	if extraType == 'g' {
+	////		if len(block.Header().Extra) > extraSeal + 33 {
+	////			egHash := common.BytesToHash(block.Header().Extra[1:33])
+	////			if err := hc.VerifyEpochGenesisHash(epochID - 1, egHash, true); err != nil {
+	////				return err
+	////			}
+	////
+	////		} else {
+	////			return fmt.Errorf("header extra info length is too short for epochGenesisHeadHash")
+	////		}
+	////	}
+	////}
+	//if block.Header().Number.Uint64() == posconfig.Pow2PosUpgradeBlockNumber{
+	//	posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Header().Difficulty.Uint64())
+	//}
+	//
+	//bGenerate := false
+	//if hc.IsEpochFirstBlkNumber(epochId, block.Header().Number.Uint64(), nil) {
+	//	bGenerate = true
+	//}
+	//
+	//egHashPre, err := hc.GetEgHash(epochId - 1, block.Header().Number.Uint64(), bGenerate)
+	//if err != nil {
+	//	return err
+	//}
+	//egHashHeader := common.BytesToHash(block.Header().Extra[0:32])
+	//if egHashPre != egHashHeader {
+	//	log.Error("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochId, 10))
+	//	return errors.New("VerifyGenesisBlocks failed, epoch id="+ strconv.FormatUint(epochId, 10))
+	//}
+	//return nil
 }
 
 // VerifySeal implements consensus.Engine, checking whether the signature contained

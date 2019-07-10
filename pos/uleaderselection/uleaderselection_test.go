@@ -222,22 +222,6 @@ func TestSortPublicKeys(t *testing.T) {
 	}
 }
 
-func TestSort(t *testing.T) {
-	pksamples, err := genPublicKeys(Ns)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pksamples, err = Sort(pksamples)
-	if err != nil {
-		t.Fatal(err)
-	}
-	n := len(pksamples)
-	for i := 0; i < n; i++ {
-		tempbyte := crypto.Keccak256(crypto.FromECDSAPub(pksamples[i]))
-		tempBig := new(big.Int).SetBytes(tempbyte)
-		fmt.Println(tempBig)
-	}
-}
 
 func TestGenerateSlotLeaderSeq(t *testing.T) {
 	pksamples, err := genPublicKeys(Ns)
@@ -249,7 +233,7 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 		t.Fatal(err)
 	}
 	var RB = []byte{byte(1)}
-	SlotLeaderSeq, cr, err := GenerateSlotLeaderSeq(SMA, pksamples, RB, EL)
+	SlotLeaderSeq, cr, _, err := GenerateSlotLeaderSeqAndIndex(SMA, pksamples, RB, uint64(EL),uint64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,42 +241,6 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 	fmt.Println(SlotLeaderSeq)
 	fmt.Println("Slot Leader Sequence Generation Succeed!")
 }
-
-// //Partial Test For GenerateSlotLeaderProof and Verication
-// func TestGenerateSlotLeaderProof(t *testing.T) {
-// 	PrivateKey, err := crypto.GenerateKey()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	pksamples, err := genPublicKeys(Ne)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	var RB = []byte{byte(1)}
-// 	pksamples[0] = &PrivateKey.PublicKey
-// 	SMA, err := genPublicKeys(Ne)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	SlotLeaderSeq, cr, err := GenerateSlotLeaderSeq(SMA, pksamples, RB, EL)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	for i := 0; i < EL ; i++ {
-// 		if PublicKeyEqual(&PrivateKey.PublicKey, SlotLeaderSeq[i]) {
-// 			fmt.Println(i)
-// 			ProofMeg, Proof, err := GenerateSlotLeaderProof(PrivateKey, SMA, pksamples, RB, cr , i)
-// 			if err != nil {
-// 				t.Fatal(err)
-// 			}
-// 			// fmt.Println(ProofMeg)
-// 			// fmt.Println(Proof)
-// 			if VerifySlotLeaderProof(Proof, ProofMeg ,pksamples , RB) {
-// 				fmt.Println("Verification Succeed!")
-// 			}
-// 		}
-// 	}
-// }
 
 // Whole Flow Test
 func TestGenerateSlotLeaderProof(t *testing.T) {
@@ -378,7 +326,7 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 	//Next epoch start
 	//Leader Selection and Verification
 	//---------Box 5-----------------------------------------------
-	SlotLeaderSeq, cr, err := GenerateSlotLeaderSeq(SMA, PublicKeys, RB, EL)
+	SlotLeaderSeq, cr, _, err := GenerateSlotLeaderSeqAndIndex(SMA, PublicKeys, RB, uint64(EL),uint64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +336,7 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 	for i := 0; i < EL; i++ {
 		if PublicKeyEqual(&PrivateKeys[0].PublicKey, SlotLeaderSeq[i]) {
 			fmt.Println(i)
-			ProofMeg, Proof, err := GenerateSlotLeaderProof(PrivateKeys[0], SMA, PublicKeys, RB, cr, i)
+			ProofMeg, Proof, err := GenerateSlotLeaderProof(PrivateKeys[0], SMA, PublicKeys, RB, uint64(i), uint64(0))
 			if err != nil {
 				t.Fatal(err)
 			}

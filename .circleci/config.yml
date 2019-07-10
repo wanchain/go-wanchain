@@ -22,8 +22,8 @@ jobs:
       - checkout
       - run: make all
       - run: make test
-      - run: make testCoin
-      - run: make testToken
+      #- run: make testCoin
+      #- run: make testToken
       - run: echo "good"
 
       # specify any bash command here prefixed with `run: `

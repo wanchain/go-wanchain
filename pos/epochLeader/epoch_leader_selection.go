@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"time"
 
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -16,7 +17,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -42,6 +43,17 @@ type Epocher struct {
 	epochLeadersDb *posdb.Db
 	blkChain       *core.BlockChain
 }
+
+type RefundInfo struct {
+	Addr common.Address
+	Amount *big.Int
+}
+
+type EpochInfo struct {
+	EpochID uint64
+	BlockNumber uint64
+}
+
 
 var epocherInst *Epocher = nil
 
@@ -105,7 +117,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	}
 
 	targetBlkNum := curNum
-	epochid, _ := util.GetEpochSlotID()
+	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
 	}
@@ -650,12 +662,33 @@ func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentiv
 	return nil
 }
 
+func recordStakeOut(infos []RefundInfo, addr common.Address, amount *big.Int)([]RefundInfo) {
+	record :=  RefundInfo{
+		Addr: addr,
+		Amount: amount,
+	}
+	infos = append(infos, record)
+	return infos
+}
+func saveStakeOut(stakeOutInfo []RefundInfo, epochID uint64) error {
+	stakeByte, err := rlp.EncodeToBytes(stakeOutInfo)
+	if err != nil {
+		return err
+	}
+	_, err = posdb.GetDb().Put(epochID, posconfig.StakeOutEpochKey,stakeByte)
+	if err != nil {
+		log.Error("saveStakeOut Failed:", "error", err)
+		return err
+	}
+	log.Info("Save refund information done.","epochID",epochID)
+	return nil
+}
 func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	if vm.StakeoutIsFinished(stateDb, epochID) {
 		return true
 	}
 	vm.StakeoutSetEpoch(stateDb, epochID)
-
+	stakeOutInfo := make([]RefundInfo,0)
 	stakers := vm.GetStakersSnap(stateDb)
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
@@ -665,6 +698,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if staker.LockEpochs == 0 {
 			continue
 		}
+
 		// handle the staker registed in pow phase. only once
 		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
 			staker.StakingEpoch = posconfig.FirstEpochId + 2
@@ -673,6 +707,29 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			}
 			changed = true
 		}
+
+		// update new fee rate
+		key := vm.GetStakeInKeyHash(staker.Address)
+		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+		if err == nil && newFeeBytes != nil {
+			var newFee vm.UpdateFeeRate
+			err = rlp.DecodeBytes(newFeeBytes, &newFee)
+			if err == nil {
+				if newFee.EffectiveEpoch == 0 {
+					newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
+				}
+
+				if newFee.EffectiveEpoch <= epochID && staker.FeeRate != newFee.FeeRate {
+					staker.FeeRate = newFee.FeeRate
+					changed = true
+				}
+			}
+		}
+		if err != nil {
+			log.SyslogErr("update new fee rate Failed: ", "err", err)
+			return false
+		}
+
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
 		clientChanged := false
@@ -680,6 +737,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			// edit the validator Amount
 			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Clients[j].Address, staker.Clients[j].Amount)
 				clientChanged = true
 			} else {
 				newClients = append(newClients, staker.Clients[j])
@@ -696,6 +754,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			// edit the validator Amount
 			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 				partnerchanged = true
 			} else {
 				newPartners = append(newPartners, staker.Partners[j])
@@ -708,18 +767,25 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if epochID >= staker.StakingEpoch+staker.LockEpochs {
 			for j := 0; j < len(staker.Clients); j++ {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo,staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
 			for j := 0; j < len(staker.Partners); j++ {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 			}
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
-			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+			stakeOutInfo = recordStakeOut(stakeOutInfo, staker.From, staker.Amount)
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
+			if newFeeBytes != nil {
+				vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
+			}
 			continue
 		}
 
 		// check the renew
 		if epochID+vm.QuitDelay >= staker.StakingEpoch+staker.LockEpochs {
+			// TODO: how to apply changed FeeRate
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				//staker.FeeRate = staker.NextFeeRate
@@ -751,5 +817,6 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
 		}
 	}
+	saveStakeOut(stakeOutInfo, epochID)
 	return true
 }

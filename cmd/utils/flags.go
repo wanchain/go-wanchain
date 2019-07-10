@@ -194,6 +194,10 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
+	NoStakingFlag = cli.BoolFlag{
+		Name:  "noStaking",
+		Usage: "Disable staking",
+	}
 
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
@@ -541,6 +545,10 @@ var (
 		Name:  "syslogtag",
 		Usage: "syslog tag",
 		Value: "gwan_pos",
+	}
+	AwsKmsFlag = cli.BoolFlag{
+		Name:  "kms",
+		Usage: "Enable AWS KMS encrypted keystore file",
 	}
 )
 
@@ -1012,6 +1020,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.SyncMode = downloader.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.SyncMode = downloader.LightSync
+	}
+	if ctx.GlobalIsSet(NoStakingFlag.Name) {
+		params.SetNoStaking()
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)

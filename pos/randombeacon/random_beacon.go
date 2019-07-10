@@ -288,7 +288,6 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 
 	rbStage, elapsedNum, leftNum := vm.GetRBStage(slotId)
 
-	log.SyslogInfo("get my RB proposer id", "ids", rb.myPropserIds)
 	log.SyslogInfo("get RB stage", "rbStage", rbStage, "elapsedNum", elapsedNum, "leftNum", leftNum)
 
 	// belong to RB proposer group
@@ -358,7 +357,7 @@ func (rb *RandomBeacon) doLoop(statedb vm.StateDB, rc *rpc.Client, epochId uint6
 		}
 	}
 
-	return nil
+	//return nil
 }
 
 func (rb *RandomBeacon) isTaskAllDone() bool {
@@ -383,14 +382,17 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 	pks := rb.getRBProposerGroupF(epochId)
 	rb.proposerPks = pks
 	if len(pks) == 0 {
+		log.SyslogInfo("get my RBP id, RBP group is empoty")
 		return nil
 	}
 
 	selfPk := posconfig.Cfg().GetMinerBn256PK()
 	if selfPk == nil {
+		log.SyslogInfo("get my RBP id, can't get miner bn256 pk")
 		return nil
 	}
 
+	log.SyslogInfo("get my RBP id", "self pk", selfPk.String())
 	ids := make([]uint32, 0)
 	for i, pk := range pks {
 		if pk.String() == selfPk.String() {
@@ -398,6 +400,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		}
 	}
 
+	log.SyslogInfo("get my RBP id", "ids", ids)
 	return ids
 }
 
@@ -485,7 +488,7 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		commitBytes[i] = commit[i].Marshal()
 	}
 
-	txPayload := vm.RbDKG1FlatTxPayload{rb.epochId, proposerId, commitBytes}
+	txPayload := vm.RbDKG1FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, Commit:commitBytes}
 
 	return &txPayload, nil
 }
@@ -576,7 +579,7 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 		proofBytes[i] = rbselection.ProofToProofFlat(&proof[i])
 	}
 
-	txPayload := vm.RbDKG2FlatTxPayload{rb.epochId, proposerId, enshareBytes, proofBytes}
+	txPayload := vm.RbDKG2FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, EnShare:enshareBytes, Proof:proofBytes}
 
 	return &txPayload, nil
 }
@@ -656,7 +659,7 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return &vm.RbSIGTxPayload{rb.epochId, proposerId, gsigshare}, nil
+	return &vm.RbSIGTxPayload{EpochId:rb.epochId, ProposerId:proposerId, GSignShare:gsigshare}, nil
 }
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {

@@ -195,7 +195,6 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		//time.Sleep(time.Second)
 	}
-	return
 }
 
 func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
