@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	resultQueueSize  = 10
+	resultQueueSize  = 1
 	miningLogAtDepth = 5
 
 	// txChanSize is the size of channel listening to TxPreEvent.
@@ -144,7 +144,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
 		chainSlotTimer: make(chan uint64, chainHeadChanSize),
 		chainDb:        eth.ChainDb(),
-		recv:           make(chan *Result, resultQueueSize),
+		//recv:           make(chan *Result, resultQueueSize),
+		recv:           make(chan *Result),
 		chain:          eth.BlockChain(),
 		proc:           eth.BlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
