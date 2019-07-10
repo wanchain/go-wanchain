@@ -42,6 +42,12 @@ addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
 sudo docker run --restart=always -d -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
 
+echo 'Please wait a few seconds...'
+
+sleep 5
+
+sudo rm /home/${USER}/.wanchain/pw.txt
+
 KEYSTOREFILE=$(sudo ls /home/${USER}/.wanchain/testnet/keystore/)
 
 KEYSTORE=$(sudo cat /home/${USER}/.wanchain/testnet/keystore/${KEYSTOREFILE})
@@ -52,7 +58,7 @@ echo ''
 echo ''
 echo ''
 echo ''
-echo -e "\033[41;37m !!!!!!!!!!!!!!!Important!!!!!!!!!!!!!!! \033[0m"
+echo -e "\033[41;37m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
 echo '=================================================='
 echo '      Please backup Your Validator Address'
 echo '     ' ${ADDR}
@@ -60,9 +66,12 @@ echo '=================================================='
 echo '      Please backup Your Validator Public Key'
 echo ${PK}
 echo '=================================================='
+echo '      Please backup Your Password:' ${PASSWD}
+echo '=================================================='
 echo '      Please backup Your Keystore Json string'
 echo ''
 echo ${KEYSTORE}
 echo ''
 echo '=================================================='
-echo -e "\033[41;37m !!!!!!!!!!!!!!!Important!!!!!!!!!!!!!!! \033[0m"
+echo -e "\033[41;37m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
+echo ''
