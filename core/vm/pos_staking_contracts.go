@@ -49,6 +49,8 @@ const (
 	JoinDelay             = 2
 	PSOutKeyHash          = 700
 	maxPartners           = 5
+
+	NewLogEpochId         = 18087
 )
 
 var (
@@ -176,6 +178,191 @@ var (
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "v",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "feeRate",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "lockEpoch",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeIn",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeAppend",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "lockEpoch",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeUpdate",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "v",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "renewal",
+				"type": "bool"
+			},
+			{
+				"indexed": false,
+				"name": "stakingEpoch",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "lockEpoch",
+				"type": "uint256"
+			}
+		],
+		"name": "partnerIn",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "delegateIn",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			}
+		],
+		"name": "delegateOut",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "feeRate",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "maxFeeRate",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "effectiveEpoch",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeUpdateFeeRate",
+		"type": "event"
 	}
 ]
 `
@@ -559,10 +746,11 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	total.Add(total, contract.Value())
 	length := len(stakerInfo.Partners)
 	found := false
+	var partner *PartnerInfo = nil
 	for i := 0; i < length; i++ {
 		total.Add(total, stakerInfo.Partners[i].Amount)
 		if stakerInfo.Partners[i].Address == contract.CallerAddress {
-			partner := &stakerInfo.Partners[i]
+			partner = &stakerInfo.Partners[i]
 			partner.Amount.Add(partner.Amount, contract.Value())
 			partner.StakeAmount.Add(partner.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
 			partner.Renewal = info.Renewal
@@ -577,7 +765,7 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 		if length >= maxPartners {
 			return nil, errors.New("Too many partners")
 		}
-		partner := PartnerInfo{
+		partner = &PartnerInfo{
 			Address:      contract.CallerAddress,
 			Amount:       contract.Value(),
 			Renewal:      info.Renewal,
@@ -588,12 +776,18 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 			partner.StakingEpoch = 0
 		}
 		partner.StakeAmount = big.NewInt(0).Mul(partner.Amount, big.NewInt(int64(weight)))
-		stakerInfo.Partners = append(stakerInfo.Partners, partner)
+		stakerInfo.Partners = append(stakerInfo.Partners, *partner)
 	}
 
 	err = p.saveStakeInfo(evm, stakerInfo)
 	if err != nil {
 		return nil, err
+	}
+	if partner != nil {
+		err = p.partnerInLog(contract, evm, &info.Addr, info.Renewal, partner.StakingEpoch, partner.LockEpochs)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
@@ -1011,63 +1205,166 @@ func (p *PosStaking) updateFeeRateParseAndValid(payload []byte) (*UpdateFeeRateP
 }
 
 func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) error {
-
-	params := make([]common.Hash, 5)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = common.BigToHash(contract.Value())
-	params[2] = common.BigToHash(new(big.Int).SetUint64(info.FeeRate))
-	params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
-	params[4] = info.Address.Hash()
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 5)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BigToHash(contract.Value())
+		params[2] = common.BigToHash(new(big.Int).SetUint64(info.FeeRate))
+		params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
+		params[4] = info.Address.Hash()
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event stakeIn(address indexed sender, address indexed posAddress, uint indexed v, uint feeRate, uint lockEpoch);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = info.Address.Hash()
+		params[2] = common.BigToHash(contract.Value())
+		//
+		data := make([]byte, 0)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(info.FeeRate)).Bytes()...)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(info.LockEpochs)).Bytes()...)
+		sig := cscAbi.Events["stakeIn"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
+	}
 }
+
 func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator common.Address) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BigToHash(contract.Value())
+		params[2] = validator.Hash()
 
-	params := make([]common.Hash, 3)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = common.BigToHash(contract.Value())
-	params[2] = validator.Hash()
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event stakeAppend(address indexed sender, address indexed posAddress, uint indexed v);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = validator.Hash()
+		params[2] = common.BigToHash(contract.Value())
 
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+		sig := cscAbi.Events["stakeAppend"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	}
 }
+
 func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerInfo) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
+		params[2] = info.Address.Hash()
 
-	params := make([]common.Hash, 3)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
-	params[2] = info.Address.Hash()
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event stakeUpdate(address indexed sender, address indexed posAddress, uint indexed lockEpoch);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = info.Address.Hash()
+		params[2] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
 
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+		sig := cscAbi.Events["stakeUpdate"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	}
 }
+
 func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator common.Address) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BigToHash(contract.Value())
+		params[2] = validator.Hash()
 
-	params := make([]common.Hash, 3)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = common.BigToHash(contract.Value())
-	params[2] = validator.Hash()
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event delegateIn(address indexed sender, address indexed posAddress, uint indexed v);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = validator.Hash()
+		params[2] = common.BigToHash(contract.Value())
 
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+		sig := cscAbi.Events["delegateIn"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+
+	}
 }
+
 func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator common.Address) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 2)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = validator.Hash()
 
-	params := make([]common.Hash, 2)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = validator.Hash()
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event delegateOut(address indexed sender, address indexed posAddress);
+		params := make([]common.Hash, 2)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = validator.Hash()
 
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+		sig := cscAbi.Events["delegatOut"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	}
 }
-func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
-	params := make([]common.Hash, 5)
-	params[0] = common.BytesToHash(contract.Caller().Bytes())
-	params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
-	params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate))
-	params[3] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
-	params[4] = common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch))
 
-	sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdateFeeRate"].Sig()))
-	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < NewLogEpochId {
+		params := make([]common.Hash, 5)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
+		params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate))
+		params[3] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
+		params[4] = common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch))
+
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdateFeeRate"].Sig()))
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
+	} else {
+		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint effectiveEpoch);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
+		params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
+
+		data := make([]byte, 0)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate)).Bytes()...)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch)).Bytes()...)
+
+		sig := cscAbi.Events["stakeUpdateFeeRate"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
+	}
+}
+
+func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool, stakingEpoch uint64, lochEpoch uint64) error {
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid >= NewLogEpochId {
+		// event partnerIn(address indexed sender, address indexed posAddress, uint indexed v, bool renewal, uint stakingEpoch, uint lockEpoch);
+		params := make([]common.Hash, 3)
+		params[0] = common.BytesToHash(contract.Caller().Bytes())
+		params[1] = common.BytesToHash(addr.Bytes())
+		params[2] = common.BigToHash(contract.Value())
+
+		var renewal = uint64(0)
+		if renew {
+			renewal = uint64(1)
+		}
+		data := make([]byte, 0)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(renewal)).Bytes()...)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(stakingEpoch)).Bytes()...)
+		data = append(data, common.BigToHash(new(big.Int).SetUint64(lochEpoch)).Bytes()...)
+
+		sig := cscAbi.Events["partnerIn"].Id().Bytes()
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
+	}
+	return nil
 }
