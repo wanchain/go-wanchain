@@ -9,6 +9,10 @@ echo '+     Welcome to Validator registion     +'
 echo ''
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
+
+echo -e "\033[41;37m !!!!!! WARNING Please Remember Your Password !!!!!!!! \033[0m"
+echo -e "\033[41;37m !!!!!!Otherwise You will lose all your assets!!!!!!!! \033[0m"
+echo -e "\033[41;37m !!!!!!Password can not be restored afterwards!!!!!!!! \033[0m"
 echo 'Please Enter your password of Validator account:'
 read PASSWD
 echo ''
@@ -65,8 +69,6 @@ echo '     ' ${ADDR}
 echo '=================================================='
 echo '      Please backup Your Validator Public Key'
 echo ${PK}
-echo '=================================================='
-echo '      Please backup Your Password:' ${PASSWD}
 echo '=================================================='
 echo '      Please backup Your Keystore Json string'
 echo ''
