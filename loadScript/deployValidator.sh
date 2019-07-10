@@ -10,9 +10,8 @@ echo ''
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
 
-echo -e "\033[41;37m !!!!!! WARNING Please Remember Your Password !!!!!!!! \033[0m"
-echo -e "\033[41;37m !!!!!!Otherwise You will lose all your assets!!!!!!!! \033[0m"
-echo -e "\033[41;37m !!!!!!Password can not be restored afterwards!!!!!!!! \033[0m"
+echo -e "\033[41;30m !!!!!! WARNING Please Remember Your Password !!!!!!!! \033[0m"
+echo -e "\033[41;30m !!!!!!Otherwise You will lose all your assets!!!!!!!! \033[0m"
 echo 'Please Enter your password of Validator account:'
 read PASSWD
 echo ''
@@ -62,7 +61,7 @@ echo ''
 echo ''
 echo ''
 echo ''
-echo -e "\033[41;37m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
+echo -e "\033[41;30m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
 echo '=================================================='
 echo '      Please backup Your Validator Address'
 echo '     ' ${ADDR}
@@ -75,5 +74,5 @@ echo ''
 echo ${KEYSTORE}
 echo ''
 echo '=================================================='
-echo -e "\033[41;37m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
+echo -e "\033[41;30m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
 echo ''
