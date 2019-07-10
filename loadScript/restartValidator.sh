@@ -36,3 +36,11 @@ echo ''
 echo ''
 echo ''
 
+if [ $(ps -ef | grep -c "gwan") -gt 1 ]; 
+then 
+    echo "Validator Start Success";
+else
+    echo "Validator Start Failed";
+    echo "Please use command 'sudo docker logs gwan' to check reason." 
+fi
+

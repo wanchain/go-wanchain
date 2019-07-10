@@ -76,3 +76,11 @@ echo ''
 echo '=================================================='
 echo -e "\033[41;30m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
 echo ''
+
+if [ $(ps -ef | grep -c "gwan") -gt 1 ]; 
+then 
+    echo "Validator Start Success";
+else
+    echo "Validator Start Failed";
+    echo "Please use command 'sudo docker logs gwan' to check reason." 
+fi
