@@ -127,7 +127,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 func CalcGasLimit(parent *types.Block) *big.Int {
 	_, epId := util.CalEpochSlotID(parent.Header().Time.Uint64())
 	if epId >= 18087 {
-		params.GasLimitBoundDivisor = big.NewInt(100)
+		params.GasLimitBoundDivisor = big.NewInt(40)
 	}
 
 	// contrib = (parentGasUsed * 3 / 2) / 1024
