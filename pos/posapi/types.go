@@ -47,13 +47,13 @@ type ApiStakerInfo struct {
 type ClientInfo struct {
 	Address     common.Address        `json:"address"`
 	Amount      *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount *math.HexOrDecimal256 `json:"votingPower"`
 	QuitEpoch   uint64                `json:"quitEpoch"`
 }
 type PartnerInfo struct {
 	Address      common.Address        `json:"address"`
 	Amount       *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount  *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount  *math.HexOrDecimal256 `json:"votingPower"`
 	Renewal      bool                  `json:"renewal"`
 	LockEpochs   uint64                `json:"lockEpochs"`
 	StakingEpoch uint64                `json:"stakingEpoch"`
