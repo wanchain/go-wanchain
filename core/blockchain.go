@@ -977,6 +977,7 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 }
 
 
+
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	var blocksIn2K int
 
@@ -1024,6 +1025,8 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
 
+	blocksIn2K := 0
+
 	curBlk := bc.CurrentBlock()
 
 	blkEpid, blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
@@ -1055,7 +1058,22 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 		return uint64(0), nil
 	} else {
 
-		blocksIn2K := bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam-diff)
+		flatSlotId := epochid*posconfig.SlotCount + slotid
+
+		cacheBeginId :=  bc.cqLastSlot - posconfig.SlotSecurityParam
+		if flatSlotId <= bc.cqLastSlot && flatSlotId > cacheBeginId && bc.cqCache.Len() > posconfig.BlockSecurityParam {
+			for ;flatSlotId > cacheBeginId;flatSlotId-- {
+				blks,ok := bc.cqCache.Get(flatSlotId)
+				blocksIn2K = blks.(int)
+				if ok  && blks != 0{
+					break
+				}
+			}
+		}
+
+		if blocksIn2K == 0 {
+			blocksIn2K = bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam-diff)
+		}
 
 		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
 
