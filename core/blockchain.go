@@ -1693,7 +1693,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		// insert the block in the canonical way, re-writing history
 		bc.insert(block)
 
-		log.Debug("blockchain reorg", block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
+		log.Debug("blockchain reorg","new chain", block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 			return err
