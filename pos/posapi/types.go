@@ -47,13 +47,13 @@ type ApiStakerInfo struct {
 type ClientInfo struct {
 	Address     common.Address        `json:"address"`
 	Amount      *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount *math.HexOrDecimal256 `json:"votingPower"`
 	QuitEpoch   uint64                `json:"quitEpoch"`
 }
 type PartnerInfo struct {
 	Address      common.Address        `json:"address"`
 	Amount       *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount  *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount  *math.HexOrDecimal256 `json:"votingPower"`
 	Renewal      bool                  `json:"renewal"`
 	LockEpochs   uint64                `json:"lockEpochs"`
 	StakingEpoch uint64                `json:"stakingEpoch"`
@@ -64,7 +64,7 @@ type StakerJson struct {
 	PubBn256  string         `json:"pubBn256"`  //stakeholder’s bn256 public key
 
 	Amount         *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount    *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount    *math.HexOrDecimal256 `json:"votingPower"`
 	LockEpochs     uint64                `json:"lockEpochs"`     //lock time which is input by user. 0 means unexpired.
 	NextLockEpochs uint64                `json:"nextLockEpochs"` //lock time which is input by user. 0 means unexpired.
 	From           common.Address        `json:"from"`
@@ -76,24 +76,26 @@ type StakerJson struct {
 	Partners []PartnerInfo `json:"partners"`
 
 	NextFeeRate uint64
-	MaxFeeRate uint64
+	MaxFeeRate  uint64
 }
 
 type RefundInfo struct {
-	Addr common.Address `json:"address"`
-	Amount         *math.HexOrDecimal256 `json:"amount"`
+	Addr   common.Address        `json:"address"`
+	Amount *math.HexOrDecimal256 `json:"amount"`
 }
-func convertReundInfo(info []epochLeader.RefundInfo)([]RefundInfo){
-	refund := make([]RefundInfo,0)
-	for i:=0; i<len(info); i++ {
+
+func convertReundInfo(info []epochLeader.RefundInfo) []RefundInfo {
+	refund := make([]RefundInfo, 0)
+	for i := 0; i < len(info); i++ {
 		record := RefundInfo{
-			Addr: info[i].Addr,
+			Addr:   info[i].Addr,
 			Amount: (*math.HexOrDecimal256)(info[i].Amount),
 		}
 		refund = append(refund, record)
 	}
 	return refund
 }
+
 type PosInfoJson struct {
 	FirstEpochId     uint64 `json:"firstEpochId"`
 	FirstBlockNumber uint64 `json:"firstBlockNumber"`
