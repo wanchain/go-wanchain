@@ -438,8 +438,12 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
-func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (string, error) {
-	return biToString(incentive.GetEpochIncentiveBlockNumber(epochID))
+func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
+	number,err :=  incentive.GetEpochIncentiveBlockNumber(epochID)
+	if err == nil {
+		return number.Uint64(), nil
+	}
+	return 0, err
 }
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochIncentive(epochID))
