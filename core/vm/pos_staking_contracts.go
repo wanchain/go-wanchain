@@ -1006,6 +1006,57 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	return nil, nil
 }
 
+//func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+//	feeRateParam, err := p.updateFeeRateParseAndValid(payload)
+//	if err != nil {
+//		return nil, err
+//	}
+//	stakeInfo, err := p.getStakeInfo(evm, feeRateParam.Addr)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if contract.CallerAddress != stakeInfo.From {
+//		return nil, errors.New("cannot update fee from another account")
+//	}
+//
+//	oldFee, err := p.getStakeFeeRate(evm, stakeInfo.Address)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if oldFee == nil {
+//		oldFee = &UpdateFeeRate{
+//			ValidatorAddr: stakeInfo.Address,
+//			MaxFeeRate: stakeInfo.FeeRate,
+//			FeeRate: stakeInfo.FeeRate,
+//			EffectiveEpoch: stakeInfo.StakingEpoch + stakeInfo.LockEpochs,
+//		}
+//	}
+//
+//	if feeRateParam.FeeRate.Cmp(maxFeeRate) > 0 {
+//		return nil, errors.New("fee rate cannot > 10000")
+//	}
+//
+//	// 0 <= fee <= maxFee
+//	if feeRateParam.FeeRate.Uint64() > oldFee.MaxFeeRate {
+//		return nil, errors.New("fee rate can't bigger than old")
+//	}
+//
+//	oldFee.FeeRate = feeRateParam.FeeRate.Uint64()
+//	if stakeInfo.StakingEpoch == uint64(0) {
+//		oldFee.EffectiveEpoch = 0
+//	}
+//	err = p.saveStakeFeeRate(evm, oldFee, stakeInfo.Address)
+//	if err != nil {
+//		return nil, err
+//	}
+//	err = p.stakeUpdateFeeRateLog(contract, evm, oldFee)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return nil, nil
+//}
+
 func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	feeRateParam, err := p.updateFeeRateParseAndValid(payload)
 	if err != nil {
@@ -1016,10 +1067,16 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 		return nil, err
 	}
 
+	// if feeRate == 10000, can't change
+	if stakeInfo.FeeRate == 10000 {
+		return nil, errors.New("feeRate equal 10000, can't change")
+	}
+
 	if contract.CallerAddress != stakeInfo.From {
 		return nil, errors.New("cannot update fee from another account")
 	}
 
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	oldFee, err := p.getStakeFeeRate(evm, stakeInfo.Address)
 	if err != nil {
 		return nil, err
@@ -1029,22 +1086,31 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 			ValidatorAddr: stakeInfo.Address,
 			MaxFeeRate: stakeInfo.FeeRate,
 			FeeRate: stakeInfo.FeeRate,
-			EffectiveEpoch: stakeInfo.StakingEpoch + stakeInfo.LockEpochs,
+			EffectiveEpoch: eid,
 		}
 	}
-
-	if feeRateParam.FeeRate.Cmp(maxFeeRate) > 0 {
+	// fee rate can't == 10000
+	if feeRateParam.FeeRate.Cmp(maxFeeRate) >= 0 {
 		return nil, errors.New("fee rate cannot > 10000")
 	}
 
+	feeRate := feeRateParam.FeeRate.Uint64()
 	// 0 <= fee <= maxFee
-	if feeRateParam.FeeRate.Uint64() > oldFee.MaxFeeRate {
+	if feeRate > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
 	}
+	if (feeRate != stakeInfo.FeeRate - 1) && (feeRate != stakeInfo.FeeRate + 1) {
+		return nil, errors.New("delta fee rate should equal 1")
+	}
 
-	oldFee.FeeRate = feeRateParam.FeeRate.Uint64()
-	if stakeInfo.StakingEpoch == uint64(0) {
-		oldFee.EffectiveEpoch = 0
+	oldFee.FeeRate = feeRate
+	oldFee.EffectiveEpoch = eid
+
+	stakeInfo.FeeRate = feeRate
+
+	err = p.saveStakeInfo(evm, stakeInfo)
+	if err != nil {
+		return nil, err
 	}
 	err = p.saveStakeFeeRate(evm, oldFee, stakeInfo.Address)
 	if err != nil {

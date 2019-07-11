@@ -709,26 +709,26 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 
 		// update new fee rate
-		key := vm.GetStakeInKeyHash(staker.Address)
-		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
-		if err == nil && newFeeBytes != nil {
-			var newFee vm.UpdateFeeRate
-			err = rlp.DecodeBytes(newFeeBytes, &newFee)
-			if err == nil {
-				if newFee.EffectiveEpoch == 0 {
-					newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
-				}
-
-				if newFee.EffectiveEpoch <= epochID && staker.FeeRate != newFee.FeeRate {
-					staker.FeeRate = newFee.FeeRate
-					changed = true
-				}
-			}
-		}
-		if err != nil {
-			log.SyslogErr("update new fee rate Failed: ", "err", err)
-			return false
-		}
+		//key := vm.GetStakeInKeyHash(staker.Address)
+		//newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+		//if err == nil && newFeeBytes != nil {
+		//	var newFee vm.UpdateFeeRate
+		//	err = rlp.DecodeBytes(newFeeBytes, &newFee)
+		//	if err == nil {
+		//		if newFee.EffectiveEpoch == 0 {
+		//			newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
+		//		}
+		//
+		//		if newFee.EffectiveEpoch <= epochID && staker.FeeRate != newFee.FeeRate {
+		//			staker.FeeRate = newFee.FeeRate
+		//			changed = true
+		//		}
+		//	}
+		//}
+		//if err != nil {
+		//	log.SyslogErr("update new fee rate Failed: ", "err", err)
+		//	return false
+		//}
 
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
@@ -773,11 +773,13 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 			}
+			key := vm.GetStakeInKeyHash(staker.Address)
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 			stakeOutInfo = recordStakeOut(stakeOutInfo, staker.From, staker.Amount)
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
-			if newFeeBytes != nil {
+			newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+			if err == nil && newFeeBytes != nil {
 				vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
 			}
 			continue
