@@ -1,4 +1,4 @@
-# 1. Galaxy Consensus getting started manual 
+# 1. Galaxy Consensus getting started manual (DEPRECATED)
 
 **!!!THIS GUIDE IS OUT OF DATE!!!** 
 
