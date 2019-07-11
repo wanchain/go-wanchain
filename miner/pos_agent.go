@@ -193,6 +193,8 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
 
+		log.Debug("Memory usage", "memory", util.MemStat())
+
 		//time.Sleep(time.Second)
 	}
 }
