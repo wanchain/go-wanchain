@@ -50,7 +50,7 @@ const (
 	PSOutKeyHash          = 700
 	maxPartners           = 5
 
-	NewLogEpochId         = 18087
+	NewLogEpochId         = 18187
 )
 
 var (
