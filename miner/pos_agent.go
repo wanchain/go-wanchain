@@ -193,7 +193,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
 
-		log.Debug("Memory usage", "memory", util.MemStat())
+		memUse := float32(util.MemStat()) / 1024.0 / 1024.0 / 1024.0
+
+		log.Debug("Memory usage(GB)", "memory", memUse)
 
 		//time.Sleep(time.Second)
 	}
