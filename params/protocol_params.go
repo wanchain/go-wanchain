@@ -90,5 +90,5 @@ var (
 	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 	WanGasTimesFactor      = big.NewInt(10)
 	//WanGasTimesFactor	   = big.NewInt(1)
-	MaxGasLimit = big.NewInt(100000000)
+	MaxGasLimit = big.NewInt(105000000)
 )
