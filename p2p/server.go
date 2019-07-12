@@ -41,10 +41,10 @@ const (
 	staticPeerCheckInterval = 15 * time.Second
 
 	// Maximum number of concurrently handshaking inbound connections.
-	maxAcceptConns = 50
+	maxAcceptConns = 25
 
 	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 16
+	maxActiveDialTasks = 8
 
 	// Maximum time allowed for reading a complete message.
 	// This is effectively the amount of time a connection can be idle.
@@ -560,7 +560,7 @@ running:
 
 			//if err == nil && strings.Contains(truncateName(c.name),params.VersionMeta) {
 			if err == nil {
-			// The handshakes are done and it passed all checks.
+				// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
 				// If message events are enabled, pass the peerFeed
 				// to the peer
@@ -568,7 +568,6 @@ running:
 					p.events = &srv.peerFeed
 				}
 				name := truncateName(c.name)
-
 
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				peers[c.id] = p
@@ -587,7 +586,6 @@ running:
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
 			delete(peers, pd.ID())
-
 
 		}
 	}
