@@ -33,7 +33,6 @@ var MainnetBootnodes = []string{
 	"enode://cd003df4a1883493b5f86c1d1d1bd6c39dc2ab171b76d66fce2526e22eda83517a892724d7b8200f0edf9e0d9c7f1b1d4e207faa68847eafd41e3fd325ecc82d@34.211.235.236:17717",
 	//Wanchain Foundation Bootnodes,US WEST NK006
 	"enode://e82ad9b30bd10d3359c1db0d6be72a49b783b5c8bc040b3c0d09651fdc7ff0874156c89284fb70b03b0c520caf904f5f92442aad7a705e56067556ffd6f15fed@35.165.177.61:17717",
-
 }
 
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
@@ -46,10 +45,10 @@ var TestnetBootnodes = []string{
 	"enode://b7b52602bebb302b386ff9c419e5c09c9bb3fb43cf19cf81b47cbccc252e2b67b3826ee102f5bca71f36e5856c2901f30cc3fa123824b76453b20e25a69ed0ec@52.52.142.120:17717",
 }
 
-
 var InternalBootnodes = []string{
-	"enode://dea09d1ded799044d3b8b5c66e28e584ea3fdaae12e0e39bb3491ac99424cc6c098f32e978c4aef1c3382c3c4492d7a33d720eabdee78cddba28541d6bef1bdc@52.53.224.4:17717", //
+	//"enode://dea09d1ded799044d3b8b5c66e28e584ea3fdaae12e0e39bb3491ac99424cc6c098f32e978c4aef1c3382c3c4492d7a33d720eabdee78cddba28541d6bef1bdc@52.53.224.4:17717", //
 	//"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@118.190.33.102:17717",
+	"enode://cad1c70f33c33019cd7cc45ef8f35046b3569dfcff5b6b5cc15409bd6fc4f271309bf5bf21976e1d2d681ca9f3ffe5eab37c5dd2a6ed72b189ef66b7006a027f@52.53.219.172:17717",
 }
 
 // PlutoBootnodes are the enode URLs of the P2P bootstrap nodes running on the
