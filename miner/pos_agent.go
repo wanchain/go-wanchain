@@ -57,9 +57,6 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
 
-	s.BlockChain().SetSlSelector(sls)
-	s.BlockChain().SetRbSelector(epochSelector)
-
 	s.BlockChain().SetSlotValidator(sls)
 
 	return epochSelector

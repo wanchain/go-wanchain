@@ -495,7 +495,6 @@ func (srv *Server) run(dialstate dialer) {
 		}
 		return ts[i:]
 	}
-
 	scheduleTasks := func() {
 		// Start from queue first.
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
@@ -587,8 +586,6 @@ running:
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
 			delete(peers, pd.ID())
-
-
 		}
 	}
 
