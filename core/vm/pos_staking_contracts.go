@@ -1091,7 +1091,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	}
 	// fee rate can't == 10000
 	if feeRateParam.FeeRate.Cmp(maxFeeRate) >= 0 {
-		return nil, errors.New("fee rate cannot > 10000")
+		return nil, errors.New("fee rate cannot >= 10000")
 	}
 
 	feeRate := feeRateParam.FeeRate.Uint64()
@@ -1099,7 +1099,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if feeRate > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
 	}
-	if (feeRate != stakeInfo.FeeRate - 1) && (feeRate != stakeInfo.FeeRate + 1) {
+	if (feeRate < stakeInfo.FeeRate - 100) || (feeRate > stakeInfo.FeeRate + 100) {
 		return nil, errors.New("delta fee rate should equal 1")
 	}
 

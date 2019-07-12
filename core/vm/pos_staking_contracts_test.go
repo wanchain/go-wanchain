@@ -567,27 +567,59 @@ func TestUpdateFeeRate(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
-	if err == nil {
-		t.Fatal("should be failed if stake holder not exist")
+	// contract.CallerAddress != stakeInfo.From
+	err := doStakeInWithParam(20000, 10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9900)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate equal 10000, can't change" {
+		t.Fatal("feeRate equal 10000, can't change")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
 	}
 	// contract.CallerAddress != stakeInfo.From
-	err = doStakeIn(20000)
+	err = doStakeInWithParam(20000, 1000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 101)
+	err = doUpdateFeeRate(common.HexToAddress("0xaaaa7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000)
+	if err == nil || err.Error() != "updateFeeRate called failed cannot update fee from another account" {
+		t.Fatal("cannot update fee from another account")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeInWithParam(20000, 1000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
+	if err == nil || err.Error() != "updateFeeRate called failed fee rate cannot >= 10000" {
+		t.Fatal("fee rate cannot > 10000")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1001)
 	if err == nil || err.Error() != "updateFeeRate called failed fee rate can't bigger than old" {
 		t.Fatal("fee rate can't bigger than old")
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
-	if err == nil || err.Error() != "updateFeeRate called failed fee rate cannot > 10000" {
-		t.Fatal("fee rate cannot > 10000")
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 899)
+	if err == nil || err.Error() != "updateFeeRate called failed delta fee rate should equal 1" {
+		t.Fatal("delta fee rate should equal 1")
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 900)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
