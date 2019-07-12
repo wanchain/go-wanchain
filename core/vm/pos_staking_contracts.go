@@ -1081,6 +1081,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if err != nil {
 		return nil, err
 	}
+
 	if oldFee == nil {
 		oldFee = &UpdateFeeRate{
 			ValidatorAddr: stakeInfo.Address,
@@ -1088,6 +1089,8 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 			FeeRate: stakeInfo.FeeRate,
 			EffectiveEpoch: eid,
 		}
+	} else if oldFee.EffectiveEpoch == eid {
+		return nil, errors.New("one epoch can only change one time")
 	}
 	// fee rate can't == 10000
 	if feeRateParam.FeeRate.Cmp(maxFeeRate) >= 0 {
@@ -1099,8 +1102,8 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if feeRate > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
 	}
-	if (feeRate < stakeInfo.FeeRate - 100) || (feeRate > stakeInfo.FeeRate + 100) {
-		return nil, errors.New("delta fee rate should equal 1")
+	if feeRate > stakeInfo.FeeRate + 100 {
+		return nil, errors.New("0 <= newFeeRate <= oldFeerate + 1")
 	}
 
 	oldFee.FeeRate = feeRate
@@ -1385,17 +1388,7 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
-		params := make([]common.Hash, 5)
-		params[0] = common.BytesToHash(contract.Caller().Bytes())
-		params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
-		params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate))
-		params[3] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
-		params[4] = common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch))
-
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdateFeeRate"].Sig()))
-		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
-	} else {
+	if eid >= NewLogEpochId {
 		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint effectiveEpoch);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -1409,6 +1402,7 @@ func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo
 		sig := cscAbi.Events["stakeUpdateFeeRate"].Id().Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 	}
+	return nil
 }
 
 func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool, stakingEpoch uint64, lochEpoch uint64) error {

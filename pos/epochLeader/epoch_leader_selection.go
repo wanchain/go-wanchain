@@ -648,8 +648,23 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 	if err != nil {
 		return nil, err
 	}
+
+	// try to get current feeRate
+	feeRate := staker.FeeRate
+	curStateDb, err := e.blkChain.StateAt(e.blkChain.CurrentBlock().Root())
+	if err != nil {
+		return nil, err
+	} else {
+		stakeBytesNew := curStateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
+		stakeNew := vm.StakerInfo{}
+		err = rlp.DecodeBytes(stakeBytesNew, &stakeNew)
+		if nil == err {
+			feeRate = stakeNew.FeeRate
+		}
+	}
+
 	validator := &vm.ValidatorInfo{
-		FeeRate:          staker.FeeRate,
+		FeeRate:          feeRate,
 		ValidatorAddr:    staker.Address,
 		WalletAddr:       staker.From,
 		TotalProbability: totalProbability,
