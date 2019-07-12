@@ -41,10 +41,10 @@ const (
 	staticPeerCheckInterval = 15 * time.Second
 
 	// Maximum number of concurrently handshaking inbound connections.
-	maxAcceptConns = 10
+	maxAcceptConns = 50
 
 	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 8
+	maxActiveDialTasks = 16
 
 	// Maximum time allowed for reading a complete message.
 	// This is effectively the amount of time a connection can be idle.
