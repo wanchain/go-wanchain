@@ -378,6 +378,63 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 		}
 	}
 }
+// length of Bytes of big.Int
+func TestTemp(t *testing.T){
+	const uintSize = 32 << (^uint(0) >> 32 & 1)
+	fmt.Printf("%v\n",uintSize)
+
+	bgTemp1 := big.NewInt(0)
+	bgTemp2 := big.NewInt(100000000)
+	bgTemp1.Add(bgTemp1,bgTemp2)
+
+	for i:=2; i<20;i++{
+		fmt.Printf("%v\n",len(bgTemp1.Bytes()))
+		bgTemp1 = bgTemp1.Mul(bgTemp1,bgTemp2)
+	}
+}
+
+func TestProofWithZero(t *testing.T) {
+	PrivateKeys, err := genPrivateKeys(Ne)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var RB = []byte{byte(1)}
+	//Sort PrivateKeys
+	PrivateKeys, err = SortPrivateKey(PrivateKeys, RB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	PublicKeys := make([]*ecdsa.PublicKey, 0)
+	for i := 0; i < Ne; i++ {
+		PublicKeys = append(PublicKeys, &PrivateKeys[i].PublicKey)
+	}
+
+	alpha, err := randFieldElement(Rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	PublicKeys, alphaPublicKeys, Proof, err := GenerateArrayPiece(PublicKeys, alpha)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	Proof[0] = big.NewInt(0).SetUint64(uint64(0))
+	Proof[1] = big.NewInt(0).SetUint64(uint64(0))
+
+	ret := VerifyDleqProof(PublicKeys, alphaPublicKeys, Proof)
+	if ret {
+		t.Errorf("VerifyDleqProof should return false,but true")
+	}
+
+	Proof[0] = nil
+	Proof[1] = nil
+	ret = VerifyDleqProof(PublicKeys, alphaPublicKeys, Proof)
+	if ret {
+		t.Errorf("VerifyDleqProof should return false,but true")
+	}
+
+}
 
 func TestDleqWithDiffAlpha(t *testing.T) {
 	PrivateKeys, err := genPrivateKeys(Ne)
