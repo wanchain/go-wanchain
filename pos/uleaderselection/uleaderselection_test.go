@@ -436,6 +436,48 @@ func TestProofWithZero(t *testing.T) {
 
 }
 
+
+func TestProofWithLongBytesLen(t *testing.T) {
+	PrivateKeys, err := genPrivateKeys(Ne)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var RB = []byte{byte(1)}
+	//Sort PrivateKeys
+	PrivateKeys, err = SortPrivateKey(PrivateKeys, RB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	PublicKeys := make([]*ecdsa.PublicKey, 0)
+	for i := 0; i < Ne; i++ {
+		PublicKeys = append(PublicKeys, &PrivateKeys[i].PublicKey)
+	}
+
+	alpha, err := randFieldElement(Rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	PublicKeys, alphaPublicKeys, Proof, err := GenerateArrayPiece(PublicKeys, alpha)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	Proof[0] = big.NewInt(0).SetUint64(uint64(^(uint64(0))))
+	Proof[1] = big.NewInt(0).SetUint64(uint64(^(uint64(0))))
+
+	Proof[0] = Proof[0].Exp(Proof[0],big.NewInt(0).SetUint64(uint64(5)),nil)
+	Proof[1] = Proof[1].Exp(Proof[1],big.NewInt(0).SetUint64(uint64(5)),nil)
+
+	fmt.Printf("Len of bytes of Proof[0]= %v\n",len(Proof[0].Bytes()))
+	fmt.Printf("Len of bytes of Proof[1]= %v\n",len(Proof[1].Bytes()))
+
+	ret := VerifyDleqProof(PublicKeys, alphaPublicKeys, Proof)
+	if ret {
+		t.Errorf("VerifyDleqProof should return false,but true")
+	}
+}
+
 func TestDleqWithDiffAlpha(t *testing.T) {
 	PrivateKeys, err := genPrivateKeys(Ne)
 	if err != nil {

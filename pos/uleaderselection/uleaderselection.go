@@ -567,6 +567,9 @@ func VerifyDleqProof(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa.Pub
 		return false
 	}
 
+	if len(Proof[0].Bytes()) > 32 || len(Proof[1].Bytes()) > 32 {
+		return false
+	}
 	n := len(PublicKeys)
 	var ebuffer bytes.Buffer
 	for i := 0; i < n; i++ {
