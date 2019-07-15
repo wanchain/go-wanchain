@@ -49,8 +49,6 @@ const (
 	JoinDelay             = 2
 	PSOutKeyHash          = 700
 	maxPartners           = 5
-
-	NewLogEpochId         = 18187
 )
 
 var (
@@ -1275,7 +1273,7 @@ func (p *PosStaking) updateFeeRateParseAndValid(payload []byte) (*UpdateFeeRateP
 
 func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
+	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 5)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(contract.Value())
@@ -1301,7 +1299,7 @@ func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) 
 
 func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator common.Address) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
+	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(contract.Value())
@@ -1323,7 +1321,7 @@ func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator comm
 
 func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerInfo) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
+	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
@@ -1345,7 +1343,7 @@ func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerIn
 
 func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator common.Address) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
+	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(contract.Value())
@@ -1368,7 +1366,7 @@ func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator commo
 
 func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator common.Address) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < NewLogEpochId {
+	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 2)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = validator.Hash()
@@ -1388,7 +1386,7 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid >= NewLogEpochId {
+	if eid >= posconfig.ApploEpochID {
 		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint effectiveEpoch);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -1407,7 +1405,7 @@ func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo
 
 func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool, stakingEpoch uint64, lochEpoch uint64) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid >= NewLogEpochId {
+	if eid >= posconfig.ApploEpochID {
 		// event partnerIn(address indexed sender, address indexed posAddress, uint indexed v, bool renewal, uint stakingEpoch, uint lockEpoch);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())

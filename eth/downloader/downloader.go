@@ -42,12 +42,10 @@ import (
 const missingNumber = uint64(0xffffffffffffffff)
 
 var (
-	MaxHashFetch  = 512 // Amount of hashes to be fetched per retrieval request
-	MaxBlockFetch = 128 // Amount of blocks to be fetched per retrieval request
-
+	MaxHashFetch    = 512 // Amount of hashes to be fetched per retrieval request
+	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
 	MaxHeaderFetch  = 192 // Amount of block headers to be fetched per retrieval request
 	MaxSkeletonSize = 128 // Number of header fetches to need for a skeleton assembly
-
 	MaxBodyFetch    = 128 // Amount of block bodies to be fetched per retrieval request
 	MaxReceiptFetch = 256 // Amount of transaction receipts to allow fetching per request
 	MaxStateFetch   = 384 // Amount of node state values to allow fetching per request
@@ -94,7 +92,6 @@ var (
 	errCancelBodyFetch         = errors.New("block body download canceled (requested)")
 	errCancelReceiptFetch      = errors.New("receipt download canceled (requested)")
 	errCancelStateFetch        = errors.New("state data download canceled (requested)")
-	errCancelEpochGenesisFetch = errors.New("Epoch Genesis data download canceled (requested)")
 	errCancelHeaderProcessing  = errors.New("header processing canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errNoSyncActive            = errors.New("no sync active")
@@ -140,10 +137,6 @@ type Downloader struct {
 	receiptWakeCh chan bool            // [eth/63] Channel to signal the receipt fetcher of new tasks
 	headerProcCh  chan []*types.Header // [eth/62] Channel to feed the header processor new tasks
 
-	//for epoch genesis
-	epochGenesisSyncStart chan uint64
-	epochGenesisCh        chan dataPack
-	epochGenesisFbCh      chan int64
 	headerTdCh            chan headerTdPack
 
 	// for stateFetcher
@@ -225,34 +218,30 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 	}
 
 	dl := &Downloader{
-		mode:          mode,
-		stateDB:       stateDb,
-		mux:           mux,
-		queue:         newQueue(),
-		peers:         newPeerSet(),
-		rttEstimate:   uint64(rttMaxEstimate),
-		rttConfidence: uint64(1000000),
-		blockchain:    chain,
-		lightchain:    lightchain,
-		dropPeer:      dropPeer,
-		headerCh:      make(chan dataPack, 1),
-		bodyCh:        make(chan dataPack, 1),
-		receiptCh:     make(chan dataPack, 1),
-		bodyWakeCh:    make(chan bool, 1),
-		receiptWakeCh: make(chan bool, 1),
-		headerProcCh:  make(chan []*types.Header, 1),
-		quitCh:        make(chan struct{}),
-		stateCh:       make(chan dataPack),
-
+		mode:           mode,
+		stateDB:        stateDb,
+		mux:            mux,
+		queue:          newQueue(),
+		peers:          newPeerSet(),
+		rttEstimate:    uint64(rttMaxEstimate),
+		rttConfidence:  uint64(1000000),
+		blockchain:     chain,
+		lightchain:     lightchain,
+		dropPeer:       dropPeer,
+		headerCh:       make(chan dataPack, 1),
+		bodyCh:         make(chan dataPack, 1),
+		receiptCh:      make(chan dataPack, 1),
+		bodyWakeCh:     make(chan bool, 1),
+		receiptWakeCh:  make(chan bool, 1),
+		headerProcCh:   make(chan []*types.Header, 1),
+		quitCh:         make(chan struct{}),
+		stateCh:        make(chan dataPack),
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
 		headerTdCh:            make(chan headerTdPack, 1),
 	}
-
 	go dl.qosTuner()
-
 	go dl.stateFetcher()
-
 	return dl
 }
 
@@ -367,7 +356,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
 		return errBusy
 	}
-
 	defer atomic.StoreInt32(&d.synchronising, 0)
 
 	// Post a user notification of the sync (only once per session)
@@ -432,7 +420,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	d.mux.Post(StartEvent{})
 	defer func() {
 		// reset on error
-		log.Info("syncWithPeer", "err", err)
 		if err != nil {
 			d.mux.Post(FailedEvent{err})
 		} else {
@@ -679,7 +666,6 @@ func (d *Downloader) spawnSyncQ(fetchers []func() error) error {
 	log.Debug("spawnSync finished", "")
 
 	return err
-
 }
 
 // Cancel cancels all of the operations and resets the queue. It returns true
@@ -942,13 +928,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 				arrived = true
 
-
 				// Modify the search interval based on the response
 				if (d.mode == FullSync && !d.blockchain.HasBlockAndState(headers[0].Hash())) || (d.mode != FullSync && !d.lightchain.HasHeader(headers[0].Hash(), headers[0].Number.Uint64())) {
 					end = check
 					break
 				}
-
 				header := d.lightchain.GetHeaderByHash(headers[0].Hash()) // Independent of sync mode, header surely exists
 				if header.Number.Uint64() != check {
 					p.log.Debug("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
@@ -1064,19 +1048,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 				}
 				from += uint64(len(headers))
 			}
-			//if to == 0 || from <= to {
-				getHeaders(from)
-			//} else {
-			//	if from > to {
-			//		p.log.Debug("No more headers available")
-			//		select {
-			//		case d.headerProcCh <- nil:
-			//			return nil
-			//		case <-d.cancelCh:
-			//			return errCancelHeaderFetch
-			//		}
-			//	}
-			//}
+			getHeaders(from)
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
@@ -1091,12 +1063,10 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 				case <-d.cancelCh:
 				}
 			}
-
 			select {
 			case d.headerProcCh <- nil:
 			case <-d.cancelCh:
 			}
-
 			return errBadPeer
 		}
 	}
