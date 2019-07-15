@@ -48,7 +48,7 @@ var TestnetBootnodes = []string{
 var InternalBootnodes = []string{
 	//"enode://dea09d1ded799044d3b8b5c66e28e584ea3fdaae12e0e39bb3491ac99424cc6c098f32e978c4aef1c3382c3c4492d7a33d720eabdee78cddba28541d6bef1bdc@52.53.224.4:17717", //
 	//"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@118.190.33.102:17717",
-	"enode://cad1c70f33c33019cd7cc45ef8f35046b3569dfcff5b6b5cc15409bd6fc4f271309bf5bf21976e1d2d681ca9f3ffe5eab37c5dd2a6ed72b189ef66b7006a027f@52.53.219.172:17717",
+	"enode://f0b604a19b711d20e60912fa2acc3b4966b3f1d8339bbcdd134d51e6ef7245927c09804aba1b8f94be5f5a77f062952ae58760ee7426299c16f9d19bf47be732@54.183.96.28:17717",
 }
 
 // PlutoBootnodes are the enode URLs of the P2P bootstrap nodes running on the
