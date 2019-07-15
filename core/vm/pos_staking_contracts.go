@@ -42,6 +42,7 @@ const (
 	PSMinDelegatorStake   = 100
 	PSMinFeeRate          = 0
 	PSMaxFeeRate          = 10000
+	PSFeeRateStep		  = 100
 	PSNodeleFeeRate       = 10000
 	MaxTimeDelegate       = 10
 	UpdateDelay           = 3
@@ -347,16 +348,6 @@ var (
 				"indexed": true,
 				"name": "feeRate",
 				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "maxFeeRate",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "effectiveEpoch",
-				"type": "uint256"
 			}
 		],
 		"name": "stakeUpdateFeeRate",
@@ -461,7 +452,7 @@ type UpdateFeeRate struct {
 	ValidatorAddr    common.Address
 	MaxFeeRate uint64
 	FeeRate uint64
-	EffectiveEpoch uint64
+	ChangedEpoch uint64
 }
 //
 // public helper structures
@@ -631,32 +622,6 @@ func (p *PosStaking) getStakeInfo(evm *EVM, addr common.Address) (*StakerInfo, e
 	return &stakerInfo, nil
 }
 
-//func (p *PosStaking) saveStakeMaxFee(evm *EVM, feeRate uint64, address common.Address) error {
-//	feeBytes, err := rlp.EncodeToBytes(feeRate)
-//	if err != nil {
-//		return err
-//	}
-//	key := GetStakeInKeyHash(address)
-//	err = StoreInfo(evm.StateDB, StakersMaxFeeAddr, key, feeBytes)
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
-//
-//func (p *PosStaking) getStakeMaxFee(evm *EVM, address common.Address) (uint64, error) {
-//	key := GetStakeInKeyHash(address)
-//	feeBytes, err := GetInfo(evm.StateDB, StakersMaxFeeAddr, key)
-//	if err != nil {
-//		return 0, err
-//	}
-//	var feeRate uint64
-//	err = rlp.DecodeBytes(feeBytes, &feeRate)
-//	if err != nil {
-//		return 0, err
-//	}
-//	return feeRate, nil
-//}
 
 func (p *PosStaking) getStakeFeeRate(evm *EVM, address common.Address) (*UpdateFeeRate, error) {
 	key := GetStakeInKeyHash(address)
@@ -1004,56 +969,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	return nil, nil
 }
 
-//func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-//	feeRateParam, err := p.updateFeeRateParseAndValid(payload)
-//	if err != nil {
-//		return nil, err
-//	}
-//	stakeInfo, err := p.getStakeInfo(evm, feeRateParam.Addr)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if contract.CallerAddress != stakeInfo.From {
-//		return nil, errors.New("cannot update fee from another account")
-//	}
-//
-//	oldFee, err := p.getStakeFeeRate(evm, stakeInfo.Address)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if oldFee == nil {
-//		oldFee = &UpdateFeeRate{
-//			ValidatorAddr: stakeInfo.Address,
-//			MaxFeeRate: stakeInfo.FeeRate,
-//			FeeRate: stakeInfo.FeeRate,
-//			EffectiveEpoch: stakeInfo.StakingEpoch + stakeInfo.LockEpochs,
-//		}
-//	}
-//
-//	if feeRateParam.FeeRate.Cmp(maxFeeRate) > 0 {
-//		return nil, errors.New("fee rate cannot > 10000")
-//	}
-//
-//	// 0 <= fee <= maxFee
-//	if feeRateParam.FeeRate.Uint64() > oldFee.MaxFeeRate {
-//		return nil, errors.New("fee rate can't bigger than old")
-//	}
-//
-//	oldFee.FeeRate = feeRateParam.FeeRate.Uint64()
-//	if stakeInfo.StakingEpoch == uint64(0) {
-//		oldFee.EffectiveEpoch = 0
-//	}
-//	err = p.saveStakeFeeRate(evm, oldFee, stakeInfo.Address)
-//	if err != nil {
-//		return nil, err
-//	}
-//	err = p.stakeUpdateFeeRateLog(contract, evm, oldFee)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return nil, nil
-//}
+
 
 func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	feeRateParam, err := p.updateFeeRateParseAndValid(payload)
@@ -1066,7 +982,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	}
 
 	// if feeRate == 10000, can't change
-	if stakeInfo.FeeRate == 10000 {
+	if stakeInfo.FeeRate == PSMaxFeeRate || feeRateParam.FeeRate.Uint64() == PSMaxFeeRate  {
 		return nil, errors.New("feeRate equal 10000, can't change")
 	}
 
@@ -1085,14 +1001,10 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 			ValidatorAddr: stakeInfo.Address,
 			MaxFeeRate: stakeInfo.FeeRate,
 			FeeRate: stakeInfo.FeeRate,
-			EffectiveEpoch: eid,
+			ChangedEpoch: eid,
 		}
-	} else if oldFee.EffectiveEpoch == eid {
+	} else if oldFee.ChangedEpoch == eid {
 		return nil, errors.New("one epoch can only change one time")
-	}
-	// fee rate can't == 10000
-	if feeRateParam.FeeRate.Cmp(maxFeeRate) >= 0 {
-		return nil, errors.New("fee rate cannot >= 10000")
 	}
 
 	feeRate := feeRateParam.FeeRate.Uint64()
@@ -1100,12 +1012,12 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if feeRate > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
 	}
-	if feeRate > stakeInfo.FeeRate + 100 {
+	if feeRate > stakeInfo.FeeRate + PSFeeRateStep {
 		return nil, errors.New("0 <= newFeeRate <= oldFeerate + 1")
 	}
 
 	oldFee.FeeRate = feeRate
-	oldFee.EffectiveEpoch = eid
+	oldFee.ChangedEpoch = eid
 
 	stakeInfo.FeeRate = feeRate
 
@@ -1207,7 +1119,7 @@ func (p *PosStaking) stakeInParseAndValid(payload []byte) (StakeInParam, error) 
 		return info, errors.New("invalid lock time")
 	}
 
-	// 4. 0 <= FeeRate <= 100
+	// 4. 0 <= FeeRate <= 10000
 	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
 		return info, errors.New("fee rate should between 0 to 100")
 	}
@@ -1268,6 +1180,10 @@ func (p *PosStaking) updateFeeRateParseAndValid(payload []byte) (*UpdateFeeRateP
 	if err != nil {
 		return nil, err
 	}
+	if updateFeeRateParam.FeeRate.Cmp(maxFeeRate) > 0 || updateFeeRateParam.FeeRate.Cmp(minFeeRate) < 0 {
+		return nil, errors.New("fee rate should between 0 to 10000")
+	}
+
 	return &updateFeeRateParam, nil
 }
 
@@ -1387,18 +1303,18 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid >= posconfig.ApploEpochID {
-		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint effectiveEpoch);
+		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint ChangedEpoch);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
 		params[2] = common.BigToHash(new(big.Int).SetUint64(feeInfo.FeeRate))
 
-		data := make([]byte, 0)
-		data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate)).Bytes()...)
-		data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.EffectiveEpoch)).Bytes()...)
+		//data := make([]byte, 0)
+		//data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate)).Bytes()...)
+		//data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.ChangedEpoch)).Bytes()...)
 
 		sig := cscAbi.Events["stakeUpdateFeeRate"].Id().Bytes()
-		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
+		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 	return nil
 }
