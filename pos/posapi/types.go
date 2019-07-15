@@ -75,7 +75,6 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 
-	NextFeeRate uint64
 	MaxFeeRate  uint64
 }
 
