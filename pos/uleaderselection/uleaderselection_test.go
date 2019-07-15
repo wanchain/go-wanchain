@@ -103,6 +103,8 @@ func TestVerifyDleqProof(t *testing.T) {
 	}
 }
 
+
+
 func TestGenerateArrayPiece(t *testing.T) {
 	pksamples, err := genPublicKeys(Ns)
 	if err != nil {
@@ -375,6 +377,73 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestDleqWithDiffAlpha(t *testing.T) {
+	PrivateKeys, err := genPrivateKeys(Ne)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var RB = []byte{byte(1)}
+	//Sort PrivateKeys
+	PrivateKeys, err = SortPrivateKey(PrivateKeys, RB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	PublicKeys := make([]*ecdsa.PublicKey, 0)
+	for i := 0; i < Ne; i++ {
+		PublicKeys = append(PublicKeys, &PrivateKeys[i].PublicKey)
+	}
+
+	alpha, err := randFieldElement(Rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	PublicKeys, alphaPublicKeys, Proof, err := GenerateArrayPieceWithDiffAlpha(PublicKeys, alpha)
+	//PublicKeys, alphaPublicKeys, Proof, err := GenerateArrayPiece(PublicKeys, alpha)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ret := VerifyDleqProof(PublicKeys, alphaPublicKeys, Proof)
+	if ret {
+		t.Errorf("VerifyDleqProof should return false,but true")
+	}
+}
+
+func GenerateArrayPieceWithDiffAlpha(PublicKeys []*ecdsa.PublicKey,
+	alpha *big.Int) ([]*ecdsa.PublicKey, []*ecdsa.PublicKey, []*big.Int, error) {
+	if len(PublicKeys) == 0 || alpha.Cmp(Big0) == 0 || alpha.Cmp(Big1) == 0 {
+		return nil, nil, nil, ErrInvalidArrayPieceGeneration
+	}
+	ArrayPiece := make([]*ecdsa.PublicKey, 0)
+	n := len(PublicKeys)
+	for i := 0; i < n-1; i++ {
+		piece := new(ecdsa.PublicKey)
+		piece.Curve = crypto.S256()
+		if PublicKeys[i] == nil {
+			fmt.Println("------ERROR----PublicKey == nil")
+			fmt.Println(PublicKeys)
+			return nil, nil, nil, ErrInvalidArrayPieceGeneration
+		}
+		piece.X, piece.Y = crypto.S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, alpha.Bytes()) //piece = alpha * PublicKey
+		ArrayPiece = append(ArrayPiece, piece)                                                       //ArrayPiece = (alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
+	}
+
+	// the last one element with different random.
+	alphaOne := alpha.Add(alpha,Big1)
+	piece := new(ecdsa.PublicKey)
+	piece.Curve = crypto.S256()
+	piece.X, piece.Y = crypto.S256().ScalarMult(PublicKeys[n-1].X, PublicKeys[n-1].Y, alphaOne.Bytes()) //piece = alpha * PublicKey
+	ArrayPiece = append(ArrayPiece, piece)                                                       //ArrayPiece = (alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
+
+	proof, err := DleqProofGeneration(PublicKeys, ArrayPiece, alpha)
+	if err != nil {
+		return nil, nil, nil, ErrInvalidArrayPieceGeneration
+	}
+	return PublicKeys, ArrayPiece, proof, nil
+
 }
 
 //Test Sample Functions below
