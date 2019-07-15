@@ -25,6 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 )
 
@@ -125,8 +126,8 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 // The result may be modified by the caller.
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) *big.Int {
-	_, epId := util.CalEpochSlotID(parent.Header().Time.Uint64())
-	if epId >= 18087 {
+	epId, _ := util.CalEpochSlotID(parent.Header().Time.Uint64())
+	if epId >= posconfig.ApploEpochID {
 		params.GasLimitBoundDivisor = big.NewInt(40)
 	}
 
