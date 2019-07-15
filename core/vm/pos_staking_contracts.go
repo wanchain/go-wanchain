@@ -986,6 +986,10 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 		return nil, errors.New("feeRate equal 10000, can't change")
 	}
 
+	if stakeInfo.FeeRate == feeRateParam.FeeRate.Uint64() {
+		return nil, errors.New("feeRate already same")
+	}
+
 	if contract.CallerAddress != stakeInfo.From {
 		return nil, errors.New("cannot update fee from another account")
 	}

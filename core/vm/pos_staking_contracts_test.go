@@ -586,7 +586,12 @@ func TestUpdateFeeRate(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0xaaaa7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate already same" {
+		t.Fatal("feeRate already same")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0xaaaa7c0813a51d3bd1d08246af2a8a7a57d8922e"), 999)
 	if err == nil || err.Error() != "updateFeeRate called failed cannot update fee from another account" {
 		t.Fatal("cannot update fee from another account")
 	}
@@ -605,8 +610,8 @@ func TestUpdateFeeRate(t *testing.T) {
 	}
 
 	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
-	if err == nil || err.Error() != "updateFeeRate called failed fee rate cannot >= 10000" {
-		t.Fatal("fee rate cannot > 10000")
+	if err == nil || err.Error() != "updateFeeRate called failed fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
 	}
 
 	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1001)
@@ -755,6 +760,30 @@ func TestUpdateFeeRateParam(t *testing.T) {
 	err := doUpdateFeeRateParam(input)
 	if err != nil {
 		t.Fatal("update fee rate param failed " + err.Error())
+	}
+
+	input.FeeRate = big.NewInt(-1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+
+	input.FeeRate = minFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = maxFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = big.NewInt(PSMaxFeeRate + 1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
 	}
 }
 
