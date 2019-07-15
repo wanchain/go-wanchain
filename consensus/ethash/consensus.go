@@ -22,12 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+
 	//"runtime"
 	"time"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
+
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -37,6 +41,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
+
 	//set "gopkg.in/fatih/set.v0"
 	"runtime"
 )
@@ -49,10 +54,10 @@ const (
 // Ethash proof-of-work protocol constants.
 var (
 	//frontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	byzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	maxUncles                     = 0                 // Maximum number of uncles allowed in a single block
-	extraVanity                   = 32                // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal                     = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
+	byzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
+	maxUncles                       = 0                 // Maximum number of uncles allowed in a single block
+	extraVanity                     = 32                // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal                       = 65                // Fixed number of extra-data suffix bytes reserved for signer seal
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 
 )
@@ -380,7 +385,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, cap)
 	}
 	// Verify that the gasUsed is <= gasLimit
-	if header.GasUsed.Cmp(header.GasLimit)>0 {
+	if header.GasUsed.Cmp(header.GasLimit) > 0 {
 		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
 	}
 
@@ -389,6 +394,12 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 	if diff < 0 {
 		diff *= -1
 	}
+
+	epId, _ := util.CalEpochSlotID(parent.Time.Uint64())
+	if epId >= posconfig.ApploEpochID {
+		params.GasLimitBoundDivisor = big.NewInt(40)
+	}
+
 	limit := parent.GasLimit.Uint64() / params.GasLimitBoundDivisor.Uint64()
 
 	if uint64(diff) >= limit || header.GasLimit.Uint64() < params.MinGasLimit.Uint64() {
@@ -427,6 +438,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return CalcDifficulty(chain.Config(), time, parent)
 }
+
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	//next := new(big.Int).Add(parent.Number, big1)
@@ -452,15 +464,15 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 	}
 
 	// Coinbase[N-windowLen-1] == Coinbase[N], N is short for posBootstrapBlockNum
-	posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
+	posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64() - 1
 	if number == posBootstrapBlockNum {
-		ppowWindowLen := (len(s.UsedSigners)-1) / 2
+		ppowWindowLen := (len(s.UsedSigners) - 1) / 2
 		slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
 		if slotheader == nil {
-			for i:=len(parents); i>0; i-- {
-				if parents[i - 1] != nil {
-					if parents[i - 1].Number.Uint64() == posBootstrapBlockNum - uint64(ppowWindowLen+1) {
-						slotheader = parents[i - 1]
+			for i := len(parents); i > 0; i-- {
+				if parents[i-1] != nil {
+					if parents[i-1].Number.Uint64() == posBootstrapBlockNum-uint64(ppowWindowLen+1) {
+						slotheader = parents[i-1]
 						break
 					}
 				} else {
@@ -775,18 +787,18 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 			return err
 		}
 
-		posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64()-1
+		posBootstrapBlockNum := chain.Config().PosFirstBlock.Uint64() - 1
 		if header.Number.Uint64() == posBootstrapBlockNum {
-			ppowWindowLen := (len(snap.UsedSigners)-1) / 2
+			ppowWindowLen := (len(snap.UsedSigners) - 1) / 2
 			slotheader := chain.GetHeaderByNumber(posBootstrapBlockNum - uint64(ppowWindowLen+1))
 			if slotheader.Coinbase != header.Coinbase {
 				return errors.New("invalid leader")
 			}
-			
+
 			// TODO: delay a time to match a pos epoc start
 		}
 
-		if header.Number.Uint64() > posBootstrapBlockNum{			
+		if header.Number.Uint64() > posBootstrapBlockNum {
 			return errors.New("consensus engine switched")
 		}
 
@@ -795,7 +807,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header,
 			return err
 		}
 	}
-	
+
 	//fix error that difficulty increase too large to block json.Unmarshal error in dev mode
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		header.Difficulty = new(big.Int).SetUint64(1)
