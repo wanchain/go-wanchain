@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 )
 
@@ -128,7 +128,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 func CalcGasLimit(parent *types.Block) *big.Int {
 	epId, _ := util.CalEpochSlotID(parent.Header().Time.Uint64())
 	if epId >= posconfig.ApploEpochID {
-		params.GasLimitBoundDivisor = big.NewInt(300)
+		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
 	}
 
 	// contrib = (parentGasUsed * 3 / 2) / 1024
