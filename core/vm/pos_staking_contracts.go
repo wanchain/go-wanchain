@@ -53,6 +53,7 @@ const (
 	PSMaxFeeRate          = 10000
 	PSFeeRateStep		  = 100
 	PSNodeleFeeRate       = 10000
+	PSMinPartnerIn        = 10000
 	MaxTimeDelegate       = 10
 	UpdateDelay           = 3
 	QuitDelay             = 3
@@ -374,6 +375,7 @@ var (
 	maxTotalStake              = new(big.Int).Mul(big.NewInt(PSMaxStake), ether)
 	minFeeRate                 = big.NewInt(PSMinFeeRate)
 	maxFeeRate                 = big.NewInt(PSMaxFeeRate)
+	minPartnerIn               = new(big.Int).Mul(big.NewInt(PSMinPartnerIn), ether)
 	noDelegateFeeRate          = big.NewInt(PSNodeleFeeRate)
 	StakersInfoStakeOutKeyHash = common.BytesToHash(big.NewInt(PSOutKeyHash).Bytes())
 )
@@ -689,6 +691,10 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	stakerInfo, err := p.getStakeInfo(evm, info.Addr)
 	if err != nil {
 		return nil, err
+	}
+
+	if contract.Value().Cmp(minPartnerIn) < 0 {
+		return nil, errors.New("min wan amount should >= 10000")
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())

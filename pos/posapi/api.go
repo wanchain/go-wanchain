@@ -322,12 +322,15 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 			var newFee vm.UpdateFeeRate
 			err = rlp.DecodeBytes(newFeeBytes, &newFee)
 			if err != nil {
-				stakeJson.MaxFeeRate = staker.FeeRate
-			} else {
 				stakeJson.MaxFeeRate = newFee.MaxFeeRate
+				stakeJson.FeeRateChangedEpoch = newFee.ChangedEpoch
+			} else {
+				stakeJson.MaxFeeRate = staker.FeeRate
+				stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
 			}
 		} else {
 			stakeJson.MaxFeeRate = staker.FeeRate
+			stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
 		}
 
 		stakers = append(stakers, stakeJson)

@@ -385,27 +385,27 @@ func TestPartnerIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("Too many partners, should fail")
 	}
@@ -421,6 +421,10 @@ func TestPartnerIn(t *testing.T) {
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("should be error, stake + partner < 50000")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9999)
+	if err == nil {
+		t.Fatal("should be error, min wan amount should >= 10000")
 	}
 	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
 	if err != nil {
