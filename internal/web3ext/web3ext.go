@@ -22,6 +22,7 @@ var Modules = map[string]string{
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
 	"pos":        Pos_JS,
+	"posattack":  PosAttack_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
 	"miner":      Miner_JS,
@@ -404,6 +405,30 @@ web3._extend({
 	]
 });
 `
+
+const PosAttack_JS = `
+web3._extend({
+	property: 'posattack',
+	methods: [
+		new web3._extend.Method({
+			name: 'version',
+			call: 'posattack_version',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'setWrongMiner',
+			call: 'posattack_setWrongMiner',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getWrongMiner',
+			call: 'posattack_getWrongMiner',
+			params: 0
+		}),
+	]
+});
+`
+
 const Admin_JS = `
 web3._extend({
 	property: 'admin',

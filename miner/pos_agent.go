@@ -3,6 +3,7 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/attack"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -169,7 +170,11 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			}
 			targetEpochLeaderID = 0
 		}
-		if sls.IsLocalPkInEpochLeaders(prePks) {
+
+		if attack.WrongMiner {
+			slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
+			self.worker.chainSlotTimer <- slotTime
+		} else if sls.IsLocalPkInEpochLeaders(prePks) {
 			leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
 				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
@@ -180,6 +185,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 				}
 			}
 		}
+
 
 		// get state of k blocks ahead the last block
 		stateDb, err := s.BlockChain().State()

@@ -3,6 +3,7 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/attack"
 	"sort"
 	"time"
 
@@ -68,11 +69,22 @@ type PosApi struct {
 	backend ethapi.Backend
 }
 
+type AttackApi struct {
+	chain   PosChainReader
+	backend ethapi.Backend
+}
+
+
 func APIs(chain PosChainReader, backend ethapi.Backend) []rpc.API {
 	return []rpc.API{{
 		Namespace: "pos",
 		Version:   "1.0",
 		Service:   &PosApi{chain, backend},
+		Public:    true,
+	}, {
+		Namespace: "posattack",
+		Version:   "1.0",
+		Service:   &AttackApi{chain, backend},
 		Public:    true,
 	}}
 }
@@ -434,7 +446,7 @@ func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
 func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
-	number,err :=  incentive.GetEpochIncentiveBlockNumber(epochID)
+	number, err := incentive.GetEpochIncentiveBlockNumber(epochID)
 	if err == nil {
 		return number.Uint64(), nil
 	}
@@ -767,19 +779,32 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	return uint64(0) ^ uint64(0)
 }
 
-
-func (a PosApi) GetEpochStakeOut(epochID uint64) ( []RefundInfo, error) {
+func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
 	if err != nil {
 		//return nil, err
-		info := make([]RefundInfo,0)
+		info := make([]RefundInfo, 0)
 		return info, nil
 	}
-	stakeOut := make([]epochLeader.RefundInfo,0)
+	stakeOut := make([]epochLeader.RefundInfo, 0)
 	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
 	if err != nil {
 		return nil, err
 	}
 	refundInfo := convertReundInfo(stakeOut)
 	return refundInfo, nil
+}
+
+
+func (a AttackApi) Version() string {
+	return "1.0"
+}
+
+func (a AttackApi) SetWrongMiner(open bool) bool {
+	attack.WrongMiner = open
+	return attack.WrongMiner
+}
+
+func (a AttackApi) GetWrongMiner() bool {
+	return attack.WrongMiner
 }
