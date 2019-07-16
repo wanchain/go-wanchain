@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 )
@@ -94,6 +95,7 @@ func (d *DockerAdapter) NewNode(config *NodeConfig) (Node, error) {
 	conf.Stack.P2P.NoDiscovery = true
 	conf.Stack.P2P.NAT = nil
 	conf.Stack.NoUSB = true
+	conf.Stack.Logger = log.New("node.id", config.ID.String())
 
 	node := &DockerNode{
 		ExecNode: ExecNode{

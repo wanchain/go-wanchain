@@ -116,7 +116,5 @@ func sntpDrift(measurements int) (time.Duration, error) {
 	for i := 1; i < len(drifts)-1; i++ {
 		drift += drifts[i]
 	}
-
 	return drift / time.Duration(measurements), nil
-
 }
