@@ -25,10 +25,19 @@ import (
 contract stake {
 	function stakeIn(bytes memory secPk, bytes memory bn256Pk, uint256 lockEpochs, uint256 feeRate) public payable {}
 	function stakeUpdate(address addr, uint256 lockEpochs) public {}
+	function stakeUpdateFeeRate(address addr, uint256 feeRate) public {}
 	function stakeAppend(address addr) public payable {}
 	function partnerIn(address addr, bool renewal) public payable {}
 	function delegateIn(address delegateAddress) public payable {}
 	function delegateOut(address delegateAddress) public {}
+
+	event stakeIn(address indexed sender, address indexed posAddress, uint indexed value, uint256 feeRate, uint256 lockEpoch);
+	event stakeAppend(address indexed sender, address indexed posAddress, uint indexed value);
+	event stakeUpdate(address indexed sender, address indexed posAddress, uint indexed lockEpoch);
+	event delegateIn(address indexed sender, address indexed posAddress, uint indexed value);
+	event delegateOut(address indexed sender, address indexed posAddress);
+	event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate);
+	event partnerIn(address indexed sender, address indexed posAddress, uint indexed value, bool renewal);
 }
 
 */
@@ -277,16 +286,6 @@ var (
 				"indexed": false,
 				"name": "renewal",
 				"type": "bool"
-			},
-			{
-				"indexed": false,
-				"name": "stakingEpoch",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "lockEpoch",
-				"type": "uint256"
 			}
 		],
 		"name": "partnerIn",
@@ -747,7 +746,7 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 	if partner != nil {
-		err = p.partnerInLog(contract, evm, &info.Addr, info.Renewal, partner.StakingEpoch, partner.LockEpochs)
+		err = p.partnerInLog(contract, evm, &info.Addr, info.Renewal)
 		if err != nil {
 			return nil, err
 		}
@@ -965,7 +964,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	if err != nil {
 		return nil, err
 	}
-	p.delegatOutLog(contract, evm, stakerInfo.Address)
+	p.delegateOutLog(contract, evm, stakerInfo.Address)
 	return nil, nil
 }
 
@@ -1017,7 +1016,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 		return nil, errors.New("fee rate can't bigger than old")
 	}
 	if feeRate > stakeInfo.FeeRate + PSFeeRateStep {
-		return nil, errors.New("0 <= newFeeRate <= oldFeerate + 1")
+		return nil, errors.New("0 <= newFeeRate <= oldFeerate + 100")
 	}
 
 	oldFee.FeeRate = feeRate
@@ -1284,7 +1283,7 @@ func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator commo
 	}
 }
 
-func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator common.Address) error {
+func (p *PosStaking) delegateOutLog(contract *Contract, evm *EVM, validator common.Address) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid < posconfig.ApploEpochID {
 		params := make([]common.Hash, 2)
@@ -1299,7 +1298,7 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = validator.Hash()
 
-		sig := cscAbi.Events["delegatOut"].Id().Bytes()
+		sig := cscAbi.Events["delegateOut"].Id().Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 }
@@ -1307,7 +1306,7 @@ func (p *PosStaking) delegatOutLog(contract *Contract, evm *EVM, validator commo
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid >= posconfig.ApploEpochID {
-		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate, uint maxFeeRate, uint ChangedEpoch);
+		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BytesToHash(feeInfo.ValidatorAddr.Bytes())
@@ -1323,10 +1322,10 @@ func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo
 	return nil
 }
 
-func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool, stakingEpoch uint64, lochEpoch uint64) error {
+func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool) error {
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid >= posconfig.ApploEpochID {
-		// event partnerIn(address indexed sender, address indexed posAddress, uint indexed v, bool renewal, uint stakingEpoch, uint lockEpoch);
+		// event partnerIn(address indexed sender, address indexed posAddress, uint indexed v, bool renewal);
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BytesToHash(addr.Bytes())
@@ -1338,8 +1337,6 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 		}
 		data := make([]byte, 0)
 		data = append(data, common.BigToHash(new(big.Int).SetUint64(renewal)).Bytes()...)
-		data = append(data, common.BigToHash(new(big.Int).SetUint64(stakingEpoch)).Bytes()...)
-		data = append(data, common.BigToHash(new(big.Int).SetUint64(lochEpoch)).Bytes()...)
 
 		sig := cscAbi.Events["partnerIn"].Id().Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
