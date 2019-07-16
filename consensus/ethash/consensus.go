@@ -397,7 +397,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header *types.He
 
 	epId, _ := util.CalEpochSlotID(parent.Time.Uint64())
 	if epId >= posconfig.ApploEpochID {
-		params.GasLimitBoundDivisor = big.NewInt(40)
+		params.GasLimitBoundDivisor = big.NewInt(300)
 	}
 
 	limit := parent.GasLimit.Uint64() / params.GasLimitBoundDivisor.Uint64()
