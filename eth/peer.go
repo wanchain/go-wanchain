@@ -166,7 +166,7 @@ func (p *peer) SendBufferTxsLoop() {
 					cp := p.bufferTxs.Copy()
 					p.bufferTxs.Clear()
 
-					go p2p.Send(p.rw, TxMsg,cp)
+					go p2p.Send(p.rw, TxMsg,cp.List())
 				}
 		}
 
