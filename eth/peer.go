@@ -67,6 +67,7 @@ type peer struct {
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 
 	bufferTxs   *set.Set
+	receiveTxs   *set.Set
 
 }
 
@@ -81,6 +82,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		bufferTxs:	 set.New(),
+		receiveTxs:  set.New(),
 	}
 
 	go newp.SendBufferTxsLoop()

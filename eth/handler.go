@@ -318,7 +318,6 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-var txMsgs = make([]*types.Transaction, 0)
 var txMsgLastAdd int64  = 0
 func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
@@ -336,15 +335,18 @@ func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 			return errResp(ErrDecode, "transaction %d is nil", i)
 		}
 		p.MarkTransaction(tx.Hash())
-		txMsgs = append(txMsgs, tx)
+		p.receiveTxs.Add(tx)
 	}
 	cur := time.Now().Unix()
-	if len(txMsgs) >= 512 || cur > txMsgLastAdd {
+	if p.receiveTxs.Size() >= 512 || cur > txMsgLastAdd {
 		txMsgLastAdd = cur
-		var txp = make([]*types.Transaction, 0)
-		txp = append(txp, txMsgs...)
-		txMsgs  = make([]*types.Transaction, 0)
-		go pm.txpool.AddRemotes(txp)
+		txp := make([]*types.Transaction, p.receiveTxs.Size())
+		txs := p.receiveTxs.List()
+		for i, tx := range  txs{
+			txp[i] = tx.(*types.Transaction)
+		}
+		p.receiveTxs.Clear()
+		go pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 	}
 	return nil
 }
