@@ -66,19 +66,27 @@ type peer struct {
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 
+	bufferTxs   *set.Set
+
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	id := p.ID()
 
-	return &peer{
+	newp := &peer{
 		Peer:        p,
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		bufferTxs:	 set.New(),
 	}
+
+	go newp.SendBufferTxsLoop()
+
+	return newp
+
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -138,9 +146,33 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 func (p *peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.knownTxs.Add(tx.Hash())
+		p.bufferTxs.Add(tx)
 	}
-	return p2p.Send(p.rw, TxMsg, txs)
+
+	return nil
+	//return p2p.Send(p.rw, TxMsg, txs)
 }
+
+func (p *peer) SendBufferTxsLoop() {
+
+	tick := time.NewTicker(1 * time.Second)
+
+	for {
+		select {
+			case <-tick.C:
+
+				if p.bufferTxs.Size() > 0 {
+
+					cp := p.bufferTxs.Copy()
+					p.bufferTxs.Clear()
+
+					go p2p.Send(p.rw, TxMsg,cp)
+				}
+		}
+
+	}
+}
+
 
 // SendNewBlockHashes announces the availability of a number of blocks through
 // a hash notification.
