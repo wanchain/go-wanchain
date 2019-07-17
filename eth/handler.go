@@ -318,7 +318,8 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-var txMsgs = make([]*types.Transaction, 0, 1024)
+var txMsgs = make([]*types.Transaction, 0)
+var txMsgLastAdd int64  = 0
 func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -337,10 +338,12 @@ func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		txMsgs = append(txMsgs, tx)
 	}
-	if len(txMsgs) >= 512 {
-		var txp = make([]*types.Transaction, 0, 1024)
+	cur := time.Now().Unix()
+	if len(txMsgs) >= 512 || cur > txMsgLastAdd {
+		txMsgLastAdd = cur
+		var txp = make([]*types.Transaction, 0)
 		txp = append(txp, txMsgs...)
-		txMsgs  = make([]*types.Transaction, 0, 1024)
+		txMsgs  = make([]*types.Transaction, 0)
 		go pm.txpool.AddRemotes(txp)
 	}
 	return nil
