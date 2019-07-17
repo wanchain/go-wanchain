@@ -54,7 +54,6 @@ const (
 var (
 	daoChallengeTimeout = 15 * time.Second // Time allowance for a node to reply to the DAO handshake challenge
 )
-
 // errIncompatibleConfig is returned if the requested protocols and configs are
 // not compatible (low protocol version restrictions and high requirements).
 var errIncompatibleConfig = errors.New("incompatible configuration")
@@ -319,6 +318,33 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
+var txMsgs = make([]*types.Transaction, 0, 1024)
+func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
+	// Transactions arrived, make sure we have a valid and fresh chain to handle them
+	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+		return nil
+	}
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	for i, tx := range txs {
+		// Validate and mark the remote transaction
+		if tx == nil {
+			return errResp(ErrDecode, "transaction %d is nil", i)
+		}
+		p.MarkTransaction(tx.Hash())
+		txMsgs = append(txMsgs, tx)
+	}
+	if len(txMsgs) >= 512 {
+		var txp = make([]*types.Transaction, 0, 1024)
+		txp = append(txp, txMsgs...)
+		txMsgs  = make([]*types.Transaction, 0, 1024)
+		go pm.txpool.AddRemotes(txp)
+	}
+	return nil
+}
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
@@ -706,24 +732,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-			break
-		}
-		// Transactions can be processed, parse all of them and deliver to the pool
-		var txs []*types.Transaction
-		if err := msg.Decode(&txs); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		for i, tx := range txs {
-			// Validate and mark the remote transaction
-			if tx == nil {
-				return errResp(ErrDecode, "transaction %d is nil", i)
-			}
-			p.MarkTransaction(tx.Hash())
-		}
-		go pm.txpool.AddRemotes(txs)
-
+		pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
