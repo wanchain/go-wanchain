@@ -27,9 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rlp"
-	set "gopkg.in/fatih/set.v0"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/log"
+	"gopkg.in/fatih/set.v0"
 )
 
 var (
@@ -171,9 +169,7 @@ func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 func (p *peer) SendBlockHeaderTd(header *types.Header, td *big.Int) error {
 	return p2p.Send(p.rw, BlockHeaderTdMsg, []interface{}{header, td})
 }
-func (p *peer) SendPivot(pivotData *types.PivotData) error {
-	return p2p.Send(p.rw, PivotMsg, pivotData)
-}
+
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *peer) SendBlockBodies(bodies []*blockBody) error {
@@ -253,30 +249,6 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
-
-func (p *peer) RequestEpochGenesisData(epochids uint64) error {
-	p.Log().Debug("Fetching epoch genesis data", "count", 1)
-	return p2p.Send(p.rw, GetEpochGenesisMsg, epochids)
-}
-
-//send epoch genesis
-func (p *peer) SendEpochGenesis(bc *core.BlockChain,epochId uint64) error {
-	p.Log().Debug("Fetching epoch genesis", "epochId", epochId)
-	epochGenesis, whiteHeader, err := bc.GetEpochGenesisAndWhiteHeader(epochId)
-	if err != nil {
-		log.Info("error to generate epoch genesis " + err.Error())
-		return err
-	}
-
-	return p2p.Send(p.rw, EpochGenesisMsg, &epochGenesisBody{EpochGenesis:epochGenesis, WhiteHeader:whiteHeader})
-}
-
-//func (p *peer)SetEpochGenesis(bc *core.BlockChain,epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
-//	p.Log().Debug("Setting epoch genesis", "epochId", epochgen.EpochId)
-//	bc.SetEpochGenesis(epochgen, whiteHeader)
-//	return nil
-//}
-////////////////////////////////////////////////////////////////
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.

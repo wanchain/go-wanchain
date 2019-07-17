@@ -16,7 +16,7 @@ http://testnet.wanscan.org/
 
 Wanstats地址为：
 
-http://54.193.4.239/
+http://testnet.wanstats.io/
 
 Faucet地址为：
 
@@ -80,6 +80,20 @@ wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/d
 脚本将提示您输入validator账号的密码。
 
 脚本执行完成后，将反馈validator的账号地址和2个公钥，请将其完整备份下来供后续注册使用。
+
+如果需要重启节点，请使用如下命令：
+
+```
+wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/restartValidator.sh && chmod +x restartValidator.sh && ./restartValidator.sh
+```
+
+可以使用如下命令查看工作日志：
+
+```
+sudo docker logs -f gwan
+```
+
+停止日志查看按Ctrl-C
 
 ## 4.2. 通过钱包注册验证节点
 

@@ -683,6 +683,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			trueHead = request.Block.ParentHash()
 			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
 		)
+
 		// Update the peers total difficulty if better than the previous
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
 			p.SetHead(trueHead, trueTD)
@@ -723,28 +724,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
-	case p.version >= eth63 && msg.Code == GetEpochGenesisMsg:
-		var epochid uint64
-		if err := msg.Decode(&epochid); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		return p.SendEpochGenesis(pm.blockchain, epochid)
-
-	case p.version >= eth63 && msg.Code == EpochGenesisMsg:
-		var epBody epochGenesisBody
-		if err := msg.Decode(&epBody); err != nil {
-			log.Debug("Failed to decode epoch genesis data", "err", err)
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		if epBody.EpochGenesis.EpochId == uint64(2601143) {
-			log.Debug("epoch id == 2601143")
-		}
-
-		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis, epBody.WhiteHeader); err != nil {
-			log.Debug("Failed to deliver epoch genesis data", "err", err)
-		}
-
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
@@ -775,25 +754,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		if err := pm.downloader.DeliverHeaderTd(p.id, &headerTd); err != nil {
 			log.Debug("Failed to deliver header td", "err", err)
-		}
-
-	case p.version >= eth63 && msg.Code == GetPivotMsg:
-		var query getPivotData
-		if err := msg.Decode(&query); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		pivotData := pm.blockchain.GetPosPivot(query.Origin, query.Height)
-
-		return p.SendPivot(pivotData)
-
-	case p.version >= eth63 && msg.Code == PivotMsg:
-		var pivotData = types.PivotData{}
-		if err := msg.Decode(&pivotData); err != nil {
-			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
-		}
-		err := pm.downloader.DeliverEpochPivot(p.id, &pivotData)
-		if err != nil {
-			log.Debug("Failed to deliver pivot headers", "err", err)
 		}
 
 	default:

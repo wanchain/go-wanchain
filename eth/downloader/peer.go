@@ -92,8 +92,6 @@ type Peer interface {
 	RequestBodies([]common.Hash) error
 	RequestReceipts([]common.Hash) error
 	RequestNodeData([]common.Hash) error
-	RequestEpochGenesisData(uint64) error
-	RequestPivot(origin uint64, height common.Hash) error
 	RequestHeaderTdByNumber(uint64) error
 }
 
@@ -125,13 +123,6 @@ func (w *lightPeerWrapper) RequestNodeData([]common.Hash) error {
 	panic("RequestNodeData not supported in light client mode sync")
 }
 
-func (w *lightPeerWrapper)RequestEpochGenesisData(uint64) error {
-	panic("RequestNodeData not supported in light client mode sync")
-}
-
-func (w *lightPeerWrapper)RequestPivot(origin uint64, height common.Hash) error {
-	panic("RequestPivot not supported in light client mode sync")
-}
 
 // newPeerConnection creates a new downloader peer.
 func newPeerConnection(id string, version int, peer Peer, logger log.Logger) *peerConnection {
@@ -256,8 +247,6 @@ func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
 		return errAlreadyFetching
 	}
 	p.epochGenesisStarted = time.Now()
-
-	go p.peer.RequestEpochGenesisData(epochid)
 
 	return nil
 }

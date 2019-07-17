@@ -37,6 +37,7 @@ var (
 	ErrInvalidPublicKey  = errors.New("public key is nil")
 	ErrSortPublicKey     = errors.New("sort public key error")
 	ErrPublicKeyNotEqual = errors.New("public key is not equal")
+	ErrZeroBigIntProof 	 = errors.New("zero big int proof")
 )
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
@@ -555,6 +556,18 @@ func DleqProofGeneration(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa
 func VerifyDleqProof(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa.PublicKey,
 	Proof []*big.Int) bool {
 	if len(PublicKeys) == 0 || len(AlphaPublicKeys) == 0 || len(PublicKeys) != len(AlphaPublicKeys) || len(Proof) != 2 {
+		return false
+	}
+
+	if Proof[0] == nil || Proof[1] == nil {
+		return false
+	}
+
+	if  Proof[0].Cmp(Big0) == 0 || Proof[1].Cmp(Big0) == 0 {
+		return false
+	}
+
+	if len(Proof[0].Bytes()) > 32 || len(Proof[1].Bytes()) > 32 {
 		return false
 	}
 	n := len(PublicKeys)

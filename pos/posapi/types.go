@@ -8,6 +8,13 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
+type ValidatorActivity struct {
+	EpLeader   []common.Address `json:"epLeader"`
+	EpActivity []int            `json:"epActivity"`
+	RpLeader   []common.Address `json:"rpLeader"`
+	RpActivity []int            `json:"rpActivity"`
+}
+
 type Activity struct {
 	EpLeader    []common.Address `json:"epLeader"`
 	EpActivity  []int            `json:"epActivity"`
@@ -47,13 +54,13 @@ type ApiStakerInfo struct {
 type ClientInfo struct {
 	Address     common.Address        `json:"address"`
 	Amount      *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount *math.HexOrDecimal256 `json:"votingPower"`
 	QuitEpoch   uint64                `json:"quitEpoch"`
 }
 type PartnerInfo struct {
 	Address      common.Address        `json:"address"`
 	Amount       *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount  *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount  *math.HexOrDecimal256 `json:"votingPower"`
 	Renewal      bool                  `json:"renewal"`
 	LockEpochs   uint64                `json:"lockEpochs"`
 	StakingEpoch uint64                `json:"stakingEpoch"`
@@ -64,7 +71,7 @@ type StakerJson struct {
 	PubBn256  string         `json:"pubBn256"`  //stakeholder’s bn256 public key
 
 	Amount         *math.HexOrDecimal256 `json:"amount"`
-	StakeAmount    *math.HexOrDecimal256 `json:"stakeAmount"`
+	StakeAmount    *math.HexOrDecimal256 `json:"votingPower"`
 	LockEpochs     uint64                `json:"lockEpochs"`     //lock time which is input by user. 0 means unexpired.
 	NextLockEpochs uint64                `json:"nextLockEpochs"` //lock time which is input by user. 0 means unexpired.
 	From           common.Address        `json:"from"`
@@ -75,25 +82,27 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 
-	NextFeeRate uint64
-	MaxFeeRate uint64
+	MaxFeeRate uint64 `json:"maxFeeRate"`
+	FeeRateChangedEpoch uint64 `json:"feeRateChangedEpoch"`
 }
 
 type RefundInfo struct {
-	Addr common.Address `json:"address"`
-	Amount         *math.HexOrDecimal256 `json:"amount"`
+	Addr   common.Address        `json:"address"`
+	Amount *math.HexOrDecimal256 `json:"amount"`
 }
-func convertReundInfo(info []epochLeader.RefundInfo)([]RefundInfo){
-	refund := make([]RefundInfo,0)
-	for i:=0; i<len(info); i++ {
+
+func convertReundInfo(info []epochLeader.RefundInfo) []RefundInfo {
+	refund := make([]RefundInfo, 0)
+	for i := 0; i < len(info); i++ {
 		record := RefundInfo{
-			Addr: info[i].Addr,
+			Addr:   info[i].Addr,
 			Amount: (*math.HexOrDecimal256)(info[i].Amount),
 		}
 		refund = append(refund, record)
 	}
 	return refund
 }
+
 type PosInfoJson struct {
 	FirstEpochId     uint64 `json:"firstEpochId"`
 	FirstBlockNumber uint64 `json:"firstBlockNumber"`
@@ -151,7 +160,6 @@ func ToStakerJson(staker *vm.StakerInfo) *StakerJson {
 	stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 	stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
 
-	stakeJson.NextFeeRate = uint64(0)
 	stakeJson.MaxFeeRate = uint64(0)
 
 	return &stakeJson

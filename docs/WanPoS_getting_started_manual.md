@@ -1,4 +1,15 @@
-# 1. Galaxy Consensus getting started manual
+# 1. Galaxy Consensus getting started manual (OUT OF DATE)
+
+**!!!THIS GUIDE IS OUT OF DATE!!!** 
+
+Up to date versions of the guide can be found at:
+
+[https://www.explorewanchain.org/#/staking/node_setup](https://www.explorewanchain.org/#/staking/node_setup) (Global version)
+[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) (For access from inside China)
+
+**!!!THIS GUIDE IS OUT OF DATE!!!** 
+
+
 
 # 2. Introduction
 This is a guide for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus. Please join our [Gitter chat room](https://gitter.im/wandevs/community) if you have any questions about this guide. Members of our official dev team and Wanchain community developers are there to help out with any issues you might have.  

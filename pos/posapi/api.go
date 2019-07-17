@@ -6,8 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core"
-
 	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -324,15 +322,15 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 			var newFee vm.UpdateFeeRate
 			err = rlp.DecodeBytes(newFeeBytes, &newFee)
 			if err != nil {
-				stakeJson.NextFeeRate = staker.FeeRate
-				stakeJson.MaxFeeRate = staker.FeeRate
-			} else {
-				stakeJson.NextFeeRate = newFee.FeeRate
 				stakeJson.MaxFeeRate = newFee.MaxFeeRate
+				stakeJson.FeeRateChangedEpoch = newFee.ChangedEpoch
+			} else {
+				stakeJson.MaxFeeRate = staker.FeeRate
+				stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
 			}
 		} else {
-			stakeJson.NextFeeRate = staker.FeeRate
 			stakeJson.MaxFeeRate = staker.FeeRate
+			stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
 		}
 
 		stakers = append(stakers, stakeJson)
@@ -438,8 +436,12 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
-func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (string, error) {
-	return biToString(incentive.GetEpochIncentiveBlockNumber(epochID))
+func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
+	number, err := incentive.GetEpochIncentiveBlockNumber(epochID)
+	if err == nil {
+		return number.Uint64(), nil
+	}
+	return 0, err
 }
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochIncentive(epochID))
@@ -528,6 +530,20 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+// GetValidatorActivity get epoch leader, random proposer addresses and activity
+func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := ValidatorActivity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	return &activity, nil
 }
 
@@ -768,51 +784,18 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	return uint64(0) ^ uint64(0)
 }
 
-func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
-		return eg, nil
-	}
-
-	return nil, errors.New("PrintEpochGenesis failed, cast failed")
-}
-func (a PosApi) GetEpochStakeOut(epochID uint64) ( []RefundInfo, error) {
+func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
 	if err != nil {
-		return nil, err
+		//return nil, err
+		info := make([]RefundInfo, 0)
+		return info, nil
 	}
-	stakeOut := make([]epochLeader.RefundInfo,0)
+	stakeOut := make([]epochLeader.RefundInfo, 0)
 	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
 	if err != nil {
 		return nil, err
 	}
 	refundInfo := convertReundInfo(stakeOut)
 	return refundInfo, nil
-}
-func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
-	}
-
-	return nil, errors.New("GenerateEpochGenesis failed, cast failed")
-}
-
-func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		geg, err := bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
-		if err != nil {
-			return false, errors.New("GenerateEpochGenesis failed")
-		}
-
-		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
-
-		if eg != nil && geg != nil {
-			if eg.GenesisBlkHash == geg.GenesisBlkHash {
-				return true, nil
-			}
-		}
-		return false, errors.New("GetEpochGenesis failed")
-	}
-
-	return false, errors.New("a.chain is not block chain")
 }

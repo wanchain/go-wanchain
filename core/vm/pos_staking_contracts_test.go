@@ -385,27 +385,27 @@ func TestPartnerIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("Too many partners, should fail")
 	}
@@ -421,6 +421,10 @@ func TestPartnerIn(t *testing.T) {
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("should be error, stake + partner < 50000")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9999)
+	if err == nil {
+		t.Fatal("should be error, min wan amount should >= 10000")
 	}
 	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
 	if err != nil {
@@ -567,27 +571,69 @@ func TestUpdateFeeRate(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
-	err := doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
-	if err == nil {
-		t.Fatal("should be failed if stake holder not exist")
+	// contract.CallerAddress != stakeInfo.From
+	err := doStakeInWithParam(20000, 10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9900)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate equal 10000, can't change" {
+		t.Fatal("feeRate equal 10000, can't change")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
 	}
 	// contract.CallerAddress != stakeInfo.From
-	err = doStakeIn(20000)
+	err = doStakeInWithParam(20000, 1000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 101)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate already same" {
+		t.Fatal("feeRate already same")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0xaaaa7c0813a51d3bd1d08246af2a8a7a57d8922e"), 999)
+	if err == nil || err.Error() != "updateFeeRate called failed cannot update fee from another account" {
+		t.Fatal("cannot update fee from another account")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeInWithParam(20000, 1000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
+	if err == nil || err.Error() != "updateFeeRate called failed fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1001)
 	if err == nil || err.Error() != "updateFeeRate called failed fee rate can't bigger than old" {
 		t.Fatal("fee rate can't bigger than old")
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
-	if err == nil || err.Error() != "updateFeeRate called failed fee rate cannot > 10000" {
-		t.Fatal("fee rate cannot > 10000")
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 800)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	setEpochTime(posconfig.FirstEpochId + 1)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 901)
+	if err == nil || err.Error() != "updateFeeRate called failed 0 <= newFeeRate <= oldFeerate + 1" {
+		t.Fatal("0 <= newFeeRate <= oldFeerate + 1")
 	}
 
-	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 900)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -718,6 +764,30 @@ func TestUpdateFeeRateParam(t *testing.T) {
 	err := doUpdateFeeRateParam(input)
 	if err != nil {
 		t.Fatal("update fee rate param failed " + err.Error())
+	}
+
+	input.FeeRate = big.NewInt(-1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+
+	input.FeeRate = minFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = maxFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = big.NewInt(PSMaxFeeRate + 1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
 	}
 }
 
