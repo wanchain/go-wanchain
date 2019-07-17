@@ -26,6 +26,7 @@ import (
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 const (
@@ -188,6 +189,11 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
 	}
+
+	if posconfig.FirstEpochId != 0 {
+		mode = downloader.FullSync
+	}
+
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
 	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)
 
