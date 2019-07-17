@@ -756,6 +756,8 @@ func (s *SLS) buildArrayPiece(epochID uint64, selfIndex uint64) ([]*ecdsa.Public
 			return nil, nil, errors.New("epochLeader is not ready")
 		}
 	}
+	// stage2 use different stage1's data
+	alpha = alpha.Add(alpha,big.NewInt(0).SetUint64(uint64(1)))
 	_, ArrayPiece, proof, err := uleaderselection.GenerateArrayPiece(publicKeys, alpha)
 	return ArrayPiece, proof, err
 }
