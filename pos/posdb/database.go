@@ -100,7 +100,7 @@ func (s *Db) DbInit(dbPath string) {
 		inst.DbClose()
 	}
 
-	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 0)
+	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 256)
 	if err != nil {
 		panic("failed to create wanpos_tmpdb database: " + dbPath + "_" + err.Error())
 	}
