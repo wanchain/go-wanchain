@@ -34,7 +34,7 @@ var (
 
 const MainnetPow2PosUpgradeBlockNumber = 4000000
 const TestnetPow2PosUpgradeBlockNumber = 3560000
-const InternalPow2PosUpgradeBlockNumber = 200
+const InternalPow2PosUpgradeBlockNumber = 10
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
