@@ -8,6 +8,13 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
+type ValidatorActivity struct {
+	EpLeader   []common.Address `json:"epLeader"`
+	EpActivity []int            `json:"epActivity"`
+	RpLeader   []common.Address `json:"rpLeader"`
+	RpActivity []int            `json:"rpActivity"`
+}
+
 type Activity struct {
 	EpLeader    []common.Address `json:"epLeader"`
 	EpActivity  []int            `json:"epActivity"`

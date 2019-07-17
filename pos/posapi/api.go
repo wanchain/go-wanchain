@@ -437,7 +437,7 @@ func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
 func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
-	number,err :=  incentive.GetEpochIncentiveBlockNumber(epochID)
+	number, err := incentive.GetEpochIncentiveBlockNumber(epochID)
 	if err == nil {
 		return number.Uint64(), nil
 	}
@@ -530,6 +530,20 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+// GetValidatorActivity get epoch leader, random proposer addresses and activity
+func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := ValidatorActivity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	return &activity, nil
 }
 
@@ -770,15 +784,14 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	return uint64(0) ^ uint64(0)
 }
 
-
-func (a PosApi) GetEpochStakeOut(epochID uint64) ( []RefundInfo, error) {
+func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
 	if err != nil {
 		//return nil, err
-		info := make([]RefundInfo,0)
+		info := make([]RefundInfo, 0)
 		return info, nil
 	}
-	stakeOut := make([]epochLeader.RefundInfo,0)
+	stakeOut := make([]epochLeader.RefundInfo, 0)
 	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
 	if err != nil {
 		return nil, err
