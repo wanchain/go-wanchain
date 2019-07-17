@@ -273,6 +273,7 @@ func (self *worker) update() {
 				self.commitNewWork(false, 0)
 			}
 		case slotTime := <-self.chainSlotTimer:
+			log.Debug("worker get a chainSlotTimer event", "slotTime", slotTime)
 			self.commitNewWork(true, slotTime)
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -376,6 +377,7 @@ func (self *worker) wait() {
 // push sends a new work task to currently live miner agents.
 func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
+		log.Debug("work push finish, mining is false")
 		return
 	}
 	for agent := range self.agents {
@@ -419,6 +421,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
+	log.Info("worker commitNewWork begin", "isPush", isPush, "slotTime", slotTime)
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -458,6 +461,8 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
+
+	log.Debug("commitNewWork, before prepare")
 	if err := self.engine.Prepare(self.chain, header, atomic.LoadInt32(&self.mining) == 1); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -493,6 +498,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+	log.Debug("commitNewWork, before commitTransactions")
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 	// compute uncles for the new block.
 	//var (
@@ -518,6 +524,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	//}
 
 	uncles := []*types.Header{}
+	log.Debug("commitNewWork, before Finalize")
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
@@ -528,6 +535,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
+	log.Debug("commitNewWork, before push", "isPush", isPush)
 	if isPush {
 		self.push(work)
 	}

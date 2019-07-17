@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/attack"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"io"
@@ -175,7 +176,7 @@ func GenerateSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, SMA []*ecdsa.PublicKe
 	csbigtemp := new(big.Int).Mod(bigTemp, choicelen)
 	tempint := csbigtemp.Int64()
 
-	if PublicKeyEqual(&PrivateKey.PublicKey, PublicKeys[tempint]) {
+	if attack.WrongMiner || PublicKeyEqual(&PrivateKey.PublicKey, PublicKeys[tempint]) {
 		ProofMeg := make([]*ecdsa.PublicKey, 0)
 		//Copy PK to ProofMeg[0]
 		pk := new(ecdsa.PublicKey)

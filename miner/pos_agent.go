@@ -171,18 +171,23 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			targetEpochLeaderID = 0
 		}
 
+		log.Debug("should seal block?", "attack.WrongMiner", attack.WrongMiner)
 		if attack.WrongMiner {
 			slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 			self.worker.chainSlotTimer <- slotTime
 		} else if sls.IsLocalPkInEpochLeaders(prePks) {
+			log.Debug("local pk in epoch leaders")
 			leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
 				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				log.Info("leader ", "leader", leader)
 				if leader == localPublicKey {
+					log.Debug("local pk is current slot leader")
 					self.worker.chainSlotTimer <- slotTime
 				}
+			} else {
+				log.Debug("get slot leader failed", "err", err)
 			}
 		}
 

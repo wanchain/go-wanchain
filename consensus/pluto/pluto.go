@@ -19,6 +19,7 @@ package pluto
 
 import (
 	"errors"
+	"github.com/wanchain/go-wanchain/attack"
 	"math/big"
 	//"math/rand"
 	"sync"
@@ -796,6 +797,7 @@ func (c *Pluto) Authorize(signer common.Address, signFn SignerFn, key *keystore.
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+	log.Debug("pluto seal begin")
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
@@ -826,15 +828,18 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
 	if epochSlotId <= lastEpochSlotId {
+		log.Warn("pluto seal failed", "epochSlotId", epochSlotId, "lastEpochSlotId", lastEpochSlotId)
 		return nil, nil
 	}
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 	if err != nil {
+		log.Warn("pluto seal failed, get leader pk fail", "err", err)
 		return nil, err
 	}
 	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	if leader != localPublicKey {
+	if !attack.WrongMiner && leader != localPublicKey {
+		log.Warn("pluto seal failed, local pk is not leader", "leader", leader, "localPublicKey", localPublicKey)
 		return nil, nil
 	}
 
@@ -886,11 +891,14 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 		return nil, err
 	}
 
-	err = c.verifyProof(block.WithSeal(header), header, nil)
-	if err != nil {
-		log.Warn("Seal error", "error", err.Error())
-		return nil, err
+	if !attack.WrongMiner {
+		err = c.verifyProof(block.WithSeal(header), header, nil)
+		if err != nil {
+			log.Warn("Seal error", "error", err.Error())
+			return nil, err
+		}
 	}
+
 	lastEpochSlotId = epochSlotId
 	return block.WithSeal(header), nil
 }
