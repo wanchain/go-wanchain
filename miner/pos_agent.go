@@ -43,7 +43,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-	//TODO: later to repair.
+	//Set to epochID 0 to get a default leaders for epoch 0.
 	err := epochSelector.SelectLeadersLoop(0)
 	if err != nil {
 		panic("PosInit failed.")
