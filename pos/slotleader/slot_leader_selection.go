@@ -137,32 +137,46 @@ func (s *SLS) getDefaultSlotLeader(slotID uint64) (slotLeader *ecdsa.PublicKey) 
 	return s.defaultSlotLeadersPtrArray[slotID]
 }
 func (s *SLS) getSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	//todo maybe the start epochid is not 0
 
 	if slotID >= posconfig.SlotCount {
 		return nil, vm.ErrSlotIDOutOfRange
 	}
 
-	// read from memory
-	s.slotCreateStatusLockCh <- 1
-	created, ok := s.slotCreateStatus[epochID]
-	<-s.slotCreateStatusLockCh
-	if ok && created {
-		return s.slotLeadersPtrArray[slotID], nil
+	epochIDGet := epochID
+	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
+	if isDefault && epochID > posconfig.FirstEpochId+2 {
+		log.Info("generateSlotLeadsGroup use default epochLeader", "epochID", epochID)
+		epochIDGet = 0
 	}
-	// read from local db
-	for i := 0; i < posconfig.SlotCount; i++ {
-		pkByte, err := posdb.GetDb().GetWithIndex(epochID, uint64(i), SlotLeader)
-		if err != nil {
-			return nil, vm.ErrSlotLeaderGroupNotReady
-		}
-		s.slotLeadersPtrArray[i] = crypto.ToECDSAPub(pkByte)
+	if !s.IsLocalPkInEpochLeaders(epochLeadersPtrArray) {
+		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
+		return nil, uleaderselection.ErrNoInPreEPLS
 	}
-	s.slotCreateStatusLockCh <- 1
-	s.slotCreateStatus[epochID] = true
-	<-s.slotCreateStatusLockCh
 
-	return s.slotLeadersPtrArray[slotID], nil
+	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
+	if isGenesis {
+		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
+			"preEpochID", epochID-1)
+		epochIDGet = 0
+	}
+
+	random, err := s.getRandom(nil, epochIDGet)
+	if err != nil {
+		return nil, vm.ErrInvalidRandom
+	}
+
+	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
+		return nil, fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
+	}
+
+	slotLeadersPtr, err := uleaderselection.GenerateSlotLeaderSeqOne(piecesPtr[:],
+		epochLeadersPtrArray[:], random.Bytes(), slotID, epochID)
+	if err != nil {
+		log.SyslogAlert("generateSlotLeadsGroup", "epochid", epochID, "error", err.Error())
+		return nil,err
+	}
+	return slotLeadersPtr, nil
 }
 
 func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
