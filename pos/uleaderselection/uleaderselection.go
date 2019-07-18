@@ -84,6 +84,7 @@ func GenerateSlotLeaderSeqAndIndex(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.P
 		buffer.Write(Uint64ToBytes(uint64(i)))
 		temp := buffer.Bytes()
 
+		//for i := 0; i < len(PublicKeys)/2; i++ {
 		for i := 0; i < len(PublicKeys); i++ {
 			tempHash := crypto.Keccak256(temp)
 			tempBig := new(big.Int).SetBytes(tempHash)

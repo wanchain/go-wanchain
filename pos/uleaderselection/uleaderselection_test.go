@@ -6,6 +6,7 @@ import (
 	Rand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -234,6 +235,25 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 	}
 	var RB = []byte{byte(1)}
 	SlotLeaderSeq, cr, _, err := GenerateSlotLeaderSeqAndIndex(SMA, pksamples, RB, uint64(EL),uint64(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(cr)
+	fmt.Println(SlotLeaderSeq)
+	fmt.Println("Slot Leader Sequence Generation Succeed!")
+}
+
+func TestGenerateSlotLeaderSeqWithManySlots(t *testing.T) {
+	pksamples, err := genPublicKeys(posconfig.EpochLeaderCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	SMA, err := genPublicKeys(posconfig.EpochLeaderCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var RB = []byte{byte(1)}
+	SlotLeaderSeq, cr, _, err := GenerateSlotLeaderSeqAndIndex(SMA, pksamples, RB, uint64(1440*12),uint64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
