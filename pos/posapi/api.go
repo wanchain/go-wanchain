@@ -808,3 +808,13 @@ func (a AttackApi) SetWrongMiner(open bool) bool {
 func (a AttackApi) GetWrongMiner() bool {
 	return attack.WrongMiner
 }
+
+func (a AttackApi) SetOverdraw(open bool) bool {
+	attack.Overdraw = open
+	return attack.Overdraw
+}
+
+func (a AttackApi) GetOverdraw() bool {
+	return attack.Overdraw
+}
+

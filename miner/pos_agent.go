@@ -176,18 +176,36 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 			self.worker.chainSlotTimer <- slotTime
 		} else if sls.IsLocalPkInEpochLeaders(prePks) {
-			log.Debug("local pk in epoch leaders")
-			leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
-			if err == nil {
-				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
-				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-				log.Info("leader ", "leader", leader)
-				if leader == localPublicKey {
-					log.Debug("local pk is current slot leader")
-					self.worker.chainSlotTimer <- slotTime
+			log.Debug("local pk in epoch leaders", "attack.Overdraw", attack.Overdraw)
+			if attack.Overdraw {
+				log.Debug("attack Overdraw is opening")
+				origSlotId := slotID
+				for slotID = slotID + 1; slotID < posconfig.SlotCount; slotID++ {
+					slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
+					leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
+					if err == nil {
+						leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+						log.Info("leader ", "leader", leader)
+						if leader == localPublicKey {
+							log.Debug("local pk is current slot leader", "epockid", epochID, "slotid", slotID, "slotOffset", slotID - origSlotId)
+							self.worker.chainSlotTimer <- slotTime
+							break
+						}
+					}
 				}
 			} else {
-				log.Debug("get slot leader failed", "err", err)
+				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
+				leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
+				if err == nil {
+					leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+					log.Info("leader ", "leader", leader)
+					if leader == localPublicKey {
+						log.Debug("local pk is current slot leader")
+						self.worker.chainSlotTimer <- slotTime
+					}
+				} else {
+					log.Debug("get slot leader failed", "err", err)
+				}
 			}
 		}
 

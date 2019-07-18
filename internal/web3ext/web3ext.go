@@ -425,6 +425,16 @@ web3._extend({
 			call: 'posattack_getWrongMiner',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'setOverdraw',
+			call: 'posattack_setOverdraw',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getOverdraw',
+			call: 'posattack_getOverdraw',
+			params: 0
+		}),
 	]
 });
 `
