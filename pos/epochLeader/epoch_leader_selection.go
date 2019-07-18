@@ -154,6 +154,10 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 }
 
 func (e *Epocher) reportSelectELFailed(epochId uint64) {
+	if epochId == 0 {
+		return
+	}
+	
 	failedTimes := 1
 	if epochId > 0 {
 		if !e.IsGenerateELSuc(epochId - 1) {
@@ -170,6 +174,10 @@ func (e *Epocher) reportSelectELFailed(epochId uint64) {
 }
 
 func (e *Epocher) reportSelectRBPFailed(epochId uint64) {
+	if epochId == 0 {
+		return
+	}
+
 	failedTimes := 1
 	if epochId > 0 {
 		if !e.IsGenerateRBPSuc(epochId - 1) {
