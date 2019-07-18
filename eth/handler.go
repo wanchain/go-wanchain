@@ -208,6 +208,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
+		peer.quit <- struct{}{}
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
