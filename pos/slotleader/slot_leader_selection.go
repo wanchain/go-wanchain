@@ -95,7 +95,7 @@ type SLS struct {
 var slotLeaderSelection *SLS
 var APkiCache *lru.ARCCache
 
-var RndCache  *lru.ARCCache
+var RndCache *lru.ARCCache
 
 type Pack struct {
 	Proof    [][]byte
@@ -493,7 +493,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 
 	rnd, ok := RndCache.Get(epochID)
 	if ok {
-		return rnd.(*big.Int),nil
+		return rnd.(*big.Int), nil
 	}
 
 	// If db is nil, use current stateDB
@@ -504,7 +504,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 			log.SyslogErr("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
 			rb := posconfig.GetRandomGenesis()
 
-			RndCache.Add(epochID,rb)
+			RndCache.Add(epochID, rb)
 
 			return rb, nil
 		}
@@ -514,7 +514,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
 			rb := posconfig.GetRandomGenesis()
 
-			RndCache.Add(epochID,rb)
+			RndCache.Add(epochID, rb)
 
 			return rb, nil
 		}
@@ -526,7 +526,7 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		rb = posconfig.GetRandomGenesis()
 	}
 
-	RndCache.Add(epochID,rb)
+	RndCache.Add(epochID, rb)
 
 	return rb, nil
 }
@@ -625,7 +625,7 @@ func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
 	<-s.slotCreateStatusLockCh
 	log.SyslogInfo("generateSlotLeadsGroup success")
 
-	s.dumpData()
+	go s.dumpData()
 	return nil
 }
 

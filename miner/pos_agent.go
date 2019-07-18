@@ -43,8 +43,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-	//TODO: later to repair.
-	err := epochSelector.SelectLeadersLoop(posconfig.FirstEpochId)
+	//Set to epochID 0 to get a default leaders for epoch 0.
+	err := epochSelector.SelectLeadersLoop(0)
 	if err != nil {
 		panic("PosInit failed.")
 	}
@@ -161,7 +161,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		sls := slotleader.GetSlotLeaderSelection()
 		sls.Loop(rc, key, epochID, slotID)
 
+		log.Info("sls.GetPreEpochLeadersPK start")
 		prePks, isDefault := sls.GetPreEpochLeadersPK(epochID)
+		log.Info("sls.GetPreEpochLeadersPK finish")
 		targetEpochLeaderID := epochID
 		if isDefault {
 			if epochID > posconfig.FirstEpochId+2 {
@@ -192,7 +194,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 		memUse := float32(util.MemStat()) / 1024.0 / 1024.0 / 1024.0
 
-		log.Debug("Memory usage(GB)", "memory", memUse)
+		log.Info("Memory usage(GB)", "memory", memUse)
 
 		//time.Sleep(time.Second)
 	}

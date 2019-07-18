@@ -235,7 +235,7 @@ func TestCalcGasLimit(t *testing.T) {
 
 	for i := 0; i < 1000000; i++ {
 		header.GasLimit = gas
-		header.GasUsed = big.NewInt(header.GasLimit.Int64())
+		header.GasUsed = big.NewInt(header.GasLimit.Int64() / 21000 * 21000)
 
 		block = types.NewBlock(header, nil, nil, nil)
 
