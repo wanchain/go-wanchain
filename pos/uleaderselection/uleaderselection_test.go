@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -244,6 +245,9 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 }
 
 func TestGenerateSlotLeaderSeqWithManySlots(t *testing.T) {
+
+	start := time.Now()
+
 	pksamples, err := genPublicKeys(posconfig.EpochLeaderCount)
 	if err != nil {
 		t.Fatal(err)
@@ -259,7 +263,9 @@ func TestGenerateSlotLeaderSeqWithManySlots(t *testing.T) {
 	}
 	fmt.Println(cr)
 	fmt.Println(SlotLeaderSeq)
+	elapsed := time.Since(start)
 	fmt.Println("Slot Leader Sequence Generation Succeed!")
+	fmt.Printf("elapsed %s",elapsed)
 }
 
 // Whole Flow Test
