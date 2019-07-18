@@ -54,6 +54,7 @@ const (
 var (
 	daoChallengeTimeout = 15 * time.Second // Time allowance for a node to reply to the DAO handshake challenge
 )
+
 // errIncompatibleConfig is returned if the requested protocols and configs are
 // not compatible (low protocol version restrictions and high requirements).
 var errIncompatibleConfig = errors.New("incompatible configuration")
@@ -318,8 +319,9 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-var txMsgLastAdd int64  = 0
-func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
+var txMsgLastAdd int64 = 0
+
+func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		return nil
@@ -342,7 +344,7 @@ func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 		txMsgLastAdd = cur
 		txp := make([]*types.Transaction, p.receiveTxs.Size())
 		txs := p.receiveTxs.List()
-		for i, tx := range  txs{
+		for i, tx := range txs {
 			txp[i] = tx.(*types.Transaction)
 		}
 		p.receiveTxs.Clear()
@@ -350,6 +352,7 @@ func (pm *ProtocolManager)handleMsgTx(p *peer, msg p2p.Msg) error {
 	}
 	return nil
 }
+
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
@@ -816,7 +819,7 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	peers := pm.peers.PeersWithoutTx(hash)
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
-		go peer.SendTransactions(types.Transactions{tx})
+		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }

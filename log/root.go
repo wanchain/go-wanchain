@@ -31,7 +31,7 @@ func Root() Logger {
 
 // Trace is a convenient alias for Root().Trace
 func Trace(msg string, ctx ...interface{}) {
-	// root.write(msg, LvlTrace, ctx)
+	root.write(msg, LvlTrace, ctx)
 }
 
 // Debug is a convenient alias for Root().Debug
