@@ -10,7 +10,7 @@ echo ''
 echo 'If you have deployed your validator with deployValidator.sh, you can restart with this script'
 echo ''
 echo 'Please Enter your password of Validator account:'
-read PASSWD
+read -s PASSWD
 echo ''
 echo ''
 echo ''
