@@ -444,45 +444,7 @@ func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], sel
 
 func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }
 
-
-
-type EpochGenesis struct {
-	ProtocolMagic       []byte      //magic number
-	EpochId             uint64      //current epochId
-	EpochLastBlkNumber     uint64      // pre epoch last block number
-	EpochLastBlkHash common.Hash //the hash of last block of previous epoch
-	Random              []byte
-	EpochLeaders		[][]byte
-	//SlotLeaders         []common.Address    //current epoch slotleaders
-	RBLeadersSec256     [][]byte    //current epoch slotleaders
-	RBLeadersBn256	    [][]byte
-	StakerInfos         [][]byte    // StakerInfo
-	GenesisBlkHash      common.Hash //the hash of this block
-	Extra               []byte      //empty
-	PreEpochGenHash 	common.Hash
-}
-
-type EpochGenesisHeader struct {
-	EpochId             uint64
-	EpochLastBlkNumber     uint64
-	GenesisBlkHash common.Hash //the hash of this block
-}
-
-//type EpochWhiteHeader struct {
-//	EpochHeader *EpochGenesisHeader
-//	WhiteHeader *Header
-//}
-
 type HeaderTdData struct {
 	Header 	*Header
 	Td 		*big.Int
-}
-
-type PivotData struct {
-	Headers []*Header
-	WhiteHeaders []*Header
-	//Summaries []*EpochGenesisSummary
-	//OriginSummaries []*EpochGenesisSummary
-	//EgHeaders []*EpochGenesisHeader
-	StartEpoch uint64
 }

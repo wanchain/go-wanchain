@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util/convert"
 	"io"
 	"math/big"
@@ -37,6 +38,9 @@ var (
 	ErrInvalidPublicKey  = errors.New("public key is nil")
 	ErrSortPublicKey     = errors.New("sort public key error")
 	ErrPublicKeyNotEqual = errors.New("public key is not equal")
+	ErrZeroBigIntProof 	 = errors.New("zero big int proof")
+
+	ErrNoInPreEPLS    	 = errors.New("Local node is not in pre epoch leaders at generateSlotLeadsGroup")
 )
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
@@ -119,6 +123,68 @@ func GenerateSlotLeaderSeqAndIndex(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.P
 	}
 	//return cr to calculate slot leader proof
 	return SlotLeaderSeq, cr, SlotLeaderSeqIndex, nil
+}
+
+func GenerateSlotLeaderSeqOne(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.PublicKey, RB []byte, slotID uint64,
+	epochID uint64) (*ecdsa.PublicKey, error) {
+	if len(SMA) == 0 || len(PublicKeys) == 0 || RB == nil || slotID >= posconfig.SlotCount{
+		return nil, ErrInvalidSlotLeaderSequenceGeneration
+	}
+	for _, piece := range SMA {
+		if piece == nil || piece.X == nil || piece.Y == nil {
+			return nil, ErrInvalidSlotLeaderSequenceGeneration
+		}
+	}
+	for _, publickey := range PublicKeys {
+		if publickey == nil || publickey.X == nil || publickey.Y == nil {
+			return nil, ErrInvalidSlotLeaderSequenceGeneration
+		}
+	}
+	//make the sequence of epoch leaders by Random Beacon
+
+	var err error
+	PublicKeys, _, err = SortPublicKeysAndIndex(PublicKeys, RB)
+	if err != nil {
+		return nil, ErrInvalidSortPublicKeys
+	}
+
+	//na := len(SMA)
+	smaLen := new(big.Int).SetInt64(int64(len(SMA)))
+
+	Gt := new(ecdsa.PublicKey)
+	Gt.Curve = crypto.S256()
+
+	var buffer bytes.Buffer
+	buffer.Write(RB)
+	buffer.Write(Uint64ToBytes(epochID))
+	buffer.Write(Uint64ToBytes(slotID))
+	temp := buffer.Bytes()
+
+	for i := 0; i < len(PublicKeys); i++ {
+		tempHash := crypto.Keccak256(temp)
+		tempBig := new(big.Int).SetBytes(tempHash)
+		cstemp := new(big.Int).Mod(tempBig, smaLen)
+		if i == 0 {
+			Gt.X = new(big.Int).Set(SMA[cstemp.Int64()].X)
+			Gt.Y = new(big.Int).Set(SMA[cstemp.Int64()].Y)
+		} else {
+			Gt.X, Gt.Y = Wadd(Gt.X, Gt.Y, SMA[cstemp.Int64()].X, SMA[cstemp.Int64()].Y)
+		}
+		temp = tempHash
+	}
+	crTemp := new(big.Int).SetBytes(crypto.Keccak256(crypto.FromECDSAPub(Gt)))
+
+	choicelen := new(big.Int).SetInt64(int64(len(PublicKeys)))
+	//cs[i] = cr[i] mod n, n is the number of PublicKeys
+
+	cstemp := new(big.Int).Mod(crTemp, choicelen).Int64()
+	tempsl := new(ecdsa.PublicKey)
+	tempsl.Curve = crypto.S256()
+	tempsl.X = new(big.Int).Set(PublicKeys[cstemp].X)
+	tempsl.Y = new(big.Int).Set(PublicKeys[cstemp].Y)
+
+	//return cr to calculate slot leader proof
+	return tempsl,  nil
 }
 
 //GenerateSlotLeaderProof produce the proof of being the slt slot leader
@@ -583,6 +649,18 @@ func DleqProofGeneration(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa
 func VerifyDleqProof(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa.PublicKey,
 	Proof []*big.Int) bool {
 	if len(PublicKeys) == 0 || len(AlphaPublicKeys) == 0 || len(PublicKeys) != len(AlphaPublicKeys) || len(Proof) != 2 {
+		return false
+	}
+
+	if Proof[0] == nil || Proof[1] == nil {
+		return false
+	}
+
+	if  Proof[0].Cmp(Big0) == 0 || Proof[1].Cmp(Big0) == 0 {
+		return false
+	}
+
+	if len(Proof[0].Bytes()) > 32 || len(Proof[1].Bytes()) > 32 {
 		return false
 	}
 	n := len(PublicKeys)

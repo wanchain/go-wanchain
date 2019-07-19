@@ -8,6 +8,13 @@ import (
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
+type ValidatorActivity struct {
+	EpLeader   []common.Address `json:"epLeader"`
+	EpActivity []int            `json:"epActivity"`
+	RpLeader   []common.Address `json:"rpLeader"`
+	RpActivity []int            `json:"rpActivity"`
+}
+
 type Activity struct {
 	EpLeader    []common.Address `json:"epLeader"`
 	EpActivity  []int            `json:"epActivity"`
@@ -75,8 +82,8 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 
-	NextFeeRate uint64
-	MaxFeeRate  uint64
+	MaxFeeRate uint64 `json:"maxFeeRate"`
+	FeeRateChangedEpoch uint64 `json:"feeRateChangedEpoch"`
 }
 
 type RefundInfo struct {
@@ -153,7 +160,6 @@ func ToStakerJson(staker *vm.StakerInfo) *StakerJson {
 	stakeJson.PubSec256 = hexutil.Encode(staker.PubSec256)
 	stakeJson.PubBn256 = hexutil.Encode(staker.PubBn256)
 
-	stakeJson.NextFeeRate = uint64(0)
 	stakeJson.MaxFeeRate = uint64(0)
 
 	return &stakeJson

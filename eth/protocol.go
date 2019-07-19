@@ -200,12 +200,3 @@ type blockBody struct {
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
 
-// GetEpochGenesisMsg represents a block header query.
-type getEpochGenesisData struct {
-	Epochid uint64 // epochid from which to get epoch genesis
-}
-
-type epochGenesisBody struct {
-	EpochGenesis 	*types.EpochGenesis
-	WhiteHeader		*types.Header
-}
