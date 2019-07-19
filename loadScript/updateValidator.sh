@@ -10,6 +10,8 @@ echo ''
 echo 'If you have deployed your validator with deployValidator.sh, you can update with this script'
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
+echo 'Please Enter your validator Address'
+read addrNew
 echo 'Please Enter your password of Validator account:'
 read -s PASSWD
 echo ''
@@ -24,15 +26,11 @@ NETWORKPATH=testnet
 
 DOCKERID=$(docker ps|grep gwan|awk '{print $1}')
 
-ADDR=$(docker inspect ${DOCKERID}|grep 0x)
-
-addrNew=`echo ${ADDR}|awk '{print $1}' | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/' | sed 's/\(.*\)./\1/'`
-
 sudo docker stop ${DOCKERID}
 
 sudo docker pull ${DOCKERIMG}
 
-
+sudo docker rm ${DOCKERID}
 
 echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
 
