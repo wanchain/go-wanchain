@@ -267,6 +267,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+
 			if !self.chain.IsInPosStage() {
 				self.commitNewWork(true, 0)
 			} else {
