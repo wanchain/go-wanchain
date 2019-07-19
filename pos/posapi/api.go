@@ -81,23 +81,9 @@ func (a PosApi) Version() string {
 	return "1.0"
 }
 
-func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
-	infoMap := make(map[string]string, 0)
-	for i := uint64(0); i < posconfig.SlotCount; i++ {
-		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
-		if err != nil {
-			infoMap[fmt.Sprintf("%06d", i)] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", epochID, i, err.Error())
-		} else {
-			infoMap[fmt.Sprintf("%06d", i)] = hex.EncodeToString(buf)
-		}
-	}
+func (a PosApi) GetSlotLeaderByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
 
-	return infoMap
-}
-
-func (a PosApi) GetSlotLeadersByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
-
-	slp,err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID,slotID)
+	slp, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
 	if err != nil {
 		return err.Error()
 	}

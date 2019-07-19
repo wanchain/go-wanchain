@@ -121,6 +121,10 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 }
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
+	if slotID >= posconfig.SlotCount {
+		return nil, vm.ErrSlotIDOutOfRange
+	}
+
 	if epochID <= posconfig.FirstEpochId+2 {
 		if s.getDefaultSlotLeader(slotID) != nil {
 			log.Info("GetSlotLeader:getDefaultSlotLeader",
