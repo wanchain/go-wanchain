@@ -528,14 +528,10 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	totalTxPending := 0
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
-		totalTxPending += len(pending[addr])
 	}
-
-	log.Info("Total pending txs", "txs", totalTxPending)
 	return pending, nil
 }
 
