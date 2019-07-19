@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/wanchain/go-wanchain/event"
-	"github.com/wanchain/go-wanchain/log"
+	//"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
@@ -84,7 +84,7 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 			EnableMsgEvents: true,
 		},
 		NoUSB:  true,
-		Logger: log.New("node.id", id.String()),
+		//Logger: log.New("node.id", id.String()),
 	})
 	if err != nil {
 		return nil, err
