@@ -161,9 +161,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		sls := slotleader.GetSlotLeaderSelection()
 		sls.Loop(rc, key, epochID, slotID)
 
-		log.Info("sls.GetPreEpochLeadersPK start")
 		prePks, isDefault := sls.GetPreEpochLeadersPK(epochID)
-		log.Info("sls.GetPreEpochLeadersPK finish")
 		targetEpochLeaderID := epochID
 		if isDefault {
 			if epochID > posconfig.FirstEpochId+2 {
