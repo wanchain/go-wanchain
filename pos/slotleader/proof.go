@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -130,6 +131,18 @@ func (s *SLS) PackSlotProof(epochID uint64, slotID uint64, prvKey *ecdsa.Private
 	// AT 021
 	proof[0] = big.NewInt(0).SetUint64(uint64(0))
 	proof[1] = big.NewInt(0).SetUint64(uint64(0))
+
+	// AT 022
+	bgTemp1 := big.NewInt(0)
+	bgTemp2 := big.NewInt(100000000)
+	bgTemp1.Add(bgTemp1,bgTemp2)
+
+	for i:=2; i<20;i++{
+		fmt.Printf("====AT 022 %v\n",len(bgTemp1.Bytes()))
+		bgTemp1 = bgTemp1.Mul(bgTemp1,bgTemp2)
+	}
+	proof[0] = bgTemp1
+	proof[1] = bgTemp1
 
 	objToPack := &Pack{Proof: convert.BigIntArrayToByteArray(proof), ProofMeg: convert.PkArrayToByteArray(proofMeg)}
 

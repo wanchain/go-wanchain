@@ -398,8 +398,8 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 }
 // length of Bytes of big.Int
 func TestTemp(t *testing.T){
-	const uintSize = 32 << (^uint(0) >> 32 & 1)
-	fmt.Printf("%v\n",uintSize)
+	//const uintSize = 32 << (^uint(0) >> 32 & 1)
+	//fmt.Printf("%v\n",uintSize)
 
 	bgTemp1 := big.NewInt(0)
 	bgTemp2 := big.NewInt(100000000)
