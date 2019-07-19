@@ -175,7 +175,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				log.Info("leader ", "leader", leader)
-				if leader == localPublicKey {
+				if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{
 					self.worker.chainSlotTimer <- slotTime
 				}
 			}

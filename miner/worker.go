@@ -47,6 +47,7 @@ const (
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
+	chainTimerSlotSize = 3
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
 )
@@ -141,7 +142,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txCh:           make(chan core.TxPreEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainSlotTimer: make(chan uint64, chainHeadChanSize),
+		chainSlotTimer: make(chan uint64, chainTimerSlotSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -529,6 +530,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 	if isPush {
+		log.Info("Pushed new mining work")
 		self.push(work)
 	}
 }
