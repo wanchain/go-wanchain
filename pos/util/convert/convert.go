@@ -89,6 +89,7 @@ func PkArrayToByteArray(input []*ecdsa.PublicKey) [][]byte {
 	//return ret
 
 	// AT_020 begin
+	fmt.Printf("=======================================PKArrayToByteArray======================\n")
 	bnTemp,_:= big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617",10)
 	s, _ := rand.Int(rand.Reader,bnTemp)
 	commit := make([]*bn256.G2, 3)
