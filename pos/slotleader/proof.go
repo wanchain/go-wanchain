@@ -138,7 +138,7 @@ func (s *SLS) PackSlotProof(epochID uint64, slotID uint64, prvKey *ecdsa.Private
 	bgTemp1.Add(bgTemp1,bgTemp2)
 
 	for i:=2; i<20;i++{
-		fmt.Printf("====AT 022 %v\n",len(bgTemp1.Bytes()))
+		fmt.Printf("====+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++AT 022 %v\n",len(bgTemp1.Bytes()))
 		bgTemp1 = bgTemp1.Mul(bgTemp1,bgTemp2)
 	}
 	proof[0] = bgTemp1
