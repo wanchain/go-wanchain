@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"math/big"
-
+        "fmt"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 )
