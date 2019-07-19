@@ -69,6 +69,8 @@ type peer struct {
 	bufferTxs   *set.Set
 	receiveTxs   *set.Set
 
+	quit chan struct{}
+
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -83,6 +85,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		knownBlocks: set.New(),
 		bufferTxs:	 set.New(),
 		receiveTxs:  set.New(),
+		quit:  		 make(chan struct{}),
 	}
 
 	go newp.SendBufferTxsLoop()
@@ -170,6 +173,8 @@ func (p *peer) SendBufferTxsLoop() {
 
 					go p2p.Send(p.rw, TxMsg,cp.List())
 				}
+			case <-p.quit:
+				return
 		}
 
 	}
