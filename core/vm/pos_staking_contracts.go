@@ -6,6 +6,7 @@ import (
 	"github.com/wanchain/go-wanchain/params"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
@@ -587,6 +588,10 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 		}
 		return nil
 	} else if methodId == stakeUpdateFeeRateId {
+		eidNow, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
+		if eidNow < posconfig.ApploEpochID {
+			return  errors.New("stakeUpdateFeeRateId haven't enabled.")
+		}
 		_, err := p.updateFeeRateParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("update fee rate verify failed")
