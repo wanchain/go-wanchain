@@ -141,7 +141,7 @@ type TxPoolConfig struct {
 // DefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
-	//Journal:   "transactions.rlp",
+	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
 	PriceLimit: 1,
