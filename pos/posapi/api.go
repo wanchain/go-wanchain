@@ -530,6 +530,11 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 
 // GetValidatorActivity get epoch leader, random proposer addresses and activity
 func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
+	epID, _ := util.GetEpochSlotID()
+	if epID == epochID {
+		return &ValidatorActivity{}, nil
+	}
+
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {

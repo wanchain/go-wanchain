@@ -386,6 +386,7 @@ func (rb *RandomBeacon) getMyRBProposerId(epochId uint64) []uint32 {
 		return nil
 	}
 
+	log.SyslogInfo("get my RBP id", "RBP group pk", pks)
 	selfPk := posconfig.Cfg().GetMinerBn256PK()
 	if selfPk == nil {
 		log.SyslogInfo("get my RBP id, can't get miner bn256 pk")

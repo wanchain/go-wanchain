@@ -4,8 +4,7 @@
 
 Up to date versions of the guide can be found at:
 
-[https://www.explorewanchain.org/#/staking/node_setup](https://www.explorewanchain.org/#/staking/node_setup) (Global version)
-[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) (For access from inside China)
+[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) 
 
 **!!!THIS GUIDE IS OUT OF DATE!!!** 
 
