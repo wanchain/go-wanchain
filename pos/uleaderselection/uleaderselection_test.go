@@ -6,12 +6,9 @@ import (
 	Rand "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"math/rand"
 	"testing"
-	"time"
-
 	"github.com/wanchain/go-wanchain/crypto"
 )
 

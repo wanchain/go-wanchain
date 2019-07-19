@@ -491,31 +491,31 @@ func GenerateArrayPiece(PublicKeys []*ecdsa.PublicKey,
 }
 
 
-func GenerateArrayPieceWithDiffAlpha(PublicKeys []*ecdsa.PublicKey,
-	alpha *big.Int) ([]*ecdsa.PublicKey, []*ecdsa.PublicKey, []*big.Int, error) {
-	if len(PublicKeys) == 0 || alpha.Cmp(Big0) == 0 || alpha.Cmp(Big1) == 0 {
-		return nil, nil, nil, ErrInvalidArrayPieceGeneration
-	}
-	ArrayPiece := make([]*ecdsa.PublicKey, 0)
-	n := len(PublicKeys)
-	for i := 0; i < n; i++ {
-		piece := new(ecdsa.PublicKey)
-		piece.Curve = crypto.S256()
-		if PublicKeys[i] == nil {
-			fmt.Println("------ERROR----PublicKey == nil")
-			fmt.Println(PublicKeys)
-			return nil, nil, nil, ErrInvalidArrayPieceGeneration
-		}
-		piece.X, piece.Y = crypto.S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, alpha.Bytes()) //piece = alpha * PublicKey
-		ArrayPiece = append(ArrayPiece, piece)                                                       //ArrayPiece = (alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
-	}
-	proof, err := DleqProofGeneration(PublicKeys, ArrayPiece, alpha)
-	if err != nil {
-		return nil, nil, nil, ErrInvalidArrayPieceGeneration
-	}
-	return PublicKeys, ArrayPiece, proof, nil
-
-}
+//func GenerateArrayPieceWithDiffAlpha(PublicKeys []*ecdsa.PublicKey,
+//	alpha *big.Int) ([]*ecdsa.PublicKey, []*ecdsa.PublicKey, []*big.Int, error) {
+//	if len(PublicKeys) == 0 || alpha.Cmp(Big0) == 0 || alpha.Cmp(Big1) == 0 {
+//		return nil, nil, nil, ErrInvalidArrayPieceGeneration
+//	}
+//	ArrayPiece := make([]*ecdsa.PublicKey, 0)
+//	n := len(PublicKeys)
+//	for i := 0; i < n; i++ {
+//		piece := new(ecdsa.PublicKey)
+//		piece.Curve = crypto.S256()
+//		if PublicKeys[i] == nil {
+//			fmt.Println("------ERROR----PublicKey == nil")
+//			fmt.Println(PublicKeys)
+//			return nil, nil, nil, ErrInvalidArrayPieceGeneration
+//		}
+//		piece.X, piece.Y = crypto.S256().ScalarMult(PublicKeys[i].X, PublicKeys[i].Y, alpha.Bytes()) //piece = alpha * PublicKey
+//		ArrayPiece = append(ArrayPiece, piece)                                                       //ArrayPiece = (alpha * Pk1, alpha * Pk2, ..., alpha * Pkn)
+//	}
+//	proof, err := DleqProofGeneration(PublicKeys, ArrayPiece, alpha)
+//	if err != nil {
+//		return nil, nil, nil, ErrInvalidArrayPieceGeneration
+//	}
+//	return PublicKeys, ArrayPiece, proof, nil
+//
+//}
 
 //VerifyArrayPiece validates the encrypted message array
 func VerifyArrayPiece(Commitment []*ecdsa.PublicKey, PublicKeys []*ecdsa.PublicKey, ArrayPiece []*ecdsa.PublicKey,
