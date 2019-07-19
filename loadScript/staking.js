@@ -79,6 +79,24 @@ var cscDefinition = [
 		"constant": false,
 		"inputs": [
 			{
+				"name": "addr",
+				"type": "address"
+			},
+			{
+				"name": "renewal",
+				"type": "bool"
+			}
+		],
+		"name": "partnerIn",
+		"outputs": [],
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
 				"name": "delegateAddress",
 				"type": "address"
 			}
@@ -173,4 +191,9 @@ var payload6 = coinContract.stakeUpdateFeeRate.getData(secAddr, 50)
 console.log("payload6: ", payload6)
 var tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload6, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
 console.log("stakeUpdateFeeRate tx6=" + tx)
+
+var payload7 = coinContract.partnerIn.getData(validatorAddr, bContinue)
+console.log("payload7: ", payload7)
+var tx = eth.sendTransaction({ from: wallet, to: cscContractAddr, value: web3.toWin(tranValue), data: payload7, gas: 200000, gasprice: '0x' + (200000000000).toString(16) });
+console.log("tx=" + tx)
 /////////////////////////////////unregister staker//////////////////////////////////////////////////////////////////////
