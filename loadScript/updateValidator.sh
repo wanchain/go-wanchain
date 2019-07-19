@@ -32,6 +32,8 @@ sudo docker pull ${DOCKERIMG}
 
 sudo docker rm ${DOCKERID}
 
+sudo docker rm gwan
+
 echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
 
 sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
