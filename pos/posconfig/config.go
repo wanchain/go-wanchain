@@ -33,7 +33,7 @@ const (
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
-	ApploEpochID     = 18103
+	ApploEpochID     = 18102
 )
 
 var EpochLeadersHold [][]byte
