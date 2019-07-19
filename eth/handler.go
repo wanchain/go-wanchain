@@ -736,7 +736,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 ||
 				diff > 100 {
 
-				pm.downloader.Synchronise(p.id,p.head,p.td,downloader.FullSync)
+				go pm.downloader.Synchronise(p.id, p.head, p.td, downloader.FullSync)
 				//go pm.synchronise(p)
 			}
 
