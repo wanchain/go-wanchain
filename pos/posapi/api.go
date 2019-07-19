@@ -520,10 +520,6 @@ func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
 
 // GetActivity get epoch leader, random proposer, slot leader 's addresses and activity
 func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
-	epID, _ := util.GetEpochSlotID()
-	if epID == epochID {
-		return &Activity{}, nil
-	}
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {
