@@ -435,6 +435,16 @@ web3._extend({
 			call: 'posattack_getOverdraw',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'setDelay',
+			call: 'posattack_setDelay',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getDelay',
+			call: 'posattack_getDelay',
+			params: 0
+		}),
 	]
 });
 `

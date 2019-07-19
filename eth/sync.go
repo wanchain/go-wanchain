@@ -186,6 +186,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// bad block) rolled back a fast sync node below the sync point. In this case
 		// however it's safe to reenable fast sync.
 		atomic.StoreUint32(&pm.fastSync, 1)
+		log.Debug("synchronise, set fastSync as 1")
 		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
@@ -195,6 +196,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// Disable fast sync if we indeed have something in our chain
 		if pm.blockchain.CurrentBlock().NumberU64() > 0 {
 			log.Info("Fast sync complete, auto disabling")
+			log.Debug("synchronise, set fastSync as 0")
 			atomic.StoreUint32(&pm.fastSync, 0)
 		}
 	}

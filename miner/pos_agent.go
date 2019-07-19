@@ -176,11 +176,27 @@ func (self *Miner) backendTimerLoop(s Backend) {
 			slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 			self.worker.chainSlotTimer <- slotTime
 		} else if sls.IsLocalPkInEpochLeaders(prePks) {
-			log.Debug("local pk in epoch leaders", "attack.Overdraw", attack.Overdraw)
+			log.Debug("local pk in epoch leaders", "attack.Overdraw", attack.Overdraw, "attack.Delay", attack.Delay)
 			if attack.Overdraw {
 				log.Debug("attack Overdraw is opening")
 				origSlotId := slotID
 				for slotID = slotID + 1; slotID < posconfig.SlotCount; slotID++ {
+					slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
+					leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
+					if err == nil {
+						leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+						log.Info("leader ", "leader", leader)
+						if leader == localPublicKey {
+							log.Debug("local pk is current slot leader", "epockid", epochID, "slotid", slotID, "slotOffset", int64(slotID - origSlotId))
+							self.worker.chainSlotTimer <- slotTime
+							break
+						}
+					}
+				}
+			} else if attack.Delay {
+				log.Debug("attack Delay is opening")
+				origSlotId := slotID
+				for slotID = 0; slotID < origSlotId; slotID++ {
 					slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 					leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 					if err == nil {

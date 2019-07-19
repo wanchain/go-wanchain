@@ -818,3 +818,11 @@ func (a AttackApi) GetOverdraw() bool {
 	return attack.Overdraw
 }
 
+func (a AttackApi) SetDelay(open bool) bool {
+	attack.Delay = open
+	return attack.Delay
+}
+
+func (a AttackApi) GetDelay() bool {
+	return attack.Delay
+}
