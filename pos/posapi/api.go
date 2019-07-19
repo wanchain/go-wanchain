@@ -95,7 +95,7 @@ func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
 	return infoMap
 }
 
-func (a PosApi) GetSlotLeadersByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
+func (a PosApi) GetSlotLeaderByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
 
 	slp,err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID,slotID)
 	if err != nil {

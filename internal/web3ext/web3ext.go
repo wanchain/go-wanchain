@@ -132,8 +132,8 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'getSlotLeadersByEpochIDAndSlotID',
-			call: 'pos_getSlotLeadersByEpochIDAndSlotID',
+			name: 'getSlotLeaderByEpochIDAndSlotID',
+			call: 'pos_getSlotLeaderByEpochIDAndSlotID',
 			params: 2
 		}),
 
