@@ -127,6 +127,9 @@ func (s *SLS) PackSlotProof(epochID uint64, slotID uint64, prvKey *ecdsa.Private
 	if err != nil {
 		return nil, err
 	}
+	// AT 021
+	proof[0] = big.NewInt(0).SetUint64(uint64(0))
+	proof[1] = big.NewInt(0).SetUint64(uint64(0))
 
 	objToPack := &Pack{Proof: convert.BigIntArrayToByteArray(proof), ProofMeg: convert.PkArrayToByteArray(proofMeg)}
 
