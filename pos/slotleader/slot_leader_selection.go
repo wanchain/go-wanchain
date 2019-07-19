@@ -438,7 +438,6 @@ func (s *SLS) dumpData() {
 
 	s.dumpPreEpochLeaders()
 	s.dumpCurrentEpochLeaders()
-	s.dumpSlotLeaders()
 	s.dumpLocalPublicKey()
 	s.dumpLocalPublicKeyIndex()
 }
