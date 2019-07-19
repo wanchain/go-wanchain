@@ -244,6 +244,24 @@ func TestGenerateSlotLeaderSeq(t *testing.T) {
 	fmt.Println("Slot Leader Sequence Generation Succeed!")
 }
 
+func TestGenerateSlotLeaderOne(t *testing.T) {
+	pksamples, err := genPublicKeys(Ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	SMA, err := genPublicKeys(Ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var RB = []byte{byte(1)}
+	SlotLeaderPtr, err := GenerateSlotLeaderSeqOne(SMA, pksamples, RB, 0,uint64(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(SlotLeaderPtr)
+	fmt.Println("Slot Leader Sequence Generation Succeed!")
+}
+
 // Whole Flow Test
 func TestGenerateSlotLeaderProof(t *testing.T) {
 	PrivateKeys, err := genPrivateKeys(Ne)
