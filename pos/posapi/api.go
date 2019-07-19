@@ -316,7 +316,7 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 		if err == nil && newFeeBytes != nil {
 			var newFee vm.UpdateFeeRate
 			err = rlp.DecodeBytes(newFeeBytes, &newFee)
-			if err != nil {
+			if err == nil {
 				stakeJson.MaxFeeRate = newFee.MaxFeeRate
 				stakeJson.FeeRateChangedEpoch = newFee.ChangedEpoch
 			} else {
