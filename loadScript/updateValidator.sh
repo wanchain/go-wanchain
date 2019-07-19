@@ -8,20 +8,35 @@ echo '=========================================='
 echo '+     Welcome to Validator Update        +'
 echo ''
 echo 'If you have deployed your validator with deployValidator.sh, you can update with this script'
-echo 'We will stop all your'
+echo 'Please Enter your validator Name:'
+read YOUR_NODE_NAME
 echo 'Please Enter your password of Validator account:'
-read PASSWD
+read -s PASSWD
 echo ''
 echo ''
 echo ''
 echo ''
 echo ''
 
-sudo docker stop gwan
+DOCKERIMG=wanchain/client-go:2.1.0-beta
+NETWORK=--testnet
+NETWORKPATH=testnet
+
+DOCKERID=$(docker ps|grep gwan|awk '{print $1}')
+
+ADDR=$(docker inspect ${DOCKERID}|grep 0x)
+
+addrNew=`echo ${ADDR}|awk '{print $1}' | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/' | sed 's/\(.*\)./\1/'`
+
+sudo docker stop ${DOCKERID}
+
+sudo docker pull ${DOCKERIMG}
+
+
 
 echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
 
-sudo docker start gwan
+sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
 
 echo 'Please wait a few seconds...'
 
