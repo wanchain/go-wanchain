@@ -2,6 +2,8 @@ package convert
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
+	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/crypto"
@@ -77,11 +79,29 @@ func ByteArrayToBigIntArray(input [][]byte) []*big.Int {
 
 // PkArrayToByteArray can change []*ecdsa.PublicKey to [][]byte
 func PkArrayToByteArray(input []*ecdsa.PublicKey) [][]byte {
-	ret := make([][]byte, len(input))
-	for i := 0; i < len(input); i++ {
-		ret[i] = crypto.FromECDSAPub(input[i])
+
+	// AT_020 GT,PK,skGT not on sec 256 curve.
+
+	//ret := make([][]byte, len(input))
+	//for i := 0; i < len(input); i++ {
+	//	ret[i] = crypto.FromECDSAPub(input[i])
+	//}
+	//return ret
+
+	// AT_020 begin
+	bnTemp,_:= big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617",10)
+	s, _ := rand.Int(rand.Reader,bnTemp)
+	commit := make([]*bn256.G2, 3)
+	for i := 0; i < 3; i++ {
+		commit[i] = new(bn256.G2).ScalarBaseMult(s)
 	}
-	return ret
+
+	commitBytes := make([][]byte, 3)
+	for i := 0; i < 3; i++ {
+		commitBytes[i] = commit[i].Marshal()
+	}
+	return commitBytes
+	// AT_020 end
 }
 
 // ByteArrayToPkArray can change [][]byte to []*ecdsa.PublicKey
