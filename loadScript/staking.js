@@ -184,16 +184,18 @@ console.log("tx4=" + tx)
 // update validator in pow phase, this can't work.
 var payload5 = coinContract.stakeUpdate.getData(secAddr, 0)
 console.log("payload5: ", payload5)
-var tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
+tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
 console.log("tx5=" + tx)
 
 var payload6 = coinContract.stakeUpdateFeeRate.getData(secAddr, 50)
 console.log("payload6: ", payload6)
-var tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload6, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
+tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload6, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
 console.log("stakeUpdateFeeRate tx6=" + tx)
 
-var payload7 = coinContract.partnerIn.getData(validatorAddr, bContinue)
+var bContinue = true
+tranValue = 20000
+var payload7 = coinContract.partnerIn.getData(secAddr, bContinue)
 console.log("payload7: ", payload7)
-var tx = eth.sendTransaction({ from: wallet, to: cscContractAddr, value: web3.toWin(tranValue), data: payload7, gas: 200000, gasprice: '0x' + (200000000000).toString(16) });
-console.log("tx=" + tx)
+tx = personal.sendTransaction({ from: wallet, to: cscContractAddr, value: web3.toWin(tranValue), data: payload7, gas: 200000, gasprice: '0x' + (200000000000).toString(16)}, passwd);
+console.log("partnerIn tx=" + tx)
 /////////////////////////////////unregister staker//////////////////////////////////////////////////////////////////////
