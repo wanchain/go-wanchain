@@ -6,6 +6,7 @@ import (
 	Rand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common/hexutil"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -408,6 +409,12 @@ func TestTemp(t *testing.T){
 		fmt.Printf("%v\n",len(bgTemp1.Bytes()))
 		bgTemp1 = bgTemp1.Mul(bgTemp1,bgTemp2)
 	}
+
+
+
+	b := hexutil.MustDecode("0x04a5946c1968bbe53bfd897c06d53555292bef6e71a4c8ed92b9c1de1b1b94f797c3984581307788ff0c2a564548901f83000b1aa65a1532dacca01214e1f3fa6c")
+	address := crypto.PubkeyToAddress(*(crypto.ToECDSAPub(b)))
+	fmt.Printf("%v\n",hexutil.Encode(address[:]))
 }
 
 func TestProofWithZero(t *testing.T) {
