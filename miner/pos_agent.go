@@ -203,7 +203,12 @@ func (self *Miner) backendTimerLoop(s Backend) {
 						leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 						log.Info("leader ", "leader", leader)
 						if leader == localPublicKey {
-							log.Debug("local pk is current slot leader", "epockid", epochID, "slotid", slotID, "slotOffset", slotID - origSlotId)
+							if slotID+5 > origSlotId {
+								log.Debug("delay attack, wait a moment")
+								break
+							}
+
+							log.Debug("local pk is current slot leader", "epockid", epochID, "slotid", slotID, "slotOffset", int64(slotID - origSlotId))
 							self.worker.chainSlotTimer <- slotTime
 							break
 						}

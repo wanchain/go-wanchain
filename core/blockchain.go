@@ -1151,7 +1151,7 @@ func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
-
+	log.Debug("blockchain InsertChain begin")
 	if bc.IsInPosStage() {
 		return bc.insertChainWithRestart(chain)
 	} else {
@@ -1198,7 +1198,7 @@ func (bc *BlockChain) insertChainEngineSwitch(chain types.Blocks) (int, error) {
 }
 
 func (bc *BlockChain) insertChainWithRestart(chain types.Blocks) (int, error) {
-
+	log.Debug("insertChainWithRestart begin")
 	var rete error
 
 	idxs, err := bc.checkRestarting(chain)

@@ -101,7 +101,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		for _, value := range smaPieces {
 			smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 		}
-		log.Debug("VerifySlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
+		//log.Debug("VerifySlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
 
 		// get skGT from trans
 		skGt := s.getSkGtFromTrans(epochLeadersPtrPre, epochID, slotID, rbBytes[:], smaPieces[:])
@@ -186,19 +186,19 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	rbBytes := rbPtr.Bytes()
 
 	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID)
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes))
+	//log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes))
 
 	epochLeadersHexStr := make([]string, 0)
 	for _, value := range epochLeadersPtrPre {
 		epochLeadersHexStr = append(epochLeadersHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "epochLeadersHexStr", epochLeadersHexStr)
+	//log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "epochLeadersHexStr", epochLeadersHexStr)
 
 	smaPiecesHexStr := make([]string, 0)
 	for _, value := range smaPiecesPtr {
 		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
 	}
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
+	//log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
 
 	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(PrivateKey, smaPiecesPtr, epochLeadersPtrPre,
 		rbBytes[:], slotID, epochID)

@@ -1583,7 +1583,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
-			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Info("Downloaded item processing failed1", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
@@ -1675,7 +1675,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 			receipts[i] = result.Receipts
 		}
 		if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
-			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Info("Downloaded item processing failed2", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch

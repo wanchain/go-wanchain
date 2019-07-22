@@ -176,6 +176,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	}
 	// Otherwise try to sync with the downloader
 	mode := downloader.FullSync
+	log.Debug("fastSync init value", "fastSync", pm.fastSync)
 	if atomic.LoadUint32(&pm.fastSync) == 1 {
 		// Fast sync was explicitly requested, and explicitly granted
 		mode = downloader.FastSync
@@ -185,8 +186,8 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// The only scenario where this can happen is if the user manually (or via a
 		// bad block) rolled back a fast sync node below the sync point. In this case
 		// however it's safe to reenable fast sync.
-		atomic.StoreUint32(&pm.fastSync, 1)
 		log.Debug("synchronise, set fastSync as 1")
+		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
