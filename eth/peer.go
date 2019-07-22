@@ -157,7 +157,7 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	cur := time.Now().UnixNano()
 	size := p.bufferTxs.Size()
 
-	if size >= 512 || cur >= (p.txLastSendTime + int64(500*time.Millisecond)) {
+	if size >= 512 || (cur >= (p.txLastSendTime + int64(500*time.Millisecond))&& size > 0) {
 		p.txLastSendTime = cur
 
 		txp := make([]*types.Transaction, size)
