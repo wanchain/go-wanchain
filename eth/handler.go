@@ -340,15 +340,16 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
+
 	cur := time.Now().Unix()
 	if p.receiveTxs.Size() >= 512 || cur > txMsgLastAdd {
 		txMsgLastAdd = cur
 		txp := make([]*types.Transaction, p.receiveTxs.Size())
-		txs := p.receiveTxs.List()
-		for i, tx := range txs {
-			txp[i] = tx.(*types.Transaction)
+
+		for i:=0;i<p.receiveTxs.Size();i++ {
+			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 		}
-		p.receiveTxs.Clear()
+
 		go pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 	}
 	return nil

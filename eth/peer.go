@@ -70,6 +70,7 @@ type peer struct {
 	receiveTxs   *set.Set
 
 	quit chan struct{}
+	txLastSendTime int64
 
 }
 
@@ -87,8 +88,6 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		receiveTxs:  set.New(),
 		quit:  		 make(chan struct{}),
 	}
-
-	go newp.SendBufferTxsLoop()
 
 	return newp
 
@@ -154,30 +153,21 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 		p.bufferTxs.Add(tx)
 	}
 
+	cur := time.Now().UnixNano()
+	if p.bufferTxs.Size() >= 512 || cur >= (p.txLastSendTime + int64(500*time.Millisecond)) {
+		p.txLastSendTime = cur
+		err := p2p.Send(p.rw, TxMsg,p.bufferTxs.List())
+		if err!= nil {
+			return err
+		}
+		p.bufferTxs.Clear()
+	}
+
 	return nil
+
 	//return p2p.Send(p.rw, TxMsg, txs)
 }
 
-func (p *peer) SendBufferTxsLoop() {
-
-	tick := time.NewTicker(1 * time.Second)
-
-	for {
-		select {
-			case <-tick.C:
-
-				if p.bufferTxs.Size() > 0 {
-
-					go p2p.Send(p.rw, TxMsg,p.bufferTxs.List())
-					p.bufferTxs.Clear()
-
-				}
-			case <-p.quit:
-				return
-		}
-
-	}
-}
 
 
 // SendNewBlockHashes announces the availability of a number of blocks through
