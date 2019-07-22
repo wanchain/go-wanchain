@@ -160,7 +160,10 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 	var info Pack
 	err := rlp.DecodeBytes(input, &info)
 	if err != nil {
-		log.SyslogErr("GetInfoFromHeadExtra rlp.DecodeBytes failed", "epochID", epochID, "input", hex.EncodeToString(input))
+		log.SyslogErr("GetInfoFromHeadExtra rlp.DecodeBytes failed",
+			"epochID", epochID,
+			"input", hex.EncodeToString(input),
+			"err", err.Error())
 		return nil, nil, err
 	}
 
@@ -173,6 +176,7 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 
 	for _, proofItem := range proof {
 		if proofItem == nil || proofItem.Cmp(uleaderselection.Big0) == 0 {
+			log.SyslogErr("GetInfoFromHeadExtra failed proof is nil or proof item is Big0")
 			return nil, nil, uleaderselection.ErrInvalidProof
 		}
 	}
@@ -180,7 +184,9 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 		return nil, nil, uleaderselection.ErrInvalidProofMeg
 	}
 	for _, proofMegItem := range proofMeg {
-		if proofMegItem == nil || proofMegItem.IsOnCurve(proofMegItem.X, proofMegItem.Y) {
+		if proofMegItem == nil || !proofMegItem.IsOnCurve(proofMegItem.X, proofMegItem.Y) {
+			log.Error("<<<<<<<<<<<<<<Jacob proofMeg>>>>>>>>>>>>")
+			log.SyslogErr("GetInfoFromHeadExtra failed proofMeg is nil or proofMeg item is not on curve")
 			return nil, nil, uleaderselection.ErrInvalidProofMeg
 		}
 	}
