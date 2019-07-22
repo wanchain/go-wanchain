@@ -2,8 +2,6 @@
 # set -x
 echo ''
 echo ''
-echo ''
-echo ''
 echo '=========================================='
 echo '+     Welcome to Validator registion     +'
 echo ''
@@ -12,16 +10,20 @@ read YOUR_NODE_NAME
 
 echo -e "\033[41;30m !!!!!! WARNING Please Remember Your Password !!!!!!!! \033[0m"
 echo -e "\033[41;30m !!!!!!Otherwise You will lose all your assets!!!!!!!! \033[0m"
-echo 'Please Enter your password of Validator account:'
-read PASSWD
+echo 'Enter your password of validator account:'
+read -s PASSWD
+echo 'Confirm your password of validator account:'
+read -s PASSWD2
 echo ''
-echo ''
-echo ''
-echo ''
-echo ''
-DOCKERIMG=wanchain/client-go:2.0.0-beta.5
+DOCKERIMG=wanchain/client-go:2.1.0-beta
 NETWORK=--testnet
 NETWORKPATH=testnet
+
+if [ ${PASSWD} != ${PASSWD2} ]
+then
+    echo 'Passwords mismatched'
+    exit
+fi
 
 sudo wget -qO- https://get.docker.com/ | sh
 sudo usermod -aG docker ${USER}
@@ -57,29 +59,24 @@ KEYSTORE=$(sudo cat /home/${USER}/.wanchain/testnet/keystore/${KEYSTOREFILE})
 
 echo ''
 echo ''
-echo ''
-echo ''
-echo ''
-echo ''
-echo -e "\033[41;30m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
+echo -e "\033[41;30m !!!!!!!!!!!!!!! Important !!!!!!!!!!!!!!! \033[0m"
 echo '=================================================='
-echo '      Please backup Your Validator Address'
+echo '      Please Backup Your Validator Address'
 echo '     ' ${ADDR}
 echo '=================================================='
-echo '      Please backup Your Validator Public Key'
+echo '      Please Backup Your Validator Public Key'
 echo ${PK}
 echo '=================================================='
-echo '      Please backup Your Keystore Json string'
+echo '      Please Backup Your Keystore JSON String'
 echo ''
 echo ${KEYSTORE}
 echo ''
 echo '=================================================='
-echo -e "\033[41;30m !!!!!!!!!!!!!!!Important Backup!!!!!!!!!!!!!!! \033[0m"
 echo ''
 
 if [ $(ps -ef | grep -c "gwan") -gt 1 ]; 
 then 
-    echo "Validator Start Success";
+    echo "Validator Start Successfully";
 else
     echo "Validator Start Failed";
     echo "Please use command 'sudo docker logs gwan' to check reason." 

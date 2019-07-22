@@ -79,6 +79,24 @@ var cscDefinition = [
 		"constant": false,
 		"inputs": [
 			{
+				"name": "addr",
+				"type": "address"
+			},
+			{
+				"name": "renewal",
+				"type": "bool"
+			}
+		],
+		"name": "partnerIn",
+		"outputs": [],
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
 				"name": "delegateAddress",
 				"type": "address"
 			}
@@ -98,6 +116,24 @@ var cscDefinition = [
 			}
 		],
 		"name": "delegateOut",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "addr",
+				"type": "address"
+			},
+			{
+				"name": "feeRate",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeUpdateFeeRate",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -148,7 +184,18 @@ console.log("tx4=" + tx)
 // update validator in pow phase, this can't work.
 var payload5 = coinContract.stakeUpdate.getData(secAddr, 0)
 console.log("payload5: ", payload5)
-var tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
+tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload5, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
 console.log("tx5=" + tx)
 
+var payload6 = coinContract.stakeUpdateFeeRate.getData(secAddr, 50)
+console.log("payload6: ", payload6)
+tx = personal.sendTransaction({from:wallet, to:cscContractAddr, value:'0x00', data:payload6, gas: 200000, gasprice:'0x' + (200000000000).toString(16)},passwd);
+console.log("stakeUpdateFeeRate tx6=" + tx)
+
+var bContinue = true
+tranValue = 20000
+var payload7 = coinContract.partnerIn.getData(secAddr, bContinue)
+console.log("payload7: ", payload7)
+tx = personal.sendTransaction({ from: wallet, to: cscContractAddr, value: web3.toWin(tranValue), data: payload7, gas: 200000, gasprice: '0x' + (200000000000).toString(16)}, passwd);
+console.log("partnerIn tx=" + tx)
 /////////////////////////////////unregister staker//////////////////////////////////////////////////////////////////////
