@@ -156,11 +156,22 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	cur := time.Now().UnixNano()
 	if p.bufferTxs.Size() >= 512 || cur >= (p.txLastSendTime + int64(500*time.Millisecond)) {
 		p.txLastSendTime = cur
-		err := p2p.Send(p.rw, TxMsg,p.bufferTxs.List())
+
+		if p.receiveTxs.Size() == 0 {
+			return nil
+		}
+
+		txp := make([]*types.Transaction, p.receiveTxs.Size())
+
+		for i:=0;i<p.bufferTxs.Size();i++ {
+			txp[i] = p.bufferTxs.Pop().(*types.Transaction)
+		}
+
+		err := p2p.Send(p.rw, TxMsg,txp)
 		if err!= nil {
 			return err
 		}
-		p.bufferTxs.Clear()
+
 	}
 
 	return nil
