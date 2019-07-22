@@ -161,9 +161,11 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 			return nil
 		}
 
-		txp := make([]*types.Transaction, p.receiveTxs.Size())
+		size := p.receiveTxs.Size()
+		txp := make([]*types.Transaction, size)
 
-		for i:=0;i<p.bufferTxs.Size();i++ {
+
+		for i:=0;i<size;i++ {
 			txp[i] = p.bufferTxs.Pop().(*types.Transaction)
 		}
 

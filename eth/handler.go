@@ -342,11 +342,13 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	}
 
 	cur := time.Now().Unix()
-	if p.receiveTxs.Size() >= 512 || cur > txMsgLastAdd {
-		txMsgLastAdd = cur
-		txp := make([]*types.Transaction, p.receiveTxs.Size())
+	size := p.receiveTxs.Size()
 
-		for i:=0;i<p.receiveTxs.Size();i++ {
+	if size >= 512 || cur > txMsgLastAdd {
+		txMsgLastAdd = cur
+		txp := make([]*types.Transaction, size)
+
+		for i:=0;i<size;i++ {
 			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 		}
 
