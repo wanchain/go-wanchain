@@ -113,8 +113,6 @@ sudo docker logs -f gwan
 
 选取Access后，在下发选取StakeIn，完成节点注册。
 
-![img](./img_get_start/8.png)
-
 ！！！注意！！！
 
 其中的`secPk`和`bn256Pk`即为上文中脚本执行完毕后返回的2个公钥。
