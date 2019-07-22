@@ -2,9 +2,11 @@
 
 **!!!THIS GUIDE IS OUT OF DATE!!!** 
 
-Up to date versions of the guide can be found at:
+Up to date versions of the guide can be found at either of these URLs:
 
-[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) 
+[https://www.explorewanchain.org/](https://www.explorewanchain.org/)
+
+[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) (Mirror with faster access inside China)
 
 **!!!THIS GUIDE IS OUT OF DATE!!!** 
 
