@@ -168,10 +168,9 @@ func (p *peer) SendBufferTxsLoop() {
 
 				if p.bufferTxs.Size() > 0 {
 
-					cp := p.bufferTxs.Copy()
+					go p2p.Send(p.rw, TxMsg,p.bufferTxs.List())
 					p.bufferTxs.Clear()
 
-					go p2p.Send(p.rw, TxMsg,cp.List())
 				}
 			case <-p.quit:
 				return
