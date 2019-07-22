@@ -19,6 +19,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"sync"
 	"time"
@@ -166,7 +167,7 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 
 		err := p2p.Send(p.rw, TxMsg,txp)
 		if err!= nil {
-			return err
+			log.Error("sending txs errors","errors","error",err)
 		}
 
 	}
