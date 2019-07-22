@@ -20,6 +20,11 @@ import (
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
+const (
+	LenProof    = 2
+	LenProofMeg = 3
+)
+
 //ProofMes 	= [PK, Gt, skGt] 	[]*PublicKey
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
@@ -28,13 +33,12 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	}
 
 	var epochLeadersPtrPre []*ecdsa.PublicKey
-	var isDefault 			bool
-
+	var isDefault bool
 
 	epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
 
 	if isDefault {
-		log.Debug("VerifySlotProof", "isDefault", isDefault,"epochID", epochID)
+		log.Debug("VerifySlotProof", "isDefault", isDefault, "epochID", epochID)
 		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
 	}
 
@@ -160,12 +164,31 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 		return nil, nil, err
 	}
 
-	return convert.ByteArrayToBigIntArray(info.Proof), convert.ByteArrayToPkArray(info.ProofMeg), nil
+	proof := convert.ByteArrayToBigIntArray(info.Proof)
+	proofMeg := convert.ByteArrayToPkArray(info.ProofMeg)
+
+	if len(proof) != LenProof {
+		return nil, nil, uleaderselection.ErrInvalidProof
+	}
+
+	for _, proofItem := range proof {
+		if proofItem == nil || proofItem.Cmp(uleaderselection.Big0) == 0 {
+			return nil, nil, uleaderselection.ErrInvalidProof
+		}
+	}
+	if len(proofMeg) != LenProofMeg {
+		return nil, nil, uleaderselection.ErrInvalidProofMeg
+	}
+	for _, proofMegItem := range proofMeg {
+		if proofMegItem == nil || proofMegItem.IsOnCurve(proofMegItem.X, proofMegItem.Y) {
+			return nil, nil, uleaderselection.ErrInvalidProofMeg
+		}
+	}
+	return proof, proofMeg, nil
 }
 
 func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
-
 
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis
@@ -253,7 +276,7 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		log.Debug("verifySlotProofByGenesis", "epochID", epochID, "slotID", slotID, "slotLeaderRb",
 			hex.EncodeToString(s.randomGenesis.Bytes()))
 		log.Debug("verifySlotProofByGenesis aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
-		eps:= s.epochLeadersPtrArrayGenesis
+		eps := s.epochLeadersPtrArrayGenesis
 		skGt := s.getSkGtFromTrans(eps[:], 0, slotID, s.randomGenesis.Bytes()[:],
 			smaPieces[:])
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
@@ -266,7 +289,7 @@ func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*b
 		return false
 	}
 	log.Debug("verifySlotProofByGenesis skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
-	eps:= s.epochLeadersPtrArrayGenesis
+	eps := s.epochLeadersPtrArrayGenesis
 	return uleaderselection.VerifySlotLeaderProof(Proof[:], ProofMeg[:], eps[:],
 		s.randomGenesis.Bytes()[:])
 }

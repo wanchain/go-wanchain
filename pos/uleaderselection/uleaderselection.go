@@ -38,9 +38,11 @@ var (
 	ErrInvalidPublicKey  = errors.New("public key is nil")
 	ErrSortPublicKey     = errors.New("sort public key error")
 	ErrPublicKeyNotEqual = errors.New("public key is not equal")
-	ErrZeroBigIntProof 	 = errors.New("zero big int proof")
+	ErrZeroBigIntProof   = errors.New("zero big int proof")
 
-	ErrNoInPreEPLS    	 = errors.New("Local node is not in pre epoch leaders at generateSlotLeadsGroup")
+	ErrNoInPreEPLS     = errors.New("Local node is not in pre epoch leaders at generateSlotLeadsGroup")
+	ErrInvalidProof    = errors.New("In valid proof in the block head")
+	ErrInvalidProofMeg = errors.New("In valid proofMeg in the block head")
 )
 
 const Accuracy float64 = 1024.0 //accuracy to magnificate
@@ -127,7 +129,7 @@ func GenerateSlotLeaderSeqAndIndex(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.P
 
 func GenerateSlotLeaderSeqOne(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.PublicKey, RB []byte, slotID uint64,
 	epochID uint64) (*ecdsa.PublicKey, error) {
-	if len(SMA) == 0 || len(PublicKeys) == 0 || RB == nil || slotID >= posconfig.SlotCount{
+	if len(SMA) == 0 || len(PublicKeys) == 0 || RB == nil || slotID >= posconfig.SlotCount {
 		return nil, ErrInvalidSlotLeaderSequenceGeneration
 	}
 	for _, piece := range SMA {
@@ -184,7 +186,7 @@ func GenerateSlotLeaderSeqOne(SMA []*ecdsa.PublicKey, PublicKeys []*ecdsa.Public
 	tempsl.Y = new(big.Int).Set(PublicKeys[cstemp].Y)
 
 	//return cr to calculate slot leader proof
-	return tempsl,  nil
+	return tempsl, nil
 }
 
 //GenerateSlotLeaderProof produce the proof of being the slt slot leader
@@ -331,7 +333,6 @@ func VerifySlotLeaderProof(Proof []*big.Int, ProofMeg []*ecdsa.PublicKey, Public
 	}
 }
 
-
 //GenerateSMA compute the Secret Message Array from the array piece received
 //need to sort the array received based on PublicKeys in advance
 func GenerateSMA(PrivateKey *ecdsa.PrivateKey, ArrayPiece []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, error) {
@@ -359,7 +360,6 @@ func GenerateSMA(PrivateKey *ecdsa.PrivateKey, ArrayPiece []*ecdsa.PublicKey) ([
 
 	return SMA, nil
 }
-
 
 //Transform Probabilities from float to bigint
 func ProbabilityFloat2big(Probabilities []*float64) ([]*big.Int, error) {
@@ -490,7 +490,6 @@ func GenerateArrayPiece(PublicKeys []*ecdsa.PublicKey,
 
 }
 
-
 //func GenerateArrayPieceWithDiffAlpha(PublicKeys []*ecdsa.PublicKey,
 //	alpha *big.Int) ([]*ecdsa.PublicKey, []*ecdsa.PublicKey, []*big.Int, error) {
 //	if len(PublicKeys) == 0 || alpha.Cmp(Big0) == 0 || alpha.Cmp(Big1) == 0 {
@@ -550,7 +549,6 @@ func PublicKeyEqual(PublicKey1 *ecdsa.PublicKey, PublicKey2 *ecdsa.PublicKey) bo
 	}
 	return PublicKey1.Curve == PublicKey2.Curve && PublicKey1.X.Cmp(PublicKey2.X) == 0 && PublicKey1.Y.Cmp(PublicKey2.Y) == 0
 }
-
 
 /*_____________________________________________________Slot Leader Selection_______________________________________________________*/
 
@@ -656,7 +654,7 @@ func VerifyDleqProof(PublicKeys []*ecdsa.PublicKey, AlphaPublicKeys []*ecdsa.Pub
 		return false
 	}
 
-	if  Proof[0].Cmp(Big0) == 0 || Proof[1].Cmp(Big0) == 0 {
+	if Proof[0].Cmp(Big0) == 0 || Proof[1].Cmp(Big0) == 0 {
 		return false
 	}
 
@@ -736,5 +734,3 @@ func Wadd(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 func Uint64ToBytes(input uint64) []byte {
 	return convert.Uint64ToBytes(input)
 }
-
-
