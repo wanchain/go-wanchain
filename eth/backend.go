@@ -119,6 +119,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
+	log.Info("New", "genesisHash", genesisHash)
 	posEngine := pluto.New(chainConfig.Pluto, chainDb)
 
 	eth := &Ethereum{
