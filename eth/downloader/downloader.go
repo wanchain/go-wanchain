@@ -401,6 +401,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if d.mode == FastSync && atomic.LoadUint32(&d.fsPivotFails) >= fsCriticalTrials {
 		d.mode = FullSync
 	}
+
 	// Retrieve the origin peer and initiate the downloading process
 	p := d.peers.Peer(id)
 	if p == nil {

@@ -363,7 +363,9 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 
 		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 		if err != nil {
+
 			log.Error("adding remote txs errors", "reason", err)
+			return err
 		}
 
 	}
@@ -752,9 +754,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 ||
 				diff > 100 {
-				pm.downloader.RegisterPeer(p.id,p.version,p)
-				go pm.downloader.Synchronise(p.id, p.head, p.td, downloader.FullSync)
-				//go pm.synchronise(p)
+
+				if !pm.downloader.Synchronising(){
+
+					pm.newPeerCh <- p
+					//go pm.synchronise(p)
+				}
+
 			}
 
 		}
