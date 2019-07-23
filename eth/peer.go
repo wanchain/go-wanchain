@@ -72,6 +72,7 @@ type peer struct {
 
 	quit           chan struct{}
 	txLastSendTime int64
+	txMsgLastAdd   int64
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {

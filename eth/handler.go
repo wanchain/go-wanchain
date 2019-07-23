@@ -321,8 +321,6 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-var txMsgLastAdd int64 = 0
-
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -353,9 +351,9 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	cur := time.Now().Unix()
 	size := p.receiveTxs.Size()
 
-	if size >= 512 || (cur > txMsgLastAdd && size > 0) {
+	if size >= 512 || (cur > p.txMsgLastAdd && size > 0) {
 
-		txMsgLastAdd = cur
+		p.txMsgLastAdd = cur
 		txp := make([]*types.Transaction, size)
 
 		for i:=0;i<size;i++ {
