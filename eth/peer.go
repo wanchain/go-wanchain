@@ -150,6 +150,9 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
 
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	if txs == nil || len(txs) == 0 {
 		return nil
 	}
