@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
@@ -740,6 +741,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		// Update the peers total difficulty if better than the previous
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
+
 			p.SetHead(trueHead, trueTD)
 
 			// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
@@ -747,19 +749,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// scenario should easily be covered by the fetcher.
 			currentBlock := pm.blockchain.CurrentBlock()
 
-			newBlockTime := request.Block.Time().Uint64()
-			localBlockTime := currentBlock.Time().Uint64()
+			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
 
-			diff := newBlockTime - localBlockTime
+				if posconfig.FirstEpochId > 0 {
+					//pos phase,lagged about 5 block start downloader synchronizing process
+					newBlockTime := request.Block.Time().Uint64()
+					localBlockTime := currentBlock.Time().Uint64()
+					diff := newBlockTime - localBlockTime
 
-			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 ||
-				diff > 100 {
+					if diff > 100 {
+						if !pm.downloader.Synchronising() {
+							pm.newPeerCh <- p
+						}
+					}
 
-				if !pm.downloader.Synchronising(){
-
-					pm.newPeerCh <- p
-					//go pm.synchronise(p)
+				} else {
+					//keep pow code
+					go pm.synchronise(p)
 				}
+
 
 			}
 
