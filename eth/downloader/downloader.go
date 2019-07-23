@@ -726,7 +726,7 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
 			if len(headers) != 1 {
-				p.log.Debug("Multiple headers for single request", "headers", len(headers))
+				p.log.Info("Multiple headers for single request", "headers", len(headers))
 				return nil, errBadPeer
 			}
 			head := headers[0]
@@ -924,7 +924,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				// Make sure the peer actually gave something valid
 				headers := packer.(*headerPack).headers
 				if len(headers) != 1 {
-					p.log.Debug("Multiple headers for single request", "headers", len(headers))
+					p.log.Info("Multiple headers for single request", "headers", len(headers))
 					return 0, errBadPeer
 				}
 				arrived = true
@@ -936,7 +936,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 				header := d.lightchain.GetHeaderByHash(headers[0].Hash()) // Independent of sync mode, header surely exists
 				if header.Number.Uint64() != check {
-					p.log.Debug("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
+					p.log.Info("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
 					return 0, errBadPeer
 				}
 				start = check
@@ -1053,7 +1053,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
-			p.log.Debug("Header request timed out", "elapsed", ttl)
+			p.log.Info("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
 			d.dropPeer(p.id)
 
@@ -1068,6 +1068,8 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 			case d.headerProcCh <- nil:
 			case <-d.cancelCh:
 			}
+
+
 			return errBadPeer
 		}
 	}
@@ -1516,7 +1518,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 					// Otherwise insert the headers for content retrieval
 					inserts := d.queue.Schedule(chunk, origin)
 					if len(inserts) != len(chunk) {
-						log.Debug("Stale headers")
+						log.Info("Stale headers")
 						return errBadPeer
 					}
 				}
