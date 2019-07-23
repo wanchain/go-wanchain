@@ -332,6 +332,11 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	if err := msg.Decode(&txs); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
 	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
