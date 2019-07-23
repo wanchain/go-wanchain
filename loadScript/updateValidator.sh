@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+# set -x
 echo ''
 echo ''
 echo ''
