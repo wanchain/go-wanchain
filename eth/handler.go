@@ -332,11 +332,14 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	if err := msg.Decode(&txs); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	for i, tx := range txs {
+	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
-			return errResp(ErrDecode, "transaction %d is nil", i)
+			//return errResp(ErrDecode, "transaction %d is nil", i)
+			log.Error("error tx message","nil tx","error code",ErrDecode)
+			continue
 		}
+
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
@@ -345,6 +348,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	size := p.receiveTxs.Size()
 
 	if size >= 512 || (cur > txMsgLastAdd && size > 0) {
+
 		txMsgLastAdd = cur
 		txp := make([]*types.Transaction, size)
 
@@ -354,8 +358,9 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 
 		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 		if err != nil {
-			log.Error("sending txs errors", "errors", "error", err)
+			log.Error("sending txs errors", "reason", err)
 		}
+
 	}
 
 	return nil

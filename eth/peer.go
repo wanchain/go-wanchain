@@ -149,7 +149,16 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
+
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
 	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+
 		p.knownTxs.Add(tx.Hash())
 		p.bufferTxs.Add(tx)
 	}
@@ -157,17 +166,17 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	cur := time.Now().UnixNano()
 	size := p.bufferTxs.Size()
 
-	if size >= 512 || (cur >= (p.txLastSendTime + int64(500*time.Millisecond))&& size > 0) {
+	if size >= 512 || (cur >= (p.txLastSendTime + int64(200*time.Millisecond))&& size > 0) {
 		p.txLastSendTime = cur
 
-		txp := make([]*types.Transaction, size)
+		txp := make([]*types.Transaction,size)
 		for i:=0;i<size;i++ {
 			txp[i] = p.bufferTxs.Pop().(*types.Transaction)
 		}
 
 		err := p2p.Send(p.rw, TxMsg,txp)
 		if err!= nil {
-			log.Error("sending txs errors","errors","error",err)
+			log.Error("sending txs errors","reason",err)
 		}
 
 	}
