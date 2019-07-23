@@ -341,7 +341,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		// Validate and mark the remote transaction
 		if tx == nil {
 			//return errResp(ErrDecode, "transaction %d is nil", i)
-			log.Error("error tx message","nil tx","error code",ErrDecode)
+			log.Error("error tx message","nil tx",ErrDecode)
 			continue
 		}
 
