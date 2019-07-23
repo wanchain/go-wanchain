@@ -759,7 +759,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 					if diff > 100 {
 						if !pm.downloader.Synchronising() {
-							pm.newPeerCh <- p
+							pm.newPeerCh <- &peer{}
 						}
 					}
 
