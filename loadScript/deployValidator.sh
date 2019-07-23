@@ -27,8 +27,22 @@ fi
 
 sudo wget -qO- https://get.docker.com/ | sh
 sudo usermod -aG docker ${USER}
+if [ $? -ne 0 ]; then
+    echo "sudo usermod -aG docker ${USER} failed"
+    exit 1
+fi
+
 sudo service docker start
+if [ $? -ne 0 ]; then
+    echo "service docker start failed"
+    exit 1
+fi
+
 sudo docker pull ${DOCKERIMG}
+if [ $? -ne 0 ]; then
+    echo "docker pull failed"
+    exit 1
+fi
 
 getAddr=$(sudo docker run -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} console --exec "personal.newAccount('${PASSWD}')")
 
@@ -42,10 +56,19 @@ PK=$getPK
 echo $PK
 
 echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
+if [ $? -ne 0 ]; then
+    echo "write pw.txt failed"
+    exit 1
+fi
 
 addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
 sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
+
+if [ $? -ne 0 ]; then
+    echo "docker run failed"
+    exit 1
+fi
 
 echo 'Please wait a few seconds...'
 
