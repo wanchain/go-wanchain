@@ -30,7 +30,7 @@ DOCKERIMG=wanchain/client-go:2.1.0-beta
 NETWORK=--testnet
 NETWORKPATH=testnet
 
-DOCKERID=$(docker ps|grep gwan|awk '{print $1}')
+DOCKERID=$(sudo docker ps|grep gwan|awk '{print $1}')
 
 sudo docker pull ${DOCKERIMG}
 if [ $? -ne 0 ]; then
