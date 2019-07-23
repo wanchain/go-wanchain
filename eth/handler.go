@@ -363,7 +363,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 
 		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 		if err != nil {
-			log.Error("sending txs errors", "reason", err)
+			log.Error("adding remote txs errors", "reason", err)
 		}
 
 	}
