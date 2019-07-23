@@ -1,5 +1,5 @@
 #!/bin/bash
-# set -x
+set -x
 echo ''
 echo ''
 echo ''
@@ -44,9 +44,11 @@ fi
 
 sudo docker stop ${DOCKERID}
 
-sudo docker rm ${DOCKERID} >/dev/null 2>&1
+sudo docker rm ${DOCKERID}
 
-sudo docker rm gwan >/dev/null 2>&1
+sudo docker stop gwan
+
+sudo docker rm gwan
 
 echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
 if [ $? -ne 0 ]; then
