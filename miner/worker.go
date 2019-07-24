@@ -19,7 +19,6 @@ package miner
 import (
 	//"bytes"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -448,12 +447,12 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 
 	// AT_time begin
 	if slotTime != 0 {
-		//headTime = (int64)(slotTime)
-		//headTime = (int64)(slotTime + posconfig.SlotTime)
-		log.Info("=======================================commitNewWork,diff < 5s")
-		headTime = (int64)(slotTime + posconfig.SlotTime - 2)
-		log.Info("=======================================commitNewWork", "slotTime", (int64)(slotTime))
-		log.Info("=======================================commitNewWork", "headTime", headTime)
+		headTime = (int64)(slotTime)
+		////headTime = (int64)(slotTime + posconfig.SlotTime)
+		//log.Info("=======================================commitNewWork,diff < 5s")
+		//headTime = (int64)(slotTime + posconfig.SlotTime - 2)
+		//log.Info("=======================================commitNewWork", "slotTime", (int64)(slotTime))
+		//log.Info("=======================================commitNewWork", "headTime", headTime)
 	}
 	// AT_time end
 	header := &types.Header{
