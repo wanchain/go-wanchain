@@ -1231,6 +1231,9 @@ func (p *PosStaking) stakeRegisterParseAndValid(payload []byte) (StakeRegisterPa
 	if info.FeeRate.Cmp(info.MaxFeeRate) > 0 {
 		return info, errors.New("fee rate should le maxFeeRate")
 	}
+	if info.MaxFeeRate.Cmp(maxFeeRate) == 0 && info.FeeRate.Cmp(info.MaxFeeRate) != 0 {
+		return info, errors.New("feeRate should be same with maxFeeRate, if maxFeeRate eq 100")
+	}
 	err = p.doStakeInParseAndValid(&info.StakeInParam)
 	if err != nil {
 		return info, err

@@ -788,6 +788,18 @@ func TestStakeRegisterParam(t *testing.T)  {
 	if err == nil {
 		t.Fatal("fee rate should le maxFeeRate")
 	}
+	input = getStakeRegisterParam()
+	input.MaxFeeRate = big.NewInt(10000)
+	input.FeeRate = big.NewInt(9999)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("feeRate should be same with maxFeeRate, if maxFeeRate eq 100")
+	}
+	input.FeeRate = big.NewInt(10000)
+	err = doStakeRegisterParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 }
 func TestStakeInParam(t *testing.T) {
 	var input = getStakeInParam()

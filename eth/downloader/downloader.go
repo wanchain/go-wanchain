@@ -808,7 +808,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	println(strconv.FormatUint(d.blockchain.CurrentHeader().Number.Uint64(), 10))
+	//println(strconv.FormatUint(d.blockchain.CurrentHeader().Number.Uint64(), 10))
 	//if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
 	//	if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
 	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
