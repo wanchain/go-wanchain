@@ -841,7 +841,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	p.log.Info("findAncestor request", "from", strconv.FormatInt(from, 10), "count", strconv.Itoa(count))
 	go p.peer.RequestHeadersByNumber(uint64(from), count, 15, false, uint64(0))
 
-	// Wait for the remote response to the head fetch
+	//// Wait for the remote response to the head fetch
 	number, hash := uint64(0), common.Hash{}
 
 	ttl := d.requestTTL()

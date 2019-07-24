@@ -404,7 +404,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
-		p.Log().Info("got header query", "count", query.Amount, "from", query.Origin, "skip", query.Skip, "reverse", query.Reverse)
+		p.Log().Info("got header query", "count", query.Amount, "from", query.Origin.Number, "skip", query.Skip, "reverse", query.Reverse)
 
 		hashMode := query.Origin.Hash != (common.Hash{})
 
