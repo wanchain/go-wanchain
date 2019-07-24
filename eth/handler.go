@@ -863,20 +863,17 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 }
 
 func (pm *ProtocolManager) sendBufferTxsLoop() {
-
-	tick := time.NewTicker(500 * time.Millisecond)
-
+	tick := time.NewTicker(200 * time.Millisecond)
 	for {
 		select {
 		case <-tick.C:
 
 			for _, p := range pm.peers.peers {
 
-				p.lock.RLock()
 				size := p.bufferTxs.Size()
 				if size > 0 {
 					txp := make([]*types.Transaction, 0)
-					for i := 0; i < size; i++ {
+					for  {
 						pop := p.bufferTxs.Pop()
 						if pop != nil {
 							tp := pop.(*types.Transaction)
@@ -892,7 +889,6 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 					}
 				}
 
-				p.lock.RUnlock()
 			}
 
 		case <-pm.quitSync:
