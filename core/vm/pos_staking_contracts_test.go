@@ -681,8 +681,8 @@ func TestUpdateFeeRate(t *testing.T) {
 	}
 	setEpochTime(posconfig.FirstEpochId + 1)
 	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 901)
-	if err == nil || err.Error() != "updateFeeRate called failed 0 <= newFeeRate <= oldFeerate + 1" {
-		t.Fatal("0 <= newFeeRate <= oldFeerate + 1")
+	if err == nil || err.Error() != "updateFeeRate called failed 0 <= newFeeRate <= oldFeerate + 100" {
+		t.Fatal("0 <= newFeeRate <= oldFeerate + 100")
 	}
 
 	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 900)
