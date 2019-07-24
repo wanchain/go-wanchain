@@ -791,10 +791,6 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		ceil = d.blockchain.CurrentBlock().NumberU64()
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
-		ceilFull := d.blockchain.CurrentBlock().NumberU64()
-		if ceilFull > ceil {
-			ceil = ceilFull
-		}
 	}
 
 	//max := ceil
@@ -818,7 +814,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
 	//	}
 	//}
-	if d.mode == FastSync {
+	//if d.mode == FastSync {
 		if params.IsPosActive() {
 			if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber-1 {
 				from = int64(posconfig.Pow2PosUpgradeBlockNumber) - 1
@@ -830,7 +826,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 			}
 		}
-	}
+	//}
 
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
