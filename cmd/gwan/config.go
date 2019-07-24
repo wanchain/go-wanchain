@@ -107,7 +107,7 @@ func defaultNodeConfig() node.Config {
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
-	cfg.HTTPModules = append(cfg.HTTPModules, "wan", "shh","pos")
+	cfg.HTTPModules = append(cfg.HTTPModules, "wan", "shh", "pos")
 	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
 	cfg.WSModules = append(cfg.WSModules, "wan", "shh")
 	cfg.IPCPath = "gwan.ipc"
@@ -160,6 +160,7 @@ func enableWhisper(ctx *cli.Context) bool {
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
+	fmt.Printf("&&&&&&&&&&&&&&&&&&&&&&&&&&Entering Alice.....makeFullNode&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
 	stack, cfg := makeConfigNode(ctx)
 
 	utils.RegisterEthService(stack, &cfg.Eth)
@@ -217,6 +218,3 @@ func dumpConfig(ctx *cli.Context) error {
 	os.Stdout.Write(out)
 	return nil
 }
-
-
-

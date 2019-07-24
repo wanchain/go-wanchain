@@ -19,6 +19,7 @@ package miner
 import (
 	//"bytes"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -47,7 +48,7 @@ const (
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
-	chainHeadChanSize = 10
+	chainHeadChanSize  = 10
 	chainTimerSlotSize = 3
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
@@ -444,9 +445,15 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 
 	num := parent.Number()
 	headTime := tstamp
+
+	// AT_time begin
 	if slotTime != 0 {
-		headTime = (int64)(slotTime)
+		//headTime = (int64)(slotTime)
+		headTime = (int64)(slotTime + posconfig.SlotTime)
+		log.Info("=======================================commitNewWork", "slotTime", (int64)(slotTime))
+		log.Info("=======================================commitNewWork", "headTime", headTime)
 	}
+	// AT_time end
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
