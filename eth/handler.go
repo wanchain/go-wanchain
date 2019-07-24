@@ -20,13 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
@@ -185,9 +186,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 	blockchain.RegisterSwitchEngine(manager)
 
-
-
-
 	return manager, nil
 }
 
@@ -250,7 +248,6 @@ func (pm *ProtocolManager) Stop() {
 
 	// Quit fetcher, txsyncLoop.
 	close(pm.quitSync)
-
 
 	// Disconnect existing sessions.
 	// This also closes the gate for any new registrations on the peer set.
@@ -758,8 +755,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 				if posconfig.FirstEpochId > 0 {
 					//pos phase,lagged about 5 block start downloader synchronizing process
-					newBlockTime := request.Block.Time().Uint64()
-					localBlockTime := currentBlock.Time().Uint64()
+					newBlockTime := request.Block.Time().Int64()
+					localBlockTime := currentBlock.Time().Int64()
 					diff := newBlockTime - localBlockTime
 
 					if diff > 100 {
@@ -873,7 +870,7 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 				size := p.bufferTxs.Size()
 				if size > 0 {
 					txp := make([]*types.Transaction, 0)
-					for  {
+					for {
 						pop := p.bufferTxs.Pop()
 						if pop != nil {
 							tp := pop.(*types.Transaction)
