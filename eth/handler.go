@@ -403,6 +403,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
+
+		p.Log().Info("got header query", "count", query.Amount, "from", query.Origin, "skip", query.Skip, "reverse", query.Reverse)
+
 		hashMode := query.Origin.Hash != (common.Hash{})
 
 		// Gather headers until the fetch or network limits is reached
@@ -500,6 +503,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				query.Origin.Number += (query.Skip + 1)
 			}
 		}
+
+		p.Log().Info("sender header", "header0", headers[0].Number.Uint64(), "header1", headers[1].Number.Uint64,"peer id",p.id)
 
 		return p.SendBlockHeaders(headers)
 

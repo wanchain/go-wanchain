@@ -819,12 +819,15 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		if params.IsPosActive() {
 			if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber-1 {
 				from = int64(posconfig.Pow2PosUpgradeBlockNumber) - 1
+
 				if ceil < uint64(from) {
 					ceil = d.blockchain.CurrentBlock().NumberU64()
 				}
+
 				if ceil < uint64(from) {
 					ceil = uint64(from)
 				}
+
 			}
 		}
 	//}

@@ -255,7 +255,9 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 			}
 		}
 	}
-	p.Log().Debug("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
+
+	p.Log().Info("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
+
 	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
