@@ -19,7 +19,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"sync"
 	"time"
@@ -70,7 +69,7 @@ type peer struct {
 	bufferTxs  *set.Set
 	receiveTxs *set.Set
 
-	quit           chan struct{}
+
 	txLastSendTime int64
 	txMsgLastAdd   int64
 }
@@ -87,10 +86,8 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		knownBlocks: set.New(),
 		bufferTxs:   set.New(),
 		receiveTxs:  set.New(),
-		quit:        make(chan struct{}),
 	}
 
-	go newp.sendBufferTxsLoop()
 
 	return newp
 
@@ -172,43 +169,7 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	//return p2p.Send(p.rw, TxMsg, txs)
 }
 
-func (p *peer) sendBufferTxsLoop() {
 
-	tick := time.NewTicker(500 * time.Millisecond)
-
-	for {
-		select {
-			case <-tick.C:
-
-				p.lock.RLock()
-
-				size := p.bufferTxs.Size()
-				if size > 0 {
-						txp := make([]*types.Transaction, 0)
-						for i := 0; i < size; i++ {
-							pop := p.bufferTxs.Pop()
-							if pop != nil {
-								tp := pop.(*types.Transaction)
-								txp = append(txp, tp)
-							} else {
-								break
-							}
-						}
-
-						err := p2p.Send(p.rw, TxMsg, txp)
-						if err != nil {
-							 log.Info("sending txs errors", "reason", err)
-						}
-					}
-
-				p.lock.RUnlock()
-
-			case <-p.quit:
-				return
-		}
-
-	}
-}
 
 
 // SendNewBlockHashes announces the availability of a number of blocks through

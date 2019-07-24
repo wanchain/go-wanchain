@@ -171,6 +171,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
+
 	inserter := func(blocks types.Blocks) (int, error) {
 		// If fast sync is running, deny importing weird blocks
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
@@ -183,6 +184,9 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 	blockchain.RegisterSwitchEngine(manager)
+
+
+
 
 	return manager, nil
 }
@@ -210,7 +214,6 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		peer.quit <- struct{}{}
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
@@ -230,6 +233,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+
+	//periodical to send transaction to different peer
+	go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -244,6 +250,7 @@ func (pm *ProtocolManager) Stop() {
 
 	// Quit fetcher, txsyncLoop.
 	close(pm.quitSync)
+
 
 	// Disconnect existing sessions.
 	// This also closes the gate for any new registrations on the peer set.
@@ -340,7 +347,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		// Validate and mark the remote transaction
 		if tx == nil {
 			//return errResp(ErrDecode, "transaction %d is nil", i)
-			log.Error("error tx message","nil tx",ErrDecode)
+			log.Error("error tx message", "nil tx", ErrDecode)
 			continue
 		}
 
@@ -356,7 +363,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.txMsgLastAdd = cur
 		txp := make([]*types.Transaction, size)
 
-		for i:=0;i<size;i++ {
+		for i := 0; i < size; i++ {
 			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 		}
 
@@ -766,13 +773,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 					go pm.synchronise(p)
 				}
 
-
 			}
 
 		}
 
 	case msg.Code == TxMsg:
-		return  pm.handleMsgTx(p, msg)
+		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
@@ -854,6 +860,46 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+
+func (pm *ProtocolManager) sendBufferTxsLoop() {
+
+	tick := time.NewTicker(500 * time.Millisecond)
+
+	for {
+		select {
+		case <-tick.C:
+
+			for _, p := range pm.peers.peers {
+
+				p.lock.RLock()
+				size := p.bufferTxs.Size()
+				if size > 0 {
+					txp := make([]*types.Transaction, 0)
+					for i := 0; i < size; i++ {
+						pop := p.bufferTxs.Pop()
+						if pop != nil {
+							tp := pop.(*types.Transaction)
+							txp = append(txp, tp)
+						} else {
+							break
+						}
+					}
+
+					err := p2p.Send(p.rw, TxMsg, txp)
+					if err != nil {
+						log.Info("sending txs errors", "reason", err)
+					}
+				}
+
+				p.lock.RUnlock()
+			}
+
+		case <-pm.quitSync:
+			return
+		}
+
+	}
 }
 
 // Mined broadcast loop
