@@ -37,7 +37,7 @@ import (
 	"github.com/wanchain/go-wanchain/event"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
-	set "gopkg.in/fatih/set.v0"
+	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -449,7 +449,9 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	// AT_time begin
 	if slotTime != 0 {
 		//headTime = (int64)(slotTime)
-		headTime = (int64)(slotTime + posconfig.SlotTime)
+		//headTime = (int64)(slotTime + posconfig.SlotTime)
+		log.Info("=======================================commitNewWork,diff < 5s")
+		headTime = (int64)(slotTime + posconfig.SlotTime - 2)
 		log.Info("=======================================commitNewWork", "slotTime", (int64)(slotTime))
 		log.Info("=======================================commitNewWork", "headTime", headTime)
 	}
