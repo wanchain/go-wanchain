@@ -953,7 +953,7 @@ func (p *PosStaking) doStakeIn(contract *Contract, evm *EVM, info StakeInParam) 
 	//if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(MinValidatorStake) < 0 {
 	//	return nil, errors.New("need more Wan to be a validator")
 	//}
-	secAddr := crypto.PubkeyToAddress(*info.pub)
+	secAddr := crypto.PubkeyToAddress(*(info.pub))
 
 	// 6. secAddr has not join the pos or has finished
 	key := GetStakeInKeyHash(secAddr)
@@ -1231,7 +1231,7 @@ func (p *PosStaking) stakeRegisterParseAndValid(payload []byte) (StakeRegisterPa
 	if info.FeeRate.Cmp(info.MaxFeeRate) > 0 {
 		return info, errors.New("fee rate should le maxFeeRate")
 	}
-	err = p.doStakeInParseAndValid(info.StakeInParam)
+	err = p.doStakeInParseAndValid(&info.StakeInParam)
 	if err == nil {
 		return info, err
 	}
@@ -1239,7 +1239,7 @@ func (p *PosStaking) stakeRegisterParseAndValid(payload []byte) (StakeRegisterPa
 	return info, nil
 }
 
-func (p *PosStaking) doStakeInParseAndValid(info StakeInParam) error {
+func (p *PosStaking) doStakeInParseAndValid(info *StakeInParam) error {
 	// 1. SecPk is valid
 	if info.SecPk == nil {
 		return errors.New("wrong secPk for stakeIn")
@@ -1281,7 +1281,7 @@ func (p *PosStaking) stakeInParseAndValid(payload []byte) (StakeInParam, error) 
 		return info, err
 	}
 
-	err = p.doStakeInParseAndValid(info)
+	err = p.doStakeInParseAndValid(&info)
 	if err != nil {
 		return info, err
 	}
