@@ -867,7 +867,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			// Make sure the peer's reply conforms to the request
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
-					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number, "len", len(headers))
 					for j:=i+1; j<len(headers); j++ {
 						p.log.Warn("Head headers broke chain ordering", "received", headers[i].Number.Int64())
 					}
