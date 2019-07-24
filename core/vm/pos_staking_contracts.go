@@ -1232,7 +1232,7 @@ func (p *PosStaking) stakeRegisterParseAndValid(payload []byte) (StakeRegisterPa
 		return info, errors.New("fee rate should le maxFeeRate")
 	}
 	err = p.doStakeInParseAndValid(&info.StakeInParam)
-	if err == nil {
+	if err != nil {
 		return info, err
 	}
 
