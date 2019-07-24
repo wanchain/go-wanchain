@@ -129,6 +129,36 @@ var (
 		"constant": false,
 		"inputs": [
 			{
+				"name": "secPk",
+				"type": "bytes"
+			},
+			{
+				"name": "bn256Pk",
+				"type": "bytes"
+			},
+			{
+				"name": "lockEpochs",
+				"type": "uint256"
+			},
+			{
+				"name": "feeRate",
+				"type": "uint256"
+			},
+			{
+				"name": "maxFeeRate",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeRegister",
+		"outputs": [],
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
 				"name": "addr",
 				"type": "address"
 			},
@@ -189,7 +219,43 @@ var (
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
-
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "posAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "v",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "feeRate",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "lockEpoch",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "maxFeeRate",
+				"type": "uint256"
+			}
+		],
+		"name": "stakeRegister",
+		"type": "event"
+	},
 	{
 		"anonymous": false,
 		"inputs": [
@@ -360,6 +426,7 @@ var (
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	// function "stakeIn" "delegateIn" 's solidity binary id
+	stakeRegisterId [4]byte
 	stakeInId     [4]byte
 	stakeUpdateId [4]byte
 	stakeAppendId [4]byte
@@ -390,6 +457,10 @@ type StakeInParam struct {
 	LockEpochs *big.Int //lock time which is input by user
 	FeeRate    *big.Int
 	pub        *ecdsa.PublicKey
+}
+type StakeRegisterParam struct {
+	StakeInParam
+	MaxFeeRate *big.Int
 }
 type StakeUpdateParam struct {
 	Addr       common.Address //stakeholder’s bn256 pairing public key
@@ -486,6 +557,7 @@ func init() {
 		panic("err in csc abi initialize ")
 	}
 
+	copy(stakeRegisterId[:], cscAbi.Methods["stakeRegister"].Id())
 	copy(stakeInId[:], cscAbi.Methods["stakeIn"].Id())
 	copy(stakeAppendId[:], cscAbi.Methods["stakeAppend"].Id())
 	copy(stakeUpdateId[:], cscAbi.Methods["stakeUpdate"].Id())
@@ -517,7 +589,9 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
-	if methodId == stakeInId {
+	if methodId == stakeRegisterId {
+		return p.StakeRegister(input[4:], contract, evm)
+	} else if methodId == stakeInId {
 		ret, err := p.StakeIn(input[4:], contract, evm)
 		if err != nil {
 			log.Info("stakein failed", "err", err)
@@ -551,7 +625,13 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
-	if methodId == stakeInId {
+	if methodId == stakeRegisterId {
+		_, err := p.stakeRegisterParseAndValid(input[4:])
+		if err != nil {
+			return errors.New("stakeRegister verify failed")
+		}
+		return nil
+	} else if methodId == stakeInId {
 		_, err := p.stakeInParseAndValid(input[4:])
 		if err != nil {
 			return errors.New("stakein verify failed")
@@ -809,6 +889,76 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 		return nil, err
 	}
 	p.stakeAppendLog(contract, evm, stakerInfo.Address)
+	return nil, nil
+}
+
+func (p *PosStaking) StakeRegister(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	info, err := p.stakeRegisterParseAndValid(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	// no max limit
+	//  amount >= PSMinStakeholderStake,
+	if contract.value.Cmp(minStakeholderStake) < 0 {
+		return nil, errors.New("need more Wan to be a stake holder")
+	}
+	// TODO: or return value - 10,500,000 to the sender?
+	if contract.value.Cmp(maxTotalStake) > 0 {
+		return nil, errors.New("max stake is 10,500,000")
+	}
+
+	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
+	// SO, don't need all in the first stakeIn.
+	//if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(MinValidatorStake) < 0 {
+	//	return nil, errors.New("need more Wan to be a validator")
+	//}
+	secAddr := crypto.PubkeyToAddress(*info.pub)
+
+	// 6. secAddr has not join the pos or has finished
+	key := GetStakeInKeyHash(secAddr)
+	oldInfo, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
+	// a. is secAddr joined?
+	if oldInfo != nil {
+		return nil, errors.New("public Sec address has exist")
+	}
+
+	// create stakeholder's information
+	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	weight := CalLocktimeWeight(info.LockEpochs.Uint64())
+	stakerInfo := &StakerInfo{
+		Address:        secAddr,
+		PubSec256:      info.SecPk,
+		PubBn256:       info.Bn256Pk,
+		Amount:         contract.value,
+		LockEpochs:     info.LockEpochs.Uint64(),
+		FeeRate:        info.FeeRate.Uint64(),
+		NextLockEpochs: info.LockEpochs.Uint64(),
+		//NextFeeRate:      info.FeeRate.Uint64(),
+		From:         contract.CallerAddress,
+		StakingEpoch: eidNow + JoinDelay,
+	}
+	if posconfig.FirstEpochId == 0 {
+		stakerInfo.StakingEpoch = 0
+	}
+	stakerInfo.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
+	err = p.saveStakeInfo(evm, stakerInfo)
+	if err != nil {
+		return nil, err
+	}
+	maxFeeRate := info.MaxFeeRate.Uint64()
+	feeUpdate := &UpdateFeeRate{
+		ValidatorAddr: stakerInfo.Address,
+		MaxFeeRate: maxFeeRate,
+		FeeRate: stakerInfo.FeeRate,
+		ChangedEpoch: uint64(0),
+	}
+	err = p.saveStakeFeeRate(evm, feeUpdate, stakerInfo.Address)
+	if err != nil {
+		return nil, err
+	}
+	p.stakeRegisterLog(contract, evm, stakerInfo, maxFeeRate)
+
 	return nil, nil
 }
 
@@ -1100,6 +1250,58 @@ func StakeoutIsFinished(stateDb *state.StateDB, epochID uint64) bool {
 	return finishedEpochId >= epochID
 }
 
+func (p *PosStaking) stakeRegisterParseAndValid(payload []byte) (StakeRegisterParam, error) {
+	var info StakeRegisterParam
+	err := cscAbi.UnpackInput(&info, "stakeRegister", payload)
+	if err != nil {
+		return info, err
+	}
+	if info.MaxFeeRate.Cmp(maxFeeRate) > 0 || info.MaxFeeRate.Cmp(minFeeRate) < 0 {
+		return info, errors.New("max fee rate should between 0 to 100")
+	}
+	if info.FeeRate.Cmp(info.MaxFeeRate) > 0 {
+		return info, errors.New("fee rate should le maxFeeRate")
+	}
+	err = p.doStakeInParseAndValid(info.StakeInParam)
+	if err == nil {
+		return info, err
+	}
+
+	return info, nil
+}
+
+func (p *PosStaking) doStakeInParseAndValid(info StakeInParam) error {
+	// 1. SecPk is valid
+	if info.SecPk == nil {
+		return errors.New("wrong secPk for stakeIn")
+	}
+	pub := crypto.ToECDSAPub(info.SecPk)
+	if nil == pub {
+		return errors.New("secPk is invalid")
+	}
+	info.pub = pub
+
+	// 2. Bn256Pk is valid
+	if info.Bn256Pk == nil {
+		return errors.New("wrong bn256Pk for stakeIn")
+	}
+	var g1 bn256.G1
+	_, err := g1.Unmarshal(info.Bn256Pk)
+	if err != nil {
+		return errors.New("wrong point for bn256Pk")
+	}
+
+	// 3. Lock time >= min epoch, <= max epoch
+	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
+		return errors.New("invalid lock time")
+	}
+
+	// 4. 0 <= FeeRate <= 10000
+	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
+		return errors.New("fee rate should between 0 to 100")
+	}
+	return nil
+}
 //
 // package param check helper functions
 //
@@ -1109,36 +1311,11 @@ func (p *PosStaking) stakeInParseAndValid(payload []byte) (StakeInParam, error) 
 	if err != nil {
 		return info, err
 	}
-	// 1. SecPk is valid
-	if info.SecPk == nil {
-		return info, errors.New("wrong secPk for stakeIn")
-	}
-	pub := crypto.ToECDSAPub(info.SecPk)
-	if nil == pub {
-		return info, errors.New("secPk is invalid")
-	}
-	info.pub = pub
 
-	// 2. Bn256Pk is valid
-	if info.Bn256Pk == nil {
-		return info, errors.New("wrong bn256Pk for stakeIn")
-	}
-	var g1 bn256.G1
-	_, err = g1.Unmarshal(info.Bn256Pk)
+	err = p.doStakeInParseAndValid(info)
 	if err != nil {
-		return info, errors.New("wrong point for bn256Pk")
+		return info, err
 	}
-
-	// 3. Lock time >= min epoch, <= max epoch
-	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
-		return info, errors.New("invalid lock time")
-	}
-
-	// 4. 0 <= FeeRate <= 10000
-	if info.FeeRate.Cmp(maxFeeRate) > 0 || info.FeeRate.Cmp(minFeeRate) < 0 {
-		return info, errors.New("fee rate should between 0 to 100")
-	}
-
 	return info, nil
 }
 func (p *PosStaking) partnerInParseAndValid(payload []byte) (PartnerInParam, error) {
@@ -1200,6 +1377,21 @@ func (p *PosStaking) updateFeeRateParseAndValid(payload []byte) (*UpdateFeeRateP
 	}
 
 	return &updateFeeRateParam, nil
+}
+
+func (p *PosStaking) stakeRegisterLog(contract *Contract, evm *EVM, info *StakerInfo, maxFeeRate uint64) error {
+	// event stakeRegister(address indexed sender, address indexed posAddress, uint indexed v, uint feeRate, uint lockEpoch, uint maxFeeRate);
+	params := make([]common.Hash, 3)
+	params[0] = common.BytesToHash(contract.Caller().Bytes())
+	params[1] = info.Address.Hash()
+	params[2] = common.BigToHash(contract.Value())
+	//
+	data := make([]byte, 0)
+	data = append(data, common.BigToHash(new(big.Int).SetUint64(info.FeeRate)).Bytes()...)
+	data = append(data, common.BigToHash(new(big.Int).SetUint64(info.LockEpochs)).Bytes()...)
+	data = append(data, common.BigToHash(new(big.Int).SetUint64(maxFeeRate)).Bytes()...)
+	sig := cscAbi.Events["stakeRegister"].Id().Bytes()
+	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 }
 
 func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) error {
