@@ -504,7 +504,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-		p.Log().Info("sender header", "header0", headers[0].Number.Uint64(), "header1", headers[1].Number.Uint64,"peer id",p.id)
+		if len(headers) > 0 {
+			p.Log().Info("sender header", "header0", headers[0].Number.Uint64(), "peer id", p.id)
+		}
 
 		return p.SendBlockHeaders(headers)
 
