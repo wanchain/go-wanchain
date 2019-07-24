@@ -898,54 +898,11 @@ func (p *PosStaking) StakeRegister(payload []byte, contract *Contract, evm *EVM)
 		return nil, err
 	}
 
-	// no max limit
-	//  amount >= PSMinStakeholderStake,
-	if contract.value.Cmp(minStakeholderStake) < 0 {
-		return nil, errors.New("need more Wan to be a stake holder")
-	}
-	// TODO: or return value - 10,500,000 to the sender?
-	if contract.value.Cmp(maxTotalStake) > 0 {
-		return nil, errors.New("max stake is 10,500,000")
-	}
-
-	// NOTE: if a validator has no MinValidatorStake, but want delegate, he can partnerIn or stakeAppend later.
-	// SO, don't need all in the first stakeIn.
-	//if info.FeeRate.Cmp(noDelegateFeeRate) != 0 &&  contract.value.Cmp(MinValidatorStake) < 0 {
-	//	return nil, errors.New("need more Wan to be a validator")
-	//}
-	secAddr := crypto.PubkeyToAddress(*info.pub)
-
-	// 6. secAddr has not join the pos or has finished
-	key := GetStakeInKeyHash(secAddr)
-	oldInfo, err := GetInfo(evm.StateDB, StakersInfoAddr, key)
-	// a. is secAddr joined?
-	if oldInfo != nil {
-		return nil, errors.New("public Sec address has exist")
-	}
-
-	// create stakeholder's information
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	weight := CalLocktimeWeight(info.LockEpochs.Uint64())
-	stakerInfo := &StakerInfo{
-		Address:        secAddr,
-		PubSec256:      info.SecPk,
-		PubBn256:       info.Bn256Pk,
-		Amount:         contract.value,
-		LockEpochs:     info.LockEpochs.Uint64(),
-		FeeRate:        info.FeeRate.Uint64(),
-		NextLockEpochs: info.LockEpochs.Uint64(),
-		//NextFeeRate:      info.FeeRate.Uint64(),
-		From:         contract.CallerAddress,
-		StakingEpoch: eidNow + JoinDelay,
-	}
-	if posconfig.FirstEpochId == 0 {
-		stakerInfo.StakingEpoch = 0
-	}
-	stakerInfo.StakeAmount = big.NewInt(0).Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
-	err = p.saveStakeInfo(evm, stakerInfo)
+	stakerInfo, err := p.doStakeIn(contract, evm, info.StakeInParam)
 	if err != nil {
 		return nil, err
 	}
+
 	maxFeeRate := info.MaxFeeRate.Uint64()
 	feeUpdate := &UpdateFeeRate{
 		ValidatorAddr: stakerInfo.Address,
@@ -957,8 +914,10 @@ func (p *PosStaking) StakeRegister(payload []byte, contract *Contract, evm *EVM)
 	if err != nil {
 		return nil, err
 	}
-	p.stakeRegisterLog(contract, evm, stakerInfo, maxFeeRate)
-
+	err = p.stakeRegisterLog(contract, evm, stakerInfo, maxFeeRate)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -968,6 +927,17 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 		return nil, err
 	}
 
+	stakerInfo, err := p.doStakeIn(contract, evm, info)
+	if err != nil {
+		return nil, err
+	}
+	err = p.stakeInLog(contract, evm, stakerInfo)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (p *PosStaking) doStakeIn(contract *Contract, evm *EVM, info StakeInParam) (*StakerInfo, error) {
 	// no max limit
 	//  amount >= PSMinStakeholderStake,
 	if contract.value.Cmp(minStakeholderStake) < 0 {
@@ -1016,8 +986,7 @@ func (p *PosStaking) StakeIn(payload []byte, contract *Contract, evm *EVM) ([]by
 	if err != nil {
 		return nil, err
 	}
-	p.stakeInLog(contract, evm, stakerInfo)
-	return nil, nil
+	return stakerInfo, nil
 }
 
 // one wants to choose a delegation to join the pos
