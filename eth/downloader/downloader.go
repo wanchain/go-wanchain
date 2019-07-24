@@ -809,7 +809,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	println(strconv.FormatUint(d.blockchain.CurrentHeader().Number.Uint64(), 10))
+	log.Info("findAncestor will", "from", strconv.FormatInt(from, 10), "ceil", strconv.FormatUint(ceil, 10), "upgrade", strconv.FormatUint(posconfig.Pow2PosUpgradeBlockNumber, 10))
 	//if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
 	//	if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
 	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
@@ -835,6 +835,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	if count > limit {
 		count = limit
 	}
+	log.Info("findAncestor request", "from", strconv.FormatInt(from, 10), "count", strconv.Itoa(count))
 	go p.peer.RequestHeadersByNumber(uint64(from), count, 15, false, uint64(0))
 
 	// Wait for the remote response to the head fetch
@@ -864,6 +865,9 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+					for j:=i+1; j<len(headers); j++ {
+						p.log.Warn("Head headers broke chain ordering", "received", headers[i].Number.Int64())
+					}
 					return 0, errInvalidChain
 				}
 			}

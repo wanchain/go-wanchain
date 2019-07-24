@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -239,12 +240,18 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 	p.Log().Debug("Fetching batch of headers", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	if to > 0 {
 		if !reverse {
+			if skip == 15 {
+				p.Log().Info("****** will", "origin", strconv.FormatUint(origin, 10), "amount", strconv.Itoa(amount), "to", strconv.FormatUint(to, 10))
+			}
 			if origin <= to {
 				if origin+uint64(amount*(skip+1)) > to {
 					amount = int(to+1-origin) / (skip + 1)
 				}
 			} else {
 				amount = 0
+			}
+			if skip == 15 {
+				p.Log().Info("****** real", "origin", strconv.FormatUint(origin, 10), "amount", strconv.Itoa(amount), "to", strconv.FormatUint(to, 10))
 			}
 		}
 	}
