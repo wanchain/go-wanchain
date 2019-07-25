@@ -166,7 +166,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)
 	}
-
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
@@ -372,7 +371,6 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
-	//var stage int = 0 // -1 pow stage 0: uninit 1: pos
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -403,7 +401,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers []*types.Header
 			unknown bool
 		)
-
 		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 			// Retrieve the next header satisfying the query
 			var origin *types.Header
@@ -415,34 +412,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if origin == nil {
 				break
 			}
-
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
-			//originNumber := number
-			//if !hashMode {
-			//	originNumber = query.Origin.Number
-			//}
-			//if stage == 0 {
-			//	if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
-			//		stage = -1
-			//	} else {
-			//		if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
-			//			stage = -1
-			//		} else {
-			//			stage = 1
-			//		}
-			//	}
-			//}
-			//if stage == -1 {
-			//	if number < posconfig.Pow2PosUpgradeBlockNumber {
-			//		headers = append(headers, origin)
-			//	}
-			//} else {
-			//	if number >= posconfig.Pow2PosUpgradeBlockNumber {
-			//		headers = append(headers, origin)
-			//	}
-			//}
-
 			bytes += estHeaderRlpSize
 
 			// Advance to the next header of the query
@@ -492,7 +463,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				query.Origin.Number += (query.Skip + 1)
 			}
 		}
-
 		return p.SendBlockHeaders(headers)
 
 	case msg.Code == BlockHeadersMsg:
@@ -543,8 +513,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
 
-		//p.CheckEpochBoundary(pm.blockchain,headers)
-
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -577,7 +545,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				bytes += len(data)
 			}
 		}
-
 		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
@@ -599,7 +566,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if filter {
 			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
 		}
-
 		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
 			if err != nil {
@@ -709,7 +675,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 		for _, block := range unknown {
-
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
@@ -732,7 +697,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			trueHead = request.Block.ParentHash()
 			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
 		)
-
 		// Update the peers total difficulty if better than the previous
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
 			p.SetHead(trueHead, trueTD)
@@ -741,12 +705,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// a singe block (as the true TD is below the propagated block), however this
 			// scenario should easily be covered by the fetcher.
 			currentBlock := pm.blockchain.CurrentBlock()
-
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
-
 				go pm.synchronise(p)
 			}
-
 		}
 
 	case msg.Code == TxMsg:

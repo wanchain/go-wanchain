@@ -407,11 +407,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 		return errUnknownPeer
 	}
 
-	err := d.syncWithPeer(p, hash, td)
-
-	atomic.StoreInt32(&d.synchronising, 0)
-
-	return err
+	return d.syncWithPeer(p, hash, td)
 }
 
 // syncWithPeer starts a block synchronization based on the hash chain from the
@@ -598,12 +594,7 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 	wg.Add(len(fetchers))
 	for _, fn := range fetchers {
 		fn := fn
-		go func() {
-			defer func() {
-				wg.Done()
-			}()
-			errc <- fn()
-		}()
+		go func() { defer wg.Done(); errc <- fn() }()
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
@@ -612,59 +603,15 @@ func (d *Downloader) spawnSync(fetchers []func() error, close bool) error {
 			// Close the queue when all fetchers have exited.
 			// This will cause the block processor to end when
 			// it has processed the queue.
-				d.queue.Close()
-		}
-
-		log.Debug("spawnSync finished","",i)
-
-		if err = <-errc; err != nil {
-			log.Info("spawnSync fetchers", "err", err)
-			break
-		}
-
-	}
-		d.queue.Close()
-		d.Cancel()
-	wg.Wait()
-	return err
-}
-
-
-// spawnSync runs d.process and all given fetcher functions to completion in
-// separate goroutines, returning the first error that appears.
-func (d *Downloader) spawnSyncQ(fetchers []func() error) error {
-	var wg sync.WaitGroup
-	//errc := make(chan error, len(fetchers))
-	errc := make(chan error, 1)
-	wg.Add(len(fetchers))
-	for _, fn := range fetchers {
-		fn := fn
-		go func() { defer wg.Done(); errc <- fn() }()
-	}
-
-	// Wait for the first error, then terminate the others.
-	var err error
-	for i := 0; i < len(fetchers)-1; i++ {
-
-		if err = <-errc; err != nil {
-			d.Cancel()
 			d.queue.Close()
+		}
+		if err = <-errc; err != nil {
 			break
 		}
-
-		log.Debug("spawnSync finished", "", i)
 	}
-
-	log.Debug("spawnSync finishing, wating processFastSyncContent")
-	d.queue.Close()
-
-	wg.Wait()
-
 	d.queue.Close()
 	d.Cancel()
-
-	log.Debug("spawnSync finished", "")
-
+	wg.Wait()
 	return err
 }
 
@@ -1032,7 +979,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 			if skeleton {
 				filled, proced, err := d.fillHeaderSkeleton(from, headers, to)
 				if err != nil {
-					p.log.Info("Skeleton chain invalid", "err", err)
+					p.log.Debug("Skeleton chain invalid", "err", err)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -1137,8 +1084,8 @@ func (d *Downloader) fetchBodies(from uint64) error {
 // available peers, reserving a chunk of receipts for each, waiting for delivery
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchReceipts(from uint64) error {
-	log.Info("Downloading transaction receipts begin", "origin", from)
-	defer log.Info("Downloading transaction receipts end", "origin", from)
+	log.Debug("Downloading transaction receipts", "origin", from)
+
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -1153,7 +1100,7 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 		d.queue.PendingReceipts, d.queue.InFlightReceipts, d.queue.ShouldThrottleReceipts, d.queue.ReserveReceipts,
 		d.receiptFetchHook, fetch, d.queue.CancelReceipts, capacity, d.peers.ReceiptIdlePeers, setIdle, "receipts")
 
-	log.Info("Transaction receipt download terminated", "err", err)
+	log.Debug("Transaction receipt download terminated", "err", err)
 	return err
 }
 
@@ -1342,8 +1289,6 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 // keeps processing and scheduling them into the header chain and downloader's
 // queue until the stream ends or a failure occurs.
 func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
-	log.Info("processHeaders begin")
-	defer log.Info("processHeaders terminated")
 	// Calculate the pivoting point for switching from fast to slow sync
 	pivot := d.queue.FastSyncPivot()
 
@@ -1486,7 +1431,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 						if n > 0 {
 							rollback = append(rollback, chunk[:n]...)
 						}
-						log.Info("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
+						log.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
 						return errInvalidChain
 					}
 					// All verifications passed, store newly found uncertain headers
@@ -1546,8 +1491,6 @@ func (d *Downloader) tryGetSwitchEnginePosition(headers []*types.Header) (uint64
 
 // processFullSyncContent takes fetch results from the queue and imports them into the chain.
 func (d *Downloader) processFullSyncContent() error {
-	log.Info("processFullSyncContent begin")
-	defer log.Info("processFullSyncContent end")
 	for {
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
@@ -1563,7 +1506,6 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
-
 	for len(results) != 0 {
 		// Check for any termination requests. This makes clean shutdown faster.
 		select {
@@ -1583,7 +1525,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
-			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
@@ -1597,9 +1539,6 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	// Start syncing state of the reported head block.
 	// This should get us most of the state of the pivot block.
-	log.Info("===fast sync block begin", "num", latest.Number.Uint64())
-	defer log.Info("===fast sync block finish", "num", latest.Number.Uint64())
-
 	stateSync := d.syncState(latest.Root)
 	defer stateSync.Cancel()
 	go func() {
@@ -1609,7 +1548,6 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	}()
 
 	pivot := d.queue.FastSyncPivot()
-	log.Debug("*****pivot is ", "pivot", pivot)
 	for {
 		results := d.queue.WaitResults()
 		if len(results) == 0 {
@@ -1675,7 +1613,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 			receipts[i] = result.Receipts
 		}
 		if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
-			log.Info("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch

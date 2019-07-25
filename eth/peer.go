@@ -111,7 +111,6 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	defer p.lock.RUnlock()
 
 	copy(hash[:], p.head[:])
-
 	return hash, new(big.Int).Set(p.td)
 }
 
@@ -279,7 +278,6 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
-
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc
