@@ -428,22 +428,23 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
-	tstart := time.Now()
+	//tstart := time.Now()
 	parent := self.chain.CurrentBlock()
-
-	tstamp := tstart.Unix()
-	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
-	}
-	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); tstamp > now+1 {
-		wait := time.Duration(tstamp-now) * time.Second
-		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
-		time.Sleep(wait)
-	}
+	//
+	//tstamp := tstart.Unix()
+	//if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
+	//	tstamp = parent.Time().Int64() + 1
+	//}
+	//// this will ensure we're not going off too far in the future
+	//if now := time.Now().Unix(); tstamp > now+1 {
+	//	wait := time.Duration(tstamp-now) * time.Second
+	//	log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+	//	time.Sleep(wait)
+	//}
 
 	num := parent.Number()
-	headTime := tstamp
+	//headTime := tstamp
+	var headTime int64
 
 	// AT_time begin
 	if slotTime != 0 {
@@ -536,7 +537,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	}
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
-		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
+		//		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 	if isPush {

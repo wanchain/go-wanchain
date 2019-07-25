@@ -172,12 +172,21 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		if sls.IsLocalPkInEpochLeaders(prePks) {
 			leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
-				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
-				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-				log.Info("leader ", "leader", leader)
-				if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{
-					self.worker.chainSlotTimer <- slotTime
+				log.Info("commit all block with the right rights.......")
+				for i := slotID; i < posconfig.SlotCount; i++ {
+					slotTime := (epochID*posconfig.SlotCount + i) * posconfig.SlotTime
+					leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+					log.Info("leader ", "leader", leader)
+					if leader == localPublicKey {
+						self.worker.chainSlotTimer <- slotTime
+					}
 				}
+
+				//leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+				//log.Info("leader ", "leader", leader)
+				//if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{
+				//	self.worker.chainSlotTimer <- slotTime
+				//}
 			}
 		}
 
