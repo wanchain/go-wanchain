@@ -170,7 +170,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
-
 	inserter := func(blocks types.Blocks) (int, error) {
 		// If fast sync is running, deny importing weird blocks
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
@@ -341,11 +340,8 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
-			//return errResp(ErrDecode, "transaction %d is nil", i)
-			log.Error("error tx message", "nil tx", ErrDecode)
 			continue
 		}
-
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
@@ -370,7 +366,6 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		}
 
 	}
-
 	return nil
 }
 
@@ -401,9 +396,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
-
-		p.Log().Info("got header query", "count", query.Amount, "from", query.Origin.Number, "skip", query.Skip, "reverse", query.Reverse)
-
 		hashMode := query.Origin.Hash != (common.Hash{})
 
 		// Gather headers until the fetch or network limits is reached
@@ -500,10 +492,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				// Number based traversal towards the leaf block
 				query.Origin.Number += (query.Skip + 1)
 			}
-		}
-
-		if len(headers) > 0 {
-			p.Log().Info("sender header", "header0", headers[0].Number.Uint64(), "peer id", p.id)
 		}
 
 		return p.SendBlockHeaders(headers)
@@ -749,7 +737,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		// Update the peers total difficulty if better than the previous
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
-
 			p.SetHead(trueHead, trueTD)
 
 			// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
@@ -759,7 +746,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
 
-				//keep pow code
 				go pm.synchronise(p)
 			}
 

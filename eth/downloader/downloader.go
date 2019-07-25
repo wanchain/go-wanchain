@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
@@ -28,10 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	ethereum "github.com/wanchain/go-wanchain"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-
 	"github.com/rcrowley/go-metrics"
+	"github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
@@ -724,7 +723,7 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
 			if len(headers) != 1 {
-				p.log.Info("Multiple headers for single request", "headers", len(headers))
+				p.log.Debug("Multiple headers for single request", "headers", len(headers))
 				return nil, errBadPeer
 			}
 			head := headers[0]
@@ -790,9 +789,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		ceil = d.blockchain.CurrentBlock().NumberU64()
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
+		ceilFull := d.blockchain.CurrentBlock().NumberU64()
+		if ceilFull > ceil {
+			ceil = ceilFull
+		}
 	}
 
-	//max := ceil
+	max := ceil
 	if ceil >= MaxForkAncestry {
 		floor = int64(ceil - MaxForkAncestry)
 	}
@@ -807,28 +810,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	p.log.Info("findAncestor will", "from", strconv.FormatInt(from, 10), "ceil", strconv.FormatUint(ceil, 10), "upgrade", strconv.FormatUint(posconfig.Pow2PosUpgradeBlockNumber, 10))
-	//if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
-	//	if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
-	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
-	//	}
-	//}
-	//if d.mode == FastSync {
-	if params.IsPosActive() {
-		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber-1 {
-			from = int64(posconfig.Pow2PosUpgradeBlockNumber) - 1
-
-			if ceil < uint64(from) {
-				ceil = d.blockchain.CurrentBlock().NumberU64()
-			}
-
-			if ceil < uint64(from) {
-				ceil = uint64(from)
-			}
-
+	if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
+		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
+			from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
 		}
 	}
-	//}
 
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
@@ -836,10 +822,9 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	if count > limit {
 		count = limit
 	}
-	p.log.Info("findAncestor request", "from", strconv.FormatInt(from, 10), "count", strconv.Itoa(count))
 	go p.peer.RequestHeadersByNumber(uint64(from), count, 15, false, uint64(0))
 
-	//// Wait for the remote response to the head fetch
+	// Wait for the remote response to the head fetch
 	number, hash := uint64(0), common.Hash{}
 
 	ttl := d.requestTTL()
@@ -863,20 +848,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				return 0, errEmptyHeaderSet
 			}
 			// Make sure the peer's reply conforms to the request
-			bWrong := false
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
-					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number, "len", len(headers))
-					for j := i + 1; j < len(headers); j++ {
-						p.log.Warn("Head headers broke chain ordering", "received", headers[i].Number.Int64())
-					}
-					bWrong = true
-					break
-					//return 0, errInvalidChain
+					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+					return 0, errInvalidChain
 				}
-			}
-			if bWrong {
-				break
 			}
 			// Check if a common ancestor was found
 			finished = true
@@ -899,7 +875,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			}
 
 		case <-timeout:
-			p.log.Info("Waiting for head header timed out", "elapsed", ttl)
+			p.log.Debug("Waiting for head header timed out", "elapsed", ttl)
 			return 0, errTimeout
 
 		case <-d.bodyCh:
@@ -945,7 +921,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				// Make sure the peer actually gave something valid
 				headers := packer.(*headerPack).headers
 				if len(headers) != 1 {
-					p.log.Info("Multiple headers for single request", "headers", len(headers))
+					p.log.Debug("Multiple headers for single request", "headers", len(headers))
 					return 0, errBadPeer
 				}
 				arrived = true
@@ -957,7 +933,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 				header := d.lightchain.GetHeaderByHash(headers[0].Hash()) // Independent of sync mode, header surely exists
 				if header.Number.Uint64() != check {
-					p.log.Info("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
+					p.log.Debug("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
 					return 0, errBadPeer
 				}
 				start = check
@@ -1074,7 +1050,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
-			p.log.Info("Header request timed out", "elapsed", ttl)
+			p.log.Debug("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
 			d.dropPeer(p.id)
 
@@ -1538,7 +1514,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 					// Otherwise insert the headers for content retrieval
 					inserts := d.queue.Schedule(chunk, origin)
 					if len(inserts) != len(chunk) {
-						log.Info("Stale headers")
+						log.Debug("Stale headers")
 						return errBadPeer
 					}
 				}

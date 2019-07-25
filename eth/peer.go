@@ -240,9 +240,6 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 	p.Log().Debug("Fetching batch of headers", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	if to > 0 {
 		if !reverse {
-			if skip == 15 {
-				p.Log().Info("****** will", "origin", strconv.FormatUint(origin, 10), "amount", strconv.Itoa(amount), "to", strconv.FormatUint(to, 10))
-			}
 			if origin <= to {
 				if origin+uint64(amount*(skip+1)) > to {
 					amount = int(to+1-origin) / (skip + 1)
@@ -250,14 +247,9 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 			} else {
 				amount = 0
 			}
-			if skip == 15 {
-				p.Log().Info("****** real", "origin", strconv.FormatUint(origin, 10), "amount", strconv.Itoa(amount), "to", strconv.FormatUint(to, 10))
-			}
 		}
 	}
-
-	p.Log().Info("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
-
+	p.Log().Debug("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
