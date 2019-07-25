@@ -723,6 +723,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				unknown = append(unknown, block)
 			}
 		}
+
 		for _, block := range unknown {
 
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
@@ -772,10 +773,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 						}
 					}
 
+
 				} else {
 					//keep pow code
 					go pm.synchronise(p)
 				}
+
+				return errors.New("lagged too many blocks")
 
 			}
 
