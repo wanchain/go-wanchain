@@ -66,11 +66,12 @@ type peer struct {
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 
-	bufferTxs   *set.Set
-	receiveTxs   *set.Set
+	bufferTxs  *set.Set
+	receiveTxs *set.Set
 
-	quit chan struct{}
 
+	txLastSendTime int64
+	txMsgLastAdd   int64
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -83,12 +84,10 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		id:          fmt.Sprintf("%x", id[:8]),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
-		bufferTxs:	 set.New(),
+		bufferTxs:   set.New(),
 		receiveTxs:  set.New(),
-		quit:  		 make(chan struct{}),
 	}
 
-	go newp.SendBufferTxsLoop()
 
 	return newp
 
@@ -112,7 +111,6 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	defer p.lock.RUnlock()
 
 	copy(hash[:], p.head[:])
-
 
 	return hash, new(big.Int).Set(p.td)
 }
@@ -149,36 +147,25 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
 	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+
 		p.knownTxs.Add(tx.Hash())
 		p.bufferTxs.Add(tx)
 	}
 
 	return nil
+
 	//return p2p.Send(p.rw, TxMsg, txs)
 }
 
-func (p *peer) SendBufferTxsLoop() {
 
-	tick := time.NewTicker(1 * time.Second)
-
-	for {
-		select {
-			case <-tick.C:
-
-				if p.bufferTxs.Size() > 0 {
-
-					cp := p.bufferTxs.Copy()
-					p.bufferTxs.Clear()
-
-					go p2p.Send(p.rw, TxMsg,cp.List())
-				}
-			case <-p.quit:
-				return
-		}
-
-	}
-}
 
 
 // SendNewBlockHashes announces the availability of a number of blocks through
@@ -208,7 +195,6 @@ func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 func (p *peer) SendBlockHeaderTd(header *types.Header, td *big.Int) error {
 	return p2p.Send(p.rw, BlockHeaderTdMsg, []interface{}{header, td})
 }
-
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *peer) SendBlockBodies(bodies []*blockBody) error {
@@ -254,8 +240,8 @@ func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, rever
 	if to > 0 {
 		if !reverse {
 			if origin <= to {
-				if origin + uint64(amount * (skip + 1)) >to {
-					amount = int(to + 1 - origin) / (skip + 1)
+				if origin+uint64(amount*(skip+1)) > to {
+					amount = int(to+1-origin) / (skip + 1)
 				}
 			} else {
 				amount = 0
@@ -269,6 +255,7 @@ func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
 	p.Log().Debug("Fetching head td", "number", origin)
 	return p2p.Send(p.rw, GetBlockHeaderTdMsg, &getHeaderTdData{Origin: hashOrNumber{Number: origin}})
 }
+
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *peer) RequestBodies(hashes []common.Hash) error {
@@ -356,9 +343,9 @@ func (p *peer) RequestPivot(origin uint64, height common.Hash) error {
 	p.Log().Debug("Fetching pivot", "origin", origin, "height", height)
 
 	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
-			Origin: origin,
-			Height: height,
-		})
+		Origin: origin,
+		Height: height,
+	})
 }
 func (p *peer) readPivot(pivot *uint64) (err error) {
 	msg, err := p.rw.ReadMsg()

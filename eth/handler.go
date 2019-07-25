@@ -209,7 +209,6 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		peer.quit <- struct{}{}
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
@@ -229,6 +228,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+
+	//periodical to send transaction to different peer
+	go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -320,8 +322,6 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-var txMsgLastAdd int64 = 0
-
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -332,24 +332,38 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	if err := msg.Decode(&txs); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	for i, tx := range txs {
+
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
+	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
-			return errResp(ErrDecode, "transaction %d is nil", i)
+			continue
 		}
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
 	cur := time.Now().Unix()
-	if p.receiveTxs.Size() >= 512 || cur > txMsgLastAdd {
-		txMsgLastAdd = cur
-		txp := make([]*types.Transaction, p.receiveTxs.Size())
-		txs := p.receiveTxs.List()
-		for i, tx := range txs {
-			txp[i] = tx.(*types.Transaction)
+	size := p.receiveTxs.Size()
+
+	if size >= 512 || (cur > p.txMsgLastAdd && size > 0) {
+
+		p.txMsgLastAdd = cur
+		txp := make([]*types.Transaction, size)
+
+		for i := 0; i < size; i++ {
+			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 		}
-		p.receiveTxs.Clear()
-		go pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+
+		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+		if err != nil {
+
+			log.Error("adding remote txs errors", "reason", err)
+			return err
+		}
+
 	}
 	return nil
 }
@@ -728,22 +742,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// scenario should easily be covered by the fetcher.
 			currentBlock := pm.blockchain.CurrentBlock()
 
-			newBlockTime := request.Block.Time().Uint64()
-			localBlockTime := currentBlock.Time().Uint64()
+			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
 
-			diff := newBlockTime - localBlockTime
-
-			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 ||
-				diff > 100 {
-
-				go pm.downloader.Synchronise(p.id, p.head, p.td, downloader.FullSync)
-				//go pm.synchronise(p)
+				go pm.synchronise(p)
 			}
 
 		}
 
 	case msg.Code == TxMsg:
-		pm.handleMsgTx(p, msg)
+		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
@@ -825,6 +832,42 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+
+func (pm *ProtocolManager) sendBufferTxsLoop() {
+	tick := time.NewTicker(200 * time.Millisecond)
+	for {
+		select {
+		case <-tick.C:
+
+			for _, p := range pm.peers.peers {
+
+				size := p.bufferTxs.Size()
+				if size > 0 {
+					txp := make([]*types.Transaction, 0)
+					for {
+						pop := p.bufferTxs.Pop()
+						if pop != nil {
+							tp := pop.(*types.Transaction)
+							txp = append(txp, tp)
+						} else {
+							break
+						}
+					}
+
+					err := p2p.Send(p.rw, TxMsg, txp)
+					if err != nil {
+						log.Info("sending txs errors", "reason", err)
+					}
+				}
+
+			}
+
+		case <-pm.quitSync:
+			return
+		}
+
+	}
 }
 
 // Mined broadcast loop
