@@ -800,8 +800,8 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 	for {
 		select {
 		case <-tick.C:
-
-			for _, p := range pm.peers.peers {
+			peers := pm.peers.PeersList()
+			for _, p := range peers {
 
 				size := p.bufferTxs.Size()
 				if size > 0 {
