@@ -18,8 +18,6 @@ package core
 
 import (
 	"math/big"
-
-	"github.com/wanchain/go-wanchain/log"
 )
 
 // GasPool tracks the amount of gas available during
@@ -31,7 +29,7 @@ type GasPool big.Int
 func (gp *GasPool) AddGas(amount *big.Int) *GasPool {
 	i := (*big.Int)(gp)
 	i.Add(i, amount)
-	log.Trace("gas pool add gas", "amount", amount.Uint64(), "left", i.Uint64())
+	//log.Trace("gas pool add gas", "amount", amount.Uint64(), "left", i.Uint64())
 	return gp
 }
 
@@ -43,7 +41,7 @@ func (gp *GasPool) SubGas(amount *big.Int) error {
 		return ErrGasLimitReached
 	}
 	i.Sub(i, amount)
-	log.Trace("gas pool sub gas", "amount", amount.Uint64(), "left", i.Uint64())
+	//log.Trace("gas pool sub gas", "amount", amount.Uint64(), "left", i.Uint64())
 	return nil
 }
 
