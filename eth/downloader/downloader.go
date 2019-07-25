@@ -791,9 +791,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		ceil = d.blockchain.CurrentBlock().NumberU64()
 	} else if d.mode == FastSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
+		ceilFull := d.blockchain.CurrentBlock().NumberU64()
+		if ceilFull > ceil {
+			ceil = ceilFull
+		}
 	}
 
-	//max := ceil
+	max := ceil
 	if ceil >= MaxForkAncestry {
 		floor = int64(ceil - MaxForkAncestry)
 	}
@@ -808,25 +812,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	//println(strconv.FormatUint(d.blockchain.CurrentHeader().Number.Uint64(), 10))
-	//if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
-	//	if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
-	//		from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
-	//	}
-	//}
-	//if d.mode == FastSync {
-		if params.IsPosActive() {
-			if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber-1 {
-				from = int64(posconfig.Pow2PosUpgradeBlockNumber) - 1
-				if ceil < uint64(from) {
-					ceil = d.blockchain.CurrentBlock().NumberU64()
-				}
-				if ceil < uint64(from) {
-					ceil = uint64(from)
-				}
-			}
+	if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
+		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
+			from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
 		}
-	//}
+	}
 
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
