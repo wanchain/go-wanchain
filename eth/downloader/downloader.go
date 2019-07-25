@@ -871,7 +871,8 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 					for j:=i+1; j<len(headers); j++ {
 						p.log.Warn("Head headers broke chain ordering", "received", headers[i].Number.Int64())
 					}
-					return 0, errInvalidChain
+					break
+					//return 0, errInvalidChain
 				}
 			}
 			// Check if a common ancestor was found
