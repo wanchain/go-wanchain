@@ -11,7 +11,7 @@ echo 'If you have deployed your validator with deployValidator.sh, you can updat
 echo 'Please make sure that only one gwan docker is running on the current machine.'
 echo 'Otherwise, please update the gwan version manually.'
 echo 'gwan binary URL: https://github.com/wanchain/go-wanchain/releases'
-echo 'gwan docker image: wanchain/client-go:2.1.0-beta'
+echo 'gwan docker image: wanchain/client-go:2.1.1-beta'
 echo ''
 echo ''
 echo 'Please Enter your validator Name:'
@@ -26,7 +26,7 @@ echo ''
 echo ''
 echo ''
 
-DOCKERIMG=wanchain/client-go:2.1.0-beta
+DOCKERIMG=wanchain/client-go:2.1.1-beta
 NETWORK=--testnet
 NETWORKPATH=testnet
 
@@ -56,7 +56,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@54.193.4.239:80
+sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"

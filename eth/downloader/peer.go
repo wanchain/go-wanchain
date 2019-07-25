@@ -53,13 +53,11 @@ type peerConnection struct {
 	blockIdle   int32 // Current block activity state of the peer (idle = 0, active = 1)
 	receiptIdle int32 // Current receipt activity state of the peer (idle = 0, active = 1)
 	stateIdle   int32 // Current node data activity state of the peer (idle = 0, active = 1)
-	epochGenesisIdle int32
 
 	headerThroughput  float64 // Number of headers measured to be retrievable per second
 	blockThroughput   float64 // Number of blocks (bodies) measured to be retrievable per second
 	receiptThroughput float64 // Number of receipts measured to be retrievable per second
 	stateThroughput   float64 // Number of node data pieces measured to be retrievable per second
-	epochGenesisThroughput   float64
 
 	rtt time.Duration // Request round trip time to track responsiveness (QoS)
 
@@ -67,8 +65,6 @@ type peerConnection struct {
 	blockStarted   time.Time // Time instance when the last block (body) fetch was started
 	receiptStarted time.Time // Time instance when the last receipt fetch was started
 	stateStarted   time.Time // Time instance when the last node data fetch was started
-
-	epochGenesisStarted   time.Time
 
 	lacking map[common.Hash]struct{} // Set of hashes not to request (didn't have previously)
 
@@ -146,13 +142,11 @@ func (p *peerConnection) Reset() {
 	atomic.StoreInt32(&p.blockIdle, 0)
 	atomic.StoreInt32(&p.receiptIdle, 0)
 	atomic.StoreInt32(&p.stateIdle, 0)
-	atomic.StoreInt32(&p.epochGenesisIdle, 0)
 
 	p.headerThroughput = 0
 	p.blockThroughput = 0
 	p.receiptThroughput = 0
 	p.stateThroughput = 0
-	p.epochGenesisThroughput = 0
 
 	p.lacking = make(map[common.Hash]struct{})
 }
@@ -236,22 +230,6 @@ func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 	return nil
 }
 
-// FetchNodeData sends a node state data retrieval request to the remote peer.
-func (p *peerConnection) FetchEpochGenesisData(epochid uint64) error {
-	// Sanity check the protocol version
-	if p.version < 63 {
-		panic(fmt.Sprintf("node data fetch [eth/63+] requested on eth/%d", p.version))
-	}
-	// Short circuit if the peer is already fetching
-	if !atomic.CompareAndSwapInt32(&p.epochGenesisIdle, 0, 1) {
-		return errAlreadyFetching
-	}
-	p.epochGenesisStarted = time.Now()
-
-	return nil
-}
-
-
 // SetHeadersIdle sets the peer to idle, allowing it to execute new header retrieval
 // requests. Its estimated header retrieval throughput is updated with that measured
 // just now.
@@ -285,11 +263,6 @@ func (p *peerConnection) SetReceiptsIdle(delivered int) {
 // with that measured just now.
 func (p *peerConnection) SetNodeDataIdle(delivered int) {
 	p.setIdle(p.stateStarted, delivered, &p.stateThroughput, &p.stateIdle)
-}
-
-
-func (p *peerConnection) SetEpochGenesisDataIdle(delivered int) {
-	p.setIdle(p.epochGenesisStarted, delivered, &p.epochGenesisThroughput, &p.epochGenesisIdle)
 }
 
 // setIdle sets the peer to idle, allowing it to execute new retrieval requests.
@@ -553,18 +526,6 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 		p.lock.RLock()
 		defer p.lock.RUnlock()
 		return p.stateThroughput
-	}
-	return ps.idlePeers(63, 64, idle, throughput)
-}
-
-func (ps *peerSet) EpochGenesisIdlePeers() ([]*peerConnection, int) {
-	idle := func(p *peerConnection) bool {
-		return atomic.LoadInt32(&p.epochGenesisIdle) == 0
-	}
-	throughput := func(p *peerConnection) float64 {
-		p.lock.RLock()
-		defer p.lock.RUnlock()
-		return p.epochGenesisThroughput
 	}
 	return ps.idlePeers(63, 64, idle, throughput)
 }

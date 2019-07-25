@@ -127,7 +127,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) *big.Int {
 	epId, _ := util.CalEpochSlotID(parent.Header().Time.Uint64())
-	if epId >= posconfig.ApploEpochID {
+	if epId >= posconfig.ApolloEpochID {
 		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
 	}
 
