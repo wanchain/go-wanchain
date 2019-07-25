@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core"
@@ -761,25 +759,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
 
-				if posconfig.FirstEpochId > 0 {
-					//pos phase,lagged about 5 block start downloader synchronizing process
-					newBlockTime := request.Block.Time().Int64()
-					localBlockTime := currentBlock.Time().Int64()
-					diff := newBlockTime - localBlockTime
-
-					if diff > 100 {
-						if !pm.downloader.Synchronising() {
-							pm.newPeerCh <- &peer{}
-							pm.peers.Unregister(p.id)
-							return errResp(ErrDecode, "msg %v: %v", msg, errors.New("lagged blocks too much"))
-						}
-					}
-
-				} else {
-					//keep pow code
-					go pm.synchronise(p)
-				}
-
+				//keep pow code
+				go pm.synchronise(p)
 			}
 
 		}
