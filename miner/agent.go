@@ -85,6 +85,7 @@ out:
 				close(self.quitCurrentOp)
 			}
 			self.quitCurrentOp = make(chan struct{})
+			log.Info("Recieved new work!")
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
 		case <-self.stop:
@@ -100,6 +101,7 @@ out:
 }
 
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
+	log.Info("Entering CpuAgent::mine")
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 		self.returnCh <- &Result{work, result}
@@ -118,6 +120,6 @@ func (self *CpuAgent) GetHashRate() int64 {
 	return 0
 }
 
-func (self *CpuAgent) SwitchEngine (engine consensus.Engine){
+func (self *CpuAgent) SwitchEngine(engine consensus.Engine) {
 	self.engine = engine
 }

@@ -797,6 +797,7 @@ func (c *Pluto) Authorize(signer common.Address, signFn SignerFn, key *keystore.
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+	log.Info("Entering Pluto Seal")
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
@@ -824,9 +825,11 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	// check if our trun
 	epochSlotId := uint64(1)
 	epochId, slotId := util.CalEpochSlotID(header.Time.Uint64())
+	log.Info("Seal", "header.Time", header.Time.Uint64(), "epochID", epochId, "slotId", slotId)
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
 	if epochSlotId <= lastEpochSlotId {
+		log.Info("Seal", "epochSlotId", epochSlotId, "lastEpochSlotId", lastEpochSlotId)
 		return nil, nil
 	}
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
@@ -836,6 +839,7 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	}
 	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 	if leader != localPublicKey {
+		log.Info("Seal leader != localPublicKey")
 		return nil, nil
 	}
 

@@ -378,6 +378,7 @@ func (self *worker) wait() {
 // push sends a new work task to currently live miner agents.
 func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
+		log.Error("worker::push LoadInt32(&self.mining) != 1")
 		return
 	}
 	for agent := range self.agents {
