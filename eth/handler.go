@@ -770,16 +770,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 					if diff > 100 {
 						if !pm.downloader.Synchronising() {
 							pm.newPeerCh <- &peer{}
+							pm.peers.Unregister(p.id)
+							return errResp(ErrDecode, "msg %v: %v", msg, errors.New("lagged blocks too much"))
 						}
 					}
-
 
 				} else {
 					//keep pow code
 					go pm.synchronise(p)
 				}
-
-				return errors.New("lagged too many blocks")
 
 			}
 
