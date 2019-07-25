@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
@@ -70,7 +69,6 @@ type peer struct {
 	bufferTxs  *set.Set
 	receiveTxs *set.Set
 
-
 	txLastSendTime int64
 	txMsgLastAdd   int64
 }
@@ -88,7 +86,6 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		bufferTxs:   set.New(),
 		receiveTxs:  set.New(),
 	}
-
 
 	return newp
 
@@ -165,9 +162,6 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 
 	//return p2p.Send(p.rw, TxMsg, txs)
 }
-
-
-
 
 // SendNewBlockHashes announces the availability of a number of blocks through
 // a hash notification.
