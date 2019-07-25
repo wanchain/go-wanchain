@@ -48,7 +48,7 @@ var TestnetBootnodes = []string{
 var InternalBootnodes = []string{
 	//"enode://dea09d1ded799044d3b8b5c66e28e584ea3fdaae12e0e39bb3491ac99424cc6c098f32e978c4aef1c3382c3c4492d7a33d720eabdee78cddba28541d6bef1bdc@52.53.224.4:17717", //
 	//"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@118.190.33.102:17717",
-	"enode://10f095104797337ffe046c380841bd4ba86bfdfada73c38c61d60c26bce5800464b272c1635f9d60d6345f053bb986ac52b51db527301cad97d987f85e4b7894@54.183.96.28:17717",
+	"enode://10f095104797337ffe046c380841bd4ba86bfdfada73c38c61d60c26bce5800464b272c1635f9d60d6345f053bb986ac52b51db527301cad97d987f85e4b7894@52.53.158.54:17717",
 }
 
 // PlutoBootnodes are the enode URLs of the P2P bootstrap nodes running on the
@@ -63,7 +63,7 @@ var PlutoV5ootnodes = []string{
 }
 
 var InternalV5Bootnodes = []string{
-	"enode://10f095104797337ffe046c380841bd4ba86bfdfada73c38c61d60c26bce5800464b272c1635f9d60d6345f053bb986ac52b51db527301cad97d987f85e4b7894@54.183.96.28:17717",
+	"enode://10f095104797337ffe046c380841bd4ba86bfdfada73c38c61d60c26bce5800464b272c1635f9d60d6345f053bb986ac52b51db527301cad97d987f85e4b7894@52.53.158.54:17717",
 }
 
 // DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
