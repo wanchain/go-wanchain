@@ -11,7 +11,7 @@ echo 'If you have deployed your validator with deployValidator.sh, you can updat
 echo 'Please make sure that only one gwan docker is running on the current machine.'
 echo 'Otherwise, please update the gwan version manually.'
 echo 'gwan binary URL: https://github.com/wanchain/go-wanchain/releases'
-echo 'gwan docker image: wanchain/client-go:2.1.0-beta'
+echo 'gwan docker image: wanchain/client-go:2.1.1-beta'
 echo ''
 echo ''
 echo 'Please Enter your validator Name:'
