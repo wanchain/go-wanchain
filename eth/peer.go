@@ -70,6 +70,7 @@ type peer struct {
 	receiveTxs *set.Set
 
 	txLastSendTime int64
+	handling   int32
 	txMsgLastAdd   int64
 }
 
@@ -154,12 +155,12 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 		}
 
 		p.knownTxs.Add(tx.Hash())
-		p.bufferTxs.Add(tx)
+		//p.bufferTxs.Add(tx)
 	}
 
-	return nil
+	//return nil
 
-	//return p2p.Send(p.rw, TxMsg, txs)
+	return p2p.Send(p.rw, TxMsg, txs)
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through

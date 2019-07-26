@@ -229,7 +229,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	go pm.txsyncLoop()
 
 	//periodical to send transaction to different peer
-	go pm.sendBufferTxsLoop()
+	//go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -321,11 +321,37 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
+func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handling, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handling, 0)
+
+	cur := time.Now().Unix()
+	size := p.receiveTxs.Size()
+
+	log.Info("handleMsgTxInsert", "size", size)
+	p.txMsgLastAdd = cur
+	txp := make([]*types.Transaction, size)
+
+	for i := 0; i < size; i++ {
+		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
+	}
+
+	st := time.Now()
+	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+	log.Info("AddRemotes","elas",time.Since(st), "len", size)
+	if err != nil {
+		log.Error("adding remote txs errors", "reason", err)
+	}
+}
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
-	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	size := p.receiveTxs.Size()
+	if size>=8192 || atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		return nil
 	}
+
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
@@ -336,6 +362,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		return nil
 	}
 
+	//log.Info("set receiveTxs", "size", size)
 	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
@@ -344,27 +371,8 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
+	go pm.handleMsgTxInsert(p)
 
-	cur := time.Now().Unix()
-	size := p.receiveTxs.Size()
-
-	if size >= 512 || (cur > p.txMsgLastAdd && size > 0) {
-
-		p.txMsgLastAdd = cur
-		txp := make([]*types.Transaction, size)
-
-		for i := 0; i < size; i++ {
-			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
-		}
-
-		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
-		if err != nil {
-
-			log.Error("adding remote txs errors", "reason", err)
-			return err
-		}
-
-	}
 	return nil
 }
 
@@ -660,6 +668,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockHashesMsg:
+		log.Info("NewBlockHashesMsg", "time", time.Now().Unix())
 		var announces newBlockHashesData
 		if err := msg.Decode(&announces); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -682,6 +691,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == NewBlockMsg:
 		// Retrieve and decode the propagated block
+		log.Info("NewBlockMsg", "time", time.Now().Unix())
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
