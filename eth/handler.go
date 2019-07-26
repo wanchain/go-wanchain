@@ -229,7 +229,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	go pm.txsyncLoop()
 
 	//periodical to send transaction to different peer
-	//go pm.sendBufferTxsLoop()
+	go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -809,33 +809,38 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
+func (pm *ProtocolManager) sendBufferTxs(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handlingSend, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handlingSend, 0)
+	txp := make([]*types.Transaction, 0)
+	for {
+		pop := p.bufferTxs.Pop()
+		if pop != nil {
+			tp := pop.(*types.Transaction)
+			txp = append(txp, tp)
+		} else {
+			break
+		}
+	}
+
+	err := p2p.Send(p.rw, TxMsg, txp)
+	if err != nil {
+		log.Info("sending txs errors", "reason", err)
+	}
+}
 func (pm *ProtocolManager) sendBufferTxsLoop() {
-	tick := time.NewTicker(200 * time.Millisecond)
+	tick := time.NewTicker(128 * time.Millisecond)
 	for {
 		select {
 		case <-tick.C:
 			peers := pm.peers.PeersList()
 			for _, p := range peers {
-
 				size := p.bufferTxs.Size()
 				if size > 0 {
-					txp := make([]*types.Transaction, 0)
-					for {
-						pop := p.bufferTxs.Pop()
-						if pop != nil {
-							tp := pop.(*types.Transaction)
-							txp = append(txp, tp)
-						} else {
-							break
-						}
-					}
-
-					err := p2p.Send(p.rw, TxMsg, txp)
-					if err != nil {
-						log.Info("sending txs errors", "reason", err)
-					}
+					go pm.sendBufferTxs(p)
 				}
-
 			}
 
 		case <-pm.quitSync:
