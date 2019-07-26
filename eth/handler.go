@@ -814,12 +814,14 @@ func (pm *ProtocolManager) sendBufferTxs(p *peer) {
 		return
 	}
 	defer atomic.StoreInt32(&p.handlingSend, 0)
-	txp := make([]*types.Transaction, 0)
-	for {
+
+	size := p.bufferTxs.Size()
+	txp := make([]*types.Transaction, size)
+	for i:=0; i<size; i++ {
 		pop := p.bufferTxs.Pop()
 		if pop != nil {
 			tp := pop.(*types.Transaction)
-			txp = append(txp, tp)
+			txp[i] = tp
 		} else {
 			break
 		}
@@ -831,7 +833,7 @@ func (pm *ProtocolManager) sendBufferTxs(p *peer) {
 	}
 }
 func (pm *ProtocolManager) sendBufferTxsLoop() {
-	tick := time.NewTicker(128 * time.Millisecond)
+	tick := time.NewTicker(8 * time.Millisecond)
 	for {
 		select {
 		case <-tick.C:
