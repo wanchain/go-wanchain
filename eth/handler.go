@@ -840,7 +840,7 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 				}
 				sizer := p.receiveTxs.Size()
 				if sizer > 0  {
-					log.Info("try handleMsgTxInsert", "sizer", sizer)
+					//log.Info("try handleMsgTxInsert", "sizer", sizer)
 					go pm.handleMsgTxInsert(p)
 				}
 			}
