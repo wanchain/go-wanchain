@@ -212,6 +212,16 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 			}
 		}
 	}
+
+	//check the blokc cq and keep it in cache
+	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i++ {
+		blk := bc.GetBlockByNumber(i)
+		res := bc.isWriteBlockSecure(blk)
+		if !res || bc.cqCache.Len() > posconfig.BlockSecurityParam {
+			break
+		}
+	}
+
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
