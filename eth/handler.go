@@ -371,6 +371,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
+	size = p.receiveTxs.Size()
 	if size > 256 {
 		log.Info("try handleMsgTxInsert", "size", size)
 		go pm.handleMsgTxInsert(p)
