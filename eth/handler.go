@@ -327,11 +327,9 @@ func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
 	}
 	defer atomic.StoreInt32(&p.handling, 0)
 
-	cur := time.Now().Unix()
 	size := p.receiveTxs.Size()
 
 	log.Info("handleMsgTxInsert", "size", size)
-	p.txMsgLastAdd = cur
 	txp := make([]*types.Transaction, size)
 
 	for i := 0; i < size; i++ {
@@ -361,7 +359,6 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	if txs == nil || len(txs) == 0 {
 		return nil
 	}
-
 	//log.Info("set receiveTxs", "size", size)
 	for _, tx := range txs {
 		// Validate and mark the remote transaction
@@ -371,11 +368,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
-	size = p.receiveTxs.Size()
-	if size > 256 {
-		log.Info("try handleMsgTxInsert", "size", size)
-		go pm.handleMsgTxInsert(p)
-	}
+
 
 	return nil
 }
@@ -845,6 +838,11 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 				if size > 0 {
 					go pm.sendBufferTxs(p)
 				}
+				sizer := p.receiveTxs.Size()
+				if sizer > 0  {
+					log.Info("try handleMsgTxInsert", "sizer", sizer)
+					go pm.handleMsgTxInsert(p)
+				}
 			}
 
 		case <-pm.quitSync:
@@ -853,6 +851,7 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 
 	}
 }
+
 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {
