@@ -222,9 +222,12 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 
 		flatSlotId := epochid*posconfig.SlotCount + slotid
 		bc.cqCache.Add(flatSlotId, blk.Number().Uint64())
-		bc.cqLastSlot = flatSlotId
 
-		if bc.cqCache.Len() >= posconfig.SlotSecurityParam {
+		if i ==  bc.currentBlock.Number().Uint64() {
+			bc.cqLastSlot = flatSlotId
+		}
+
+		if  (bc.cqLastSlot - flatSlotId) > posconfig.SlotSecurityParam {
 			break
 		}
 	}
