@@ -33,7 +33,7 @@ const (
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
-	ApolloEpochID     = 18104
+	ApolloEpochID    = 18104
 )
 
 var EpochLeadersHold [][]byte
@@ -59,7 +59,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 144
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
