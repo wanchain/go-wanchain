@@ -294,11 +294,12 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 		return stakers, errors.New("epocher instance do not exist")
 	}
 
-	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return stakers, err
 	}
@@ -346,11 +347,12 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 	if epocherInst == nil {
 		return nil, errors.New("epocher instance do not exist")
 	}
-	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return nil, err
 	}

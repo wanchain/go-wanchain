@@ -180,6 +180,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	//manager.fetcher = fetcher.New(blockchain.GetHeaderByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+
 	blockchain.RegisterSwitchEngine(manager)
 
 	return manager, nil
