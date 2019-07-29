@@ -108,8 +108,8 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
-		curBlock = e.blkChain.GetBlockByNumber(curNum)
-		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		curBlockHeader := e.blkChain.GetHeaderByNumber(curNum)
+		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
 		if curEpochId <= targetEpochId {
 			break
 		}

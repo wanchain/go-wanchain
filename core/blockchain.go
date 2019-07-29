@@ -966,8 +966,8 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 	lastBlock := posUtil.GetEpochBlock(blkEpid)
 	for i := lastBlock; i > 0; i-- {
 
-		curBlk = bc.GetBlockByNumber(i)
-		blkEpid, blkSlid = posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+		curBlkHeader := bc.GetHeaderByNumber(i)
+		blkEpid, blkSlid = posUtil.CalEpSlbyTd(curBlkHeader.Difficulty.Uint64())
 		checkSlots = blkEpid*posconfig.SlotCount + blkSlid
 
 		if checkSlots <= expSlots {
