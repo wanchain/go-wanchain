@@ -609,6 +609,7 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 func (bc *BlockChain) HasBlockAndState(hash common.Hash) bool {
 	// Check first that the block itself is known
 	block := bc.GetBlockByHash(hash)
+
 	if block == nil {
 		return false
 	}

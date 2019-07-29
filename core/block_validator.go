@@ -79,9 +79,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 
 	//Verify only allow one block in a slot
 	if block.NumberU64() > v.bc.config.PosFirstBlock.Uint64() {
-		parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		//parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
 		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time.Uint64())
-		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlock.Header().Time.Uint64())
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time.Uint64())
 		if (slotIDNew == slotIDOld) && (epIDNew == epIDOld) {
 			return fmt.Errorf("Multi blocks in one slot")
 		}

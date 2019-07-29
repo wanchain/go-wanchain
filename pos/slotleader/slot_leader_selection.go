@@ -554,7 +554,9 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 			return rb, nil
 		}
 	} else {
-		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+
+		//db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+		db, err = s.blockChain.StateAt(s.blockChain.GetHeaderByHash(block.ParentHash()).Root)
 		if err != nil {
 			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
 			rb := posconfig.GetRandomGenesis()
