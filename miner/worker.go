@@ -432,6 +432,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
+	log.Info("tstart")
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
 		tstamp = parent.Time().Int64() + 1
 	}
@@ -442,6 +443,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		time.Sleep(wait)
 	}
 
+	log.Info("tstart after sleep")
 	num := parent.Number()
 	headTime := tstamp
 	if slotTime != 0 {
@@ -464,6 +466,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
+	log.Info("tstart after prepare")
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
 	//if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 	//	// Check whether the block is among the fork extra-override range
@@ -483,6 +486,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
+	log.Info("tstart after makeCurrent")
 	// Create the current work task and check any fork transitions needed
 	work := self.current
 	//if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
@@ -494,9 +498,11 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+	log.Info("tstart after Pending")
 
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
+	log.Info("tstart after commitTransactions")
 	// compute uncles for the new block.
 	//var (
 	//	uncles    []*types.Header
@@ -526,6 +532,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
+	log.Info("tstart after Finalize")
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
