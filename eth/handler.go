@@ -321,11 +321,32 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
+func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handling, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handling, 0)
+
+	size := p.receiveTxs.Size()
+
+	txp := make([]*types.Transaction, size)
+
+	for i := 0; i < size; i++ {
+		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
+	}
+
+	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+	if err != nil {
+		log.Error("adding remote txs errors", "reason", err)
+	}
+}
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
-	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	size := p.receiveTxs.Size()
+	if (uint64)(size)>=core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		return nil
 	}
+
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
@@ -344,26 +365,8 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
-	cur := time.Now().Unix()
-	size := p.receiveTxs.Size()
 
-	if size >= 512 || (cur > p.txMsgLastAdd && size > 0) {
 
-		p.txMsgLastAdd = cur
-		txp := make([]*types.Transaction, size)
-
-		for i := 0; i < size; i++ {
-			txp[i] = p.receiveTxs.Pop().(*types.Transaction)
-		}
-
-		err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
-		if err != nil {
-
-			log.Error("adding remote txs errors", "reason", err)
-			return err
-		}
-
-	}
 	return nil
 }
 
@@ -795,33 +798,45 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
+func (pm *ProtocolManager) sendBufferTxs(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handlingSend, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handlingSend, 0)
+
+	size := p.bufferTxs.Size()
+	txp := make([]*types.Transaction, size)
+	for i:=0; i<size; i++ {
+		pop := p.bufferTxs.Pop()
+		if pop != nil {
+			tp := pop.(*types.Transaction)
+			txp[i] = tp
+		} else {
+			break
+		}
+	}
+
+	err := p2p.Send(p.rw, TxMsg, txp)
+	if err != nil {
+		log.Info("sending txs errors", "reason", err)
+	}
+}
 func (pm *ProtocolManager) sendBufferTxsLoop() {
-	tick := time.NewTicker(200 * time.Millisecond)
+	tick := time.NewTicker(8 * time.Millisecond)
 	for {
 		select {
 		case <-tick.C:
 			peers := pm.peers.PeersList()
 			for _, p := range peers {
-
 				size := p.bufferTxs.Size()
 				if size > 0 {
-					txp := make([]*types.Transaction, 0)
-					for {
-						pop := p.bufferTxs.Pop()
-						if pop != nil {
-							tp := pop.(*types.Transaction)
-							txp = append(txp, tp)
-						} else {
-							break
-						}
-					}
-
-					err := p2p.Send(p.rw, TxMsg, txp)
-					if err != nil {
-						log.Info("sending txs errors", "reason", err)
-					}
+					go pm.sendBufferTxs(p)
 				}
-
+				sizer := p.receiveTxs.Size()
+				if sizer > 0  {
+					//log.Info("try handleMsgTxInsert", "sizer", sizer)
+					go pm.handleMsgTxInsert(p)
+				}
 			}
 
 		case <-pm.quitSync:
@@ -830,6 +845,7 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 
 	}
 }
+
 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {

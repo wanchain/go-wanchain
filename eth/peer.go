@@ -71,6 +71,8 @@ type peer struct {
 
 
 	txLastSendTime int64
+	handling   int32
+	handlingSend   int32
 	txMsgLastAdd   int64
 }
 

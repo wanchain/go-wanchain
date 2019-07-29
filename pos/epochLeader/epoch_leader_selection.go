@@ -108,8 +108,8 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
-		curBlock = e.blkChain.GetBlockByNumber(curNum)
-		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		curBlockHeader := e.blkChain.GetHeaderByNumber(curNum)
+		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
 		if curEpochId <= targetEpochId {
 			break
 		}
@@ -129,7 +129,8 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	//stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetHeaderByNumber(targetBlkNum).Root)
 	if err != nil {
 		return err
 	}
@@ -350,11 +351,13 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 
 func (e *Epocher) GetWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
-	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
+
+	block := e.GetBlkChain().GetHeaderByNumber(targetBlkNum)
+	//block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := e.GetBlkChain().StateAt(block.Root())
+	stateDb, err := e.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -637,7 +640,8 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	//stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetHeaderByNumber(targetBlkNum).Root)
 	if err != nil {
 		return nil, err
 	}
