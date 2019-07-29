@@ -608,14 +608,25 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 // in the database or not, caching it if present.
 func (bc *BlockChain) HasBlockAndState(hash common.Hash) bool {
 	// Check first that the block itself is known
-	block := bc.GetBlockByHash(hash)
+	if posconfig.FirstEpochId == 0 {
+		block := bc.GetBlockByHash(hash)
 
-	if block == nil {
-		return false
+		if block == nil {
+			return false
+		}
+		// Ensure the associated state is also present
+		_, err := bc.stateCache.OpenTrie(block.Root())
+		return err == nil
+	} else {
+		block := bc.GetHeaderByHash(hash)
+
+		if block == nil {
+			return false
+		}
+		// Ensure the associated state is also present
+		_, err := bc.stateCache.OpenTrie(block.Root)
+		return err == nil
 	}
-	// Ensure the associated state is also present
-	_, err := bc.stateCache.OpenTrie(block.Root())
-	return err == nil
 }
 
 // GetBlock retrieves a block from the database by hash and number,
