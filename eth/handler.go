@@ -346,7 +346,7 @@ func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	size := p.receiveTxs.Size()
-	if size>=8192 || atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	if (uint64)(size)>=core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		return nil
 	}
 
