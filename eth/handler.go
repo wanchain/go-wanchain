@@ -329,16 +329,13 @@ func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
 
 	size := p.receiveTxs.Size()
 
-	log.Info("handleMsgTxInsert", "size", size)
 	txp := make([]*types.Transaction, size)
 
 	for i := 0; i < size; i++ {
 		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 	}
 
-	st := time.Now()
 	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
-	log.Info("AddRemotes","elas",time.Since(st), "len", size)
 	if err != nil {
 		log.Error("adding remote txs errors", "reason", err)
 	}
