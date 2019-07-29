@@ -959,8 +959,6 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	result := true
 	if totalSlots >= posconfig.SlotSecurityParam {
 		result = blocksIn2K > posconfig.K
-	} else if totalSlots >= posconfig.K {
-		result = blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
 
 	if result {
