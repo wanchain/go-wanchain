@@ -214,10 +214,16 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	}
 
 	//check the blokc cq and keep it in cache
-	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i++ {
+	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i-- {
 		blk := bc.GetBlockByNumber(i)
-		res := bc.isWriteBlockSecure(blk)
-		if !res || bc.cqCache.Len() > posconfig.BlockSecurityParam {
+
+		epochid,slotid := posUtil.CalEpochSlotID(blk.Time().Uint64())
+
+		flatSlotId := epochid*posconfig.SlotCount + slotid
+		bc.cqCache.Add(flatSlotId, blk.Number().Uint64())
+		bc.cqLastSlot = flatSlotId
+
+		if bc.cqCache.Len() >= posconfig.SlotSecurityParam {
 			break
 		}
 	}
@@ -911,9 +917,9 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 	var blocksIn2K int
 
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
-	if epochId == posconfig.FirstEpochId {
-		return true
-	}
+	//if epochId == posconfig.FirstEpochId {
+	//	return true
+	//}
 
 
 	//because slot index starts from 0 //
@@ -940,16 +946,20 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 		blocksIn2K = bc.getBlocksCountIn2KSlots(block, posconfig.SlotSecurityParam)
 	}
 
-	bc.cqCache.Add(endFlatSlotId,blocksIn2K)
-	bc.cqLastSlot = endFlatSlotId
 
+	result := true
 	if totalSlots >= posconfig.SlotSecurityParam {
-		return blocksIn2K > posconfig.K
+		result = blocksIn2K > posconfig.K
 	} else if totalSlots >= posconfig.K {
-		return blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
+		result = blocksIn2K > (int)(totalSlots-posconfig.K-bc.config.PosFirstBlock.Uint64())
 	}
 
-	return true
+	if result {
+		bc.cqCache.Add(endFlatSlotId,block.Number().Uint64())
+		bc.cqLastSlot = endFlatSlotId
+	}
+
+	return result
 }
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
@@ -991,11 +1001,11 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 
 		cacheBeginId :=  bc.cqLastSlot - posconfig.SlotSecurityParam
 		if flatSlotId <= bc.cqLastSlot && flatSlotId > cacheBeginId && bc.cqCache.Len() > posconfig.BlockSecurityParam {
+
 			for ;flatSlotId > cacheBeginId;flatSlotId-- {
 				blks,ok := bc.cqCache.Get(flatSlotId)
-				blocksIn2K = blks.(int)
 				if ok  && blks != 0{
-					break
+					blocksIn2K++
 				}
 			}
 		}
@@ -1016,11 +1026,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	epid, _ := posUtil.CalEpochSlotID(block.Time().Uint64())
+	epid, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 	// cq, _ := bc.ChainQuality(epid, slid)
 	// log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
 
 	//confirm chain quality confirm security
+
+
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId && block.NumberU64() > posconfig.Pow2PosUpgradeBlockNumber+posconfig.Stage2K {
 
 		res, _ := bc.ChainRestartStatus()
@@ -1039,6 +1051,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 				return NonStatTy, ErrInsufficientCQ
 			}
 		}
+
+	} else if  epid == posconfig.FirstEpochId &&
+			slotId > (posconfig.SlotCount - posconfig.SlotSecurityParam) {
+
+			flatSlotId := posconfig.FirstEpochId*posconfig.SlotCount + slotId
+			bc.cqCache.Add(flatSlotId, block.Number().Uint64())
+			bc.cqLastSlot = flatSlotId
 	}
 
 	// Calculate the total difficulty of the block
