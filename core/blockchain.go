@@ -869,9 +869,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
 //posconfig.SlotSecurityParam
-
-func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64) int {
-	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) int {
+	epochId, slotId := posUtil.CalEpochSlotID(blk.Time().Uint64())
 	endFlatSlotId := epochId*posconfig.SlotCount + slotId
 
 	if endFlatSlotId == 0 {
@@ -884,22 +883,25 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(block *types.Block, secPara uint64
 	}
 
 	n := 0
+
+	blkHeader := blk.Header()
+	blkNumber := blk.NumberU64()
 	for {
 
 
-		blockHash := block.ParentHash()
-		block = bc.GetBlockByHash(blockHash)
+		blkNumber = blkHeader.Number.Uint64() - 1
+		blkHeader = bc.GetHeaderByNumber(blkNumber)
 
-		if nil == block {
+		if nil == blkHeader {
 			//never reached, because ppow blocks, safely remove this code?
 			break
 		}
 
-		if block.Number().Cmp(bc.config.PosFirstBlock) < 0 {
+		if blkHeader.Number.Cmp(bc.config.PosFirstBlock) < 0 {
 			break
 		}
 
-		epochId, slotId = posUtil.CalEpochSlotID(block.Time().Uint64())
+		epochId, slotId = posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
 		flatSlotId := epochId*posconfig.SlotCount + slotId
 		if flatSlotId < startFlatSlotId || flatSlotId >= endFlatSlotId {
 			break
