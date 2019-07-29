@@ -781,13 +781,14 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	if err != nil {
 		return nil, err
 	}
-	
+
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eidNow >= posconfig.ApolloEpochID {
+	if eidNow >= posconfig.ApolloEpochID &&  eidNow < posconfig.AugustEpochID{
 		if contract.Value().Cmp(minPartnerIn) < 0 {
 			return nil, errors.New("min wan amount should >= 10000")
 		}
 	}
+
 	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
 	if stakerInfo.StakingEpoch == 0 {
 		realLockEpoch = int64(stakerInfo.LockEpochs)
@@ -822,6 +823,12 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	if found == false {
 		if length >= maxPartners {
 			return nil, errors.New("Too many partners")
+		}
+
+		if eidNow >= posconfig.ApolloEpochID {
+			if contract.Value().Cmp(minPartnerIn) < 0 {
+				return nil, errors.New("min wan amount should >= 10000")
+			}
 		}
 		partner = &PartnerInfo{
 			Address:      contract.CallerAddress,
