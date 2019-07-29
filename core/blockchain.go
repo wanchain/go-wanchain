@@ -216,12 +216,11 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	t := time.Now()
 	//check the blokc cq and keep it in cache
 	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i-- {
-		blk := bc.GetBlockByNumber(i)
-
-		epochid,slotid := posUtil.CalEpochSlotID(blk.Time().Uint64())
+		blkHeader := bc.GetHeaderByNumber(i)
+		epochid,slotid := posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
 
 		flatSlotId := epochid*posconfig.SlotCount + slotid
-		bc.cqCache.Add(flatSlotId, blk.Number().Uint64())
+		bc.cqCache.Add(flatSlotId, blkHeader.Number.Uint64())
 
 		if i ==  bc.currentBlock.Number().Uint64() {
 			bc.cqLastSlot = flatSlotId
