@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math"
 	"math/big"
 	"strconv"
@@ -28,10 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	ethereum "github.com/wanchain/go-wanchain"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-
 	"github.com/rcrowley/go-metrics"
+	"github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/ethdb"
@@ -138,7 +137,7 @@ type Downloader struct {
 	receiptWakeCh chan bool            // [eth/63] Channel to signal the receipt fetcher of new tasks
 	headerProcCh  chan []*types.Header // [eth/62] Channel to feed the header processor new tasks
 
-	headerTdCh chan headerTdPack
+	headerTdCh            chan headerTdPack
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -209,6 +208,7 @@ type BlockChain interface {
 	GetFirstPosBlockNumber() uint64
 
 	GetBlockByNumber(number uint64) *types.Block
+
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -238,7 +238,7 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		stateCh:        make(chan dataPack),
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
-		headerTdCh:     make(chan headerTdPack, 1),
+		headerTdCh:            make(chan headerTdPack, 1),
 	}
 	go dl.qosTuner()
 	go dl.stateFetcher()
@@ -401,7 +401,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if d.mode == FastSync && atomic.LoadUint32(&d.fsPivotFails) >= fsCriticalTrials {
 		d.mode = FullSync
 	}
-
 	// Retrieve the origin peer and initiate the downloading process
 	p := d.peers.Peer(id)
 	if p == nil {
@@ -448,9 +447,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 	onlyPow := 0
 	posFirst := d.blockchain.GetFirstPosBlockNumber()
-	if origin+1 < posFirst {
+	if origin+1 < posFirst  {
 		if height > posFirst {
-			height = posFirst - 1
+			height = posFirst-1
 			latest, td, err = d.fetchHeaderTd(p, height)
 			if err != nil {
 				log.Debug("fetchHeaderTd error", "err", err)
@@ -529,8 +528,8 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 
 	fetchers := []func() error{
 		func() error { return d.fetchHeaders(p, origin+1, uint64(height)) }, // Headers are always retrieved
-		func() error { return d.fetchBodies(origin + 1) },                   // Bodies are retrieved during normal and fast sync
-		func() error { return d.fetchReceipts(origin + 1) },                 // Receipts are retrieved during fast sync
+		func() error { return d.fetchBodies(origin + 1) },   // Bodies are retrieved during normal and fast sync
+		func() error { return d.fetchReceipts(origin + 1) }, // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
 	}
 
@@ -546,6 +545,7 @@ func (d *Downloader) fastSyncWithPeerPow(p *peerConnection, origin uint64, heigh
 	}
 	return err
 }
+
 
 func (d *Downloader) fullSyncWithPeer(p *peerConnection, origin uint64, height uint64, heightHeader *types.Header, td *big.Int) (err error) {
 	log.Info("fullSyncWithPeer", "current block", d.blockchain.CurrentBlock().NumberU64())
@@ -759,9 +759,9 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		from = 0
 	}
 
-	if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1 {
+	if max >= posconfig.Pow2PosUpgradeBlockNumber-1 || d.blockchain.CurrentHeader().Number.Uint64() >= posconfig.Pow2PosUpgradeBlockNumber-1{
 		if uint64(from) < posconfig.Pow2PosUpgradeBlockNumber {
-			from = int64(posconfig.Pow2PosUpgradeBlockNumber) - 1
+			from = int64(posconfig.Pow2PosUpgradeBlockNumber)-1
 		}
 	}
 
@@ -1014,7 +1014,6 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, to uint64) err
 			case d.headerProcCh <- nil:
 			case <-d.cancelCh:
 			}
-
 			return errBadPeer
 		}
 	}
@@ -1643,6 +1642,8 @@ func (d *Downloader) DeliverHeaders(id string, headers []*types.Header) (err err
 	return d.deliver(id, d.headerCh, &headerPack{id, headers}, headerInMeter, headerDropMeter)
 }
 
+
+
 // DeliverBodies injects a new batch of block bodies received from a remote node.
 func (d *Downloader) DeliverBodies(id string, transactions [][]*types.Transaction, uncles [][]*types.Header) (err error) {
 	return d.deliver(id, d.bodyCh, &bodyPack{id, transactions, uncles}, bodyInMeter, bodyDropMeter)
@@ -1657,6 +1658,7 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 	return d.deliver(id, d.stateCh, &statePack{id, data}, stateInMeter, stateDropMeter)
 }
+
 
 func (d *Downloader) DeliverHeaderTd(id string, headerTd *types.HeaderTdData) (err error) {
 	d.cancelLock.RLock()

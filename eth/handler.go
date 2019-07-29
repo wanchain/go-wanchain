@@ -180,8 +180,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
-	//manager.fetcher = fetcher.New(blockchain.GetHeaderByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
-
 	blockchain.RegisterSwitchEngine(manager)
 
 	return manager, nil
@@ -358,7 +356,7 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	if txs == nil || len(txs) == 0 {
 		return nil
 	}
-	//log.Info("set receiveTxs", "size", size)
+
 	for _, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
@@ -664,7 +662,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockHashesMsg:
-		log.Info("NewBlockHashesMsg", "time", time.Now().Unix())
 		var announces newBlockHashesData
 		if err := msg.Decode(&announces); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -680,14 +677,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				unknown = append(unknown, block)
 			}
 		}
-
 		for _, block := range unknown {
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
 	case msg.Code == NewBlockMsg:
 		// Retrieve and decode the propagated block
-		log.Info("NewBlockMsg", "time", time.Now().Unix())
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)

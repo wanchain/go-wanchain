@@ -608,25 +608,13 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 // in the database or not, caching it if present.
 func (bc *BlockChain) HasBlockAndState(hash common.Hash) bool {
 	// Check first that the block itself is known
-	if posconfig.FirstEpochId == 0 {
-		block := bc.GetBlockByHash(hash)
-
-		if block == nil {
-			return false
-		}
-		// Ensure the associated state is also present
-		_, err := bc.stateCache.OpenTrie(block.Root())
-		return err == nil
-	} else {
-		block := bc.GetHeaderByHash(hash)
-
-		if block == nil {
-			return false
-		}
-		// Ensure the associated state is also present
-		_, err := bc.stateCache.OpenTrie(block.Root)
-		return err == nil
+	block := bc.GetBlockByHash(hash)
+	if block == nil {
+		return false
 	}
+	// Ensure the associated state is also present
+	_, err := bc.stateCache.OpenTrie(block.Root())
+	return err == nil
 }
 
 // GetBlock retrieves a block from the database by hash and number,
@@ -932,8 +920,6 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) 
 
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
-	t := time.Now()
-	defer log.Info("isWriteBlockSecure","eclapse",time.Since(t),"cache length",bc.cqCache.Len())
 
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 
@@ -1051,11 +1037,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 				return NonStatTy, ErrInsufficientCQ
 			}
 		}
-
 	}
-
-
-
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1328,8 +1310,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		lastCanon     *types.Block
 		coalescedLogs []*types.Log
 	)
-
-	t := time.Now()
 	// Start the parallel header verifier
 	headers := make([]*types.Header, len(chain))
 	seals := make([]bool, len(chain))
@@ -1359,7 +1339,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
 		}
-
 		if err != nil {
 			if err == ErrKnownBlock {
 				stats.ignored++
@@ -1391,13 +1370,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// TODO: verify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
-		log.Info("verify header","eclapsed",time.Since(t))
 
 		if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
 			epochId, _ := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
 			posconfig.FirstEpochId = epochId
 		}
-
 
 		var parent *types.Block
 		if i == 0 {
@@ -1405,9 +1382,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		} else {
 			parent = chain[i-1]
 		}
-
-		t = time.Now()
-
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1418,10 +1392,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
-
-		log.Info("bc.processor.Process","eclapsed",time.Since(t))
-
-		t = time.Now()
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
@@ -1429,9 +1399,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		log.Info("bc.Validator().ValidateState","eclapsed",time.Since(t))
-
-		t  = time.Now()
 		if bc.IsInPosStage() && bc.SlotValidator() != nil {
 			err = bc.SlotValidator().ValidateBody(block)
 			if err != nil {
@@ -1439,15 +1406,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				return i, events, coalescedLogs, err
 			}
 		}
-		log.Info("bc.SlotValidator().ValidateBody","eclapsed",time.Since(t))
-		t = time.Now()
+
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockAndState(block, receipts, state)
-
-
-		log.Info("bc.WriteBlockAndState","eclapsed",time.Since(t))
-		t = time.Now()
-
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
@@ -1468,9 +1429,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainSideEvent{block})
 		}
-
-
-
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)
