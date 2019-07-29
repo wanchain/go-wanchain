@@ -1019,7 +1019,8 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		bc.cqLastSlot = flatSlotId
 	}
 
-	if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  {
+	//if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  { TODO: temp change.
+	if bc.config.IsPosActive && epid > posconfig.FirstEpochId  { // temp change for test.
 
 		res, _ := bc.ChainRestartStatus()
 
