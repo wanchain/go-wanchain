@@ -343,7 +343,8 @@ func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
 func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	size := p.receiveTxs.Size()
-	if (uint64)(size)>=core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	if (uint64)(size) >= core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
+		log.Warn("receiveTxs is full or acceptTxs 0", "receiveTxs.Size", size, "acceptTxs", pm.acceptTxs)
 		return nil
 	}
 
@@ -365,7 +366,6 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 		p.MarkTransaction(tx.Hash())
 		p.receiveTxs.Add(tx)
 	}
-
 
 	return nil
 }
@@ -806,7 +806,7 @@ func (pm *ProtocolManager) sendBufferTxs(p *peer) {
 
 	size := p.bufferTxs.Size()
 	txp := make([]*types.Transaction, size)
-	for i:=0; i<size; i++ {
+	for i := 0; i < size; i++ {
 		pop := p.bufferTxs.Pop()
 		if pop != nil {
 			tp := pop.(*types.Transaction)
@@ -833,7 +833,7 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 					go pm.sendBufferTxs(p)
 				}
 				sizer := p.receiveTxs.Size()
-				if sizer > 0  {
+				if sizer > 0 {
 					//log.Info("try handleMsgTxInsert", "sizer", sizer)
 					go pm.handleMsgTxInsert(p)
 				}
@@ -845,7 +845,6 @@ func (pm *ProtocolManager) sendBufferTxsLoop() {
 
 	}
 }
-
 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {
