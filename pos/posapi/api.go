@@ -530,11 +530,19 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	return &activity, nil
 }
 
+// GetSlotActivity get slot activity of epoch
+func (a PosApi) GetSlotActivity(epochID uint64) (*SlotActivity, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	activity := SlotActivity{}
+	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
 // GetValidatorActivity get epoch leader, random proposer addresses and activity
 func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
-	epID, _ := util.GetEpochSlotID()
-	if epID == epochID {
-		return &ValidatorActivity{}, nil
+	epID := a.GetEpochID()
+	if epochID >= epID {
+		return nil, nil
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
@@ -546,6 +554,13 @@ func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error)
 	activity := ValidatorActivity{}
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
+	if len(activity.EpLeader) == 0 &&
+		len(activity.EpActivity) == 0 &&
+		len(activity.RpLeader) == 0 &&
+		len(activity.RpActivity) == 0 {
+		return nil, nil
+	}
+
 	return &activity, nil
 }
 

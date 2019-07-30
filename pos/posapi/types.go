@@ -15,6 +15,13 @@ type ValidatorActivity struct {
 	RpActivity []int            `json:"rpActivity"`
 }
 
+type SlotActivity struct {
+	SltLeader   []common.Address `json:"sltLeader"`
+	SlBlocks    []int            `json:"slBlocks"`
+	SlActivity  float64          `json:"slActivity"`
+	SlCtrlCount int              `json:"slCtrlCount"`
+}
+
 type Activity struct {
 	EpLeader    []common.Address `json:"epLeader"`
 	EpActivity  []int            `json:"epActivity"`
@@ -82,7 +89,7 @@ type StakerJson struct {
 	Clients  []ClientInfo  `json:"clients"`
 	Partners []PartnerInfo `json:"partners"`
 
-	MaxFeeRate uint64 `json:"maxFeeRate"`
+	MaxFeeRate          uint64 `json:"maxFeeRate"`
 	FeeRateChangedEpoch uint64 `json:"feeRateChangedEpoch"`
 }
 

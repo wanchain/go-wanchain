@@ -317,6 +317,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getSlotActivity',
+			call: 'pos_getSlotActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getEpochID',
 			call: 'pos_getEpochID',
 			params: 0
