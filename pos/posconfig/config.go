@@ -34,6 +34,7 @@ const (
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
 	ApolloEpochID     = 18104
+	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 )
 
 var EpochLeadersHold [][]byte

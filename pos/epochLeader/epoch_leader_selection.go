@@ -104,7 +104,7 @@ NOTE: if the targetEpochId is future, will return current blockNumber.
 */
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
-	var curBlock *types.Block
+	var curBlockHeader *types.Header
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
@@ -119,7 +119,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	targetBlkNum := curNum
 	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
-		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
+		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlockHeader.Hash())
 	}
 
 	return targetBlkNum
