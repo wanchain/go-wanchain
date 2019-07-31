@@ -322,11 +322,11 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 				stakeJson.FeeRateChangedEpoch = newFee.ChangedEpoch
 			} else {
 				stakeJson.MaxFeeRate = staker.FeeRate
-				stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
+				stakeJson.FeeRateChangedEpoch = 0
 			}
 		} else {
 			stakeJson.MaxFeeRate = staker.FeeRate
-			stakeJson.FeeRateChangedEpoch = staker.StakingEpoch
+			stakeJson.FeeRateChangedEpoch = 0
 		}
 
 		stakers = append(stakers, stakeJson)
