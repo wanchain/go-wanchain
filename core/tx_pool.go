@@ -1085,6 +1085,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
 			}
 		}
+
+
 		sort.Sort(addresses)
 
 		// Drop transactions until the total is below the limit or only locals remain

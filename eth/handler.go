@@ -821,6 +821,7 @@ func (pm *ProtocolManager) sendBufferTxs(p *peer) {
 		log.Info("sending txs errors", "reason", err)
 	}
 }
+
 func (pm *ProtocolManager) sendBufferTxsLoop() {
 	tick := time.NewTicker(8 * time.Millisecond)
 	for {

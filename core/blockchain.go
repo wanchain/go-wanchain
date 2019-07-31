@@ -1014,7 +1014,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	//confirm chain quality confirm security
 	if posconfig.FirstEpochId != 0 {
-		flatSlotId := posconfig.FirstEpochId*posconfig.SlotCount + slotId
+		flatSlotId := epid*posconfig.SlotCount + slotId
 		bc.cqCache.Add(flatSlotId, block.Number().Uint64())
 		bc.cqLastSlot = flatSlotId
 	}
