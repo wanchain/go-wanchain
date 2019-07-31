@@ -172,17 +172,26 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		if sls.IsLocalPkInEpochLeaders(prePks) {
 			//leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
-				log.Info("commit all block with the right rights.......")
-				for i := 0; uint64(i) <= slotID; i++ {
-					slotTime := (epochID*posconfig.SlotCount + uint64(i)) * posconfig.SlotTime
-					leaderPub, _ := sls.GetSlotLeader(targetEpochLeaderID, uint64(i))
-					leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-					if leader == localPublicKey {
-						log.Info("leader ", "leader", leader, "slotID", slotID, "history slotID", i)
-						self.worker.chainSlotTimer <- slotTime
-					}
-				}
 
+				leaderPub1, _ := sls.GetSlotLeader(targetEpochLeaderID, slotID)
+
+				leader1 := hex.EncodeToString(crypto.FromECDSAPub(leaderPub1))
+
+				if leader1 == localPublicKey {
+					log.Info("commit all block with the right rights.......")
+					for i := 0; uint64(i) <= slotID; i++ {
+						slotTime := (epochID*posconfig.SlotCount + uint64(i)) * posconfig.SlotTime
+						leaderPub, _ := sls.GetSlotLeader(targetEpochLeaderID, uint64(i))
+						leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
+						if leader == localPublicKey {
+							log.Info("leader ", "leader", leader, "slotID", slotID, "history slotID", i)
+							self.worker.chainSlotTimer <- slotTime
+
+							time.Sleep(time.Millisecond * 100)
+						}
+					}
+
+				}
 				//leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				//log.Info("leader ", "leader", leader)
 				//if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{

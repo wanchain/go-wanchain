@@ -86,7 +86,8 @@ out:
 			}
 			self.quitCurrentOp = make(chan struct{})
 			log.Info("Recieved new work!")
-			go self.mine(work, self.quitCurrentOp)
+			//go self.mine(work, self.quitCurrentOp)
+			self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
 		case <-self.stop:
 			self.mu.Lock()

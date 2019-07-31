@@ -828,10 +828,10 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	log.Info("Seal", "header.Time", header.Time.Uint64(), "epochID", epochId, "slotId", slotId)
 	epochSlotId += slotId << 8
 	epochSlotId += epochId << 32
-	if epochSlotId <= lastEpochSlotId {
-		log.Info("Seal", "epochSlotId", epochSlotId, "lastEpochSlotId", lastEpochSlotId)
-		return nil, nil
-	}
+	//if epochSlotId <= lastEpochSlotId {
+	//	log.Info("Seal", "epochSlotId", epochSlotId, "lastEpochSlotId", lastEpochSlotId)
+	//	return nil, nil
+	//}
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&c.key.PrivateKey.PublicKey))
 	leaderPub, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochId, slotId)
 	if err != nil {
