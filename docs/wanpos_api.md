@@ -28,14 +28,14 @@ This manual enumerates and explains all POS-APIs.
         - [3.1.15. getTimeByEpochID](#3115-gettimebyepochid)
         - [3.1.16. getWhiteListConfig](#3116-getwhitelistconfig)
         - [3.1.17. getWhiteListbyEpochID](#3117-getwhitelistbyepochid)
-    - [3.2. 奖励信息查询](#32-奖励信息查询)
+    - [3.2. Reward information query](#32-reward-information-query)
         - [3.2.1. getEpochIncentivePayDetail](#321-getepochincentivepaydetail)
         - [3.2.2. getEpochIncentiveBlockNumber](#322-getepochincentiveblocknumber)
         - [3.2.3. getEpochIncentive](#323-getepochincentive)
         - [3.2.4. getEpochGasPool](#324-getepochgaspool)
         - [3.2.5. getEpochRemain](#325-getepochremain)
         - [3.2.6. getIncentivePool](#326-getincentivepool)
-    - [3.3. 选举信息查询](#33-选举信息查询)
+    - [3.3. Election information enquiry](#33-election-information-enquiry)
         - [3.3.1. getEpochStakerInfo](#331-getepochstakerinfo)
         - [3.3.2. getEpochStakerInfoAll](#332-getepochstakerinfoall)
         - [3.3.3. GetEpochLeadersAddrByEpochID](#333-getepochleadersaddrbyepochid)
@@ -54,11 +54,11 @@ This manual enumerates and explains all POS-APIs.
         - [3.3.16. getValidSMACnt](#3316-getvalidsmacnt)
     - [3.4. Random number query](#34-random-number-query)
         - [3.4.1. getRandom](#341-getrandom)
-    - [3.5. 活跃度查询](#35-活跃度查询)
+    - [3.5. Activity query](#35-activity-query)
         - [3.5.1. getActivity](#351-getactivity)
         - [3.5.2. getSlotActivity](#352-getslotactivity)
         - [3.5.3. getValidatorActivity](#353-getvalidatoractivity)
-    - [3.6. 废弃的API](#36-废弃的api)
+    - [3.6. Abandoned the API](#36-abandoned-the-api)
         - [3.6.1. getBootNodePK](#361-getbootnodepk)
         - [3.6.2. getIncentiveRunTimes](#362-getincentiveruntimes)
         - [3.6.3. getRBAddress](#363-getrbaddress)
@@ -205,7 +205,7 @@ Gets the public key list of the controlled node specifying the epoch
 ......
 "0x04fdb485b566c2ddb40e2f4341b1e5746479a7c45e3d8101b1360b8bdba6206deee520ceecc9e9897e3b05b53e3ffa6fa659bef47c384984c0bc021a843df10847"]
 ```
-## 3.2. 奖励信息查询
+## 3.2. Reward information query
 
 ### 3.2.1. getEpochIncentivePayDetail
 Get the reward information of the designated epoch, enter epochID, and return the reward payment details (including RNP reward, EL reward and chunk reward) for all the verification nodes and clients working in the epoch.
@@ -259,7 +259,7 @@ Get the bonus pool size of the specified epoch, and return values are respective
 ```
 
 
-## 3.3. 选举信息查询
+## 3.3. Election information enquiry
 
 ### 3.3.1. getEpochStakerInfo
 Get the election weight information of the designated epochID and the verifier address of the designated epoch
@@ -491,7 +491,7 @@ Error: no random number exists
 ```
 
 
-## 3.5. 活跃度查询
+## 3.5. Activity query
 
 ### 3.5.1. getActivity
 Get the activity information of the specified epoch, the historical epoch is a fixed value, and the current epoch will update the latest current value in real time
@@ -553,7 +553,7 @@ RpLeader is the random number proposer list of this epoch, and rpActivity is whe
 }
 ```
 
-## 3.6. 废弃的API
+## 3.6. Abandoned the API
 
 The following API interfaces have been deprecated and will be removed in future releases
 
