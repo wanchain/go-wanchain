@@ -759,7 +759,7 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// TODO give money for the main test
 	if header.Number.Uint64() == chain.Config().PosFirstBlock.Uint64() {
-		state.AddBalance(common.HexToAddress("xxxxnewxxxxx"), big.NewInt(0).Mul(big.NewInt(100000000), big.NewInt(1e18)))
+		state.AddBalance(common.HexToAddress("0xadc5fFc946DC781DAc5cDA9d1446959e9A685120"), big.NewInt(0).Mul(big.NewInt(100000000), big.NewInt(1e18)))
 	}
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 	if posconfig.FirstEpochId != 0 && epochID > posconfig.FirstEpochId+2 && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
