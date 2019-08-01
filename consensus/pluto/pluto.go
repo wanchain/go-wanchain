@@ -876,12 +876,6 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	copy(header.Extra[:len(buf)], buf)
 	header.Difficulty.SetUint64(epochSlotId)
 
-	fb := new(big.Int).Mul( new(big.Int).SetUint64(0xffffffffffffffff), new(big.Int).SetUint64(0xffffffffffffffff))
-	fdiff := new(big.Int).SetUint64(epochSlotId)
-	fdiff = fdiff.Add(fdiff,fb)
-	header.Difficulty.Set(fdiff)
-
-
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
 		return nil, err
