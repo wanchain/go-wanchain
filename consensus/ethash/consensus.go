@@ -480,9 +480,13 @@ func (self *Ethash) verifySignerIdentity(chain consensus.ChainReader, header *ty
 				}
 			}
 		}
-		if slotheader.Coinbase != header.Coinbase {
-			return errors.New("invalid leader")
-		}
+		//if slotheader.Coinbase != header.Coinbase {
+		//	return errors.New("invalid leader")
+		//}
+		// TODO only record for main test
+		log.Warn("Engisn switch", "slotheader.Coinbase",slotheader.Coinbase)
+		log.Warn("Engisn switch", "header.Coinbase",header.Coinbase)
+
 	}
 	if number > posBootstrapBlockNum {
 		return errors.New("consensus engines should switched")

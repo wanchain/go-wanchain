@@ -530,9 +530,11 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
+		if isPush {
+			log.Info("Pushed new mining work")
+		}
 	}
 	if isPush {
-		log.Info("Pushed new mining work")
 		self.push(work)
 	}
 }

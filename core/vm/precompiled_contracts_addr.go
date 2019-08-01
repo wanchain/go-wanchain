@@ -25,11 +25,11 @@ var (
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
-	WanCscPrecompileAddr  = common.BytesToAddress([]byte{218})
-	StakersInfoAddr       = common.BytesToAddress(big.NewInt(400).Bytes())
-	StakingCommonAddr     = common.BytesToAddress(big.NewInt(401).Bytes())
-	StakersFeeAddr        = common.BytesToAddress(big.NewInt(402).Bytes())
-	StakersMaxFeeAddr     = common.BytesToAddress(big.NewInt(403).Bytes())
+	WanCscPrecompileAddr  = common.BytesToAddress(big.NewInt(8888218).Bytes())
+	StakersInfoAddr       = common.BytesToAddress(big.NewInt(8888400).Bytes())
+	StakingCommonAddr     = common.BytesToAddress(big.NewInt(8888401).Bytes())
+	StakersFeeAddr        = common.BytesToAddress(big.NewInt(8888402).Bytes())
+	StakersMaxFeeAddr     = common.BytesToAddress(big.NewInt(8888403).Bytes())
 	otaBalanceStorageAddr = common.BytesToAddress(big.NewInt(300).Bytes())
 	otaImageStorageAddr   = common.BytesToAddress(big.NewInt(301).Bytes())
 
@@ -60,12 +60,12 @@ var (
 	otaBalance50000WStorageAddr = common.HexToAddress(Wancoin50000)
 
 	//pos
-	slotLeaderPrecompileAddr = common.BytesToAddress(big.NewInt(600).Bytes())
+	slotLeaderPrecompileAddr = common.BytesToAddress(big.NewInt(8888600).Bytes())
 
-	IncentivePrecompileAddr = common.BytesToAddress(big.NewInt(606).Bytes()) //0x25E
+	IncentivePrecompileAddr = common.BytesToAddress(big.NewInt(8888606).Bytes()) //0x25E
 
-	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
-	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
+	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(8888610).Bytes())
+	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(8888612).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr

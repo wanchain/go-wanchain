@@ -168,7 +168,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:         vmConfig,
 		badBlocks:        badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restartSucess:    false,
+		restartSucess:    true,
 	}
 
 	c, e := lru.NewARC(posconfig.SlotSecurityParam)

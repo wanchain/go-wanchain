@@ -83,9 +83,14 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
 		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time.Uint64())
 		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time.Uint64())
-		if (slotIDNew == slotIDOld) && (epIDNew == epIDOld) {
-			return fmt.Errorf("Multi blocks in one slot")
+		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
+		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
+		if flatSlotIdNew <= flatSlotIdOld {
+			return fmt.Errorf("Invalid slot in chain.")
 		}
+		//if (slotIDNew == slotIDOld) && (epIDNew == epIDOld) {
+		//	return fmt.Errorf("Multi blocks in one slot")
+		//}
 	}
 
 	if err := v.engine.VerifyGenesisBlocks(v.bc, block); err != nil {

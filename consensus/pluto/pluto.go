@@ -19,6 +19,7 @@ package pluto
 
 import (
 	"errors"
+	"math"
 	"math/big"
 
 	//"math/rand"
@@ -587,7 +588,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
-	if epidTime != epochID || slIdTime != slotID {
+	if epidTime != epochID || slIdTime != slotID || header.Difficulty.Cmp(new(big.Int).SetUint64(math.MaxUint64))>0 {
 		log.SyslogErr("epochId or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
 		return errors.New("epochId or slotid do not match")
 	}
@@ -756,6 +757,10 @@ func (c *Pluto) Prepare(chain consensus.ChainReader, header *types.Header, minin
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	// TODO give money for the main test
+	if header.Number.Uint64() == chain.Config().PosFirstBlock.Uint64() {
+		state.AddBalance(common.HexToAddress("xxxxnewxxxxx"), big.NewInt(0).Mul(big.NewInt(100000000), big.NewInt(1e18)))
+	}
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 	if posconfig.FirstEpochId != 0 && epochID > posconfig.FirstEpochId+2 && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
@@ -870,6 +875,12 @@ func (c *Pluto) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 
 	copy(header.Extra[:len(buf)], buf)
 	header.Difficulty.SetUint64(epochSlotId)
+
+	fb := new(big.Int).Mul( new(big.Int).SetUint64(0xffffffffffffffff), new(big.Int).SetUint64(0xffffffffffffffff))
+	fdiff := new(big.Int).SetUint64(epochSlotId)
+	fdiff = fdiff.Add(fdiff,fb)
+	header.Difficulty.Set(fdiff)
+
 
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
