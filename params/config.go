@@ -32,7 +32,7 @@ var (
 	InternalGenesisHash = common.HexToHash("0xb1dc31a86510003c23b9ddee0e194775807262529b8dafa6dc23d9315364d2b3")
 )
 
-const MainnetPow2PosUpgradeBlockNumber = 3836666
+const MainnetPow2PosUpgradeBlockNumber = 3837000
 const TestnetPow2PosUpgradeBlockNumber = 3560000
 const InternalPow2PosUpgradeBlockNumber = 200
 
