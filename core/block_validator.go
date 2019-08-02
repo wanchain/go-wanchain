@@ -85,8 +85,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time.Uint64())
 		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
 		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
-		if flatSlotIdNew <= flatSlotIdOld {
-			return fmt.Errorf("Invalid slot in chain.")
+		if epIDNew > posconfig.ApolloEpochID {
+			if flatSlotIdNew <= flatSlotIdOld {
+				return fmt.Errorf("Invalid slot in chain.")
+			}
 		}
 	}
 
