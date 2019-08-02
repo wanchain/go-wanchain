@@ -939,8 +939,6 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
 		blocksIn2K := bc.cqCache.Len()
 
-		log.Info("user buffer")
-
 		return  blocksIn2K > posconfig.K
 	}
 
