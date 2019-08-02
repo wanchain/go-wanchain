@@ -20,6 +20,7 @@ package pluto
 import (
 	"errors"
 	"math/big"
+	"math"
 
 	//"math/rand"
 	"sync"
@@ -587,7 +588,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
-	if epidTime != epochID || slIdTime != slotID {
+	if epidTime != epochID || slIdTime != slotID || header.Difficulty.Cmp(new(big.Int).SetUint64(math.MaxUint64))>0 {
 		log.SyslogErr("epochId or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
 		return errors.New("epochId or slotid do not match")
 	}
