@@ -1012,12 +1012,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// cq, _ := bc.ChainQuality(epid, slid)
 	// log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
 
-	//confirm chain quality confirm security
-	if posconfig.FirstEpochId != 0 {
-		flatSlotId := epid*posconfig.SlotCount + slotId
-		bc.cqCache.Add(flatSlotId, block.Number().Uint64())
-		bc.cqLastSlot = flatSlotId
-	}
+
 
 	//if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  { TODO: temp change.
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId  { // temp change for test.
@@ -1111,6 +1106,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		bc.insert(block)
 		if bc.config.IsPosActive {
 			posUtil.UpdateEpochBlock(block)
+
+			flatSlotId := epid*posconfig.SlotCount + slotId
+			bc.cqCache.Add(flatSlotId, block.Number().Uint64())
+			bc.cqLastSlot = flatSlotId
 		}
 	}
 
