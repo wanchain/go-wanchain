@@ -249,13 +249,6 @@ func TestInvalidTransactions(t *testing.T) {
 	if err := pool.AddLocal(tx); err != nil &&  err.Error() !="parameter is too short" {
 		t.Error("expected", nil, "got", err)
 	}
-	params.SetNoStaking()
-	if err := pool.AddRemote(tx); err != ErrStakingTx {
-		t.Error("expected", ErrUnderpriced, "got", err)
-	}
-	if err := pool.AddLocal(tx); err != ErrStakingTx {
-		t.Error("expected", nil, "got", err)
-	}
 }
 
 func TestTransactionQueue(t *testing.T) {
