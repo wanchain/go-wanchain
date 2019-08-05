@@ -595,7 +595,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 	s := slotleader.GetSlotLeaderSelection()
 
-	if len(header.Extra) == extraSeal {
+	if len(header.Extra) <= extraSeal {
 		log.SyslogErr("Header extra info length is too short")
 		return errUnauthorized
 

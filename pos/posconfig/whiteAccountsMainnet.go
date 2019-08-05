@@ -3,7 +3,7 @@ package posconfig
 import "github.com/wanchain/go-wanchain/common"
 
 
-var PosOwnerAddrMainnet = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
+var PosOwnerAddrMainnet = common.HexToAddress("0xa3d0f7227258df834f66d9f91fe4c97a223a9ec8")
 
 var WhiteListMainnet = [...]string{
 	"0x048be2b2bab6de9161410b78e5d30215df8c966cce240296fa858086d50d3e62ec0b3368eae94b9179c72e28099c6e0261f6cff923438f50bb86d42eb100c7f445",
