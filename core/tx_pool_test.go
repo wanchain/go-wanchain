@@ -243,10 +243,10 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 
 	tx = transaction2(2, vm.WanCscPrecompileAddr, big.NewInt(100000), key)
-	if err := pool.AddRemote(tx); err != nil && err.Error() !="parameter is too short" {
+	if err := pool.AddRemote(tx); err != nil && err.Error() != "parameter is too short" {
 		t.Error("expected", ErrUnderpriced, "got", err)
 	}
-	if err := pool.AddLocal(tx); err != nil &&  err.Error() !="parameter is too short" {
+	if err := pool.AddLocal(tx); err != nil && err.Error() != "parameter is too short" {
 		t.Error("expected", nil, "got", err)
 	}
 }
@@ -654,6 +654,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	blockchain := &testBlockChain{statedb, big.NewInt(1000000), new(event.Feed)}
 
 	config := testTxPoolConfig
+	config.AccountQueue = 16
 	config.NoLocals = nolocals
 	config.GlobalQueue = config.AccountQueue*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
 
@@ -1535,7 +1536,7 @@ func (CTStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) b
 func (CTStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
 var (
-	balanceAddr = "0x0000000000000000000000001000000000000000";
+	balanceAddr = "0x0000000000000000000000001000000000000000"
 	accountAddr = "0x03b854fc72fb01a0e36ee918b085ff52280d1842eeb282b389a1fb3d3752ed7aed"
 )
 
@@ -1545,7 +1546,7 @@ func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
 
 		if bytes.Equal(common.FromHex(balanceAddr), addr.Bytes()) {
 			return common.FromHex(accountAddr)
-		} else if  dbMockRetVal!=nil {
+		} else if dbMockRetVal != nil {
 			return dbMockRetVal.Bytes()
 		} else {
 			return nil
