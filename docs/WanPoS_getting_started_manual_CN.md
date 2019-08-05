@@ -165,9 +165,9 @@ $ exit
 - YourPK1、2：返回的你账号的2个公钥信息，注册validator时需要；
 
 ```
-$ docker pull wanchain/client-go:2.0.0-beta.5
+$ docker pull wanchain/client-go:2.1.1-beta
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet
 
 YourContainerID
 
@@ -283,7 +283,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@54.193.4.239:80
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@testnet.wanstats.io
 
 ```
 
@@ -291,7 +291,7 @@ $ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchai
 
 “your-node-name”请自定义为您想要的节点名称，例如“Community-WAN-node_EMEA1”，请避免使用大小写字母，数字，“-”，“_”以外的字符，例如空格。
 
-您可以通过WanStats网站来查看这些信息，Beta测试阶段WanStats的网址为：http://54.193.4.239/
+您可以通过WanStats网站来查看这些信息，Beta测试阶段WanStats的网址为：http://testnet.wanstats.io
 
 执行完上述脚本，即可完成开启验证节点运行。
 
@@ -330,7 +330,7 @@ $ exit
 验证人信息可以通过命令行查找，也可以通过浏览器查找。请注意，在使用pos.getStakerInfo获取验证节点信息前，请确认当前已经同步到最新块。可通过eth.blockNumber来查看。
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet
 
 YourContainerID
 
