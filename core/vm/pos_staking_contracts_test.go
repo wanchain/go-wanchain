@@ -1024,7 +1024,7 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 	input.Bn256Pk = common.FromHex("0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910")
 	input.LockEpochs = big.NewInt(10)
 	input.FeeRate = big.NewInt(int64(feeRate))
-	input.MaxFeeRate = big.NewInt(int64(10000))
+	input.MaxFeeRate = big.NewInt(int64(1000))
 
 	bytes, err := cscAbi.Pack("stakeRegister", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate, input.MaxFeeRate)
 	if err != nil {
@@ -1084,7 +1084,7 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 	return nil
 }
 func doStakeRegister(amount int64) error {
-	return doStakeRegisterWithParam(amount, 100)
+	return doStakeRegisterWithParam(amount, 1000)
 }
 
 func doStakeIn(amount int64) error {
