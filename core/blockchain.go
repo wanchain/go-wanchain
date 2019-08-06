@@ -237,7 +237,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	// Take ownership of this particular state
 
 
-	epid, slid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
+	epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 	//record the restarting slot point
 	bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 
