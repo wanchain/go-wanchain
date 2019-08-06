@@ -171,9 +171,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		restartSucess:    false,
 	}
 
-	epid, slid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
-	//record the restarting slot point
-	bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
 
 	c, e := lru.NewARC(posconfig.SlotSecurityParam)
 	if e != nil || c == nil {
@@ -237,6 +235,12 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 
 	log.Info("loaded cq cache","eclapsed",time.Since(t),"length",bc.cqCache.Len())
 	// Take ownership of this particular state
+
+
+	epid, slid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
+	//record the restarting slot point
+	bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
 	go bc.update()
 	return bc, nil
 }
