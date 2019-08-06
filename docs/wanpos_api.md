@@ -226,7 +226,7 @@ Get the reward information of the designated epoch, enter epochID, and return th
 ]
 ```
 ### 3.2.2. getEpochIncentiveBlockNumber
-Get the epochID of the designated epoch
+Get the incentive pay block number of the input epoch
 ```
 > pos.getEpochIncentiveBlockNumber(18106)
 4003788
