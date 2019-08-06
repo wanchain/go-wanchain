@@ -24,9 +24,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -54,7 +55,7 @@ import (
 	"github.com/wanchain/go-wanchain/p2p/netutil"
 	"github.com/wanchain/go-wanchain/params"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -129,7 +130,10 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 6=Pluto)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
-
+	FirstPos = cli.Uint64Flag{
+		Name:  "firstPos",
+		Usage: "firstPos",
+	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Wan test network: pre-configured proof-of-work test network",
@@ -139,14 +143,34 @@ var (
 		Name:  "internal",
 		Usage: "Internal network: pre-configured proof-of-authority internal test network",
 	}
+
 	PlutoFlag = cli.BoolFlag{
 		Name:  "pluto",
 		Usage: "Pluto network: pre-configured wanchain proof-of-authority test network",
 	}
+
+	PlutoDevFlag = cli.BoolFlag{
+		Name:  "plutodev",
+		Usage: "Pluto dev network: pre-configured wanchain proof-of-authority test network",
+	}
+
+	//facuet enbale settings
+	FaucetEnabledFlag = cli.BoolFlag{
+		Name:  "faucet",
+		Usage: "Enable faucet ",
+	}
+
+	FaucetAmountFlag = cli.IntFlag{
+		Name:  "faucetamount",
+		Usage: "Faucet charge amount per time",
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
+	}
+
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Developer mode: pre-configured private network with several debugging flags",
 	}
+
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
 		Usage: "Custom node name",
@@ -169,6 +193,10 @@ var (
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
+	}
+	NoStakingFlag = cli.BoolFlag{
+		Name:  "noStaking",
+		Usage: "Disable staking",
 	}
 
 	LightServFlag = cli.IntFlag{
@@ -269,7 +297,7 @@ var (
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
 		Usage: "Megabytes of memory allocated to internal caching (min 16MB / database forced)",
-		Value: 128,
+		Value: 256,
 	}
 	TrieCacheGenFlag = cli.IntFlag{
 		Name:  "trie-cache-gens",
@@ -284,7 +312,7 @@ var (
 	MinerThreadsFlag = cli.IntFlag{
 		Name:  "minerthreads",
 		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
+		Value: 1, //pos do not need multi cpu. runtime.NumCPU(),
 	}
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
@@ -323,8 +351,8 @@ var (
 	}
 	// Logging and debug settings
 	EthStatsURLFlag = cli.StringFlag{
-		Name:  "ethstats",
-		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
+		Name:  "wanstats",
+		Usage: "Reporting URL of a wanstats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
@@ -493,6 +521,35 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	// syslog
+	SysLogFlag = cli.BoolFlag{
+		Name:  "syslog",
+		Usage: "Enable the syslog",
+	}
+	SyslogNetFlag = cli.StringFlag{
+		Name:  "syslognet",
+		Usage: "syslog net protocol",
+		Value: "tcp",
+	}
+	SyslogSvrFlag = cli.StringFlag{
+		Name:  "syslogsvr",
+		Usage: "syslog server address",
+	}
+	SyslogLevelFlag = cli.StringFlag{
+		Name:  "sysloglevel",
+		Usage: "syslog level",
+		Value: "INFO",
+	}
+	SyslogTagFlag = cli.StringFlag{
+		Name:  "syslogtag",
+		Usage: "syslog tag",
+		Value: "gwan_pos",
+	}
+	AwsKmsFlag = cli.BoolFlag{
+		Name:  "kms",
+		Usage: "Enable AWS KMS encrypted keystore file",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -507,7 +564,7 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(DevInternalFlag.Name) {
 			return filepath.Join(path, "interal")
 		}
-		if ctx.GlobalBool(PlutoFlag.Name) {
+		if ctx.GlobalBool(PlutoFlag.Name) || ctx.GlobalBool(PlutoDevFlag.Name) {
 			return filepath.Join(path, "pluto")
 		}
 		return path
@@ -566,6 +623,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.InternalBootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
 		urls = params.PlutoBootnodes
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		urls = params.PlutoBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -594,6 +653,8 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.InternalV5Bootnodes
 	case ctx.GlobalBool(PlutoFlag.Name):
 		urls = params.PlutoV5ootnodes
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		urls = params.PlutoV5ootnodes
 	case cfg.BootstrapNodesV5 != nil:
 		return // already set, don't apply defaults.
 	}
@@ -614,14 +675,6 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
-	}
-}
-
-// setDiscoveryV5Address creates a UDP listening address string from set command
-// line flags for the V5 discovery protocol.
-func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
 	}
 }
 
@@ -703,16 +756,16 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
+	if err := raiseFdLimit(16384); err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
 	}
 	limit, err := getFdLimit()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
-	}
+	// if limit > 2048 { // cap database file descriptors even if more is available
+	// 	limit = 2048
+	// }
 	return limit / 2 // Leave half for networking and other stuff
 }
 
@@ -746,6 +799,7 @@ func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
 		cfg.Etherbase = account.Address
 		return
 	}
+
 	accounts := ks.Accounts()
 	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {
@@ -778,7 +832,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
-	setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
@@ -814,7 +867,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		// --dev mode can't use p2p networking.
 		cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 	}
@@ -838,6 +890,8 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	case ctx.GlobalBool(DevInternalFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "internal")
 	case ctx.GlobalBool(PlutoFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
+	case ctx.GlobalBool(PlutoDevFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "pluto")
 	}
 
@@ -940,7 +994,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag)
+	checkExclusive(ctx, DevModeFlag, TestnetFlag, DevInternalFlag, PlutoFlag, PlutoDevFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -956,6 +1010,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.SyncMode = downloader.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.SyncMode = downloader.LightSync
+	}
+	if ctx.GlobalIsSet(NoStakingFlag.Name) {
+		params.SetNoStaking()
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
@@ -978,20 +1035,27 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
+
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
 		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
+
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
-
+	if ctx.GlobalIsSet(FirstPos.Name) {
+		params.WanchainChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
+	}
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
+		if ctx.GlobalIsSet(FirstPos.Name) {
+			params.TestnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
+		}
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
@@ -1000,12 +1064,25 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 4
 		}
+		if ctx.GlobalIsSet(FirstPos.Name) {
+			params.InternalChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
+		}
 		cfg.Genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
+		posconfig.IsDev = false
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 6
 		}
+
 		cfg.Genesis = core.DefaultPlutoGenesisBlock()
+
+	case ctx.GlobalIsSet(PlutoDevFlag.Name):
+		posconfig.IsDev = true
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 6
+		}
+		cfg.Genesis = core.PlutoDevGenesisBlock()
+
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
@@ -1100,6 +1177,10 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultInternalGenesisBlock()
 	case ctx.GlobalBool(PlutoFlag.Name):
 		genesis = core.DefaultPlutoGenesisBlock()
+
+	case ctx.GlobalBool(PlutoDevFlag.Name):
+		genesis = core.PlutoDevGenesisBlock()
+
 	case ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DevGenesisBlock()
 	}
@@ -1128,7 +1209,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		}
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
+	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg, nil)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

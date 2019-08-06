@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package downloader
-
+/*
 import (
 	"errors"
 	"fmt"
@@ -437,6 +437,92 @@ func (dl *downloadTester) dropPeer(id string) {
 	dl.downloader.UnregisterPeer(id)
 }
 
+
+func (dl *downloadTester) GetBlockByNumber(number uint64) *types.Block {
+	return nil
+}
+
+type RbLeadersSelInt struct{
+	
+}
+
+func (dl *downloadTester) SetRbSelector(rbs RbLeadersSelInt) {
+
+}
+
+type SlLeadersSelInt struct {
+	
+}
+
+
+func (dl *downloadTester) SetSlSelector(sls SlLeadersSelInt) {
+
+}
+
+func (dl *downloadTester) GetEpochGenesisAndWhiteHeader(epochId uint64) (*types.EpochGenesis, *types.Header, error) {
+	return nil,nil,nil
+}
+
+func (dl *downloadTester) IsExistEpochGenesis(epochid uint64) bool {
+	return false
+}
+
+func (dl *downloadTester) SetEpochGenesis(epochgen *types.EpochGenesis, whiteHeader *types.Header) error {
+	return nil
+}
+
+func (dl *downloadTester) GetEpochStartCh() chan uint64 {
+	return nil
+}
+
+type EpochGenesisBlock struct {
+}
+
+func (dl *downloadTester) GetEpochGene() *EpochGenesisBlock {
+	return nil
+}
+
+type Validator struct {
+}
+
+func (dl *downloadTester) SetSlotValidator(validator Validator) {
+
+}
+
+// Validator returns the current validator.
+func (dl *downloadTester) SlotValidator() Validator {
+	return Validator{}
+}
+
+func (dl *downloadTester) SetFastSynchValidator() {
+}
+
+func (dl *downloadTester) SetFullSynchValidator() {
+}
+
+// if current block number +1 is >= pos first block
+func (dl *downloadTester) IsInPosStage() bool {
+	return false
+}
+
+func (dl *downloadTester) GetFirstPosBlockNumber() uint64 {
+	return 0
+}
+
+func (dl *downloadTester) ChainRestartStatus() (bool, *types.Block) {
+
+
+	return false, nil
+}
+
+func (dl *downloadTester) PreVerifyEpochGenesis(epochGen *types.EpochGenesis, whiteHeader *types.Header) int64 {
+	return 0
+}
+
+func (dl *downloadTester) VerifyPivot(data *types.PivotData, peerId string) error {
+	return nil
+}
+
 type downloadTesterPeer struct {
 	dl    *downloadTester
 	id    string
@@ -486,13 +572,13 @@ func (dlp *downloadTesterPeer) RequestHeadersByHash(origin common.Hash, amount i
 	dlp.dl.lock.RUnlock()
 
 	// Use the absolute header fetcher to satisfy the query
-	return dlp.RequestHeadersByNumber(number, amount, skip, reverse)
+	return dlp.RequestHeadersByNumber(number, amount, skip, reverse,0)
 }
 
 // RequestHeadersByNumber constructs a GetBlockHeaders function based on a numbered
 // origin; associated with a particular peer in the download tester. The returned
 // function can be used to retrieve batches of headers from the particular peer.
-func (dlp *downloadTesterPeer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
+func (dlp *downloadTesterPeer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool, to uint64) error {
 	dlp.waitDelay()
 
 	dlp.dl.lock.RLock()
@@ -581,6 +667,18 @@ func (dlp *downloadTesterPeer) RequestNodeData(hashes []common.Hash) error {
 	}
 	go dlp.dl.downloader.DeliverNodeData(dlp.id, results)
 
+	return nil
+}
+
+func (dlp *downloadTesterPeer) RequestEpochGenesisData(epochids uint64) error {
+	return nil
+}
+
+func (dlp *downloadTesterPeer) RequestHeaderTdByNumber(origin uint64) error {
+	return nil
+}
+
+func (dlp *downloadTesterPeer) RequestPivot(origin uint64, height common.Hash) error {
 	return nil
 }
 
@@ -811,9 +909,9 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download and the tester
-	targetBlocks := 15
+	targetBlocks := 14
 	if targetBlocks >= MaxHashFetch {
-		targetBlocks = MaxHashFetch - 15
+		targetBlocks = MaxHashFetch - 14
 	}
 
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, testAddress, tester.genesis, nil, false)
@@ -1462,7 +1560,7 @@ func (ftp *floodingTestPeer) RequestNodeData(hashes []common.Hash) error {
 	return ftp.peer.RequestNodeData(hashes)
 }
 
-func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int, reverse bool) error {
+func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int, reverse bool, to uint64) error {
 	deliveriesDone := make(chan struct{}, 500)
 	for i := 0; i < cap(deliveriesDone); i++ {
 		peer := fmt.Sprintf("fake-peer%d", i)
@@ -1472,7 +1570,7 @@ func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int
 		}()
 	}
 	// Deliver the actual requested headers.
-	go ftp.peer.RequestHeadersByNumber(from, count, skip, reverse)
+	go ftp.peer.RequestHeadersByNumber(from, count, skip, reverse, uint64(0))
 	// None of the extra deliveries should block.
 	timeout := time.After(15 * time.Second)
 	for i := 0; i < cap(deliveriesDone); i++ {
@@ -1485,6 +1583,18 @@ func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int
 	return nil
 }
 
+func (ftp *floodingTestPeer) RequestEpochGenesisData(epochids uint64) error {
+	return nil
+}
+func (ftp *floodingTestPeer) RequestHeaderTdByNumber(origin uint64) error {
+	return nil
+}
+
+
+func (ftp *floodingTestPeer) RequestPivot(origin uint64, height common.Hash) error {
+	return nil
+}
+
 func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
@@ -1492,7 +1602,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts := master.makeChain(5, testAddress, master.genesis, nil, false)
-	for i := 0; i < 150; i++ {
+	for i := 0; i < 140; i++ {
 		tester := newTester()
 		tester.peerDb = master.peerDb
 
@@ -1596,3 +1706,4 @@ func testFastCriticalRestarts(t *testing.T, protocol int, progress bool) {
 	// completed using a single mode of operation, whereas fast-then-slow can result
 	// in arbitrary intermediate state that's not cleanly verifiable.
 }
+*/

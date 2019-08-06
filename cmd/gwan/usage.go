@@ -72,8 +72,10 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NoUSBFlag,
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
+			utils.FirstPos,
 			utils.DevInternalFlag,
 			utils.PlutoFlag,
+			utils.PlutoDevFlag,
 			utils.DevModeFlag,
 			utils.SyncModeFlag,
 			utils.EthStatsURLFlag,
@@ -121,6 +123,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
+			utils.AwsKmsFlag,
 		},
 	},
 	{
@@ -190,6 +193,11 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsEnabledFlag,
 			utils.FakePoWFlag,
 			utils.NoCompactionFlag,
+			utils.SysLogFlag,
+			utils.SyslogNetFlag,
+			utils.SyslogSvrFlag,
+			utils.SyslogLevelFlag,
+			utils.SyslogTagFlag,
 		}, debug.Flags...),
 	},
 	{

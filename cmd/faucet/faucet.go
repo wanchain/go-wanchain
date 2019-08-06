@@ -67,7 +67,7 @@ var (
 	ethPortFlag = flag.Int("ethport", 17717, "Listener port for the devp2p connection")
 	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
 	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
-	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+	statsFlag   = flag.String("wanstats", "", "Wanstats network monitoring auth string")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
@@ -91,7 +91,12 @@ var (
 	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
+
+
+
+
 func main() {
+
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
@@ -224,7 +229,6 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 			NoDiscovery:      true,
 			DiscoveryV5:      true,
 			ListenAddr:       fmt.Sprintf(":%d", port),
-			DiscoveryV5Addr:  fmt.Sprintf(":%d", port+1),
 			MaxPeers:         25,
 			BootstrapNodesV5: enodes,
 		},
@@ -256,10 +260,12 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	if err := stack.Start(); err != nil {
 		return nil, err
 	}
+
 	for _, boot := range enodes {
 		old, _ := discover.ParseNode(boot.String())
 		stack.Server().AddPeer(old)
 	}
+
 	// Attach to the client and retrieve and interesting metadatas
 	api, err := stack.Attach()
 	if err != nil {
@@ -267,6 +273,9 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 		return nil, err
 	}
 	client := ethclient.NewClient(api)
+
+
+
 
 	return &faucet{
 		config:   genesis.Config,
@@ -352,6 +361,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		// Initial stats reported successfully, proceed with user interaction
 		break
 	}
+
 	// Send over the initial stats and the latest header
 	if err = send(conn, map[string]interface{}{
 		"funds":    balance.Div(balance, ether),
@@ -362,6 +372,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		log.Warn("Failed to send initial stats to client", "err", err)
 		return
 	}
+
 	if err = send(conn, head, 3*time.Second); err != nil {
 		log.Warn("Failed to send initial header to client", "err", err)
 		return
@@ -452,7 +463,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethereum/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/wanchain/go-wanchain/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {
@@ -485,6 +496,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 				}
 				continue
 			}
+
 			// Submit the transaction and mark as funded if successful
 			if err := f.client.SendTransaction(context.Background(), signed); err != nil {
 				f.lock.Unlock()
@@ -494,12 +506,14 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 				}
 				continue
 			}
+
 			f.reqs = append(f.reqs, &request{
 				Avatar:  avatar,
 				Account: address,
 				Time:    time.Now(),
 				Tx:      signed,
 			})
+
 			f.timeouts[username] = time.Now().Add(time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute)
 			fund = true
 		}

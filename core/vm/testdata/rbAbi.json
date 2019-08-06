@@ -1,0 +1,64 @@
+[
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "epochId",
+        "type": "uint256"
+      }
+    ],
+    "name": "genR",
+    "outputs": [],
+    "payable": false,
+    "type": "function",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "epochId",
+        "type": "uint256"
+      },
+      {
+        "name": "gsigs",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "sigShare",
+    "outputs": [],
+    "payable": false,
+    "type": "function",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "epochId",
+        "type": "uint256"
+      },
+      {
+        "name": "pks",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "enSs",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "cs",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "proofs",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "dkg",
+    "outputs": [],
+    "payable": false,
+    "type": "function",
+    "stateMutability": "nonpayable"
+  }
+]

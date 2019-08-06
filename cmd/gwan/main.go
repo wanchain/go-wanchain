@@ -35,9 +35,11 @@ import (
 	"github.com/wanchain/go-wanchain/ethclient"
 	"github.com/wanchain/go-wanchain/internal/debug"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/wanchain/go-wanchain/cmd/fullfaucet"
 )
 
 const (
@@ -81,6 +83,7 @@ var (
 		utils.FastSyncFlag,
 		utils.LightModeFlag,
 		utils.SyncModeFlag,
+		utils.NoStakingFlag,
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
@@ -102,8 +105,15 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
+		utils.FirstPos,
 		utils.DevInternalFlag,
+
 		utils.PlutoFlag,
+		utils.PlutoDevFlag,
+
+		utils.FaucetEnabledFlag,
+		utils.FaucetAmountFlag,
+
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -115,6 +125,8 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
+
+		utils.AwsKmsFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -136,9 +148,18 @@ var (
 		utils.WhisperMaxMessageSizeFlag,
 		utils.WhisperMinPOWFlag,
 	}
+
+	syslogFlags = []cli.Flag{
+		utils.SysLogFlag,
+		utils.SyslogNetFlag,
+		utils.SyslogSvrFlag,
+		utils.SyslogLevelFlag,
+		utils.SyslogTagFlag,
+	}
 )
 
 func init() {
+
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
@@ -177,6 +198,7 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, whisperFlags...)
+	app.Flags = append(app.Flags, syslogFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -222,8 +244,13 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
-	// Start up the node itself
-	utils.StartNode(stack)
+	if ctx.GlobalBool(utils.SysLogFlag.Name) {
+		log.InitSyslog(
+			ctx.GlobalString(utils.SyslogNetFlag.Name),
+			ctx.GlobalString(utils.SyslogSvrFlag.Name),
+			ctx.GlobalString(utils.SyslogLevelFlag.Name),
+			ctx.GlobalString(utils.SyslogTagFlag.Name))
+	}
 
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -232,9 +259,20 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
-			unlockAccount(ctx, ks, trimmed, i, passwords)
+			if ctx.IsSet(utils.AwsKmsFlag.Name) {
+				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, i, passwords)
+			} else {
+				unlockAccount(ctx, ks, trimmed, i, passwords)
+			}
 		}
 	}
+
+	// Send unlock account finish event
+	stack.AccountManager().SendStartupUnlockFinish()
+
+	// Start up the node itself
+	utils.StartNode(stack)
+
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
@@ -276,13 +314,16 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
+		posconfig.MineEnabled = true
 		// Mining only makes sense if a full Ethereum node is running
 		var ethereum *eth.Ethereum
 		if err := stack.Service(&ethereum); err != nil {
 			utils.Fatalf("ethereum service not running: %v", err)
 		}
+
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
 			type threaded interface {
@@ -298,4 +339,27 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
+
+
+
+	if ctx.GlobalBool(utils.FaucetEnabledFlag.Name)&&
+		ctx.IsSet(utils.EtherbaseFlag.Name)&&
+		ctx.IsSet(utils.UnlockedAccountFlag.Name)&&
+		( ctx.GlobalBool(utils.PlutoFlag.Name) ||
+			ctx.GlobalBool(utils.TestnetFlag.Name)){
+
+		// Mining only makes sense if a full Ethereum node is running
+		var ethereum *eth.Ethereum
+		if err := stack.Service(&ethereum); err != nil {
+			utils.Fatalf("ethereum service not running: %v", err)
+		}
+
+		//-faucet.amount 100 -faucet.tiers 3
+		amount := ctx.GlobalUint64(utils.FaucetAmountFlag.Name)
+
+
+		go fullFaucet.FaucetStart(amount,ethereum,stack.IPCEndpoint())
+	}
+
 }
+

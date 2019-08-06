@@ -18,10 +18,12 @@
 package core
 
 import (
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -42,11 +44,18 @@ type StateProcessor struct {
 
 // NewStateProcessor initialises a new StateProcessor.
 func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consensus.Engine) *StateProcessor {
-	return &StateProcessor{
+	sp := &StateProcessor{
 		config: config,
 		bc:     bc,
 		engine: engine,
 	}
+
+	bc.RegisterSwitchEngine(sp)
+	return sp
+}
+
+func (p *StateProcessor) SwitchEngine (engine consensus.Engine){
+	p.engine = engine
 }
 
 // Process processes the state changes according to the Ethereum rules by running
@@ -64,11 +73,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
+
 	// Mutate the the block and state according to any hard-fork specs
 	//if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 	//	misc.ApplyDAOHardFork(statedb)
 	//}
 	// Iterate over and process the individual transactions
+	log.Debug("***process", "block", block.Number().Uint64())
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas, cfg)

@@ -28,15 +28,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/rlp"
 )
 
 var (
@@ -239,14 +239,14 @@ func (db *nodeDB) ensureExpirer() {
 // expirer should be started in a go routine, and is responsible for looping ad
 // infinitum and dropping stale data from the database.
 func (db *nodeDB) expirer() {
-	tick := time.Tick(nodeDBCleanupCycle)
+	tick := time.NewTicker(nodeDBCleanupCycle)
+	defer tick.Stop()
 	for {
 		select {
-		case <-tick:
+		case <-tick.C:
 			if err := db.expireNodes(); err != nil {
 				log.Error(fmt.Sprintf("Failed to expire nodedb items: %v", err))
 			}
-
 		case <-db.quit:
 			return
 		}

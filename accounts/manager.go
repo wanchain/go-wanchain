@@ -32,7 +32,8 @@ type Manager struct {
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
 	wallets  []Wallet                   // Cache of all wallets from all registered backends
 
-	feed event.Feed // Wallet feed notifying of arrivals/departures
+	feed event.Feed 					// Wallet feed notifying of arrivals/departures
+	startupUnlockFeed event.Feed		// To subscribe unlock finish event in startup stage
 
 	quit chan chan error
 	lock sync.RWMutex
@@ -166,6 +167,14 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 // manager detects the arrival or departure of a wallet from any of its backends.
 func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
 	return am.feed.Subscribe(sink)
+}
+
+func (am *Manager) SubscribeStartupUnlock(c chan bool) event.Subscription {
+	return am.startupUnlockFeed.Subscribe(c)
+}
+
+func (am *Manager) SendStartupUnlockFinish() {
+	am.startupUnlockFeed.Send(true)
 }
 
 // merge is a sorted analogue of append for wallets, where the ordering of the

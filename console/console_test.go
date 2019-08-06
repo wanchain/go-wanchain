@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -94,13 +95,17 @@ func newTester(t *testing.T, confOverride func(*eth.Config)) *tester {
 		t.Fatalf("failed to create node: %v", err)
 	}
 	ethConf := &eth.Config{
-		Genesis:   core.DevGenesisBlock(),
+		//Genesis:   core.DevGenesisBlock(),
+		Genesis:   core.DefaultPlutoGenesisBlock(),
 		Etherbase: common.HexToAddress(testAddress),
 		PowTest:   true,
 	}
 	if confOverride != nil {
 		confOverride(ethConf)
 	}
+
+	posconfig.Init(nil,2)
+
 	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return eth.New(ctx, ethConf) }); err != nil {
 		t.Fatalf("failed to register Ethereum protocol: %v", err)
 	}
@@ -142,6 +147,16 @@ func newTester(t *testing.T, confOverride func(*eth.Config)) *tester {
 
 // Close cleans up any temporary data folders and held resources.
 func (env *tester) Close(t *testing.T) {
+	if err := env.console.Stop(false); err != nil {
+		t.Errorf("failed to stop embedded console: %v", err)
+	}
+	//if err := env.stack.Stop(); err != nil {
+	//	t.Errorf("failed to stop embedded node: %v", err)
+	//}
+	os.RemoveAll(env.workspace)
+}
+
+func (env *tester) CloseAll(t *testing.T) {
 	if err := env.console.Stop(false); err != nil {
 		t.Errorf("failed to stop embedded console: %v", err)
 	}
@@ -332,4 +347,9 @@ func TestIndenting(t *testing.T) {
 			t.Errorf("test %d: invalid indenting: have %d, want %d", i, counted, tt.expectedIndentCount)
 		}
 	}
+}
+
+func TestCloseAll(t *testing.T){
+	tester := newTester(t, nil)
+	defer tester.CloseAll(t)
 }

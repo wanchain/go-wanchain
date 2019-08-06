@@ -20,6 +20,8 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/wanchain/go-wanchain/pos/posapi"
 	"math/big"
 	"runtime"
 	"sync"
@@ -30,6 +32,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/consensus/clique"
+	"github.com/wanchain/go-wanchain/consensus/pluto"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/bloombits"
@@ -116,6 +119,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
 
 	eth := &Ethereum{
 		config:         config,
@@ -133,6 +137,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
+	inPosStage := false
+	if chainConfig.IsPosActive  ||
+		(core.PeekChainHeight(chainDb)+1) >= chainConfig.PosFirstBlock.Uint64() {
+		eth.engine = posEngine
+		inPosStage = true
+	}
+
 	log.Info("Initialising Wanchain protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
@@ -143,11 +154,15 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
 	}
 
+
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
+
+	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig, posEngine)
 	if err != nil {
 		return nil, err
 	}
+	//eth.blockchain.RegisterSwitchEngine(eth)
+	eth.blockchain.PrependRegisterSwitchEngine(eth)
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -155,6 +170,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
 	eth.bloomIndexer.Start(eth.blockchain.CurrentHeader(), eth.blockchain.SubscribeChainEvent)
+
+	// TODO:ppow2pos
+	//if chainConfig.Pluto != nil {
+	//	miner.PosInit(eth)
+	//}
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
@@ -174,6 +194,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
 
+
+    if inPosStage{
+		miner.PosInit(eth)
+		chainConfig.SetPosActive()
+	}
 	return eth, nil
 }
 
@@ -212,13 +237,9 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-	if chainConfig.Pluto != nil {
-		var cliqueCfg params.CliqueConfig
-		chainConfig.Clique = &cliqueCfg
-		chainConfig.Clique.Period = chainConfig.Pluto.Period
-		chainConfig.Clique.Epoch = chainConfig.Pluto.Epoch
-		return clique.New(chainConfig.Clique, db)
-	}
+	//if chainConfig.Pluto != nil {
+	//	return pluto.New(chainConfig.Pluto, db)
+	//}
 	// Otherwise assume proof-of-work
 	switch {
 	case config.PowFake:
@@ -245,6 +266,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+	apis = append(apis, posapi.APIs(s.BlockChain(), s.ApiBackend)...)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -338,6 +360,23 @@ func (s *Ethereum) StartMining(local bool) error {
 		}
 		clique.Authorize(eb, wallet.SignHash)
 	}
+	if pluto, ok := s.engine.(*pluto.Pluto); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		//------------Get local unlock publicKey
+		type getKey interface {
+			GetUnlockedKey(address common.Address) (*keystore.Key, error)
+		}
+		key, err := wallet.(getKey).GetUnlockedKey(eb)
+		if key == nil || err != nil {
+			panic(err)
+		}
+		//------------
+		pluto.Authorize(eb, wallet.SignHash, key)
+	}
 
 	if ethash, ok := s.engine.(*ethash.Ethash); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
@@ -427,4 +466,10 @@ func (s *Ethereum) Stop() error {
 	close(s.shutdownChan)
 
 	return nil
+}
+
+func (s *Ethereum) SwitchEngine(engine consensus.Engine){
+	s.engine = engine
+
+	miner.PosInit(s)
 }

@@ -62,9 +62,17 @@ type keyPair struct {
 	D1 string `json:"privateKey1"`
 }
 
+type AwsKmsInfo struct {
+	AKID      string
+	SecretKey string
+	Region    string
+}
+
 type keyStore interface {
 	// Loads and decrypts the key from disk
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
+	// Decrypts the key from keyjson
+	GetKeyFromKeyJson(addr common.Address, keyjson []byte, auth string) (*Key, error)
 	// Loads an encrypted keyfile from disk
 	GetEncryptedKey(addr common.Address, filename string) (*Key, error)
 	// Writes and encrypts the key

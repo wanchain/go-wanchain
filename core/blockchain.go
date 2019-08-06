@@ -18,8 +18,10 @@
 package core
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posdb"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -41,6 +43,8 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/metrics"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posUtil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/trie"
 )
@@ -48,18 +52,23 @@ import (
 var (
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
 
-	ErrNoGenesis = errors.New("Genesis not found in chain")
+	ErrNoGenesis        = errors.New("Genesis not found in chain")
+	ErrSecurityViolated = errors.New("reorg length is more than BlockSecurityParam")
+	ErrInsufficientCQ   = errors.New("chain quality is too low")
 )
 
 const (
 	bodyCacheLimit      = 256
 	blockCacheLimit     = 256
 	maxFutureBlocks     = 256
-	maxTimeFutureBlocks = 30
+	//maxTimeFutureBlocks = 30
+	maxTimeFutureBlocks = 3
 	badBlockLimit       = 10
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
+
+	INITRESTARTING = 0
 )
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -86,6 +95,7 @@ type BlockChain struct {
 	chainSideFeed event.Feed
 	chainHeadFeed event.Feed
 	logsFeed      event.Feed
+	reorgFeed     event.Feed
 	scope         event.SubscriptionScope
 	genesisBlock  *types.Block
 
@@ -110,17 +120,34 @@ type BlockChain struct {
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
 	engine    consensus.Engine
+	posEngine consensus.Engine
+	agents    []consensus.EngineSwitcher
 	processor Processor // block processor interface
 	validator Validator // block and state validator interface
 	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
+
+	CurrentEpochId int64
+
+	slotValidator Validator
+
+	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
+	checkCQBlk       *types.Block
+
+	cqCache  	  *lru.ARCCache
+	cqLastSlot    uint64
+
+	stopSlot      uint64 //the best peer's latest slot
+	restartSucess bool
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+//func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngine consensus.Engine) (*BlockChain, error) {
+func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, posEngines ...consensus.Engine) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -137,9 +164,27 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		blockCache:   blockCache,
 		futureBlocks: futureBlocks,
 		engine:       engine,
-		vmConfig:     vmConfig,
-		badBlocks:    badBlocks,
+		//posEngine:        posEngine,
+		vmConfig:         vmConfig,
+		badBlocks:        badBlocks,
+		checkCQStartSlot: INITRESTARTING,
+		restartSucess:    false,
 	}
+
+
+
+	c, e := lru.NewARC(posconfig.SlotSecurityParam)
+	if e != nil || c == nil {
+		panic("failed to create chain quality cache")
+	}
+	bc.cqCache = c
+
+	if len(posEngines) > 0 {
+		bc.posEngine = posEngines[0]
+	} else {
+		bc.posEngine = nil
+	}
+
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
 
@@ -148,6 +193,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	if err != nil {
 		return nil, err
 	}
+	bc.RegisterSwitchEngine(bc.hc)
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -168,13 +214,54 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 			}
 		}
 	}
+
+	t := time.Now()
+	//check the blokc cq and keep it in cache
+	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i-- {
+		blkHeader := bc.GetHeaderByNumber(i)
+		epochid,slotid := posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
+
+		flatSlotId := epochid*posconfig.SlotCount + slotid
+		bc.cqCache.Add(flatSlotId, blkHeader.Number.Uint64())
+
+		if i ==  bc.currentBlock.Number().Uint64() {
+			bc.cqLastSlot = flatSlotId
+		}
+
+		if  (bc.cqLastSlot - flatSlotId) > posconfig.SlotSecurityParam {
+			break
+		}
+	}
+
+	log.Info("loaded cq cache","eclapsed",time.Since(t),"length",bc.cqCache.Len())
 	// Take ownership of this particular state
+
+
+	epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
+	//record the restarting slot point
+	bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
 	go bc.update()
 	return bc, nil
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
+}
+
+func PeekChainHeight(db ethdb.Database) uint64 {
+	head := GetHeadBlockHash(db)
+	if head == (common.Hash{}) {
+		// Corrupt or empty database, init from scratch
+		log.Warn("Empty database, resetting chain")
+		return uint64(0)
+	}
+
+	return GetBlockNumber(db, head)
+}
+
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -322,8 +409,9 @@ func (bc *BlockChain) LastBlockHash() common.Hash {
 }
 
 // CurrentBlock retrieves the current head block of the canonical chain. The
-// block is retrieved from the blockchain's internal cache.
+
 func (bc *BlockChain) CurrentBlock() *types.Block {
+
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
 
@@ -783,10 +871,180 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+
+
+
+// Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
+// pos block number begin with 1, epoc and slot index begin from 0
+//posconfig.SlotSecurityParam
+func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) int {
+	epochId, slotId := posUtil.CalEpochSlotID(blk.Time().Uint64())
+	endFlatSlotId := epochId*posconfig.SlotCount + slotId
+
+	if endFlatSlotId == 0 {
+		return 0
+	}
+
+	startFlatSlotId := uint64(0)
+	if endFlatSlotId >= secPara {
+		startFlatSlotId = endFlatSlotId - secPara
+	}
+
+	n := 0
+
+	blkHeader := blk.Header()
+	blkNumber := blk.NumberU64()
+	for {
+
+
+		blkNumber = blkHeader.Number.Uint64() - 1
+		blkHeader = bc.GetHeaderByNumber(blkNumber)
+
+		if nil == blkHeader {
+			//never reached, because ppow blocks, safely remove this code?
+			break
+		}
+
+		if blkHeader.Number.Cmp(bc.config.PosFirstBlock) < 0 {
+			break
+		}
+
+		epochId, slotId = posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
+		flatSlotId := epochId*posconfig.SlotCount + slotId
+		if flatSlotId < startFlatSlotId || flatSlotId >= endFlatSlotId {
+			break
+		}
+		n = n + 1
+
+		if flatSlotId == uint64(0) {
+			break
+		}
+	}
+
+
+	return n
+}
+
+
+
+func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
+
+	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+
+	endFlatSlotId := epochId*posconfig.SlotCount + slotId
+	startId := endFlatSlotId - posconfig.SlotSecurityParam -1
+
+	if  bc.cqCache.Len() > posconfig.BlockSecurityParam{
+
+		if startId > bc.cqLastSlot {
+			bc.cqCache.Purge()
+		} else {
+			k := bc.cqLastSlot - posconfig.SlotSecurityParam
+			for ;k<= startId;k++ {
+				bc.cqCache.Remove(k)
+			}
+		}
+
+		blocksIn2K := bc.cqCache.Len()
+
+		return  blocksIn2K > posconfig.K
+	}
+
+	return false
+}
+
+func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
+
+	blocksIn2K := 0
+
+	curBlk := bc.CurrentBlock()
+
+	blkEpid, blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
+	blkSlots := blkEpid*posconfig.SlotCount + blkSlid
+	expSlots := epochid*posconfig.SlotCount + slotid
+
+	if expSlots >= (blkSlots+posconfig.SlotSecurityParam) || (epochid == posconfig.FirstEpochId && slotid == 0) {
+		return 0, errors.New("wrong epoid or slotid")
+	}
+
+	//lastBlock := bc.epochGene.rbLeaderSelector.GetEpochLastBlkNumber(epochid)
+	checkSlots := uint64(0)
+
+	lastBlock := posUtil.GetEpochBlock(blkEpid)
+	for i := lastBlock; i > 0; i-- {
+
+		curBlkHeader := bc.GetHeaderByNumber(i)
+		blkEpid, blkSlid = posUtil.CalEpSlbyTd(curBlkHeader.Difficulty.Uint64())
+		checkSlots = blkEpid*posconfig.SlotCount + blkSlid
+
+		if checkSlots <= expSlots {
+			break
+		}
+	}
+
+	//if the gap is empty block,then the quality is 0
+	diff := expSlots - checkSlots
+	if uint64(diff) >= posconfig.SlotSecurityParam {
+		return uint64(0), nil
+	} else {
+
+		flatSlotId := epochid*posconfig.SlotCount + slotid
+
+		cacheBeginId :=  bc.cqLastSlot - posconfig.SlotSecurityParam
+		if flatSlotId <= bc.cqLastSlot && flatSlotId > cacheBeginId && bc.cqCache.Len() > posconfig.BlockSecurityParam {
+
+			for ;flatSlotId > cacheBeginId;flatSlotId-- {
+				blks,ok := bc.cqCache.Get(flatSlotId)
+				if ok  && blks != 0{
+					blocksIn2K++
+				}
+			}
+		}
+
+		if blocksIn2K == 0 {
+			blocksIn2K = bc.getBlocksCountIn2KSlots(curBlk, posconfig.SlotSecurityParam-diff)
+		}
+
+		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
+
+		return uint64(quality), nil
+	}
+
+}
+
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
+
+	epid, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
+	// cq, _ := bc.ChainQuality(epid, slid)
+	// log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
+
+
+
+	if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  {
+
+		//res, _ := bc.ChainRestartStatus()
+
+
+		if !bc.restartSucess {
+			restartEpid := bc.checkCQStartSlot / posconfig.SlotCount
+			if (int64)(epid) - (int64)(restartEpid) > 2 {
+				log.Info("set restart success", "current epid", epid, "restart epochid", restartEpid)
+				bc.SetChainRestartSuccess()
+			}
+		}
+
+		if !bc.isWriteBlockSecure(block) {
+
+			if bc.restartSucess {
+				return NonStatTy, ErrInsufficientCQ
+			}
+		}
+	}
+
+
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -817,16 +1075,26 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		return NonStatTy, err
 	}
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
-	// Second clause in the if statement reduces the vulnerability to selfish mining.
-	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	/// If the total difficulty is higher than our known, add it to the canonical chain
+	/// Second clause in the if statement reduces the vulnerability to selfish mining.
+	/// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+
+	//removed second clause in the if statement reduces the vulnerability to selfish mining
+	//get maxvalid chain as our suppose
+
+	//if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
+
+	//if bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64() {
+	if (!bc.config.IsPosActive && (externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))) ||
+		(bc.config.IsPosActive && (bc.currentBlock.NumberU64() == 0 || block.NumberU64() > bc.currentBlock.NumberU64())) {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
 				return NonStatTy, err
 			}
 		}
+
 		// Write the positional metadata for transaction and receipt lookups
 		if err := WriteTxLookupEntries(batch, block); err != nil {
 			return NonStatTy, err
@@ -837,6 +1105,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		}
 		status = CanonStatTy
 	} else {
+		//if incoming block humber is smaller than or equal local block number,then keep current
 		status = SideStatTy
 	}
 	if err := batch.Write(); err != nil {
@@ -845,10 +1114,55 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	// Set new head.
 	if status == CanonStatTy {
+
 		bc.insert(block)
+		if bc.config.IsPosActive {
+			posUtil.UpdateEpochBlock(block)
+			
+			flatSlotId := epid*posconfig.SlotCount + slotId
+			bc.cqCache.Add(flatSlotId, block.Number().Uint64())
+			bc.cqLastSlot = flatSlotId
+
+		}
 	}
+
 	bc.futureBlocks.Remove(block.Hash())
+
+	if bc.IsInPosStage() && !bc.Config().IsPosActive {
+		bc.config.SetPosActive()
+	}
+
+	if bc.isCurrentLastPPowBlock() {
+		bc.CurrentEpochId = -1
+		log.Info("ppow2pos", "", "will switch engine......")
+		bc.SwitchClientEngine()
+	}
+
 	return status, nil
+}
+
+func (bc *BlockChain) isCurrentLastPPowBlock() bool {
+	num := bc.currentBlock.Number()
+	num = num.Add(num, big.NewInt(1))
+	return num.Cmp(bc.Config().PosFirstBlock) == 0
+}
+
+func (bc *BlockChain) SwitchClientEngine() error {
+	for _, agent := range bc.agents {
+		agent.SwitchEngine(bc.posEngine)
+	}
+
+	bc.engine = bc.posEngine
+
+	return nil
+}
+
+func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append(bc.agents, agent)
+}
+
+func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append([]consensus.EngineSwitcher{agent}, bc.agents...)
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical
@@ -858,9 +1172,117 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
-	return n, err
+
+	if bc.IsInPosStage() {
+		return bc.insertChainWithRestart(chain)
+	} else {
+		return bc.insertChainEngineSwitch(chain)
+	}
+
+}
+
+func (bc *BlockChain) insertChainEngineSwitch(chain types.Blocks) (int, error) {
+
+	//insert here
+	splitChain := make([]types.Blocks, 0)
+	splitChain = append(splitChain, make(types.Blocks, 0))
+	splitChain = append(splitChain, make(types.Blocks, 0))
+
+	for _, block := range chain {
+		if block.Number().Uint64() < bc.Config().PosFirstBlock.Uint64() {
+			splitChain[0] = append(splitChain[0], block)
+		} else {
+			splitChain[1] = append(splitChain[1], block)
+		}
+	}
+
+	realIdx := 0
+	for _, split := range splitChain {
+
+		if len(split) == 0 {
+			continue
+		}
+
+		n, events, logs, err := bc.insertChain(split)
+		bc.PostChainEvents(events, logs)
+
+		if err != nil {
+			return n + realIdx, err
+		}
+
+		realIdx = realIdx + len(split)
+
+	}
+
+	return 0, nil
+
+}
+
+func (bc *BlockChain) insertChainWithRestart(chain types.Blocks) (int, error) {
+
+	var rete error
+
+	idxs, err := bc.checkRestarting(chain)
+	if err != nil {
+		return 0, err
+	}
+
+	idxStart := 0
+	if len(idxs) == 0 {
+		n, events, logs, err := bc.insertChain(chain)
+		bc.PostChainEvents(events, logs)
+		return n, err
+	} else {
+
+		end := idxs[0]
+		block := chain[end]
+		preblock := block
+
+		if end > 0 {
+			n, events, logs, err := bc.insertChain(chain[0:end])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n, err
+			}
+		} else { //the firt block is restarting block
+			preblock = bc.GetBlockByHash(block.ParentHash())
+			bc.SetRestartBlock(block, preblock, false)
+
+			n, events, logs, err := bc.insertChain(chain[0 : end+1])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n, err
+			}
+			idxStart = 1
+			rete = err
+		}
+
+		for i := idxStart; i < len(idxs); i++ {
+
+			start := idxs[i]
+			end := start
+			if i < len(idxs)-1 {
+				end = idxs[i+1]
+			} else {
+				end = uint(len(chain))
+			}
+
+			block = chain[start]
+			preblock = chain[start-1]
+
+			bc.SetRestartBlock(block, preblock, false)
+
+			n, events, logs, err := bc.insertChain(chain[start:end])
+			bc.PostChainEvents(events, logs)
+			if err != nil {
+				return n, err
+			}
+			rete = err
+		}
+
+		return 0, rete
+	}
+
 }
 
 // insertChain will execute the actual chain insertion and event aggregation. The
@@ -869,7 +1291,13 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
-		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
+
+		//if chain[i-1].NumberU64() == bc.config.PosFirstBlock.Uint64() && posconfig.EpochBaseTime == 0{
+		//	posconfig.EpochBaseTime = chain[i-1].Time().Uint64()
+		//}
+
+		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 ||
+			chain[i].ParentHash() != chain[i-1].Hash() {
 			// Chain broke ancestry, log a messge (programming error) and skip insertion
 			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
 				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
@@ -878,6 +1306,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
 		}
 	}
+
 	// Pre-checks passed, start the full block imports
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -889,7 +1318,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// faster than direct delivery and requires much less mutex
 	// acquiring.
 	var (
-		stats         = insertStats{startTime: mclock.Now()}
+		stats         = insertStats{startTime: mclock.Now(), blockTime: chain[0].Header().Time.Uint64()}
 		events        = make([]interface{}, 0, len(chain))
 		lastCanon     *types.Block
 		coalescedLogs []*types.Log
@@ -951,8 +1380,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
+		// TODO: verify pos header proof
 		// Create a new statedb using the parent block and report an
 		// error if it fails.
+
+		if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
+			epochId, _ := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+			posconfig.FirstEpochId = epochId
+		}
+
 		var parent *types.Block
 		if i == 0 {
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
@@ -975,6 +1411,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+
+		if bc.IsInPosStage() && bc.SlotValidator() != nil {
+			err = bc.SlotValidator().ValidateBody(block)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return i, events, coalescedLogs, err
+			}
+		}
+
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockAndState(block, receipts, state)
 		if err != nil {
@@ -1014,6 +1459,7 @@ type insertStats struct {
 	usedGas                    uint64
 	lastIndex                  int
 	startTime                  mclock.AbsTime
+	blockTime                  uint64
 }
 
 // statsReportLimit is the time limit during import after which we always print
@@ -1027,6 +1473,7 @@ func (st *insertStats) report(chain []*types.Block, index int) {
 	var (
 		now     = mclock.Now()
 		elapsed = time.Duration(now) - time.Duration(st.startTime)
+		//timeFromMine = uint64(time.Now().Unix()/1000) - st.blockTime
 	)
 	// If we're at the last block of the batch or report period reached, log
 	if index == len(chain)-1 || elapsed >= statsReportLimit {
@@ -1038,6 +1485,7 @@ func (st *insertStats) report(chain []*types.Block, index int) {
 			"blocks", st.processed, "txs", txs, "mgas", float64(st.usedGas) / 1000000,
 			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(),
+			"blockElapsed", time.Now().Unix() - int64(st.blockTime),
 		}
 		if st.queued > 0 {
 			context = append(context, []interface{}{"queued", st.queued}...)
@@ -1058,9 +1506,6 @@ func countTransactions(chain []*types.Block) (c int) {
 	return c
 }
 
-// reorgs takes two blocks, an old chain and a new chain and will reconstruct the blocks and inserts them
-// to be part of the new canonical chain and accumulates potential missing transactions and post an
-// event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	var (
 		newChain    types.Blocks
@@ -1144,13 +1589,32 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash(), "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
+		//return fmt.Errorf("Impossible reorg, please file an issue")
 	}
+
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
+	newChainLen := len(newChain)
+	epochId, slotid := posUtil.CalEpSlbyTd(newChain[newChainLen-1].Header().Difficulty.Uint64())
+	bc.updateReOrg(epochId, slotid, uint64(len(oldChain)))
+	go bc.reorgFeed.Send(ReorgEvent{epochId, slotid, uint64(len(oldChain))})
+
+	//if reorg length is bigger than k,do not let reorg happen
+	if posconfig.FirstEpochId != 0 && uint(newChainLen) > posconfig.Cfg().K {
+		log.Error("Impossible reorg because reorg length is bigger than K setting", "reorg length", newChainLen, "old chain rollback lenght", len(oldChain))
+		return ErrSecurityViolated
+
+	} else {
+		log.Info("reorg happended", "reorg length", newChainLen, "old chain rollback lenght", len(oldChain))
+	}
+
 	for _, block := range newChain {
+
 		// insert the block in the canonical way, re-writing history
 		bc.insert(block)
+
+		log.Debug("blockchain reorg","new chain", block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 			return err
@@ -1333,6 +1797,7 @@ func (bc *BlockChain) GetTdByHash(hash common.Hash) *big.Int {
 // GetHeader retrieves a block header from the database by hash and number,
 // caching it if found.
 func (bc *BlockChain) GetHeader(hash common.Hash, number uint64) *types.Header {
+	//return pos buffer if number < k
 	return bc.hc.GetHeader(hash, number)
 }
 
@@ -1371,6 +1836,10 @@ func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) even
 	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))
 }
 
+func (bc *BlockChain) SubscribeReorgEvent(ch chan<- ReorgEvent) event.Subscription {
+	return bc.scope.Track(bc.reorgFeed.Subscribe(ch))
+}
+
 // SubscribeChainEvent registers a subscription of ChainEvent.
 func (bc *BlockChain) SubscribeChainEvent(ch chan<- ChainEvent) event.Subscription {
 	return bc.scope.Track(bc.chainFeed.Subscribe(ch))
@@ -1390,3 +1859,140 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) event.Su
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
+
+
+func (bc *BlockChain) SetSlotValidator(validator Validator) {
+	bc.slotValidator = validator
+}
+
+// Validator returns the current validator.
+func (bc *BlockChain) SlotValidator() Validator {
+	return bc.slotValidator
+}
+
+// if current block number +1 is >= pos first block
+func (bc *BlockChain) IsInPosStage() bool {
+	currentBlockNumber := bc.currentBlock.Number()
+	currentBlockNumber = currentBlockNumber.Add(currentBlockNumber, big.NewInt(1))
+	return bc.config.IsPosBlockNumber(currentBlockNumber)
+}
+
+func (bc *BlockChain) GetFirstPosBlockNumber() uint64 {
+	return bc.Config().PosFirstBlock.Uint64()
+}
+
+func (bc *BlockChain) ChainRestartStatus() (bool, *types.Block) {
+
+	//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
+	diff := bc.checkCQStartSlot - bc.stopSlot
+	if diff > posconfig.SlotSecurityParam-1 &&
+		bc.checkCQStartSlot > 0 &&
+		bc.stopSlot > 0 {
+		return true, bc.checkCQBlk
+	}
+
+	return false, nil
+}
+
+func (bc *BlockChain) SetChainRestartSuccess() {
+
+	log.Info("")
+
+	bc.checkCQBlk = nil
+	bc.checkCQStartSlot = 0
+	bc.stopSlot = 0
+	bc.restartSucess = true
+}
+
+func (bc *BlockChain) SetRestartBlock(block *types.Block, preBlock *types.Block, useLocalTime bool) {
+
+	if useLocalTime {
+
+		epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
+		//record the restarting slot point
+		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
+		lastepid, lastlslid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+		bc.stopSlot = lastepid*posconfig.SlotCount + lastlslid
+
+		bc.restartSucess = false
+
+	} else if block != nil && preBlock != nil {
+
+		bc.checkCQBlk = block
+		epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+		//record the restarting slot point
+		bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
+
+		stopepid, stoplslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+		bc.stopSlot = stopepid*posconfig.SlotCount + stoplslid
+
+		res, _ := bc.ChainRestartStatus()
+		if res {
+			bc.restartSucess = false
+		}
+	}
+
+}
+
+func (bc *BlockChain) checkRestarting(chain types.Blocks) ([]uint, error) {
+	idxs := make([]uint, 0)
+	for i, block := range chain {
+
+		if block.NumberU64() <= posconfig.Pow2PosUpgradeBlockNumber+2 {
+			continue
+		}
+		//it is chain restarting phase if chain is restarted and current slot not more 1 epoch than start slot
+		epid, slid := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+		curSlots := epid*posconfig.SlotCount + slid
+
+		var preBlock *types.Block
+		if i == 0 {
+			preBlock = bc.GetBlockByHash(block.ParentHash())
+		} else {
+			preBlock = chain[i-1]
+		}
+
+		if preBlock == nil {
+			return nil, errors.New("can not find parent block in check restart")
+		}
+
+		preepid, preslid := posUtil.CalEpSlbyTd(preBlock.Difficulty().Uint64())
+		preSlots := preepid*posconfig.SlotCount + preslid
+
+		diff := curSlots - preSlots
+
+		//log.Info("the slot diff","diff",diff)
+		if diff > posconfig.SlotSecurityParam-1 {
+			idxs = append(idxs, uint(i))
+			//fmt.Println("restart point=",i)
+		}
+	}
+
+	return idxs, nil
+
+}
+func (bc *BlockChain) updateReOrg(epochId uint64, slotid uint64, length uint64) {
+
+	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
+	if reOrgDb == nil {
+		reOrgDb = posdb.NewDb(posconfig.ReorgLocalDB)
+	}
+
+	numberBytes, _ := reOrgDb.Get(epochId, "reorgNumber")
+
+	num := uint64(0)
+	if numberBytes != nil {
+		num = binary.BigEndian.Uint64(numberBytes) + 1
+	}
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+
+	reOrgDb.Put(epochId, "reorgNumber", b)
+
+	b = make([]byte, 8)
+	binary.BigEndian.PutUint64(b, length)
+	reOrgDb.Put(epochId, "reorgLength", b)
+}
+

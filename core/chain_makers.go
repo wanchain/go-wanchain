@@ -388,7 +388,7 @@ func newCanonical(n int, full bool) (ethdb.Database, *BlockChain, error, *ChainE
 	genesis := gspec.MustCommit(db)
 	engine := ethash.NewFaker(db)
 
-	blockchain, _ := NewBlockChain(db, params.TestChainConfig, engine, vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.TestChainConfig, engine, vm.Config{}, nil)
 	chainEnv := NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
 	// Create and inject the requested chain
 	if n == 0 {

@@ -27,7 +27,7 @@ import (
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.
-var MaxTrieCacheGen = uint16(120)
+var MaxTrieCacheGen = uint16(240)
 
 const (
 	// Number of past tries to keep. This value is chosen such that

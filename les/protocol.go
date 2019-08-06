@@ -125,6 +125,7 @@ type getBlockHeadersData struct {
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
+	To      uint64
 }
 
 // hashOrNumber is a combined field for specifying an origin block.

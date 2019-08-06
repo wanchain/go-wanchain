@@ -17,6 +17,8 @@
 package core
 
 import (
+	"fmt"
+	"math/big"
 	"runtime"
 	"testing"
 	"time"
@@ -215,5 +217,34 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	// Check that abortion was honored by not processing too many POWs
 	if verified > 2*threads {
 		t.Errorf("verification count too large: have %d, want below %d", verified, 2*threads)
+	}
+}
+
+func TestCalcGasLimit(t *testing.T) {
+	header := &types.Header{}
+
+	header.GasLimit = params.GenesisGasLimit
+	header.GasUsed = header.GasLimit
+	header.Time = big.NewInt(1763168326)
+
+	block := types.NewBlock(header, nil, nil, nil)
+
+	gas := CalcGasLimit(block)
+
+	fmt.Println("gasLimitNew:", gas.Uint64())
+
+	for i := 0; i < 1000000; i++ {
+		header.GasLimit = gas
+		header.GasUsed = big.NewInt(header.GasLimit.Int64() / 21000 * 21000)
+
+		block = types.NewBlock(header, nil, nil, nil)
+
+		gas = CalcGasLimit(block)
+
+		fmt.Println(i, "gasLimitNew:", gas.Uint64())
+
+		if gas.Uint64() == 105000000 {
+			break
+		}
 	}
 }

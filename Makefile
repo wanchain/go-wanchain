@@ -27,7 +27,7 @@ evm:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/evm\" to start the evm."
 
-	
+
 # The all target build all the wanchain tools
 all:
 	build/env.sh go run build/ci.go install
@@ -85,7 +85,7 @@ devtools:
 # 	@ls -ld $(GOBIN)/geth-linux-* | grep 386
 
 gwan-linux-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/gwan
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 --ldflags "-s -w"  -v ./cmd/gwan
 	@echo "Linux amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gwan-linux-* | grep amd64
 	mkdir -p ${linuxDir}
@@ -120,7 +120,7 @@ gwan-linux-amd64:
 # 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/geth
 # 	@echo "Linux MIPS cross compilation done:"
 # 	@ls -ld $(GOBIN)/geth-linux-* | grep mips
-
+ 
 # geth-linux-mipsle:
 # 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/geth
 # 	@echo "Linux MIPSle cross compilation done:"
@@ -146,7 +146,7 @@ gwan-linux-amd64:
 # 	@ls -ld $(GOBIN)/geth-darwin-* | grep 386
 
 gwan-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/gwan
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 --ldflags "-s -w"  -v ./cmd/gwan
 	@echo "Darwin amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gwan-darwin-* | grep amd64
 	mkdir -p ${darwinDir}
@@ -163,7 +163,7 @@ gwan-darwin-amd64:
 # 	@ls -ld $(GOBIN)/geth-windows-* | grep 386
 
 gwan-windows-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/gwan
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 --ldflags "-s -w"  -v ./cmd/gwan
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gwan-windows-* | grep amd64
 	mkdir -p ${windowsDir}
@@ -171,3 +171,5 @@ gwan-windows-amd64:
 	zip ${windowsDir}.zip ${windowsDir}/gwan.exe
 
 release: clean gwan-linux-amd64 gwan-windows-amd64 gwan-darwin-amd64
+#release: clean gwan-linux-amd64
+

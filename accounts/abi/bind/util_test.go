@@ -27,6 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/pos/epochLeader"
 )
 
 var testKey, _ = crypto.HexToECDSA("f1572f76b75b40a7da72d6f2ee7fda3d1189c2d28f0a2f096347055abe344d7f")
@@ -53,6 +54,7 @@ var waitDeployedTests = map[string]struct {
 func TestWaitDeployed(t *testing.T) {
 	for name, test := range waitDeployedTests {
 		backend := backends.NewSimulatedBackend()
+		epochLeader.NewEpocher(backend.BlockEnv.Blockchain())
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
 		tx, _ = types.SignTx(tx, types.NewEIP155Signer(big.NewInt(1)), testKey)

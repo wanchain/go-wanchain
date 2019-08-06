@@ -30,8 +30,9 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/incentive"
+	"github.com/wanchain/go-wanchain/pos/util"
 )
 
 var (
@@ -89,7 +90,9 @@ type Message interface {
 // with the given data.
 //
 // TODO convert to uint64
-func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
+func IntrinsicGas(data []byte, to *common.Address, homestead bool) *big.Int {
+	contractCreation := to == nil
+
 	igas := new(big.Int)
 	if contractCreation && homestead {
 		igas.SetUint64(params.TxGasContractCreation)
@@ -110,6 +113,12 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
 		igas.Add(igas, m)
 	}
+
+	// reduce gas used for pos tx
+	if vm.IsPosPrecompiledAddr(to) {
+		igas = igas.Div(igas, big.NewInt(10))
+	}
+
 	return igas
 }
 
@@ -222,13 +231,13 @@ func (st *StateTransition) preCheck() error {
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	if types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsNormalTransaction(st.msg.TxType()) || types.IsPosTransaction(st.msg.TxType()) {
 		if err = st.preCheck(); err != nil {
 			return
 		}
 	}
 
-	log.Trace("after preCheck", "txType", st.msg.TxType(), "gas pool", st.gp.String())
+	//log.Trace("after preCheck", "txType", st.msg.TxType(), "gas pool", st.gp.String())
 
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
@@ -238,14 +247,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(st.data, contractCreation, true /*homestead*/)
-	log.Trace("get intrinsic gas", "gas", intrinsicGas.String())
+	intrinsicGas := IntrinsicGas(st.data, msg.To(), true /*homestead*/)
+	//log.Trace("get intrinsic gas", "gas", intrinsicGas.String())
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
 	var stampTotalGas uint64
-	if !types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsPrivacyTransaction(st.msg.TxType()) {
 		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
 			sender.Address().Bytes(),
 			st.data, st.gasPrice, st.value)
@@ -257,7 +266,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.gas = evmUseableGas
 		st.initialGas.SetUint64(evmUseableGas)
 		st.data = pureCallData[:]
-		log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
+		//log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
 		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
 		if err := st.gp.SubGas(new(big.Int).SetUint64(totalUseableGas)); err != nil {
 			return nil, nil, nil, false, err
@@ -268,7 +277,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, err
 	}
 
-	log.Trace("subed intrinsic gas", "gas pool left", st.gp.String())
+	//log.Trace("subed intrinsic gas", "gas pool left", st.gp.String())
 
 	var (
 		evm = st.evm
@@ -279,16 +288,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	)
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
-		log.Trace("create contract", "left gas", st.gas, "err", vmerr)
+		//log.Trace("create contract", "left gas", st.gas, "err", vmerr)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
-		log.Trace("no create contract", "left gas", st.gas, "err", vmerr)
+		//log.Trace("no create contract", "left gas", st.gas, "err", vmerr)
 	}
 
 	if vmerr != nil {
-		log.Debug("VM returned with error", "err", vmerr)
+		//log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
@@ -297,18 +306,23 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		}
 	}
 
-	if types.IsNormalTransaction(st.msg.TxType()) {
+	if types.IsNormalTransaction(st.msg.TxType()) || types.IsPosTransaction(st.msg.TxType()) {
 		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = new(big.Int).Set(st.gasUsed())
-		log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
-	} else {
+		//log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
+	} else if types.IsPrivacyTransaction(st.msg.TxType()) {
 		requiredGas = new(big.Int).SetUint64(stampTotalGas)
 		usedGas = requiredGas
-		log.Trace("calc used gas, privacy tx", "required gas", requiredGas, "used gas", usedGas)
+		//log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
+	if !params.IsPosActive() {
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(usedGas, st.gasPrice))
+	} else {
+		epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
+		incentive.AddEpochGas(st.state, new(big.Int).Mul(usedGas, st.gasPrice), epochID)
+	}
 	return ret, requiredGas, usedGas, vmerr != nil, err
 }
 

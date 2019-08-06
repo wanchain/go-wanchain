@@ -40,4 +40,10 @@ var (
 
 	stateInMeter   = metrics.NewMeter("eth/downloader/states/in")
 	stateDropMeter = metrics.NewMeter("eth/downloader/states/drop")
+
+
+	epochGenesisInMeter   = metrics.NewMeter("eth/downloader/epochGenesis/in")
+	epochGenesisReqTimer     = metrics.NewTimer("eth/downloader/epochGenesis/req")
+	epochGenesisDropMeter = metrics.NewMeter("eth/downloader/epochGenesis/drop")
+	epochGenesisTimeoutMeter = metrics.NewMeter("eth/downloader/epochGenesis/timeout")
 )
