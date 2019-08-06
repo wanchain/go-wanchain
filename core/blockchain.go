@@ -1030,7 +1030,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 		if !bc.restartSucess {
 			restartEpid := bc.checkCQStartSlot / posconfig.SlotCount
-			if epid-restartEpid > 2 {
+			if (int64)(epid) - (int64)(restartEpid) > 2 {
 				log.Info("set restart success", "current epid", epid, "restart epochid", restartEpid)
 				bc.SetChainRestartSuccess()
 			}
