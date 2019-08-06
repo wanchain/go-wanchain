@@ -168,8 +168,12 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		vmConfig:         vmConfig,
 		badBlocks:        badBlocks,
 		checkCQStartSlot: INITRESTARTING,
-		restartSucess:    true,
+		restartSucess:    false,
 	}
+
+	epid, slid := posUtil.CalEpSlbyTd(bc.currentBlock.Difficulty().Uint64())
+	//record the restarting slot point
+	bc.checkCQStartSlot = epid*posconfig.SlotCount + slid
 
 	c, e := lru.NewARC(posconfig.SlotSecurityParam)
 	if e != nil || c == nil {
@@ -1017,9 +1021,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  {
 
-		res, _ := bc.ChainRestartStatus()
+		//res, _ := bc.ChainRestartStatus()
 
-		if res {
+
+		if !bc.restartSucess {
 			restartEpid := bc.checkCQStartSlot / posconfig.SlotCount
 			if epid-restartEpid > 2 {
 				log.Info("set restart success", "current epid", epid, "restart epochid", restartEpid)
