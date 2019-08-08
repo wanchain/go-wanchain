@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"sync/atomic"
 
@@ -186,6 +187,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
+		log.Error(err.Error())
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
