@@ -26,7 +26,7 @@ echo ''
 echo ''
 echo ''
 
-DOCKERIMG=wanchain/client-go:2.1.2-beta
+DOCKERIMG=wanchain/client-go:2.1.2
 NETWORK=--testnet
 NETWORKPATH=testnet
 
