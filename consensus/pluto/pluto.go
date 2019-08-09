@@ -779,6 +779,7 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
+	state.Finalise(true)
 	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
 
 	header.UncleHash = types.CalcUncleHash(nil)

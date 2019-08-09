@@ -10,6 +10,7 @@ RUN cd /go-wanchain && make gwan
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache curl
 COPY --from=builder /go-wanchain/build/bin/gwan /usr/local/bin/
 
 EXPOSE 8545 17717/tcp 17717/udp
