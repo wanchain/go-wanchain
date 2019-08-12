@@ -38,10 +38,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
-
-	Mrand "math/rand"
-
+	
 	"github.com/wanchain/go-wanchain/log"
+
 )
 
 var (
@@ -423,7 +422,12 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 		return nil, nil, nil, nil, ErrRingSignFail
 	}
 
-	s := Mrand.Intn(n) //s is the random position for real key 
+	rnd,rnderr := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	if rnderr != nil {
+		return nil, nil, nil, nil, ErrRingSignFail
+	}
+	s := int(rnd.Int64())//s is the random position for real key
+
 	if s > 0 {
 		PublicKeys[0], PublicKeys[s] = PublicKeys[s], PublicKeys[0] //exchange position
 	}

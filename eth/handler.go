@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -177,9 +178,19 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
+	//changed get block with buffer jia
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	blockchain.RegisterSwitchEngine(manager)
 
 	return manager, nil
+}
+
+func (pm *ProtocolManager) SwitchEngine(engine consensus.Engine) {
+	validator := func(header *types.Header) error {
+		return engine.VerifyHeader(pm.blockchain, header, true)
+	}
+
+	pm.fetcher.UpdateValidator(validator)
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
@@ -188,7 +199,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Wanchain peer", "peer", id)
+	log.Trace("Removing Wanchain peer", "peer", id)
 
 	// Unregister the peer from the downloader and Ethereum peer set
 	pm.downloader.UnregisterPeer(id)
@@ -216,6 +227,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+
+	//periodical to send transaction to different peer
+	go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -253,12 +267,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if pm.peers.Len() >= pm.maxPeers {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("Wanchain peer connected", "name", p.Name())
+	p.Log().Trace("Wanchain peer connected", "name", p.Name())
 
 	// Execute the Ethereum handshake
 	td, head, genesis := pm.blockchain.Status()
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
-		p.Log().Debug("Wanchain handshake failed", "err", err)
+		p.Log().Trace("Wanchain handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
@@ -301,10 +315,59 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("Wanchain message handling failed", "err", err)
+			p.Log().Trace("Wanchain message handling failed", "err", err)
 			return err
 		}
 	}
+}
+
+func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handling, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handling, 0)
+
+	size := p.receiveTxs.Size()
+
+	txp := make([]*types.Transaction, size)
+
+	for i := 0; i < size; i++ {
+		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
+	}
+
+	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+	if err != nil {
+		log.Error("adding remote txs errors", "reason", err)
+	}
+}
+func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
+	// Transactions arrived, make sure we have a valid and fresh chain to handle them
+	size := p.receiveTxs.Size()
+	if (uint64)(size)>=core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
+		return nil
+	}
+
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
+	for _, tx := range txs {
+		// Validate and mark the remote transaction
+		if tx == nil {
+			continue
+		}
+		p.MarkTransaction(tx.Hash())
+		p.receiveTxs.Add(tx)
+	}
+
+
+	return nil
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
@@ -651,23 +714,38 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-			break
+		return pm.handleMsgTx(p, msg)
+	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
+		var query getHeaderTdData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
-		// Transactions can be processed, parse all of them and deliver to the pool
-		var txs []*types.Transaction
-		if err := msg.Decode(&txs); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		hashMode := query.Origin.Hash != (common.Hash{})
+
+		var origin *types.Header
+		if hashMode {
+			origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
+		} else {
+			origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
 		}
-		for i, tx := range txs {
-			// Validate and mark the remote transaction
-			if tx == nil {
-				return errResp(ErrDecode, "transaction %d is nil", i)
-			}
-			p.MarkTransaction(tx.Hash())
+		if origin == nil {
+			return errors.New("GetBlockHeaderTdMsg header not exsit, height =" + strconv.FormatUint(query.Origin.Number, 10))
 		}
-		pm.txpool.AddRemotes(txs)
+		td := pm.blockchain.GetTd(origin.Hash(), origin.Number.Uint64())
+		if td == nil {
+			return errors.New("GetBlockHeaderTdMsg get td failed, height =" + strconv.FormatUint(origin.Number.Uint64(), 10))
+		}
+
+		return p.SendBlockHeaderTd(origin, td)
+
+	case p.version >= eth63 && msg.Code == BlockHeaderTdMsg:
+		var headerTd types.HeaderTdData
+		if err := msg.Decode(&headerTd); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		if err := pm.downloader.DeliverHeaderTd(p.id, &headerTd); err != nil {
+			log.Debug("Failed to deliver header td", "err", err)
+		}
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -719,6 +797,56 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
+
+func (pm *ProtocolManager) sendBufferTxs(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handlingSend, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handlingSend, 0)
+
+	size := p.bufferTxs.Size()
+	txp := make([]*types.Transaction, size)
+	for i:=0; i<size; i++ {
+		pop := p.bufferTxs.Pop()
+		if pop != nil {
+			tp := pop.(*types.Transaction)
+			txp[i] = tp
+		} else {
+			break
+		}
+	}
+
+	err := p2p.Send(p.rw, TxMsg, txp)
+	if err != nil {
+		log.Info("sending txs errors", "reason", err)
+	}
+}
+
+func (pm *ProtocolManager) sendBufferTxsLoop() {
+	tick := time.NewTicker(8 * time.Millisecond)
+	for {
+		select {
+		case <-tick.C:
+			peers := pm.peers.PeersList()
+			for _, p := range peers {
+				size := p.bufferTxs.Size()
+				if size > 0 {
+					go pm.sendBufferTxs(p)
+				}
+				sizer := p.receiveTxs.Size()
+				if sizer > 0  {
+					//log.Info("try handleMsgTxInsert", "sizer", sizer)
+					go pm.handleMsgTxInsert(p)
+				}
+			}
+
+		case <-pm.quitSync:
+			return
+		}
+
+	}
+}
+
 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {

@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 shh:1.0 txpool:1.0 wan:1.0 web3:1.0"
-	httpAPIs = "eth:1.0 net:1.0 rpc:1.0 wan:1.0 web3:1.0"
+	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 pos:1.0 rpc:1.0 shh:1.0 txpool:1.0 wan:1.0 web3:1.0"
+	httpAPIs = "eth:1.0 net:1.0 pos:1.0 rpc:1.0 wan:1.0 web3:1.0"
+	wsAPIs = "eth:1.0 net:1.0 rpc:1.0 wan:1.0 web3:1.0"
 )
 
 // Tests that a node embedded within a console can be started up properly and
@@ -117,7 +118,7 @@ func TestWSAttachWelcome(t *testing.T) {
 		"--etherbase", coinbase, "--ws", "--wsport", port)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, geth, "ws://localhost:"+port, httpAPIs)
+	testAttachWelcome(t, geth, "ws://localhost:"+port, wsAPIs)
 
 	geth.Interrupt()
 	geth.ExpectExit()

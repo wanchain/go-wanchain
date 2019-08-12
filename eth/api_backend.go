@@ -206,3 +206,12 @@ func (b *EthApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
 }
+
+
+func (b *EthApiBackend) Synchronising() bool {
+	return b.eth.protocolManager.downloader.Synchronising()
+}
+
+func (b *EthApiBackend) ChainQuality(epochid uint64, slotid uint64) (uint64,error) {
+	return b.eth.blockchain.ChainQuality(epochid,slotid)
+}

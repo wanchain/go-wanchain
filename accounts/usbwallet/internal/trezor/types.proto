@@ -1,6 +1,8 @@
 // This file originates from the SatoshiLabs Trezor `common` repository at:
 //   https://github.com/trezor/trezor-common/blob/master/protob/types.proto
-// dated 28.07.2017, commit dd8ec3231fb5f7992360aff9bdfe30bb58130f4b.
+// dated 25.06.2018, commit b3276879db396e65ccd0b970a8275d67f2e78093.
+
+syntax = "proto2";
 
 /**
  * Types for TREZOR communication
@@ -43,6 +45,7 @@ enum FailureType {
 	Failure_ProcessError = 9;
 	Failure_NotEnoughFunds = 10;
 	Failure_NotInitialized = 11;
+	Failure_PinMismatch = 12;
 	Failure_FirmwareError = 99;
 }
 
@@ -99,6 +102,9 @@ enum ButtonRequestType {
 	ButtonRequest_FirmwareCheck = 9;
 	ButtonRequest_Address = 10;
 	ButtonRequest_PublicKey = 11;
+	ButtonRequest_MnemonicWordCount = 12;
+	ButtonRequest_MnemonicInput = 13;
+	ButtonRequest_PassphraseType = 14;
 }
 
 /**
@@ -160,23 +166,6 @@ message HDNodePathType {
 }
 
 /**
- * Structure representing Coin
- * @used_in Features
- */
-message CoinType {
-	optional string coin_name = 1;
-	optional string coin_shortcut = 2;
-	optional uint32 address_type = 3 [default=0];
-	optional uint64 maxfee_kb = 4;
-	optional uint32 address_type_p2sh = 5 [default=5];
-	optional string signed_message_header = 8;
-	optional uint32 xpub_magic = 9 [default=76067358];	// default=0x0488b21e
-	optional uint32 xprv_magic = 10 [default=76066276];	// default=0x0488ade4
-	optional bool segwit = 11;
-	optional uint32 forkid = 12;
-}
-
-/**
  * Type of redeem script used in input
  * @used_in TxInputType
  */
@@ -200,6 +189,8 @@ message TxInputType {
 	optional InputScriptType script_type = 6 [default=SPENDADDRESS];	// defines template of input script
 	optional MultisigRedeemScriptType multisig = 7;				// Filled if input is going to spend multisig tx
 	optional uint64 amount = 8;						// amount of previous transaction output (for segwit only)
+	optional uint32 decred_tree = 9;
+	optional uint32 decred_script_version = 10;
 }
 
 /**
@@ -214,6 +205,7 @@ message TxOutputType {
 	required OutputScriptType script_type = 4;	// output script type
 	optional MultisigRedeemScriptType multisig = 5; // defines multisig address; script_type must be PAYTOMULTISIG
 	optional bytes op_return_data = 6;		// defines op_return data; script_type must be PAYTOOPRETURN, amount must be 0
+	optional uint32 decred_script_version = 7;
 }
 
 /**
@@ -223,11 +215,12 @@ message TxOutputType {
 message TxOutputBinType {
 	required uint64 amount = 1;
 	required bytes script_pubkey = 2;
+	optional uint32 decred_script_version = 3;
 }
 
 /**
  * Structure representing transaction
- * @used_in SimpleSignTx
+ * @used_in TxAck
  */
 message TransactionType {
 	optional uint32 version = 1;
@@ -237,8 +230,10 @@ message TransactionType {
 	optional uint32 lock_time = 4;
 	optional uint32 inputs_cnt = 6;
 	optional uint32 outputs_cnt = 7;
-	optional bytes extra_data = 8;
-	optional uint32 extra_data_len = 9;
+	optional bytes extra_data = 8;			// only for Zcash
+	optional uint32 extra_data_len = 9;		// only for Zcash
+	optional uint32 expiry = 10;			// only for Decred and Zcash
+	optional bool overwintered = 11;		// only for Zcash
 }
 
 /**
@@ -273,4 +268,245 @@ message IdentityType {
 	optional string port = 4;			// port part of URI
 	optional string path = 5;			// path part of URI
 	optional uint32 index = 6 [default=0];		// identity index
+}
+
+/**
+ * Structure representing passphrase source
+ * @used_in ApplySettings
+ */
+enum PassphraseSourceType {
+	ASK = 0;
+	DEVICE = 1;
+	HOST = 2;
+}
+
+/**
+ * Structure representing the common part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMTransactionCommon {
+	repeated uint32 address_n = 1;			// BIP-32 path to derive the key from master node
+	optional uint32 network = 2;			// Network ID (0x68 = Mainnet, 0x98 = Testnet, 0x60 = Mijin)
+	optional uint32 timestamp = 3;			// Number of seconds elapsed since the creation of the nemesis block
+	optional uint64 fee = 4;			// Fee for the transaction
+	optional uint32 deadline = 5;			// Deadline of the transaction
+	optional bytes signer = 6;			// Public key of the account (for multisig transactions)
+}
+
+/**
+ * Structure representing the transfer transaction part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMTransfer {
+	optional string recipient = 1;			// Address of the recipient
+	optional uint64 amount = 2;			// Amount of micro NEM that is transferred
+	optional bytes payload = 3;			// Actual message data (unencrypted)
+	optional bytes public_key = 4;			// Public key of the recipient (for encrypted payloads)
+	repeated NEMMosaic mosaics = 5;			// Attached mosaics
+}
+
+/**
+ * Structure representing the mosaic attachment for NEM transfer transactions
+ * @used_in NEMTransfer
+ */
+message NEMMosaic {
+	optional string namespace = 1;			// Fully qualified name of the namespace
+	optional string mosaic = 2;			// Name of the mosaic definition
+	optional uint64 quantity = 3;			// Mosaic quantity, always given in smallest units
+}
+
+/**
+ * Structure representing the provision namespace part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMProvisionNamespace {
+	optional string namespace = 1;			// New part concatenated to the parent
+	optional string parent = 2;			// Parent namespace (for child namespaces)
+	optional string sink = 3;			// Rental fee sink address
+	optional uint64 fee = 4;			// Rental fee
+}
+
+/**
+ * Type of levy which will be used for mosaic
+ * @used_in NEMMosaicDefinition
+ */
+enum NEMMosaicLevy {
+	MosaicLevy_Absolute = 1;
+	MosaicLevy_Percentile = 2;
+}
+
+/**
+ * Structure representing the mosaic definition creation part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMMosaicCreation {
+	optional NEMMosaicDefinition definition = 1;	// Mosaic definition
+	optional string sink = 2;			// Creation fee sink address
+	optional uint64 fee = 3;			// Creation fee
+}
+
+/**
+ * Structure representing a mosaic definition
+ * @used_in NEMMosaicCreation
+ */
+message NEMMosaicDefinition {
+	optional string name = 1;			// User-friendly name of the mosaic (for whitelisted mosaics)
+	optional string ticker = 2;			// Ticker of the mosaic (for whitelisted mosaics)
+	optional string namespace = 3;			// Fully qualified name of the namespace
+	optional string mosaic = 4;			// Name of the mosaic definition
+	optional uint32 divisibility = 5;		// Number of decimal places that a mosaic can be divided into
+	optional NEMMosaicLevy levy = 6;		// Levy type
+	optional uint64 fee = 7;			// Levy fee (interpretation depends on levy type)
+	optional string levy_address = 8;		// Levy address
+	optional string levy_namespace = 9;		// Fully qualified name of the namespace of the levy mosaic
+	optional string levy_mosaic = 10;		// Name of the levy mosaic
+	optional uint64 supply = 11;			// Initial supply to create, always given in entire units
+	optional bool mutable_supply = 12;		// Mutable supply
+	optional bool transferable = 13;		// Mosaic allows transfers among accounts other than the creator
+	optional string description = 14;		// Mosaic description
+	repeated uint32 networks = 15;			// Networks that the mosaic is valid on (for whitelisted mosaics)
+}
+
+/**
+ * Structure representing the mosaic supply change part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMMosaicSupplyChange {
+	optional string namespace = 1;			// Fully qualified name of the namespace
+	optional string mosaic = 2;			// Name of the mosaic definition
+	optional NEMSupplyChangeType type = 3;		// Type of supply change
+	optional uint64 delta = 4;			// Supply delta
+}
+
+/**
+ * Type of supply change which will be applied to mosaic
+ * @used_in NEMMosaicSupplyChange
+ */
+enum NEMSupplyChangeType {
+	SupplyChange_Increase = 1;
+	SupplyChange_Decrease = 2;
+}
+
+/**
+ * Structure representing the aggregate modification part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMAggregateModification {
+	repeated NEMCosignatoryModification modifications = 1;	// Cosignatory modifications
+	optional sint32 relative_change = 2;			// Relative change of the minimum cosignatories
+}
+
+/**
+ * Structure representing the cosignatory modification for aggregate modification transactions
+ * @used_in NEMAggregateMdofiication
+ */
+message NEMCosignatoryModification {
+	optional NEMModificationType type = 1;		// Type of cosignatory modification
+	optional bytes public_key = 2;			// Public key of the cosignatory
+}
+
+/**
+ * Type of cosignatory modification
+ * @used_in NEMCosignatoryModification
+ */
+enum NEMModificationType {
+	CosignatoryModification_Add = 1;
+	CosignatoryModification_Delete = 2;
+}
+
+/**
+ * Structure representing the importance transfer part for NEM transactions
+ * @used_in NEMSignTx
+ */
+message NEMImportanceTransfer {
+	optional NEMImportanceTransferMode mode = 1;	// Mode of importance transfer
+	optional bytes public_key = 2;			// Public key of the remote account
+}
+
+/**
+ * Mode of importance transfer
+ * @used_in NEMModificationType
+ */
+enum NEMImportanceTransferMode {
+	ImportanceTransfer_Activate = 1;
+	ImportanceTransfer_Deactivate = 2;
+}
+
+/**
+ * Describes a Stellar asset
+ * @used_in StellarTxOpAck
+ */
+message StellarAssetType {
+	optional uint32 type = 1;	// 0 = native asset (XLM), 1 = alphanum 4, 2 = alphanum 12
+	optional string code = 2;	// for non-native assets, string describing the code
+	optional string issuer = 3;	// issuing address
+}
+
+/**
+* Type of Lisk transaction
+* @used_in LiskTransactionCommon
+*/
+enum LiskTransactionType {
+	Transfer = 0;
+	RegisterSecondPassphrase = 1;
+	RegisterDelegate = 2;
+	CastVotes = 3;
+	RegisterMultisignatureAccount = 4;
+	CreateDapp = 5;
+	TransferIntoDapp = 6;
+	TransferOutOfDapp = 7;
+}
+
+/**
+* Structure representing the common part for Lisk transactions
+* @used_in LiskSignTx
+*/
+message LiskTransactionCommon {
+	optional LiskTransactionType type = 1;
+	optional uint64 amount = 2 [default=0];
+	optional uint64 fee = 3;
+	optional string recipient_id = 4;
+	optional bytes sender_public_key = 5;
+	optional bytes requester_public_key = 6;
+	optional bytes signature = 7;
+	optional uint32 timestamp = 8;
+	optional LiskTransactionAsset asset = 9;
+}
+
+/**
+* Structure representing the asset field in the Lisk transaction
+* @used_in LiskTransactionCommon
+*/
+message LiskTransactionAsset {
+	optional LiskSignatureType signature = 1;
+	optional LiskDelegateType delegate = 2;
+	repeated string votes = 3;
+	optional LiskMultisignatureType multisignature = 4;
+	optional string data = 5;
+}
+
+/**
+* Structure representing the signature field in the Lisk transaction asset field
+* @used_in LiskTransactionAsset
+*/
+message LiskSignatureType {
+	optional bytes public_key = 1;
+}
+
+/**
+* Structure representing the delegate field in the Lisk transaction asset field
+* @used_in LiskTransactionAsset
+*/
+message LiskDelegateType {
+	optional string username  = 1;
+}
+
+/**
+* Structure representing the multisignature field in the Lisk transaction asset field
+* @used_in LiskTransactionAsset
+*/
+message LiskMultisignatureType {
+	optional uint32 min = 1;
+	optional uint32 life_time = 2;
+	repeated string keys_group = 3;
 }

@@ -176,8 +176,11 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 	data := tx.Data()
 	length := uint32(len(data))
 
+    txType := uint32(tx.Txtype())
+
 	request := &trezor.EthereumSignTx{
 		AddressN:   derivationPath,
+		TxType:     &txType,
 		Nonce:      new(big.Int).SetUint64(tx.Nonce()).Bytes(),
 		GasPrice:   tx.GasPrice().Bytes(),
 		GasLimit:   tx.Gas().Bytes(),
@@ -225,6 +228,7 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 	}
 	// Inject the final signature into the transaction and sanity check the sender
 	signed, err := tx.WithSignature(signer, signature)
+
 	if err != nil {
 		return common.Address{}, nil, err
 	}

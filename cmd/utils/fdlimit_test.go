@@ -21,7 +21,7 @@ import "testing"
 // TestFileDescriptorLimits simply tests whether the file descriptor allowance
 // per this process can be retrieved.
 func TestFileDescriptorLimits(t *testing.T) {
-	target := 4096
+	target := 16384
 
 	if limit, err := getFdLimit(); err != nil || limit <= 0 {
 		t.Fatalf("failed to retrieve file descriptor limit (%d): %v", limit, err)

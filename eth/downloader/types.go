@@ -77,3 +77,11 @@ type statePack struct {
 func (p *statePack) PeerId() string { return p.peerId }
 func (p *statePack) Items() int     { return len(p.states) }
 func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
+
+type headerTdPack struct {
+	peerId string
+	headerTd *types.HeaderTdData
+}
+func (p *headerTdPack) PeerId() string { return p.peerId }
+func (p *headerTdPack) Items() int     { return 1 }
+func (p *headerTdPack) Stats() string  { return fmt.Sprintf("%d", 1) }

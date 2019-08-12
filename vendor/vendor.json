@@ -21,12 +21,6 @@
 			"revisionTime": "2016-08-11T21:22:31Z"
 		},
 		{
-			"checksumSHA1": "24EW3PGLGVSy/5joAOZdHzN/S2E=",
-			"path": "github.com/Azure/azure-storage-go",
-			"revision": "12ccaadb081cdd217702067d28da9a7ff4305239",
-			"revisionTime": "2017-03-02T22:15:08Z"
-		},
-		{
 			"checksumSHA1": "+sxS3YEvxf1VxlRskIdXFRWq9rY=",
 			"path": "github.com/Azure/go-autorest/autorest",
 			"revision": "ec5f4903f77ed9927ac95b19ab8e44ada64c1356",
@@ -105,16 +99,16 @@
 			"revisionTime": "2017-07-10T16:04:46Z"
 		},
 		{
-			"checksumSHA1": "yqF125xVSkmfLpIVGrLlfE05IUk=",
+			"checksumSHA1": "8e94vVGc8ssfxcpgDSGLmp1hRJM=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "748d386b5c1ea99658fd69fe9f03991ce86a90c1",
-			"revisionTime": "2017-07-26T21:28:29Z"
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
 		},
 		{
-			"checksumSHA1": "Z1gJ3PKzwBpOoPnTSEM5yd0zHYA=",
+			"checksumSHA1": "DA2cyOt1W92RTyXAqKQ4JWKGR8U=",
 			"path": "github.com/golang/protobuf/protoc-gen-go/descriptor",
-			"revision": "748d386b5c1ea99658fd69fe9f03991ce86a90c1",
-			"revisionTime": "2017-07-26T21:28:29Z"
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
 		},
 		{
 			"checksumSHA1": "p/8vSviYF91gFflhrt5vkyksroo=",
@@ -262,6 +256,12 @@
 			"revisionTime": "2017-09-02T20:46:57Z"
 		},
 		{
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "5d4384ee4fb2527b0a1256a821ebfc92f91efefc",
+			"revisionTime": "2018-12-26T10:54:42Z"
+		},
+		{
 			"checksumSHA1": "WbbxCn2jUYIL5viqLo0BKXEdPrQ=",
 			"path": "github.com/prometheus/prometheus/util/flock",
 			"revision": "3101606756c53221ed58ba94ecba6b26adf89dcc",
@@ -280,10 +280,10 @@
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
-			"checksumSHA1": "yOMpVYuaPAtsMIo9DvQP8WZqxQs=",
+			"checksumSHA1": "lU41NL1TEDtsrr0yUdp3SMB4Y9o=",
 			"path": "github.com/rjeczalik/notify",
-			"revision": "9d5aa0c3b735c3340018a4627446c3ea5a04a097",
-			"revisionTime": "2017-01-28T20:05:44Z"
+			"revision": "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8",
+			"revisionTime": "2018-08-27T19:31:19Z"
 		},
 		{
 			"checksumSHA1": "5uqO4ITTDMklKi3uNaE/D9LQ5nM=",
@@ -338,6 +338,42 @@
 			"path": "github.com/rs/xhandler",
 			"revision": "ed27b6fd65218132ee50cd95f38474a3d8a2cd12",
 			"revisionTime": "2016-06-18T19:32:21Z"
+		},
+		{
+			"checksumSHA1": "tLHFmMOC2eMcXYaPXfifUVj3wX4=",
+			"path": "github.com/stretchr/objx",
+			"revision": "35313a95ee26395aa17d366c71a2ccf788fa69b6",
+			"revisionTime": "2019-04-15T11:18:23Z"
+		},
+		{
+			"checksumSHA1": "DBdcVxnvaINHhWyyGgih/Mel6gE=",
+			"path": "github.com/stretchr/testify",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "IIsn0Wdi5rHU8xca+FzDd+YeYlc=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "fg3TzS9/QK3wZbzei3Z6O8XPLHg=",
+			"path": "github.com/stretchr/testify/http",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "lsdl3fgOiM4Iuy7xjTQxiBtAwB0=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
+		},
+		{
+			"checksumSHA1": "IL+W0JvlL7zRZFsSVHiX2hectIs=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
 		},
 		{
 			"checksumSHA1": "yHbyLpI/Meh0DGrmi8x6FrDxxUY=",

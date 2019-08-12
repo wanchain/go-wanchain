@@ -94,6 +94,7 @@ func (d *DockerAdapter) NewNode(config *NodeConfig) (Node, error) {
 	conf.Stack.P2P.NoDiscovery = true
 	conf.Stack.P2P.NAT = nil
 	conf.Stack.NoUSB = true
+	//conf.Stack.Logger = log.New("node.id", config.ID.String())
 
 	node := &DockerNode{
 		ExecNode: ExecNode{

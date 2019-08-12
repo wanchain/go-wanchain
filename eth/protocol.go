@@ -41,7 +41,7 @@ var ProtocolName = "wan"
 var ProtocolVersions = []uint{eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{25,  8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -62,6 +62,14 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// Protocol messages belonging to wan/64
+	GetEpochGenesisMsg 	= 0x11
+	EpochGenesisMsg    	= 0x12
+	GetPivotMsg    		= 0x13
+	PivotMsg       		= 0x14
+	GetBlockHeaderTdMsg = 0x15
+	BlockHeaderTdMsg 	= 0x16
 )
 
 type errCode int
@@ -131,6 +139,15 @@ type getBlockHeadersData struct {
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
 }
 
+type getHeaderTdData struct {
+	Origin hashOrNumber
+}
+
+type getPivotData struct {
+	Origin uint64
+	Height common.Hash
+}
+
 // hashOrNumber is a combined field for specifying an origin block.
 type hashOrNumber struct {
 	Hash   common.Hash // Block hash from which to retrieve headers (excludes Number)
@@ -181,3 +198,4 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+

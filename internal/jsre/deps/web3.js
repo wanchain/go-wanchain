@@ -5659,6 +5659,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, null, null]
     });
 
+    var showPublicKey = new Method({
+        name: 'showPublicKey',
+        call: 'personal_showPublicKey',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,null]
+    });
+
     var sendTransaction = new Method({
         name: 'sendTransaction',
         call: 'personal_sendTransaction',
@@ -5694,23 +5701,6 @@ var methods = function () {
         inputFormatter: [null, null, null]
     });
 
-    var getTotalBalance = new Method({
-        name: 'getTotalBalance',
-        call: 'personal_getTotalBalance',
-        params: 1,
-        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
-        outputFormatter: formatters.outputBigNumberFormatter
-    });
-
-    var getOTAUnspendBalance = new Method({
-        name: 'getOTAUnspendBalance',
-        call: 'personal_getOTAUnspendBalance',
-        params: 1,
-        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
-        outputFormatter: formatters.outputBigNumberFormatter
-    });
-
-
     return [
         newAccount,
         importRawKey,
@@ -5722,8 +5712,7 @@ var methods = function () {
         genRingSignData,
         lockAccount,
         updateAccount,
-        getTotalBalance,
-        getOTAUnspendBalance
+        showPublicKey
     ];
 };
 

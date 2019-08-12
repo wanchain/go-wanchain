@@ -1,4 +1,5 @@
 // Copyright 2015 The go-ethereum Authors
+// Copyright 2018 Wanchain Foundation Ltd
 // This file is part of go-ethereum.
 //
 // go-ethereum is free software: you can redistribute it and/or modify
@@ -31,7 +32,7 @@ import (
 var AppHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
 
-   Copyright 2013-2017 The go-ethereum Authors
+   Copyright 2013-2017 The go-ethereum Authors; Copyright 2018 Wanchain Foundation Ltd
 
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
@@ -71,8 +72,10 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NoUSBFlag,
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
+			utils.FirstPos,
 			utils.DevInternalFlag,
 			utils.PlutoFlag,
+			utils.PlutoDevFlag,
 			utils.DevModeFlag,
 			utils.SyncModeFlag,
 			utils.EthStatsURLFlag,
@@ -120,6 +123,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
+			utils.AwsKmsFlag,
 		},
 	},
 	{
@@ -189,6 +193,11 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsEnabledFlag,
 			utils.FakePoWFlag,
 			utils.NoCompactionFlag,
+			utils.SysLogFlag,
+			utils.SyslogNetFlag,
+			utils.SyslogSvrFlag,
+			utils.SyslogLevelFlag,
+			utils.SyslogTagFlag,
 		}, debug.Flags...),
 	},
 	{

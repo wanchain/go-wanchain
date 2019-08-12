@@ -378,7 +378,7 @@ func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error
 	}
 
 	// Should supply enough intrinsic gas
-	if types.IsNormalTransaction(tx.Txtype()) && tx.Gas().Cmp(core.IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)) < 0 {
+	if types.IsNormalTransaction(tx.Txtype()) && tx.Gas().Cmp(core.IntrinsicGas(tx.Data(), tx.To(), pool.homestead)) < 0 {
 		return core.ErrIntrinsicGas
 	}
 

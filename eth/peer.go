@@ -27,7 +27,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/rlp"
-	set "gopkg.in/fatih/set.v0"
+	"gopkg.in/fatih/set.v0"
 )
 
 var (
@@ -65,19 +65,34 @@ type peer struct {
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+
+	bufferTxs  *set.Set
+	receiveTxs *set.Set
+
+
+	txLastSendTime int64
+	handling   int32
+	handlingSend   int32
+	txMsgLastAdd   int64
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	id := p.ID()
 
-	return &peer{
+	newp := &peer{
 		Peer:        p,
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		bufferTxs:   set.New(),
+		receiveTxs:  set.New(),
 	}
+
+
+	return newp
+
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -133,11 +148,26 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
-	for _, tx := range txs {
-		p.knownTxs.Add(tx.Hash())
+	if txs == nil || len(txs) == 0 {
+		return nil
 	}
-	return p2p.Send(p.rw, TxMsg, txs)
+
+	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+
+		p.knownTxs.Add(tx.Hash())
+		p.bufferTxs.Add(tx)
+	}
+
+	return nil
+
+	//return p2p.Send(p.rw, TxMsg, txs)
 }
+
+
+
 
 // SendNewBlockHashes announces the availability of a number of blocks through
 // a hash notification.
@@ -162,6 +192,9 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 // SendBlockHeaders sends a batch of block headers to the remote peer.
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
+}
+func (p *peer) SendBlockHeaderTd(header *types.Header, td *big.Int) error {
+	return p2p.Send(p.rw, BlockHeaderTdMsg, []interface{}{header, td})
 }
 
 // SendBlockBodies sends a batch of block contents to the remote peer.
@@ -203,9 +236,25 @@ func (p *peer) RequestHeadersByHash(origin common.Hash, amount int, skip int, re
 
 // RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the number of an origin block.
-func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
-	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
+func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool, to uint64) error {
+	p.Log().Debug("Fetching batch of headers", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
+	if to > 0 {
+		if !reverse {
+			if origin <= to {
+				if origin+uint64(amount*(skip+1)) > to {
+					amount = int(to+1-origin) / (skip + 1)
+				}
+			} else {
+				amount = 0
+			}
+		}
+	}
+	p.Log().Debug("Fetching batch of headers real", "count", amount, "from", origin, "skip", skip, "reverse", reverse, "to", to)
 	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+}
+func (p *peer) RequestHeaderTdByNumber(origin uint64) error {
+	p.Log().Debug("Fetching head td", "number", origin)
+	return p2p.Send(p.rw, GetBlockHeaderTdMsg, &getHeaderTdData{Origin: hashOrNumber{Number: origin}})
 }
 
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
@@ -289,6 +338,34 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	}
 	return nil
 }
+
+func (p *peer) RequestPivot(origin uint64, height common.Hash) error {
+	p.Log().Debug("Fetching pivot", "origin", origin, "height", height)
+
+	return p2p.Send(p.rw, GetPivotMsg, &getPivotData{
+		Origin: origin,
+		Height: height,
+	})
+}
+func (p *peer) readPivot(pivot *uint64) (err error) {
+	msg, err := p.rw.ReadMsg()
+	if err != nil {
+		return err
+	}
+	if msg.Code != PivotMsg {
+		p.Log().Debug("read pivot", "msg.Code", msg.Code)
+		return err
+	}
+	if msg.Size > ProtocolMaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	}
+	// Decode the handshake and make sure everything matches
+	if err := msg.Decode(&pivot); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	return nil
+}
+
 
 // String implements fmt.Stringer.
 func (p *peer) String() string {
@@ -387,6 +464,16 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	return list
 }
 
+func (ps *peerSet) PeersList() []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		list = append(list, p)
+	}
+	return list
+}
 // BestPeer retrieves the known peer with the currently highest total difficulty.
 func (ps *peerSet) BestPeer() *peer {
 	ps.lock.RLock()

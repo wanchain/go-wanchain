@@ -8,7 +8,7 @@
 #                                                                     
 
 
-echo "run geth in testnet"
+echo "run gwan in testnet"
 mkdir -p ./data_testnet
-./build/bin/geth --testnet --txpool.nolocals --txpool.pricelimit 180000000000 --verbosity 4  --datadir ./data_testnet \
+./build/bin/gwan --testnet --txpool.nolocals --txpool.pricelimit 180000000000 --verbosity 4  --datadir ./data_testnet \
      --rpc --rpcaddr 0.0.0.0 --rpcapi "eth,personal,net,admin,wan" --rpccorsdomain '*' $@
