@@ -564,9 +564,12 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
+			log.Info(fmt.Sprintf("deleteStateObject, address is %x", addr))
 			s.deleteStateObject(stateObject)
 		} else {
+			log.Info(fmt.Sprintf("stateObject.updateRoot, address is %x", addr))
 			stateObject.updateRoot(s.db)
+			log.Info(fmt.Sprintf("updateStateObject, address is %x", addr))
 			s.updateStateObject(stateObject)
 		}
 	}

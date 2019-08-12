@@ -759,7 +759,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs-UpdateDelay {
-		return nil, errors.New("cannot change at the last 3 epoch.")
+//		return nil, errors.New("cannot change at the last 3 epoch.")
 	}
 
 	stakerInfo.NextLockEpochs = info.LockEpochs.Uint64()
@@ -1276,7 +1276,7 @@ func (p *PosStaking) doStakeInParseAndValid(info *StakeInParam) error {
 
 	// 3. Lock time >= min epoch, <= max epoch
 	if info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0 {
-		return errors.New("invalid lock time")
+		//return errors.New("invalid lock time")
 	}
 
 	// 4. 0 <= FeeRate <= 10000
@@ -1317,7 +1317,7 @@ func (p *PosStaking) stakeUpdateParseAndValid(payload []byte) (StakeUpdateParam,
 	}
 	//  Lock time >= min epoch, <= max epoch
 	if info.LockEpochs.Uint64() != 0 && (info.LockEpochs.Cmp(minEpochNum) < 0 || info.LockEpochs.Cmp(maxEpochNum) > 0) {
-		return info, errors.New("invalid lock time")
+		//return info, errors.New("invalid lock time")
 	}
 
 	return info, nil

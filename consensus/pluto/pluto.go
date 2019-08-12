@@ -21,7 +21,7 @@ import (
 	"errors"
 	"math/big"
 	"math"
-
+	"fmt"
 	//"math/rand"
 	"sync"
 	"time"
@@ -779,7 +779,9 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
+	//state.Finalise(true)
 	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
+	log.Info(fmt.Sprintf("pluto::Finalize root hash is %x:", header.Root))
 
 	header.UncleHash = types.CalcUncleHash(nil)
 
