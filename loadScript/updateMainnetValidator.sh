@@ -1,5 +1,6 @@
 #!/bin/bash
 # set -x
+
 DOCKERIMG=wanchain/client-go:2.1.2
 
 echo ''
@@ -7,7 +8,7 @@ echo ''
 echo ''
 echo ''
 echo '=========================================='
-echo '|   Welcome to testnet Validator Update  |'
+echo '|  Welcome to Mainnet Validator Update   |'
 echo ''
 echo 'If you have deployed your validator with deployValidator.sh, you can update with this script'
 echo 'Please make sure that only one gwan docker is running on the current machine.'
@@ -27,10 +28,6 @@ echo ''
 echo ''
 echo ''
 echo ''
-
-
-NETWORK=--testnet
-NETWORKPATH=testnet
 
 DOCKERID=$(sudo docker ps|grep gwan|awk '{print $1}')
 
@@ -58,7 +55,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
+sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
