@@ -289,9 +289,11 @@ func (self *stateObject) updateTrie(db Database) Trie {
 	for key, value := range self.dirtyStorageByteArray {
 		delete(self.dirtyStorageByteArray, key)
 		if len(value) == 0 {
+			log.Info(fmt.Sprintf("len(value)==0 %v", value))
 			self.setError(tr.TryDelete(key[:]))
 			continue
 		}
+		log.Info(fmt.Sprintf("len(value)!=0 %v", value))
 		self.setError(tr.TryUpdate(key[:], value))
 	}
 
