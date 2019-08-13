@@ -3,7 +3,7 @@
 echo ''
 echo ''
 echo '=========================================='
-echo '| Welcome to Mainnet Validator registion |'
+echo '|  Welcome to Mainnet Validator Deploy   |'
 echo ''
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
