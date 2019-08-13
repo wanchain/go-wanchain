@@ -8,9 +8,10 @@
 #        cp ${f} ../go-wanchain/${f}
 # done
 
-cd ../go-wanchain
-make
-cp ./build/bin/gwan ../pos6/bin/
-cd ../pos6
-docker build . -t wanchain/client-go:2.0.0-beta.5
-docker push wanchain/client-go:2.0.0-beta.5
+#cd ../go-wanchain
+#make
+#cp ./build/bin/gwan ../pos6/bin/
+#cd ../pos6
+
+docker build . -t wanchain/client-go:2.1.2
+docker push wanchain/client-go:2.1.2
