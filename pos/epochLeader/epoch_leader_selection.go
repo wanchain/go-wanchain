@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"time"
 
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -16,7 +17,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
@@ -42,6 +43,17 @@ type Epocher struct {
 	epochLeadersDb *posdb.Db
 	blkChain       *core.BlockChain
 }
+
+type RefundInfo struct {
+	Addr common.Address
+	Amount *big.Int
+}
+
+type EpochInfo struct {
+	EpochID uint64
+	BlockNumber uint64
+}
+
 
 var epocherInst *Epocher = nil
 
@@ -92,12 +104,12 @@ NOTE: if the targetEpochId is future, will return current blockNumber.
 */
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
-	var curBlock *types.Block
+	var curBlockHeader *types.Header
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
-		curBlock = e.blkChain.GetBlockByNumber(curNum)
-		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlock.Header().Difficulty)
+		curBlockHeader := e.blkChain.GetHeaderByNumber(curNum)
+		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
 		if curEpochId <= targetEpochId {
 			break
 		}
@@ -105,9 +117,9 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	}
 
 	targetBlkNum := curNum
-	epochid, _ := util.GetEpochSlotID()
+	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
-		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlock.Header().Hash())
+		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlockHeader.Hash())
 	}
 
 	return targetBlkNum
@@ -117,7 +129,8 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	//stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetHeaderByNumber(targetBlkNum).Root)
 	if err != nil {
 		return err
 	}
@@ -142,6 +155,10 @@ func (e *Epocher) SelectLeadersLoop(epochId uint64) error {
 }
 
 func (e *Epocher) reportSelectELFailed(epochId uint64) {
+	if epochId == 0 {
+		return
+	}
+	
 	failedTimes := 1
 	if epochId > 0 {
 		if !e.IsGenerateELSuc(epochId - 1) {
@@ -158,6 +175,10 @@ func (e *Epocher) reportSelectELFailed(epochId uint64) {
 }
 
 func (e *Epocher) reportSelectRBPFailed(epochId uint64) {
+	if epochId == 0 {
+		return
+	}
+
 	failedTimes := 1
 	if epochId > 0 {
 		if !e.IsGenerateRBPSuc(epochId - 1) {
@@ -330,11 +351,13 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 
 func (e *Epocher) GetWhiteInfo(epochId uint64) (*vm.UpgradeWhiteEpochLeaderParam, error) {
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
-	block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
+
+	block := e.GetBlkChain().GetHeaderByNumber(targetBlkNum)
+	//block := e.GetBlkChain().GetBlockByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := e.GetBlkChain().StateAt(block.Root())
+	stateDb, err := e.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -617,7 +640,8 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 
 	targetBlkNum := e.GetTargetBlkNumber(epochId)
 
-	stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	//stateDb, err := e.blkChain.StateAt(e.blkChain.GetBlockByNumber(targetBlkNum).Root())
+	stateDb, err := e.blkChain.StateAt(e.blkChain.GetHeaderByNumber(targetBlkNum).Root)
 	if err != nil {
 		return nil, err
 	}
@@ -636,8 +660,23 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 	if err != nil {
 		return nil, err
 	}
+
+	// try to get current feeRate
+	feeRate := staker.FeeRate
+	curStateDb, err := e.blkChain.StateAt(e.blkChain.CurrentBlock().Root())
+	if err != nil {
+		return nil, err
+	} else {
+		stakeBytesNew := curStateDb.GetStateByteArray(vm.StakersInfoAddr, addrHash)
+		stakeNew := vm.StakerInfo{}
+		err = rlp.DecodeBytes(stakeBytesNew, &stakeNew)
+		if nil == err {
+			feeRate = stakeNew.FeeRate
+		}
+	}
+
 	validator := &vm.ValidatorInfo{
-		FeeRate:          staker.FeeRate,
+		FeeRate:          feeRate,
 		ValidatorAddr:    staker.Address,
 		WalletAddr:       staker.From,
 		TotalProbability: totalProbability,
@@ -650,12 +689,33 @@ func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentiv
 	return nil
 }
 
+func recordStakeOut(infos []RefundInfo, addr common.Address, amount *big.Int)([]RefundInfo) {
+	record :=  RefundInfo{
+		Addr: addr,
+		Amount: amount,
+	}
+	infos = append(infos, record)
+	return infos
+}
+func saveStakeOut(stakeOutInfo []RefundInfo, epochID uint64) error {
+	stakeByte, err := rlp.EncodeToBytes(stakeOutInfo)
+	if err != nil {
+		return err
+	}
+	_, err = posdb.GetDb().Put(epochID, posconfig.StakeOutEpochKey,stakeByte)
+	if err != nil {
+		log.Error("saveStakeOut Failed:", "error", err)
+		return err
+	}
+	log.Info("Save refund information done.","epochID",epochID)
+	return nil
+}
 func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	if vm.StakeoutIsFinished(stateDb, epochID) {
 		return true
 	}
 	vm.StakeoutSetEpoch(stateDb, epochID)
-
+	stakeOutInfo := make([]RefundInfo,0)
 	stakers := vm.GetStakersSnap(stateDb)
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
@@ -665,6 +725,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if staker.LockEpochs == 0 {
 			continue
 		}
+
 		// handle the staker registed in pow phase. only once
 		if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
 			staker.StakingEpoch = posconfig.FirstEpochId + 2
@@ -673,6 +734,29 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			}
 			changed = true
 		}
+
+		// update new fee rate
+		//key := vm.GetStakeInKeyHash(staker.Address)
+		//newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+		//if err == nil && newFeeBytes != nil {
+		//	var newFee vm.UpdateFeeRate
+		//	err = rlp.DecodeBytes(newFeeBytes, &newFee)
+		//	if err == nil {
+		//		if newFee.EffectiveEpoch == 0 {
+		//			newFee.EffectiveEpoch = staker.StakingEpoch + staker.LockEpochs
+		//		}
+		//
+		//		if newFee.EffectiveEpoch <= epochID && staker.FeeRate != newFee.FeeRate {
+		//			staker.FeeRate = newFee.FeeRate
+		//			changed = true
+		//		}
+		//	}
+		//}
+		//if err != nil {
+		//	log.SyslogErr("update new fee rate Failed: ", "err", err)
+		//	return false
+		//}
+
 		// check if delegator want to quit.
 		newClients := make([]vm.ClientInfo, 0)
 		clientChanged := false
@@ -680,6 +764,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			// edit the validator Amount
 			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Clients[j].Address, staker.Clients[j].Amount)
 				clientChanged = true
 			} else {
 				newClients = append(newClients, staker.Clients[j])
@@ -696,6 +781,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			// edit the validator Amount
 			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 				partnerchanged = true
 			} else {
 				newPartners = append(newPartners, staker.Partners[j])
@@ -708,18 +794,27 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		if epochID >= staker.StakingEpoch+staker.LockEpochs {
 			for j := 0; j < len(staker.Clients); j++ {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo,staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
 			for j := 0; j < len(staker.Partners); j++ {
 				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 			}
+			key := vm.GetStakeInKeyHash(staker.Address)
 			// quit the validator
 			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
-			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), nil)
+			stakeOutInfo = recordStakeOut(stakeOutInfo, staker.From, staker.Amount)
+			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
+			newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
+			if err == nil && newFeeBytes != nil {
+				vm.UpdateInfo(stateDb, vm.StakersFeeAddr, key, nil)
+			}
 			continue
 		}
 
 		// check the renew
 		if epochID+vm.QuitDelay >= staker.StakingEpoch+staker.LockEpochs {
+			// TODO: how to apply changed FeeRate
 			if staker.NextLockEpochs != 0 {
 				staker.LockEpochs = staker.NextLockEpochs
 				//staker.FeeRate = staker.NextFeeRate
@@ -751,5 +846,6 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, vm.GetStakeInKeyHash(staker.Address), stakerBytes)
 		}
 	}
+	saveStakeOut(stakeOutInfo, epochID)
 	return true
 }

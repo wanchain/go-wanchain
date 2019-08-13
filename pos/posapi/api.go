@@ -6,8 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core"
-
 	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
@@ -83,18 +81,13 @@ func (a PosApi) Version() string {
 	return "1.0"
 }
 
-func (a PosApi) GetSlotLeadersByEpochID(epochID uint64) map[string]string {
-	infoMap := make(map[string]string, 0)
-	for i := uint64(0); i < posconfig.SlotCount; i++ {
-		buf, err := posdb.GetDb().GetWithIndex(epochID, i, slotleader.SlotLeader)
-		if err != nil {
-			infoMap[fmt.Sprintf("%06d", i)] = fmt.Sprintf("epochID:%d, index:%d, error:%s \n", epochID, i, err.Error())
-		} else {
-			infoMap[fmt.Sprintf("%06d", i)] = hex.EncodeToString(buf)
-		}
-	}
+func (a PosApi) GetSlotLeaderByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
 
-	return infoMap
+	slp, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
+	if err != nil {
+		return err.Error()
+	}
+	return hex.EncodeToString(crypto.FromECDSAPub(slp))
 }
 
 func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, error) {
@@ -301,16 +294,16 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 		return stakers, errors.New("epocher instance do not exist")
 	}
 
-	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return stakers, err
 	}
 	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
-
 		staker := vm.StakerInfo{}
 		err := rlp.DecodeBytes(value, &staker)
 		if err != nil {
@@ -318,6 +311,24 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 			return true
 		}
 		stakeJson := ToStakerJson(&staker)
+		// add NextFeeRate MaxFeeRate
+		keyFee := vm.GetStakeInKeyHash(staker.Address)
+		newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, keyFee)
+		if err == nil && newFeeBytes != nil {
+			var newFee vm.UpdateFeeRate
+			err = rlp.DecodeBytes(newFeeBytes, &newFee)
+			if err == nil {
+				stakeJson.MaxFeeRate = newFee.MaxFeeRate
+				stakeJson.FeeRateChangedEpoch = newFee.ChangedEpoch
+			} else {
+				stakeJson.MaxFeeRate = staker.FeeRate
+				stakeJson.FeeRateChangedEpoch = 0
+			}
+		} else {
+			stakeJson.MaxFeeRate = staker.FeeRate
+			stakeJson.FeeRateChangedEpoch = 0
+		}
+
 		stakers = append(stakers, stakeJson)
 		return true
 	})
@@ -336,11 +347,12 @@ func (a PosApi) GetEpochStakerInfoAll(epochID uint64) ([]ApiStakerInfo, error) {
 	if epocherInst == nil {
 		return nil, errors.New("epocher instance do not exist")
 	}
-	block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 	if block == nil {
 		return nil, errors.New("Unkown block")
 	}
-	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root())
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +433,13 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 func (a PosApi) GetTotalIncentive() (string, error) {
 	return biToString(incentive.GetTotalIncentive())
 }
-
+func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
+	number, err := incentive.GetEpochIncentiveBlockNumber(epochID)
+	if err == nil {
+		return number.Uint64(), nil
+	}
+	return 0, err
+}
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
 	return biToString(incentive.GetEpochIncentive(epochID))
 }
@@ -509,6 +527,40 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+// GetSlotActivity get slot activity of epoch
+func (a PosApi) GetSlotActivity(epochID uint64) (*SlotActivity, error) {
+	s := slotleader.GetSlotLeaderSelection()
+	activity := SlotActivity{}
+	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+// GetValidatorActivity get epoch leader, random proposer addresses and activity
+func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
+	epID := a.GetEpochID()
+	if epochID >= epID {
+		return nil, nil
+	}
+
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := ValidatorActivity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
+	if len(activity.EpLeader) == 0 &&
+		len(activity.EpActivity) == 0 &&
+		len(activity.RpLeader) == 0 &&
+		len(activity.RpActivity) == 0 {
+		return nil, nil
+	}
+
 	return &activity, nil
 }
 
@@ -749,39 +801,18 @@ func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	return uint64(0) ^ uint64(0)
 }
 
-func (a PosApi) GetEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
-		return eg, nil
+func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
+	stakeOutByte, err := posdb.GetDb().Get(epochID, posconfig.StakeOutEpochKey)
+	if err != nil {
+		//return nil, err
+		info := make([]RefundInfo, 0)
+		return info, nil
 	}
-
-	return nil, errors.New("PrintEpochGenesis failed, cast failed")
-}
-
-func (a PosApi) GenerateEpochGenesis(epochId uint64) (*types.EpochGenesis, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		return bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
+	stakeOut := make([]epochLeader.RefundInfo, 0)
+	err = rlp.DecodeBytes(stakeOutByte, &stakeOut)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, errors.New("GenerateEpochGenesis failed, cast failed")
-}
-
-func (a PosApi) IsEqualEpochGenesis(epochId uint64) (bool, error) {
-	if bc, ok := a.chain.(*core.BlockChain); ok {
-		geg, err := bc.GetEpochGene().DoGenerateEpochGenesis(epochId)
-		if err != nil {
-			return false, errors.New("GenerateEpochGenesis failed")
-		}
-
-		eg := bc.GetEpochGene().GetEpochGenesis(epochId)
-
-		if eg != nil && geg != nil {
-			if eg.GenesisBlkHash == geg.GenesisBlkHash {
-				return true, nil
-			}
-		}
-		return false, errors.New("GetEpochGenesis failed")
-	}
-
-	return false, errors.New("a.chain is not block chain")
+	refundInfo := convertReundInfo(stakeOut)
+	return refundInfo, nil
 }

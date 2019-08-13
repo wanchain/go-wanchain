@@ -26,6 +26,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/consensus"
+
 	//"github.com/wanchain/go-wanchain/consensus/misc"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/state"
@@ -39,7 +40,7 @@ import (
 )
 
 const (
-	resultQueueSize  = 10
+	resultQueueSize  = 1
 	miningLogAtDepth = 5
 
 	// txChanSize is the size of channel listening to TxPreEvent.
@@ -47,6 +48,7 @@ const (
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
+	chainTimerSlotSize = 3
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
 )
@@ -94,15 +96,15 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent
-	txSub        event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
-	chainSideSub event.Subscription
-	chainSlotTimer  chan uint64
-	wg           sync.WaitGroup
+	mux            *event.TypeMux
+	txCh           chan core.TxPreEvent
+	txSub          event.Subscription
+	chainHeadCh    chan core.ChainHeadEvent
+	chainHeadSub   event.Subscription
+	chainSideCh    chan core.ChainSideEvent
+	chainSideSub   event.Subscription
+	chainSlotTimer chan uint64
+	wg             sync.WaitGroup
 
 	agents map[Agent]struct{}
 	recv   chan *Result
@@ -141,7 +143,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txCh:           make(chan core.TxPreEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainSlotTimer: make(chan uint64, chainHeadChanSize),
+		chainSlotTimer: make(chan uint64, chainTimerSlotSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -165,13 +167,12 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	} else {
 		worker.commitNewWork(false, 0)
 	}
-	
 
 	eth.BlockChain().RegisterSwitchEngine(worker)
 
 	return worker
 }
-func (self *worker) SwitchEngine(engine consensus.Engine){
+func (self *worker) SwitchEngine(engine consensus.Engine) {
 	self.engine = engine
 }
 
@@ -267,6 +268,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+
 			if !self.chain.IsInPosStage() {
 				self.commitNewWork(true, 0)
 			} else {
@@ -492,6 +494,7 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 	// compute uncles for the new block.
@@ -527,6 +530,9 @@ func (self *worker) commitNewWork(isPush bool, slotTime uint64) {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
+		if isPush {
+			log.Info("Pushed new mining work")
+		}
 	}
 	if isPush {
 		self.push(work)

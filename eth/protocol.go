@@ -38,7 +38,7 @@ const (
 var ProtocolName = "wan"
 
 // Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{ eth63, eth62}
+var ProtocolVersions = []uint{eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{25,  8}
@@ -137,7 +137,6 @@ type getBlockHeadersData struct {
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
 	Reverse bool         // Query direction (false = rising towards latest, true = falling towards genesis)
-	//To      uint64        // destination, if to == -1 ignore this param
 }
 
 type getHeaderTdData struct {
@@ -200,12 +199,3 @@ type blockBody struct {
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
 
-// GetEpochGenesisMsg represents a block header query.
-type getEpochGenesisData struct {
-	Epochid uint64 // epochid from which to get epoch genesis
-}
-
-type epochGenesisBody struct {
-	EpochGenesis 	*types.EpochGenesis
-	WhiteHeader		*types.Header
-}

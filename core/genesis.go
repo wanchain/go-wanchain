@@ -23,6 +23,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
@@ -34,8 +37,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/rlp"
-	"math/big"
-	"strings"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -256,14 +257,14 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			secAddr := crypto.PubkeyToAddress(*pub)
 			weight := vm.CalLocktimeWeight(vm.PSMinEpochNum)
 			staker := &vm.StakerInfo{
-				PubSec256:   account.Staking.S256pk,
-				PubBn256:    account.Staking.Bn256pk,
-				Amount:      account.Staking.Amount,
-				From:		 secAddr,
-				Address:	 secAddr,
-				LockEpochs:    0, // never expired
+				PubSec256:    account.Staking.S256pk,
+				PubBn256:     account.Staking.Bn256pk,
+				Amount:       account.Staking.Amount,
+				From:         secAddr,
+				Address:      secAddr,
+				LockEpochs:   0, // never expired
 				StakingEpoch: uint64(0),
-				FeeRate:	 uint64(10000),
+				FeeRate:      uint64(10000),
 			}
 			staker.StakeAmount = big.NewInt(0)
 			staker.StakeAmount.Mul(staker.Amount, big.NewInt(int64(weight)))
@@ -273,7 +274,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			}
 			addr := crypto.PubkeyToAddress(*crypto.ToECDSAPub(account.Staking.S256pk))
 			addrHash := common.BytesToHash(addr[:])
-			statedb.AddBalance(vm.WanCscPrecompileAddr,staker.Amount)
+			statedb.AddBalance(vm.WanCscPrecompileAddr, staker.Amount)
 
 			statedb.SetStateByteArray(vm.StakersInfoAddr, addrHash, infoArray)
 		}
@@ -402,7 +403,7 @@ func DefaultInternalGenesisBlock() *Genesis {
 		Config:     params.InternalChainConfig,
 		Nonce:      20,
 		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
-		GasLimit:   0x2fefd8,
+		GasLimit:   0x47b760, //0x5F5E100, // 100000000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(wanchainInternalAllocJson),
 	}
@@ -413,21 +414,20 @@ func DefaultInternalGenesisBlock() *Genesis {
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
-		Timestamp:  0x0,
+		Timestamp:  1561976845,
 		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
-		GasLimit:   0x47b760,	// 4700000
+		GasLimit:   0x47b760, // 4700000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
 }
 
-
 func PlutoDevGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
-		Timestamp:  0x0,
+		Timestamp:  1561976845,
 		ExtraData:  hexutil.MustDecode("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"),
-		GasLimit:   0x47b760,	// 4700000
+		GasLimit:   0x47b760, // 4700000
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoDevAllocJson),
 	}

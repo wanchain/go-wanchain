@@ -290,7 +290,7 @@ func TestDump(t *testing.T) {
 	posdb.GetDb().Put(1, EpochLeaders, epochLeaderAllBytes[:])
 
 	posconfig.SelfTestMode = true
-	s.dumpData()
+	go s.dumpData()
 
 	s.setWorkingEpochID(epochID)
 	posconfig.SelfTestMode = false
@@ -314,9 +314,9 @@ func TestClearData(t *testing.T) {
 	posconfig.SelfTestMode = true
 	s.buildEpochLeaderGroup(1)
 
-	s.dumpData()
+	go s.dumpData()
 	s.clearData()
-	s.dumpData()
+	go s.dumpData()
 
 	s.setWorkingEpochID(epochID)
 	posconfig.SelfTestMode = false
@@ -530,7 +530,7 @@ func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 
 	//isLocalPkInPreEpochLeaders
 	pks, _ := s.GetPreEpochLeadersPK(4)
-	inOrNot:= s.IsLocalPkInEpochLeaders(pks)
+	inOrNot := s.IsLocalPkInEpochLeaders(pks)
 	if inOrNot == true {
 		t.Fail()
 	}
@@ -538,7 +538,7 @@ func TestIsLocalPKInPreEpochLeaders(t *testing.T) {
 	s.key.PrivateKey = prvKeyExist
 	//isLocalPkInPreEpochLeaders
 	pks, _ = s.GetPreEpochLeadersPK(4)
-	inOrNot= s.IsLocalPkInEpochLeaders(pks)
+	inOrNot = s.IsLocalPkInEpochLeaders(pks)
 
 	if inOrNot == false {
 		t.Fail()
@@ -622,7 +622,7 @@ func TestGetRandom(t *testing.T) {
 	vmcfg := vm.Config{}
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec.MustCommit(db)
-	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg,nil)
+	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg, nil)
 	s.blockChain = chain
 
 	if err != nil {
@@ -738,7 +738,7 @@ func TestGenerateSecurityMsg(t *testing.T) {
 	//gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec := core.DefaultGenesisBlock()
 	gspec.MustCommit(db)
-	_, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg,nil)
+	_, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg, nil)
 
 	if err != nil {
 		t.Fail()
@@ -794,8 +794,6 @@ func TestGenerateSecurityMsg(t *testing.T) {
 		copy(epochLeaderAllBytes[i*65:], pubKeyByes[:])
 	}
 	posdb.GetDb().Put(epochID, EpochLeaders, epochLeaderAllBytes[:])
-
-
 
 	// build stg2 trans and input into state db
 	for i := 0; i < posconfig.EpochLeaderCount; i++ {

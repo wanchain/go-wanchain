@@ -196,6 +196,10 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
+	NoStakingFlag = cli.BoolFlag{
+		Name:  "noStaking",
+		Usage: "Disable staking",
+	}
 
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
@@ -295,7 +299,7 @@ var (
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
 		Usage: "Megabytes of memory allocated to internal caching (min 16MB / database forced)",
-		Value: 128,
+		Value: 256,
 	}
 	TrieCacheGenFlag = cli.IntFlag{
 		Name:  "trie-cache-gens",
@@ -550,7 +554,7 @@ var (
 	}
 	AwsKmsFlag = cli.BoolFlag{
 		Name:  "kms",
-		Usage: "Enable kms feature",
+		Usage: "Enable AWS KMS encrypted keystore file",
 	}
 )
 
@@ -680,14 +684,6 @@ func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-// setDiscoveryV5Address creates a UDP listening address string from set command
-// line flags for the V5 discovery protocol.
-func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
-	}
-}
-
 // setNAT creates a port mapper from command line flags.
 func setNAT(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
@@ -766,16 +762,16 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
+	if err := raiseFdLimit(16384); err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
 	}
 	limit, err := getFdLimit()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
-	}
+	// if limit > 2048 { // cap database file descriptors even if more is available
+	// 	limit = 2048
+	// }
 	return limit / 2 // Leave half for networking and other stuff
 }
 
@@ -842,7 +838,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
-	setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
@@ -904,7 +899,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		// --dev mode can't use p2p networking.
 		cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 	}
@@ -1054,6 +1048,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.SyncMode = downloader.LightSync
 	}
+	if ctx.GlobalIsSet(NoStakingFlag.Name) {
+		params.SetNoStaking()
+	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
 	}
@@ -1088,7 +1085,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 	if ctx.GlobalIsSet(FirstPos.Name) {
-		params.MainnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
+		params.WanchainChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
 	}
 	// Override any default configs for hard coded networks.
 	switch {
@@ -1118,6 +1115,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 
 	case ctx.GlobalIsSet(PlutoDevFlag.Name):
 		posconfig.IsDev = true
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 6
+		}
 		cfg.Genesis = core.PlutoDevGenesisBlock()
 
 	case ctx.GlobalBool(DevModeFlag.Name):

@@ -43,7 +43,7 @@ func PosInit(s Backend) *epochLeader.Epocher {
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
-	//TODO: later to repair.
+	//Set to epochID 0 to get a default leaders for epoch 0.
 	err := epochSelector.SelectLeadersLoop(0)
 	if err != nil {
 		panic("PosInit failed.")
@@ -56,9 +56,6 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	sls.Init(s.BlockChain(), nil, nil)
 
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
-
-	s.BlockChain().SetSlSelector(sls)
-	s.BlockChain().SetRbSelector(epochSelector)
 
 	s.BlockChain().SetSlotValidator(sls)
 
@@ -178,7 +175,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				log.Info("leader ", "leader", leader)
-				if leader == localPublicKey {
+				if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{
 					self.worker.chainSlotTimer <- slotTime
 				}
 			}
@@ -192,6 +189,10 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		} else {
 			log.SyslogErr("Failed to get stateDb", "err", err)
 		}
+
+		memUse := float32(util.MemStat()) / 1024.0 / 1024.0 / 1024.0
+
+		log.Info("Memory usage(GB)", "memory", memUse)
 
 		//time.Sleep(time.Second)
 	}

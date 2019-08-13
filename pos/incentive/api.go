@@ -24,6 +24,7 @@ var (
 	dictEpochTotal     = "epoch_total"
 	dictTotalRemain    = "total_remain"
 	dictEpochRemain    = "epoch_remain"
+	dictEpochBlock     = "epoch_block_number"
 	dictRunTimes       = "run_times"
 	dictEpochGasPool   = "epoch_gas_pool"
 	dictAllGasPool     = "all_gas_pool"
@@ -100,6 +101,9 @@ func localDbGetValue(epochID uint64, key string) (*big.Int, error) {
 
 	return big.NewInt(0).SetBytes(total), nil
 }
+func localDbSetValue(epochID uint64, key string, value *big.Int) {
+	localDb.Put(epochID, key, value.Bytes())
+}
 
 func localDbAddValue(epochID uint64, key string, value *big.Int) {
 	total, err := localDb.Get(epochID, key)
@@ -142,6 +146,10 @@ func GetTotalIncentive() (*big.Int, error) {
 // GetEpochIncentive get total incentive of all epoch
 func GetEpochIncentive(epochID uint64) (*big.Int, error) {
 	return localDbGetValue(epochID, dictEpochTotal)
+}
+
+func GetEpochIncentiveBlockNumber(epochID uint64) (*big.Int, error) {
+	return localDbGetValue(epochID, dictEpochBlock)
 }
 
 // GetEpochRemain get remain of epoch input

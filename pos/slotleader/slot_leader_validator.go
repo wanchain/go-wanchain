@@ -1,16 +1,15 @@
 package slotleader
 
 import (
+	"crypto/ecdsa"
 	"errors"
-	"math/big"
-
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/log"
-	"crypto/ecdsa"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
+	"math/big"
 )
 
 func (s *SLS) ValidateBody(block *types.Block) error {
@@ -31,6 +30,8 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	//	start = 33
 	//}
 
+	//prootStartTime := time.Now().Nanosecond()
+
 	proof, proofMeg, err := s.GetInfoFromHeadExtra(epochID, header.Extra[:len(header.Extra)-extraSeal])
 
 	if err != nil {
@@ -42,6 +43,10 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 		log.Error("VerifyPackedSlotProof failed", "number", block.NumberU64(), "epochID", epochID, "slotID", slotID)
 		return errors.New("VerifyPackedSlotProof failed")
 	}
+
+	//prootEndTime := time.Now().Nanosecond()
+
+	//log.Error("proof verify ecplapsed time","beginTime",prootStartTime,"endTime",prootEndTime,"elipse time",prootEndTime - prootStartTime  )
 
 	return nil
 }

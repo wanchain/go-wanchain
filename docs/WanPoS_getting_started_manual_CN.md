@@ -16,7 +16,7 @@ http://testnet.wanscan.org/
 
 Wanstats地址为：
 
-http://54.193.4.239/
+http://testnet.wanstats.io/
 
 Faucet地址为：
 
@@ -42,28 +42,108 @@ Beta相对于Alpha版主要更新内容包括（暂定）：
 - [1. 万维链星系共识入门手册](#1-万维链星系共识入门手册)
 - [2. 概述](#2-概述)
 - [3. 目录](#3-目录)
-- [4. 通过Docker启动节点](#4-通过docker启动节点)
-    - [4.1. 成为验证人](#41-成为验证人)
-    - [4.2. 成为委托人](#42-成为委托人)
-- [5. 其它的安装和运行方式](#5-其它的安装和运行方式)
-    - [5.1. 使用代码编译运行](#51-使用代码编译运行)
-    - [5.2. 运行教程](#52-运行教程)
-        - [5.2.1. 同步节点](#521-同步节点)
-        - [5.2.2. 验证节点](#522-验证节点)
-- [6. 常用操作](#6-常用操作)
-    - [6.1. 账号创建](#61-账号创建)
-    - [6.2. 查询余额](#62-查询余额)
-    - [6.3. 获取测试币](#63-获取测试币)
-    - [6.4. Stake注册和代理流程](#64-stake注册和代理流程)
-    - [6.5. 退本金方法](#65-退本金方法)
-        - [6.5.1. 验证节点退本金](#651-验证节点退本金)
-        - [6.5.2. 委托人退本金](#652-委托人退本金)
+- [4. 通过脚本启动节点](#4-通过脚本启动节点)
+    - [4.1. 运行脚本创建并启动validator](#41-运行脚本创建并启动validator)
+    - [4.2. 通过钱包注册验证节点](#42-通过钱包注册验证节点)
+    - [4.3. 转少量交易费到验证节点](#43-转少量交易费到验证节点)
+- [5. 通过Docker启动节点](#5-通过docker启动节点)
+    - [5.1. 成为验证人](#51-成为验证人)
+    - [5.2. 成为委托人](#52-成为委托人)
+- [6. 其它的安装和运行方式](#6-其它的安装和运行方式)
+    - [6.1. 使用代码编译运行](#61-使用代码编译运行)
+    - [6.2. 运行教程](#62-运行教程)
+        - [6.2.1. 同步节点](#621-同步节点)
+        - [6.2.2. 验证节点](#622-验证节点)
+- [7. 常用操作](#7-常用操作)
+    - [7.1. 账号创建](#71-账号创建)
+    - [7.2. 查询余额](#72-查询余额)
+    - [7.3. 获取测试币](#73-获取测试币)
+    - [7.4. Stake注册和代理流程](#74-stake注册和代理流程)
+    - [7.5. 退本金方法](#75-退本金方法)
+        - [7.5.1. 验证节点退本金](#751-验证节点退本金)
+        - [7.5.2. 委托人退本金](#752-委托人退本金)
 
 <!-- /TOC -->
 
-# 4. 通过Docker启动节点
+# 4. 通过脚本启动节点
 
-## 4.1. 成为验证人
+## 4.1. 运行脚本创建并启动validator
+
+在ssh登录到云服务器后，执行如下命令：
+
+```
+wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/deployValidator.sh && chmod +x deployValidator.sh && ./deployValidator.sh
+```
+
+脚本将提示您输入validator的名字，这个名字用作wanstats网站上的监控显示名称，不代表区块链浏览器上的名称。
+
+脚本将提示您输入validator账号的密码。
+
+脚本执行完成后，将反馈validator的账号地址和2个公钥，请将其完整备份下来供后续注册使用。
+
+如果需要重启节点，请使用如下命令：
+
+```
+wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/restartValidator.sh && chmod +x restartValidator.sh && ./restartValidator.sh
+```
+
+可以使用如下命令查看工作日志：
+
+```
+sudo docker logs -f gwan
+```
+
+停止日志查看按Ctrl-C
+
+## 4.2. 通过钱包注册验证节点
+
+接下来，可通过钱包完成validator注册行为
+
+首先确保自己的本地轻钱包，或keystore账号中有足够的wan币，beta阶段为测试币，可接受委托的验证节点需要至少50000，不可接受委托的节点至少10000。并确认账户中除此之外还有足够的交易手续费。
+
+在轻钱包上线之前，可通过web钱包注册：https://mywanwallet.io/
+
+在轻钱包正式版上线后，推荐使用轻钱包注册，安全性更高。
+
+(注意，如果使用wan wallet的助记词在mywanwallet上注册，需要在填写助记词时，密码位置需要留空)
+
+在web钱包注册时，需要注意首先在右上角选取网络。beta阶段需要选择testnet网络。
+
+点击Contract页面，选取Staking合约。
+
+选取Access后，在下发选取StakeIn，完成节点注册。
+
+![img](./img_get_start/8.png)
+
+！！！注意！！！
+
+其中的`secPk`和`bn256Pk`即为上文中脚本执行完毕后返回的2个公钥。
+
+其中`lockEpochs`为锁定时间，取值范围是7~90。
+
+其中`feeRate`为佣金费率，取值范围是0~10000，代表0.00%~100.00%的佣金费率。
+
+填写完成后，在下发选取钱包类型，并导入钱包。
+
+锁定的金额，在下一页中输入。
+
+按照提示操作，即可完成validator注册。
+
+## 4.3. 转少量交易费到验证节点
+
+在注册完成后，还需要转账少量交易手续费到验证节点地址，用于执行POS协议的手续费。
+
+手续费消耗一般不超过0.01 wan每比交易，因此转50 wan币到验证人账号，便可支持较长时间的使用。
+
+请定期通过浏览器检查验证人地址的余额，保证始终有交易费可用。
+
+# 5. 通过Docker启动节点
+
+如果已经通过脚本完成验证节点创建、启动和注册工作，则不需要再执行本章内容。
+
+如果你想要更多定制化内容，可参考本章，通过docker启动节点。
+
+## 5.1. 成为验证人
 
 1） 安装 docker (Ubuntu):
 ```
@@ -85,9 +165,9 @@ $ exit
 - YourPK1、2：返回的你账号的2个公钥信息，注册validator时需要；
 
 ```
-$ docker pull wanchain/client-go:2.0.0-beta.5
+$ docker pull wanchain/client-go:2.1.1-beta
 
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet
 
 YourContainerID
 
@@ -203,7 +283,7 @@ $ docker exec -it YourContainerID /bin/gwan attach .wanchain/testnet/gwan.ipc
 
 $ docker stop YourContainerID
 
-$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@54.193.4.239:80
+$ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet --etherbase "YourAccountAddress" --unlock "YourAccountAddress" --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats your-node-name:admin@testnet.wanstats.io
 
 ```
 
@@ -211,7 +291,7 @@ $ docker run -d -p 17717:17717 -p 17717:17717/udp -v /home/YourUserName/.wanchai
 
 “your-node-name”请自定义为您想要的节点名称，例如“Community-WAN-node_EMEA1”，请避免使用大小写字母，数字，“-”，“_”以外的字符，例如空格。
 
-您可以通过WanStats网站来查看这些信息，Beta测试阶段WanStats的网址为：http://54.193.4.239/
+您可以通过WanStats网站来查看这些信息，Beta测试阶段WanStats的网址为：http://testnet.wanstats.io
 
 执行完上述脚本，即可完成开启验证节点运行。
 
@@ -228,7 +308,7 @@ docker logs -f `docker ps -q`
 
 ![img](./img_get_start/6.png)
 
-## 4.2. 成为委托人
+## 5.2. 成为委托人
 
 可通过Wan Wallet轻钱包方便的完成委托投注。
 
@@ -250,7 +330,7 @@ $ exit
 验证人信息可以通过命令行查找，也可以通过浏览器查找。请注意，在使用pos.getStakerInfo获取验证节点信息前，请确认当前已经同步到最新块。可通过eth.blockNumber来查看。
 
 ```
-$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.0.0-beta.5 /bin/gwan --testnet
+$ docker run -d -v /home/YourUserName/.wanchain:/root/.wanchain wanchain/client-go:2.1.1-beta /bin/gwan --testnet
 
 YourContainerID
 
@@ -338,9 +418,9 @@ root> gwan attach .wanchain/testnet/gwan.ipc
 委托人投注完成。
 
 
-# 5. 其它的安装和运行方式
+# 6. 其它的安装和运行方式
 
-## 5.1. 使用代码编译运行
+## 6.1. 使用代码编译运行
 
 需要提前安装和配置golang运行环境：https://golang.org/
 
@@ -366,17 +446,17 @@ $ make
 
 编译得到的gwan在此目录下： `build/bin/gwan`
 
-## 5.2. 运行教程
+## 6.2. 运行教程
 
 可在如下不同角色下运行：
 
-### 5.2.1. 同步节点
+### 6.2.1. 同步节点
 
 ```
 $ gwan --testnet --syncmode "full"
 ```
 
-### 5.2.2. 验证节点
+### 6.2.2. 验证节点
 
 在下面命令中请替换地址为您的个人地址 `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` ，并替换 `/tmp/pw.txt` 为您地址的密码文本文件。
 
@@ -384,9 +464,9 @@ $ gwan --testnet --syncmode "full"
 $ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
-# 6. 常用操作
+# 7. 常用操作
 
-## 6.1. 账号创建
+## 7.1. 账号创建
 
 
 ```
@@ -404,7 +484,7 @@ $ gwan --testnet account pubkeys 'Your Address' 'Your Password'
 
 星系共识需要使用key1和key3，作为SecPk和G1PK。
 
-## 6.2. 查询余额
+## 7.2. 查询余额
 
 
 ```
@@ -425,7 +505,7 @@ $ eth.getBalance("Your Address Fill Here")
 $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 ```
 
-## 6.3. 获取测试币
+## 7.3. 获取测试币
 
 验证节点请在网页中填表申请测试币。（地址）
 
@@ -443,15 +523,15 @@ www.wanchain.org
 
 
 
-## 6.4. Stake注册和代理流程
+## 7.4. Stake注册和代理流程
 
 用户注册一个节点服务器为星系共识验证节点的步骤如下图所示：
 
 ![img](./img_get_start/99.png)
 
-## 6.5. 退本金方法
+## 7.5. 退本金方法
 
-### 6.5.1. 验证节点退本金
+### 7.5.1. 验证节点退本金
 
 验证人可使用[stakeUpdate.js](https://github.com/wanchain/go-wanchain/blob/develop/loadScript/stakeUpdate.js)脚本，将locktime设成0，来实现退款。本金将在下个周期开始时，自动退回来源账户。
 
@@ -459,7 +539,7 @@ www.wanchain.org
 
 
 
-### 6.5.2. 委托人退本金
+### 7.5.2. 委托人退本金
 
 通过钱包投注的委托人，可直接通过钱包的退款按钮退款。
 

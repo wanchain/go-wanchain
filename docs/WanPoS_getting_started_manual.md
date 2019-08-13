@@ -1,12 +1,24 @@
-# 1. Galaxy Consensus getting started manual
+# 1. Galaxy Consensus getting started manual (OUT OF DATE)
+
+**!!!THIS GUIDE IS OUT OF DATE!!!** 
+
+Up to date versions of the guide can be found at either of these URLs:
+
+[https://www.explorewanchain.org/](https://www.explorewanchain.org/)
+
+[https://wanchain.github.io/explorewanchain/#/staking/node_setup](https://wanchain.github.io/explorewanchain/#/staking/node_setup) (Mirror with faster access inside China)
+
+**!!!THIS GUIDE IS OUT OF DATE!!!** 
+
+
 
 # 2. Introduction
 This is a guide for helping getting started as a Wanchain Galaxy Consensus node operator. You can follow along with this manual and help test the proof of concept version of Galaxy Consensus. Please join our [Gitter chat room](https://gitter.im/wandevs/community) if you have any questions about this guide. Members of our official dev team and Wanchain community developers are there to help out with any issues you might have.  
 
 **Software Environment**
 - We recommend using Linux or MacOS
-- Docker services
-- Install Golang from https://golang.org/ and set GO environment variables `$GOPATH` and `$GOROOT`
+- Docker services 
+- Install Golang from https://golang.org/ and set GO environment variables `$GOPATH` and `$GOROOT` if you want to build from source code.
 
 # 3. Contents
 
@@ -15,30 +27,96 @@ This is a guide for helping getting started as a Wanchain Galaxy Consensus node 
 - [1. Galaxy Consensus getting started manual](#1-galaxy-consensus-getting-started-manual)
 - [2. Introduction](#2-introduction)
 - [3. Contents](#3-contents)
-- [4. Quick start from Docker](#4-quick-start-from-docker)
-    - [4.1. Step by step node setup](#41-step-by-step-node-setup)
-    - [4.2. Step by step delegation guide](#42-step-by-step-delegation-guide)
-- [5. Other ways to Download and run](#5-other-ways-to-download-and-run)
-    - [5.1. Run from Docker](#51-run-from-docker)
-    - [5.2. Download](#52-download)
-        - [5.2.1. Download BIN](#521-download-bin)
-        - [5.2.2. Download Code and Compile](#522-download-code-and-compile)
-    - [5.3. Run](#53-run)
-        - [5.3.1. Non-staking node](#531-non-staking-node)
-        - [5.3.2. Staking-node](#532-staking-node)
-- [6. Common Operations](#6-common-operations)
-    - [6.1. PoS account creation](#61-pos-account-creation)
-    - [6.2. Check balance](#62-check-balance)
-    - [6.3. Get test WAN](#63-get-test-wan)
-    - [6.4. Registration and delegation](#64-registration-and-delegation)
-    - [6.5. Check rewards](#65-check-rewards)
-    - [6.6. Unregister and Unlock](#66-unregister-and-unlock)
+- [4. Quick start from Script](#4-quick-start-from-script)
+    - [4.1. Run a command to create and run validator](#41-run-a-command-to-create-and-run-validator)
+    - [4.2. Register validator from wallet](#42-register-validator-from-wallet)
+    - [4.3. Send Tx Gas Fee to Valdiator address](#43-send-tx-gas-fee-to-valdiator-address)
+- [5. Quick start from Docker](#5-quick-start-from-docker)
+    - [5.1. Step by step node setup](#51-step-by-step-node-setup)
+    - [5.2. Step by step delegation guide](#52-step-by-step-delegation-guide)
+- [6. Other ways to Download and run](#6-other-ways-to-download-and-run)
+    - [6.1. Run from Docker](#61-run-from-docker)
+    - [6.2. Download](#62-download)
+        - [6.2.1. Download BIN](#621-download-bin)
+        - [6.2.2. Download Code and Compile](#622-download-code-and-compile)
+    - [6.3. Run](#63-run)
+        - [6.3.1. Non-staking node](#631-non-staking-node)
+        - [6.3.2. Staking-node](#632-staking-node)
+- [7. Common Operations](#7-common-operations)
+    - [7.1. PoS account creation](#71-pos-account-creation)
+    - [7.2. Check balance](#72-check-balance)
+    - [7.3. Get test WAN](#73-get-test-wan)
+    - [7.4. Registration and delegation](#74-registration-and-delegation)
+    - [7.5. Check rewards](#75-check-rewards)
+    - [7.6. Unregister and Unlock](#76-unregister-and-unlock)
 
 <!-- /TOC -->
 
-# 4. Quick start from Docker
+# 4. Quick start from Script
 
-## 4.1. Step by step node setup
+## 4.1. Run a command to create and run validator
+
+After ssh login into cloud server. Run this command below:
+
+```
+wget https://raw.githubusercontent.com/wanchain/go-wanchain/develop/loadScript/deployValidator.sh && chmod +x deployValidator.sh && ./deployValidator.sh
+```
+
+The script will prompt you to enter the name of the validator, which is used as the monitor display name on the wanstats website and does not represent the name on the blockchain browser.
+
+The script will prompt you to enter the password for the validator account.
+
+After the script is executed, the account address of the validator and the two public keys will be fed back. Please back it up completely for subsequent registration.
+
+## 4.2. Register validator from wallet
+
+Next, you can complete the validator registration behavior through the wallet.
+
+Please make sure that there is enough WAN coins in your local light wallet, or keystore json accout, wanmask account and so on.
+
+In Beta stage is the test wan coins, the validator register require that at least 50,000 coins for delegating-validator, at least 10000 coins for non-delegating-validator.
+
+And make sure there are enough transaction fees outside.
+
+Before the wan wallet (light wallet) release, it can be registered with the keystore file via web wallet: https://mywanwallet.io/
+
+After the official version of the wan wallet (light wallet) release, it is recommended to use the wan wallet to register, which is more secure.
+
+Register via web wallet: https://mywanwallet.io/
+
+When registering in the web wallet, you need to pay attention to first select the network in the upper right corner. The beta phase requires the selection of a testnet network.
+
+Click on the Contract page and select the Staking contract.
+
+After selecting Access, select StakeIn to complete the node registration.
+
+![img](./img_get_start/8.png)
+
+! ! ! note! ! !
+
+The `secPk` and `bn256Pk` are the two public keys returned after the script is executed.
+
+The `lockEpochs` is the lock time, which ranges from 7 to 90.
+
+Where `feeRate` is the commission rate, which ranges from 0 to 10000, representing a commission rate of 0.00% to 100.00%.
+
+After filling out, select the wallet type and import the wallet.
+
+The amount locked is entered on the next page.
+
+Follow the prompts to complete the validator registration.
+
+## 4.3. Send Tx Gas Fee to Valdiator address
+
+After the registration is completed, a small transaction fee is also transferred to the verification node address for the execution of the POS protocol fee.
+
+The handling fee is generally not more than 0.01 wan per transaction, so a transfer of 50 wan to the validator account can support longe time use.
+
+Please check the balance of the validator address regularly through the browser to ensure that transaction fees are always available.
+
+# 5. Quick start from Docker
+
+## 5.1. Step by step node setup
 
 **Step 1:** Install docker (Ubuntu):
 ```
@@ -184,7 +262,7 @@ Setup is now complete, mining will begin as soon as syncing is finished.
 
 ![img](./img_get_start/6.png)
 
-## 4.2. Step by step delegation guide
+## 5.2. Step by step delegation guide
 
 You can use the [wan-wallet-desktop](https://github.com/wanchain/wan-wallet-desktop/releases) for delegation easily.
 
@@ -285,19 +363,19 @@ Load the script in GWAN to complete delegation.
 
 ```
 
-# 5. Other ways to Download and run
+# 6. Other ways to Download and run
 
 Below is some other ways to download and run gwan.
 
-## 5.1. Run from Docker
+## 6.1. Run from Docker
 
 You can run a node from a Docker image. Same to 4.1.
 
-## 5.2. Download
+## 6.2. Download
 
 You can download a binary file or code to run a node.
 
-### 5.2.1. Download BIN
+### 6.2.1. Download BIN
 
 You can download the compiled binary file from the download links below:
 
@@ -310,7 +388,7 @@ You can download the compiled binary file from the download links below:
 |MacOS|gwan.tar.gz| XXXXXXXXXXXXXXXX |XXXXXXXXXXXXXXXXXXXXXXXXX
 
 
-### 5.2.2. Download Code and Compile
+### 6.2.2. Download Code and Compile
 
 If you want to compile the Galaxy Consensus code, you should first to install the Golang development environment and config $GOPATH and $GOROOT:
 
@@ -352,17 +430,17 @@ $ make
 
 Then you can find the binary file in path `build/bin/gwan`
 
-## 5.3. Run
+## 6.3. Run
 
 You can run a node in two different modes, staking and non staking.
 
-### 5.3.1. Non-staking node
+### 6.3.1. Non-staking node
 
 ```
 $ gwan --testnet --syncmode "full"
 ```
 
-### 5.3.2. Staking-node
+### 6.3.2. Staking-node
 
 In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e` with your own account address and replace the `/tmp/pw.txt` file with your own password file with your password string in it.
 
@@ -370,9 +448,9 @@ In the following command, you should replace the `0x8d8e7c0813a51d3bd1d08246af2a
 $ gwan --testnet --etherbase "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --unlock "0x8d8e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password /tmp/pw.txt  --mine --minerthreads=1 --syncmode "full"
 ```
 
-# 6. Common Operations
+# 7. Common Operations
 
-## 6.1. PoS account creation
+## 7.1. PoS account creation
 
 Before you run a PoS node you should create an account.
 
@@ -398,7 +476,7 @@ $ personal.showPublicKey('Your Address', 'Your Password')
 
 These public keys will be used in staking registration.
 
-## 6.2. Check balance
+## 7.2. Check balance
 
 You can check your balance in the address when you attach a GWAN console in the `ipc` file or use a console mode at GWAN start.
 
@@ -420,7 +498,7 @@ $ eth.getBalance("Your Address Fill Here")
 $ eth.getBalance("0x8c35B69AC00EC3dA29a84C40842dfdD594Bf5d27")
 ```
 
-## 6.3. Get test WAN
+## 7.3. Get test WAN
 
 If you want to get some test WAN to experiment with Galaxy Consensus, you can fill a form on this URL: (Waiting to update...)
 
@@ -432,7 +510,7 @@ If you want to get some test WAN to experiment with Galaxy Consensus, you can fi
 
 
 
-## 6.4. Registration and delegation
+## 7.4. Registration and delegation
 
 If you have an account with WAN coins and you want to create a Galaxy Consensus validator, you should do it as in the diagram below:
 
@@ -465,7 +543,7 @@ In the script file, the password should be replaced with your own in `personal.u
 
 The `tranValue` should be filled with the amount of WAN you want to lock in the smart contract for stake registration. You can't get it back until the locking time is up.
 
-## 6.5. Check rewards
+## 7.5. Check rewards
 
 You can check your balance as shown above to verify whether you have received a reward, and you can use the commands shown below to see which address was awarded and the reward amount for the specified epoch ID.
 
@@ -474,7 +552,7 @@ You can check your balance as shown above to verify whether you have received a 
 $ pos.getEpochIncentivePayDetail(19000)
 ```
 
-## 6.6. Unregister and Unlock
+## 7.6. Unregister and Unlock
 
 Validators can use `stakeUpdate.js` to set lock time to 0. It will be un-register at next period. 
 

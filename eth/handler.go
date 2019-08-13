@@ -166,7 +166,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)
 	}
-
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
@@ -186,7 +185,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	return manager, nil
 }
 
-func (pm *ProtocolManager) SwitchEngine (engine consensus.Engine){
+func (pm *ProtocolManager) SwitchEngine(engine consensus.Engine) {
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(pm.blockchain, header, true)
 	}
@@ -228,6 +227,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+
+	//periodical to send transaction to different peer
+	go pm.sendBufferTxsLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -319,11 +321,59 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
+func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handling, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handling, 0)
+
+	size := p.receiveTxs.Size()
+
+	txp := make([]*types.Transaction, size)
+
+	for i := 0; i < size; i++ {
+		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
+	}
+
+	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
+	if err != nil {
+		log.Error("adding remote txs errors", "reason", err)
+	}
+}
+func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
+	// Transactions arrived, make sure we have a valid and fresh chain to handle them
+	size := p.receiveTxs.Size()
+	if (uint64)(size)>=core.DefaultTxPoolConfig.GlobalQueue+core.DefaultTxPoolConfig.GlobalSlots || atomic.LoadUint32(&pm.acceptTxs) == 0 {
+		return nil
+	}
+
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	if txs == nil || len(txs) == 0 {
+		return nil
+	}
+
+	for _, tx := range txs {
+		// Validate and mark the remote transaction
+		if tx == nil {
+			continue
+		}
+		p.MarkTransaction(tx.Hash())
+		p.receiveTxs.Add(tx)
+	}
+
+
+	return nil
+}
+
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
-	//var stage int = 0 // -1 pow stage 0: uninit 1: pos
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -354,7 +404,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers []*types.Header
 			unknown bool
 		)
-
 		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 			// Retrieve the next header satisfying the query
 			var origin *types.Header
@@ -366,34 +415,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if origin == nil {
 				break
 			}
-
 			number := origin.Number.Uint64()
 			headers = append(headers, origin)
-			//originNumber := number
-			//if !hashMode {
-			//	originNumber = query.Origin.Number
-			//}
-			//if stage == 0 {
-			//	if originNumber < posconfig.Pow2PosUpgradeBlockNumber {
-			//		stage = -1
-			//	} else {
-			//		if query.Skip == 191 && originNumber > 191 && ((originNumber - 191) < posconfig.Pow2PosUpgradeBlockNumber){
-			//			stage = -1
-			//		} else {
-			//			stage = 1
-			//		}
-			//	}
-			//}
-			//if stage == -1 {
-			//	if number < posconfig.Pow2PosUpgradeBlockNumber {
-			//		headers = append(headers, origin)
-			//	}
-			//} else {
-			//	if number >= posconfig.Pow2PosUpgradeBlockNumber {
-			//		headers = append(headers, origin)
-			//	}
-			//}
-
 			bytes += estHeaderRlpSize
 
 			// Advance to the next header of the query
@@ -443,7 +466,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				query.Origin.Number += (query.Skip + 1)
 			}
 		}
-
 		return p.SendBlockHeaders(headers)
 
 	case msg.Code == BlockHeadersMsg:
@@ -494,9 +516,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
 
-		//p.CheckEpochBoundary(pm.blockchain,headers)
-
-
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -529,7 +548,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				bytes += len(data)
 			}
 		}
-
 		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
@@ -551,8 +569,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if filter {
 			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
 		}
-
-
 		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
 			if err != nil {
@@ -662,7 +678,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 		for _, block := range unknown {
-
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
@@ -699,46 +714,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-			break
-		}
-		// Transactions can be processed, parse all of them and deliver to the pool
-		var txs []*types.Transaction
-		if err := msg.Decode(&txs); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		for i, tx := range txs {
-			// Validate and mark the remote transaction
-			if tx == nil {
-				return errResp(ErrDecode, "transaction %d is nil", i)
-			}
-			p.MarkTransaction(tx.Hash())
-		}
-		pm.txpool.AddRemotes(txs)
-
-	case p.version >= eth63 && msg.Code == GetEpochGenesisMsg:
-		var epochid uint64
-		if err := msg.Decode(&epochid); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-
-		return p.SendEpochGenesis(pm.blockchain,epochid)
-
-	case p.version >= eth63 && msg.Code == EpochGenesisMsg:
-		var epBody epochGenesisBody
-		if err := msg.Decode(&epBody); err != nil {
-			log.Debug("Failed to decode epoch genesis data", "err", err)
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		if epBody.EpochGenesis.EpochId == uint64(2601143) {
-			log.Debug("epoch id == 2601143")
-		}
-
-		if err := pm.downloader.DeliverEpochGenesisData(p.id, epBody.EpochGenesis, epBody.WhiteHeader); err != nil {
-			log.Debug("Failed to deliver epoch genesis data", "err", err)
-		}
-
+		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
 		if err := msg.Decode(&query); err != nil {
@@ -771,32 +747,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Debug("Failed to deliver header td", "err", err)
 		}
 
-	case p.version >= eth63 && msg.Code == GetPivotMsg:
-		var query getPivotData
-		if err := msg.Decode(&query); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		pivotData := pm.blockchain.GetPosPivot(query.Origin, query.Height)
-
-		return p.SendPivot(pivotData)
-
-	case p.version >= eth63 && msg.Code == PivotMsg:
-		var pivotData = types.PivotData{}
-		if err := msg.Decode(&pivotData); err != nil {
-			return errResp(ErrDecode, "PivotMsg msg %v: %v", msg, err)
-		}
-		err := pm.downloader.DeliverEpochPivot(p.id, &pivotData)
-		if err != nil {
-			log.Debug("Failed to deliver pivot headers", "err", err)
-		}
-
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
 	return nil
 }
-
-
 
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
@@ -842,6 +797,56 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
+
+func (pm *ProtocolManager) sendBufferTxs(p *peer) {
+	if !atomic.CompareAndSwapInt32(&p.handlingSend, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.handlingSend, 0)
+
+	size := p.bufferTxs.Size()
+	txp := make([]*types.Transaction, size)
+	for i:=0; i<size; i++ {
+		pop := p.bufferTxs.Pop()
+		if pop != nil {
+			tp := pop.(*types.Transaction)
+			txp[i] = tp
+		} else {
+			break
+		}
+	}
+
+	err := p2p.Send(p.rw, TxMsg, txp)
+	if err != nil {
+		log.Info("sending txs errors", "reason", err)
+	}
+}
+
+func (pm *ProtocolManager) sendBufferTxsLoop() {
+	tick := time.NewTicker(8 * time.Millisecond)
+	for {
+		select {
+		case <-tick.C:
+			peers := pm.peers.PeersList()
+			for _, p := range peers {
+				size := p.bufferTxs.Size()
+				if size > 0 {
+					go pm.sendBufferTxs(p)
+				}
+				sizer := p.receiveTxs.Size()
+				if sizer > 0  {
+					//log.Info("try handleMsgTxInsert", "sizer", sizer)
+					go pm.handleMsgTxInsert(p)
+				}
+			}
+
+		case <-pm.quitSync:
+			return
+		}
+
+	}
+}
+
 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {

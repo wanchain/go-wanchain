@@ -121,9 +121,20 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'getSlotLeadersByEpochID',
-			call: 'pos_getSlotLeadersByEpochID',
+			name: 'getEpochStakeOut',
+			call: 'pos_getEpochStakeOut',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEpochIncentiveBlockNumber',
+			call: 'pos_getEpochIncentiveBlockNumber',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getSlotLeaderByEpochIDAndSlotID',
+			call: 'pos_getSlotLeaderByEpochIDAndSlotID',
+			params: 2
 		}),
 
 		new web3._extend.Method({
@@ -270,14 +281,14 @@ web3._extend({
 			params: 1,
             outputFormatter: function(stakers) {
                 for(var i=0; i<stakers.length; i++) {
-                    stakers[i].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].stakeAmount)
+                    stakers[i].votingPower = web3._extend.utils.toBigNumber(stakers[i].votingPower)
                     stakers[i].amount = web3._extend.utils.toBigNumber(stakers[i].amount)
                     for(var k=0; k<stakers[i].clients.length; k++) {
-                        stakers[i].clients[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].clients[k].stakeAmount)
+                        stakers[i].clients[k].votingPower = web3._extend.utils.toBigNumber(stakers[i].clients[k].votingPower)
                         stakers[i].clients[k].amount = web3._extend.utils.toBigNumber(stakers[i].clients[k].amount)
                     }
                     for(var k=0; k<stakers[i].partners.length; k++) {
-                        stakers[i].partners[k].stakeAmount = web3._extend.utils.toBigNumber(stakers[i].partners[k].stakeAmount)
+                        stakers[i].partners[k].votingPower = web3._extend.utils.toBigNumber(stakers[i].partners[k].votingPower)
                         stakers[i].partners[k].amount = web3._extend.utils.toBigNumber(stakers[i].partners[k].amount)
                     }
                 }
@@ -298,6 +309,16 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getActivity',
 			call: 'pos_getActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidatorActivity',
+			call: 'pos_getValidatorActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSlotActivity',
+			call: 'pos_getSlotActivity',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -373,21 +394,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getEpochIdByBlockNumber',
 			call: 'pos_getEpochIdByBlockNumber',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getEpochGenesis',
-			call: 'pos_getEpochGenesis',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'generateEpochGenesis',
-			call: 'pos_generateEpochGenesis',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'isEqualEpochGenesis',
-			call: 'pos_isEqualEpochGenesis',
 			params: 1
 		}),
 	]

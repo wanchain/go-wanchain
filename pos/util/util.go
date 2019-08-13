@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -231,4 +232,11 @@ func IsWhiteAddr(addr *common.Address) bool {
 	}
 
 	return false
+}
+
+// Get app memory use
+func MemStat() uint64 {
+	memStat := new(runtime.MemStats)
+	runtime.ReadMemStats(memStat)
+	return memStat.Alloc
 }

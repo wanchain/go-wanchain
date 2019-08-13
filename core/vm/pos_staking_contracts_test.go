@@ -103,12 +103,18 @@ func reset() bool {
 }
 
 func (StakerStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
-	ret, _ := posStakingDB.Get(hs[:])
+	//ret, _ := posStakingDB.Get(hs[:])
+
+	key := append(addr[:], hs[:]...)
+	ret, _ := posStakingDB.Get(key)
 	return ret
 }
 
 func (StakerStateDB) SetStateByteArray(addr common.Address, hs common.Hash, data []byte) {
-	posStakingDB.Put(hs[:], data)
+	//posStakingDB.Put(hs[:], data)
+
+	key := append(addr[:], hs[:]...)
+	posStakingDB.Put(key, data)
 }
 
 type dummyStakerRef struct {
@@ -144,6 +150,58 @@ var (
 	contract       = &Contract{value: big.NewInt(0).Mul(big.NewInt(10), ether), CallerAddress: stakerAddr}
 	stakercontract = &PosStaking{}
 )
+
+func TestStakeRegister(t *testing.T)  {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// value >= 10000
+	err := doStakeRegister(9999)
+	if err == nil {
+		t.Fatal("should be error, stake < 10,000")
+	}
+	// fee too high
+	err = doStakeRegisterWithParam(10000, 10001)
+	if err == nil {
+		t.Fatal("fee should too high")
+	}
+
+	// normal, should success
+	err = doStakeRegister(10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	// can't join twice
+	err = doStakeRegister(10000)
+	if err == nil {
+		t.Fatal("should not stakeIn twice")
+	}
+
+	// if posconfig.FirstEpochId == 0
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	posconfig.FirstEpochId = 0
+	err = doStakeRegister(10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// value <= 10,500,000
+	err = doStakeRegister(10590001)
+	if err == nil {
+		t.Fatal("should be error, stake > 10,500,000")
+	}
+	err = doStakeRegister(10500000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	clearDb()
+}
 
 func TestStakeIn(t *testing.T) {
 	if !reset() {
@@ -379,27 +437,27 @@ func TestPartnerIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x11117c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x22227c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x33337c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x44447c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x55557c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20)
+	err = doPartnerOne(common.HexToAddress("0x66667c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("Too many partners, should fail")
 	}
@@ -415,6 +473,10 @@ func TestPartnerIn(t *testing.T) {
 	err = doDelegateOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 20000)
 	if err == nil {
 		t.Fatal("should be error, stake + partner < 50000")
+	}
+	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9999)
+	if err == nil {
+		t.Fatal("should be error, min wan amount should >= 10000")
 	}
 	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 30000)
 	if err != nil {
@@ -525,7 +587,7 @@ func TestStakeAppend(t *testing.T) {
 	}
 }
 
-func TestStakeUpdate(t *testing.T)  {
+func TestStakeUpdate(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
@@ -552,6 +614,78 @@ func TestStakeUpdate(t *testing.T)  {
 	// normal
 	setEpochTime(posconfig.FirstEpochId + 2 + 10 - UpdateDelay)
 	err = doStakeUpdate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 0, 10)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestUpdateFeeRate(t *testing.T) {
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err := doStakeInWithParam(20000, 10000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 9900)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate equal 10000, can't change" {
+		t.Fatal("feeRate equal 10000, can't change")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeInWithParam(20000, 1000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000)
+	if err == nil || err.Error() != "updateFeeRate called failed feeRate already same" {
+		t.Fatal("feeRate already same")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0xaaaa7c0813a51d3bd1d08246af2a8a7a57d8922e"), 999)
+	if err == nil || err.Error() != "updateFeeRate called failed cannot update fee from another account" {
+		t.Fatal("cannot update fee from another account")
+	}
+
+	if !reset() {
+		t.Fatal("pos staking db init error")
+	}
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 5)
+	if err == nil {
+		t.Fatal("should be failed if stake holder not exist")
+	}
+	// contract.CallerAddress != stakeInfo.From
+	err = doStakeInWithParam(20000, 1000)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 10001)
+	if err == nil || err.Error() != "updateFeeRate called failed fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1001)
+	if err == nil || err.Error() != "updateFeeRate called failed fee rate can't bigger than old" {
+		t.Fatal("fee rate can't bigger than old")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 800)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	setEpochTime(posconfig.FirstEpochId + 1)
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 901)
+	if err == nil || err.Error() != "updateFeeRate called failed 0 <= newFeeRate <= oldFeerate + 100" {
+		t.Fatal("0 <= newFeeRate <= oldFeerate + 100")
+	}
+
+	err = doUpdateFeeRate(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 900)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -588,6 +722,85 @@ func TestMultiDelegateIn(b *testing.T) {
 	clearDb()
 }
 
+func TestStakeRegisterParam(t *testing.T)  {
+	var input = getStakeRegisterParam()
+	// good
+	err := doStakeRegisterParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input = getStakeRegisterParam()
+	input.SecPk = common.FromHex("0x04d7dffe5e06d2c7024d9bb93f675b8242e71901")
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("secpk should be error")
+	}
+
+	input = getStakeRegisterParam()
+	input.Bn256Pk = common.FromHex("0x04d7dffe5e06d2c7024d9bb93f675b8242e71901")
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("Bn256Pk should be error")
+	}
+
+	one := big.NewInt(1)
+	zero := big.NewInt(0)
+	input = getStakeRegisterParam()
+	input.LockEpochs = new(big.Int).Sub(minEpochNum, one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("lock epoch should not < minEpochNum")
+	}
+
+	input.LockEpochs = new(big.Int).Add(maxEpochNum, one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("lock epoch should not > maxEpochNum")
+	}
+
+	input = getStakeRegisterParam()
+	input.FeeRate = new(big.Int).Sub(zero, one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("FeeRate should >= 0")
+	}
+
+	input.FeeRate = new(big.Int).Add(big.NewInt(10000), one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("FeeRate should <=  10000")
+	}
+
+	input = getStakeRegisterParam()
+	input.MaxFeeRate = big.NewInt(-1)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("max fee rate should between 0 to 100")
+	}
+	input.MaxFeeRate = new(big.Int).Add(big.NewInt(10000), one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("max fee rate should between 0 to 100")
+	}
+	input.MaxFeeRate = new(big.Int).Sub(input.FeeRate, one)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("fee rate should le maxFeeRate")
+	}
+	input = getStakeRegisterParam()
+	input.MaxFeeRate = big.NewInt(10000)
+	input.FeeRate = big.NewInt(9999)
+	err = doStakeRegisterParam(input)
+	if err == nil {
+		t.Fatal("feeRate should be same with maxFeeRate, if maxFeeRate eq 100")
+	}
+	input.FeeRate = big.NewInt(10000)
+	err = doStakeRegisterParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
 func TestStakeInParam(t *testing.T) {
 	var input = getStakeInParam()
 	// good
@@ -675,6 +888,61 @@ func TestStakeUpdateParam(t *testing.T) {
 	}
 }
 
+func TestUpdateFeeRateParam(t *testing.T) {
+	var input UpdateFeeRateParam
+	input.FeeRate = big.NewInt(5)
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	err := doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal("update fee rate param failed " + err.Error())
+	}
+
+	input.FeeRate = big.NewInt(-1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+
+	input.FeeRate = minFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = maxFeeRate
+	err = doUpdateFeeRateParam(input)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	input.FeeRate = big.NewInt(PSMaxFeeRate + 1)
+	err = doUpdateFeeRateParam(input)
+	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+		t.Fatal("fee rate should between 0 to 10000")
+	}
+}
+
+//func TestMaxFee(t *testing.T) {
+//	if !reset() {
+//		t.Fatal("pos staking db init error")
+//	}
+//	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+//	err := stakercontract.saveStakeMaxFee(stakerevm, 0xffffffffffffffff, contract.CallerAddress)
+//	if err != nil {
+//		t.Fatal(err.Error())
+//	}
+//
+//	fee, err := stakercontract.getStakeMaxFee(stakerevm, contract.CallerAddress)
+//	if err != nil {
+//		t.Fatal(err.Error())
+//	}
+//
+//	println("max fee = " + strconv.FormatUint(fee, 10))
+//	if 0xffffffffffffffff != fee {
+//		t.Fatal("fee not equal")
+//	}
+//}
+
 func doStakeInWithParam(amount int64, feeRate int) error {
 	stakerevm.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
@@ -736,6 +1004,87 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 		}
 	}
 	return nil
+}
+
+func doStakeRegisterWithParam(amount int64, feeRate int) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
+	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	a := new(big.Int).Mul(big.NewInt(amount), ether)
+	contract.Value().Set(a)
+	contract.self = &dummyContractRef{}
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	stakerevm.BlockNumber = big.NewInt(10)
+
+	var input StakeRegisterParam
+	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.SecPk = common.FromHex("0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70")
+	input.Bn256Pk = common.FromHex("0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910")
+	input.LockEpochs = big.NewInt(10)
+	input.FeeRate = big.NewInt(int64(feeRate))
+	input.MaxFeeRate = big.NewInt(int64(1000))
+
+	bytes, err := cscAbi.Pack("stakeRegister", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate, input.MaxFeeRate)
+	if err != nil {
+		return errors.New("stakeIn pack failed")
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("stakeIn called failed " + err.Error())
+	}
+
+	// check
+	pub := crypto.ToECDSAPub(input.SecPk)
+	secAddr := crypto.PubkeyToAddress(*pub)
+	key := GetStakeInKeyHash(secAddr)
+	bytes2 := stakerevm.StateDB.GetStateByteArray(StakersInfoAddr, key)
+	var info StakerInfo
+	err = rlp.DecodeBytes(bytes2, &info)
+	if err != nil {
+		return errors.New("stakeRegister StakerInfo rlp decode failed")
+	}
+	if info.LockEpochs != input.LockEpochs.Uint64() ||
+		info.FeeRate != input.FeeRate.Uint64() ||
+		!reflect.DeepEqual(info.PubBn256, input.Bn256Pk) ||
+		!reflect.DeepEqual(info.PubSec256, input.SecPk) {
+		return errors.New("stakeIn parse StakerInfo failed")
+	}
+	if info.Address != secAddr ||
+		info.From != contract.CallerAddress ||
+		info.Amount.Cmp(a) != 0  {
+		return errors.New("stakeIn from amount epoch address saved wrong")
+	}
+	if posconfig.FirstEpochId == 0 {
+		if info.StakingEpoch != 0 {
+			return errors.New("StakingEpoch saved wrong, should eq 0")
+		}
+	} else {
+		if info.StakingEpoch != eidNow + 2 {
+			return errors.New("StakingEpoch saved wrong")
+		}
+	}
+
+
+	bytes3 := stakerevm.StateDB.GetStateByteArray(StakersFeeAddr, key)
+	var fee UpdateFeeRate
+	err = rlp.DecodeBytes(bytes3, &fee)
+	if err != nil {
+		return errors.New("stakeRegister UpdateFeeRate rlp decode failed")
+	}
+	if input.MaxFeeRate.Uint64() != fee.MaxFeeRate ||
+		fee.ChangedEpoch != uint64(0) ||
+		fee.ValidatorAddr != secAddr ||
+		fee.FeeRate != input.FeeRate.Uint64() {
+		return errors.New("stakeRegister maxFeeRate rlp decode failed")
+	}
+	return nil
+}
+func doStakeRegister(amount int64) error {
+	return doStakeRegisterWithParam(amount, 1000)
 }
 
 func doStakeIn(amount int64) error {
@@ -959,6 +1308,45 @@ func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
 	return nil
 }
 
+func doUpdateFeeRate(from common.Address, feeRate uint64) error {
+	stakerevm.Time = big.NewInt(time.Now().Unix())
+	if evmtime != int64(0) {
+		stakerevm.Time = big.NewInt(evmtime)
+	}
+	contract.CallerAddress = from
+
+	var input UpdateFeeRateParam
+	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
+	input.FeeRate = big.NewInt(int64(feeRate))
+
+	bytes, err := cscAbi.Pack("stakeUpdateFeeRate", input.Addr, input.FeeRate)
+	if err != nil {
+		return errors.New("updateFeeRate pack failed " + err.Error())
+	}
+
+	_, err = stakercontract.Run(bytes, contract, stakerevm)
+
+	if err != nil {
+		return errors.New("updateFeeRate called failed " + err.Error())
+	}
+	// check
+	//key := GetStakeInKeyHash(input.Addr)
+	//bytes := stakerevm.StateDB.GetStateByteArray(StakersFeeAddr, key)
+
+	return nil
+}
+
+func doStakeRegisterParam(input StakeRegisterParam) error {
+	bytes, err := cscAbi.Pack("stakeRegister", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate, input.MaxFeeRate)
+	if err != nil {
+		return err
+	}
+	_, err = stakercontract.stakeRegisterParseAndValid(bytes[4:])
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func doStakeInParam(input StakeInParam) error {
 	bytes, err := cscAbi.Pack("stakeIn", input.SecPk, input.Bn256Pk, input.LockEpochs, input.FeeRate)
 	if err != nil {
@@ -983,6 +1371,24 @@ func doStakeUpdateParam(input StakeUpdateParam) error {
 	return nil
 }
 
+func doUpdateFeeRateParam(input UpdateFeeRateParam) error {
+	bytes, err := cscAbi.Pack("stakeUpdateFeeRate", input.Addr, input.FeeRate)
+	if err != nil {
+		return err
+	}
+	feeParam, err := stakercontract.updateFeeRateParseAndValid(bytes[4:])
+	if err != nil {
+		return err
+	}
+	if feeParam.FeeRate.Cmp(input.FeeRate) != 0 {
+		return errors.New("fee rate not equal")
+	}
+	if feeParam.Addr != input.Addr {
+		return errors.New("addr not equal")
+	}
+	return nil
+}
+
 func getStakeInParam() StakeInParam {
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -990,6 +1396,13 @@ func getStakeInParam() StakeInParam {
 	input.Bn256Pk = common.FromHex("0x150b2b3230d6d6c8d1c133ec42d82f84add5e096c57665ff50ad071f6345cf45191fd8015cea72c4591ab3fd2ade12287c28a092ac0abf9ea19c13eb65fd4910")
 	input.LockEpochs = big.NewInt(10)
 	input.FeeRate = big.NewInt(int64(100))
+
+	return input
+}
+func getStakeRegisterParam() StakeRegisterParam {
+	var input StakeRegisterParam
+	input.StakeInParam = getStakeInParam()
+	input.MaxFeeRate = big.NewInt(int64(1000))
 
 	return input
 }

@@ -33,6 +33,8 @@ const (
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
+	ApolloEpochID     = 18104
+	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 )
 
 var EpochLeadersHold [][]byte
@@ -46,6 +48,7 @@ const (
 	MaxEpHold         = 30
 	MinEpHold         = 0
 	Key3Suffix        = "bn256KeySuffix"
+	StakeOutEpochKey  = "StakeOutEpochKey"
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch

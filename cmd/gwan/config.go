@@ -34,7 +34,7 @@ import (
 	"strings"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/naoina/toml"
 	"github.com/wanchain/go-wanchain/cmd/utils"
@@ -389,5 +389,6 @@ func getVerifyAccounts() (bool, []string) {
 
 	return true, accounts
 }
+
 
 

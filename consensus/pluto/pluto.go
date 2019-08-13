@@ -20,6 +20,8 @@ package pluto
 import (
 	"errors"
 	"math/big"
+	"math"
+
 	//"math/rand"
 	"sync"
 	"time"
@@ -586,14 +588,17 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
-	if epidTime != epochID || slIdTime != slotID {
+	if epidTime != epochID || slIdTime != slotID || header.Difficulty.Cmp(new(big.Int).SetUint64(math.MaxUint64))>0 {
 		log.SyslogErr("epochId or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
 		return errors.New("epochId or slotid do not match")
 	}
 
 	s := slotleader.GetSlotLeaderSelection()
 
-	if len(header.Extra) == extraSeal {
+	if len(header.Extra) > 512 { // proof,proofmsg,sign
+		log.SyslogErr("Header extra info length is too long")
+		return errUnauthorized
+	} else if len(header.Extra) <= extraSeal {
 		log.SyslogErr("Header extra info length is too short")
 		return errUnauthorized
 

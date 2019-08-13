@@ -24,11 +24,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	posutil "github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
+
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -38,8 +41,6 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
@@ -1030,8 +1031,8 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-	if head.Number.Uint64() >= s.b.ChainConfig().PosFirstBlock.Uint64()  {
-		epochid,slotid := posutil.CalEpSlbyTd(head.Difficulty.Uint64())
+	if head.Number.Uint64() >= s.b.ChainConfig().PosFirstBlock.Uint64() {
+		epochid, slotid := posutil.CalEpSlbyTd(head.Difficulty.Uint64())
 		fields["epochId"] = epochid
 		fields["slotId"] = slotid
 	}
@@ -1345,7 +1346,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		log.Debug("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
 }

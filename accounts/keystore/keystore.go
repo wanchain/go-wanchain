@@ -47,6 +47,7 @@ var (
 	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
 	ErrNoMatch = errors.New("no key for given address or file")
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+	ErrInvalidKmsInfo = errors.New("invalid AWS KMS info")
 )
 
 // KeyStoreType is the reflect type of a keystore backend.
@@ -339,6 +340,11 @@ func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 	return ks.TimedUnlock(a, passphrase, 0)
 }
 
+func (ks *KeyStore) UnlockMemKey(a accounts.Account, keyjson []byte, passphrase string) error {
+	return ks.TimedUnlockMemKey(a, keyjson, passphrase, 0)
+}
+
+
 // Lock removes the private key with the given address from memory.
 func (ks *KeyStore) Lock(addr common.Address) error {
 	ks.mu.Lock()
@@ -387,6 +393,35 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	return nil
 }
 
+func (ks *KeyStore) TimedUnlockMemKey(a accounts.Account, keyjson []byte, passphrase string, timeout time.Duration) error {
+	a, key, err := ks.getDecryptedKeyFromMemJson(a, keyjson, passphrase)
+	if err != nil {
+		return err
+	}
+
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	u, found := ks.unlocked[a.Address]
+	if found {
+		if u.abort == nil {
+			// The address was unlocked indefinitely, so unlocking
+			// it with a timeout would be confusing.
+			zeroKey(key.PrivateKey)
+			return nil
+		}
+		// Terminate the expire goroutine and replace it below.
+		close(u.abort)
+	}
+	if timeout > 0 {
+		u = &unlocked{Key: key, abort: make(chan struct{})}
+		go ks.expire(a.Address, u, timeout)
+	} else {
+		u = &unlocked{Key: key}
+	}
+	ks.unlocked[a.Address] = u
+	return nil
+}
+
 // Find resolves the given account into a unique entry in the keystore.
 func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	ks.cache.maybeReload()
@@ -406,6 +441,11 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 		return a, nil, err
 	}
 	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
+	return a, key, err
+}
+
+func (ks *KeyStore) getDecryptedKeyFromMemJson(a accounts.Account, keyjson []byte, auth string) (accounts.Account, *Key, error) {
+	key, err := ks.storage.GetKeyFromKeyJson(a.Address, keyjson, auth)
 	return a, key, err
 }
 

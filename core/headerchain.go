@@ -63,8 +63,6 @@ type HeaderChain struct {
 
 	rand   *mrand.Rand
 	engine consensus.Engine
-
-	epochgen  *EpochGenesisBlock
 }
 
 // NewHeaderChain creates a new HeaderChain structure.

@@ -25,6 +25,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/params"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 )
 
@@ -78,11 +79,16 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 
 	//Verify only allow one block in a slot
 	if block.NumberU64() > v.bc.config.PosFirstBlock.Uint64() {
-		parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		//parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
 		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time.Uint64())
-		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlock.Header().Time.Uint64())
-		if (slotIDNew == slotIDOld) && (epIDNew == epIDOld) {
-			return fmt.Errorf("Multi blocks in one slot")
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time.Uint64())
+		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
+		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
+		if epIDNew > posconfig.ApolloEpochID {
+			if flatSlotIdNew <= flatSlotIdOld {
+				return fmt.Errorf("Invalid slot in chain.")
+			}
 		}
 	}
 
@@ -125,6 +131,11 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 // The result may be modified by the caller.
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) *big.Int {
+	epId, _ := util.CalEpochSlotID(parent.Header().Time.Uint64())
+	if epId >= posconfig.ApolloEpochID {
+		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
+	}
+
 	// contrib = (parentGasUsed * 3 / 2) / 1024
 	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3))
 	contrib = contrib.Div(contrib, big.NewInt(2))
@@ -150,6 +161,10 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 	if gl.Cmp(params.TargetGasLimit) < 0 {
 		gl.Add(parent.GasLimit(), decay)
 		gl.Set(math.BigMin(gl, params.TargetGasLimit))
+	}
+
+	if gl.Cmp(params.MaxGasLimit) > 0 {
+		gl.Set(params.MaxGasLimit)
 	}
 	return gl
 }

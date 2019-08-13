@@ -17,15 +17,13 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
+	"strings"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -44,7 +42,6 @@ var (
 		Category:  "ACCOUNT COMMANDS",
 		Description: `
     geth wallet import /path/to/my/presale.wallet
-
 will prompt for your password and imports your ether presale account.
 It can be used non-interactively with the --password option taking a
 passwordfile as argument containing the wallet password in plaintext.`,
@@ -64,7 +61,6 @@ passwordfile as argument containing the wallet password in plaintext.`,
 				},
 				Description: `
 	geth wallet [options] /path/to/my/presale.wallet
-
 will prompt for your password and imports your ether presale account.
 It can be used non-interactively with the --password option taking a
 passwordfile as argument containing the wallet password in plaintext.`,
@@ -77,24 +73,18 @@ passwordfile as argument containing the wallet password in plaintext.`,
 		Usage:    "Manage accounts",
 		Category: "ACCOUNT COMMANDS",
 		Description: `
-
 Manage accounts, list all existing accounts, import a private key into a new
 account, create a new account or update an existing account.
-
 It supports interactive mode, when you are prompted for password as well as
 non-interactive mode where passwords are supplied via a given password file.
 Non-interactive mode is only meant for scripted use on test networks or known
 safe environments.
-
 Make sure you remember the password you gave when creating a new account (with
 either new or import). Without it you are not able to unlock your account.
-
 Note that exporting your key in unencrypted format is NOT supported.
-
 Keys are stored under <DATADIR>/keystore.
 It is safe to transfer the entire directory or the individual keys therein
 between ethereum nodes by simply copying.
-
 Make sure you backup your keys regularly.`,
 		Subcommands: []cli.Command{
 			{
@@ -120,15 +110,10 @@ Print a short summary of all accounts`,
 				},
 				Description: `
     geth account new
-
 Creates a new account and prints the address.
-
 The account is saved in encrypted format, you are prompted for a passphrase.
-
 You must remember this passphrase to unlock your account in the future.
-
 For non-interactive use the passphrase can be specified with the --password flag:
-
 Note, this is meant to be used for testing only, it is a bad idea to save your
 password to file or expose in any other way.
 `,
@@ -145,19 +130,13 @@ password to file or expose in any other way.
 				},
 				Description: `
     geth account update <address>
-
 Update an existing account.
-
 The account is saved in the newest version in encrypted format, you are prompted
 for a passphrase to unlock the account and another to save the updated file.
-
 This same command can therefore be used to migrate an account of a deprecated
 format to the newest format or change the password for an account.
-
 For non-interactive use the passphrase can be specified with the --password flag:
-
     geth account update [options] <address>
-
 Since only one password can be given, only format update can be performed,
 changing your password is only possible interactively.
 `,
@@ -175,20 +154,13 @@ changing your password is only possible interactively.
 				ArgsUsage: "<keyFile>",
 				Description: `
     geth account import <keyfile>
-
 Imports an unencrypted private key from <keyfile> and creates a new account.
 Prints the address.
-
 The keyfile is assumed to be a json file which contains an unencrypted private key pair in hexencoded string format.
-
 The account is saved in encrypted format, you are prompted for a passphrase.
-
 You must remember this passphrase to unlock your account in the future.
-
 For non-interactive use the passphrase can be specified with the -password flag:
-
     geth account import [options] <keyfile>
-
 Note:
 As you can directly copy your encrypted accounts to another ethereum instance,
 this import mechanism is not needed when you transfer an account between
@@ -207,37 +179,8 @@ nodes.
 Print public key of an address`,
 			},
 			{
-				Name:      "updatestm",
-				Usage:     "Update an existing storeman account",
-				Action:    utils.MigrateFlags(accountUpdateStoreman),
-				ArgsUsage: "<address>",
-				Flags: []cli.Flag{
-					utils.DataDirFlag,
-					utils.KeyStoreDirFlag,
-					utils.LightKDFFlag,
-				},
-				Description: `
-    gwan account updatestm <address>
-
-Update an existing storeman account.
-
-The account is saved in the newest version in encrypted format, you are prompted
-for a passphrase to unlock the account and another to save the updated file.
-
-This same command can therefore be used to migrate an account of a deprecated
-format to the newest format or change the password for an account.
-
-For non-interactive use the passphrase can be specified with the --password flag:
-
-    gwan account updatestm [options] <address>
-
-Since only one password can be given, only format update can be performed,
-changing your password is only possible interactively.
-`,
-			},
-			{
 				Name:      "encrypt",
-				Usage:     "Encrypt an existing account with aws kms",
+				Usage:     "Encrypt an existing account with AWS KMS",
 				Action:    utils.MigrateFlags(accountEncrypt),
 				ArgsUsage: "<address>",
 				Flags: []cli.Flag{
@@ -246,15 +189,13 @@ changing your password is only possible interactively.
 				},
 				Description: `
     gwan account encrypt <address>
-
 Encrypt an existing account.
-
-The account will be encrypted by aws kms, and ciphertext will be saved into new file named as "<original-name>-cipher"
+The account will be encrypted by AWS KMS, and ciphertext will be saved into new file named as "<original-name>-cipher"
 `,
 			},
 			{
 				Name:      "decrypt",
-				Usage:     "Decrypt an existing aws kms encrypted account",
+				Usage:     "Decrypt an existing AWS KMS encrypted account",
 				Action:    utils.MigrateFlags(accountDecrypt),
 				ArgsUsage: "<address>",
 				Flags: []cli.Flag{
@@ -263,25 +204,8 @@ The account will be encrypted by aws kms, and ciphertext will be saved into new 
 				},
 				Description: `
     gwan account decrypt <address>
-
 Decrypt an existing account.
-
-The account will be decrypted by aws kms, and plaintext will be saved into new file named as "<original-name>-plain"
-`,
-			},
-			{
-				Name:      "trystmpswd",
-				Usage:     "try storeman keystore account password",
-				Action:    utils.MigrateFlags(accountTryStmPswd),
-				ArgsUsage: "<address> <jsonFile>",
-				Flags: []cli.Flag{
-					utils.DataDirFlag,
-					utils.KeyStoreDirFlag,
-				},
-				Description: `
-    gwan account trystmpswd <address> <jsonFile>
-
-try storeman keystore account password from json file.
+The account will be decrypted by AWS KMS, and plaintext will be saved into new file named as "<original-name>"
 `,
 			},
 		},
@@ -326,6 +250,64 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 	// All trials expended to unlock account, bail out
 	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
 
+	return accounts.Account{}, ""
+}
+
+func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
+	account, err := utils.MakeAddress(ks, address)
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+
+	a, err := ks.Find(account)
+	if err != nil {
+		utils.Fatalf("Could not find the account: %v", err)
+	}
+
+	var trials int
+	var keyjson []byte
+	for ; trials < 3; trials++ {
+		prompt := fmt.Sprintf("AWS KMS decrypting account %s | Attempt %d/%d", address, trials+1, 3)
+		keyNames := [3]string{"aKID", "secretKey", "region"}
+		kmsInfo, err := getAwsKmsSecretInfo(prompt, keyNames[:])
+		if err != nil {
+			utils.Fatalf("Failed to read input: %v", err)
+		}
+
+		keyjson, err = awskms.DecryptFileToBuffer(a.URL.Path, kmsInfo[0], kmsInfo[1], kmsInfo[2])
+		if err != nil {
+			fmt.Println("invalid AWS KMS info, decrypt keystore file fail: ", err)
+			continue
+		}
+
+		break
+	}
+
+	if trials == 3 || len(keyjson) == 0 {
+		utils.Fatalf("AWS KMS decrypt failed")
+	}
+
+	fmt.Println("AWS KMS decrypt successful")
+	for trials := 0; trials < 3; trials++ {
+		prompt := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", address, trials+1, 3)
+		password := getPassPhrase(prompt, false, i, passwords)
+		err = ks.UnlockMemKey(account, keyjson, password)
+		if err == nil {
+			log.Info("Unlocked account", "address", account.Address.Hex())
+			return account, password
+		}
+		if err, ok := err.(*keystore.AmbiguousAddrError); ok {
+			log.Info("Unlocked account", "address", account.Address.Hex())
+			return ambiguousAddrRecovery(ks, err, password), password
+		}
+		if err != keystore.ErrDecrypt {
+			// No need to prompt again if the error is not decryption-related.
+			break
+		}
+	}
+
+	// All trials expended to unlock account, bail out
+	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
 	return accounts.Account{}, ""
 }
 
@@ -418,175 +400,6 @@ func accountUpdate(ctx *cli.Context) error {
 	return nil
 }
 
-
-func accountUpdateStoreman(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		utils.Fatalf("No accounts specified to update")
-	}
-
-	stack, _ := makeConfigNode(ctx)
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-
-	for _, addr := range ctx.Args() {
-		account, err := utils.MakeAddress(ks, addr)
-		if err != nil {
-			utils.Fatalf("Could not make account from address: %v", err)
-		}
-
-		prompt := fmt.Sprintf("Please input old password to unlocking account %s", addr)
-		oldPassword := getPassPhrase(prompt, false, 0, nil)
-
-		prompt = "Please give a new password. Do not forget this password."
-		newPassword := getPassPhrase(prompt, true, 0, nil)
-
-		if err := ks.UpdateStoreman(account, oldPassword, newPassword); err != nil {
-			utils.Fatalf("Could not update the storeman account: %v", err)
-		}
-	}
-
-	return nil
-}
-
-
-var awsKMSCiphertextFileExt = "-cipher"
-var awsKMSPlaintextFileExt = "-plain"
-
-// accountEncrypt encrypt an account using aws kms,
-// and save ciphertext into new file named as "<original-name>-cipher"
-func accountEncrypt(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		utils.Fatalf("No accounts specified to encrypt")
-	}
-
-	var keyVal [4]string
-	keyName := [4]string{"aKID", "secretKey", "region", "keyId"}
-	for i, name := range keyName {
-		fmt.Println("please input aws kms ", name, ":")
-		pswd, err := terminal.ReadPassword(0)
-		if err != nil {
-			return err
-		}
-
-		keyVal[i] = string(pswd)
-		if keyVal[i] == string("") {
-			return errors.New("invalid aws kms " + name + "!")
-		}
-	}
-
-	fmt.Println("begin encrypting...")
-	stack, _ := makeConfigNode(ctx)
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	for _, addr := range ctx.Args() {
-		exceptAddr := common.HexToAddress(addr)
-		a := accounts.Account{Address:exceptAddr}
-		fa, err := ks.Find(a)
-		if err != nil {
-			return err
-		}
-
-		desFile := fa.URL.Path + awsKMSCiphertextFileExt
-		err = awskms.EncryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2], keyVal[3])
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("encrypt account(",  addr, ") successfully into new keystore file : ", desFile)
-	}
-
-	return nil
-}
-
-// accountDecrypt decrypt an account using aws kms,
-// and save ciphertext into new file named as "<original-name>-plain"
-func accountDecrypt(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		utils.Fatalf("No accounts specified to decrypt")
-	}
-
-	var keyVal [3]string
-	keyName := [3]string{"aKID", "secretKey", "region"}
-	for i, name := range keyName {
-		fmt.Println("please input aws kms ", name, ":")
-		pswd, err := terminal.ReadPassword(0)
-		if err != nil {
-			return err
-		}
-
-		keyVal[i] = string(pswd)
-		if keyVal[i] == string("") {
-			return errors.New("invalid aws kms " + name + "!")
-		}
-	}
-
-	fmt.Println("begin decrypting...")
-	stack, _ := makeConfigNode(ctx)
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	for _, addr := range ctx.Args() {
-		exceptAddr := common.HexToAddress(addr)
-		a := accounts.Account{Address:exceptAddr}
-		fa, err := ks.Find(a)
-		if err != nil {
-			return err
-		}
-
-		desFile := fa.URL.Path + awsKMSPlaintextFileExt
-		err = awskms.DecryptFile(fa.URL.Path, desFile, keyVal[0], keyVal[1], keyVal[2])
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("decrypt account(",  addr, ") successfully into new keystore file : ", desFile)
-	}
-
-	return nil
-}
-
-func accountTryStmPswd(ctx *cli.Context) error {
-	args := ctx.Args()
-	if len(args) != 2 {
-		utils.Fatalf("invalid input number, useage : gwan account trystmpswd <address> <jsonFile>")
-	}
-
-	fmt.Println("begin read storeman keystore file...")
-	stack, _ := makeConfigNode(ctx)
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	exceptAddr := common.HexToAddress(args[0])
-	a := accounts.Account{Address:exceptAddr}
-	fa, err := ks.Find(a)
-	if err != nil {
-		utils.Fatalf("storeman keystore file doesn't exist")
-	}
-
-	fmt.Println("find keystore file : ", fa.URL.Path)
-	keyjson, err := ioutil.ReadFile(fa.URL.Path)
-	if err != nil {
-		utils.Fatalf("read keystore file fail. err:%s", err.Error())
-	}
-
-	fmt.Println("begin read json file : ", args[1])
-	b, err := ioutil.ReadFile(args[1])
-	if err != nil {
-		utils.Fatalf("open json file fail. err:%s", err.Error())
-	}
-
-	var pswds []string
-	err = json.Unmarshal(b, &pswds)
-	if err != nil {
-		utils.Fatalf("unmarshal json file fail. err:%s", err.Error())
-	}
-
-	fmt.Println("begin try password...")
-	for _, pswd := range pswds {
-		_, err = keystore.DecryptKey(keyjson, pswd)
-		if err == nil {
-			fmt.Println("the password of the " + args[0] + " is:" + pswd)
-			return nil
-		}
-	}
-
-	return errors.New("have not matched password!")
-}
-
 func importWallet(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
@@ -665,4 +478,98 @@ func showPublicKey(ctx *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+// accountEncrypt encrypt an account using AWS KMS,
+// and save ciphertext into new file named as "<original-name>-cipher"
+func accountEncrypt(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		utils.Fatalf("No accounts specified to encrypt")
+	}
+
+	keyNames := [4]string{"aKID", "secretKey", "region", "keyId"}
+	keyVals, err := getAwsKmsSecretInfo("", keyNames[:])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("begin encrypting...")
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	for _, addr := range ctx.Args() {
+		exceptAddr := common.HexToAddress(addr)
+		a := accounts.Account{Address:exceptAddr}
+		fa, err := ks.Find(a)
+		if err != nil {
+			return err
+		}
+
+		desFile := fa.URL.Path + keystore.AwsKMSCiphertextFileExt
+		err = awskms.EncryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2], keyVals[3])
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("encrypt account(",  addr, ") successfully into new keystore file : ", desFile)
+	}
+
+	return nil
+}
+
+// accountDecrypt decrypt an account using AWS KMS,
+// and save ciphertext into new file named as "<original-name>-plain"
+func accountDecrypt(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		utils.Fatalf("No accounts specified to decrypt")
+	}
+
+	keyNames := [3]string{"aKID", "secretKey", "region"}
+	keyVals, err := getAwsKmsSecretInfo("", keyNames[:])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("begin decrypting...")
+	stack, _ := makeConfigNode(ctx)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	for _, addr := range ctx.Args() {
+		exceptAddr := common.HexToAddress(addr)
+		a := accounts.Account{Address:exceptAddr}
+		fa, err := ks.Find(a)
+		if err != nil {
+			return err
+		}
+
+		desFile := ""
+		pot := strings.LastIndex(fa.URL.Path, keystore.AwsKMSCiphertextFileExt)
+		if pot != -1 {
+			desFile = fa.URL.Path[:pot]
+		} else {
+			desFile = fa.URL.Path + "-plain"
+		}
+
+		err = awskms.DecryptFile(fa.URL.Path, desFile, keyVals[0], keyVals[1], keyVals[2])
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("decrypt account(",  addr, ") successfully into new keystore file : ", desFile)
+	}
+
+	return nil
+}
+
+func getAwsKmsSecretInfo(notice string, items []string) ([]string, error) {
+	inputs := make([]string, len(items))
+	fmt.Println(notice)
+	for i, name := range items {
+		input, err := console.Stdin.PromptPassword(name + ": ")
+		if err != nil {
+			return nil, err
+		}
+
+		inputs[i] = input
+	}
+
+	return inputs, nil
 }

@@ -141,6 +141,9 @@ func (s *SLS) Loop(rc *rpc.Client, key *keystore.Key, epochID uint64, slotID uin
 	if workStage != slotLeaderSelectionInit && workStage != slotLeaderSelectionStageFinished {
 		if !s.isEpochLeaderMapReady() {
 			s.doInit(epochID)
+			if !s.isEpochLeaderMapReady() {
+				s.setWorkStage(epochID, slotLeaderSelectionStageFinished)
+			}
 		}
 	}
 
@@ -214,14 +217,6 @@ func (s *SLS) doInit(epochID uint64) {
 	s.clearData()
 	s.buildEpochLeaderGroup(epochID)
 	s.setWorkingEpochID(epochID)
-
-	err := s.generateSlotLeadsGroup(epochID)
-	if err != nil {
-		log.Error(err.Error())
-		// no slot leaders are created, it leads that no one proposal block
-		// comment panic, because let node live to used for others node synchronization.
-		// panic("generateSlotLeadsGroup error")
-	}
 }
 
 func (s *SLS) startStage1Work() error {

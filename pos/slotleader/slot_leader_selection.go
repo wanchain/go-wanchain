@@ -95,6 +95,8 @@ type SLS struct {
 var slotLeaderSelection *SLS
 var APkiCache *lru.ARCCache
 
+var RndCache *lru.ARCCache
+
 type Pack struct {
 	Proof    [][]byte
 	ProofMeg [][]byte
@@ -119,13 +121,35 @@ func (s *SLS) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 }
 
 func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
+	if slotID >= posconfig.SlotCount {
+		return nil, vm.ErrSlotIDOutOfRange
+	}
+
 	if epochID <= posconfig.FirstEpochId+2 {
+		if s.getDefaultSlotLeader(slotID) != nil {
+			log.Info("GetSlotLeader:getDefaultSlotLeader",
+				"epochID", epochID,
+				"slotID", slotID,
+				"slot leader", hex.EncodeToString(crypto.FromECDSAPub(s.getDefaultSlotLeader(slotID))))
+		} else {
+			log.Warn("GetSlotLeader slot leader is nil")
+		}
+
 		return s.getDefaultSlotLeader(slotID), nil
 	}
 
 	_, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
 		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
+
+		if s.getDefaultSlotLeader(slotID) != nil {
+			log.Info("GetSlotLeader:getDefaultSlotLeader",
+				"epochID", epochID,
+				"slotID", slotID,
+				"slot leader", hex.EncodeToString(crypto.FromECDSAPub(s.getDefaultSlotLeader(slotID))))
+		} else {
+			log.Warn("GetSlotLeader slot leader is nil")
+		}
 		return s.getDefaultSlotLeader(slotID), nil
 	}
 
@@ -135,32 +159,56 @@ func (s *SLS) getDefaultSlotLeader(slotID uint64) (slotLeader *ecdsa.PublicKey) 
 	return s.defaultSlotLeadersPtrArray[slotID]
 }
 func (s *SLS) getSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.PublicKey, err error) {
-	//todo maybe the start epochid is not 0
 
 	if slotID >= posconfig.SlotCount {
 		return nil, vm.ErrSlotIDOutOfRange
 	}
 
-	// read from memory
-	s.slotCreateStatusLockCh <- 1
-	created, ok := s.slotCreateStatus[epochID]
-	<-s.slotCreateStatusLockCh
-	if ok && created {
-		return s.slotLeadersPtrArray[slotID], nil
+	epochIDGet := epochID
+	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
+	if isDefault && epochID > posconfig.FirstEpochId+2 {
+		log.Info("generateSlotLeadsGroup use default epochLeader", "epochID", epochID)
+		epochIDGet = 0
 	}
-	// read from local db
-	for i := 0; i < posconfig.SlotCount; i++ {
-		pkByte, err := posdb.GetDb().GetWithIndex(epochID, uint64(i), SlotLeader)
-		if err != nil {
-			return nil, vm.ErrSlotLeaderGroupNotReady
-		}
-		s.slotLeadersPtrArray[i] = crypto.ToECDSAPub(pkByte)
+	if !s.IsLocalPkInEpochLeaders(epochLeadersPtrArray) {
+		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
+		return nil, uleaderselection.ErrNoInPreEPLS
 	}
-	s.slotCreateStatusLockCh <- 1
-	s.slotCreateStatus[epochID] = true
-	<-s.slotCreateStatusLockCh
 
-	return s.slotLeadersPtrArray[slotID], nil
+	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
+	if isGenesis {
+		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
+			"preEpochID", epochID-1)
+		epochIDGet = 0
+	}
+
+	random, err := s.getRandom(nil, epochIDGet)
+	if err != nil {
+		return nil, vm.ErrInvalidRandom
+	}
+
+	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
+		return nil, fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
+	}
+
+	slotLeadersPtr, err := uleaderselection.GenerateSlotLeaderSeqOne(piecesPtr[:],
+		epochLeadersPtrArray[:], random.Bytes(), slotID, epochID)
+	if err != nil {
+		log.SyslogAlert("generateSlotLeadsGroup", "epochid", epochID, "error", err.Error())
+		return nil, err
+	}
+
+	if slotLeadersPtr != nil {
+		log.Info("getSlotLeader",
+			"epochID", epochID,
+			"slotID", slotID,
+			"slot leader", hex.EncodeToString(crypto.FromECDSAPub(slotLeadersPtr)))
+	} else {
+		log.Warn("getSlotLeader slot leader is nil")
+	}
+
+	return slotLeadersPtr, nil
 }
 
 func (s *SLS) GetSma(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bool, err error) {
@@ -173,6 +221,12 @@ func SlsInit() {
 	if err != nil || APkiCache == nil {
 		log.SyslogErr("APkiCache failed")
 	}
+
+	RndCache, err = lru.NewARC(10)
+	if err != nil || RndCache == nil {
+		log.SyslogErr("RndCache failed")
+	}
+
 	slotLeaderSelection = &SLS{}
 	slotLeaderSelection.epochLeadersMap = make(map[string][]uint64)
 	slotLeaderSelection.epochLeadersArray = make([]string, 0)
@@ -388,7 +442,6 @@ func (s *SLS) dumpData() {
 
 	s.dumpPreEpochLeaders()
 	s.dumpCurrentEpochLeaders()
-	s.dumpSlotLeaders()
 	s.dumpLocalPublicKey()
 	s.dumpLocalPublicKeyIndex()
 }
@@ -482,6 +535,12 @@ func (s *SLS) isEpochLeaderMapReady() bool {
 }
 
 func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err error) {
+
+	rnd, ok := RndCache.Get(epochID)
+	if ok {
+		return rnd.(*big.Int), nil
+	}
+
 	// If db is nil, use current stateDB
 	var db *state.StateDB
 	if block == nil {
@@ -489,13 +548,21 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		if err != nil {
 			log.SyslogErr("SLS.getRandom getStateDb return error, use a default value", "epochID", epochID)
 			rb := posconfig.GetRandomGenesis()
+
+			RndCache.Add(epochID, rb)
+
 			return rb, nil
 		}
 	} else {
-		db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+
+		//db, err = s.blockChain.StateAt(s.blockChain.GetBlockByHash(block.ParentHash()).Root())
+		db, err = s.blockChain.StateAt(s.blockChain.GetHeaderByHash(block.ParentHash()).Root)
 		if err != nil {
 			log.SyslogErr("Update stateDb error in SLS.updateToLastStateDb", "error", err.Error())
 			rb := posconfig.GetRandomGenesis()
+
+			RndCache.Add(epochID, rb)
+
 			return rb, nil
 		}
 	}
@@ -505,6 +572,9 @@ func (s *SLS) getRandom(block *types.Block, epochID uint64) (ret *big.Int, err e
 		log.SyslogErr("vm.GetR return nil, use a default value", "epochID", epochID)
 		rb = posconfig.GetRandomGenesis()
 	}
+
+	RndCache.Add(epochID, rb)
+
 	return rb, nil
 }
 
@@ -538,72 +608,72 @@ func (s *SLS) getSMAPieces(epochID uint64) (ret []*ecdsa.PublicKey, isGenesis bo
 	}
 }
 
-func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
-	epochIDGet := epochID
-	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
-	if isDefault && epochID > posconfig.FirstEpochId+2 {
-		log.Info("generateSlotLeadsGroup use default epochLeader", "epochID", epochID)
-		epochIDGet = 0
-	}
-	if !s.IsLocalPkInEpochLeaders(epochLeadersPtrArray) {
-		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
-		return nil
-	}
-
-	// get pre sma
-	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
-	if isGenesis {
-		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
-			"preEpochID", epochID-1)
-		//epochIDGet = posconfig.FirstEpochId
-		epochIDGet = 0
-	}
-	// get random
-	random, err := s.getRandom(nil, epochIDGet)
-	if err != nil {
-		return vm.ErrInvalidRandom
-	}
-	log.Debug("generateSlotLeadsGroup", "Random got", hex.EncodeToString(random.Bytes()))
-
-	// return slot leaders pointers.
-	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
-	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
-		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
-		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
-	}
-
-	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
-		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
-	if err != nil {
-		log.SyslogAlert("generateSlotLeadsGroup", "epochid", epochID, "error", err.Error())
-		return err
-	}
-
-	// insert slot address to local DB
-	for index, val := range slotLeadersPtr {
-		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
-		if err != nil {
-			log.SyslogAlert("generateSlotLeadsGroup:PutWithIndex", "epochid", epochID, "error", err.Error())
-			return err
-		}
-	}
-
-	for index, val := range slotLeadersPtr {
-		s.slotLeadersPtrArray[index] = val
-	}
-
-	for index, value := range slotLeadersIndex {
-		s.slotLeadersIndex[index] = value
-	}
-
-	s.slotCreateStatusLockCh <- 1
-	s.slotCreateStatus[epochID] = true
-	<-s.slotCreateStatusLockCh
-	log.SyslogInfo("generateSlotLeadsGroup success")
-
-	s.dumpData()
-	return nil
-}
+//func (s *SLS) generateSlotLeadsGroup(epochID uint64) error {
+//	epochIDGet := epochID
+//	epochLeadersPtrArray, isDefault := s.GetPreEpochLeadersPK(epochIDGet)
+//	if isDefault && epochID > posconfig.FirstEpochId+2 {
+//		log.Info("generateSlotLeadsGroup use default epochLeader", "epochID", epochID)
+//		epochIDGet = 0
+//	}
+//	if !s.IsLocalPkInEpochLeaders(epochLeadersPtrArray) {
+//		log.Debug("Local node is not in pre epoch leaders at generateSlotLeadsGroup", "epochID", epochID)
+//		return nil
+//	}
+//
+//	// get pre sma
+//	piecesPtr, isGenesis, _ := s.getSMAPieces(epochIDGet)
+//	if isGenesis {
+//		log.Warn("Can not find pre epoch SMA or not in Pre epoch leaders, use the first epoch.", "curEpochID", epochID,
+//			"preEpochID", epochID-1)
+//		//epochIDGet = posconfig.FirstEpochId
+//		epochIDGet = 0
+//	}
+//	// get random
+//	random, err := s.getRandom(nil, epochIDGet)
+//	if err != nil {
+//		return vm.ErrInvalidRandom
+//	}
+//	log.Debug("generateSlotLeadsGroup", "Random got", hex.EncodeToString(random.Bytes()))
+//
+//	// return slot leaders pointers.
+//	slotLeadersPtr := make([]*ecdsa.PublicKey, 0)
+//	if len(epochLeadersPtrArray) != posconfig.EpochLeaderCount {
+//		log.Error("SLS", "Fail to get epoch leader", epochIDGet)
+//		return fmt.Errorf("fail to get epochLeader:%d", epochIDGet)
+//	}
+//
+//	slotLeadersPtr, _, slotLeadersIndex, err := uleaderselection.GenerateSlotLeaderSeqAndIndex(piecesPtr[:],
+//		epochLeadersPtrArray[:], random.Bytes(), posconfig.SlotCount, epochID)
+//	if err != nil {
+//		log.SyslogAlert("generateSlotLeadsGroup", "epochid", epochID, "error", err.Error())
+//		return err
+//	}
+//
+//	// insert slot address to local DB
+//	for index, val := range slotLeadersPtr {
+//		_, err = posdb.GetDb().PutWithIndex(uint64(epochID), uint64(index), SlotLeader, crypto.FromECDSAPub(val))
+//		if err != nil {
+//			log.SyslogAlert("generateSlotLeadsGroup:PutWithIndex", "epochid", epochID, "error", err.Error())
+//			return err
+//		}
+//	}
+//
+//	for index, val := range slotLeadersPtr {
+//		s.slotLeadersPtrArray[index] = val
+//	}
+//
+//	for index, value := range slotLeadersIndex {
+//		s.slotLeadersIndex[index] = value
+//	}
+//
+//	s.slotCreateStatusLockCh <- 1
+//	s.slotCreateStatus[epochID] = true
+//	<-s.slotCreateStatusLockCh
+//	log.SyslogInfo("generateSlotLeadsGroup success")
+//
+//	s.dumpData()
+//	return nil
+//}
 
 // create alpha1*pki,alpha1*PKi,alphaN*PKi,...
 // used to create security message.
