@@ -571,6 +571,11 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			stateObject.updateRoot(s.db)
 			log.Info(fmt.Sprintf("updateStateObject, address is %x", addr))
 			s.updateStateObject(stateObject)
+
+			if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
+                        log.Info(fmt.Sprintf("deleteStateObject, address is %x", addr))
+                        s.deleteStateObject(stateObject)
+                	}
 		}
 	}
 	// Invalidate journal because reverting across transactions is not allowed.

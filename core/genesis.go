@@ -262,7 +262,8 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 				Amount:       account.Staking.Amount,
 				From:         secAddr,
 				Address:      secAddr,
-				LockEpochs:   0, // never expired
+				//LockEpochs:   0, // never expired
+				LockEpochs:   3, // never expired
 				StakingEpoch: uint64(0),
 				FeeRate:      uint64(10000),
 			}
