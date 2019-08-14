@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"strconv"
 )
 
@@ -119,14 +119,14 @@ func (msg *MsgTxArgs)Cmp(arg *MsgTxArgs) bool {
 }
 
 func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
-	mpcsyslog.Info("GetMsgTxFromMsgTxArgs, begin")
+	log.SyslogInfo("GetMsgTxFromMsgTxArgs, begin")
 	if args == nil {
-		mpcsyslog.Err("GetMsgTxFromMsgTxArgs, invalid btc MsgTxArgs")
+		log.SyslogErr("GetMsgTxFromMsgTxArgs, invalid btc MsgTxArgs")
 		return nil, errors.New("invalid btc MsgTxArgs")
 	}
 
 	if args.Version != BTC_VERSION {
-		mpcsyslog.Err("GetMsgTxFromMsgTxArgs, invalid btc tx version, version:%d", args.Version)
+		log.SyslogErr("GetMsgTxFromMsgTxArgs, invalid btc tx version", "version", args.Version)
 		return nil, errors.New("invalid btc tx version")
 	}
 
@@ -140,7 +140,7 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 
 		inTxId, err := chainhash.NewHashFromStr(txInArgs.PreviousOutPoint.Hash)
 		if err != nil {
-			mpcsyslog.Err("GetMsgTxFromMsgTxArgs, invalid btc TxInId, id:%s", txInArgs.PreviousOutPoint.Hash)
+			log.SyslogErr("GetMsgTxFromMsgTxArgs, invalid btc TxInId", "id", txInArgs.PreviousOutPoint.Hash)
 			return nil, errors.New("invalid btc TxInId!")
 		}
 
@@ -151,7 +151,7 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 	for _, txOutArgs := range args.TxOut {
 		scriptBytes := common.FromHex(txOutArgs.PkScript)
 		if scriptBytes == nil {
-			mpcsyslog.Err("GetMsgTxFromMsgTxArgs, invalid btc TxOut PkScript, script:%s", txOutArgs.PkScript)
+			log.SyslogErr("GetMsgTxFromMsgTxArgs, invalid btc TxOut PkScript", "script", txOutArgs.PkScript)
 			return nil, errors.New("invalid btc TxOut PkScript!")
 		}
 
@@ -159,17 +159,17 @@ func GetMsgTxFromMsgTxArgs(args * MsgTxArgs) (*wire.MsgTx, error)  {
 	}
 
 	if len(ret.TxOut) == 0 {
-		mpcsyslog.Err("GetMsgTxFromMsgTxArgs, invalid btc MsgTxArgs, doesn't have TxOut")
+		log.SyslogErr("GetMsgTxFromMsgTxArgs, invalid btc MsgTxArgs, doesn't have TxOut")
 		return nil, errors.New("invalid btc MsgTxArgs, doesn't have TxOut")
 	}
 
-	mpcsyslog.Info("GetMsgTxFromMsgTxArgs, succeed")
+	log.SyslogInfo("GetMsgTxFromMsgTxArgs, succeed")
 	return ret, nil
 }
 
 
 func GetHashedForEachTxIn(args *MsgTxArgs) ([]common.Hash, error) {
-	mpcsyslog.Info("GetHashedForEachTxIn, begin")
+	log.SyslogInfo("GetHashedForEachTxIn, begin")
 	tx, err := GetMsgTxFromMsgTxArgs(args)
 	if err != nil {
 		return nil, err
@@ -177,27 +177,27 @@ func GetHashedForEachTxIn(args *MsgTxArgs) ([]common.Hash, error) {
 
 	hashes := []common.Hash{}
 	for i := 0; i < len(args.TxIn); i++ {
-		mpcsyslog.Info("GetHashedForEachTxIn, i:%d, TxInPkScript:%s", i, args.TxIn[i].PkScript)
+		log.SyslogInfo("GetHashedForEachTxIn", "i", i, "TxInPkScript", args.TxIn[i].PkScript)
 		hash, err := txscript.CalcSignatureHash(common.FromHex(args.TxIn[i].PkScript), txscript.SigHashAll, tx, i)
 		if err != nil {
-			mpcsyslog.Err("GetHashedForEachTxIn, CalcSignatureHash fail, err:%s", err.Error())
+			log.SyslogErr("GetHashedForEachTxIn, CalcSignatureHash fail", "err", err.Error())
 			return nil, err
 		}
 
-		mpcsyslog.Info("GetHashedForEachTxIn, i:%d, hash:%s", i, common.ToHex(hash))
+		log.SyslogInfo("GetHashedForEachTxIn", "i", i, "hash", common.ToHex(hash))
 		hashes = append(hashes, common.BytesToHash(hash))
 	}
 
-	mpcsyslog.Info("GetHashedForEachTxIn, succeed")
+	log.SyslogInfo("GetHashedForEachTxIn, succeed")
 	return hashes, nil
 }
 
 
 func RecoverPublicKey(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
-	mpcsyslog.Info("RecoverPublicKey, Hash:%s, R:%s, S:%s, V:%s", sighash.String(), common.ToHex(R.Bytes()), common.ToHex(S.Bytes()), common.ToHex(Vb.Bytes()))
+	log.SyslogInfo("RecoverPublicKey", "Hash", sighash.String(), "R", common.ToHex(R.Bytes()), "S", common.ToHex(S.Bytes()), "V", common.ToHex(Vb.Bytes()))
 
 	if Vb.BitLen() > 8 {
-		mpcsyslog.Err("RecoverPublicKey, invalid sign")
+		log.SyslogErr("RecoverPublicKey, invalid sign")
 		return common.Address{}, errors.New("invalid sign")
 	}
 
@@ -214,13 +214,13 @@ func RecoverPublicKey(sighash common.Hash, R, S, Vb *big.Int) (common.Address, e
 
 	pubKey, err := crypto.SigToPub(sighash[:], sig)
 	if err != nil {
-		mpcsyslog.Err("RecoverPublicKey, fail, err:%s", err.Error())
+		log.SyslogErr("RecoverPublicKey, fail", "err", err.Error())
 		return common.Address{}, err
 	}
 
 	pubKeyCompressed := keystore.ECDSAPKCompression(pubKey)
 	hash160 := crypto.PubkeyToRipemd160(pubKey)
-	mpcsyslog.Info("RecoverPublicKey, pubKeyCompressed:%s, hash160:%s", common.ToHex(pubKeyCompressed), common.ToHex(hash160[:]))
+	log.SyslogInfo("RecoverPublicKey", "pubKeyCompressed", common.ToHex(pubKeyCompressed), "hash160", common.ToHex(hash160[:]))
 	return hash160, nil
 }
 

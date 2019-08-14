@@ -2,7 +2,7 @@ package step
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 )
 
@@ -13,7 +13,7 @@ type MpcPoint_Step struct {
 }
 
 func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPoint_Step {
-	mpcsyslog.Info("CreateMpcPoint_Step begin")
+	log.SyslogInfo("CreateMpcPoint_Step begin")
 
 	signNum := len(preValueKeys)
 	mpc := &MpcPoint_Step{*CreateBaseMpcStep(peers, signNum), resultKeys, signNum}
@@ -26,7 +26,7 @@ func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, r
 }
 
 func (ptStep *MpcPoint_Step) CreateMessage() []mpcprotocol.StepMessage {
-	mpcsyslog.Info("MpcPoint_Step.CreateMessage begin")
+	log.SyslogInfo("MpcPoint_Step.CreateMessage begin")
 
 	message := make([]mpcprotocol.StepMessage, 1)
 	message[0].Msgcode = mpcprotocol.MPCMessage
@@ -41,16 +41,16 @@ func (ptStep *MpcPoint_Step) CreateMessage() []mpcprotocol.StepMessage {
 }
 
 func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
-	mpcsyslog.Info("MpcPoint_Step.HandleMessage begin, peerID:%s", msg.PeerID.String())
+	log.SyslogInfo("MpcPoint_Step.HandleMessage begin, peerID:%s", msg.PeerID.String())
 
 	seed := ptStep.getPeerSeed(msg.PeerID)
 	if seed == 0 {
-		mpcsyslog.Err("MpcPoint_Step.HandleMessage, get peer seed fail. peer:%s", msg.PeerID.String())
+		log.SyslogErr("MpcPoint_Step.HandleMessage, get peer seed fail. peer:%s", msg.PeerID.String())
 		return false
 	}
 
 	if len(msg.Data) != 2*ptStep.signNum {
-		mpcsyslog.Err("MpcPoint_Step HandleMessage, msg data len doesn't match requiremant, dataLen:%d", len(msg.Data))
+		log.SyslogErr("MpcPoint_Step HandleMessage, msg data len doesn't match requiremant, dataLen:%d", len(msg.Data))
 		return false
 	}
 
@@ -58,7 +58,7 @@ func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 		pointer := ptStep.messages[i].(*mpcPointGenerator)
 		_, exist := pointer.message[seed]
 		if exist {
-			mpcsyslog.Err("MpcPoint_Step.HandleMessage, get msg from seed fail. peer:%s", msg.PeerID.String())
+			log.SyslogErr("MpcPoint_Step.HandleMessage, get msg from seed fail. peer:%s", msg.PeerID.String())
 			return false
 		}
 
@@ -69,7 +69,7 @@ func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 }
 
 func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	mpcsyslog.Info("MpcPoint_Step.FinishStep begin")
+	log.SyslogInfo("MpcPoint_Step.FinishStep begin")
 	err := ptStep.BaseMpcStep.FinishStep()
 	if err != nil {
 		return err
@@ -79,12 +79,12 @@ func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 		pointer := ptStep.messages[i].(*mpcPointGenerator)
 		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
 		if err != nil {
-			mpcsyslog.Err("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
+			log.SyslogErr("MpcPoint_Step.FinishStep, SetValue fail. err:%s", err.Error())
 			return err
 		}
 	}
 
-	mpcsyslog.Info("MpcPoint_Step.FinishStep succeed")
+	log.SyslogInfo("MpcPoint_Step.FinishStep succeed")
 	return nil
 }
 

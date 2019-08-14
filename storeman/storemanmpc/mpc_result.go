@@ -2,7 +2,7 @@ package storemanmpc
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 )
 
@@ -12,7 +12,7 @@ type BaseMpcResult struct {
 }
 
 func (result *BaseMpcResult) InitializeValue(preSetValue ...MpcValue) {
-	mpcsyslog.Info("BaseMpcResult.InitializeValue begin")
+	log.SyslogInfo("BaseMpcResult.InitializeValue begin")
 
 	for i := 0; i < len(preSetValue); i++ {
 		if preSetValue[i].Value != nil {
@@ -38,7 +38,7 @@ func (mpc *BaseMpcResult) GetValue(key string) ([]big.Int, error) {
 		return value, nil
 	}
 
-	mpcsyslog.Err("BaseMpcResult GetValue fail. key:%s", key)
+	log.SyslogErr("BaseMpcResult GetValue fail", "key", key)
 	return value, mpcprotocol.ErrMpcResultExist
 }
 
@@ -53,7 +53,7 @@ func (mpc *BaseMpcResult) GetByteValue(key string) ([]byte, error) {
 		return value, nil
 	}
 
-	mpcsyslog.Err("GetByteValue fail, key:%s", key)
+	log.SyslogErr("GetByteValue fail", "key", key)
 	return value, mpcprotocol.ErrQuit
 }
 

@@ -3,7 +3,7 @@ package step
 import (
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
 	"time"
@@ -23,7 +23,7 @@ type RequestMpcStep struct {
 }
 
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
-	mpcsyslog.Info("RequestMpcStep.InitStep begin")
+	log.SyslogInfo("RequestMpcStep.InitStep begin")
 
 	if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
 		findMap := make(map[uint64]bool)
@@ -47,7 +47,7 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		}
 
 		req.accType = accType
-		mpcsyslog.Info("RequestMpcStep.InitStep, accType:%s", string(accType[:]))
+		log.SyslogInfo("RequestMpcStep.InitStep, accType:%s", string(accType[:]))
 
 	} else if req.messageType == mpcprotocol.MpcTXSignLeader {
 		addr, err := result.GetValue(mpcprotocol.MpcAddress)
@@ -132,10 +132,10 @@ func (req *RequestMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc
 }
 
 func (req *RequestMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
-	mpcsyslog.Info("RequestMpcStep.HandleMessage begin, peerID:%s", msg.PeerID.String())
+	log.SyslogInfo("RequestMpcStep.HandleMessage begin, peerID:%s", msg.PeerID.String())
 	_, exist := req.message[*msg.PeerID]
 	if exist {
-		mpcsyslog.Err("RequestMpcStep.HandleMessage, get message from peerID fail. peer:%s", msg.PeerID.String())
+		log.SyslogErr("RequestMpcStep.HandleMessage, get message from peerID fail. peer:%s", msg.PeerID.String())
 		return false
 	}
 

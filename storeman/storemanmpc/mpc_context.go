@@ -3,7 +3,7 @@ package storemanmpc
 import (
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"sync"
 )
 
@@ -70,9 +70,9 @@ func (mpcCtx *MpcContext) setMpcStep(mpcSteps ...MpcStepFunc) {
 
 func (mpcCtx *MpcContext) quit(err error) {
 	if err == nil{
-		mpcsyslog.Info("MpcContext.quit")
+		log.SyslogInfo("MpcContext.quit")
 	} else {
-		mpcsyslog.Err("MpcContext.quit, err:%s", err.Error())
+		log.SyslogErr("MpcContext.quit", "err", err.Error())
 	}
 
 	mpcCtx.quitMu.Lock()
@@ -87,7 +87,7 @@ func (mpcCtx *MpcContext) quit(err error) {
 }
 
 func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanManager) error {
-	mpcsyslog.Info("mainMPCProcess begin, ctxid:%d", mpcCtx.ContextID)
+	log.SyslogInfo("mainMPCProcess begin", "ctxid", mpcCtx.ContextID)
 	mpcErr := error(nil)
 	for _, mpcCt := range mpcCtx.MpcSteps {
 		err := mpcCt.InitMessageLoop(mpcCt)
@@ -111,7 +111,7 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 				break
 			}
 
-			mpcsyslog.Info("step init finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+			log.SyslogInfo("step init finished", "ctxid", mpcCtx.ContextID, "stepId", i)
 			msg := mpcCtx.MpcSteps[i].CreateMessage()
 			if msg != nil {
 				for _, item := range msg {
@@ -122,27 +122,27 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 					StoremanManager.SetMessagePeers(mpcMsg, item.Peers)
 					if item.PeerID != nil {
 						StoremanManager.P2pMessage(item.PeerID, item.Msgcode, mpcMsg)
-						mpcsyslog.Info("step send a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+						log.SyslogInfo("step send a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					} else {
 						StoremanManager.BoardcastMessage(peerIDs, item.Msgcode, mpcMsg)
-						mpcsyslog.Info("step boardcast a p2p msg. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+						log.SyslogInfo("step boardcast a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					}
 				}
 			}
 
-			mpcsyslog.Info("step send p2p msg finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+			log.SyslogInfo("step send p2p msg finished", "ctxid", mpcCtx.ContextID, "stepId", i)
 			err = mpcCtx.MpcSteps[i].FinishStep(mpcCtx.mpcResult, StoremanManager)
 			if err != nil {
 				mpcErr = err
 				break
 			}
 
-			mpcsyslog.Info("step mssage finished. ctxid:%d, stepId:%d", mpcCtx.ContextID, i)
+			log.SyslogInfo("step mssage finished", "ctxid", mpcCtx.ContextID, "stepId", i)
 		}
 	}
 
 	if mpcErr != nil {
-		mpcsyslog.Err("mainMPCProcess fail. err:%s", mpcErr.Error())
+		log.SyslogErr("mainMPCProcess fail", "err", mpcErr.Error())
 		mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcCtx.ContextID,
 			StepID: 0,
 			Peers:  []byte(mpcErr.Error())}
@@ -150,6 +150,6 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 	}
 
 	mpcCtx.quit(nil)
-	mpcsyslog.Info("MpcContext finished. ctx ID:%d", mpcCtx.ContextID)
+	log.SyslogInfo("MpcContext finished", "ctx ID", mpcCtx.ContextID)
 	return mpcErr
 }

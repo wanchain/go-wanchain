@@ -4,7 +4,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	//"github.com/wanchain/go-wanchain/log"
 	//"github.com/wanchain/go-wanchain/common"
@@ -29,7 +29,7 @@ func createJZSSValue(degree int, peerNum int) *RandomPolynomialValue {
 func (poly *RandomPolynomialValue) initialize(peers *[]mpcprotocol.PeerInfo, result mpcprotocol.MpcResultInterface) error {
 	cof, err := mpccrypto.GetRandCoefficients(len(poly.randCoefficient))
 	if err != nil {
-		mpcsyslog.Err("RandomPolynomialValue, GetRandCoefficients fail. err:%s", err.Error())
+		log.SyslogErr("RandomPolynomialValue, GetRandCoefficients fail. err:%s", err.Error())
 		return err
 	}
 

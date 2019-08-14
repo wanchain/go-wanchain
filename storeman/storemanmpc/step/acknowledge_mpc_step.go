@@ -2,7 +2,7 @@ package step
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 )
 
@@ -12,7 +12,7 @@ type AcknowledgeMpcStep struct {
 }
 
 func CreateAcknowledgeMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *AcknowledgeMpcStep {
-	mpcsyslog.Info("CreateAcknowledgeMpcStep begin")
+	log.SyslogInfo("CreateAcknowledgeMpcStep begin")
 
 	return &AcknowledgeMpcStep{*CreateBaseStep(peers, 0), messageType}
 }
@@ -22,7 +22,7 @@ func (ack *AcknowledgeMpcStep) InitStep(mpcprotocol.MpcResultInterface) error {
 }
 
 func (ack *AcknowledgeMpcStep) CreateMessage() []mpcprotocol.StepMessage {
-	mpcsyslog.Info("AcknowledgeMpcStep.CreateMessage begin")
+	log.SyslogInfo("AcknowledgeMpcStep.CreateMessage begin")
 
 	data := make([]big.Int, 1)
 	data[0].SetInt64(ack.messageType)
@@ -35,7 +35,7 @@ func (ack *AcknowledgeMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 }
 
 func (ack *AcknowledgeMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	mpcsyslog.Info("AcknowledgeMpcStep.FinishStep begin")
+	log.SyslogInfo("AcknowledgeMpcStep.FinishStep begin")
 
 	err := ack.BaseStep.FinishStep()
 	if err != nil {
@@ -46,7 +46,7 @@ func (ack *AcknowledgeMpcStep) FinishStep(result mpcprotocol.MpcResultInterface,
 	data[0].SetInt64(ack.messageType)
 	result.SetValue(mpcprotocol.MPCActoin, data)
 
-	mpcsyslog.Info("AcknowledgeMpcStep.FinishStep succeed")
+	log.SyslogInfo("AcknowledgeMpcStep.FinishStep succeed")
 	return nil
 }
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 )
 
 var dbInstance Database
@@ -70,9 +70,9 @@ func (db *storemanDB) Delete(key []byte) error {
 func (db *storemanDB) Close() {
 	err := db.db.Close()
 	if err == nil {
-		mpcsyslog.Info("Storeman database closed")
+		log.SyslogInfo("Storeman database closed")
 	} else {
-		mpcsyslog.Err("Failed to close database. err:%s", err.Error())
+		log.SyslogErr("Failed to close database", "err", err.Error())
 	}
 
 	dbInstance = nil
@@ -81,7 +81,7 @@ func (db *storemanDB) Close() {
 // GetDB returns singleton of Database implementation
 func GetDB() (Database, error) {
 	if dbInstance == nil {
-		mpcsyslog.Err("get storeman database error")
+		log.SyslogErr("get storeman database error")
 		return nil, errors.New("get storeman database error")
 	}
 

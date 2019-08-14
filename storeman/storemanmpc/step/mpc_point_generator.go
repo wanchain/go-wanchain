@@ -5,7 +5,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 )
 
@@ -21,29 +21,29 @@ func createPointGenerator(preValueKey string) *mpcPointGenerator {
 }
 
 func (point *mpcPointGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result mpcprotocol.MpcResultInterface) error {
-	mpcsyslog.Info("mpcPointGenerator.initialize begin")
+	log.SyslogInfo("mpcPointGenerator.initialize begin")
 
 	value, err := result.GetValue(point.preValueKey)
 	if err != nil {
-		mpcsyslog.Err("mpcPointGenerator.initialize get preValueKey fail")
+		log.SyslogErr("mpcPointGenerator.initialize get preValueKey fail")
 		return err
 	}
 
 	curve := crypto.S256()
 	x, y := curve.ScalarBaseMult(value[0].Bytes())
 	if x == nil || y == nil {
-		mpcsyslog.Err("mpcPointGenerator.ScalarBaseMult fail. err:%s", mpcprotocol.ErrPointZero.Error())
+		log.SyslogErr("mpcPointGenerator.ScalarBaseMult fail. err:%s", mpcprotocol.ErrPointZero.Error())
 		return mpcprotocol.ErrPointZero
 	}
 
 	point.seed = [2]big.Int{*x, *y}
 
-	mpcsyslog.Info("mpcPointGenerator.initialize succeed")
+	log.SyslogInfo("mpcPointGenerator.initialize succeed")
 	return nil
 }
 
 func (point *mpcPointGenerator) calculateResult() error {
-	mpcsyslog.Info("mpcPointGenerator.calculateResult begin")
+	log.SyslogInfo("mpcPointGenerator.calculateResult begin")
 
 	result := new(ecdsa.PublicKey)
 	result.Curve = crypto.S256()
@@ -59,12 +59,12 @@ func (point *mpcPointGenerator) calculateResult() error {
 	}
 
 	if !mpccrypto.ValidatePublicKey(result) {
-		mpcsyslog.Err("mpcPointGenerator.ValidatePublicKey fail. err:%s", mpcprotocol.ErrPointZero.Error())
+		log.SyslogErr("mpcPointGenerator.ValidatePublicKey fail. err:%s", mpcprotocol.ErrPointZero.Error())
 		return mpcprotocol.ErrPointZero
 	}
 
 	point.result = [2]big.Int{*result.X, *result.Y}
 
-	mpcsyslog.Info("mpcPointGenerator.calculateResult succeed")
+	log.SyslogInfo("mpcPointGenerator.calculateResult succeed")
 	return nil
 }

@@ -2,7 +2,7 @@ package storemanmpc
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	mpcsyslog "github.com/wanchain/go-wanchain/storeman/syslog"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/storeman/btc"
@@ -29,7 +29,7 @@ func acknowledgeTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValu
 }
 
 func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
-	mpcsyslog.Info("generateTxSignMpc begin")
+	log.SyslogInfo("generateTxSignMpc begin")
 
 	signNum, err := getSignNumFromTxInfo(mpc)
 	if err != nil {
@@ -55,28 +55,28 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 	signNum := 1
 	chainType, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcChainType)
 	if err != nil {
-		mpcsyslog.Err("getSignNumFromTxInfo, get chainType fail. err:%s", err.Error())
+		log.SyslogErr("getSignNumFromTxInfo, get chainType fail", "err", err.Error())
 		return 0, err
 	}
 
 	if string(chainType) == "BTC" {
 		btcTxData, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcTransaction)
 		if err != nil {
-			mpcsyslog.Err("getSignNumFromTxInfo, get tx rlp date fail. err:%s", err.Error())
+			log.SyslogErr("getSignNumFromTxInfo, get tx rlp date fail", "err", err.Error())
 			return 0, err
 		}
 
 		var args btc.MsgTxArgs
 		err = rlp.DecodeBytes(btcTxData, &args)
 		if err != nil {
-			mpcsyslog.Err("getSignNumFromTxInfo, decode tx rlp data fail. err:%s", err.Error())
+			log.SyslogErr("getSignNumFromTxInfo, decode tx rlp data fail", "err", err.Error())
 			return 0, err
 		}
 
 		signNum = len(args.TxIn)
 	}
 
-	mpcsyslog.Info("getSignNumFromTxInfo, succeed. signNum:%d", signNum)
+	log.SyslogInfo("getSignNumFromTxInfo, succeed", "signNum", signNum)
 	return signNum, nil
 }
 
