@@ -74,9 +74,9 @@ sleep 5
 
 sudo rm /home/${USER}/.wanchain/pw.txt
 
-KEYSTOREFILE=$(sudo ls /home/${USER}/.wanchain/testnet/keystore/)
+KEYSTOREFILE=$(sudo ls /home/${USER}/.wanchain/keystore/)
 
-KEYSTORE=$(sudo cat /home/${USER}/.wanchain/testnet/keystore/${KEYSTOREFILE})
+KEYSTORE=$(sudo cat /home/${USER}/.wanchain/keystore/${KEYSTOREFILE})
 
 echo ''
 echo ''
