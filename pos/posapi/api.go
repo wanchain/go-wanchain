@@ -137,7 +137,11 @@ func (a PosApi) GetLeaderGroupByEpochID(epochID uint64) ([]LeaderJson, error) {
 }
 
 func (a PosApi) GetLocalPK() (string, error) {
-	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
+	SLS := slotleader.GetSlotLeaderSelection()
+	if SLS == nil {
+		return "nil", errors.New("This function can not use in POW stage.")
+	}
+	pk, err := SLS.GetLocalPublicKey()
 	if err != nil {
 		return "nil", err
 	}
