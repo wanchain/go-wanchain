@@ -1,3 +1,27 @@
 [submodule "tests/testdata"]
 	path = tests/testdata
 	url = https://github.com/wanchain/go-wanchain-tests
+[submodule "vendor/github.com/btcsuite/btcd"]
+	path = vendor/github.com/btcsuite/btcd
+	url = https://github.com/btcsuite/btcd
+[submodule "vendor/github.com/btcsuite/btclog"]
+	path = vendor/github.com/btcsuite/btclog
+	url = https://github.com/btcsuite/btclog
+[submodule "vendor/github.com/btcsuite/btcutil"]
+	path = vendor/github.com/btcsuite/btcutil
+	url = https://github.com/btcsuite/btcutil
+[submodule "vendor/github.com/btcsuite/btcwallet"]
+	path = vendor/github.com/btcsuite/btcwallet
+	url = https://github.com/btcsuite/btcwallet
+[submodule "vendor/github.com/btcsuite/goleveldb"]
+	path = vendor/github.com/btcsuite/goleveldb
+	url = https://github.com/btcsuite/goleveldb
+[submodule "vendor/github.com/btcsuite/go-socks"]
+	path = vendor/github.com/btcsuite/go-socks
+	url = https://github.com/btcsuite/go-socks
+[submodule "vendor/github.com/btcsuite/snappy-go"]
+	path = vendor/github.com/btcsuite/snappy-go
+	url = https://github.com/btcsuite/snappy-go
+[submodule "vendor/github.com/btcsuite/websocket"]
+	path = vendor/github.com/btcsuite/websocket
+	url = https://github.com/btcsuite/websocket
