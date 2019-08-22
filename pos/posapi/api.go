@@ -820,3 +820,33 @@ func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 	refundInfo := convertReundInfo(stakeOut)
 	return refundInfo, nil
 }
+
+func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
+	sRet := fmt.Sprintf("Get tps from %d to %d\n", fromNumber, toNumber)
+	s := slotleader.GetSlotLeaderSelection()
+	reader := s.GetChainReader()
+
+	totalTx := uint64(0)
+	totalSecond := uint64(0)
+	for i := fromNumber; i <= toNumber; i++ {
+		header := reader.GetHeaderByNumber(i)
+		block := reader.GetBlock(header.Hash(), i)
+		if block != nil {
+			totalTx += uint64(len(block.Transactions()))
+
+			if i == fromNumber {
+				totalSecond = block.Time().Uint64()
+			}
+
+			if i == toNumber {
+				totalSecond = block.Time().Uint64() - totalSecond
+			}
+		}
+	}
+
+	sRet += fmt.Sprintf("Total tx: %d", totalTx)
+	sRet += fmt.Sprintf("Total second: %d", totalSecond)
+	sRet += fmt.Sprintf("TPS: %d", totalTx/totalSecond)
+
+	return sRet, nil
+}
