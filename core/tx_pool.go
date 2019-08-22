@@ -148,9 +148,9 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceBump:  10,
 
 	AccountSlots: 16 * 128,
-	GlobalSlots:  10240,
+	GlobalSlots:  102400,
 	AccountQueue: 64 * 128,
-	GlobalQueue:  10240,
+	GlobalQueue:  102400,
 
 	Lifetime: 3 * time.Hour,
 }
@@ -1085,7 +1085,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
 			}
 		}
-
 
 		sort.Sort(addresses)
 
