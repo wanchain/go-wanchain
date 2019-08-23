@@ -822,7 +822,7 @@ func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 }
 
 func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
-	sRet := fmt.Sprintf("Get tps from %d to %d\n", fromNumber, toNumber)
+	sRet := fmt.Sprintf("Get tps from %d to %d, ", fromNumber, toNumber)
 	s := slotleader.GetSlotLeaderSelection()
 	reader := s.GetChainReader()
 
@@ -844,8 +844,8 @@ func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
 		}
 	}
 
-	sRet += fmt.Sprintf("Total tx: %d", totalTx)
-	sRet += fmt.Sprintf("Total second: %d", totalSecond)
+	sRet += fmt.Sprintf("Total tx: %d, ", totalTx)
+	sRet += fmt.Sprintf("Total second: %d, ", totalSecond)
 	sRet += fmt.Sprintf("TPS: %d", totalTx/totalSecond)
 
 	return sRet, nil
