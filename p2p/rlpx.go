@@ -35,13 +35,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
 	"github.com/wanchain/go-wanchain/crypto/secp256k1"
 	"github.com/wanchain/go-wanchain/crypto/sha3"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/golang/snappy"
 )
 
 const (
@@ -122,6 +122,8 @@ func (t *rlpx) close(err error) {
 }
 
 func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err error) {
+
+	fmt.Printf("Jacob .... rlpx::doProtoHandshake\n")
 	// Writing our handshake happens concurrently, we prefer
 	// returning the handshake read error. If the remote side
 	// disconnects us early with a valid reason, we should return it
@@ -176,6 +178,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 // and also verifies whether the encryption handshake 'worked' and the
 // remote side actually provided the right public key.
 func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, error) {
+	fmt.Printf("Jacob .... rlpx::doEncHandshake\n")
 	var (
 		sec secrets
 		err error
