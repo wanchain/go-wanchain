@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -38,15 +37,11 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/wanchain/go-wanchain/cmd/utils"
-	"github.com/wanchain/go-wanchain/contracts/release"
 	"github.com/wanchain/go-wanchain/eth"
 	"github.com/wanchain/go-wanchain/node"
 	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-
 	//"github.com/wanchain/go-wanchain/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	whisper "github.com/wanchain/go-wanchain/whisper/whisperv5"
 )
 
@@ -146,7 +141,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+
 	utils.SetEthConfig(ctx, stack, &cfg.Eth)
+
 	cfg.Sm.StoremanNodes = cfg.Node.P2P.StoremanNodes
 	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
@@ -155,8 +152,8 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	utils.SetShhConfig(ctx, stack, &cfg.Shh)
 
 	//Init wanpos private db
-	posdb.DbInitAll(cfg.Node.DataDir)
-	posconfig.Init(&cfg.Node, cfg.Eth.NetworkId)
+	//posdb.DbInitAll(cfg.Node.DataDir)
+	//posconfig.Init(&cfg.Node, cfg.Eth.NetworkId)
 
 	return stack, cfg
 }
@@ -174,7 +171,7 @@ func enableWhisper(ctx *cli.Context) bool {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterEthService(stack, &cfg.Eth)
+	//utils.RegisterEthService(stack, &cfg.Eth)
 
 	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
 	shhEnabled := enableWhisper(ctx)
@@ -204,12 +201,10 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		kmsInfo := &storemanmpc.KmsInfo{}
 		if enableKms {
 			kmsInfo = getKmsInfo()
-
 		}
 
 		password := getPassword(ctx, false)
 		verify, accounts := getVerifyAccounts()
-
 		if verify {
 			suc, status = verifySecurityInfo(stack, enableKms, kmsInfo, password, accounts)
 			for !suc  {
@@ -231,24 +226,24 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		}
 
 		cfg.Sm.Password = password
-
 		utils.RegisterSmService(stack, &cfg.Sm, kmsInfo.AKID, kmsInfo.SecretKey, kmsInfo.Region)
 	}
 
 	// Add the release oracle service so it boots along with node.
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		config := release.Config{
-			Oracle: relOracle,
-			Major:  uint32(params.VersionMajor),
-			Minor:  uint32(params.VersionMinor),
-			Patch:  uint32(params.VersionPatch),
-		}
-		commit, _ := hex.DecodeString(gitCommit)
-		copy(config.Commit[:], commit)
-		return release.NewReleaseService(ctx, config)
-	}); err != nil {
-		utils.Fatalf("Failed to register the Geth release oracle service: %v", err)
-	}
+	//if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+	//	config := release.Config{
+	//		Oracle: relOracle,
+	//		Major:  uint32(params.VersionMajor),
+	//		Minor:  uint32(params.VersionMinor),
+	//		Patch:  uint32(params.VersionPatch),
+	//	}
+	//	commit, _ := hex.DecodeString(gitCommit)
+	//	copy(config.Commit[:], commit)
+	//	return release.NewReleaseService(ctx, config)
+	//}); err != nil {
+	//	utils.Fatalf("Failed to register the Geth release oracle service: %v", err)
+	//}
+
 	return stack
 }
 
@@ -274,7 +269,6 @@ func dumpConfig(ctx *cli.Context) error {
 
 
 func verifySecurityInfo(node *node.Node, enableKms bool, info *storemanmpc.KmsInfo, password string, accounts []string) (bool, int) {
-	return true,0
 
 	fmt.Println("")
 	fmt.Println("should verify ", len(accounts), " accounts")
@@ -365,10 +359,6 @@ func getPassword(ctx *cli.Context, retry bool) string {
 }
 
 func getVerifyAccounts() (bool, []string) {
-
-	return true,nil
-
-
 	fmt.Println("")
 	reader := bufio.NewReader(os.Stdin)
 	var accounts []string

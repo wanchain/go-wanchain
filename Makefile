@@ -21,6 +21,11 @@ gwan:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/gwan\" to launch gwan."
 
+schnorrmpc:
+	build/env.sh  go run   -gcflags "-N -l"    build/ci.go   install ./cmd/schnorrmpc
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/schnorrmpc\" to launch schnorrmpc."
+
 # The evm target build EVM emulator binary
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm

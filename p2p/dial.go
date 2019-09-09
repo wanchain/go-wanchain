@@ -231,6 +231,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		case nil:
 			s.dialing[id] = t.flags
 			newtasks = append(newtasks, t)
+			log.Warn("Dailing storeman dial candidate", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
 		}
 	}
 
@@ -280,6 +281,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		t := &waitExpireTask{s.hist.min().exp.Sub(now)}
 		newtasks = append(newtasks, t)
 	}
+
 	return newtasks
 }
 
