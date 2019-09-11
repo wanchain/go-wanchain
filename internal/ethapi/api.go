@@ -70,6 +70,7 @@ var (
 	ErrReqTooManyOTAMix                 = errors.New("Require too many OTA mix address")
 	ErrInvalidOTAMixNum                 = errors.New("Invalid required OTA mix address number")
 	ErrInvalidInput                     = errors.New("Invalid input")
+	ErrInvalidOTAImage                  = errors.New("Invalid OTA image")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -1467,6 +1468,25 @@ func (s *PublicTransactionPoolAPI) GetOTAMixSet(ctx context.Context, otaAddr str
 	}
 
 	return ret, nil
+}
+
+func (s *PublicTransactionPoolAPI) CheckOTAUsed(ctx context.Context, OTAImage string) (bool, error) {
+	if !hexutil.Has0xPrefix(OTAImage) {
+		return false, ErrInvalidOTAImage
+	}
+
+	imageByte := common.FromHex(OTAImage)
+	if len(imageByte) == 0 {
+		return false, ErrInvalidOTAImage
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(-1))
+	if state == nil || err != nil {
+		return false, err
+	}
+
+	exist, _, err := vm.CheckOTAImageExist(state, imageByte)
+	return exist, err
 }
 
 // ComputeOTAPPKeys compute ota private key, public key and short address
