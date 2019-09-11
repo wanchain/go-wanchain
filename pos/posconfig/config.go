@@ -41,9 +41,9 @@ var EpochLeadersHold [][]byte
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCount = 25
+	EpochLeaderCount = 50
 	// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 13
+	RandomProperCount = 25
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold         = 30
 	MinEpHold         = 0
@@ -52,7 +52,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 30
+	SlotTime = 5
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -60,7 +60,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 10
+	K      = 1440
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -125,7 +125,7 @@ type Config struct {
 var DefaultConfig = Config{
 	12,
 	K,
-	6,
+	13,
 	0,
 	0,
 	nil,

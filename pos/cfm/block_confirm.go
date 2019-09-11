@@ -2,18 +2,19 @@ package cfm
 
 import (
 	"errors"
+	"time"
+
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"time"
 )
 
 const (
 	// security block difference between main block chain and side block chain
-	SecBlkDiff = 50
+	SecBlkDiff = 6
 	//SecBlkDiff = 3
 	MaxUint64  = uint64(^(uint64(0)))
 	SecPowBlks = 12
