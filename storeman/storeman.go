@@ -2,6 +2,7 @@ package storeman
 
 import (
 	"context"
+	"github.com/wanchain/go-wanchain/core/types"
 	"math/big"
 	"path/filepath"
 	"sync"
@@ -12,15 +13,14 @@ import (
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/wanchain/go-wanchain/storeman/btc"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/storeman/validator"
-	"github.com/wanchain/go-wanchain/storeman/btc"
 )
 
 type Storeman struct {
@@ -131,7 +131,6 @@ func (sa *StoremanAPI) CreateMpcAccount(ctx context.Context, accType string) (co
 	return addr, err
 }
 
-
 func (sa *StoremanAPI) SignMpcTransaction(ctx context.Context, tx mpcprotocol.SendTxArgs) (hexutil.Bytes, error) {
 	if tx.To == nil ||
 		tx.Gas == nil ||
@@ -188,13 +187,11 @@ func (sa *StoremanAPI) SignMpcBtcTransaction(ctx context.Context, args btc.MsgTx
 	return signeds, err
 }
 
-
 // APIs returns the RPC descriptors the Whisper implementation offers
 //AddValidMpcTx stores raw data of cross chain transaction for MPC signing verification
 func (sa *StoremanAPI) AddValidMpcTx(ctx context.Context, tx mpcprotocol.SendTxArgs) error {
 	return validator.AddValidMpcTx(&tx)
 }
-
 
 func (sa *StoremanAPI) AddValidMpcBtcTx(ctx context.Context, args btc.MsgTxArgs) error {
 	log.SyslogInfo("AddValidMpcBtcTx", "txInfo", args.String())
@@ -217,6 +214,68 @@ func (sm *Storeman) APIs() []rpc.API {
 func (sm *Storeman) Protocols() []p2p.Protocol {
 	return []p2p.Protocol{sm.protocol}
 }
+
+// for schnorr begin
+func (sa *StoremanAPI) CreateMpcGPK(ctx context.Context) (pk []byte, err error) {
+	//log.SyslogInfo("CreateMpcAccount begin", "accType", accType)
+	//
+	//if !mpcprotocol.CheckAccountType(accType) {
+	//	return common.Address{}, mpcprotocol.ErrInvalidStmAccType
+	//}
+	//
+	//if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
+	//	return common.Address{}, mpcprotocol.ErrTooLessStoreman
+	//}
+	//
+	//if len(sa.sm.storemanPeers) > 22 {
+	//	return common.Address{}, mpcprotocol.ErrTooMoreStoreman
+	//}
+	//
+	//addr, err := sa.sm.mpcDistributor.CreateRequestStoremanAccount(accType)
+	//if err == nil {
+	//	log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
+	//} else {
+	//	log.SyslogErr("CreateMpcAccount end", "err", err.Error())
+	//}
+	//
+	//return addr, err
+	return []byte{}, nil
+}
+
+func (sa *StoremanAPI) SignMpcByData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
+	//if tx.To == nil ||
+	//	tx.Gas == nil ||
+	//	tx.GasPrice == nil ||
+	//	tx.Value == nil ||
+	//	tx.Nonce == nil ||
+	//	tx.ChainID == nil {
+	//	return nil, mpcprotocol.ErrInvalidMpcTx
+	//}
+	//
+	//log.SyslogInfo("SignMpcTransaction begin", "txInfo", tx.String())
+	//
+	//if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
+	//	return nil, mpcprotocol.ErrTooLessStoreman
+	//}
+	//
+	//trans := types.NewTransaction(uint64(*tx.Nonce), *tx.To, (*big.Int)(tx.Value), (*big.Int)(tx.Gas), (*big.Int)(tx.GasPrice), tx.Data)
+	//signed, err := sa.sm.mpcDistributor.CreateRequestMpcSign(trans, tx.From, tx.ChainType, tx.SignType, (*big.Int)(tx.ChainID))
+	//if err == nil {
+	//	log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
+	//} else {
+	//	log.SyslogErr("SignMpcTransaction end", "err", err.Error())
+	//}
+	//
+	//return signed, err
+	return []byte{}, []byte{}, nil
+}
+
+func (sa *StoremanAPI) AddValidMpcData(ctx context.Context, data mpcprotocol.SendData) error {
+	//return validator.AddValidMpcTx(&tx)
+	return nil
+}
+
+// for schnorr end
 
 // Start implements node.Service, starting the background data propagation thread
 // of the Whisper protocol.

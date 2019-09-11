@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"math/big"
-	"time"
 	"strconv"
+	"time"
 )
 
 const (
@@ -25,12 +25,12 @@ const (
 	KeepaliveCycle
 	NumberOfMessageCodes
 
-	MPCDegree          = 8
+	MPCDegree = 8
 	//MPCDegree          = 1
 	MPCTimeOut         = time.Second * 100
 	ProtocolName       = "storeman"
 	ProtocolVersion    = uint64(1)
-	ProtocolVersionStr = "1.0"
+	ProtocolVersionStr = "1.1"
 )
 const (
 	MpcPrivateShare  = "MpcPrivateShare"
@@ -110,7 +110,7 @@ func CheckAccountType(accType string) bool {
 func GetPreSetKeyArr(keySeed string, num int) []string {
 	keyArr := []string{}
 	for i := 0; i < num; i++ {
-		keyArr = append(keyArr, keySeed + "_" + strconv.Itoa(i))
+		keyArr = append(keyArr, keySeed+"_"+strconv.Itoa(i))
 	}
 
 	return keyArr
