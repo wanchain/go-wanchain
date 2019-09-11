@@ -5704,17 +5704,7 @@ var methods = function () {
     });
 
     return [
-        newAccount,
-        importRawKey,
-        unlockAccount,
-        ecRecover,
-        sign,
-        sendTransaction,
-        sendPrivacyCxtTransaction,
-        genRingSignData,
-        lockAccount,
-        updateAccount,
-        showPublicKey
+
     ];
 };
 
@@ -5994,16 +5984,7 @@ var methods = function () {
     });
 
     return [
-        blockNetworkRead,
-        syncEnabled,
-        swapEnabled,
-        download,
-        upload,
-        retrieve,
-        store,
-        get,
-        put,
-        modify
+
     ];
 };
 
@@ -6092,10 +6073,7 @@ var eth = function () {
     });
 
     return [
-        newFilter,
-        uninstallFilter,
-        getLogs,
-        poll
+
     ];
 };
 
