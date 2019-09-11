@@ -1,0 +1,47 @@
+/tmp
+*/**/*un~
+*/**/*.test
+*un~
+.DS_Store
+*/**/.DS_Store
+.ethtest
+*/**/*tx_database*
+*/**/*dapps*
+build/_workspace/**
+build/bin/**
+build/_vendor/pkg
+tests/testdata/**
+pos/gwan/**
+
+#*
+.#*
+*#
+*~
+.project
+.settings
+
+# used by the Makefile
+# /build/_workspace/
+# /build/bin/
+/geth*.zip
+
+# travis
+profile.tmp
+profile.cov
+
+# IdeaIDE
+.idea
+
+# Docker Env 
+DOCKER/**
+
+# go unit test cover out
+*.out
+
+
+# tmp data directory
+data_pluto/*
+data_testnet/*
+
+.vscode/
+
