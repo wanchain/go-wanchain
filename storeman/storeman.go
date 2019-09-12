@@ -216,7 +216,7 @@ func (sm *Storeman) Protocols() []p2p.Protocol {
 }
 
 // for schnorr begin
-func (sa *StoremanAPI) CreateMpcGPK(ctx context.Context) (pk []byte, err error) {
+func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 	//log.SyslogInfo("CreateMpcAccount begin", "accType", accType)
 	//
 	//if !mpcprotocol.CheckAccountType(accType) {
@@ -242,7 +242,7 @@ func (sa *StoremanAPI) CreateMpcGPK(ctx context.Context) (pk []byte, err error) 
 	return []byte{}, nil
 }
 
-func (sa *StoremanAPI) SignMpcByData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
+func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
 	//if tx.To == nil ||
 	//	tx.Gas == nil ||
 	//	tx.GasPrice == nil ||
@@ -270,7 +270,7 @@ func (sa *StoremanAPI) SignMpcByData(ctx context.Context, data mpcprotocol.SendD
 	return []byte{}, []byte{}, nil
 }
 
-func (sa *StoremanAPI) AddValidMpcData(ctx context.Context, data mpcprotocol.SendData) error {
+func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
 	//return validator.AddValidMpcTx(&tx)
 	return nil
 }
