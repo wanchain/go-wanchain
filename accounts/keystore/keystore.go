@@ -44,9 +44,9 @@ import (
 )
 
 var (
-	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
-	ErrNoMatch = errors.New("no key for given address or file")
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+	ErrLocked         = accounts.NewAuthNeededError("password or unlock")
+	ErrNoMatch        = errors.New("no key for given address or file")
+	ErrDecrypt        = errors.New("could not decrypt key with given passphrase")
 	ErrInvalidKmsInfo = errors.New("invalid AWS KMS info")
 )
 
@@ -344,7 +344,6 @@ func (ks *KeyStore) UnlockMemKey(a accounts.Account, keyjson []byte, passphrase 
 	return ks.TimedUnlockMemKey(a, keyjson, passphrase, 0)
 }
 
-
 // Lock removes the private key with the given address from memory.
 func (ks *KeyStore) Lock(addr common.Address) error {
 	ks.mu.Lock()
@@ -432,7 +431,7 @@ func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 }
 
 func (ks *KeyStore) GetDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
-	return ks.getDecryptedKey(a,auth)
+	return ks.getDecryptedKey(a, auth)
 }
 
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
@@ -497,7 +496,12 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	return account, nil
 }
 
-func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (accounts.Account, error) {
+func (ks *KeyStore) NewStoremanAccount(pKey *ecdsa.PublicKey,
+	pShare *big.Int,
+	seeds []uint64,
+	passphrase string,
+	accType string) (accounts.Account, error) {
+
 	_, account, err := storeStoremanKey(ks.storage, pKey, pShare, seeds, passphrase, accType)
 	if err != nil {
 		return accounts.Account{}, err
@@ -614,7 +618,7 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 }
 
 // TODO: temp add, for quickly print public keys, maybe removed later
-func (ks *KeyStore) GetKey(a accounts.Account,  passphrase string) (*Key, error) {
+func (ks *KeyStore) GetKey(a accounts.Account, passphrase string) (*Key, error) {
 	keyJSON, err := ioutil.ReadFile(a.URL.Path)
 	if err != nil {
 		return nil, err
@@ -625,7 +629,6 @@ func (ks *KeyStore) GetKey(a accounts.Account,  passphrase string) (*Key, error)
 	}
 	return key, nil
 }
-
 
 // GetWanAddress represents the keystore to retrieve corresponding wanchain public address for a specific ordinary account/address
 func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, error) {

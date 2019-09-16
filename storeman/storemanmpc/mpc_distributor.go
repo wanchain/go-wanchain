@@ -96,7 +96,13 @@ type MpcDistributor struct {
 	password       string
 }
 
-func CreateMpcDistributor(accountManager *accounts.Manager, msger P2pMessager, aKID, secretKey, region, password string) *MpcDistributor {
+func CreateMpcDistributor(accountManager *accounts.Manager,
+	msger P2pMessager,
+	aKID,
+	secretKey,
+	region,
+	password string) *MpcDistributor {
+
 	kmsInfo := KmsInfo{aKID, secretKey, region}
 	mpc := &MpcDistributor{
 		mu:             sync.RWMutex{},
@@ -198,7 +204,12 @@ func (mpcServer *MpcDistributor) InitStoreManGroup() {
 	}
 }
 
-func GetPrivateShare(ks *keystore.KeyStore, address common.Address, enableKms bool, kmsInfo *KmsInfo, password string) (*keystore.Key, int, error) {
+func GetPrivateShare(ks *keystore.KeyStore,
+	address common.Address,
+	enableKms bool,
+	kmsInfo *KmsInfo,
+	password string) (*keystore.Key, int, error) {
+
 	account := accounts.Account{Address: address}
 	account, err := ks.Find(account)
 	if err != nil {
@@ -291,7 +302,10 @@ func (mpcServer *MpcDistributor) getMessagePeers(mpcMessage *mpcprotocol.MpcMess
 	return &peers
 }
 
-func (mpcServer *MpcDistributor) selectPeers(ctxType int, allPeers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) []mpcprotocol.PeerInfo {
+func (mpcServer *MpcDistributor) selectPeers(ctxType int,
+	allPeers []mpcprotocol.PeerInfo,
+	preSetValue ...MpcValue) []mpcprotocol.PeerInfo {
+
 	var peers []mpcprotocol.PeerInfo
 	if ctxType == mpcprotocol.MpcGPKLeader {
 		peers = allPeers
@@ -355,7 +369,12 @@ func (mpcServer *MpcDistributor) CreateRequestGPK() ([]byte, error) {
 	}
 }
 
-func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction, from common.Address, chainType string, SignType string, chianID *big.Int) (hexutil.Bytes, error) {
+func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction,
+	from common.Address,
+	chainType string,
+	SignType string,
+	chianID *big.Int) (hexutil.Bytes, error) {
+
 	log.SyslogInfo("CreateRequestMpcSign begin")
 
 	if chianID == nil {
@@ -737,7 +756,12 @@ func (mpcServer *MpcDistributor) BoardcastMessage(peers []discover.NodeID, code 
 	return nil
 }
 
-func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (accounts.Account, error) {
+func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey,
+	pShare *big.Int,
+	seeds []uint64,
+	passphrase string,
+	accType string) (accounts.Account, error) {
+
 	ks := mpcServer.AccountManager.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	account, err := ks.NewStoremanAccount(pKey, pShare, seeds, passphrase, accType)
 	if err != nil {
@@ -749,7 +773,10 @@ func (mpcServer *MpcDistributor) newStoremanKeyStore(pKey *ecdsa.PublicKey, pSha
 	return account, err
 }
 
-func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInterface, peers *[]mpcprotocol.PeerInfo, accType string) error {
+func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInterface,
+	peers *[]mpcprotocol.PeerInfo,
+	accType string) error {
+
 	log.SyslogInfo("MpcDistributor.CreateKeystore begin")
 	point, err := result.GetValue(mpcprotocol.PublicKeyResult)
 	if err != nil {
