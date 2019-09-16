@@ -8,21 +8,21 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 )
 
-type AckMpcAccountStep struct {
+type AckMpcGPKStep struct {
 	BaseStep
 	message       map[discover.NodeID]bool
 	mpcGPK        []byte
 	remoteMpcGPKs map[discover.NodeID][]byte
 }
 
-func CreateAckMpcAccountStep(peers *[]mpcprotocol.PeerInfo) *AckMpcAccountStep {
-	return &AckMpcAccountStep{*CreateBaseStep(peers, -1),
+func CreateAckMpcGPKStep(peers *[]mpcprotocol.PeerInfo) *AckMpcGPKStep {
+	return &AckMpcGPKStep{*CreateBaseStep(peers, -1),
 		make(map[discover.NodeID]bool),
 		nil,
 		make(map[discover.NodeID][]byte)}
 }
 
-func (ack *AckMpcAccountStep) InitStep(result mpcprotocol.MpcResultInterface) error {
+func (ack *AckMpcGPKStep) InitStep(result mpcprotocol.MpcResultInterface) error {
 	log.SyslogInfo("AckMpcAccountStep.InitStep begin")
 	mpcGpk, err := result.GetByteValue(mpcprotocol.MpcContextResult)
 	if err != nil {
@@ -36,7 +36,7 @@ func (ack *AckMpcAccountStep) InitStep(result mpcprotocol.MpcResultInterface) er
 	return nil
 }
 
-func (ack *AckMpcAccountStep) CreateMessage() []mpcprotocol.StepMessage {
+func (ack *AckMpcGPKStep) CreateMessage() []mpcprotocol.StepMessage {
 	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
 		Msgcode:   mpcprotocol.MPCMessage,
 		PeerID:    nil,
@@ -45,7 +45,7 @@ func (ack *AckMpcAccountStep) CreateMessage() []mpcprotocol.StepMessage {
 		BytesData: [][]byte{ack.mpcGPK}}}
 }
 
-func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+func (ack *AckMpcGPKStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
 	log.SyslogInfo("AckMpcAccountStep.FinishStep begin")
 	err := ack.BaseStep.FinishStep()
 	if err != nil {
@@ -53,18 +53,23 @@ func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, 
 	}
 
 	if len(ack.remoteMpcGPKs) != len(*ack.BaseStep.peers) {
-		log.SyslogErr("ack mpc account step, finish, invalid remote mpc address. peer num:%d, mpc addr num:%d", len(*ack.BaseStep.peers), len(ack.remoteMpcGPKs))
+		log.SyslogErr("ack mpc account step, finish, invalid remote mpc address. peer num:%d, mpc addr num:%d",
+			len(*ack.BaseStep.peers), len(ack.remoteMpcGPKs))
 		return mpcprotocol.ErrInvalidMPCAddr
 	}
 
 	for peerID, mpcGpk := range ack.remoteMpcGPKs {
 		if mpcGpk == nil {
-			log.SyslogErr("ack mpc account step, finish, invalid remote mpc address: nil. peerID:%s", peerID.String())
+			log.SyslogErr("ack mpc account step, finish, invalid remote mpc address: nil. peerID:%s",
+				peerID.String())
 			return mpcprotocol.ErrInvalidMPCAddr
 		}
 
 		if !bytes.Equal(ack.mpcGPK, mpcGpk) {
-			log.SyslogErr("ack mpc account step, finish, invalid remote mpc address. local:%s, received:%s, peerID:%s", common.ToHex(ack.mpcGPK), common.ToHex(mpcGpk), peerID.String())
+			log.SyslogErr("ack mpc account step, finish, invalid remote mpc address. local:%s, received:%s, peerID:%s",
+				common.ToHex(ack.mpcGPK),
+				common.ToHex(mpcGpk),
+				peerID.String())
 			return mpcprotocol.ErrInvalidMPCAddr
 		}
 	}
@@ -72,11 +77,12 @@ func (ack *AckMpcAccountStep) FinishStep(result mpcprotocol.MpcResultInterface, 
 	return nil
 }
 
-func (ack *AckMpcAccountStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+func (ack *AckMpcGPKStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 	log.SyslogInfo("AckMpcAccountStep.HandleMessage begin")
 	_, exist := ack.message[*msg.PeerID]
 	if exist {
-		log.SyslogErr("AckMpcAccountStep.HandleMessage fail. peer doesn't exist in task peer group. peerID:%s", msg.PeerID.String())
+		log.SyslogErr("AckMpcAccountStep.HandleMessage fail. peer doesn't exist in task peer group. peerID:%s",
+			msg.PeerID.String())
 		return false
 	}
 

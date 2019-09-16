@@ -50,9 +50,9 @@ func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 
 func genCreateGPKMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
 	accTypeStr := ""
-	JRSS := step.CreateMpcJRSS_Step(mpcprotocol.MPCDegree, &mpc.peers)
-	PublicKey := step.CreateMpcAddressStep(&mpc.peers, accTypeStr)
-	ackAddress := step.CreateAckMpcAccountStep(&mpc.peers)
-	mpc.setMpcStep(firstStep, readyStep, JRSS, PublicKey, ackAddress)
+	skShare := step.CreateMpcSKShare_Step(mpcprotocol.MPCDegree, &mpc.peers)
+	gpk := step.CreateMpcGPKStep(&mpc.peers, accTypeStr)
+	ackGpk := step.CreateAckMpcGPKStep(&mpc.peers)
+	mpc.setMpcStep(firstStep, readyStep, skShare, gpk, ackGpk)
 	return mpc, nil
 }
