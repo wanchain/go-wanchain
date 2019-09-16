@@ -7,22 +7,22 @@ import (
 
 func TestMpcCtxFactory(t *testing.T) {
 	mpcFactory := MpcCtxFactory{}
-	_, err := mpcFactory.CreateContext(mpcprotocol.MpcCreateLockAccountLeader, 0, nil)
+	_, err := mpcFactory.CreateContext(mpcprotocol.MpcGPKLeader, 0, nil)
 	if err != nil {
 		t.Error("mpcFactory create err:", err)
 	}
 
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcCreateLockAccountPeer, 0, nil)
+	_, err = mpcFactory.CreateContext(mpcprotocol.MpcGPKPeer, 0, nil)
 	if err != nil {
 		t.Error("mpcFactory create err:", err)
 	}
 
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcTXSignLeader, 0, nil)
+	_, err = mpcFactory.CreateContext(mpcprotocol.MpcSignLeader, 0, nil)
 	if err != nil {
 		t.Error("mpcFactory create err:", err)
 	}
 
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcTXSignPeer, 0, nil)
+	_, err = mpcFactory.CreateContext(mpcprotocol.MpcSignPeer, 0, nil)
 	if err != nil {
 		t.Error("mpcFactory create err:", err)
 	}

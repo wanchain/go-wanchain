@@ -293,7 +293,7 @@ func (mpcServer *MpcDistributor) getMessagePeers(mpcMessage *mpcprotocol.MpcMess
 
 func (mpcServer *MpcDistributor) selectPeers(ctxType int, allPeers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) []mpcprotocol.PeerInfo {
 	var peers []mpcprotocol.PeerInfo
-	if ctxType == mpcprotocol.MpcCreateLockAccountLeader {
+	if ctxType == mpcprotocol.MpcGPKLeader {
 		peers = allPeers
 	} else {
 		peers = make([]mpcprotocol.PeerInfo, mpcprotocol.MPCDegree*2+1)
@@ -334,7 +334,7 @@ func (mpcServer *MpcDistributor) CreateRequestStoremanAccount(accType string) (c
 	preSetValue := make([]MpcValue, 0, 1)
 	preSetValue = append(preSetValue, MpcValue{Key: mpcprotocol.MpcStmAccType, ByteValue: []byte(accType)})
 
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader, preSetValue...)
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcGPKLeader, preSetValue...)
 	if err != nil {
 		return common.Address{}, err
 	} else {
@@ -346,7 +346,7 @@ func (mpcServer *MpcDistributor) CreateRequestGPK() ([]byte, error) {
 	log.SyslogInfo("CreateRequestGPK begin")
 
 	preSetValue := make([]MpcValue, 0, 1)
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader, preSetValue...)
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcGPKLeader, preSetValue...)
 
 	if err != nil {
 		return []byte{}, err
@@ -376,7 +376,7 @@ func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction, fro
 		return nil, err
 	}
 
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
 		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil}, MpcValue{mpcprotocol.MpcTransaction, nil, txbytes},
 		MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)}, MpcValue{mpcprotocol.MpcSignType, nil, []byte(SignType)},
 		MpcValue{mpcprotocol.MpcChainID, []big.Int{*chianID}, nil})
@@ -408,7 +408,7 @@ func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) ([
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcChainType, nil, []byte("BTC")})
 	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
 
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, preSetValues...)
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader, preSetValues...)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +450,7 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 	}
 
 	peers := []mpcprotocol.PeerInfo{}
-	if ctxType == mpcprotocol.MpcTXSignLeader {
+	if ctxType == mpcprotocol.MpcSignLeader {
 		address := common.Address{}
 		for _, item := range preSetValue {
 			if item.Key == mpcprotocol.MpcAddress {
@@ -517,15 +517,15 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 
 	var ctxType int
 	nType := mpcMessage.Data[0].Int64()
-	if nType == mpcprotocol.MpcCreateLockAccountLeader {
-		ctxType = mpcprotocol.MpcCreateLockAccountPeer
+	if nType == mpcprotocol.MpcGPKLeader {
+		ctxType = mpcprotocol.MpcGPKPeer
 	} else {
-		ctxType = mpcprotocol.MpcTXSignPeer
+		ctxType = mpcprotocol.MpcSignPeer
 	}
 
 	log.SyslogInfo("createMpcContext", "ctxType", ctxType, "ctxId", mpcMessage.ContextID)
-	if ctxType == mpcprotocol.MpcTXSignPeer {
-		log.SyslogInfo("createMpcContext MpcTXSignPeer")
+	if ctxType == mpcprotocol.MpcSignPeer {
+		log.SyslogInfo("createMpcContext MpcSignPeer")
 
 		chainType := string(mpcMessage.BytesData[0])
 		txBytesData := mpcMessage.BytesData[1]
@@ -623,7 +623,7 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
 		}
 
-	} else if ctxType == mpcprotocol.MpcCreateLockAccountPeer {
+	} else if ctxType == mpcprotocol.MpcGPKPeer {
 		if len(mpcMessage.BytesData) == 0 {
 			return mpcprotocol.ErrInvalidStmAccType
 		}

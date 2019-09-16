@@ -19,7 +19,7 @@ func reqSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVa
 }
 
 //get message from leader and create Context
-func ackTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+func ackSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)

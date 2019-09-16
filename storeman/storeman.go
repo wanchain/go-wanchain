@@ -230,7 +230,8 @@ func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 
 	addr, err := sa.sm.mpcDistributor.CreateRequestGPK()
 	if err == nil {
-		log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
+		//log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
+		log.SyslogInfo("CreateMpcAccount end", "addr", addr)
 	} else {
 		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
 	}

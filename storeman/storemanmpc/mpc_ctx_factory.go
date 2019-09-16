@@ -17,7 +17,7 @@ func (*MpcCtxFactory) CreateContext(ctxType int, mpcID uint64, peers []mpcprotoc
 	case mpcprotocol.MpcSignLeader:
 		return reqSignMpc(mpcID, peers, preSetValue...)
 	case mpcprotocol.MpcSignPeer:
-		return ackTxSignMpc(mpcID, peers, preSetValue...)
+		return ackSignMpc(mpcID, peers, preSetValue...)
 	}
 
 	return nil, mpcprotocol.ErrContextType
