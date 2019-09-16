@@ -21,5 +21,6 @@ var (
 	ErrInvalidMPCAddr    = errors.New("Invalid mpc account address")
 	ErrFailSignRetVerify = errors.New("Mpc signing result verify failed")
 	ErrInvalidStmAccType = errors.New("invalid storeman account type! please input 'WAN' or 'ETH' or 'BTC' ")
-	ErrInvalidMpcTx		 = errors.New("invalid mpc transaction")
+	ErrInvalidMpcTx      = errors.New("invalid mpc transaction")
+	ErrInvalidSignedData = errors.New("invalid signed Data")
 )

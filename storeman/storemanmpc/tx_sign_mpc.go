@@ -1,29 +1,29 @@
 package storemanmpc
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/storeman/btc"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
+	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
 )
 
 //send create LockAccount from leader
-func requestTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+func reqSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	requestMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcTXSignLeader)
+	requestMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcSignLeader)
 	mpcReady := step.CreateMpcReadyStep(&mpc.peers)
 	return generateTxSignMpc(mpc, requestMpc, mpcReady)
 }
 
 //get message from leader and create Context
-func acknowledgeTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+func ackTxSignMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcTXSignPeer)
+	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcSignPeer)
 	mpcReady := step.CreateGetMpcReadyStep(&mpc.peers)
 	return generateTxSignMpc(mpc, AcknowledgeMpc, mpcReady)
 }
@@ -41,7 +41,7 @@ func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStep
 	pointStepPreValueKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignA0, signNum)
 	pointStepResultKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignAPoint, signNum)
 	AGPoint := step.CreateMpcPoint_Step(&mpc.peers, pointStepPreValueKeys, pointStepResultKeys)
-	
+
 	lagStepPreValueKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignARSeed, signNum)
 	lagStepResultKeys := mpcprotocol.GetPreSetKeyArr(mpcprotocol.MpcSignARResult, signNum)
 	ARLag := step.CreateTXSign_Lagrange_Step(&mpc.peers, lagStepPreValueKeys, lagStepResultKeys)
@@ -79,4 +79,3 @@ func getSignNumFromTxInfo(mpc *MpcContext) (int, error) {
 	log.SyslogInfo("getSignNumFromTxInfo, succeed", "signNum", signNum)
 	return signNum, nil
 }
-

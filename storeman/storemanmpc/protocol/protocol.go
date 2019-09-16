@@ -9,10 +9,18 @@ import (
 )
 
 const (
-	MpcCreateLockAccountLeader = iota + 0
-	MpcCreateLockAccountPeer
-	MpcTXSignLeader
-	MpcTXSignPeer
+	MpcSchnrThr        = 26 // MpcSchnrThr >= number(storeman)/2 +1
+	MpcSchnrDegree     = MpcSchnrThr - 1
+	MpcSchnrNodeNumber = 50 // At least MpcSchnrNodeNumber MPC nodes
+	MPCDegree          = 8
+	//MPCDegree          = 1
+)
+
+const (
+	MpcGPKLeader = iota + 0
+	MpcGPKPeer
+	MpcSignLeader
+	MpcSignPeer
 )
 const (
 	StatusCode = iota + 0 // used by storeman protocol
@@ -25,8 +33,6 @@ const (
 	KeepaliveCycle
 	NumberOfMessageCodes
 
-	MPCDegree = 8
-	//MPCDegree          = 1
 	MPCTimeOut         = time.Second * 100
 	ProtocolName       = "storeman"
 	ProtocolVersion    = uint64(1)

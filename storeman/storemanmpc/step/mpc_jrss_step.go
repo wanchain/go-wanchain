@@ -1,8 +1,10 @@
 package step
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
+	"crypto/ecdsa"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 )
 
@@ -35,13 +37,16 @@ func (jrss *MpcJRSS_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc 
 		return err
 	}
 
+	// gskshare
 	JRSSvalue := jrss.messages[0].(*RandomPolynomialValue)
 	err = result.SetValue(mpcprotocol.MpcPrivateShare, []big.Int{*JRSSvalue.result})
 	if err != nil {
 		return err
 	}
-
-	err = result.SetValue(mpcprotocol.MpcPublicShare, []big.Int{JRSSvalue.randCoefficient[0]})
+	// gpkshare
+	var gpkShare ecdsa.PublicKey
+	gpkShare.X, gpkShare.Y = crypto.S256().ScalarBaseMult((*JRSSvalue.result).Bytes())
+	err = result.SetValue(mpcprotocol.MpcPublicShare, []big.Int{*gpkShare.X, *gpkShare.Y})
 	if err != nil {
 		return err
 	}

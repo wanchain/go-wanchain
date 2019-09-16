@@ -1,24 +1,24 @@
 package storemanmpc
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/storeman/storemanmpc/step"
 )
 
 //send create LockAccount from leader
-func requestCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+func reqGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	requestMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcCreateLockAccountLeader)
+	requestMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcGPKLeader)
 	mpcReady := step.CreateMpcReadyStep(&mpc.peers)
-	return generateCreateLockAccountMpc(mpc, requestMpc, mpcReady)
+	return genCreateGPKMpc(mpc, requestMpc, mpcReady)
 
 }
 
 //get message from leader and create Context
-func acknowledgeCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 	log.SyslogInfo("acknowledgeCreateLockAccountMpc begin.")
 	for _, preSetValuebyteData := range preSetValue {
 		log.SyslogInfo("acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
@@ -43,22 +43,13 @@ func acknowledgeCreateLockAccountMpc(mpcID uint64, peers []mpcprotocol.PeerInfo,
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcCreateLockAccountPeer)
+	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcGPKPeer)
 	mpcReady := step.CreateGetMpcReadyStep(&mpc.peers)
-	return generateCreateLockAccountMpc(mpc, AcknowledgeMpc, mpcReady)
+	return genCreateGPKMpc(mpc, AcknowledgeMpc, mpcReady)
 }
 
-func generateCreateLockAccountMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
-	var accTypeStr string
-	accType, err := mpc.mpcResult.GetByteValue(mpcprotocol.MpcStmAccType)
-	if err != nil {
-		return nil, err
-	} else if accType == nil {
-		accTypeStr = ""
-	} else {
-		accTypeStr = string(accType[:])
-	}
-
+func genCreateGPKMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
+	accTypeStr := ""
 	JRSS := step.CreateMpcJRSS_Step(mpcprotocol.MPCDegree, &mpc.peers)
 	PublicKey := step.CreateMpcAddressStep(&mpc.peers, accTypeStr)
 	ackAddress := step.CreateAckMpcAccountStep(&mpc.peers)

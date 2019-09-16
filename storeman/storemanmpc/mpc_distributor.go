@@ -22,13 +22,13 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
 	"github.com/wanchain/go-wanchain/storeman/btc"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/storeman/validator"
 	"strings"
 )
@@ -332,13 +332,26 @@ func (mpcServer *MpcDistributor) CreateRequestStoremanAccount(accType string) (c
 	log.SyslogInfo("CreateRequestStoremanAccount begin", "accType", accType)
 
 	preSetValue := make([]MpcValue, 0, 1)
-	preSetValue = append(preSetValue, MpcValue{Key:mpcprotocol.MpcStmAccType, ByteValue:[]byte(accType)})
+	preSetValue = append(preSetValue, MpcValue{Key: mpcprotocol.MpcStmAccType, ByteValue: []byte(accType)})
 
 	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader, preSetValue...)
 	if err != nil {
 		return common.Address{}, err
 	} else {
 		return common.BytesToAddress(value), err
+	}
+}
+
+func (mpcServer *MpcDistributor) CreateRequestGPK() ([]byte, error) {
+	log.SyslogInfo("CreateRequestGPK begin")
+
+	preSetValue := make([]MpcValue, 0, 1)
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcCreateLockAccountLeader, preSetValue...)
+
+	if err != nil {
+		return []byte{}, err
+	} else {
+		return value, err
 	}
 }
 
@@ -363,7 +376,7 @@ func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction, fro
 		return nil, err
 	}
 
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, MpcValue{mpcprotocol.MpcTxHash+"_0", []big.Int{*txHash.Big()}, nil},
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcTXSignLeader, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
 		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil}, MpcValue{mpcprotocol.MpcTransaction, nil, txbytes},
 		MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)}, MpcValue{mpcprotocol.MpcSignType, nil, []byte(SignType)},
 		MpcValue{mpcprotocol.MpcChainID, []big.Int{*chianID}, nil})
@@ -404,7 +417,7 @@ func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) ([
 	pot := 0
 	for pot < len(value) {
 		ret = append(ret, value[pot+1:pot+1+int(value[pot])])
-		pot += int(value[pot]) +1
+		pot += int(value[pot]) + 1
 	}
 
 	return ret, err
@@ -456,7 +469,7 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 		preSetValue = append(preSetValue, *value)
 	} else {
 		for i := 0; i < len(mpcServer.StoreManGroup); i++ {
-			peers = append(peers, mpcprotocol.PeerInfo{PeerID:mpcServer.StoreManGroup[i], Seed:0})
+			peers = append(peers, mpcprotocol.PeerInfo{PeerID: mpcServer.StoreManGroup[i], Seed: 0})
 		}
 	}
 
@@ -797,7 +810,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 
 			sinature := btcec.Signature{&R[0], &S[0]}
 			sign := sinature.Serialize()
-			txSigns = append(txSigns, byte(len(sign) + 1))
+			txSigns = append(txSigns, byte(len(sign)+1))
 			txSigns = append(txSigns, sign...)
 			txSigns = append(txSigns, byte(txscript.SigHashAll))
 
@@ -820,7 +833,7 @@ func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInt
 
 		result.SetByteValue(mpcprotocol.MPCSignedFrom, (*signFrom)[:])
 		result.SetByteValue(mpcprotocol.MpcContextResult, txSigns)
-		log.SyslogInfo("MpcDistributor.SignTransaction, " + mpcprotocol.MpcContextResult, "signs", common.ToHex(txSigns))
+		log.SyslogInfo("MpcDistributor.SignTransaction, "+mpcprotocol.MpcContextResult, "signs", common.ToHex(txSigns))
 		return nil
 
 	} else {

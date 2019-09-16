@@ -1,10 +1,10 @@
 package shcnorrmpc
 
 import (
-	Rand "crypto/rand"
-	"math/big"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/crypto"
+	Rand "crypto/rand"
+	"github.com/wanchain/go-wanchain/crypto"
+	"math/big"
 )
 
 // Generate a random polynomial, its constant item is nominated
@@ -17,13 +17,12 @@ func RandPoly(degree int, constant big.Int) Polynomial {
 	for i := 1; i < degree+1; i++ {
 
 		temp, _ := Rand.Int(Rand.Reader, crypto.S256().Params().N)
-		
+
 		// in case of polynomial degenerating
 		poly[i] = *temp.Add(temp, bigOne)
 	}
 	return poly
 }
-
 
 // Calculate polynomial's evaluation at some point
 func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
@@ -47,8 +46,6 @@ func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
 	return *sum
 }
 
-
-
 // Calculate the b coefficient in Lagrange's polynomial interpolation algorithm
 
 func evaluateB(x []big.Int, degree int) []*big.Int {
@@ -64,8 +61,6 @@ func evaluateB(x []big.Int, degree int) []*big.Int {
 	}
 	return b
 }
-
-
 
 // sub-function for evaluateB
 
@@ -98,8 +93,6 @@ func evaluateb(x []big.Int, i int, degree int) *big.Int {
 	return sum
 }
 
-
-
 // Lagrange's polynomial interpolation algorithm: working in ECC points
 func LagrangeECC(sig []ecdsa.PublicKey, x []big.Int, degree int) *ecdsa.PublicKey {
 
@@ -109,17 +102,17 @@ func LagrangeECC(sig []ecdsa.PublicKey, x []big.Int, degree int) *ecdsa.PublicKe
 
 	//累加过程中，第一个点需设为无穷远点，但是这样会生成空指针，后面点加函数报错
 	//因此，只能退而求其次，先将累加的第一个点设入到sum中.然后循环的起点为1
-	sum.X, sum.Y = crypto.S256().ScalarMult(sig[0].X, sig[0].Y, b[0].Bytes()) 
-	
+	sum.X, sum.Y = crypto.S256().ScalarMult(sig[0].X, sig[0].Y, b[0].Bytes())
+
 	for i := 1; i < degree+1; i++ {
 		temp := new(ecdsa.PublicKey)
-		temp.X, temp.Y = crypto.S256().ScalarMult(sig[i].X, sig[i].Y, b[i].Bytes()) 
+		temp.X, temp.Y = crypto.S256().ScalarMult(sig[i].X, sig[i].Y, b[i].Bytes())
 		sum.X, sum.Y = crypto.S256().Add(sum.X, sum.Y, temp.X, temp.Y)
 	}
 	return sum
 }
 
-func SchnorrSign(psk big.Int, r big.Int, m big.Int) big.Int{
+func SchnorrSign(psk big.Int, r big.Int, m big.Int) big.Int {
 	sum := big.NewInt(1)
 	sum.Mul(&psk, &m)
 	sum.Mod(sum, crypto.S256().Params().N)
@@ -145,11 +138,3 @@ func Lagrange(f []big.Int, x []big.Int, degree int) big.Int {
 	}
 	return *s
 }
-
-
-
-
-
-
-
-

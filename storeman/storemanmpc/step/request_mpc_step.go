@@ -1,9 +1,9 @@
 package step
 
 import (
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 	"math/rand"
 	"time"
@@ -17,7 +17,7 @@ type RequestMpcStep struct {
 	address     big.Int
 	chainID     big.Int
 	chainType   []byte
-	signType	[]byte
+	signType    []byte
 	txCode      []byte
 	message     map[discover.NodeID]bool
 }
@@ -25,7 +25,7 @@ type RequestMpcStep struct {
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
 	log.SyslogInfo("RequestMpcStep.InitStep begin")
 
-	if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
+	if req.messageType == mpcprotocol.MpcGPKLeader {
 		findMap := make(map[uint64]bool)
 		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < len(*req.peers); i++ {
@@ -49,7 +49,7 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		req.accType = accType
 		log.SyslogInfo("RequestMpcStep.InitStep, accType:%s", string(accType[:]))
 
-	} else if req.messageType == mpcprotocol.MpcTXSignLeader {
+	} else if req.messageType == mpcprotocol.MpcSignLeader {
 		addr, err := result.GetValue(mpcprotocol.MpcAddress)
 		if err != nil {
 			return err
@@ -96,14 +96,14 @@ func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *Req
 
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	msg := mpcprotocol.StepMessage{
-		Msgcode:mpcprotocol.RequestMPC,
-		PeerID:nil,
-		Peers:req.peers,
-		Data:nil,
-		BytesData:nil}
+		Msgcode:   mpcprotocol.RequestMPC,
+		PeerID:    nil,
+		Peers:     req.peers,
+		Data:      nil,
+		BytesData: nil}
 	msg.Data = make([]big.Int, 1)
 	msg.Data[0].SetInt64(req.messageType)
-	if req.messageType == mpcprotocol.MpcTXSignLeader {
+	if req.messageType == mpcprotocol.MpcSignLeader {
 		msg.Data = append(msg.Data, req.txHash)
 		msg.Data = append(msg.Data, req.address)
 		msg.Data = append(msg.Data, req.chainID)
@@ -111,7 +111,7 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.BytesData[0] = req.chainType
 		msg.BytesData[1] = req.txCode
 		msg.BytesData[2] = req.signType
-	} else if req.messageType == mpcprotocol.MpcCreateLockAccountLeader {
+	} else if req.messageType == mpcprotocol.MpcGPKLeader {
 		msg.BytesData = make([][]byte, 1)
 		msg.BytesData[0] = req.accType
 	}
@@ -142,5 +142,3 @@ func (req *RequestMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 	req.message[*msg.PeerID] = true
 	return true
 }
-
-

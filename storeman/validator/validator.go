@@ -1,20 +1,20 @@
 package validator
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/storeman/btc"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
-	"time"
-	"github.com/wanchain/go-wanchain/storeman/btc"
 	"math/big"
-	"errors"
-	"github.com/btcsuite/btcd/txscript"
-	"bytes"
+	"time"
 )
 
 var noticeFuncIds [][4]byte
@@ -22,7 +22,7 @@ var noticeFuncIds [][4]byte
 func init() {
 	noticeFuncDefs := []string{
 		"btc2wbtcLockNotice(address,address,bytes32,bytes32,uint256)",
-		"wbtc2btcLockNotice(address,address,address,bytes32,bytes32,uint256)",}
+		"wbtc2btcLockNotice(address,address,address,bytes32,bytes32,uint256)"}
 
 	var funcId [4]byte
 	for _, funcDef := range noticeFuncDefs {
@@ -38,7 +38,7 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, from common.Address, chainType str
 		"chainType", chainType,
 		"chainId", chainId.String(),
 		"leaderTxLeaderHashBytes", common.ToHex(leaderTxLeaderHashBytes),
-		"leaderTxRawData",common.ToHex(leaderTxRawData))
+		"leaderTxRawData", common.ToHex(leaderTxRawData))
 
 	var leaderTx types.Transaction
 	err := rlp.DecodeBytes(leaderTxRawData, &leaderTx)
@@ -101,7 +101,6 @@ func ValidateTx(signer mpccrypto.MPCTxSigner, from common.Address, chainType str
 		return false
 	}
 }
-
 
 func ValidateBtcTx(args *btc.MsgTxArgs) bool {
 	if args == nil {
@@ -177,7 +176,6 @@ func waitKeyFromDB(keys [][]byte) ([]byte, error) {
 	return nil, errors.New("waitKeyFromDB, unknown error")
 }
 
-
 func GetKeyFromBtcTx(args *btc.MsgTxArgs) (keyWithoutTxIn []byte, keyWithTxIn []byte) {
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.Version)).Bytes()...)
 	keyWithoutTxIn = append(keyWithoutTxIn, big.NewInt(int64(args.LockTime)).Bytes()...)
@@ -238,7 +236,6 @@ func IsNoticeTransaction(payload []byte) (bool, error) {
 	return false, nil
 }
 
-
 func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
 	log.SyslogInfo("AddValidMpcTx", "txInfo", tx.String())
 
@@ -264,6 +261,21 @@ func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
 	}
 
 	return addKeyValueToDB(key, val)
+}
+
+func AddValidData(data *mpcprotocol.SendData) error {
+	log.SyslogInfo("AddValidData", "txInfo", data.String())
+	if len(data.Data) != common.HashLength {
+		log.SyslogErr(mpcprotocol.ErrInvalidSignedData.Error())
+		return mpcprotocol.ErrInvalidSignedData
+	}
+	val, err := json.Marshal(&data)
+	if err != nil {
+		log.SyslogErr("AddValidData, marshal fail", "err", err.Error())
+		return err
+	}
+
+	return addKeyValueToDB(data.Data[:], val)
 }
 
 func AddValidMpcBtcTx(args *btc.MsgTxArgs) error {

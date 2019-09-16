@@ -8,7 +8,10 @@ type MpcAddressStep struct {
 }
 
 func CreateMpcAddressStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcAddressStep {
-	mpc := &MpcAddressStep{MpcPoint_Step: *CreateMpcPoint_Step(peers, []string{mpcprotocol.MpcPublicShare}, []string{mpcprotocol.PublicKeyResult}), accType:accType}
+	mpc := &MpcAddressStep{MpcPoint_Step: *CreateMpcPoint_Step(peers,
+		[]string{mpcprotocol.MpcPublicShare},
+		[]string{mpcprotocol.PublicKeyResult}),
+		accType: accType}
 	return mpc
 }
 

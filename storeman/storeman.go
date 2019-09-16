@@ -217,29 +217,25 @@ func (sm *Storeman) Protocols() []p2p.Protocol {
 
 // for schnorr begin
 func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
-	//log.SyslogInfo("CreateMpcAccount begin", "accType", accType)
-	//
-	//if !mpcprotocol.CheckAccountType(accType) {
-	//	return common.Address{}, mpcprotocol.ErrInvalidStmAccType
-	//}
-	//
-	//if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
-	//	return common.Address{}, mpcprotocol.ErrTooLessStoreman
-	//}
-	//
-	//if len(sa.sm.storemanPeers) > 22 {
-	//	return common.Address{}, mpcprotocol.ErrTooMoreStoreman
-	//}
-	//
-	//addr, err := sa.sm.mpcDistributor.CreateRequestStoremanAccount(accType)
-	//if err == nil {
-	//	log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
-	//} else {
-	//	log.SyslogErr("CreateMpcAccount end", "err", err.Error())
-	//}
-	//
-	//return addr, err
-	return []byte{}, nil
+
+	log.SyslogInfo("CreateGPK begin")
+
+	if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
+		return []byte{}, mpcprotocol.ErrTooLessStoreman
+	}
+
+	if len(sa.sm.storemanPeers)+1 < mpcprotocol.MpcSchnrNodeNumber {
+		return []byte{}, mpcprotocol.ErrTooLessStoreman
+	}
+
+	addr, err := sa.sm.mpcDistributor.CreateRequestGPK()
+	if err == nil {
+		log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
+	} else {
+		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
+	}
+
+	return addr, err
 }
 
 func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
@@ -271,8 +267,7 @@ func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) 
 }
 
 func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
-	//return validator.AddValidMpcTx(&tx)
-	return nil
+	return validator.AddValidData(&data)
 }
 
 // for schnorr end

@@ -1,10 +1,11 @@
 package step
 
 import (
+	"crypto/rand"
 	"github.com/wanchain/go-wanchain/crypto"
-	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 	//"github.com/wanchain/go-wanchain/log"
 	//"github.com/wanchain/go-wanchain/common"
@@ -12,34 +13,36 @@ import (
 
 type RandomPolynomialValue struct {
 	randCoefficient []big.Int          //coefficient
-	message         map[uint64]big.Int //Polynomil result
+	message         map[uint64]big.Int //Polynomial result
 	polyValue       []big.Int
 	result          *big.Int
-	bJRSS           bool
 }
 
 func createJRSSValue(degree int, peerNum int) *RandomPolynomialValue {
-	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil, true}
+	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil}
 }
 
 func createJZSSValue(degree int, peerNum int) *RandomPolynomialValue {
-	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil, false}
+	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil}
 }
 
-func (poly *RandomPolynomialValue) initialize(peers *[]mpcprotocol.PeerInfo, result mpcprotocol.MpcResultInterface) error {
-	cof, err := mpccrypto.GetRandCoefficients(len(poly.randCoefficient))
+func (poly *RandomPolynomialValue) initialize(peers *[]mpcprotocol.PeerInfo,
+	result mpcprotocol.MpcResultInterface) error {
+
+	degree := len(poly.randCoefficient) - 1
+
+	s, err := rand.Int(rand.Reader, crypto.S256().Params().N)
 	if err != nil {
-		log.SyslogErr("RandomPolynomialValue, GetRandCoefficients fail. err:%s", err.Error())
+		log.SyslogErr("RandomPolynomialValue::initialize, rand.Int fail. err:%s", err.Error())
 		return err
 	}
-
+	cof := shcnorrmpc.RandPoly(degree, *s)
 	copy(poly.randCoefficient, cof)
-	if !poly.bJRSS {
-		poly.randCoefficient[0] = *big.NewInt(0)
-	}
 
 	for i := 0; i < len(poly.polyValue); i++ {
-		poly.polyValue[i] = mpccrypto.EvaluatePoly(poly.randCoefficient, new(big.Int).SetUint64((*peers)[i].Seed))
+		poly.polyValue[i] = shcnorrmpc.EvaluatePoly(poly.randCoefficient,
+			new(big.Int).SetUint64((*peers)[i].Seed),
+			degree)
 	}
 
 	return nil
@@ -49,7 +52,7 @@ func (poly *RandomPolynomialValue) calculateResult() error {
 	poly.result = big.NewInt(0)
 	for _, value := range poly.message {
 		poly.result.Add(poly.result, &value)
-		poly.result.Mod(poly.result, crypto.Secp256k1_N)
+		poly.result.Mod(poly.result, crypto.S256().Params().N)
 	}
 
 	return nil
