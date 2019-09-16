@@ -3,9 +3,10 @@ package step
 import (
 	"crypto/ecdsa"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 )
 
@@ -29,14 +30,7 @@ func (point *mpcPointGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result
 		return err
 	}
 
-	curve := crypto.S256()
-	x, y := curve.ScalarBaseMult(value[0].Bytes())
-	if x == nil || y == nil {
-		log.SyslogErr("mpcPointGenerator.ScalarBaseMult fail. err:%s", mpcprotocol.ErrPointZero.Error())
-		return mpcprotocol.ErrPointZero
-	}
-
-	point.seed = [2]big.Int{*x, *y}
+	point.seed = [2]big.Int{value[0], value[1]}
 
 	log.SyslogInfo("mpcPointGenerator.initialize succeed")
 	return nil
@@ -45,18 +39,22 @@ func (point *mpcPointGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result
 func (point *mpcPointGenerator) calculateResult() error {
 	log.SyslogInfo("mpcPointGenerator.calculateResult begin")
 
-	result := new(ecdsa.PublicKey)
-	result.Curve = crypto.S256()
-	var i = 0
-	for _, value := range point.message {
-		if i == 0 {
-			result.X = new(big.Int).Set(&value[0])
-			result.Y = new(big.Int).Set(&value[1])
-			i++
-		} else {
-			result.X, result.Y = crypto.S256().Add(result.X, result.Y, &value[0], &value[1])
-		}
+	seeds := make([]big.Int, 0)
+	gpkshares := make([]ecdsa.PublicKey, 0)
+	for seed, value := range point.message {
+
+		// get seeds, need sort seeds, and make seeds as a key of map, and check the map's count??
+		seeds = append(seeds, *big.NewInt(0).SetUint64(seed))
+
+		// build PK[]
+		var gpkshare ecdsa.PublicKey
+		gpkshare.Curve = crypto.S256()
+		gpkshare.X, gpkshare.Y = &value[0], &value[1]
+		gpkshares = append(gpkshares, gpkshare)
 	}
+
+	// lagrangeEcc
+	result := shcnorrmpc.LagrangeECC(gpkshares, seeds[:], mpcprotocol.MPCDegree)
 
 	if !mpccrypto.ValidatePublicKey(result) {
 		log.SyslogErr("mpcPointGenerator.ValidatePublicKey fail. err:%s", mpcprotocol.ErrPointZero.Error())
