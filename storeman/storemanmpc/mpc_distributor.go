@@ -799,12 +799,13 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 		seed[i] = item.Seed
 	}
 
-	account, err := mpcServer.newStoremanKeyStore(result1, &private[0], seed, mpcServer.password, accType)
+	_, err = mpcServer.newStoremanKeyStore(result1, &private[0], seed, mpcServer.password, accType)
 	if err != nil {
 		return err
 	}
 
-	result.SetByteValue(mpcprotocol.MpcContextResult, account.Address[:])
+	//result.SetByteValue(mpcprotocol.MpcContextResult, account.Address[:])
+	result.SetByteValue(mpcprotocol.MpcContextResult, crypto.FromECDSAPub(result1))
 	return nil
 }
 
