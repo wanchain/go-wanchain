@@ -1,8 +1,8 @@
 package step
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 )
 
 type MpcMessageGenerator interface {

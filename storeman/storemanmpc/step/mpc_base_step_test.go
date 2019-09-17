@@ -86,7 +86,7 @@ func makeJZSS(degree, peerNum int, peerInfo []mpcprotocol.PeerInfo) ([]big.Int, 
 func makePeerInfo(peerNum int) []mpcprotocol.PeerInfo {
 	peerInfo := make([]mpcprotocol.PeerInfo, peerNum)
 	for i := 0; i < peerNum; i++ {
-		peerInfo[i] = mpcprotocol.PeerInfo{PeerID:discover.NodeID{}, Seed:uint64(i + 2)}
+		peerInfo[i] = mpcprotocol.PeerInfo{PeerID: discover.NodeID{}, Seed: uint64(i + 2)}
 	}
 
 	return peerInfo
@@ -204,9 +204,9 @@ func TestJRSSGenerator(t *testing.T) {
 	jrss3 := createJRSSValue(1, 3)
 
 	peerInfo := []mpcprotocol.PeerInfo{
-		mpcprotocol.PeerInfo{PeerID:discover.NodeID{}, Seed:1},
-		mpcprotocol.PeerInfo{PeerID:discover.NodeID{}, Seed:2},
-		mpcprotocol.PeerInfo{PeerID:discover.NodeID{}, Seed:3}}
+		mpcprotocol.PeerInfo{PeerID: discover.NodeID{}, Seed: 1},
+		mpcprotocol.PeerInfo{PeerID: discover.NodeID{}, Seed: 2},
+		mpcprotocol.PeerInfo{PeerID: discover.NodeID{}, Seed: 3}}
 	jrss1.initialize(&peerInfo, nil)
 	jrss2.initialize(&peerInfo, nil)
 	jrss3.initialize(&peerInfo, nil)
