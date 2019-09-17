@@ -18,11 +18,7 @@ type RandomPolynomialValue struct {
 	result          *big.Int
 }
 
-func createJRSSValue(degree int, peerNum int) *RandomPolynomialValue {
-	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil}
-}
-
-func createJZSSValue(degree int, peerNum int) *RandomPolynomialValue {
+func createSkPolyValue(degree int, peerNum int) *RandomPolynomialValue {
 	return &RandomPolynomialValue{make([]big.Int, degree+1), make(map[uint64]big.Int), make([]big.Int, peerNum), nil}
 }
 

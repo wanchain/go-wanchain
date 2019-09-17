@@ -12,7 +12,7 @@ import (
 func makeZero(degree, peerNum int, peerInfo []mpcprotocol.PeerInfo) ([]big.Int, *big.Int) {
 	jrss := make([]RandomPolynomialValue, peerNum)
 	for i := 0; i < peerNum; i++ {
-		jrss[i] = *createJRSSValue(degree, peerNum)
+		jrss[i] = *createSkPolyValue(degree, peerNum)
 	}
 
 	lagResult := big.NewInt(0)
@@ -38,31 +38,7 @@ func makeZero(degree, peerNum int, peerInfo []mpcprotocol.PeerInfo) ([]big.Int, 
 func makeJRSS(degree, peerNum int, peerInfo []mpcprotocol.PeerInfo) ([]big.Int, *big.Int) {
 	jrss := make([]RandomPolynomialValue, peerNum)
 	for i := 0; i < peerNum; i++ {
-		jrss[i] = *createJRSSValue(degree, peerNum)
-	}
-
-	lagResult := big.NewInt(0)
-	for i := 0; i < peerNum; i++ {
-		jrss[i].initialize(&peerInfo, nil)
-		lagResult.Add(lagResult, &jrss[i].randCoefficient[0])
-	}
-
-	lagResult.Mod(lagResult, crypto.Secp256k1_N)
-	jrssResult := make([]big.Int, peerNum)
-	for i := 0; i < peerNum; i++ {
-		for j := 0; j < peerNum; j++ {
-			jrssResult[i].Add(&jrssResult[i], &jrss[j].polyValue[i])
-		}
-		jrssResult[i].Mod(&jrssResult[i], crypto.Secp256k1_N)
-	}
-
-	return jrssResult, lagResult
-}
-
-func makeJZSS(degree, peerNum int, peerInfo []mpcprotocol.PeerInfo) ([]big.Int, *big.Int) {
-	jrss := make([]RandomPolynomialValue, peerNum)
-	for i := 0; i < peerNum; i++ {
-		jrss[i] = *createJZSSValue(degree, peerNum)
+		jrss[i] = *createSkPolyValue(degree, peerNum)
 	}
 
 	lagResult := big.NewInt(0)
@@ -127,55 +103,6 @@ func TestJRSSZeroMult(t *testing.T) {
 	}
 }
 
-func TestJRSSGeneratorMult(t *testing.T) {
-	degree := 8
-	peerNum := 21
-	peerInfo := makePeerInfo(peerNum)
-	jrssResult, lagResult := makeJRSS(degree, peerNum, peerInfo)
-	t.Logf("lagResult is: %v", lagResult)
-	jrssResult1, lagResult1 := makeJRSS(degree, peerNum, peerInfo)
-	t.Logf("lagResult1 is: %v", lagResult1)
-	lagResult.Mul(lagResult, lagResult1)
-	lagResult.Mod(lagResult, crypto.Secp256k1_N)
-	t.Logf("Mult lagResult is: %v", lagResult)
-	jzssResult, zResult := makeJZSS(degree*2, peerNum, peerInfo)
-	t.Logf("zero Result is: %v", zResult)
-	jrssResultMul := make([]big.Int, peerNum)
-	for i := 0; i < peerNum; i++ {
-		jrssResultMul[i].Mul(&jrssResult[i], &jrssResult1[i])
-		jrssResultMul[i].Add(&jrssResultMul[i], &jzssResult[i])
-		jrssResultMul[i].Mod(&jrssResultMul[i], crypto.Secp256k1_N)
-	}
-
-	for i := 0; i < peerNum-degree*2-1; i++ {
-		seedLen := degree*2 + 1
-		seed := make([]int, seedLen)
-		for j := 0; j < seedLen; j++ {
-			seed[j] = i + j
-		}
-
-		lag1 := testLagrange(seed, peerInfo, jrssResultMul)
-		t.Logf("lagResult 1 is: %v", lag1)
-		if lagResult.Cmp(&lag1) != 0 {
-			t.Error("Lagrange is Error")
-		}
-	}
-
-	for i := 0; i < peerNum-degree*2-1; i++ {
-		seedLen := degree * 2
-		seed := make([]int, seedLen)
-		for j := 0; j < seedLen; j++ {
-			seed[j] = i + j
-		}
-
-		lag1 := testLagrange(seed, peerInfo, jrssResultMul)
-		t.Logf("lagResult 2 is: %v", lag1)
-		if lagResult.Cmp(&lag1) == 0 {
-			t.Error("Lagrange is Error")
-		}
-	}
-}
-
 func TestJRSSGenerator21(t *testing.T) {
 	degree := 8
 	peerNum := 21
@@ -199,9 +126,9 @@ func TestJRSSGenerator21(t *testing.T) {
 }
 
 func TestJRSSGenerator(t *testing.T) {
-	jrss1 := createJRSSValue(1, 3)
-	jrss2 := createJRSSValue(1, 3)
-	jrss3 := createJRSSValue(1, 3)
+	jrss1 := createSkPolyValue(1, 3)
+	jrss2 := createSkPolyValue(1, 3)
+	jrss3 := createSkPolyValue(1, 3)
 
 	peerInfo := []mpcprotocol.PeerInfo{
 		mpcprotocol.PeerInfo{PeerID: discover.NodeID{}, Seed: 1},

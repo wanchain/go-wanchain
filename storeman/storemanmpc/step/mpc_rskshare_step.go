@@ -14,7 +14,7 @@ type MpcRSKShare_Step struct {
 
 func CreateMpcRSKShareStep(degree int, peers *[]mpcprotocol.PeerInfo) *MpcRSKShare_Step {
 	mpc := &MpcRSKShare_Step{*CreateBaseMpcStep(peers, 1)}
-	mpc.messages[0] = createJRSSValue(degree, len(*peers))
+	mpc.messages[0] = createSkPolyValue(degree, len(*peers))
 	return mpc
 }
 
