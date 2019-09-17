@@ -1,13 +1,13 @@
 package step
 
 import (
-	"testing"
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/p2p/discover"
-	"math/big"
-	"github.com/wanchain/go-wanchain/common"
-	"errors"
 	"bytes"
+	"errors"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/p2p/discover"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
+	"math/big"
+	"testing"
 )
 
 var peers []mpcprotocol.PeerInfo
@@ -25,7 +25,6 @@ var mpcAddr = "0x0000000000000000000000000000000000000055"
 var mpcAddrBytes = common.FromHex(mpcAddr)
 var wrongMpcAddrBytes1 = common.FromHex("0x0000000000000000000000000000000000000044")
 var wrongMpcAddrBytes2 = common.FromHex("0x00000000000000000000000000000000000044")
-
 
 func (ret *tmpMpcResult) Initialize() error {
 	return nil
@@ -51,7 +50,6 @@ func (ret *tmpMpcResult) GetByteValue(key string) ([]byte, error) {
 	return nil, nil
 }
 
-
 type tmpMpcResultWrong1 struct {
 	tmpMpcResult
 }
@@ -72,12 +70,11 @@ func (ret *tmpMpcResultWrong2) GetByteValue(key string) ([]byte, error) {
 	return nil, nil
 }
 
-
 var mpcResult tmpMpcResult
 var mpcResultWrong1 tmpMpcResultWrong1
 var mpcResultWrong2 tmpMpcResultWrong2
 
-func Init()  {
+func Init() {
 	if len(peers) != 0 {
 		return
 	}
@@ -127,7 +124,6 @@ func TestInitStep(t *testing.T) {
 		t.Error("invalid step's mpcAddr")
 	}
 }
-
 
 func TestHandleMessage(t *testing.T) {
 	Init()
@@ -195,13 +191,3 @@ func TestFinishStep(t *testing.T) {
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
