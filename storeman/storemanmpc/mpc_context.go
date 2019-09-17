@@ -1,9 +1,9 @@
 package storemanmpc
 
 import (
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	"sync"
 )
 
@@ -44,7 +44,7 @@ func (mpcCtx *MpcContext) getMpcResult() []byte {
 }
 
 func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.MpcMessage, peers *[]mpcprotocol.PeerInfo) error {
-	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{Msgcode:0, PeerID:PeerID, Peers:peers, Data:msg.Data, BytesData:msg.BytesData}
+	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{Msgcode: 0, PeerID: PeerID, Peers: peers, Data: msg.Data, BytesData: msg.BytesData}
 	return nil
 }
 
@@ -69,7 +69,7 @@ func (mpcCtx *MpcContext) setMpcStep(mpcSteps ...MpcStepFunc) {
 }
 
 func (mpcCtx *MpcContext) quit(err error) {
-	if err == nil{
+	if err == nil {
 		log.SyslogInfo("MpcContext.quit")
 	} else {
 		log.SyslogErr("MpcContext.quit", "err", err.Error())
@@ -124,7 +124,7 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 						StoremanManager.P2pMessage(item.PeerID, item.Msgcode, mpcMsg)
 						log.SyslogInfo("step send a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					} else {
-						StoremanManager.BoardcastMessage(peerIDs, item.Msgcode, mpcMsg)
+						StoremanManager.BroadcastMessage(peerIDs, item.Msgcode, mpcMsg)
 						log.SyslogInfo("step boardcast a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					}
 				}
@@ -146,7 +146,7 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 		mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcCtx.ContextID,
 			StepID: 0,
 			Peers:  []byte(mpcErr.Error())}
-		StoremanManager.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
+		StoremanManager.BroadcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
 	}
 
 	mpcCtx.quit(nil)

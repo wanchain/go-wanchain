@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"math/big"
-	"strconv"
 	"time"
 )
 
@@ -51,7 +50,6 @@ const (
 	Mpcm             = "Mpcm"             // m
 	MpcS             = "MpcS"             // S
 
-	MpcSignAPoint  = "MpcSignAPoint"
 	MpcTxHash      = "MpcTxHash"
 	MpcTransaction = "MpcTransaction"
 	MpcChainType   = "MpcChainType"
@@ -59,7 +57,6 @@ const (
 	MpcChainID     = "MpcChainID"
 	MpcAddress     = "MpcAddress"
 	MPCActoin      = "MPCActoin"
-	MPCSignedFrom  = "MPCSignedFrom"
 	MpcStmAccType  = "MpcStmAccType"
 )
 
@@ -97,21 +94,4 @@ type MpcMessage struct {
 	Peers     []byte
 	Data      []big.Int //message data
 	BytesData [][]byte
-}
-
-func CheckAccountType(accType string) bool {
-	if accType == "WAN" || accType == "ETH" || accType == "BTC" {
-		return true
-	}
-
-	return false
-}
-
-func GetPreSetKeyArr(keySeed string, num int) []string {
-	keyArr := []string{}
-	for i := 0; i < num; i++ {
-		keyArr = append(keyArr, keySeed+"_"+strconv.Itoa(i))
-	}
-
-	return keyArr
 }

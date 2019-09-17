@@ -528,7 +528,7 @@ func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage
 					peerIDs = append(peerIDs, item.PeerID)
 				}
 
-				mpcServer.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
+				mpcServer.BroadcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
 
 				log.SyslogErr("createMpcContext, verify tx fail", "ContextID", mpcMessage.ContextID)
 				return mpcprotocol.ErrFailedTxVerify
@@ -611,14 +611,14 @@ func (mpcServer *MpcDistributor) P2pMessage(peerID *discover.NodeID, code uint64
 	} else {
 		err := mpcServer.P2pMessager.SendToPeer(peerID, code, msg)
 		if err != nil {
-			log.SyslogErr("BoardcastMessage fail", "err", err.Error())
+			log.SyslogErr("BroadcastMessage fail", "err", err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (mpcServer *MpcDistributor) BoardcastMessage(peers []discover.NodeID, code uint64, msg interface{}) error {
+func (mpcServer *MpcDistributor) BroadcastMessage(peers []discover.NodeID, code uint64, msg interface{}) error {
 	if peers == nil {
 		for _, peer := range mpcServer.StoreManGroup {
 			if peer == mpcServer.Self.ID {
@@ -626,7 +626,7 @@ func (mpcServer *MpcDistributor) BoardcastMessage(peers []discover.NodeID, code 
 			} else {
 				err := mpcServer.P2pMessager.SendToPeer(&peer, code, msg)
 				if err != nil {
-					log.SyslogErr("BoardcastMessage fail", "peer", peer.String(), "err", err.Error())
+					log.SyslogErr("BroadcastMessage fail", "peer", peer.String(), "err", err.Error())
 				}
 			}
 		}
@@ -637,7 +637,7 @@ func (mpcServer *MpcDistributor) BoardcastMessage(peers []discover.NodeID, code 
 			} else {
 				err := mpcServer.P2pMessager.SendToPeer(&peerID, code, msg)
 				if err != nil {
-					log.SyslogErr("BoardcastMessage fail", "peer", peerID.String(), "err", err.Error())
+					log.SyslogErr("BroadcastMessage fail", "peer", peerID.String(), "err", err.Error())
 				}
 			}
 		}
