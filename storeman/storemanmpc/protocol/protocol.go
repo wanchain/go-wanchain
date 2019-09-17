@@ -39,9 +39,10 @@ const (
 	ProtocolVersionStr = "1.1"
 )
 const (
-	MpcPrivateShare  = "MpcPrivateShare"
-	MpcPrivateKey    = "MpcPrivateKey"
-	MpcPublicShare   = "MpcPublicShare"
+	MpcPrivateShare  = "MpcPrivateShare"  // skShare
+	RMpcPrivateShare = "RMpcPrivateShare" // rskShare
+	MpcPublicShare   = "MpcPublicShare"   // pkShare
+	RMpcPublicShare  = "RMpcPublicShare"  // rpkShare
 	MpcSignA         = "MpcSignA"
 	MpcSignA0        = "MpcSignA0"
 	MpcSignR         = "MpcSignR"
@@ -56,17 +57,20 @@ const (
 	MpcTxSignResult  = "MpcTxSignResult"
 	MpcContextResult = "MpcContextResult"
 
-	PublicKeyResult = "PublicKeyResult"
-	MpcSignAPoint   = "MpcSignAPoint"
-	MpcTxHash       = "MpcTxHash"
-	MpcTransaction  = "MpcTransaction"
-	MpcChainType    = "MpcChainType"
-	MpcSignType     = "MpcSignType"
-	MpcChainID      = "MpcChainID"
-	MpcAddress      = "MpcAddress"
-	MPCActoin       = "MPCActoin"
-	MPCSignedFrom   = "MPCSignedFrom"
-	MpcStmAccType   = "MpcStmAccType"
+	PublicKeyResult  = "PublicKeyResult"
+	RPublicKeyResult = "RPublicKeyResult" // R
+	MpcM             = "M"                // M
+	Mpcm             = "m"                // m
+	MpcSignAPoint    = "MpcSignAPoint"
+	MpcTxHash        = "MpcTxHash"
+	MpcTransaction   = "MpcTransaction"
+	MpcChainType     = "MpcChainType"
+	MpcSignType      = "MpcSignType"
+	MpcChainID       = "MpcChainID"
+	MpcAddress       = "MpcAddress"
+	MPCActoin        = "MPCActoin"
+	MPCSignedFrom    = "MPCSignedFrom"
+	MpcStmAccType    = "MpcStmAccType"
 )
 
 type PeerInfo struct {

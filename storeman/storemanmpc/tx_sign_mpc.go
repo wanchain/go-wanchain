@@ -33,9 +33,10 @@ func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStep
 
 	accTypeStr := ""
 	skShare := step.CreateMpcSKShare_Step(mpcprotocol.MPCDegree, &mpc.peers)
-	gpk := step.CreateMpcGPKStep(&mpc.peers, accTypeStr)
-	ackGpk := step.CreateAckMpcGPKStep(&mpc.peers)
-	mpc.setMpcStep(firstStep, readyStep, skShare, gpk, ackGpk)
+	RStep := step.CreateMpcRStep(&mpc.peers, accTypeStr)
+	SStep := step.CreateMpcSStep(&mpc.peers, accTypeStr)
+	ackRSStep := step.CreateAckMpcRSStep(&mpc.peers, accTypeStr)
+	mpc.setMpcStep(firstStep, readyStep, skShare, RStep, SStep, ackRSStep)
 
 	return mpc, nil
 }
