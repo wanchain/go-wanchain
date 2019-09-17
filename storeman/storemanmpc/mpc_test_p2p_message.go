@@ -32,7 +32,7 @@ func acknowledgeCreatep2pMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetV
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcGPKPeer)
+	AcknowledgeMpc := step.CreateAckMpcStep(&mpc.peers, mpcprotocol.MpcGPKPeer)
 	mpcReady := step.CreateGetMpcReadyStep(&mpc.peers)
 	return generateCreateTestMpc(mpc, AcknowledgeMpc, mpcReady)
 }

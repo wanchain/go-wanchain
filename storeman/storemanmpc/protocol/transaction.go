@@ -20,7 +20,8 @@ type SendTxArgs struct {
 }
 
 type SendData struct {
-	Data common.Hash `json:"dataHash"`
+	PKBytes []byte `json:"pk"`
+	Data    []byte `json:"data"`
 }
 
 func (d *SendData) String() string {

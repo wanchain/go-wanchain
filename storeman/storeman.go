@@ -3,6 +3,7 @@ package storeman
 import (
 	"context"
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
 	"math/big"
 	"path/filepath"
 	"sync"
@@ -228,42 +229,35 @@ func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 		return []byte{}, mpcprotocol.ErrTooLessStoreman
 	}
 
-	addr, err := sa.sm.mpcDistributor.CreateRequestGPK()
+	gpk, err := sa.sm.mpcDistributor.CreateRequestGPK()
 	if err == nil {
 		//log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
-		log.SyslogInfo("CreateMpcAccount end", "addr", addr)
+		log.SyslogInfo("CreateMpcAccount end", "addr", gpk)
 	} else {
 		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
 	}
 
-	return addr, err
+	return gpk, err
 }
 
 func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
-	//if tx.To == nil ||
-	//	tx.Gas == nil ||
-	//	tx.GasPrice == nil ||
-	//	tx.Value == nil ||
-	//	tx.Nonce == nil ||
-	//	tx.ChainID == nil {
-	//	return nil, mpcprotocol.ErrInvalidMpcTx
-	//}
-	//
-	//log.SyslogInfo("SignMpcTransaction begin", "txInfo", tx.String())
-	//
-	//if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
-	//	return nil, mpcprotocol.ErrTooLessStoreman
-	//}
-	//
-	//trans := types.NewTransaction(uint64(*tx.Nonce), *tx.To, (*big.Int)(tx.Value), (*big.Int)(tx.Gas), (*big.Int)(tx.GasPrice), tx.Data)
-	//signed, err := sa.sm.mpcDistributor.CreateRequestMpcSign(trans, tx.From, tx.ChainType, tx.SignType, (*big.Int)(tx.ChainID))
-	//if err == nil {
-	//	log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
-	//} else {
-	//	log.SyslogErr("SignMpcTransaction end", "err", err.Error())
-	//}
-	//
-	//return signed, err
+	//Todo  check the input parameter
+
+	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
+		return []byte{}, []byte{}, mpcprotocol.ErrTooLessStoreman
+	}
+
+	PKBytes := data.PKBytes
+	pk := crypto.ToECDSAPub(PKBytes)
+	from := crypto.PubkeyToAddress(*pk)
+
+	signed, err := sa.sm.mpcDistributor.CreateReqMpcSign(data.Data, from)
+	if err == nil {
+		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
+	} else {
+		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
+	}
+
 	return []byte{}, []byte{}, nil
 }
 

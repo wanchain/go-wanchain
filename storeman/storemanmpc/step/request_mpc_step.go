@@ -12,14 +12,15 @@ import (
 type RequestMpcStep struct {
 	BaseStep
 	messageType int64
-	accType     []byte
-	txHash      big.Int
-	address     big.Int
-	chainID     big.Int
-	chainType   []byte
-	signType    []byte
-	txCode      []byte
-	message     map[discover.NodeID]bool
+
+	accType   []byte
+	txHash    big.Int
+	address   big.Int
+	chainID   big.Int
+	chainType []byte
+	signType  []byte
+	txCode    []byte
+	message   map[discover.NodeID]bool
 }
 
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
@@ -112,8 +113,8 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.BytesData[1] = req.txCode
 		msg.BytesData[2] = req.signType
 	} else if req.messageType == mpcprotocol.MpcGPKLeader {
-		msg.BytesData = make([][]byte, 1)
-		msg.BytesData[0] = req.accType
+		//msg.BytesData = make([][]byte, 1)
+		//msg.BytesData[0] = req.accType
 	}
 
 	return []mpcprotocol.StepMessage{msg}

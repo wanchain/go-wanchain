@@ -170,7 +170,7 @@ func (mpcServer *MpcDistributor) GetMessage(PeerID discover.NodeID, rw p2p.MsgRe
 
 		//create context
 		go func() {
-			err := mpcServer.createMpcContext(&mpcMessage)
+			err := mpcServer.createMpcCtx(&mpcMessage)
 
 			if err != nil {
 				log.SyslogErr("createMpcContext fail", "err", err.Error())
@@ -395,11 +395,26 @@ func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction,
 		return nil, err
 	}
 
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
-		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil}, MpcValue{mpcprotocol.MpcTransaction, nil, txbytes},
-		MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)}, MpcValue{mpcprotocol.MpcSignType, nil, []byte(SignType)},
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader,
+		MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
+		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil},
+		MpcValue{mpcprotocol.MpcTransaction, nil, txbytes},
+		MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)},
+		MpcValue{mpcprotocol.MpcSignType, nil, []byte(SignType)},
 		MpcValue{mpcprotocol.MpcChainID, []big.Int{*chianID}, nil})
 
+	return value, err
+}
+
+func (mpcServer *MpcDistributor) CreateReqMpcSign(data []byte, from common.Address) ([]byte, error) {
+
+	log.SyslogInfo("CreateReqMpcSign begin")
+
+	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader,
+		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil},
+		MpcValue{mpcprotocol.MpcTransaction, nil, data})
+
+	//Todo update the return value
 	return value, err
 }
 
@@ -485,6 +500,8 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 		}
 
 		peers = peers1
+
+		// mpc private share
 		preSetValue = append(preSetValue, *value)
 	} else {
 		for i := 0; i < len(mpcServer.StoreManGroup); i++ {
@@ -653,6 +670,108 @@ func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMes
 		}
 
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcStmAccType, nil, []byte(accType)})
+	}
+
+	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)
+	if err != nil {
+		log.SyslogErr("createMpcContext, createContext fail", "err", err.Error())
+		return err
+	}
+
+	go func() {
+		mpcServer.addMpcContext(mpcMessage.ContextID, mpc)
+		defer mpcServer.removeMpcContext(mpcMessage.ContextID)
+		err = mpc.mainMPCProcess(mpcServer)
+	}()
+
+	return nil
+}
+
+func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage, preSetValue ...MpcValue) error {
+	log.SyslogInfo("MpcDistributor createMpcCtx begin")
+
+	mpcServer.mu.RLock()
+	_, exist := mpcServer.mpcMap[mpcMessage.ContextID]
+	mpcServer.mu.RUnlock()
+	if exist {
+		log.SyslogErr("createMpcCtx fail", "err", mpcprotocol.ErrMpcContextExist.Error())
+		return mpcprotocol.ErrMpcContextExist
+	}
+
+	var ctxType int
+	nType := mpcMessage.Data[0].Int64()
+	if nType == mpcprotocol.MpcGPKLeader {
+		ctxType = mpcprotocol.MpcGPKPeer
+	} else {
+		ctxType = mpcprotocol.MpcSignPeer
+	}
+
+	log.SyslogInfo("createMpcCtx", "ctxType", ctxType, "ctxId", mpcMessage.ContextID)
+	if ctxType == mpcprotocol.MpcSignPeer {
+		log.SyslogInfo("createMpcCtx MpcSignPeer")
+
+		chainType := string(mpcMessage.BytesData[0])
+		txBytesData := mpcMessage.BytesData[1]
+		txSignType := mpcMessage.BytesData[2]
+		txHash := mpcMessage.Data[1]
+		address := common.BigToAddress(&mpcMessage.Data[2])
+		chainId := mpcMessage.Data[3]
+
+		log.SyslogInfo(
+			"createMpcCtx",
+			"chainType", string(chainType),
+			"txData", common.ToHex(txBytesData),
+			"signType", string(txSignType),
+			"txHash", txHash.String(),
+			"address", address.String(),
+			"chainId", chainId.String())
+
+		// load account
+		MpcPrivateShare, _, err := mpcServer.loadStoremanAddress(&address)
+		if err != nil {
+			return err
+		}
+
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
+
+		if chainType != "BTC" {
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, mpcMessage.BytesData[2]})
+			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainID, []big.Int{chainId}, nil})
+
+			signer, err := mpcServer.createMPCTxSigner(chainType, &mpcMessage.Data[3])
+			if err != nil {
+				log.SyslogErr("createMPCTxSigner fail", "err", err.Error())
+				return err
+			}
+
+			verifyResult := validator.ValidateTx(signer, address, chainType, &chainId, txBytesData, txHash.Bytes())
+			if !verifyResult {
+				mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcMessage.ContextID,
+					StepID: 0,
+					Peers:  []byte(mpcprotocol.ErrFailedTxVerify.Error())}
+				peerInfo := mpcServer.getMessagePeers(mpcMessage)
+				peerIDs := make([]discover.NodeID, 0)
+				for _, item := range *peerInfo {
+					peerIDs = append(peerIDs, item.PeerID)
+				}
+
+				mpcServer.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
+
+				log.SyslogErr("createMpcContext, verify tx fail", "ContextID", mpcMessage.ContextID)
+				return mpcprotocol.ErrFailedTxVerify
+			}
+
+			if len(mpcMessage.Data) > 1 {
+				preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{txHash}, nil})
+				preSetValue = append(preSetValue, *MpcPrivateShare)
+			}
+		}
+
+	} else if ctxType == mpcprotocol.MpcGPKPeer {
+		//ToDo add log info
+		//ToDo change reqMPC message sent
 	}
 
 	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)

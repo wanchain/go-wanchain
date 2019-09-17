@@ -11,9 +11,9 @@ func reqGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	requestMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcGPKLeader)
+	reqMpc := step.CreateRequestMpcStep(&mpc.peers, mpcprotocol.MpcGPKLeader)
 	mpcReady := step.CreateMpcReadyStep(&mpc.peers)
-	return genCreateGPKMpc(mpc, requestMpc, mpcReady)
+	return genCreateGPKMpc(mpc, reqMpc, mpcReady)
 
 }
 
@@ -43,9 +43,9 @@ func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
-	AcknowledgeMpc := step.CreateAcknowledgeMpcStep(&mpc.peers, mpcprotocol.MpcGPKPeer)
+	AckMpc := step.CreateAckMpcStep(&mpc.peers, mpcprotocol.MpcGPKPeer)
 	mpcReady := step.CreateGetMpcReadyStep(&mpc.peers)
-	return genCreateGPKMpc(mpc, AcknowledgeMpc, mpcReady)
+	return genCreateGPKMpc(mpc, AckMpc, mpcReady)
 }
 
 func genCreateGPKMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {

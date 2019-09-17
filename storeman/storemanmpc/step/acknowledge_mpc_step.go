@@ -1,40 +1,40 @@
 package step
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 )
 
-type AcknowledgeMpcStep struct {
+type AckMpcStep struct {
 	BaseStep
 	messageType int64
 }
 
-func CreateAcknowledgeMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *AcknowledgeMpcStep {
+func CreateAckMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *AckMpcStep {
 	log.SyslogInfo("CreateAcknowledgeMpcStep begin")
 
-	return &AcknowledgeMpcStep{*CreateBaseStep(peers, 0), messageType}
+	return &AckMpcStep{*CreateBaseStep(peers, 0), messageType}
 }
 
-func (ack *AcknowledgeMpcStep) InitStep(mpcprotocol.MpcResultInterface) error {
+func (ack *AckMpcStep) InitStep(mpcprotocol.MpcResultInterface) error {
 	return nil
 }
 
-func (ack *AcknowledgeMpcStep) CreateMessage() []mpcprotocol.StepMessage {
+func (ack *AckMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	log.SyslogInfo("AcknowledgeMpcStep.CreateMessage begin")
 
 	data := make([]big.Int, 1)
 	data[0].SetInt64(ack.messageType)
 	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
-		Msgcode:mpcprotocol.MPCMessage,
-		PeerID:nil,
-		Peers:nil,
-		Data:data,
-		BytesData:nil}}
+		Msgcode:   mpcprotocol.MPCMessage,
+		PeerID:    nil,
+		Peers:     nil,
+		Data:      data,
+		BytesData: nil}}
 }
 
-func (ack *AcknowledgeMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+func (ack *AckMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
 	log.SyslogInfo("AcknowledgeMpcStep.FinishStep begin")
 
 	err := ack.BaseStep.FinishStep()
@@ -50,6 +50,6 @@ func (ack *AcknowledgeMpcStep) FinishStep(result mpcprotocol.MpcResultInterface,
 	return nil
 }
 
-func (ack *AcknowledgeMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+func (ack *AckMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 	return true
 }

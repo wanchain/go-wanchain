@@ -265,17 +265,18 @@ func AddValidMpcTx(tx *mpcprotocol.SendTxArgs) error {
 
 func AddValidData(data *mpcprotocol.SendData) error {
 	log.SyslogInfo("AddValidData", "txInfo", data.String())
-	if len(data.Data) != common.HashLength {
-		log.SyslogErr(mpcprotocol.ErrInvalidSignedData.Error())
-		return mpcprotocol.ErrInvalidSignedData
-	}
+	//if len(data.Data) != common.HashLength {
+	//	log.SyslogErr(mpcprotocol.ErrInvalidSignedData.Error())
+	//	return mpcprotocol.ErrInvalidSignedData
+	//}
 	val, err := json.Marshal(&data)
 	if err != nil {
 		log.SyslogErr("AddValidData, marshal fail", "err", err.Error())
 		return err
 	}
 
-	return addKeyValueToDB(data.Data[:], val)
+	key := crypto.Keccak256(data.Data[:])
+	return addKeyValueToDB(key, val)
 }
 
 func AddValidMpcBtcTx(args *btc.MsgTxArgs) error {
