@@ -32,7 +32,7 @@ func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStep
 	log.SyslogInfo("generateTxSignMpc begin")
 
 	accTypeStr := ""
-	skShare := step.CreateMpcSKShareStep(mpcprotocol.MPCDegree, &mpc.peers)
+	skShare := step.CreateMpcRSKShareStep(mpcprotocol.MPCDegree, &mpc.peers)
 	RStep := step.CreateMpcRStep(&mpc.peers, accTypeStr)
 	SStep := step.CreateMpcSStep(&mpc.peers, accTypeStr)
 	ackRSStep := step.CreateAckMpcRSStep(&mpc.peers, accTypeStr)
