@@ -43,34 +43,24 @@ const (
 	RMpcPrivateShare = "RMpcPrivateShare" // rskShare
 	MpcPublicShare   = "MpcPublicShare"   // pkShare
 	RMpcPublicShare  = "RMpcPublicShare"  // rpkShare
-	MpcSignA         = "MpcSignA"
-	MpcSignA0        = "MpcSignA0"
-	MpcSignR         = "MpcSignR"
-	MpcSignR0        = "MpcSignR0"
-	MpcSignB         = "MpcSignB"
-	MpcSignC         = "MpcSignC"
-	MpcSignARSeed    = "MpcSignARSeed"
-	MpcSignARResult  = "MpcSignARResult"
-	MpcTxSignSeed    = "MpcTxSignSeed"
-	MpcTxSignResultR = "MpcTxSignResultR"
-	MpcTxSignResultV = "MpcTxSignResultV"
-	MpcTxSignResult  = "MpcTxSignResult"
 	MpcContextResult = "MpcContextResult"
 
 	PublicKeyResult  = "PublicKeyResult"
 	RPublicKeyResult = "RPublicKeyResult" // R
-	MpcM             = "M"                // M
-	Mpcm             = "m"                // m
-	MpcSignAPoint    = "MpcSignAPoint"
-	MpcTxHash        = "MpcTxHash"
-	MpcTransaction   = "MpcTransaction"
-	MpcChainType     = "MpcChainType"
-	MpcSignType      = "MpcSignType"
-	MpcChainID       = "MpcChainID"
-	MpcAddress       = "MpcAddress"
-	MPCActoin        = "MPCActoin"
-	MPCSignedFrom    = "MPCSignedFrom"
-	MpcStmAccType    = "MpcStmAccType"
+	MpcM             = "MpcM"             // M
+	Mpcm             = "Mpcm"             // m
+	MpcS             = "MpcS"             // S
+
+	MpcSignAPoint  = "MpcSignAPoint"
+	MpcTxHash      = "MpcTxHash"
+	MpcTransaction = "MpcTransaction"
+	MpcChainType   = "MpcChainType"
+	MpcSignType    = "MpcSignType"
+	MpcChainID     = "MpcChainID"
+	MpcAddress     = "MpcAddress"
+	MPCActoin      = "MPCActoin"
+	MPCSignedFrom  = "MPCSignedFrom"
+	MpcStmAccType  = "MpcStmAccType"
 )
 
 type PeerInfo struct {

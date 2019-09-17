@@ -1,7 +1,6 @@
 package storemanmpc
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
@@ -9,24 +8,19 @@ import (
 	"math/big"
 	"math/rand"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
-	"github.com/wanchain/go-wanchain/storeman/btc"
 	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/storeman/validator"
@@ -369,92 +363,16 @@ func (mpcServer *MpcDistributor) CreateRequestGPK() ([]byte, error) {
 	}
 }
 
-func (mpcServer *MpcDistributor) CreateRequestMpcSign(tx *types.Transaction,
-	from common.Address,
-	chainType string,
-	SignType string,
-	chianID *big.Int) (hexutil.Bytes, error) {
-
-	log.SyslogInfo("CreateRequestMpcSign begin")
-
-	if chianID == nil {
-		log.SyslogErr("CreateRequestMpcSign fail", "err", mpcprotocol.ErrChainID.Error())
-		return nil, mpcprotocol.ErrChainID
-	}
-
-	signer, err := mpcServer.createMPCTxSigner(chainType, chianID)
-	if err != nil {
-		log.SyslogErr("createMPCTxSigner fail", "err", err.Error())
-		return nil, err
-	}
-
-	txHash := signer.Hash(tx)
-	txbytes, err := rlp.EncodeToBytes(tx)
-	if err != nil {
-		log.SyslogErr("CreateRequestMpcSign", "rlp EncodeToBytes fail", "err", err.Error())
-		return nil, err
-	}
-
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader,
-		MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{*txHash.Big()}, nil},
-		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil},
-		MpcValue{mpcprotocol.MpcTransaction, nil, txbytes},
-		MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)},
-		MpcValue{mpcprotocol.MpcSignType, nil, []byte(SignType)},
-		MpcValue{mpcprotocol.MpcChainID, []big.Int{*chianID}, nil})
-
-	return value, err
-}
-
 func (mpcServer *MpcDistributor) CreateReqMpcSign(data []byte, from common.Address) ([]byte, error) {
 
 	log.SyslogInfo("CreateReqMpcSign begin")
 
 	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader,
 		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil},
-		MpcValue{mpcprotocol.MpcTransaction, nil, data})
+		MpcValue{mpcprotocol.MpcM, nil, data})
 
 	//Todo update the return value
 	return value, err
-}
-
-func (mpcServer *MpcDistributor) CreateRequestBtcMpcSign(args *btc.MsgTxArgs) ([]hexutil.Bytes, error) {
-	log.SyslogInfo("CreateRequestBtcMpcSign begin")
-
-	txBytesData, err := rlp.EncodeToBytes(args)
-	if err != nil {
-		log.SyslogErr("CreateRequestBtcMpcSign, rlp encode tx fail", "err", err.Error())
-		return nil, err
-	}
-
-	txHashes, err := btc.GetHashedForEachTxIn(args)
-	if err != nil {
-		return nil, err
-	}
-
-	preSetValues := []MpcValue{}
-	for i := 0; i < len(args.TxIn); i++ {
-		preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcTxHash + "_" + strconv.Itoa(i), []big.Int{*txHashes[i].Big()}, nil})
-	}
-
-	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcAddress, []big.Int{*args.From.Big()}, nil})
-	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
-	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcChainType, nil, []byte("BTC")})
-	preSetValues = append(preSetValues, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
-
-	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader, preSetValues...)
-	if err != nil {
-		return nil, err
-	}
-
-	ret := make([]hexutil.Bytes, 0, len(args.TxIn))
-	pot := 0
-	for pot < len(value) {
-		ret = append(ret, value[pot+1:pot+1+int(value[pot])])
-		pot += int(value[pot]) + 1
-	}
-
-	return ret, err
 }
 
 func (mpcServer *MpcDistributor) getMpcID() (uint64, error) {
@@ -538,153 +456,6 @@ func (mpcServer *MpcDistributor) QuitMpcContext(msg *mpcprotocol.MpcMessage) {
 	if exist {
 		mpc.quit(errors.New(string(msg.Peers[:])))
 	}
-}
-
-func (mpcServer *MpcDistributor) createMpcContext(mpcMessage *mpcprotocol.MpcMessage, preSetValue ...MpcValue) error {
-	log.SyslogInfo("MpcDistributor createMpcContext begin")
-
-	mpcServer.mu.RLock()
-	_, exist := mpcServer.mpcMap[mpcMessage.ContextID]
-	mpcServer.mu.RUnlock()
-	if exist {
-		log.SyslogErr("createMpcContext fail", "err", mpcprotocol.ErrMpcContextExist.Error())
-		return mpcprotocol.ErrMpcContextExist
-	}
-
-	var ctxType int
-	nType := mpcMessage.Data[0].Int64()
-	if nType == mpcprotocol.MpcGPKLeader {
-		ctxType = mpcprotocol.MpcGPKPeer
-	} else {
-		ctxType = mpcprotocol.MpcSignPeer
-	}
-
-	log.SyslogInfo("createMpcContext", "ctxType", ctxType, "ctxId", mpcMessage.ContextID)
-	if ctxType == mpcprotocol.MpcSignPeer {
-		log.SyslogInfo("createMpcContext MpcSignPeer")
-
-		chainType := string(mpcMessage.BytesData[0])
-		txBytesData := mpcMessage.BytesData[1]
-		txSignType := mpcMessage.BytesData[2]
-		txHash := mpcMessage.Data[1]
-		address := common.BigToAddress(&mpcMessage.Data[2])
-		chainId := mpcMessage.Data[3]
-
-		log.SyslogInfo(
-			"createMpcContext",
-			"chainType", string(chainType),
-			"txData", common.ToHex(txBytesData),
-			"signType", string(txSignType),
-			"txHash", txHash.String(),
-			"address", address.String(),
-			"chainId", chainId.String())
-
-		// load account
-		MpcPrivateShare, _, err := mpcServer.loadStoremanAddress(&address)
-		if err != nil {
-			return err
-		}
-
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainType, nil, []byte(chainType)})
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTransaction, nil, txBytesData})
-
-		if chainType != "BTC" {
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, mpcMessage.BytesData[2]})
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcChainID, []big.Int{chainId}, nil})
-
-			signer, err := mpcServer.createMPCTxSigner(chainType, &mpcMessage.Data[3])
-			if err != nil {
-				log.SyslogErr("createMPCTxSigner fail", "err", err.Error())
-				return err
-			}
-
-			verifyResult := validator.ValidateTx(signer, address, chainType, &chainId, txBytesData, txHash.Bytes())
-			if !verifyResult {
-				mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcMessage.ContextID,
-					StepID: 0,
-					Peers:  []byte(mpcprotocol.ErrFailedTxVerify.Error())}
-				peerInfo := mpcServer.getMessagePeers(mpcMessage)
-				peerIDs := make([]discover.NodeID, 0)
-				for _, item := range *peerInfo {
-					peerIDs = append(peerIDs, item.PeerID)
-				}
-
-				mpcServer.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
-
-				log.SyslogErr("createMpcContext, verify tx fail", "ContextID", mpcMessage.ContextID)
-				return mpcprotocol.ErrFailedTxVerify
-			}
-
-			if len(mpcMessage.Data) > 1 {
-				preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash + "_0", []big.Int{txHash}, nil})
-				preSetValue = append(preSetValue, *MpcPrivateShare)
-			}
-		} else {
-			var btcTx btc.MsgTxArgs
-			err := rlp.DecodeBytes(txBytesData, &btcTx)
-			if err != nil {
-				log.SyslogErr("createMpcContext, rlp decode tx fail", "err", err.Error())
-				return err
-			}
-
-			verifyResult := validator.ValidateBtcTx(&btcTx)
-			if !verifyResult {
-				mpcMsg := &mpcprotocol.MpcMessage{ContextID: mpcMessage.ContextID,
-					StepID: 0,
-					Peers:  []byte(mpcprotocol.ErrFailedTxVerify.Error())}
-				peerInfo := mpcServer.getMessagePeers(mpcMessage)
-				peerIDs := make([]discover.NodeID, 0)
-				for _, item := range *peerInfo {
-					peerIDs = append(peerIDs, item.PeerID)
-				}
-
-				mpcServer.BoardcastMessage(peerIDs, mpcprotocol.MPCError, mpcMsg)
-
-				log.SyslogErr("createMpcContext, verify tx fail", "ContextID", mpcMessage.ContextID)
-				return mpcprotocol.ErrFailedTxVerify
-			}
-
-			txHashes, err := btc.GetHashedForEachTxIn(&btcTx)
-			if err != nil {
-				log.SyslogErr("createMpcContext, GetHashedForEachTxIn fail", "err", err.Error())
-				return err
-			}
-
-			for i := 0; i < len(btcTx.TxIn); i++ {
-				preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcTxHash + "_" + strconv.Itoa(i), []big.Int{*txHashes[i].Big()}, nil})
-			}
-
-			preSetValue = append(preSetValue, *MpcPrivateShare)
-			preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcSignType, nil, []byte("hash")})
-		}
-
-	} else if ctxType == mpcprotocol.MpcGPKPeer {
-		if len(mpcMessage.BytesData) == 0 {
-			return mpcprotocol.ErrInvalidStmAccType
-		}
-
-		accType := string(mpcMessage.BytesData[0][:])
-		if !mpcprotocol.CheckAccountType(accType) {
-			return mpcprotocol.ErrInvalidStmAccType
-		}
-
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcStmAccType, nil, []byte(accType)})
-	}
-
-	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)
-	if err != nil {
-		log.SyslogErr("createMpcContext, createContext fail", "err", err.Error())
-		return err
-	}
-
-	go func() {
-		mpcServer.addMpcContext(mpcMessage.ContextID, mpc)
-		defer mpcServer.removeMpcContext(mpcMessage.ContextID)
-		err = mpc.mainMPCProcess(mpcServer)
-	}()
-
-	return nil
 }
 
 func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage, preSetValue ...MpcValue) error {
@@ -926,139 +697,4 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 	//result.SetByteValue(mpcprotocol.MpcContextResult, account.Address[:])
 	result.SetByteValue(mpcprotocol.MpcContextResult, crypto.FromECDSAPub(result1))
 	return nil
-}
-
-func (mpcServer *MpcDistributor) SignTransaction(result mpcprotocol.MpcResultInterface, signNum int) error {
-
-	chainType, err1 := result.GetByteValue(mpcprotocol.MpcChainType)
-	log.SyslogInfo("MpcDistributor.SignTransaction begin", "signNum", signNum, "chainType", string(chainType))
-
-	if bytes.Equal(chainType, []byte("BTC")) {
-		txSigns := make([]byte, 0)
-		var signFrom *common.Address
-
-		for i := 0; i < signNum; i++ {
-			iStr := "_" + strconv.Itoa(i)
-
-			R, err := result.GetValue(mpcprotocol.MpcTxSignResultR + iStr)
-			if err != nil {
-				return err
-			}
-
-			V, err := result.GetValue(mpcprotocol.MpcTxSignResultV + iStr)
-			if err != nil {
-				return err
-			}
-
-			S, err := result.GetValue(mpcprotocol.MpcTxSignResult + iStr)
-			if err != nil {
-				return err
-			}
-
-			sinature := btcec.Signature{&R[0], &S[0]}
-			sign := sinature.Serialize()
-			txSigns = append(txSigns, byte(len(sign)+1))
-			txSigns = append(txSigns, sign...)
-			txSigns = append(txSigns, byte(txscript.SigHashAll))
-
-			txHash, err := result.GetValue(mpcprotocol.MpcTxHash + iStr)
-			if err != nil {
-				return err
-			}
-
-			signFromTmp, err := btc.RecoverPublicKey(common.BytesToHash(txHash[0].Bytes()), &R[0], &S[0], &V[0])
-			if err != nil {
-				return err
-			} else if signFrom == nil {
-				signFrom = &signFromTmp
-			} else if (*signFrom) != signFromTmp {
-				log.SyslogErr("MpcDistributor.SignTransaction, signfrom doesn't match pre value",
-					"pre", signFrom.String(), "this", signFromTmp.String())
-				return mpcprotocol.ErrFailSignRetVerify
-			}
-		}
-
-		result.SetByteValue(mpcprotocol.MPCSignedFrom, (*signFrom)[:])
-		result.SetByteValue(mpcprotocol.MpcContextResult, txSigns)
-		log.SyslogInfo("MpcDistributor.SignTransaction, "+mpcprotocol.MpcContextResult, "signs", common.ToHex(txSigns))
-		return nil
-
-	} else {
-
-		R, err := result.GetValue(mpcprotocol.MpcTxSignResultR + "_0")
-		if err != nil {
-			log.SyslogErr("MpcDistributor.SignTransaction, GetValue fail", "key", mpcprotocol.MpcTxSignResultR)
-			return err
-		}
-
-		V, err := result.GetValue(mpcprotocol.MpcTxSignResultV + "_0")
-		if err != nil {
-			log.SyslogErr("MpcDistributor.SignTransaction, GetValue fail", "key", mpcprotocol.MpcTxSignResultV)
-			return err
-		}
-
-		S, err := result.GetValue(mpcprotocol.MpcTxSignResult + "_0")
-		if err != nil {
-			log.SyslogErr("MpcDistributor.SignTransaction, GetValue fail", "key", mpcprotocol.MpcTxSignResult)
-			return err
-		}
-
-		SignType, err := result.GetByteValue(mpcprotocol.MpcSignType)
-		if (err == nil && bytes.Equal(SignType, []byte("hash"))) || err1 != nil {
-			txSign, err := mpccrypto.TransSignature(&R[0], &S[0], &V[0])
-			if err != nil {
-				log.SyslogErr("mpccrypto tans signature fail", "err", err.Error())
-				return err
-			}
-
-			result.SetByteValue(mpcprotocol.MpcContextResult, txSign)
-			txHash, err := result.GetValue(mpcprotocol.MpcTxHash + "_0")
-			if err == nil {
-				from, err := mpccrypto.SenderEcrecover(common.BytesToHash(txHash[0].Bytes()).Bytes(), txSign)
-				if err != nil {
-					log.SyslogErr("MpcDistributor.SignTransaction, SenderEcrecover fail", "err", err.Error())
-				} else {
-					result.SetByteValue(mpcprotocol.MPCSignedFrom, from[:])
-				}
-			}
-
-			return nil
-
-		} else {
-			chianID, err := result.GetValue(mpcprotocol.MpcChainID)
-			if err != nil {
-				log.SyslogErr("MpcDistributor.SignTransaction, GetValue fail", "key", mpcprotocol.MpcChainID)
-				return err
-			}
-
-			signer, err := mpcServer.createMPCTxSigner(string(chainType[:]), &chianID[0])
-			if err != nil {
-				log.SyslogErr("MpcDistributor.SignTransaction, create mpc signer fail", "err", err.Error())
-				return err
-			}
-
-			encodedTx, err := result.GetByteValue(mpcprotocol.MpcTransaction)
-			if err != nil {
-				log.SyslogErr("MpcDistributor.SignTransaction, GetValue fail", "key", mpcprotocol.MpcTransaction)
-				return err
-			}
-
-			tx := new(types.Transaction)
-			if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-				log.SyslogErr("rlp decode fail", "err", err.Error())
-				return err
-			}
-
-			txSign, from, err := signer.SignTransaction(tx, &R[0], &S[0], &V[0])
-			if err != nil {
-				log.SyslogErr("mpc signatual fail", "err", err.Error())
-				return err
-			}
-
-			result.SetByteValue(mpcprotocol.MpcContextResult, txSign)
-			result.SetByteValue(mpcprotocol.MPCSignedFrom, from[:])
-			return nil
-		}
-	}
-
 }

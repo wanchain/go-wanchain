@@ -8,17 +8,17 @@ import (
 	"math/big"
 )
 
-type MpcSKShare_Step struct {
+type MpcRSKShare_Step struct {
 	BaseMpcStep
 }
 
-func CreateMpcSKShareStep(degree int, peers *[]mpcprotocol.PeerInfo) *MpcSKShare_Step {
-	mpc := &MpcSKShare_Step{*CreateBaseMpcStep(peers, 1)}
+func CreateMpcRSKShareStep(degree int, peers *[]mpcprotocol.PeerInfo) *MpcRSKShare_Step {
+	mpc := &MpcRSKShare_Step{*CreateBaseMpcStep(peers, 1)}
 	mpc.messages[0] = createJRSSValue(degree, len(*peers))
 	return mpc
 }
 
-func (jrss *MpcSKShare_Step) CreateMessage() []mpcprotocol.StepMessage {
+func (jrss *MpcRSKShare_Step) CreateMessage() []mpcprotocol.StepMessage {
 	message := make([]mpcprotocol.StepMessage, len(*jrss.peers))
 	JRSSvalue := jrss.messages[0].(*RandomPolynomialValue)
 	for i := 0; i < len(*jrss.peers); i++ {
@@ -31,7 +31,7 @@ func (jrss *MpcSKShare_Step) CreateMessage() []mpcprotocol.StepMessage {
 	return message
 }
 
-func (jrss *MpcSKShare_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+func (jrss *MpcRSKShare_Step) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
 	err := jrss.BaseMpcStep.FinishStep()
 	if err != nil {
 		return err
@@ -39,15 +39,14 @@ func (jrss *MpcSKShare_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 
 	// gskshare
 	JRSSvalue := jrss.messages[0].(*RandomPolynomialValue)
-	err = result.SetValue(mpcprotocol.MpcPrivateShare, []big.Int{*JRSSvalue.result})
+	err = result.SetValue(mpcprotocol.RMpcPrivateShare, []big.Int{*JRSSvalue.result})
 	if err != nil {
 		return err
 	}
 	// gpkshare
 	var gpkShare ecdsa.PublicKey
-	gpkShare.Curve = crypto.S256()
 	gpkShare.X, gpkShare.Y = crypto.S256().ScalarBaseMult((*JRSSvalue.result).Bytes())
-	err = result.SetValue(mpcprotocol.MpcPublicShare, []big.Int{*gpkShare.X, *gpkShare.Y})
+	err = result.SetValue(mpcprotocol.RMpcPublicShare, []big.Int{*gpkShare.X, *gpkShare.Y})
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func (jrss *MpcSKShare_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 	return nil
 }
 
-func (jrss *MpcSKShare_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+func (jrss *MpcRSKShare_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 	seed := jrss.getPeerSeed(msg.PeerID)
 	if seed == 0 {
 		log.SyslogErr("MpcJRSS_Step, can't find peer seed. peerID:%s", msg.PeerID.String())
