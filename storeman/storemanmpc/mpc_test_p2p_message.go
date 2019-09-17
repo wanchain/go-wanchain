@@ -43,7 +43,7 @@ func generateCreateTestMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep Mpc
 	mpcTest[0] = firstStep
 	mpcTest[1] = readyStep
 	for i := 0; i < test; i++ {
-		mpcTest[i+2] = step.CreateMpcSKShare_Step(mpcprotocol.MPCDegree, &mpc.peers)
+		mpcTest[i+2] = step.CreateMpcSKShareStep(mpcprotocol.MPCDegree, &mpc.peers)
 	}
 
 	mpc.setMpcStep(mpcTest...)

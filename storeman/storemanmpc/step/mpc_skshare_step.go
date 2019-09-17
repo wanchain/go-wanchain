@@ -12,7 +12,7 @@ type MpcSKShare_Step struct {
 	BaseMpcStep
 }
 
-func CreateMpcSKShare_Step(degree int, peers *[]mpcprotocol.PeerInfo) *MpcSKShare_Step {
+func CreateMpcSKShareStep(degree int, peers *[]mpcprotocol.PeerInfo) *MpcSKShare_Step {
 	mpc := &MpcSKShare_Step{*CreateBaseMpcStep(peers, 1)}
 	mpc.messages[0] = createJRSSValue(degree, len(*peers))
 	return mpc
