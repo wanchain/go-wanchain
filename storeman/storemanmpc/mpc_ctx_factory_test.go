@@ -2,33 +2,25 @@ package storemanmpc
 
 import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"testing"
 )
 
-func TestMpcCtxFactory(t *testing.T) {
-	mpcFactory := MpcCtxFactory{}
-	_, err := mpcFactory.CreateContext(mpcprotocol.MpcGPKLeader, 0, nil)
-	if err != nil {
-		t.Error("mpcFactory create err:", err)
+type MpcTestCtxFactory struct {
+}
+
+func (*MpcTestCtxFactory) CreateContext(ctxType int, mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (MpcInterface, error) {
+	switch ctxType {
+	case mpcprotocol.MpcGPKLeader:
+		return testCreatep2pMpc(mpcID, peers, preSetValue...)
+
+	case mpcprotocol.MpcGPKPeer:
+		return acknowledgeCreatep2pMpc(mpcID, peers, preSetValue...)
+
+	case mpcprotocol.MpcSignLeader:
+		return reqSignMpc(mpcID, peers, preSetValue...)
+
+	case mpcprotocol.MpcSignPeer:
+		return ackSignMpc(mpcID, peers, preSetValue...)
 	}
 
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcGPKPeer, 0, nil)
-	if err != nil {
-		t.Error("mpcFactory create err:", err)
-	}
-
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcSignLeader, 0, nil)
-	if err != nil {
-		t.Error("mpcFactory create err:", err)
-	}
-
-	_, err = mpcFactory.CreateContext(mpcprotocol.MpcSignPeer, 0, nil)
-	if err != nil {
-		t.Error("mpcFactory create err:", err)
-	}
-
-	_, err = mpcFactory.CreateContext(5, 0, nil)
-	if err != nil {
-		t.Log("mpcFactory create err:", err)
-	}
+	return nil, mpcprotocol.ErrContextType
 }
