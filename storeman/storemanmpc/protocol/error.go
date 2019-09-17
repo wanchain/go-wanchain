@@ -23,4 +23,6 @@ var (
 	ErrInvalidStmAccType = errors.New("invalid storeman account type! please input 'WAN' or 'ETH' or 'BTC' ")
 	ErrInvalidMpcTx      = errors.New("invalid mpc transaction")
 	ErrInvalidSignedData = errors.New("invalid signed Data")
+	ErrInvalidMPCR       = errors.New("Invalid signed data(R)")
+	ErrInvalidMPCS       = errors.New("Invalid signed data(S)")
 )
