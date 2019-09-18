@@ -83,6 +83,9 @@ func New(cfg *Config, accountManager *accounts.Manager, aKID, secretKey, region 
 	return storeman
 }
 
+////////////////////////////////////
+// Storeman
+////////////////////////////////////
 type Storeman struct {
 	protocol       p2p.Protocol
 	peers          map[discover.NodeID]*Peer
@@ -215,6 +218,9 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	return sm.runMessageLoop(storemanPeer, rw)
 }
 
+////////////////////////////////////
+// StoremanAPI
+////////////////////////////////////
 type StoremanAPI struct {
 	sm *Storeman
 }
