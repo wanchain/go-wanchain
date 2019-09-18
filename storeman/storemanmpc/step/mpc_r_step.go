@@ -8,7 +8,7 @@ type MpcRStep struct {
 }
 
 func CreateMpcRStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcRStep {
-	mpc := &MpcRStep{MpcPointStep: *CreateMpcPoint_Step(peers,
+	mpc := &MpcRStep{MpcPointStep: *CreateMpcPointStep(peers,
 		[]string{mpcprotocol.RMpcPublicShare},
 		[]string{mpcprotocol.RPublicKeyResult}),
 		accType: accType}

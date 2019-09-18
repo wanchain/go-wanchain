@@ -12,8 +12,8 @@ type MpcPointStep struct {
 	signNum    int
 }
 
-func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPointStep {
-	log.SyslogInfo("CreateMpcPoint_Step begin")
+func CreateMpcPointStep(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPointStep {
+	log.SyslogInfo("CreateMpcPointStep begin")
 
 	signNum := len(preValueKeys)
 	mpc := &MpcPointStep{*CreateBaseMpcStep(peers, signNum), resultKeys, signNum}
