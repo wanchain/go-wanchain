@@ -92,22 +92,22 @@ func (p *Peer) handshake() error {
 	log.SyslogInfo("storeman received handshake", "peer", p.ID().String(), "code", packet.Code)
 	if packet.Code != mpcprotocol.StatusCode {
 		log.SyslogErr("storeman peer sent packet before status packet", "peer", p.ID().String(), "code", packet.Code)
-		return fmt.Errorf("storman peer [%s] sent packet %x before status packet", p.ID().String(), packet.Code)
+		return fmt.Errorf("storeman peer [%s] sent packet %x before status packet", p.ID().String(), packet.Code)
 	}
 	s := rlp.NewStream(packet.Payload, uint64(packet.Size))
 	peerVersion, err := s.Uint()
 	if err != nil {
-		log.SyslogErr("storman peer sent bad status message", "peer", p.ID().String(), "err", err)
-		return fmt.Errorf("storman peer [%s] sent bad status message: %v", p.ID().String(), err)
+		log.SyslogErr("storeman peer sent bad status message", "peer", p.ID().String(), "err", err)
+		return fmt.Errorf("storeman peer [%s] sent bad status message: %v", p.ID().String(), err)
 	}
 	if peerVersion != mpcprotocol.PVer {
-		log.SyslogErr("storman peer: protocol version dont mismatch", "peer", p.ID().String(), "actual version", peerVersion, "expect version", mpcprotocol.PVer)
-		return fmt.Errorf("storman peer [%s]: protocol version mismatch %d != %d", p.ID().String(), peerVersion, mpcprotocol.PVer)
+		log.SyslogErr("storeman peer: protocol version not mismatch", "peer", p.ID().String(), "actual version", peerVersion, "expect version", mpcprotocol.PVer)
+		return fmt.Errorf("storeman peer [%s]: protocol version mismatch %d != %d", p.ID().String(), peerVersion, mpcprotocol.PVer)
 	}
 	// Wait until out own status is consumed too
 	if err := <-errc; err != nil {
-		log.SyslogErr("storman peer failed to send status packet", "peer", p.ID().String(), "err", err)
-		return fmt.Errorf("storman peer [%s] failed to send status packet: %v", p.ID().String(), err)
+		log.SyslogErr("storeman peer failed to send status packet", "peer", p.ID().String(), "err", err)
+		return fmt.Errorf("storeman peer [%s] failed to send status packet: %v", p.ID().String(), err)
 	}
 	return nil
 }
