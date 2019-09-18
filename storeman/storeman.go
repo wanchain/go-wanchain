@@ -246,10 +246,9 @@ func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 
 	gpk, err := sa.sm.mpcDistributor.CreateRequestGPK()
 	if err == nil {
-		//log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
-		log.SyslogInfo("CreateMpcAccount end", "addr", gpk)
+		log.SyslogInfo("CreateGPK end", "addr", gpk)
 	} else {
-		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
+		log.SyslogErr("CreateGPK end", "err", err.Error())
 	}
 
 	return gpk, err
@@ -278,4 +277,14 @@ func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) 
 
 func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
 	return validator.AddValidData(&data)
+}
+
+// non leader node polling the data received from leader node
+func (sa *StoremanAPI) GetDataForApprove(ctx context.Context) ([]mpcprotocol.SendData, error) {
+	return nil, nil
+}
+
+// non leader node ApproveData, and make sure that the data is really required to be signed by them.
+func (sa *StoremanAPI) ApproveData(ctx context.Context, data []mpcprotocol.SendData) []bool {
+	return []bool{true}
 }
