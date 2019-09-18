@@ -38,7 +38,7 @@ func (ack *AckMpcGPKStep) InitStep(result mpcprotocol.MpcResultInterface) error 
 
 func (ack *AckMpcGPKStep) CreateMessage() []mpcprotocol.StepMessage {
 	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
-		Msgcode:   mpcprotocol.MPCMessage,
+		MsgCode:   mpcprotocol.MPCMessage,
 		PeerID:    nil,
 		Peers:     nil,
 		Data:      nil,

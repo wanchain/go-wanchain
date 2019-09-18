@@ -22,7 +22,7 @@ func (jrss *MpcRSKShare_Step) CreateMessage() []mpcprotocol.StepMessage {
 	message := make([]mpcprotocol.StepMessage, len(*jrss.peers))
 	JRSSvalue := jrss.messages[0].(*RandomPolynomialValue)
 	for i := 0; i < len(*jrss.peers); i++ {
-		message[i].Msgcode = mpcprotocol.MPCMessage
+		message[i].MsgCode = mpcprotocol.MPCMessage
 		message[i].PeerID = &(*jrss.peers)[i].PeerID
 		message[i].Data = make([]big.Int, 1)
 		message[i].Data[0] = JRSSvalue.polyValue[i]

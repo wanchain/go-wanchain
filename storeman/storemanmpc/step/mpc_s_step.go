@@ -28,7 +28,7 @@ func (msStep *MpcSStep) CreateMessage() []mpcprotocol.StepMessage {
 	log.SyslogInfo("MpcSStep.CreateMessage begin")
 
 	message := make([]mpcprotocol.StepMessage, 1)
-	message[0].Msgcode = mpcprotocol.MPCMessage
+	message[0].MsgCode = mpcprotocol.MPCMessage
 	message[0].PeerID = nil
 
 	for i := 0; i < msStep.signNum; i++ {

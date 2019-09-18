@@ -44,7 +44,7 @@ func (mpcCtx *MpcContext) getMpcResult() []byte {
 }
 
 func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.MpcMessage, peers *[]mpcprotocol.PeerInfo) error {
-	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{Msgcode: 0, PeerID: PeerID, Peers: peers, Data: msg.Data, BytesData: msg.BytesData}
+	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{MsgCode: 0, PeerID: PeerID, Peers: peers, Data: msg.Data, BytesData: msg.BytesData}
 	return nil
 }
 
@@ -121,10 +121,10 @@ func (mpcCtx *MpcContext) mainMPCProcess(StoremanManager mpcprotocol.StoremanMan
 						BytesData: item.BytesData}
 					StoremanManager.SetMessagePeers(mpcMsg, item.Peers)
 					if item.PeerID != nil {
-						StoremanManager.P2pMessage(item.PeerID, item.Msgcode, mpcMsg)
+						StoremanManager.P2pMessage(item.PeerID, item.MsgCode, mpcMsg)
 						log.SyslogInfo("step send a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					} else {
-						StoremanManager.BroadcastMessage(peerIDs, item.Msgcode, mpcMsg)
+						StoremanManager.BroadcastMessage(peerIDs, item.MsgCode, mpcMsg)
 						log.SyslogInfo("step boardcast a p2p msg", "ctxid", mpcCtx.ContextID, "stepId", i)
 					}
 				}

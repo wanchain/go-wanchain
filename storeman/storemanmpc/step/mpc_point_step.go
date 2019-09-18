@@ -1,15 +1,15 @@
 package step
 
 import (
-	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/log"
+	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 )
 
 type MpcPoint_Step struct {
 	BaseMpcStep
 	resultKeys []string
-	signNum int
+	signNum    int
 }
 
 func CreateMpcPoint_Step(peers *[]mpcprotocol.PeerInfo, preValueKeys []string, resultKeys []string) *MpcPoint_Step {
@@ -29,7 +29,7 @@ func (ptStep *MpcPoint_Step) CreateMessage() []mpcprotocol.StepMessage {
 	log.SyslogInfo("MpcPoint_Step.CreateMessage begin")
 
 	message := make([]mpcprotocol.StepMessage, 1)
-	message[0].Msgcode = mpcprotocol.MPCMessage
+	message[0].MsgCode = mpcprotocol.MPCMessage
 	message[0].PeerID = nil
 
 	for i := 0; i < ptStep.signNum; i++ {
@@ -62,7 +62,7 @@ func (ptStep *MpcPoint_Step) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 			return false
 		}
 
-		pointer.message[seed] = [2]big.Int{msg.Data[2*i + 0], msg.Data[2*i + 1]}
+		pointer.message[seed] = [2]big.Int{msg.Data[2*i+0], msg.Data[2*i+1]}
 	}
 
 	return true
@@ -75,7 +75,7 @@ func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 		return err
 	}
 
-	for i := 0; i < ptStep.signNum; i++  {
+	for i := 0; i < ptStep.signNum; i++ {
 		pointer := ptStep.messages[i].(*mpcPointGenerator)
 		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
 		if err != nil {
@@ -87,4 +87,3 @@ func (ptStep *MpcPoint_Step) FinishStep(result mpcprotocol.MpcResultInterface, m
 	log.SyslogInfo("MpcPoint_Step.FinishStep succeed")
 	return nil
 }
-

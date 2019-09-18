@@ -20,12 +20,11 @@ func CreateMpcReadyStep(peers *[]mpcprotocol.PeerInfo) *MpcReadyStep {
 func (ready *MpcReadyStep) CreateMessage() []mpcprotocol.StepMessage {
 	data := make([]big.Int, 1)
 	data[0].SetInt64(1)
-	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{Msgcode:
-		mpcprotocol.MPCMessage,
-		PeerID:nil,
-		Peers:nil,
-		Data:data,
-		BytesData:nil}}
+	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{MsgCode: mpcprotocol.MPCMessage,
+		PeerID:    nil,
+		Peers:     nil,
+		Data:      data,
+		BytesData: nil}}
 }
 
 func (ready *MpcReadyStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {

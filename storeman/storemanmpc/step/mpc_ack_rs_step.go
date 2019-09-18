@@ -48,7 +48,7 @@ func (mars *MpcAckRSStep) InitStep(result mpcprotocol.MpcResultInterface) error 
 
 func (mars *MpcAckRSStep) CreateMessage() []mpcprotocol.StepMessage {
 	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
-		Msgcode:   mpcprotocol.MPCMessage,
+		MsgCode:   mpcprotocol.MPCMessage,
 		PeerID:    nil,
 		Peers:     nil,
 		Data:      []big.Int{mars.mpcS, mars.mpcR[0], mars.mpcR[1]},

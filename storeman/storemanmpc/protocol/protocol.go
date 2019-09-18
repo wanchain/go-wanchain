@@ -74,7 +74,7 @@ type GetMessageInterface interface {
 }
 
 type StepMessage struct {
-	Msgcode   uint64 //message code
+	MsgCode   uint64 //message code
 	PeerID    *discover.NodeID
 	Peers     *[]PeerInfo
 	Data      []big.Int //message data

@@ -27,7 +27,7 @@ func (ack *AckMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	data := make([]big.Int, 1)
 	data[0].SetInt64(ack.messageType)
 	return []mpcprotocol.StepMessage{mpcprotocol.StepMessage{
-		Msgcode:   mpcprotocol.MPCMessage,
+		MsgCode:   mpcprotocol.MPCMessage,
 		PeerID:    nil,
 		Peers:     nil,
 		Data:      data,

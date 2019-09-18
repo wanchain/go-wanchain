@@ -61,7 +61,7 @@ func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *Req
 
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	msg := mpcprotocol.StepMessage{
-		Msgcode:   mpcprotocol.RequestMPC,
+		MsgCode:   mpcprotocol.RequestMPC,
 		PeerID:    nil,
 		Peers:     req.peers,
 		Data:      nil,
