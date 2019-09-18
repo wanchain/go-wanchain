@@ -12,15 +12,9 @@ import (
 type RequestMpcStep struct {
 	BaseStep
 	messageType int64
-
-	accType   []byte
-	txHash    big.Int
-	address   big.Int
-	chainID   big.Int
-	chainType []byte
-	signType  []byte
-	txCode    []byte
-	message   map[discover.NodeID]bool
+	address     big.Int
+	mpcM        []byte
+	message     map[discover.NodeID]bool
 }
 
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
@@ -42,14 +36,6 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 			}
 		}
 
-		accType, err := result.GetByteValue(mpcprotocol.MpcStmAccType)
-		if err != nil {
-			return err
-		}
-
-		req.accType = accType
-		log.SyslogInfo("RequestMpcStep.InitStep, accType:%s", string(accType[:]))
-
 	} else if req.messageType == mpcprotocol.MpcSignLeader {
 		addr, err := result.GetValue(mpcprotocol.MpcAddress)
 		if err != nil {
@@ -57,42 +43,20 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		}
 
 		req.address = addr[0]
-		req.chainType, err = result.GetByteValue(mpcprotocol.MpcChainType)
+		req.mpcM, err = result.GetByteValue(mpcprotocol.MpcM)
 		if err != nil {
 			return err
 		}
 
-		req.signType, err = result.GetByteValue(mpcprotocol.MpcSignType)
-		if err != nil {
-			return err
-		}
-
-		req.txCode, err = result.GetByteValue(mpcprotocol.MpcTransaction)
-		if err != nil {
-			return err
-		}
-
-		if string(req.chainType) != "BTC" {
-			hash, err := result.GetValue(mpcprotocol.MpcTxHash + "_0")
-			if err != nil {
-				return err
-			}
-
-			req.txHash = hash[0]
-			chainID, err := result.GetValue(mpcprotocol.MpcChainID)
-			if err != nil {
-				return err
-			}
-
-			req.chainID = chainID[0]
-		}
 	}
 
 	return nil
 }
 
 func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *RequestMpcStep {
-	return &RequestMpcStep{BaseStep: *CreateBaseStep(peers, len(*peers)-1), messageType: messageType, message: make(map[discover.NodeID]bool)}
+	return &RequestMpcStep{BaseStep: *CreateBaseStep(peers, len(*peers)-1),
+		messageType: messageType,
+		message:     make(map[discover.NodeID]bool)}
 }
 
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
@@ -105,16 +69,11 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	msg.Data = make([]big.Int, 1)
 	msg.Data[0].SetInt64(req.messageType)
 	if req.messageType == mpcprotocol.MpcSignLeader {
-		msg.Data = append(msg.Data, req.txHash)
 		msg.Data = append(msg.Data, req.address)
-		msg.Data = append(msg.Data, req.chainID)
-		msg.BytesData = make([][]byte, 3)
-		msg.BytesData[0] = req.chainType
-		msg.BytesData[1] = req.txCode
-		msg.BytesData[2] = req.signType
+		msg.BytesData = make([][]byte, 1)
+		msg.BytesData[0] = req.mpcM
 	} else if req.messageType == mpcprotocol.MpcGPKLeader {
-		//msg.BytesData = make([][]byte, 1)
-		//msg.BytesData[0] = req.accType
+
 	}
 
 	return []mpcprotocol.StepMessage{msg}
@@ -128,7 +87,7 @@ func (req *RequestMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc
 
 	data := make([]big.Int, 1)
 	data[0].SetInt64(req.messageType)
-	result.SetValue(mpcprotocol.MPCActoin, data)
+	result.SetValue(mpcprotocol.MPCAction, data)
 	return nil
 }
 

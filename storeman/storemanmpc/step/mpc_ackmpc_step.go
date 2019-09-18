@@ -44,12 +44,13 @@ func (ack *AckMpcStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpc
 
 	data := make([]big.Int, 1)
 	data[0].SetInt64(ack.messageType)
-	result.SetValue(mpcprotocol.MPCActoin, data)
+	result.SetValue(mpcprotocol.MPCAction, data)
 
 	log.SyslogInfo("AcknowledgeMpcStep.FinishStep succeed")
 	return nil
 }
 
 func (ack *AckMpcStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
+	//TODO  should check the message needed to be signed??
 	return true
 }

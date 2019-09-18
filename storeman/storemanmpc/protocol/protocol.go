@@ -56,8 +56,7 @@ const (
 	MpcSignType    = "MpcSignType"
 	MpcChainID     = "MpcChainID"
 	MpcAddress     = "MpcAddress"
-	MPCActoin      = "MPCActoin"
-	MpcStmAccType  = "MpcStmAccType"
+	MPCAction      = "MPCAction"
 )
 
 type PeerInfo struct {
