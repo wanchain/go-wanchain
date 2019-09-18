@@ -3,12 +3,12 @@ package step
 import mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 
 type MpcRStep struct {
-	MpcPoint_Step
+	MpcPointStep
 	accType string
 }
 
 func CreateMpcRStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcRStep {
-	mpc := &MpcRStep{MpcPoint_Step: *CreateMpcPoint_Step(peers,
+	mpc := &MpcRStep{MpcPointStep: *CreateMpcPoint_Step(peers,
 		[]string{mpcprotocol.RMpcPublicShare},
 		[]string{mpcprotocol.RPublicKeyResult}),
 		accType: accType}
@@ -16,7 +16,7 @@ func CreateMpcRStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcRStep {
 }
 
 func (addStep *MpcRStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
-	err := addStep.MpcPoint_Step.FinishStep(result, mpc)
+	err := addStep.MpcPointStep.FinishStep(result, mpc)
 	if err != nil {
 		return err
 	}

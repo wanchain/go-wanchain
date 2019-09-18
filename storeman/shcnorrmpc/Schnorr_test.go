@@ -64,7 +64,7 @@ func TestSchnorr(t *testing.T) {
 	// every storeman node sends the secret shares to other nodes in secret!
 	// Attention! IN SECRET!
 
-	// After reveiving the secret shares, each node computes its group private key share
+	// After receiving the secret shares, each node computes its group private key share
 	gskshare := make([]*big.Int, Nstm)
 
 	for i := 0; i < Nstm; i++ {
@@ -75,7 +75,7 @@ func TestSchnorr(t *testing.T) {
 		gskshare[i].Mod(gskshare[i], crypto.S256().Params().N)
 	}
 
-	// Each storeman node publishs the scalar point of its group private key share
+	// Each storeman node publishes the scalar point of its group private key share
 	gpkshare := make([]ecdsa.PublicKey, Nstm)
 
 	for i := 0; i < Nstm; i++ {

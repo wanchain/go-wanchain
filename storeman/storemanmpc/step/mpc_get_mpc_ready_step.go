@@ -20,8 +20,11 @@ func (ready *GetMpcReadyStep) CreateMessage() []mpcprotocol.StepMessage {
 	return nil
 }
 
-func (ready *GetMpcReadyStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc mpcprotocol.StoremanManager) error {
+func (ready *GetMpcReadyStep) FinishStep(result mpcprotocol.MpcResultInterface,
+	mpc mpcprotocol.StoremanManager) error {
+
 	return ready.BaseStep.FinishStep()
+
 }
 
 func (ready *GetMpcReadyStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {

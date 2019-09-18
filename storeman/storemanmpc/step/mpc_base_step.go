@@ -15,7 +15,10 @@ type BaseStep struct {
 }
 
 func CreateBaseStep(peers *[]mpcprotocol.PeerInfo, wait int) *BaseStep {
-	step := &BaseStep{peers: peers, msgChan: make(chan *mpcprotocol.StepMessage, len(*peers)+3), finish: make(chan error, 3)}
+	step := &BaseStep{peers: peers,
+		msgChan: make(chan *mpcprotocol.StepMessage, len(*peers)+3),
+		finish:  make(chan error, 3)}
+
 	if wait >= 0 {
 		step.waiting = wait
 	} else {
