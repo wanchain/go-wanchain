@@ -2,6 +2,7 @@ package storeman
 
 import (
 	"context"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
 	"path/filepath"
 	"sync"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
@@ -19,16 +19,6 @@ import (
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/storeman/validator"
 )
-
-type Storeman struct {
-	protocol       p2p.Protocol
-	peers          map[discover.NodeID]*Peer
-	storemanPeers  map[discover.NodeID]bool
-	peerMu         sync.RWMutex  // Mutex to sync the active peer set
-	quit           chan struct{} // Channel used for graceful exit
-	mpcDistributor *storemanmpc.MpcDistributor
-	cfg            *Config
-}
 
 type Config struct {
 	StoremanNodes []*discover.Node
@@ -53,6 +43,55 @@ type StrmanKeepAliveOk struct {
 }
 
 const keepaliveMagic = 0x33
+
+// New creates a Whisper client ready to communicate through the Ethereum P2P network.
+func New(cfg *Config, accountManager *accounts.Manager, aKID, secretKey, region string) *Storeman {
+	storeman := &Storeman{
+		peers: make(map[discover.NodeID]*Peer),
+		quit:  make(chan struct{}),
+		cfg:   cfg,
+	}
+
+	storeman.mpcDistributor = storemanmpc.CreateMpcDistributor(accountManager,
+		storeman,
+		aKID,
+		secretKey,
+		region,
+		cfg.Password)
+
+	dataPath := filepath.Join(cfg.DataPath, "storeman", "data")
+	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(dataPath, 0700); err != nil {
+			log.SyslogErr("make Storeman path fail", "err", err.Error())
+		}
+	}
+
+	validator.NewDatabase(dataPath)
+	// p2p storeman sub protocol handler
+	storeman.protocol = p2p.Protocol{
+		Name:    mpcprotocol.PName,
+		Version: uint(mpcprotocol.PVer),
+		Length:  mpcprotocol.NumberOfMessageCodes,
+		Run:     storeman.HandlePeer,
+		NodeInfo: func() interface{} {
+			return map[string]interface{}{
+				"version": mpcprotocol.PVerStr,
+			}
+		},
+	}
+
+	return storeman
+}
+
+type Storeman struct {
+	protocol       p2p.Protocol
+	peers          map[discover.NodeID]*Peer
+	storemanPeers  map[discover.NodeID]bool
+	peerMu         sync.RWMutex  // Mutex to sync the active peer set
+	quit           chan struct{} // Channel used for graceful exit
+	mpcDistributor *storemanmpc.MpcDistributor
+	cfg            *Config
+}
 
 // MaxMessageSize returns the maximum accepted message size.
 func (sm *Storeman) MaxMessageSize() uint32 {
@@ -86,23 +125,6 @@ func (sm *Storeman) runMessageLoop(p *Peer, rw p2p.MsgReadWriter) error {
 	}
 }
 
-type StoremanAPI struct {
-	sm *Storeman
-}
-
-func (sa *StoremanAPI) Version(ctx context.Context) (v string) {
-	return mpcprotocol.PVerStr
-}
-
-func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
-	var ps []*p2p.PeerInfo
-	for _, p := range sa.sm.peers {
-		ps = append(ps, p.Peer.Info())
-	}
-
-	return ps
-}
-
 // APIs returns the RPC descriptors the Whisper implementation offers
 func (sm *Storeman) APIs() []rpc.API {
 	return []rpc.API{
@@ -119,57 +141,6 @@ func (sm *Storeman) APIs() []rpc.API {
 func (sm *Storeman) Protocols() []p2p.Protocol {
 	return []p2p.Protocol{sm.protocol}
 }
-
-// for schnorr begin
-func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
-
-	log.SyslogInfo("CreateGPK begin")
-
-	if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
-		return []byte{}, mpcprotocol.ErrTooLessStoreman
-	}
-
-	if len(sa.sm.storemanPeers)+1 < mpcprotocol.MpcSchnrNodeNumber {
-		return []byte{}, mpcprotocol.ErrTooLessStoreman
-	}
-
-	gpk, err := sa.sm.mpcDistributor.CreateRequestGPK()
-	if err == nil {
-		//log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
-		log.SyslogInfo("CreateMpcAccount end", "addr", gpk)
-	} else {
-		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
-	}
-
-	return gpk, err
-}
-
-func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
-	//Todo  check the input parameter
-
-	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
-		return []byte{}, []byte{}, mpcprotocol.ErrTooLessStoreman
-	}
-
-	PKBytes := data.PKBytes
-	pk := crypto.ToECDSAPub(PKBytes)
-	from := crypto.PubkeyToAddress(*pk)
-
-	signed, err := sa.sm.mpcDistributor.CreateReqMpcSign(data.Data, from)
-	if err == nil {
-		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
-	} else {
-		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
-	}
-
-	return []byte{}, []byte{}, nil
-}
-
-func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
-	return validator.AddValidData(&data)
-}
-
-// for schnorr end
 
 // Start implements node.Service, starting the background data propagation thread
 // of the Whisper protocol.
@@ -244,35 +215,67 @@ func (sm *Storeman) HandlePeer(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	return sm.runMessageLoop(storemanPeer, rw)
 }
 
-// New creates a Whisper client ready to communicate through the Ethereum P2P network.
-func New(cfg *Config, accountManager *accounts.Manager, aKID, secretKey, region string) *Storeman {
-	storeman := &Storeman{
-		peers: make(map[discover.NodeID]*Peer),
-		quit:  make(chan struct{}),
-		cfg:   cfg,
+type StoremanAPI struct {
+	sm *Storeman
+}
+
+func (sa *StoremanAPI) Version(ctx context.Context) (v string) {
+	return mpcprotocol.PVerStr
+}
+
+func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
+	var ps []*p2p.PeerInfo
+	for _, p := range sa.sm.peers {
+		ps = append(ps, p.Peer.Info())
 	}
 
-	storeman.mpcDistributor = storemanmpc.CreateMpcDistributor(accountManager, storeman, aKID, secretKey, region, cfg.Password)
-	dataPath := filepath.Join(cfg.DataPath, "storeman", "data")
-	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(dataPath, 0700); err != nil {
-			log.SyslogErr("make Stroreman path fail", "err", err.Error())
-		}
+	return ps
+}
+
+func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
+
+	log.SyslogInfo("CreateGPK begin")
+
+	if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
+		return []byte{}, mpcprotocol.ErrTooLessStoreman
 	}
 
-	validator.NewDatabase(dataPath)
-	// p2p storeman sub protocol handler
-	storeman.protocol = p2p.Protocol{
-		Name:    mpcprotocol.PName,
-		Version: uint(mpcprotocol.PVer),
-		Length:  mpcprotocol.NumberOfMessageCodes,
-		Run:     storeman.HandlePeer,
-		NodeInfo: func() interface{} {
-			return map[string]interface{}{
-				"version": mpcprotocol.PVerStr,
-			}
-		},
+	if len(sa.sm.storemanPeers)+1 < mpcprotocol.MpcSchnrNodeNumber {
+		return []byte{}, mpcprotocol.ErrTooLessStoreman
 	}
 
-	return storeman
+	gpk, err := sa.sm.mpcDistributor.CreateRequestGPK()
+	if err == nil {
+		//log.SyslogInfo("CreateMpcAccount end", "addr", addr.String())
+		log.SyslogInfo("CreateMpcAccount end", "addr", gpk)
+	} else {
+		log.SyslogErr("CreateMpcAccount end", "err", err.Error())
+	}
+
+	return gpk, err
+}
+
+func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
+	//Todo  check the input parameter
+
+	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
+		return []byte{}, []byte{}, mpcprotocol.ErrTooLessStoreman
+	}
+
+	PKBytes := data.PKBytes
+	pk := crypto.ToECDSAPub(PKBytes)
+	from := crypto.PubkeyToAddress(*pk)
+
+	signed, err := sa.sm.mpcDistributor.CreateReqMpcSign(data.Data, from)
+	if err == nil {
+		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
+	} else {
+		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
+	}
+
+	return []byte{}, []byte{}, nil
+}
+
+func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
+	return validator.AddValidData(&data)
 }

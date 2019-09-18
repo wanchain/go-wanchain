@@ -7,7 +7,11 @@ import (
 type MpcCtxFactory struct {
 }
 
-func (*MpcCtxFactory) CreateContext(ctxType int, mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (MpcInterface, error) {
+func (*MpcCtxFactory) CreateContext(ctxType int,
+	mpcID uint64,
+	peers []mpcprotocol.PeerInfo,
+	preSetValue ...MpcValue) (MpcInterface, error) {
+
 	switch ctxType {
 	case mpcprotocol.MpcGPKLeader:
 		return reqGPKMpc(mpcID, peers, preSetValue...)

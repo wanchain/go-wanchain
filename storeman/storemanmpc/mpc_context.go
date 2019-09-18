@@ -43,12 +43,22 @@ func (mpcCtx *MpcContext) getMpcResult() []byte {
 	}
 }
 
-func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID, msg *mpcprotocol.MpcMessage, peers *[]mpcprotocol.PeerInfo) error {
-	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{MsgCode: 0, PeerID: PeerID, Peers: peers, Data: msg.Data, BytesData: msg.BytesData}
+func (mpcCtx *MpcContext) getMessage(PeerID *discover.NodeID,
+	msg *mpcprotocol.MpcMessage,
+	peers *[]mpcprotocol.PeerInfo) error {
+
+	mpcCtx.MapStepChan[msg.StepID] <- &mpcprotocol.StepMessage{MsgCode: 0,
+		PeerID:    PeerID,
+		Peers:     peers,
+		Data:      msg.Data,
+		BytesData: msg.BytesData}
 	return nil
 }
 
-func createMpcContext(contextID uint64, peers []mpcprotocol.PeerInfo, mpcResult mpcprotocol.MpcResultInterface) *MpcContext {
+func createMpcContext(contextID uint64,
+	peers []mpcprotocol.PeerInfo,
+	mpcResult mpcprotocol.MpcResultInterface) *MpcContext {
+
 	mpc := &MpcContext{
 		ContextID:   contextID,
 		peers:       peers,

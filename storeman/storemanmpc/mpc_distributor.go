@@ -136,13 +136,21 @@ func GetPrivateShare(ks *keystore.KeyStore,
 	}
 
 	if err != nil {
-		log.SyslogErr("get account keyjson fail", "addr", address.String(), "path", account.URL.Path, "err", err.Error())
+		log.SyslogErr("get account keyjson fail",
+			"addr", address.String(),
+			"path", account.URL.Path,
+			"err", err.Error())
+
 		return nil, 0x01, err
 	}
 
 	key, err := keystore.DecryptKey(keyjson, password)
 	if err != nil {
-		log.SyslogErr("decrypt account keyjson fail", "addr", address.String(), "path", account.URL.Path, "err", err.Error())
+		log.SyslogErr("decrypt account keyjson fail",
+			"addr", address.String(),
+			"path", account.URL.Path,
+			"err", err.Error())
+
 		return nil, 0x011, err
 	}
 
@@ -155,7 +163,7 @@ func (mpcServer *MpcDistributor) GetMessage(PeerID discover.NodeID, rw p2p.MsgRe
 	switch msg.Code {
 	case mpcprotocol.StatusCode:
 		// this should not happen, but no need to panic; just ignore this message.
-		log.SyslogInfo("unxepected status message received", "peer", PeerID.String())
+		log.SyslogInfo("unexpected status message received", "peer", PeerID.String())
 
 	case mpcprotocol.KeepaliveCode:
 		// this should not happen, but no need to panic; just ignore this message.
@@ -265,7 +273,11 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 
 		value, peers1, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
-			log.SyslogErr("MpcDistributor createRequestMpcContext, loadStoremanAddress fail", "address", address.String(), "err", err.Error())
+
+			log.SyslogErr("MpcDistributor createRequestMpcContext, loadStoremanAddress fail",
+				"address", address.String(),
+				"err", err.Error())
+
 			return []byte{}, err
 		}
 
@@ -279,7 +291,11 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 		}
 	}
 
-	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcID, mpcServer.selectPeers(ctxType, peers, preSetValue...), preSetValue...)
+	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType,
+		mpcID,
+		mpcServer.selectPeers(ctxType, peers, preSetValue...),
+		preSetValue...)
+
 	if err != nil {
 		log.SyslogErr("MpcDistributor createRequestMpcContext, CreateContext fail", "err", err.Error())
 		return []byte{}, err
@@ -493,7 +509,11 @@ func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage
 		//ToDo change reqMPC message sent
 	}
 
-	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType, mpcMessage.ContextID, *mpcServer.getMessagePeers(mpcMessage), preSetValue...)
+	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType,
+		mpcMessage.ContextID,
+		*mpcServer.getMessagePeers(mpcMessage),
+		preSetValue...)
+
 	if err != nil {
 		log.SyslogErr("createMpcContext, createContext fail", "err", err.Error())
 		return err
@@ -525,7 +545,10 @@ func (mpcServer *MpcDistributor) removeMpcContext(mpcID uint64) {
 }
 
 func (mpcServer *MpcDistributor) getMpcMessage(PeerID *discover.NodeID, mpcMessage *mpcprotocol.MpcMessage) error {
-	log.SyslogInfo("getMpcMessage", "peerid", PeerID.String(), "ctxId", mpcMessage.ContextID, "stepID", mpcMessage.StepID)
+	log.SyslogInfo("getMpcMessage",
+		"peerid", PeerID.String(),
+		"ctxId", mpcMessage.ContextID,
+		"stepID", mpcMessage.StepID)
 
 	mpcServer.mu.RLock()
 	mpc, exist := mpcServer.mpcMap[mpcMessage.ContextID]
@@ -641,8 +664,6 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 	if err != nil {
 		return err
 	}
-
-	//result.SetByteValue(mpcprotocol.MpcContextResult, account.Address[:])
 	result.SetByteValue(mpcprotocol.MpcContextResult, crypto.FromECDSAPub(result1))
 	return nil
 }

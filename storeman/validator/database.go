@@ -18,7 +18,7 @@ type Database interface {
 	Close()
 }
 
-// Leveldb implementation
+// Level db implementation
 type storemanDB struct {
 	fn string
 	db *leveldb.DB

@@ -101,8 +101,16 @@ func (p *Peer) handshake() error {
 		return fmt.Errorf("storeman peer [%s] sent bad status message: %v", p.ID().String(), err)
 	}
 	if peerVersion != mpcprotocol.PVer {
-		log.SyslogErr("storeman peer: protocol version not mismatch", "peer", p.ID().String(), "actual version", peerVersion, "expect version", mpcprotocol.PVer)
-		return fmt.Errorf("storeman peer [%s]: protocol version mismatch %d != %d", p.ID().String(), peerVersion, mpcprotocol.PVer)
+		log.SyslogErr("storeman peer: protocol version not mismatch",
+			"peer", p.ID().String(),
+			"actual version", peerVersion,
+			"expect version", mpcprotocol.PVer)
+
+		return fmt.Errorf("storeman peer [%s]: protocol version mismatch %d != %d",
+			p.ID().String(),
+			peerVersion,
+			mpcprotocol.PVer)
+
 	}
 	// Wait until out own status is consumed too
 	if err := <-errc; err != nil {

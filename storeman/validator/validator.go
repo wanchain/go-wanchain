@@ -161,6 +161,6 @@ func addKeyValueToDB(key, value []byte) error {
 		return err
 	}
 
-	log.SyslogInfo("addKeyValueToDB succeed to get data from leveldb after putting key-val pair", "ret", string(ret))
+	log.SyslogInfo("addKeyValueToDB succeed to get data from level db after putting key-val pair", "ret", string(ret))
 	return nil
 }

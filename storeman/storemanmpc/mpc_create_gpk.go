@@ -8,6 +8,7 @@ import (
 
 //send create LockAccount from leader
 func reqGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+
 	result := createMpcBaseMpcResult()
 	result.InitializeValue(preSetValue...)
 	mpc := createMpcContext(mpcID, peers, result)
@@ -19,6 +20,7 @@ func reqGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 
 //get message from leader and create Context
 func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
+
 	log.SyslogInfo("acknowledgeCreateLockAccountMpc begin.")
 	for _, preSetValuebyteData := range preSetValue {
 		log.SyslogInfo("acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
@@ -49,10 +51,12 @@ func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 }
 
 func genCreateGPKMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStepFunc) (*MpcContext, error) {
+
 	accTypeStr := ""
 	skShare := step.CreateMpcSKShareStep(mpcprotocol.MPCDegree, &mpc.peers)
 	gpk := step.CreateMpcGPKStep(&mpc.peers, accTypeStr)
 	ackGpk := step.CreateAckMpcGPKStep(&mpc.peers)
 	mpc.setMpcStep(firstStep, readyStep, skShare, gpk, ackGpk)
 	return mpc, nil
+
 }

@@ -7,7 +7,11 @@ import (
 type MpcTestCtxFactory struct {
 }
 
-func (*MpcTestCtxFactory) CreateContext(ctxType int, mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (MpcInterface, error) {
+func (*MpcTestCtxFactory) CreateContext(ctxType int,
+	mpcID uint64,
+	peers []mpcprotocol.PeerInfo,
+	preSetValue ...MpcValue) (MpcInterface, error) {
+
 	switch ctxType {
 	case mpcprotocol.MpcGPKLeader:
 		return testCreatep2pMpc(mpcID, peers, preSetValue...)
