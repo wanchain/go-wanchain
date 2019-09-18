@@ -9,10 +9,8 @@ import (
 
 const (
 	MpcSchnrThr        = 26 // MpcSchnrThr >= number(storeman)/2 +1
-	MpcSchnrDegree     = MpcSchnrThr - 1
+	MPCDegree          = MpcSchnrThr - 1
 	MpcSchnrNodeNumber = 50 // At least MpcSchnrNodeNumber MPC nodes
-	MPCDegree          = 8
-	//MPCDegree          = 1
 )
 
 const (
