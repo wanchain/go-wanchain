@@ -56,7 +56,8 @@ func TestSchnorr(t *testing.T) {
 	for i := 0; i < Nstm; i++ {
 		poly[i] = RandPoly(Degree, *s[i]) // fi(x), set si as its constant term
 		for j := 0; j < Nstm; j++ {
-			sshare[i][j] = EvaluatePoly(poly[i], &x[j], Degree) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			// share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			sshare[i][j] = EvaluatePoly(poly[i], &x[j], Degree)
 		}
 	}
 
@@ -101,7 +102,8 @@ func TestSchnorr(t *testing.T) {
 	for i := 0; i < Nstm; i++ {
 		poly1[i] = RandPoly(Degree, *s[i]) // fi(x), set si as its constant term
 		for j := 0; j < Nstm; j++ {
-			rrshare[i][j] = EvaluatePoly(poly1[i], &x[j], Degree) // share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			// share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
+			rrshare[i][j] = EvaluatePoly(poly1[i], &x[j], Degree)
 		}
 	}
 
