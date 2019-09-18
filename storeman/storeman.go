@@ -40,13 +40,13 @@ var DefaultConfig = Config{
 	StoremanNodes: make([]*discover.Node, 0),
 }
 
-type StoremanKeepalive struct {
+type StrmanKeepAlive struct {
 	version   int
 	magic     int
 	recipient discover.NodeID
 }
 
-type StoremanKeepaliveOk struct {
+type StrmanKeepAliveOk struct {
 	version int
 	magic   int
 	status  int

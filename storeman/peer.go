@@ -66,11 +66,11 @@ func (p *Peer) stop() {
 }
 
 func (p *Peer) sendKeepalive() {
-	p2p.Send(p.ws, mpcprotocol.KeepaliveCode, StoremanKeepalive{version: 1, magic: keepaliveMagic, recipient: p.Peer.ID()})
+	p2p.Send(p.ws, mpcprotocol.KeepaliveCode, StrmanKeepAlive{version: 1, magic: keepaliveMagic, recipient: p.Peer.ID()})
 }
 
 func (p *Peer) sendKeepaliveOk() {
-	p2p.Send(p.ws, mpcprotocol.KeepaliveOkCode, StoremanKeepaliveOk{version: 1, magic: keepaliveMagic, status: 0})
+	p2p.Send(p.ws, mpcprotocol.KeepaliveOkCode, StrmanKeepAliveOk{version: 1, magic: keepaliveMagic, status: 0})
 }
 
 // handshake sends the protocol initiation status message to the remote peer and
