@@ -30,10 +30,10 @@ const (
 	KeepaliveCycle
 	NumberOfMessageCodes
 
-	MPCTimeOut         = time.Second * 100
-	ProtocolName       = "storeman"
-	ProtocolVersion    = uint64(1)
-	ProtocolVersionStr = "1.1"
+	MPCTimeOut = time.Second * 100
+	PName      = "storeman"
+	PVer       = uint64(1)
+	PVerStr    = "1.1"
 )
 const (
 	MpcPrivateShare  = "MpcPrivateShare"  // skShare

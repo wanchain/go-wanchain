@@ -2,11 +2,11 @@ package storeman
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
-	"github.com/wanchain/go-wanchain/log"
 	set "gopkg.in/fatih/set.v0"
 	"time"
 )
@@ -79,7 +79,7 @@ func (p *Peer) handshake() error {
 	// Send the handshake status message asynchronously
 	errc := make(chan error, 1)
 	go func() {
-		errc <- p2p.Send(p.ws, mpcprotocol.StatusCode, mpcprotocol.ProtocolVersion)
+		errc <- p2p.Send(p.ws, mpcprotocol.StatusCode, mpcprotocol.PVer)
 	}()
 	// Fetch the remote status packet and verify protocol match
 	packet, err := p.ws.ReadMsg()
@@ -100,9 +100,9 @@ func (p *Peer) handshake() error {
 		log.SyslogErr("storman peer sent bad status message", "peer", p.ID().String(), "err", err)
 		return fmt.Errorf("storman peer [%s] sent bad status message: %v", p.ID().String(), err)
 	}
-	if peerVersion != mpcprotocol.ProtocolVersion {
-		log.SyslogErr("storman peer: protocol version dont mismatch", "peer", p.ID().String(), "actual version", peerVersion, "expect version", mpcprotocol.ProtocolVersion)
-		return fmt.Errorf("storman peer [%s]: protocol version mismatch %d != %d", p.ID().String(), peerVersion, mpcprotocol.ProtocolVersion)
+	if peerVersion != mpcprotocol.PVer {
+		log.SyslogErr("storman peer: protocol version dont mismatch", "peer", p.ID().String(), "actual version", peerVersion, "expect version", mpcprotocol.PVer)
+		return fmt.Errorf("storman peer [%s]: protocol version mismatch %d != %d", p.ID().String(), peerVersion, mpcprotocol.PVer)
 	}
 	// Wait until out own status is consumed too
 	if err := <-errc; err != nil {

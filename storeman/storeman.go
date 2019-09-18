@@ -91,7 +91,7 @@ type StoremanAPI struct {
 }
 
 func (sa *StoremanAPI) Version(ctx context.Context) (v string) {
-	return mpcprotocol.ProtocolVersionStr
+	return mpcprotocol.PVerStr
 }
 
 func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
@@ -107,8 +107,8 @@ func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
 func (sm *Storeman) APIs() []rpc.API {
 	return []rpc.API{
 		{
-			Namespace: mpcprotocol.ProtocolName,
-			Version:   mpcprotocol.ProtocolVersionStr,
+			Namespace: mpcprotocol.PName,
+			Version:   mpcprotocol.PVerStr,
 			Service:   &StoremanAPI{sm: sm},
 			Public:    true,
 		},
@@ -263,13 +263,13 @@ func New(cfg *Config, accountManager *accounts.Manager, aKID, secretKey, region 
 	validator.NewDatabase(dataPath)
 	// p2p storeman sub protocol handler
 	storeman.protocol = p2p.Protocol{
-		Name:    mpcprotocol.ProtocolName,
-		Version: uint(mpcprotocol.ProtocolVersion),
+		Name:    mpcprotocol.PName,
+		Version: uint(mpcprotocol.PVer),
 		Length:  mpcprotocol.NumberOfMessageCodes,
 		Run:     storeman.HandlePeer,
 		NodeInfo: func() interface{} {
 			return map[string]interface{}{
-				"version": mpcprotocol.ProtocolVersionStr,
+				"version": mpcprotocol.PVerStr,
 			}
 		},
 	}
