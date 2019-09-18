@@ -5,7 +5,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
-	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 )
@@ -56,7 +55,7 @@ func (point *mpcPointGenerator) calculateResult() error {
 	// lagrangeEcc
 	result := shcnorrmpc.LagrangeECC(gpkshares, seeds[:], mpcprotocol.MPCDegree)
 
-	if !mpccrypto.ValidatePublicKey(result) {
+	if !shcnorrmpc.ValidatePublicKey(result) {
 		log.SyslogErr("mpcPointGenerator.ValidatePublicKey fail. err:%s", mpcprotocol.ErrPointZero.Error())
 		return mpcprotocol.ErrPointZero
 	}

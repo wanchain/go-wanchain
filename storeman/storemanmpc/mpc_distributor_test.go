@@ -3,7 +3,7 @@ package storemanmpc
 import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/p2p/discover"
-	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
+	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
 	"testing"
@@ -13,7 +13,7 @@ func TestMpcSelectPeers(t *testing.T) {
 	var mpcID uint64
 	var err error
 	for {
-		mpcID, err = mpccrypto.UintRand(uint64(1<<64 - 1))
+		mpcID, err = shcnorrmpc.UintRand(uint64(1<<64 - 1))
 		if err != nil {
 		} else {
 			break

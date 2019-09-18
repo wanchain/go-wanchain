@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -21,7 +22,6 @@ import (
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
-	mpccrypto "github.com/wanchain/go-wanchain/storeman/storemanmpc/crypto"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/storeman/validator"
 	"strings"
@@ -301,18 +301,6 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 	return result, nil
 }
 
-func (mpcServer *MpcDistributor) createMPCTxSigner(ChainType string, ChainID *big.Int) (mpccrypto.MPCTxSigner, error) {
-	log.SyslogInfo("MpcDistributor.createMPCTxSigner begin", "ChainType", ChainType, "ChainID", ChainID.Int64())
-
-	if ChainType == "WAN" {
-		return mpccrypto.CreateWanMPCTxSigner(ChainID), nil
-	} else if ChainType == "ETH" {
-		return mpccrypto.CreateEthMPCTxSigner(ChainID), nil
-	}
-
-	return nil, mpcprotocol.ErrChainTypeError
-}
-
 func (mpcServer *MpcDistributor) loadStoremanAddress(address *common.Address) (*MpcValue, []mpcprotocol.PeerInfo, error) {
 	log.SyslogInfo("MpcDistributor.loadStoremanAddress begin", "address", address.String())
 
@@ -421,7 +409,7 @@ func (mpcServer *MpcDistributor) getMpcID() (uint64, error) {
 	var mpcID uint64
 	var err error
 	for {
-		mpcID, err = mpccrypto.UintRand(uint64(1<<64 - 1))
+		mpcID, err = shcnorrmpc.UintRand(uint64(1<<64 - 1))
 		if err != nil {
 			log.SyslogErr("MpcDistributor getMpcID, UnitRand fail", "err", err.Error())
 			return 0, err

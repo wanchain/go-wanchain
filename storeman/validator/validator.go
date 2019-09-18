@@ -13,16 +13,7 @@ import (
 var noticeFuncIds [][4]byte
 
 func init() {
-	noticeFuncDefs := []string{
-		"btc2wbtcLockNotice(address,address,bytes32,bytes32,uint256)",
-		"wbtc2btcLockNotice(address,address,address,bytes32,bytes32,uint256)"}
 
-	var funcId [4]byte
-	for _, funcDef := range noticeFuncDefs {
-		copy(funcId[:], crypto.Keccak256([]byte(funcDef))[:4])
-		noticeFuncIds = append(noticeFuncIds, funcId)
-		log.SyslogInfo("validator.init, add notice func id", "id", common.ToHex(funcId[:]))
-	}
 }
 
 // TODO add ValidateData
