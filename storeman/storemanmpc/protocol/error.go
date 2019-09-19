@@ -20,4 +20,5 @@ var (
 	ErrInvalidSignedData = errors.New("invalid signed Data")
 	ErrInvalidMPCR       = errors.New("invalid signed data(R)")
 	ErrInvalidMPCS       = errors.New("invalid signed data(S)")
+	ErrVerifyFailed      = errors.New("verify failed")
 )

@@ -1,6 +1,10 @@
 package step
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"fmt"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
@@ -63,27 +67,7 @@ func (mars *MpcAckRSStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc 
 		return err
 	}
 
-	for _, mpcR := range mars.remoteMpcR {
-		if mpcR == nil {
-			return mpcprotocol.ErrInvalidMPCR
-		}
-
-		if mars.mpcR[0].Cmp(&mpcR[0]) != 0 || mars.mpcR[1].Cmp(&mpcR[1]) != 0 {
-
-			return mpcprotocol.ErrInvalidMPCR
-		}
-
-	}
-
-	for _, mpcS := range mars.remoteMpcS {
-		if mars.mpcS.Cmp(&mpcS) != 0 {
-
-			return mpcprotocol.ErrInvalidMPCS
-		}
-
-	}
-
-	return nil
+	return mars.verifyRS(result)
 }
 
 func (mars *MpcAckRSStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
@@ -102,4 +86,69 @@ func (mars *MpcAckRSStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
 
 	mars.message[*msg.PeerID] = true
 	return true
+}
+
+func (mars *MpcAckRSStep) verifyRS(result mpcprotocol.MpcResultInterface) error {
+	// check R
+	for _, mpcR := range mars.remoteMpcR {
+		if mpcR == nil {
+			return mpcprotocol.ErrInvalidMPCR
+		}
+
+		if mars.mpcR[0].Cmp(&mpcR[0]) != 0 || mars.mpcR[1].Cmp(&mpcR[1]) != 0 {
+			return mpcprotocol.ErrInvalidMPCR
+		}
+	}
+	// check S
+	for _, mpcS := range mars.remoteMpcS {
+		if mars.mpcS.Cmp(&mpcS) != 0 {
+			return mpcprotocol.ErrInvalidMPCS
+		}
+	}
+
+	// check signVerify
+	M, err := result.GetByteValue(mpcprotocol.MpcM)
+	if err != nil {
+		log.SyslogErr("ack MpcAckRSStep get MpcM . err:%s", err.Error())
+		return err
+	}
+
+	// gpk
+	gpkItem, err := result.GetValue(mpcprotocol.PublicKeyResult)
+	if err != nil {
+		log.SyslogErr("ack MpcAckRSStep get PublicKeyResult . err:%s", err.Error())
+		return err
+	}
+	gpk := new(ecdsa.PublicKey)
+	gpk.X, gpk.Y = &gpkItem[0], &gpkItem[1]
+
+	// rpk : R
+	rpk := new(ecdsa.PublicKey)
+	rpk.X, rpk.Y = &mars.mpcR[0], &mars.mpcR[1]
+	// Forming the m: hash(message||rpk)
+	var buffer bytes.Buffer
+	buffer.Write(M[:])
+	buffer.Write(crypto.FromECDSAPub(rpk))
+	mTemp := crypto.Keccak256(buffer.Bytes())
+	m := new(big.Int).SetBytes(mTemp)
+
+	// check ssG = rpk + m*gpk
+	ssG := new(ecdsa.PublicKey)
+	ssG.X, ssG.Y = crypto.S256().ScalarBaseMult(mars.mpcS.Bytes())
+
+	// m*gpk
+	mgpk := new(ecdsa.PublicKey)
+	mgpk.X, mgpk.Y = crypto.S256().ScalarMult(gpk.X, gpk.Y, m.Bytes())
+
+	// rpk + m*gpk
+	temp := new(ecdsa.PublicKey)
+	temp.X, temp.Y = crypto.S256().Add(mgpk.X, mgpk.Y, rpk.X, rpk.Y)
+
+	if ssG.X.Cmp(temp.X) == 0 && ssG.Y.Cmp(temp.Y) == 0 {
+		fmt.Println("Verification Succeeded")
+	} else {
+		log.SyslogErr("Verification failed")
+		return mpcprotocol.ErrVerifyFailed
+	}
+	return nil
 }
