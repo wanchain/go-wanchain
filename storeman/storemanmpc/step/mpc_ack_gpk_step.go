@@ -16,7 +16,8 @@ type AckMpcGPKStep struct {
 }
 
 func CreateAckMpcGPKStep(peers *[]mpcprotocol.PeerInfo) *AckMpcGPKStep {
-	return &AckMpcGPKStep{*CreateBaseStep(peers, -1),
+	return &AckMpcGPKStep{
+		*CreateBaseStep(peers, -1),
 		make(map[discover.NodeID]bool),
 		nil,
 		make(map[discover.NodeID][]byte)}

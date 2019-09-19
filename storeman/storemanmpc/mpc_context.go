@@ -22,6 +22,7 @@ type MpcStepFunc interface {
 	CreateMessage() []mpcprotocol.StepMessage
 	FinishStep(mpcprotocol.MpcResultInterface, mpcprotocol.StoremanManager) error
 	GetMessageChan() chan *mpcprotocol.StepMessage
+	SetWaitAll(bool)
 }
 
 type MpcContext struct {

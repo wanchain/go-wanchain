@@ -14,7 +14,8 @@ type AckMpcStep struct {
 func CreateAckMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *AckMpcStep {
 	log.SyslogInfo("CreateAcknowledgeMpcStep begin")
 
-	return &AckMpcStep{*CreateBaseStep(peers, 0), messageType}
+	return &AckMpcStep{
+		*CreateBaseStep(peers, 0), messageType}
 }
 
 func (ack *AckMpcStep) InitStep(mpcprotocol.MpcResultInterface) error {

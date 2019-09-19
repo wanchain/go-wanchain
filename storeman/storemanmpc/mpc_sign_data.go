@@ -36,5 +36,8 @@ func generateTxSignMpc(mpc *MpcContext, firstStep MpcStepFunc, readyStep MpcStep
 	ackRSStep := step.CreateAckMpcRSStep(&mpc.peers, accTypeStr)
 	mpc.setMpcStep(firstStep, readyStep, skShare, RStep, SStep, ackRSStep)
 
+	for _, stItem := range mpc.MpcSteps {
+		stItem.SetWaitAll(false)
+	}
 	return mpc, nil
 }

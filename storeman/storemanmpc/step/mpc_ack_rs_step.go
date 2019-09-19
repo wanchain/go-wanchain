@@ -18,7 +18,8 @@ type MpcAckRSStep struct {
 }
 
 func CreateAckMpcRSStep(peers *[]mpcprotocol.PeerInfo, accType string) *MpcAckRSStep {
-	mpc := &MpcAckRSStep{*CreateBaseStep(peers, -1),
+	mpc := &MpcAckRSStep{
+		*CreateBaseStep(peers, -1),
 		make(map[discover.NodeID]bool),
 		make(map[discover.NodeID][]big.Int),
 		make(map[discover.NodeID]big.Int),

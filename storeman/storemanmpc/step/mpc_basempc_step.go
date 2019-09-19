@@ -16,7 +16,9 @@ type BaseMpcStep struct {
 }
 
 func CreateBaseMpcStep(peers *[]mpcprotocol.PeerInfo, messageNum int) *BaseMpcStep {
-	return &BaseMpcStep{*CreateBaseStep(peers, -1), make([]MpcMessageGenerator, messageNum)}
+	return &BaseMpcStep{
+		*CreateBaseStep(peers, -1),
+		make([]MpcMessageGenerator, messageNum)}
 }
 
 func (mpcStep *BaseMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {

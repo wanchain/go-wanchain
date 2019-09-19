@@ -13,7 +13,8 @@ func (ready *GetMpcReadyStep) InitStep(mpcprotocol.MpcResultInterface) error {
 }
 
 func CreateGetMpcReadyStep(peers *[]mpcprotocol.PeerInfo) *GetMpcReadyStep {
-	return &GetMpcReadyStep{*CreateBaseStep(peers, 1)}
+	return &GetMpcReadyStep{
+		*CreateBaseStep(peers, 1)}
 }
 
 func (ready *GetMpcReadyStep) CreateMessage() []mpcprotocol.StepMessage {

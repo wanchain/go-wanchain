@@ -12,6 +12,7 @@ type BaseStep struct {
 	msgChan chan *mpcprotocol.StepMessage
 	finish  chan error
 	waiting int
+	waitAll bool // true: wait all
 }
 
 func CreateBaseStep(peers *[]mpcprotocol.PeerInfo, wait int) *BaseStep {
@@ -25,7 +26,7 @@ func CreateBaseStep(peers *[]mpcprotocol.PeerInfo, wait int) *BaseStep {
 	} else {
 		step.waiting = len(*peers)
 	}
-
+	step.waitAll = true
 	return step
 }
 
@@ -116,4 +117,8 @@ func (step *BaseStep) getPeerSeed(peerID *discover.NodeID) uint64 {
 	}
 
 	return 0
+}
+
+func (step *BaseStep) SetWaitAll(waitAll bool) {
+	step.waitAll = waitAll
 }
