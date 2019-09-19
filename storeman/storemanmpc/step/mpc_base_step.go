@@ -71,6 +71,10 @@ func (step *BaseStep) FinishStep() error {
 	case <-time.After(mpcprotocol.MPCTimeOut):
 		log.SyslogErr("BaseStep.FinishStep, wait step finish timeout")
 		step.msgChan <- nil
+
+		if !step.waitAll {
+			return nil
+		}
 		return mpcprotocol.ErrTimeOut
 	}
 }
