@@ -18,6 +18,8 @@ func init() {
 
 // TODO add ValidateData
 func ValidateData(data []byte) bool {
+	// 1. check in local db or not
+	// 2. check has approved or not
 	return true
 }
 

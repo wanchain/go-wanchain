@@ -4,14 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
-	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
-	"io/ioutil"
-	"math/big"
-	"math/rand"
-	"sort"
-	"sync"
-	"time"
-
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/awskms"
@@ -22,9 +14,13 @@ import (
 	"github.com/wanchain/go-wanchain/p2p"
 	"github.com/wanchain/go-wanchain/p2p/discover"
 	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"github.com/wanchain/go-wanchain/storeman/validator"
-	"strings"
+	"io/ioutil"
+	"math/big"
+	"sort"
+	"sync"
 )
 
 type MpcContextCreater interface {
@@ -270,7 +266,7 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 				break
 			}
 		}
-
+		// peers1: the peers which are used to create the group public key, used to build the sign data.
 		value, peers1, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
 
@@ -281,19 +277,18 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 			return []byte{}, err
 		}
 
-		peers = peers1
-
 		// mpc private share
 		preSetValue = append(preSetValue, *value)
+
+		peers = peers1
 	} else {
 		for i := 0; i < len(mpcServer.StoreManGroup); i++ {
 			peers = append(peers, mpcprotocol.PeerInfo{PeerID: mpcServer.StoreManGroup[i], Seed: 0})
 		}
 	}
-
 	mpc, err := mpcServer.mpcCreater.CreateContext(ctxType,
 		mpcID,
-		mpcServer.selectPeers(ctxType, peers, preSetValue...),
+		peers,
 		preSetValue...)
 
 	if err != nil {
@@ -381,45 +376,45 @@ func (mpcServer *MpcDistributor) getMessagePeers(mpcMessage *mpcprotocol.MpcMess
 	return &peers
 }
 
-func (mpcServer *MpcDistributor) selectPeers(ctxType int,
-	allPeers []mpcprotocol.PeerInfo,
-	preSetValue ...MpcValue) []mpcprotocol.PeerInfo {
-
-	var peers []mpcprotocol.PeerInfo
-	if ctxType == mpcprotocol.MpcGPKLeader {
-		peers = allPeers
-	} else {
-		peers = make([]mpcprotocol.PeerInfo, mpcprotocol.MPCDegree*2+1)
-		storemanLen := len(mpcServer.StoreManGroup)
-		selectIndex := 0
-		rand.Seed(time.Now().UnixNano())
-		for _, item := range preSetValue {
-			if strings.Index(item.Key, mpcprotocol.MpcTxHash) == 0 {
-				sel := big.NewInt(0)
-				hash := item.Value[0]
-				sel.Mod(&hash, big.NewInt(int64(storemanLen)))
-				selectIndex = (int(sel.Uint64()) + rand.Int()) % storemanLen
-				break
-			}
-		}
-
-		j := 1
-		for i := 0; j < len(peers) && i < len(allPeers); i++ {
-			sel := (i + selectIndex) % storemanLen
-			if mpcServer.P2pMessager.IsActivePeer(&(allPeers[sel].PeerID)) {
-				peers[j] = allPeers[sel]
-				log.SyslogInfo("select peers", "index", j, "peer", peers[j].PeerID.String())
-				j++
-			}
-		}
-
-		index := int(mpcServer.storeManIndex[mpcServer.Self.ID])
-		peers[0] = allPeers[index]
-		log.SyslogInfo("select peers", "index", 0, "peer", peers[0].PeerID.String())
-	}
-
-	return peers
-}
+//func (mpcServer *MpcDistributor) selectPeers(ctxType int,
+//	allPeers []mpcprotocol.PeerInfo,
+//	preSetValue ...MpcValue) []mpcprotocol.PeerInfo {
+//
+//	var peers []mpcprotocol.PeerInfo
+//	if ctxType == mpcprotocol.MpcGPKLeader {
+//		peers = allPeers
+//	} else {
+//		peers = make([]mpcprotocol.PeerInfo, mpcprotocol.MPCDegree*2+1)
+//		storemanLen := len(mpcServer.StoreManGroup)
+//		selectIndex := 0
+//		rand.Seed(time.Now().UnixNano())
+//		for _, item := range preSetValue {
+//			if strings.Index(item.Key, mpcprotocol.MpcTxHash) == 0 {
+//				sel := big.NewInt(0)
+//				hash := item.Value[0]
+//				sel.Mod(&hash, big.NewInt(int64(storemanLen)))
+//				selectIndex = (int(sel.Uint64()) + rand.Int()) % storemanLen
+//				break
+//			}
+//		}
+//
+//		j := 1
+//		for i := 0; j < len(peers) && i < len(allPeers); i++ {
+//			sel := (i + selectIndex) % storemanLen
+//			if mpcServer.P2pMessager.IsActivePeer(&(allPeers[sel].PeerID)) {
+//				peers[j] = allPeers[sel]
+//				log.SyslogInfo("select peers", "index", j, "peer", peers[j].PeerID.String())
+//				j++
+//			}
+//		}
+//
+//		index := int(mpcServer.storeManIndex[mpcServer.Self.ID])
+//		peers[0] = allPeers[index]
+//		log.SyslogInfo("select peers", "index", 0, "peer", peers[0].PeerID.String())
+//	}
+//
+//	return peers
+//}
 
 func (mpcServer *MpcDistributor) getMpcID() (uint64, error) {
 	var mpcID uint64

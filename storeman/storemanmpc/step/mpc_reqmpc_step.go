@@ -17,6 +17,14 @@ type RequestMpcStep struct {
 	message     map[discover.NodeID]bool
 }
 
+func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *RequestMpcStep {
+
+	return &RequestMpcStep{
+		BaseStep:    *CreateBaseStep(peers, len(*peers)-1),
+		messageType: messageType,
+		message:     make(map[discover.NodeID]bool)}
+}
+
 func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error {
 	log.SyslogInfo("RequestMpcStep.InitStep begin")
 
@@ -53,12 +61,6 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 	return nil
 }
 
-func CreateRequestMpcStep(peers *[]mpcprotocol.PeerInfo, messageType int64) *RequestMpcStep {
-	return &RequestMpcStep{BaseStep: *CreateBaseStep(peers, len(*peers)-1),
-		messageType: messageType,
-		message:     make(map[discover.NodeID]bool)}
-}
-
 func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	msg := mpcprotocol.StepMessage{
 		MsgCode:   mpcprotocol.RequestMPC,
@@ -66,6 +68,7 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		Peers:     req.peers,
 		Data:      nil,
 		BytesData: nil}
+
 	msg.Data = make([]big.Int, 1)
 	msg.Data[0].SetInt64(req.messageType)
 	if req.messageType == mpcprotocol.MpcSignLeader {
@@ -73,7 +76,7 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 		msg.BytesData = make([][]byte, 1)
 		msg.BytesData[0] = req.mpcM
 	} else if req.messageType == mpcprotocol.MpcGPKLeader {
-
+		//todo  do nothing?
 	}
 
 	return []mpcprotocol.StepMessage{msg}
