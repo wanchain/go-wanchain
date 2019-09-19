@@ -853,18 +853,18 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalBool(StoremanFlag.Name) {
 		cfg.StoremanEnabled = true
 		smDataPath := GetActualDataDir(ctx)
-		smspath := filepath.Join(smDataPath, "storemans.json");
+		smspath := filepath.Join(smDataPath, "storemans.json")
 		b, err := ioutil.ReadFile(smspath)
 		if err != nil {
 			panic(err)
 		}
 		var SIDs []string
 		errUnmarshal := json.Unmarshal(b, &SIDs)
-		if(errUnmarshal != nil) {
-			log.Error("Unmarshal error","errUnmarshal", errUnmarshal)
+		if errUnmarshal != nil {
+			log.Error("Unmarshal error", "errUnmarshal", errUnmarshal)
 			panic(errUnmarshal)
 		} else {
-			fmt.Println(SIDs);
+			fmt.Println(SIDs)
 			for _, url := range SIDs {
 				node, err := discover.ParseNode(url)
 				if err != nil {
