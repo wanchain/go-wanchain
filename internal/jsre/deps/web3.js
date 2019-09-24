@@ -13755,48 +13755,36 @@ module.exports = Wan;
         call: 'storeman_version',
         params: 0
       });
-      var createMpcAccount = new Method ({
-        name: 'createMpcAccount',
-        call: 'storeman_createMpcAccount',
+      var createGpk = new Method ({
+        name: 'createGPK',
+        call: 'storeman_createGPK',
         params: 1,
         inputFormatter: [null]
       });
-      var signMpcTransaction = new Method ({
-        name: 'signMpcTransaction',
-        call: 'storeman_signMpcTransaction',
+      var signData = new Method ({
+        name: 'signData',
+        call: 'storeman_signData',
         params: 1,
         inputFormatter: [null]
       });
-      var signMpcBtcTransaction = new Method ({
-        name: 'signMpcBtcTransaction',
-        call: 'storeman_signMpcBtcTransaction',
-        params: 1,
-        inputFormatter: [null]
-      });
-      var addValidMpcTx = new Method ({
-        name: 'addValidMpcTx',
-        call: 'storeman_addValidMpcTx',
+      var addValidData = new Method ({
+        name: 'addValidData',
+        call: 'storeman_addValidData',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
       });
-      var addValidMpcBtcTx = new Method ({
-        name: 'addValidMpcBtcTx',
-        call: 'storeman_addValidMpcBtcTx',
-        params: 1
-      });
+
       var peers = new Method ({
         name: 'peers',
         call: 'storeman_peers',
         params: 0
       });
       return [
-        version,
-        createMpcAccount,
-        signMpcTransaction,
-        signMpcBtcTransaction,
-        addValidMpcTx,
-        addValidMpcBtcTx,
-        peers,
+          version,
+          createGpk,
+          signData,
+          addValidData,
+          peers,
       ];
     };
     var properties = function () {

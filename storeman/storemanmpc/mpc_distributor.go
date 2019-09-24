@@ -648,9 +648,11 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 
 	result1 := new(ecdsa.PublicKey)
 	result1.Curve = crypto.S256()
-	result1.X = &point[0]
-	result1.Y = &point[1]
+	//result1.X = &point[0]
+	result1.X = big.NewInt(0).SetBytes(point[0].Bytes())
+	result1.Y = big.NewInt(0).SetBytes(point[1].Bytes())
 	seed := make([]uint64, len(*peers))
+
 	for i, item := range *peers {
 		seed[i] = item.Seed
 	}
@@ -659,6 +661,13 @@ func (mpcServer *MpcDistributor) CreateKeystore(result mpcprotocol.MpcResultInte
 	if err != nil {
 		return err
 	}
+
 	result.SetByteValue(mpcprotocol.MpcContextResult, crypto.FromECDSAPub(result1))
+	log.Info("=====Jacob CreateKeystore ",
+		"gpk address", crypto.PubkeyToAddress(*result1),
+		"gpk byte", crypto.FromECDSAPub(result1),
+		"gpk hexutil.Encode", hexutil.Encode(crypto.FromECDSAPub(result1)),
+		"gpk string", string(crypto.FromECDSAPub(result1)))
+
 	return nil
 }

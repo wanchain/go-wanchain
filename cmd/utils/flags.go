@@ -1168,7 +1168,7 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 // RegisterSmService configure Storeman and adds it to the given node
 func RegisterSmService(stack *node.Node, cfg *storeman.Config, aKID, secretKey, region string) {
 	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
-
+		log.Info("RegisterSmService")
 		return storeman.New(cfg, stack.AccountManager(), aKID, secretKey, region), nil
 	}); err != nil {
 		Fatalf("Failed to register the Storeman service: %v", err)

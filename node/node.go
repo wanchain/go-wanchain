@@ -249,13 +249,16 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		apis = append(apis, service.APIs()...)
 	}
 	// Start the various API endpoints, terminating all in case of errors
+
 	if err := n.startInProc(apis); err != nil {
 		return err
 	}
+
 	if err := n.startIPC(apis); err != nil {
 		n.stopInProc()
 		return err
 	}
+
 	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors); err != nil {
 		n.stopIPC()
 		n.stopInProc()
@@ -267,6 +270,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
+
 	// All API endpoints started successfully
 	n.rpcAPIs = apis
 	return nil

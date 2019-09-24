@@ -1,6 +1,7 @@
 package step
 
 import (
+	"encoding/hex"
 	"github.com/wanchain/go-wanchain/log"
 	mpcprotocol "github.com/wanchain/go-wanchain/storeman/storemanmpc/protocol"
 	"math/big"
@@ -41,9 +42,13 @@ func (ptStep *MpcPointStep) CreateMessage() []mpcprotocol.StepMessage {
 }
 
 func (ptStep *MpcPointStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {
-	log.SyslogInfo("MpcPointStep.HandleMessage begin, peerID:%s", msg.PeerID.String())
-
 	seed := ptStep.getPeerSeed(msg.PeerID)
+	log.SyslogInfo("***************Jacob MpcPointStep.HandleMessage begin ",
+		"peerID", msg.PeerID.String(),
+		"gpk x", hex.EncodeToString(msg.Data[0].Bytes()),
+		"gpk y", hex.EncodeToString(msg.Data[1].Bytes()),
+		"seed", seed)
+
 	if seed == 0 {
 		log.SyslogErr("MpcPointStep.HandleMessage, get peer seed fail. peer:%s", msg.PeerID.String())
 		return false
@@ -77,6 +82,11 @@ func (ptStep *MpcPointStep) FinishStep(result mpcprotocol.MpcResultInterface, mp
 
 	for i := 0; i < ptStep.signNum; i++ {
 		pointer := ptStep.messages[i].(*mpcPointGenerator)
+		//PublicKeyResult
+		log.Info("==Jacob generated gpk MpcPointStep::FinishStep",
+			"result key", ptStep.resultKeys[i],
+			"result value", pointer.result[:])
+
 		err = result.SetValue(ptStep.resultKeys[i], pointer.result[:])
 		if err != nil {
 			log.SyslogErr("MpcPointStep.FinishStep, SetValue fail. err:%s", err.Error())

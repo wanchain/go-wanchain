@@ -68,7 +68,9 @@ type RPCService struct {
 func (s *RPCService) Modules() map[string]string {
 	modules := make(map[string]string)
 	for name := range s.server.services {
-		modules[name] = "1.0"
+		fmt.Print(name)
+		fmt.Print("\n")
+		modules[name] = "2.0"
 	}
 	return modules
 }

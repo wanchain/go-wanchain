@@ -21,21 +21,21 @@ func reqGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcVal
 //get message from leader and create Context
 func ackGPKMpc(mpcID uint64, peers []mpcprotocol.PeerInfo, preSetValue ...MpcValue) (*MpcContext, error) {
 
-	log.SyslogInfo("acknowledgeCreateLockAccountMpc begin.")
+	log.SyslogInfo("ackGPKMpc begin.")
 	for _, preSetValuebyteData := range preSetValue {
-		log.SyslogInfo("acknowledgeCreateLockAccountMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
+		log.SyslogInfo("ackGPKMpc", "byteValue", string(preSetValuebyteData.ByteValue[:]))
 	}
 
 	findMap := make(map[uint64]bool)
 	for _, item := range peers {
 		if item.Seed > 0xffffff {
-			log.SyslogErr("acknowledgeCreateLockAccountMpc fail", "err", mpcprotocol.ErrMpcSeedOutRange.Error())
+			log.SyslogErr("ackGPKMpc fail", "err", mpcprotocol.ErrMpcSeedOutRange.Error())
 			return nil, mpcprotocol.ErrMpcSeedOutRange
 		}
 
 		_, exist := findMap[item.Seed]
 		if exist {
-			log.SyslogErr("acknowledgeCreateLockAccountMpc fail", "err", mpcprotocol.ErrMpcSeedDuplicate.Error())
+			log.SyslogErr("ackGPKMpc fail", "err", mpcprotocol.ErrMpcSeedDuplicate.Error())
 			return nil, mpcprotocol.ErrMpcSeedDuplicate
 		}
 

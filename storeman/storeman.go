@@ -241,7 +241,7 @@ func (sa *StoremanAPI) Peers(ctx context.Context) []*p2p.PeerInfo {
 func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 
 	log.SyslogInfo("CreateGPK begin")
-
+	log.SyslogInfo("CreateGPK begin", "peers", len(sa.sm.peers), "storeman peers", len(sa.sm.storemanPeers))
 	if len(sa.sm.peers) < len(sa.sm.storemanPeers)-1 {
 		return []byte{}, mpcprotocol.ErrTooLessStoreman
 	}
@@ -252,7 +252,7 @@ func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 
 	gpk, err := sa.sm.mpcDistributor.CreateRequestGPK()
 	if err == nil {
-		log.SyslogInfo("CreateGPK end", "addr", gpk)
+		log.SyslogInfo("CreateGPK end", "gpk", gpk)
 	} else {
 		log.SyslogErr("CreateGPK end", "err", err.Error())
 	}
@@ -286,11 +286,11 @@ func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendDa
 }
 
 // non leader node polling the data received from leader node
-func (sa *StoremanAPI) GetDataForApprove(ctx context.Context) ([]mpcprotocol.SendData, error) {
-	return nil, nil
-}
-
-// non leader node ApproveData, and make sure that the data is really required to be signed by them.
-func (sa *StoremanAPI) ApproveData(ctx context.Context, data []mpcprotocol.SendData) []bool {
-	return []bool{true}
-}
+//func (sa *StoremanAPI) GetDataForApprove(ctx context.Context) ([]mpcprotocol.SendData, error) {
+//	return nil, nil
+//}
+//
+//// non leader node ApproveData, and make sure that the data is really required to be signed by them.
+//func (sa *StoremanAPI) ApproveData(ctx context.Context, data []mpcprotocol.SendData) []bool {
+//	return []bool{true}
+//}
