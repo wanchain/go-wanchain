@@ -3747,6 +3747,10 @@ var inputCallFormatter = function (options){
     return options;
 };
 
+
+var inputMpcFormatter = function (options){
+  return options;
+};
 /**
  * Formats the input of a transaction and converts all values to HEX
  *
@@ -3964,7 +3968,8 @@ module.exports = {
     outputBlockFormatter: outputBlockFormatter,
     outputLogFormatter: outputLogFormatter,
     outputPostFormatter: outputPostFormatter,
-    outputSyncingFormatter: outputSyncingFormatter
+    outputSyncingFormatter: outputSyncingFormatter,
+    inputMpcFormatter:inputMpcFormatter
 };
 
 
@@ -13758,20 +13763,18 @@ module.exports = Wan;
       var createGpk = new Method ({
         name: 'createGPK',
         call: 'storeman_createGPK',
-        params: 1,
-        inputFormatter: [null]
+        params: 0
       });
       var signData = new Method ({
-        name: 'signData',
-        call: 'storeman_signData',
-        params: 1,
-        inputFormatter: [null]
+            name: 'signData',
+            //call: 'storeman_signData',
+            call: 'storeman_signData',
+            params: 1
       });
       var addValidData = new Method ({
         name: 'addValidData',
         call: 'storeman_addValidData',
-        params: 1,
-        inputFormatter: [formatters.inputTransactionFormatter]
+        params: 1
       });
 
       var peers = new Method ({

@@ -67,7 +67,22 @@ func (mars *MpcAckRSStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc 
 		return err
 	}
 
-	return mars.verifyRS(result)
+	err = mars.verifyRS(result)
+	if err != nil {
+		return err
+	}
+
+	// rpk : R
+	rpk := new(ecdsa.PublicKey)
+	rpk.X, rpk.Y = &mars.mpcR[0], &mars.mpcR[1]
+	// Forming the m: hash(message||rpk)
+	var buffer bytes.Buffer
+	buffer.Write(crypto.FromECDSAPub(rpk))
+	// S
+	buffer.Write(mars.mpcS.Bytes())
+	result.SetByteValue(mpcprotocol.MpcContextResult, buffer.Bytes())
+
+	return nil
 }
 
 func (mars *MpcAckRSStep) HandleMessage(msg *mpcprotocol.StepMessage) bool {

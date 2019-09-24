@@ -260,11 +260,32 @@ func (sa *StoremanAPI) CreateGPK(ctx context.Context) (pk []byte, err error) {
 	return gpk, err
 }
 
-func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
+//func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (R []byte, s []byte, err error) {
+//	//Todo  check the input parameter
+//
+//	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
+//		return []byte{}, []byte{}, mpcprotocol.ErrTooLessStoreman
+//	}
+//
+//	PKBytes := data.PKBytes
+//	pk := crypto.ToECDSAPub(PKBytes)
+//	from := crypto.PubkeyToAddress(*pk)
+//
+//	signed, err := sa.sm.mpcDistributor.CreateReqMpcSign(data.Data, from)
+//	if err == nil {
+//		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
+//	} else {
+//		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
+//	}
+//
+//	return []byte{}, []byte{}, nil
+//}
+
+func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) (result mpcprotocol.SignedResult, err error) {
 	//Todo  check the input parameter
 
 	if len(sa.sm.peers) < mpcprotocol.MPCDegree*2 {
-		return []byte{}, []byte{}, mpcprotocol.ErrTooLessStoreman
+		return mpcprotocol.SignedResult{R: []byte{}, S: []byte{}}, mpcprotocol.ErrTooLessStoreman
 	}
 
 	PKBytes := data.PKBytes
@@ -272,13 +293,15 @@ func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) 
 	from := crypto.PubkeyToAddress(*pk)
 
 	signed, err := sa.sm.mpcDistributor.CreateReqMpcSign(data.Data, from)
+
+	// signed   R // s
 	if err == nil {
 		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
 	} else {
 		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
 	}
 
-	return []byte{}, []byte{}, nil
+	return mpcprotocol.SignedResult{R: signed[0:66], S: signed[65:]}, nil
 }
 
 func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {

@@ -14,3 +14,8 @@ func (d *SendData) String() string {
 	return fmt.Sprintf(
 		"From:%s", hexutil.Encode(d.Data[:]))
 }
+
+type SignedResult struct {
+	R []byte `json:"R"`
+	S []byte `json:"S"`
+}
