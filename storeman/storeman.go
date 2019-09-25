@@ -303,7 +303,7 @@ func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) 
 		return mpcprotocol.SignedResult{R: []byte{}, S: []byte{}}, err
 	}
 
-	return mpcprotocol.SignedResult{R: signed[0:66], S: signed[65:]}, nil
+	return mpcprotocol.SignedResult{R: signed[0:65], S: signed[65:]}, nil
 }
 
 func (sa *StoremanAPI) AddValidData(ctx context.Context, data mpcprotocol.SendData) error {
