@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	version = 3
+	version        = 3
 	StoremanWanAcc = "WAN"
 	StoremanEthAcc = "ETH"
 	StoremanBtcAcc = "BTC"
@@ -244,6 +244,41 @@ func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accT
 		addr = crypto.PubkeyToRipemd160(pKey)
 		exten = common.Bytes2Hex(ECDSAPKCompression(pKey))
 
+	} else {
+		addr = crypto.PubkeyToAddress(*pKey)
+	}
+
+	key := &Key{
+		Id:          id,
+		Address:     addr,
+		PrivateKey:  priv,
+		PrivateKey2: priv,
+		Exten:       exten,
+	}
+
+	//3 bytes for every seed
+	for i, seed := range seeds {
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, seed)
+		copy(key.WAddress[i*3:], b[5:])
+	}
+
+	return key, nil
+}
+
+func newMpcKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accType string) (*Key, error) {
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = crypto.S256()
+	priv.D = pShare
+	priv.PublicKey.X, priv.PublicKey.Y = big.NewInt(0).SetBytes(pKey.X.Bytes()), big.NewInt(0).SetBytes(pKey.Y.Bytes())
+	id := uuid.NewRandom()
+
+	exten := ""
+	exten = hex.EncodeToString(crypto.FromECDSAPub(pKey))
+	addr := common.Address{}
+	if accType == StoremanBtcAcc {
+		addr = crypto.PubkeyToRipemd160(pKey)
+		exten = common.Bytes2Hex(ECDSAPKCompression(pKey))
 
 	} else {
 		addr = crypto.PubkeyToAddress(*pKey)
@@ -258,13 +293,13 @@ func newStoremanKey(pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, accT
 	}
 
 	//3 bytes for every seed
-	for i,seed := range seeds{
+	for i, seed := range seeds {
 		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b,seed)
-		copy(key.WAddress[i*3:],b[5:])
+		binary.BigEndian.PutUint64(b, seed)
+		copy(key.WAddress[i*3:], b[5:])
 	}
 
-	return key , nil
+	return key, nil
 }
 
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
@@ -280,9 +315,9 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	return key, a, err
 }
 
-func storeStoremanKey(ks keyStore, pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string)(*Key, accounts.Account, error){
-	key, err := newStoremanKey(pKey, pShare, seeds, accType)
-	if err!= nil {
+func storeStoremanKey(ks keyStore, pKey *ecdsa.PublicKey, pShare *big.Int, seeds []uint64, passphrase string, accType string) (*Key, accounts.Account, error) {
+	key, err := newMpcKey(pKey, pShare, seeds, accType)
+	if err != nil {
 		return nil, accounts.Account{}, err
 	}
 

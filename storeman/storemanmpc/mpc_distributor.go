@@ -3,6 +3,7 @@ package storemanmpc
 import (
 	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -345,8 +346,11 @@ func (mpcServer *MpcDistributor) loadStoremanAddress(address *common.Address) (*
 		mpcServer.mpcAccountMap[*address] = value
 	}
 
+	gpkByte, err := hex.DecodeString(key.Exten)
+	gpk := crypto.ToECDSAPub(gpkByte)
+
 	return &MpcValue{mpcprotocol.MpcPrivateShare, []big.Int{value.privateShare}, nil},
-		&MpcValue{mpcprotocol.PublicKeyResult, []big.Int{*(key.PrivateKey.PublicKey.X), *(key.PrivateKey.PublicKey.Y)}, nil},
+		&MpcValue{mpcprotocol.PublicKeyResult, []big.Int{*gpk.X, *gpk.Y}, nil},
 		value.peers,
 		nil
 }

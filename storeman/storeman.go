@@ -299,6 +299,7 @@ func (sa *StoremanAPI) SignData(ctx context.Context, data mpcprotocol.SendData) 
 		log.SyslogInfo("SignMpcTransaction end", "signed", common.ToHex(signed))
 	} else {
 		log.SyslogErr("SignMpcTransaction end", "err", err.Error())
+		return mpcprotocol.SignedResult{R: []byte{}, S: []byte{}}, err
 	}
 
 	return mpcprotocol.SignedResult{R: signed[0:66], S: signed[65:]}, nil

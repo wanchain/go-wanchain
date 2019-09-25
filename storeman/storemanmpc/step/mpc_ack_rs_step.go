@@ -3,6 +3,7 @@ package step
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
@@ -74,6 +75,7 @@ func (mars *MpcAckRSStep) FinishStep(result mpcprotocol.MpcResultInterface, mpc 
 
 	// rpk : R
 	rpk := new(ecdsa.PublicKey)
+	rpk.Curve = crypto.S256()
 	rpk.X, rpk.Y = &mars.mpcR[0], &mars.mpcR[1]
 	// Forming the m: hash(message||rpk)
 	var buffer bytes.Buffer
@@ -135,10 +137,12 @@ func (mars *MpcAckRSStep) verifyRS(result mpcprotocol.MpcResultInterface) error 
 		return err
 	}
 	gpk := new(ecdsa.PublicKey)
+	gpk.Curve = crypto.S256()
 	gpk.X, gpk.Y = &gpkItem[0], &gpkItem[1]
 
 	// rpk : R
 	rpk := new(ecdsa.PublicKey)
+	rpk.Curve = crypto.S256()
 	rpk.X, rpk.Y = &mars.mpcR[0], &mars.mpcR[1]
 	// Forming the m: hash(message||rpk)
 	var buffer bytes.Buffer
@@ -149,15 +153,28 @@ func (mars *MpcAckRSStep) verifyRS(result mpcprotocol.MpcResultInterface) error 
 
 	// check ssG = rpk + m*gpk
 	ssG := new(ecdsa.PublicKey)
+	ssG.Curve = crypto.S256()
 	ssG.X, ssG.Y = crypto.S256().ScalarBaseMult(mars.mpcS.Bytes())
 
 	// m*gpk
 	mgpk := new(ecdsa.PublicKey)
+	mgpk.Curve = crypto.S256()
 	mgpk.X, mgpk.Y = crypto.S256().ScalarMult(gpk.X, gpk.Y, m.Bytes())
 
 	// rpk + m*gpk
 	temp := new(ecdsa.PublicKey)
+	temp.Curve = crypto.S256()
+
 	temp.X, temp.Y = crypto.S256().Add(mgpk.X, mgpk.Y, rpk.X, rpk.Y)
+
+	log.Info("@@@@@@@@@@@@@@Jacob verifyRS@@@@@@@@@@@@@@",
+		"M", hex.EncodeToString(M[:]),
+		"m", hex.EncodeToString(m.Bytes()),
+		"R", hex.EncodeToString(crypto.FromECDSAPub(rpk)),
+		"rpk+m*gpk", hex.EncodeToString(crypto.FromECDSAPub(temp)),
+		"ssG", hex.EncodeToString(crypto.FromECDSAPub(ssG)),
+		"ss", hex.EncodeToString(mars.mpcS.Bytes()),
+		"gpk", hex.EncodeToString(crypto.FromECDSAPub(gpk)))
 
 	if ssG.X.Cmp(temp.X) == 0 && ssG.Y.Cmp(temp.Y) == 0 {
 		fmt.Println("Verification Succeeded")

@@ -3,6 +3,7 @@ package step
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/storeman/shcnorrmpc"
@@ -64,6 +65,10 @@ func (msg *mpcSGenerator) initialize(peers *[]mpcprotocol.PeerInfo, result mpcpr
 	}
 	sigShare := shcnorrmpc.SchnorrSign(gskShare[0], rskShare[0], *m)
 	msg.seed = sigShare
+
+	log.Info("@@@@@@@@@@@@@@SchnorrSign@@@@@@@@@@@@@@",
+		"M", hex.EncodeToString(MBytes),
+		"m", hex.EncodeToString(m.Bytes()))
 
 	log.SyslogInfo("mpcSGenerator.initialize succeed")
 	return nil

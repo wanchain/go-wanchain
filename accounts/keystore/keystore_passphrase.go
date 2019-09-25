@@ -314,7 +314,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		PrivateKey:  key,
 		PrivateKey2: key2,
 		WAddress:    waddress,
-		Exten:		 *exten,
+		Exten:       *exten,
 	}, nil
 }
 
