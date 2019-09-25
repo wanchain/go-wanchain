@@ -6,8 +6,8 @@ import (
 )
 
 type SendData struct {
-	PKBytes []byte `json:"pk"`
-	Data    []byte `json:"data"`
+	PKBytes hexutil.Bytes `json:"pk"`
+	Data    []byte        `json:"data"`
 }
 
 func (d *SendData) String() string {
@@ -16,6 +16,6 @@ func (d *SendData) String() string {
 }
 
 type SignedResult struct {
-	R []byte `json:"R"`
-	S []byte `json:"S"`
+	R hexutil.Bytes `json:"R"`
+	S hexutil.Bytes `json:"S"`
 }
