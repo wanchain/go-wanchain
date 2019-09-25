@@ -12,7 +12,7 @@ import (
 type RequestMpcStep struct {
 	BaseStep
 	messageType int64
-	address     big.Int
+	address     []byte
 	mpcM        []byte
 	message     map[discover.NodeID]bool
 }
@@ -52,12 +52,13 @@ func (req *RequestMpcStep) InitStep(result mpcprotocol.MpcResultInterface) error
 		}
 
 	} else if req.messageType == mpcprotocol.MpcSignLeader {
-		addr, err := result.GetValue(mpcprotocol.MpcAddress)
+
+		var err error
+		req.address, err = result.GetByteValue(mpcprotocol.MpcAddress)
 		if err != nil {
 			return err
 		}
 
-		req.address = addr[0]
 		req.mpcM, err = result.GetByteValue(mpcprotocol.MpcM)
 		if err != nil {
 			return err
@@ -79,9 +80,9 @@ func (req *RequestMpcStep) CreateMessage() []mpcprotocol.StepMessage {
 	msg.Data = make([]big.Int, 1)
 	msg.Data[0].SetInt64(req.messageType)
 	if req.messageType == mpcprotocol.MpcSignLeader {
-		msg.Data = append(msg.Data, req.address)
-		msg.BytesData = make([][]byte, 1)
+		msg.BytesData = make([][]byte, 2)
 		msg.BytesData[0] = req.mpcM
+		msg.BytesData[1] = req.address
 	} else if req.messageType == mpcprotocol.MpcGPKLeader {
 		//todo  do nothing?
 	}

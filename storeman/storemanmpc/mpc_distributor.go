@@ -243,7 +243,7 @@ func (mpcServer *MpcDistributor) CreateReqMpcSign(data []byte, from common.Addre
 	log.SyslogInfo("CreateReqMpcSign begin")
 
 	value, err := mpcServer.createRequestMpcContext(mpcprotocol.MpcSignLeader,
-		MpcValue{mpcprotocol.MpcAddress, []big.Int{*from.Big()}, nil},
+		MpcValue{mpcprotocol.MpcAddress, nil, from[:]},
 		MpcValue{mpcprotocol.MpcM, nil, data})
 
 	//Todo update the return value
@@ -262,12 +262,12 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 		address := common.Address{}
 		for _, item := range preSetValue {
 			if item.Key == mpcprotocol.MpcAddress {
-				address = common.BigToAddress(&item.Value[0])
+				copy(address[:], item.ByteValue)
 				break
 			}
 		}
 		// peers1: the peers which are used to create the group public key, used to build the sign data.
-		value, peers1, err := mpcServer.loadStoremanAddress(&address)
+		value, value1, peers1, err := mpcServer.loadStoremanAddress(&address)
 		if err != nil {
 
 			log.SyslogErr("MpcDistributor createRequestMpcContext, loadStoremanAddress fail",
@@ -279,6 +279,9 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 
 		// mpc private share
 		preSetValue = append(preSetValue, *value)
+
+		// mpc gpk for sign
+		preSetValue = append(preSetValue, *value1)
 
 		peers = peers1
 	} else {
@@ -312,17 +315,20 @@ func (mpcServer *MpcDistributor) createRequestMpcContext(ctxType int, preSetValu
 	return result, nil
 }
 
-func (mpcServer *MpcDistributor) loadStoremanAddress(address *common.Address) (*MpcValue, []mpcprotocol.PeerInfo, error) {
+func (mpcServer *MpcDistributor) loadStoremanAddress(address *common.Address) (*MpcValue, *MpcValue, []mpcprotocol.PeerInfo, error) {
 	log.SyslogInfo("MpcDistributor.loadStoremanAddress begin", "address", address.String())
 
 	mpcServer.accMu.Lock()
 	defer mpcServer.accMu.Unlock()
 	value, exist := mpcServer.mpcAccountMap[*address]
+
+	var key *keystore.Key
+	var err error
 	if !exist {
 		ks := mpcServer.AccountManager.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-		key, _, err := GetPrivateShare(ks, *address, mpcServer.enableAwsKms, &mpcServer.kmsInfo, mpcServer.password)
+		key, _, err = GetPrivateShare(ks, *address, mpcServer.enableAwsKms, &mpcServer.kmsInfo, mpcServer.password)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		b := make([]byte, 8)
@@ -335,10 +341,14 @@ func (mpcServer *MpcDistributor) loadStoremanAddress(address *common.Address) (*
 		}
 
 		value = &mpcAccount{*address, *key.PrivateKey.D, peers}
+
 		mpcServer.mpcAccountMap[*address] = value
 	}
 
-	return &MpcValue{mpcprotocol.MpcPrivateShare, []big.Int{value.privateShare}, nil}, value.peers, nil
+	return &MpcValue{mpcprotocol.MpcPrivateShare, []big.Int{value.privateShare}, nil},
+		&MpcValue{mpcprotocol.PublicKeyResult, []big.Int{*(key.PrivateKey.PublicKey.X), *(key.PrivateKey.PublicKey.Y)}, nil},
+		value.peers,
+		nil
 }
 
 func (mpcServer *MpcDistributor) SetMessagePeers(mpcMessage *mpcprotocol.MpcMessage, peers *[]mpcprotocol.PeerInfo) {
@@ -467,16 +477,19 @@ func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage
 	if ctxType == mpcprotocol.MpcSignPeer {
 		log.SyslogInfo("createMpcCtx MpcSignPeer")
 		mpcM := mpcMessage.BytesData[0]
-		address := common.BigToAddress(&mpcMessage.Data[0])
+		address := mpcMessage.BytesData[1]
 
-		log.SyslogInfo("createMpcCtx", "address", address.String(), "mpcM", mpcM)
+		add := common.Address{}
+		copy(add[:], address)
+
+		log.SyslogInfo("createMpcCtx", "address", address, "mpcM", mpcM)
 		// load account
-		MpcPrivateShare, _, err := mpcServer.loadStoremanAddress(&address)
+		MpcPrivateShare, _, _, err := mpcServer.loadStoremanAddress(&add)
 		if err != nil {
 			return err
 		}
 
-		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, []big.Int{*address.Big()}, nil})
+		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, nil, address})
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcM, nil, mpcM})
 		preSetValue = append(preSetValue, *MpcPrivateShare)
 
