@@ -484,7 +484,7 @@ func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage
 
 		log.SyslogInfo("createMpcCtx", "address", address, "mpcM", mpcM)
 		// load account
-		MpcPrivateShare, _, _, err := mpcServer.loadStoremanAddress(&add)
+		MpcPrivateShare, MpcPubKey, _, err := mpcServer.loadStoremanAddress(&add)
 		if err != nil {
 			return err
 		}
@@ -492,6 +492,7 @@ func (mpcServer *MpcDistributor) createMpcCtx(mpcMessage *mpcprotocol.MpcMessage
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcAddress, nil, address})
 		preSetValue = append(preSetValue, MpcValue{mpcprotocol.MpcM, nil, mpcM})
 		preSetValue = append(preSetValue, *MpcPrivateShare)
+		preSetValue = append(preSetValue, *MpcPubKey)
 
 		//verifyResult := validator.ValidateTx(signer, address, chainType, &chainId, txBytesData, txHash.Bytes())
 		verifyResult := validator.ValidateData(mpcM[:])
