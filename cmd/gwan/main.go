@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"os"
 	"runtime"
 	"sort"
@@ -272,6 +273,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	// Start up the node itself
 	utils.StartNode(stack)
+
+	util.SetLocalNodeString(stack.Server().Self().ID.String())
 
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math"
 	"math/big"
 	"strconv"
@@ -374,6 +375,14 @@ func (pm *ProtocolManager) handleMsgTx(p *peer, msg p2p.Msg) error {
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
+
+	// Jacob begin
+	fromNodeString := p.Peer.ID().String()
+	toNodeString := util.GetLocalNodeString()
+
+	msDelays := util.GetDelay(fromNodeString,toNodeString)
+
+	// Jacob end
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -682,6 +691,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockMsg:
+
+		// Jacob
+		time.Sleep(time.Millisecond*time.Duration(msDelays))
+
 		// Retrieve and decode the propagated block
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
@@ -714,6 +727,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
+		//Jacob
+		time.Sleep(time.Millisecond*time.Duration(msDelays))
 		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
