@@ -693,7 +693,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	case msg.Code == NewBlockMsg:
 
 		// Jacob
-		log.Info("================NewBlockMsg Jacob sleep","delay",msDelays)
+		//log.Info("================NewBlockMsg Jacob sleep","delay",msDelays)
 		time.Sleep(time.Millisecond*time.Duration(msDelays))
 
 		// Retrieve and decode the propagated block
@@ -729,7 +729,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == TxMsg:
 		//Jacob
-		log.Info("================TxMsg Jacob sleep","delay",msDelays)
+		//log.Info("================TxMsg Jacob sleep","delay",msDelays)
 		time.Sleep(time.Millisecond*time.Duration(msDelays))
 		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
