@@ -336,6 +336,13 @@ func (pm *ProtocolManager) handleMsgTxInsert(p *peer) {
 		txp[i] = p.receiveTxs.Pop().(*types.Transaction)
 	}
 
+	//Jacob should add delay here for batch add in the local tx pool.
+	fromNodeString := p.Peer.ID().String()
+	toNodeString := util.GetLocalNodeString()
+	msDelays := util.GetDelay(fromNodeString,toNodeString)
+	time.Sleep(time.Millisecond*time.Duration(msDelays))
+	//Jacob add end.
+
 	err := pm.txpool.AddRemotes(([]*types.Transaction)(txp))
 	if err != nil {
 		log.Error("adding remote txs errors", "reason", err)
@@ -730,7 +737,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	case msg.Code == TxMsg:
 		//Jacob
 		//log.Info("================TxMsg Jacob sleep","delay",msDelays)
-		time.Sleep(time.Millisecond*time.Duration(msDelays))
+		// commit below sleep , because transactions arrive in burst , it should not one trans , one delay
+		// it should many trans from one peer, only delay one time.
+		//time.Sleep(time.Millisecond*time.Duration(msDelays))
 		return pm.handleMsgTx(p, msg)
 	case p.version >= eth63 && msg.Code == GetBlockHeaderTdMsg:
 		var query getHeaderTdData
