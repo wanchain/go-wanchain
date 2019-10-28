@@ -82,9 +82,9 @@ var (
 	GasLimitBoundDivisorNew = big.NewInt(300)  // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit             = big.NewInt(5000) // Minimum the gas limit may ever be.
 
-	//MaxGasLimit             = big.NewInt(405000000) 	// 4M
+	MaxGasLimit             = big.NewInt(405000000) 	// 4M
 
-	MaxGasLimit             = big.NewInt(205000000) 	// 2M
+	//MaxGasLimit             = big.NewInt(205000000) 	// 2M
 
 
 	GenesisGasLimit         = big.NewInt(4712388)               // Gas limit of the Genesis block.
