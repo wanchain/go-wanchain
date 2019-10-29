@@ -84,7 +84,7 @@ var (
 
 	MaxGasLimit             = big.NewInt(405000000) 	// 4M
 
-	//MaxGasLimit             = big.NewInt(405000000) 	// 2M
+	//MaxGasLimit             = big.NewInt(205000000) 	// 2M
 
 
 	GenesisGasLimit         = big.NewInt(4712388)               // Gas limit of the Genesis block.

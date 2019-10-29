@@ -223,6 +223,7 @@ var WhiteListOrig = [...]string{
 }
 */
 // 25 nodes
+
 var WhiteListOrig = [...]string{
 	"0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70",
 	"0x0480dc2f30861c94c3a9dd9aa6dad207c9431a771247f61c8d62e9b616435ceebcb6b60e40e9f46a6f08bbd3e05939b3c0ea3f690c116c34afde1e533c2e8bb0ff",
