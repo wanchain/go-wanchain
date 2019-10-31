@@ -47,9 +47,9 @@ const (
 
 
 	//// EpochLeaderCount is count of pk in epoch leader group which is select by stake
-	EpochLeaderCount = 25
+	EpochLeaderCount = 50
 	//// RandomProperCount is count of pk in random leader group which is select by stake
-	RandomProperCount = 13
+	RandomProperCount = 25
 
 	PosUpgradeEpochID = 2 // must send tx 2 epoch before.
 	MaxEpHold         = 30
@@ -59,7 +59,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 60
+	SlotTime = 2
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
