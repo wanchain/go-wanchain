@@ -368,8 +368,8 @@ func initDelays(){
 
 // unit: ms
 func GetDelay(from, to string) float32 {
-	return 0
-	//return getDelayByIndex(getIndexByNodeString(from),getIndexByNodeString(to))
+	//return 0
+	return getDelayByIndex(getIndexByNodeString(from),getIndexByNodeString(to))
 }
 
 func GetLocalNodeString() string{
