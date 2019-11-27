@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wanchain/go-wanchain"
 	"github.com/wanchain/go-wanchain/accounts/abi/bind"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/math"
