@@ -710,6 +710,11 @@ func saveStakeOut(stakeOutInfo []RefundInfo, epochID uint64) error {
 	log.Info("Save refund information done.","epochID",epochID)
 	return nil
 }
+func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
+	if core.CanTransfer(db, sender, amount) {
+		core.Transfer(db, sender, recipient,amount)
+	}
+}
 func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 	if vm.StakeoutIsFinished(stateDb, epochID) {
 		return true
@@ -763,7 +768,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		for j := 0; j < len(staker.Clients); j++ {
 			// edit the validator Amount
 			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
-				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Clients[j].Address, staker.Clients[j].Amount)
 				clientChanged = true
 			} else {
@@ -780,7 +785,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		for j := 0; j < len(staker.Partners); j++ {
 			// edit the validator Amount
 			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
-				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 				partnerchanged = true
 			} else {
@@ -793,16 +798,16 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 
 		if epochID >= staker.StakingEpoch+staker.LockEpochs {
 			for j := 0; j < len(staker.Clients); j++ {
-				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
+				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo,staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
 			for j := 0; j < len(staker.Partners); j++ {
-				core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
+				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 			}
 			key := vm.GetStakeInKeyHash(staker.Address)
 			// quit the validator
-			core.Transfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
+			coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 			stakeOutInfo = recordStakeOut(stakeOutInfo, staker.From, staker.Amount)
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
 			newFeeBytes, err := vm.GetInfo(stateDb, vm.StakersFeeAddr, key)
