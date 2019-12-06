@@ -35,6 +35,8 @@ const (
 	ReorgLocalDB     = "forkdb"
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
+
+
 )
 
 var EpochLeadersHold [][]byte
@@ -93,6 +95,9 @@ const (
 	CriticalReorgThreshold  = 3
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
+
+	MainnetDecember2019ForkEpochId = 18236 + 10
+	TestnetDecember2019ForkEpochId = 18236 + 10
 )
 
 var TxDelay = K
@@ -120,6 +125,8 @@ type Config struct {
 	Dkg2End       uint64
 	SignBegin     uint64
 	SignEnd       uint64
+
+	December2019ForkEpochId uint64
 }
 
 var DefaultConfig = Config{
@@ -136,6 +143,7 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
 }
 
 func Cfg() *Config {
@@ -180,6 +188,9 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		// this is mainnet. *****
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
+
+		DefaultConfig.December2019ForkEpochId = MainnetDecember2019ForkEpochId
+
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		if IsDev { // --plutodev
@@ -193,6 +204,8 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
+
+		DefaultConfig.December2019ForkEpochId = TestnetDecember2019ForkEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))
