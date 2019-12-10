@@ -237,7 +237,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		epochId,_ :=util.GetEpochSlotID()
+		epochId,_ :=util.CalEpochSlotID(evm.Time.Uint64())
 		if epochId >= posconfig.Cfg().December2019ForkEpochId {
 			if methodId == getEpochIdId {
 				return c.getEpochId(input[4:], contract, evm)
