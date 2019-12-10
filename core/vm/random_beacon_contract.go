@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
 )
 
@@ -79,7 +80,64 @@ var (
     ],
     "payable": false,
     "type": "function"
-  }
+  },
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "blockTime",
+				"type": "uint256"
+			}
+		],
+		"name": "getEpochId",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "blockTime",
+				"type": "uint256"
+			}
+		],
+		"name": "getRandomByBlockTime",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "epochId",
+				"type": "uint256"
+			}
+		],
+		"name": "getRandomByEpochId",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
 ]`
 	// random beacon smart contract abi object
 	rbSCAbi, errRbSCInit = abi.JSON(strings.NewReader(rbSCDefinition))
@@ -88,6 +146,9 @@ var (
 	dkg1Id     [4]byte
 	dkg2Id     [4]byte
 	sigShareId [4]byte
+	getEpochIdId [4]byte
+	getRandomByEpochIdId [4]byte
+	getRandomByBlockTimeId [4]byte
 
 	// prefix for the key hash
 	kindCij = []byte{100}
@@ -148,6 +209,9 @@ func init() {
 	copy(dkg1Id[:], rbSCAbi.Methods["dkg1"].Id())
 	copy(dkg2Id[:], rbSCAbi.Methods["dkg2"].Id())
 	copy(sigShareId[:], rbSCAbi.Methods["sigShare"].Id())
+	copy(getEpochIdId[:], rbSCAbi.Methods["getEpochId"].Id())
+	copy(getRandomByEpochIdId[:], rbSCAbi.Methods["getRandomByEpochId"].Id())
+	copy(getRandomByBlockTimeId[:], rbSCAbi.Methods["getRandomByBlockTime"].Id())
 }
 
 //
@@ -173,9 +237,54 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
+		epochId,_ :=util.GetEpochSlotID()
+		if epochId >= posconfig.Cfg().December2019ForkEpochId {
+			if methodId == getEpochIdId {
+				return c.getEpochId(input[4:], contract, evm)
+			} else if methodId == getRandomByEpochIdId {
+				return c.getRandomByEpochId(input[4:], contract, evm)
+			} else if methodId == getRandomByBlockTimeId {
+				return c.getRandomByBlockTime(input[4:], contract, evm)
+			}
+		}
 		log.SyslogErr("random beacon contract no match id found")
 		return nil, errors.New("no function")
 	}
+}
+
+func (c *RandomBeaconContract) getEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	blockTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+
+	epochId,_ := posutil.CalEpochSlotID(blockTime)
+
+	eBig := new(big.Int).SetUint64(epochId)
+	return common.LeftPadBytes(eBig.Bytes(), 32), nil
+}
+
+func (c *RandomBeaconContract) getRandomByEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	epochId := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+
+	r := GetStateR(evm.StateDB, epochId)
+
+	if r == nil {
+		r = big.NewInt(0)
+	}
+
+	return common.LeftPadBytes(r.Bytes(), 32), nil
+}
+
+func (c *RandomBeaconContract) getRandomByBlockTime(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	blockTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+
+	epochId,_ := posutil.CalEpochSlotID(blockTime)
+
+	r := GetStateR(evm.StateDB, epochId)
+
+	if r == nil {
+		r = big.NewInt(0)
+	}
+
+	return common.LeftPadBytes(r.Bytes(), 32), nil
 }
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
