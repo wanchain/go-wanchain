@@ -76,13 +76,13 @@ type SelectLead interface {
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
 	GetEpochLastBlkNumber(targetEpochId uint64) uint64
-	GetCurrentBlock() *types.Block
+	GetCurrentHeader() *types.Header
 	//TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
 }
 
 func GetCurrentBlkEpochSlotID() (epochID, slotID uint64) {
-	curblk := GetEpocherInst().GetCurrentBlock()
-	return GetEpochSlotIDFromDifficulty(curblk.Difficulty())
+	curheader := GetEpocherInst().GetCurrentHeader()
+	return GetEpochSlotIDFromDifficulty(curheader.Difficulty)
 }
 
 var (
