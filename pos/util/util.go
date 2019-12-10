@@ -55,6 +55,8 @@ func CalEpochSlotIDByNow() {
 	//fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
+
+
 //PkEqual only can use in same curve. return whether the two points equal
 func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 	if pk1 == nil || pk2 == nil {
@@ -74,7 +76,13 @@ type SelectLead interface {
 	GetRBProposerG1(epochID uint64) []bn256.G1
 	GetEpochLeaders(epochID uint64) [][]byte
 	GetEpochLastBlkNumber(targetEpochId uint64) uint64
+	GetCurrentBlock() *types.Block
 	//TryGetAndSaveAllStakerInfoBytes(epochId uint64) (*[][]byte, error)
+}
+
+func GetCurrentBlkEpochSlotID() (epochID, slotID uint64) {
+	curblk := GetEpocherInst().GetCurrentBlock()
+	return GetEpochSlotIDFromDifficulty(curblk.Difficulty())
 }
 
 var (
@@ -103,6 +111,7 @@ func CalEpSlbyTd(blkTd uint64) (epochID uint64, slotID uint64) {
 	slotID = ((blkTd & 0xffffffff) >> 8)
 	return epochID, slotID
 }
+
 func UpdateEpochBlock(block *types.Block) {
 	blkTd := block.Difficulty().Uint64()
 	epochID, slotID := CalEpSlbyTd(blkTd)

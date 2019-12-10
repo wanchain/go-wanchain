@@ -88,6 +88,10 @@ func (e *Epocher) GetBlkChain() *core.BlockChain {
 	return e.blkChain
 }
 
+func (e *Epocher) GetCurrentBlock() *types.Block {
+	return e.blkChain.CurrentBlock()
+}
+
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	if epochId < 2 {
 		return uint64(0)
