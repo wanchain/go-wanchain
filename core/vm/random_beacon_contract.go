@@ -85,7 +85,7 @@ var (
 		"constant": true,
 		"inputs": [
 			{
-				"name": "blockTime",
+				"name": "timestamp",
 				"type": "uint256"
 			}
 		],
@@ -104,11 +104,11 @@ var (
 		"constant": true,
 		"inputs": [
 			{
-				"name": "blockTime",
+				"name": "timestamp",
 				"type": "uint256"
 			}
 		],
-		"name": "getRandomByBlockTime",
+		"name": "getRandomNumberByTimestamp",
 		"outputs": [
 			{
 				"name": "",
@@ -127,7 +127,7 @@ var (
 				"type": "uint256"
 			}
 		],
-		"name": "getRandomByEpochId",
+		"name": "getRandomNumberByEpochId",
 		"outputs": [
 			{
 				"name": "",
@@ -147,8 +147,8 @@ var (
 	dkg2Id     [4]byte
 	sigShareId [4]byte
 	getEpochIdId [4]byte
-	getRandomByEpochIdId [4]byte
-	getRandomByBlockTimeId [4]byte
+	getRandomNumberByEpochIdId [4]byte
+	getRandomNumberByTimestampId [4]byte
 
 	// prefix for the key hash
 	kindCij = []byte{100}
@@ -210,8 +210,8 @@ func init() {
 	copy(dkg2Id[:], rbSCAbi.Methods["dkg2"].Id())
 	copy(sigShareId[:], rbSCAbi.Methods["sigShare"].Id())
 	copy(getEpochIdId[:], rbSCAbi.Methods["getEpochId"].Id())
-	copy(getRandomByEpochIdId[:], rbSCAbi.Methods["getRandomByEpochId"].Id())
-	copy(getRandomByBlockTimeId[:], rbSCAbi.Methods["getRandomByBlockTime"].Id())
+	copy(getRandomNumberByEpochIdId[:], rbSCAbi.Methods["getRandomNumberByEpochId"].Id())
+	copy(getRandomNumberByTimestampId[:], rbSCAbi.Methods["getRandomNumberByTimestamp"].Id())
 }
 
 //
@@ -241,10 +241,10 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 		if epochId >= posconfig.Cfg().MercuryEpochId {
 			if methodId == getEpochIdId {
 				return c.getEpochId(input[4:], contract, evm)
-			} else if methodId == getRandomByEpochIdId {
-				return c.getRandomByEpochId(input[4:], contract, evm)
-			} else if methodId == getRandomByBlockTimeId {
-				return c.getRandomByBlockTime(input[4:], contract, evm)
+			} else if methodId == getRandomNumberByEpochIdId {
+				return c.getRandomNumberByEpochId(input[4:], contract, evm)
+			} else if methodId == getRandomNumberByTimestampId {
+				return c.getRandomNumberByTimestamp(input[4:], contract, evm)
 			}
 		}
 		log.SyslogErr("random beacon contract no match id found")
@@ -253,15 +253,15 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 }
 
 func (c *RandomBeaconContract) getEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	blockTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
-	epochId,_ := posutil.CalEpochSlotID(blockTime)
+	epochId,_ := posutil.CalEpochSlotID(timestamp)
 
 	eBig := new(big.Int).SetUint64(epochId)
 	return common.LeftPadBytes(eBig.Bytes(), 32), nil
 }
 
-func (c *RandomBeaconContract) getRandomByEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *RandomBeaconContract) getRandomNumberByEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	epochId := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
 	r := GetStateR(evm.StateDB, epochId)
@@ -273,10 +273,10 @@ func (c *RandomBeaconContract) getRandomByEpochId(payload []byte, contract *Cont
 	return common.LeftPadBytes(r.Bytes(), 32), nil
 }
 
-func (c *RandomBeaconContract) getRandomByBlockTime(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	blockTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+func (c *RandomBeaconContract) getRandomNumberByTimestamp(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
-	epochId,_ := posutil.CalEpochSlotID(blockTime)
+	epochId,_ := posutil.CalEpochSlotID(timestamp)
 
 	r := GetStateR(evm.StateDB, epochId)
 
