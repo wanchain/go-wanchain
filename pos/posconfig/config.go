@@ -62,7 +62,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 20
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -96,8 +96,8 @@ const (
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
 
-	MainnetDecember2019ForkEpochId = 18236 + 10
-	TestnetDecember2019ForkEpochId = 18236 + 10
+	MainnetMercuryEpochId = 18236 + 10
+	TestnetMercuryEpochId = 1313307 + 5
 )
 
 var TxDelay = K
@@ -126,7 +126,7 @@ type Config struct {
 	SignBegin     uint64
 	SignEnd       uint64
 
-	December2019ForkEpochId uint64
+	MercuryEpochId uint64
 }
 
 var DefaultConfig = Config{
@@ -189,7 +189,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
 
-		DefaultConfig.December2019ForkEpochId = MainnetDecember2019ForkEpochId
+		DefaultConfig.MercuryEpochId = MainnetMercuryEpochId
 
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
@@ -201,11 +201,12 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 	} else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
 
-		DefaultConfig.December2019ForkEpochId = TestnetDecember2019ForkEpochId
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

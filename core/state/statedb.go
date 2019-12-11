@@ -469,10 +469,9 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 // cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
 
-	epochid,_ :=util.GetCurrentBlkEpochSlotID()
+	epochid,_ := util.GetCurrentBlkEpochSlotID()
 
-	if epochid < posconfig.Cfg().December2019ForkEpochId {
-
+	if epochid < posconfig.Cfg().MercuryEpochId {
 		db.ForEachStorageByteArrayBeforeFork(addr,cb)
 
 	} else {
