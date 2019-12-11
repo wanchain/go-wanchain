@@ -84,7 +84,7 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func (t *TestSelectLead) GetEpochLastBlkNumber(epochID uint64) uint64 { return 0 }
-
+/*
 func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 	posconfig.Init(nil, 4)
 	activityInit()
@@ -122,7 +122,7 @@ func TestGetEpochLeaderAddressAndActivity(t *testing.T) {
 		}
 	}
 }
-
+*/
 func testGetRBAddress(epochID uint64) []vm.Leader {
 	leaders := make([]vm.Leader, len(rpAddrs))
 	for i := 0; i < len(rpAddrs); i++ {
