@@ -89,8 +89,15 @@ func (e *Epocher) GetBlkChain() *core.BlockChain {
 }
 
 func (e *Epocher) GetCurrentHeader() *types.Header {
-	return e.blkChain.GetHc().CurrentHeader()
+
+	inst := e.blkChain.GetHc()
+	if inst == nil {
+		return nil
+	}
+
+	return inst.CurrentHeader()
 }
+
 
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	if epochId < 2 {

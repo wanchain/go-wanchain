@@ -81,9 +81,20 @@ type SelectLead interface {
 }
 
 func GetCurrentBlkEpochSlotID() (epochID, slotID uint64) {
-	curheader := GetEpocherInst().GetCurrentHeader()
+
+	inst :=  GetEpocherInst()
+	if inst == nil {
+		return 0,0
+	}
+
+	curheader := inst.GetCurrentHeader()
+	if curheader == nil {
+		return 0,0
+	}
+
 	return GetEpochSlotIDFromDifficulty(curheader.Difficulty)
 }
+
 
 var (
 	lastBlockEpoch     = make(map[uint64]uint64)
