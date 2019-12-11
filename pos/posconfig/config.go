@@ -62,7 +62,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 20
+	K      = 1440
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -97,7 +97,7 @@ const (
 	NonCriticalChainQuality = 0.8
 
 	MainnetMercuryEpochId = 18236 + 10
-	TestnetMercuryEpochId = 1313307 + 5
+	TestnetMercuryEpochId = 18236 + 10
 )
 
 var TxDelay = K
