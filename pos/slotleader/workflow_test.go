@@ -48,6 +48,8 @@ func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil
 
 func (t *TestSelectLead) GetEpochLastBlkNumber(targetEpochId uint64) uint64 { return 0 }
 
+func (t *TestSelectLead) GetCurrentHeader() *types.Header {return nil}
+
 func RmDB(dbName string){
 	var dbPath string
 	dbPath = path.Join(dbPath, "gwan",dbName)

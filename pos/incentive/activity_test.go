@@ -33,6 +33,7 @@ func (t *TestChainReader) Config() *params.ChainConfig                          
 func (t *TestChainReader) GetHeader(hash common.Hash, number uint64) *types.Header { return nil }
 func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header          { return nil }
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
+func (t *TestSelectLead) GetCurrentHeader() *types.Header {return nil}
 
 func TestGetSlotLeaderActivity(t *testing.T) {
 	posconfig.Init(nil, 4)
