@@ -14,8 +14,8 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+//"github.com/wanchain/go-wanchain/pos/util"
+//	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 type TestChainReader struct {
