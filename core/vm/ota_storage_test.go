@@ -1089,7 +1089,7 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	}
 //}
-/*
+
 func TestGetOTASet(t *testing.T) {
 	{
 		var (
@@ -1533,7 +1533,7 @@ func TestGetOTASet(t *testing.T) {
 		}
 	}
 }
-*/
+
 func TestCheckOTAImageExist(t *testing.T) {
 	var (
 		db, _      = ethdb.NewMemDatabase()

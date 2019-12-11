@@ -204,7 +204,7 @@ func TestGasCoinMint(t *testing.T) {
 	}
 
 }
-/*
+
 func TestGasCoinRefund(t *testing.T) {
 	var (
 		initialBalance = big.NewInt(0)
@@ -357,7 +357,7 @@ func TestGasCoinRefund(t *testing.T) {
 	}
 	fmt.Println(keyPairs)
 }
-*/
+
 
 // generate recipient's OTA for privary transaction
 func genOTAStr(pk, pk1 *ecdsa.PublicKey) (string, error) {
