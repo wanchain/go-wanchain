@@ -8,7 +8,7 @@ import (
 	"path"
 	"testing"
 	"time"
-
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -47,6 +47,8 @@ func (t *TestSelectLead) GetProposerBn256PK(epochID uint64, idx uint64, addr com
 func (t *TestSelectLead) GetRBProposerG1(epochID uint64) []bn256.G1 { return nil }
 
 func (t *TestSelectLead) GetEpochLastBlkNumber(targetEpochId uint64) uint64 { return 0 }
+
+func (t *TestSelectLead) GetCurrentHeader() *types.Header {return nil}
 
 func RmDB(dbName string){
 	var dbPath string

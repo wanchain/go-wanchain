@@ -13687,6 +13687,13 @@ module.exports = XMLHttpRequest;
             inputFormatter: [null, null]
         });
 
+        var checkOTAUsed = new Method({
+          name: 'checkOTAUsed',
+          call: 'wan_checkOTAUsed',
+          params: 1,
+          inputFormatter: [null]
+        });
+
         var computeOTAPPKeys = new Method({
             name: 'computeOTAPPKeys',
             call: 'wan_computeOTAPPKeys',
@@ -13719,6 +13726,7 @@ module.exports = XMLHttpRequest;
             getWanAddress,
             generateOneTimeAddress,
             getOTAMixSet,
+            checkOTAUsed,
             getOTABalance,
             getSupportWanCoinOTABalances,
             getSupportStampOTABalances,

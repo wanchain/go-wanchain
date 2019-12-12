@@ -3,7 +3,7 @@
 echo ''
 echo ''
 echo '=========================================='
-echo '+     Welcome to Validator registion     +'
+echo '| Welcome to Testnet Validator registion |'
 echo ''
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
@@ -15,7 +15,7 @@ read -s PASSWD
 echo 'Confirm your password of validator account:'
 read -s PASSWD2
 echo ''
-DOCKERIMG=wanchain/client-go:2.1.2-beta
+DOCKERIMG=wanchain/client-go:2.1.2
 NETWORK=--testnet
 NETWORKPATH=testnet
 

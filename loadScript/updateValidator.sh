@@ -1,17 +1,19 @@
 #!/bin/bash
 # set -x
+DOCKERIMG=wanchain/client-go:2.1.4-beta
+
 echo ''
 echo ''
 echo ''
 echo ''
 echo '=========================================='
-echo '+     Welcome to Validator Update        +'
+echo '|   Welcome to testnet Validator Update  |'
 echo ''
 echo 'If you have deployed your validator with deployValidator.sh, you can update with this script'
 echo 'Please make sure that only one gwan docker is running on the current machine.'
 echo 'Otherwise, please update the gwan version manually.'
 echo 'gwan binary URL: https://github.com/wanchain/go-wanchain/releases'
-echo 'gwan docker image: wanchain/client-go:2.1.1-beta'
+echo 'gwan docker image: ' ${DOCKERIMG}
 echo ''
 echo ''
 echo 'Please Enter your validator Name:'
@@ -26,7 +28,7 @@ echo ''
 echo ''
 echo ''
 
-DOCKERIMG=wanchain/client-go:2.1.2-beta
+
 NETWORK=--testnet
 NETWORKPATH=testnet
 

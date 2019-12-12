@@ -82,7 +82,9 @@ func (a PosApi) Version() string {
 }
 
 func (a PosApi) GetSlotLeaderByEpochIDAndSlotID(epochID uint64, slotID uint64) string {
-
+	if !isPosStage() {
+		return "Not POS stage."
+	}
 	slp, err := slotleader.GetSlotLeaderSelection().GetSlotLeader(epochID, slotID)
 	if err != nil {
 		return err.Error()
@@ -91,6 +93,10 @@ func (a PosApi) GetSlotLeaderByEpochIDAndSlotID(epochID uint64, slotID uint64) s
 }
 
 func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
+
 	infoMap := make(map[string]string, 0)
 
 	selector := epochLeader.GetEpocher()
@@ -109,6 +115,10 @@ func (a PosApi) GetEpochLeadersByEpochID(epochID uint64) (map[string]string, err
 }
 
 func (a PosApi) GetEpochLeadersAddrByEpochID(epochID uint64) ([]common.Address, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
+
 	selector := epochLeader.GetEpocher()
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
@@ -129,6 +139,9 @@ func (a PosApi) GetEpochLeadersAddrByEpochID(epochID uint64) ([]common.Address, 
 	return addres, nil
 }
 func (a PosApi) GetLeaderGroupByEpochID(epochID uint64) ([]LeaderJson, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	selector := epochLeader.GetEpocher()
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
@@ -137,7 +150,14 @@ func (a PosApi) GetLeaderGroupByEpochID(epochID uint64) ([]LeaderJson, error) {
 }
 
 func (a PosApi) GetLocalPK() (string, error) {
-	pk, err := slotleader.GetSlotLeaderSelection().GetLocalPublicKey()
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
+	SLS := slotleader.GetSlotLeaderSelection()
+	if SLS == nil {
+		return "nil", errors.New("This function can not use in POW stage.")
+	}
+	pk, err := SLS.GetLocalPublicKey()
 	if err != nil {
 		return "nil", err
 	}
@@ -146,14 +166,23 @@ func (a PosApi) GetLocalPK() (string, error) {
 }
 
 func (a PosApi) GetBootNodePK() string {
+	if !isPosStage() {
+		return "Not POS stage."
+	}
 	return posconfig.GenesisPK
 }
 
 func (a PosApi) GetSlotScCallTimesByEpochID(epochID uint64) uint64 {
+	if !isPosStage() {
+		return 0
+	}
 	return vm.GetSlotScCallTimes(epochID)
 }
 
 func (a PosApi) GetSmaByEpochID(epochID uint64) (map[string]string, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	pks, _, err := slotleader.GetSlotLeaderSelection().GetSma(epochID)
 	if err != nil {
 		return nil, err
@@ -169,6 +198,9 @@ func (a PosApi) GetSmaByEpochID(epochID uint64) (map[string]string, error) {
 }
 
 func (a PosApi) GetRandomProposersByEpochID(epochID uint64) (map[string]string, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	selector := epochLeader.GetEpocher()
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
@@ -184,6 +216,9 @@ func (a PosApi) GetRandomProposersByEpochID(epochID uint64) (map[string]string, 
 }
 
 func (a PosApi) GetRandomProposersAddrByEpochID(epochID uint64) ([]common.Address, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	selector := epochLeader.GetEpocher()
 	if selector == nil {
 		return nil, errors.New("GetEpocherInst error")
@@ -199,10 +234,16 @@ func (a PosApi) GetRandomProposersAddrByEpochID(epochID uint64) ([]common.Addres
 }
 
 func (a PosApi) GetSlotCreateStatusByEpochID(epochID uint64) bool {
+	if !isPosStage() {
+		return false
+	}
 	return slotleader.GetSlotLeaderSelection().GetSlotCreateStatusByEpochID(epochID)
 }
 
 func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return nil, err
@@ -217,10 +258,16 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 }
 
 func (a PosApi) GetChainQuality(epochid uint64, slotid uint64) (uint64, error) {
+	if !isPosStage() {
+		return 1000, nil
+	}
 	return a.chain.ChainQuality(epochid, slotid)
 }
 
 func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	reOrgDb := posdb.GetDbByName(posconfig.ReorgLocalDB)
 	if reOrgDb == nil {
 		return []uint64{0, 0}, nil
@@ -244,6 +291,9 @@ func (a PosApi) GetReorgState(epochid uint64) ([]uint64, error) {
 }
 
 func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) {
+	if !isPosStage() {
+		return 0, nil
+	}
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return 0, err
@@ -335,6 +385,10 @@ func (a PosApi) GetStakerInfo(targetBlkNum uint64) ([]*StakerJson, error) {
 	return stakers, nil
 }
 
+func isPosStage() bool {
+	return posconfig.FirstEpochId != 0
+}
+
 func (a PosApi) GetPosInfo() (info PosInfoJson) {
 	info.FirstEpochId = posconfig.FirstEpochId
 	info.FirstBlockNumber = posconfig.Pow2PosUpgradeBlockNumber
@@ -398,6 +452,9 @@ func biToString(value *big.Int, err error) (string, error) {
 }
 
 func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
 		return []ValidatorInfo{}, nil
@@ -431,9 +488,15 @@ func (a PosApi) GetEpochIncentivePayDetail(epochID uint64) ([]ValidatorInfo, err
 }
 
 func (a PosApi) GetTotalIncentive() (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	return biToString(incentive.GetTotalIncentive())
 }
 func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
+	if !isPosStage() {
+		return 0, nil
+	}
 	number, err := incentive.GetEpochIncentiveBlockNumber(epochID)
 	if err == nil {
 		return number.Uint64(), nil
@@ -441,10 +504,16 @@ func (a PosApi) GetEpochIncentiveBlockNumber(epochID uint64) (uint64, error) {
 	return 0, err
 }
 func (a PosApi) GetEpochIncentive(epochID uint64) (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	return biToString(incentive.GetEpochIncentive(epochID))
 }
 
 func (a PosApi) GetEpochRemain(epochID uint64) (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	return biToString(incentive.GetEpochRemain(epochID))
 }
 
@@ -485,14 +554,23 @@ func (a PosApi) GetWhiteListbyEpochID(epochID uint64) ([]string, error) {
 }
 
 func (a PosApi) GetTotalRemain() (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	return biToString(incentive.GetTotalRemain())
 }
 
 func (a PosApi) GetIncentiveRunTimes() (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	return biToString(incentive.GetRunTimes())
 }
 
 func (a PosApi) GetEpochGasPool(epochID uint64) (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {
@@ -502,10 +580,16 @@ func (a PosApi) GetEpochGasPool(epochID uint64) (string, error) {
 }
 
 func (a PosApi) GetRBAddress(epochID uint64) []common.Address {
+	if !isPosStage() {
+		return nil
+	}
 	return incentive.GetRBAddress(epochID)
 }
 
 func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {
@@ -517,6 +601,9 @@ func (a PosApi) GetIncentivePool(epochID uint64) ([]string, error) {
 
 // GetActivity get epoch leader, random proposer, slot leader 's addresses and activity
 func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	s := slotleader.GetSlotLeaderSelection()
 	db, err := s.GetCurrentStateDb()
 	if err != nil {
@@ -532,6 +619,9 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 
 // GetSlotActivity get slot activity of epoch
 func (a PosApi) GetSlotActivity(epochID uint64) (*SlotActivity, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	s := slotleader.GetSlotLeaderSelection()
 	activity := SlotActivity{}
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
@@ -540,6 +630,9 @@ func (a PosApi) GetSlotActivity(epochID uint64) (*SlotActivity, error) {
 
 // GetValidatorActivity get epoch leader, random proposer addresses and activity
 func (a PosApi) GetValidatorActivity(epochID uint64) (*ValidatorActivity, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
 	epID := a.GetEpochID()
 	if epochID >= epID {
 		return nil, nil
@@ -583,6 +676,9 @@ func (a PosApi) GetSlotTime() int {
 }
 
 func (a PosApi) GetMaxStableBlkNumber() uint64 {
+	if !isPosStage() {
+		return 0
+	}
 	return cfm.GetCFM().GetMaxStableBlkNumber()
 }
 
@@ -815,4 +911,35 @@ func (a PosApi) GetEpochStakeOut(epochID uint64) ([]RefundInfo, error) {
 	}
 	refundInfo := convertReundInfo(stakeOut)
 	return refundInfo, nil
+}
+
+// GetTps used to get tps value
+func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
+	sRet := fmt.Sprintf("Get tps from %d to %d, ", fromNumber, toNumber)
+	s := slotleader.GetSlotLeaderSelection()
+	reader := s.GetChainReader()
+
+	totalTx := uint64(0)
+	totalSecond := uint64(0)
+	for i := fromNumber; i <= toNumber; i++ {
+		header := reader.GetHeaderByNumber(i)
+		block := reader.GetBlock(header.Hash(), i)
+		if block != nil {
+			totalTx += uint64(len(block.Transactions()))
+
+			if i == fromNumber {
+				totalSecond = block.Time().Uint64()
+			}
+
+			if i == toNumber {
+				totalSecond = block.Time().Uint64() - totalSecond
+			}
+		}
+	}
+
+	sRet += fmt.Sprintf("Total tx: %d, ", totalTx)
+	sRet += fmt.Sprintf("Total second: %d, ", totalSecond)
+	sRet += fmt.Sprintf("TPS: %d", totalTx/totalSecond)
+
+	return sRet, nil
 }

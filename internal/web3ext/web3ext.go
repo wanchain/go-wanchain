@@ -396,6 +396,11 @@ web3._extend({
 			call: 'pos_getEpochIdByBlockNumber',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getTps',
+			call: 'pos_getTps',
+			params: 2
+		}),
 	]
 });
 `

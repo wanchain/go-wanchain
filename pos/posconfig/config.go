@@ -35,6 +35,8 @@ const (
 	ReorgLocalDB     = "forkdb"
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
+
+
 )
 
 var EpochLeadersHold [][]byte
@@ -93,6 +95,9 @@ const (
 	CriticalReorgThreshold  = 3
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
+
+	MainnetMercuryEpochId = 18241 + 15
+	TestnetMercuryEpochId = 18241 + 5
 )
 
 var TxDelay = K
@@ -120,6 +125,8 @@ type Config struct {
 	Dkg2End       uint64
 	SignBegin     uint64
 	SignEnd       uint64
+
+	MercuryEpochId uint64
 }
 
 var DefaultConfig = Config{
@@ -136,6 +143,7 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
 }
 
 func Cfg() *Config {
@@ -180,6 +188,9 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		// this is mainnet. *****
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
+
+		DefaultConfig.MercuryEpochId = MainnetMercuryEpochId
+
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		if IsDev { // --plutodev
@@ -190,9 +201,12 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 	} else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
+
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

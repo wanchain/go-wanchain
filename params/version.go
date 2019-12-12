@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	VersionMajor = 2         // Major version component of the current release
-	VersionMinor = 1         // Minor version component of the current release
-	VersionPatch = 2         // Patch version component of the current release
-	VersionMeta  = "wan_mpc" // Version metadata to append to the version string
+	VersionMajor = 2        // Major version component of the current release
+	VersionMinor = 1        // Minor version component of the current release
+	VersionPatch = 4        // Patch version component of the current release
+	VersionMeta  = "beta" 		// Version metadata to append to the version string
 )
 
 // Version holds the textual version string.

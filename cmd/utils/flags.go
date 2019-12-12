@@ -319,7 +319,7 @@ var (
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
-		Value: params.GenesisGasLimit.Uint64(),
+		Value: params.NewTargeGasLimit.Uint64(),
 	}
 	EtherbaseFlag = cli.StringFlag{
 		Name:  "etherbase",
