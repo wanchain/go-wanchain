@@ -42,18 +42,18 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-getAddr=$(sudo docker run -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan console --exec "personal.newAccount('${PASSWD}')")
+getAddr=$(sudo docker run -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan console --exec "personal.newAccount('${PASSWD}')")
 
 ADDR=$getAddr
 
 echo $ADDR
 
-getPK=$(sudo docker run -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan console --exec "personal.showPublicKey(${ADDR},'${PASSWD}')")
+getPK=$(sudo docker run -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan console --exec "personal.showPublicKey(${ADDR},'${PASSWD}')")
 PK=$getPK
 
 echo $PK
 
-echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
+echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
 if [ $? -ne 0 ]; then
     echo "write pw.txt failed"
     exit 1
@@ -61,7 +61,7 @@ fi
 
 addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
+sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
@@ -72,11 +72,11 @@ echo 'Please wait a few seconds...'
 
 sleep 5
 
-sudo rm /home/${USER}/.wanchain/pw.txt
+sudo rm ~/.wanchain/pw.txt
 
-KEYSTOREFILE=$(sudo ls /home/${USER}/.wanchain/keystore/)
+KEYSTOREFILE=$(sudo ls ~/.wanchain/keystore/)
 
-KEYSTORE=$(sudo cat /home/${USER}/.wanchain/keystore/${KEYSTOREFILE})
+KEYSTORE=$(sudo cat ~/.wanchain/keystore/${KEYSTOREFILE})
 
 echo ''
 echo ''
