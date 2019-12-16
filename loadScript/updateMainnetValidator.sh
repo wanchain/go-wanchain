@@ -1,7 +1,7 @@
 #!/bin/bash
 # set -x
 
-DOCKERIMG=wanchain/client-go:2.1.2
+DOCKERIMG=wanchain/client-go:2.1.3
 
 echo ''
 echo ''
@@ -49,13 +49,13 @@ sudo docker stop gwan >/dev/null 2>&1
 
 sudo docker rm gwan >/dev/null 2>&1
 
-echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
+echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
 if [ $? -ne 0 ]; then
     echo "Write pw.txt failed"
     exit 1
 fi
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v /home/${USER}/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
+sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
@@ -66,7 +66,7 @@ echo 'Please wait a few seconds...'
 
 sleep 5
 
-sudo rm /home/${USER}/.wanchain/pw.txt
+sudo rm ~/.wanchain/pw.txt
 
 if [ $? -ne 0 ]; then
     echo "rm pw.txt failed"

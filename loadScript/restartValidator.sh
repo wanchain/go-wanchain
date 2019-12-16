@@ -19,7 +19,7 @@ echo ''
 
 sudo docker stop gwan
 
-echo ${PASSWD} | sudo tee -a /home/${USER}/.wanchain/pw.txt > /dev/null
+echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
 
 sudo docker start gwan
 
@@ -27,7 +27,7 @@ echo 'Please wait a few seconds...'
 
 sleep 5
 
-sudo rm /home/${USER}/.wanchain/pw.txt
+sudo rm ~/.wanchain/pw.txt
 
 echo ''
 echo ''
