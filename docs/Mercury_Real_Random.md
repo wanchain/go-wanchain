@@ -2,9 +2,8 @@
 
 ## Smart Contract ABI
 
-We have added three functions in random number protocol ABIs.
+We have added three functions in random number protocol ABIs:
 
-There are:
 - getEpochId 
   - You can get epochId from a input timestamp.
 - getRandomNumberByEpochId
