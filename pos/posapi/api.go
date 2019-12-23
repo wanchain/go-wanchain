@@ -244,6 +244,11 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	if !isPosStage() {
 		return nil, nil
 	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return nil, err
@@ -294,6 +299,11 @@ func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) 
 	if !isPosStage() {
 		return 0, nil
 	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return 0, err
