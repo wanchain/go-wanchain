@@ -9,6 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/params"
 
@@ -247,6 +248,12 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 
 	if blockNr > a.chain.CurrentHeader().Number.Int64() {
 		blockNr = -1
+	}
+
+	epID, _ := util.CalEpSlbyTd(a.chain.CurrentHeader().Difficulty.Uint64())
+
+	if epochId > epID {
+		return nil, errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
 	}
 
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
