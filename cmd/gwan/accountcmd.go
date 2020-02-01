@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/wanchain/go-wanchain/awskms"
 	"github.com/wanchain/go-wanchain/common"
@@ -32,6 +33,10 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"gopkg.in/urfave/cli.v1"
+
+	"cloud.google.com/go/compute/metadata"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
 var (
@@ -338,6 +343,58 @@ func unlockAccountFromAwsKmsFile(ctx *cli.Context, ks *keystore.KeyStore, addres
 
 	// All trials expended to unlock account, bail out
 	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
+	return accounts.Account{}, ""
+}
+
+func unlockAccountFromGCPSecretManager(ctx *cli.Context, ks *keystore.KeyStore, address string) (accounts.Account, string) {
+	account, err := utils.MakeAddress(ks, address)
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+
+	client, err := secretmanager.NewClient(context.Background())
+	if err != nil {
+		utils.Fatalf("failed to setup client: %v", err)
+	}
+	defer client.Close()
+
+	var (
+		project       = ctx.GlobalString(utils.GCPProjectIDFlag.Name)
+		secretName    = ctx.GlobalString(utils.GCPSecretNameFlag.Name)
+		secretVersion = ctx.GlobalString(utils.GCPSecretVersionFlag.Name)
+	)
+
+	if project == "" {
+		detectedProject, err := metadata.NumericProjectID()
+		if err != nil {
+			utils.Fatalf("failed to auto-detect GCP project, specify with --gcp-project-id")
+		}
+		project = detectedProject
+	}
+
+	accessRequest := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, secretName, secretVersion),
+	}
+
+	result, err := client.AccessSecretVersion(context.Background(), accessRequest)
+	if err != nil {
+		utils.Fatalf("failed to access secret version: %v", err)
+	}
+
+	password := string(result.Payload.Data)
+
+	err = ks.Unlock(account, password)
+	if err == nil {
+		log.Info("Unlocked account", "address", account.Address.Hex())
+		return account, password
+	}
+	if err, ok := err.(*keystore.AmbiguousAddrError); ok {
+		log.Info("Unlocked account", "address", account.Address.Hex())
+		return ambiguousAddrRecovery(ks, err, password), password
+	}
+
+	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
+
 	return accounts.Account{}, ""
 }
 

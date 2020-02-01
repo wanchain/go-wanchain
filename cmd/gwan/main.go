@@ -127,6 +127,9 @@ var (
 		configFileFlag,
 
 		utils.AwsKmsFlag,
+		utils.GCPSecretNameFlag,
+		utils.GCPSecretVersionFlag,
+		utils.GCPProjectIDFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -261,6 +264,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
 			if ctx.IsSet(utils.AwsKmsFlag.Name) {
 				unlockAccountFromAwsKmsFile(ctx, ks, trimmed, i, passwords)
+			} else if ctx.IsSet(utils.GCPSecretNameFlag.Name) {
+				unlockAccountFromGCPSecretManager(ctx, ks, trimmed)
 			} else {
 				unlockAccount(ctx, ks, trimmed, i, passwords)
 			}
