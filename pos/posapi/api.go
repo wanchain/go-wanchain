@@ -634,6 +634,23 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	return &activity, nil
 }
 
+// GetEpRnpActivity get epoch leader, random leader proposer activity
+func (a PosApi) GetEpRnpActivity(epochID uint64) (*EpRnpActivity, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := EpRnpActivity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
+	return &activity, nil
+}
+
 // GetSlotActivity get slot activity of epoch
 func (a PosApi) GetSlotActivity(epochID uint64) (*SlotActivity, error) {
 	if !isPosStage() {
