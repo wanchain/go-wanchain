@@ -96,8 +96,8 @@ const (
 	CriticalChainQuality    = 0.618
 	NonCriticalChainQuality = 0.8
 
-	MainnetMercuryEpochId = 18241 + 15
-	TestnetMercuryEpochId = 18241 + 5
+	MainnetMercuryEpochId = 18250 //2019.12.20
+	TestnetMercuryEpochId = 18246 //2019.12.16
 )
 
 var TxDelay = K
