@@ -439,6 +439,10 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 }
 
 var isPosActive = false
+const (
+	TestnetChainId = 3
+	MainnetChainId = 1
+)
 
 func IsPosActive() bool {
 	return isPosActive

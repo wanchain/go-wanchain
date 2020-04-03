@@ -6,6 +6,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+
+	//"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -357,6 +359,7 @@ func TestGasCoinRefund(t *testing.T) {
 	}
 	fmt.Println(keyPairs)
 }
+
 
 // generate recipient's OTA for privary transaction
 func genOTAStr(pk, pk1 *ecdsa.PublicKey) (string, error) {
