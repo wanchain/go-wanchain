@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -75,6 +76,12 @@ func (s *Db) DbInit(dbPath string) {
 	var dirname string
 	var err error
 	if dbPath == "" {
+		//Remove old unuse tmp files and directorys.
+		files, _ := filepath.Glob(filepath.Join(os.TempDir(), "wanpos_tmpdb_*"))
+		for i := 0; i < len(files); i++ {
+			os.RemoveAll(files[i])
+		}
+
 		dirname, err = ioutil.TempDir(os.TempDir(), "wanpos_tmpdb_")
 		if err != nil {
 			panic("failed to create wanpos_tmpdb file: " + err.Error())

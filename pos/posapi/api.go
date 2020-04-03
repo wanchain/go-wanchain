@@ -9,6 +9,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 
 	"github.com/wanchain/go-wanchain/pos/cfm"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 
 	"github.com/wanchain/go-wanchain/params"
 
@@ -244,6 +245,17 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	if !isPosStage() {
 		return nil, nil
 	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
+	epID, _ := util.CalEpSlbyTd(a.chain.CurrentHeader().Difficulty.Uint64())
+
+	if epochId > epID {
+		return nil, errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
+	}
+
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return nil, err
@@ -294,6 +306,11 @@ func (a PosApi) GetRbSignatureCount(epochId uint64, blockNr int64) (int, error) 
 	if !isPosStage() {
 		return 0, nil
 	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
 		return 0, err
@@ -614,6 +631,23 @@ func (a PosApi) GetActivity(epochID uint64) (*Activity, error) {
 	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
 	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	activity.SltLeader, activity.SlBlocks, activity.SlActivity, activity.SlCtrlCount = incentive.GetSlotLeaderActivity(s.GetChainReader(), epochID)
+	return &activity, nil
+}
+
+// GetEpRnpActivity get epoch leader, random leader proposer activity
+func (a PosApi) GetEpRnpActivity(epochID uint64) (*EpRnpActivity, error) {
+	if !isPosStage() {
+		return nil, nil
+	}
+	s := slotleader.GetSlotLeaderSelection()
+	db, err := s.GetCurrentStateDb()
+	if err != nil {
+		return nil, err
+	}
+
+	activity := EpRnpActivity{}
+	activity.EpLeader, activity.EpActivity = incentive.GetEpochLeaderActivity(db, epochID)
+	activity.RpLeader, activity.RpActivity = incentive.GetEpochRBLeaderActivity(db, epochID)
 	return &activity, nil
 }
 

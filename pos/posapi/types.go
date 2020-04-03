@@ -33,6 +33,13 @@ type Activity struct {
 	SlCtrlCount int              `json:"slCtrlCount"`
 }
 
+type EpRnpActivity struct {
+	EpLeader   []common.Address `json:"epLeader"`
+	EpActivity []int            `json:"epActivity"`
+	RpLeader   []common.Address `json:"rpLeader"`
+	RpActivity []int            `json:"rpActivity"`
+}
+
 type ValidatorInfo struct {
 	Address       common.Address        `json:"address"`
 	WalletAddress common.Address        `json:"stakeInFromAddr"`

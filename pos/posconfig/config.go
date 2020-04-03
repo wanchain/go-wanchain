@@ -36,10 +36,11 @@ const (
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 
-
+	TestnetAdditionalBlock = 6661460
 )
 
 var EpochLeadersHold [][]byte
+var TestnetAdditionalValue = new(big.Int).Mul(big.NewInt(210000000),big.NewInt(1e18))
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
