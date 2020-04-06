@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"github.com/wanchain/go-wanchain/params"
 	"math/big"
 	"os"
 	"os/user"
@@ -28,7 +29,6 @@ import (
 	"github.com/wanchain/go-wanchain/core"
 	"github.com/wanchain/go-wanchain/eth/downloader"
 	"github.com/wanchain/go-wanchain/eth/gasprice"
-	"github.com/wanchain/go-wanchain/params"
 )
 
 // DefaultConfig contains default settings for use on the Ethereum main net.
@@ -42,8 +42,8 @@ var DefaultConfig = Config{
 	NetworkId:            1,
 	LightPeers:           20,
 	DatabaseCache:        128,
-	GasPrice:             big.NewInt(0).Mul(big.NewInt(18 * params.Shannon),params.WanGasTimesFactor),
-
+	//GasPrice:             big.NewInt(0).Mul(big.NewInt(18 * params.Shannon),params.WanGasTimesFactor),
+	GasPrice:             big.NewInt(1 * params.Shannon),
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
 		Blocks:     10,

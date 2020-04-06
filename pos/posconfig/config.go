@@ -64,6 +64,7 @@ const (
 	// K count of each epoch
 	KCount = 12
 	K      = 1440
+
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -128,6 +129,8 @@ type Config struct {
 	SignEnd       uint64
 
 	MercuryEpochId uint64
+
+	DefaultGasPrice	 *big.Int
 }
 
 var DefaultConfig = Config{
@@ -145,6 +148,8 @@ var DefaultConfig = Config{
 	Stage8K,
 	Stage10K - 1,
 	0,
+
+	nil,
 }
 
 func Cfg() *Config {
