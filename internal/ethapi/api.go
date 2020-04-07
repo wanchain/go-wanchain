@@ -57,7 +57,8 @@ const (
 )
 
 var (
-	defaultGasPrice = big.NewInt(0).Mul(big.NewInt(18*params.Shannon), params.WanGasTimesFactor)
+	//defaultGasPrice = big.NewInt(0).Mul(big.NewInt(18*params.Shannon), params.WanGasTimesFactor)
+	defaultGasPrice = big.NewInt(1*params.Shannon)
 )
 
 var (
@@ -1411,8 +1412,12 @@ func (s *PublicTransactionPoolAPI) SendPosTransaction(ctx context.Context, args 
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
+
+
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
+
+
 	tx.SetTxtype(types.POS_TX)
 	var chainID *big.Int
 
