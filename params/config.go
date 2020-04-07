@@ -441,7 +441,7 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 var (
 
 	isPosActive = false
-	TestnetChainId = TestChainConfig.ChainId.Int64()
+	TestnetChainId = TestnetChainConfig.ChainId.Int64()
 	MainnetChainId = WanchainChainConfig.ChainId.Int64()
 
 )
