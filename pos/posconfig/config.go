@@ -100,6 +100,9 @@ const (
 
 	MainnetMercuryEpochId = 18250 //2019.12.20
 	TestnetMercuryEpochId = 18246 //2019.12.16
+
+	MainnetVenusEpochId = 111
+	TestnetVenusEpochId = 110
 )
 
 var TxDelay = K
@@ -129,7 +132,7 @@ type Config struct {
 	SignEnd       uint64
 
 	MercuryEpochId uint64
-
+	VenusEpochId uint64
 	DefaultGasPrice	 *big.Int
 }
 
@@ -147,6 +150,7 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
 	0,
 
 	nil,
@@ -196,6 +200,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		PosOwnerAddr = PosOwnerAddrMainnet
 
 		DefaultConfig.MercuryEpochId = MainnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = MainnetVenusEpochId
 
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
@@ -208,11 +213,13 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = TestnetVenusEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
 
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))
