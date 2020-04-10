@@ -131,6 +131,8 @@ type Config struct {
 	MercuryEpochId uint64
 
 	DefaultGasPrice	 *big.Int
+
+	SyncTargetBlokcNum uint64
 }
 
 var DefaultConfig = Config{
@@ -150,6 +152,8 @@ var DefaultConfig = Config{
 	0,
 
 	nil,
+
+	0,
 }
 
 func Cfg() *Config {
