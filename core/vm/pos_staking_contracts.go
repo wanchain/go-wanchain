@@ -19,6 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
+	 posutil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 /* the contract interface described by solidity.
@@ -419,6 +420,25 @@ var (
 		],
 		"name": "stakeUpdateFeeRate",
 		"type": "event"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "getPosAvgReturn",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]
 `
@@ -434,6 +454,8 @@ var (
 	delegateInId  [4]byte
 	delegateOutId [4]byte
 	stakeUpdateFeeRateId [4]byte
+
+	getPosAvgReturnId [4]byte
 
 	maxEpochNum                = big.NewInt(PSMaxEpochNum)
 	minEpochNum                = big.NewInt(PSMinEpochNum)
@@ -565,6 +587,8 @@ func init() {
 	copy(delegateInId[:], cscAbi.Methods["delegateIn"].Id())
 	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].Id())
 	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].Id())
+
+	copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturnId"].Id())
 }
 
 /////////////////////////////
@@ -609,6 +633,8 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return p.DelegateOut(input[4:], contract, evm)
 	} else if methodId == stakeUpdateFeeRateId {
 		return p.StakeUpdateFeeRate(input[4:], contract, evm)
+	} else if methodId == getPosAvgReturnId {
+		return p.getPosAvgReturn(input[4:], contract, evm)
 	}
 	return nil, errMethodId
 }
@@ -1534,4 +1560,21 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 	}
 	return nil
+}
+
+func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	//to do
+	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+
+	epochId,_ := posutil.CalEpochSlotID(timestamp)
+
+	r := GetStateR(evm.StateDB, epochId)
+
+	if r == nil {
+		r = big.NewInt(0)
+	}
+
+	return common.LeftPadBytes(r.Bytes(), 32), nil
+
+	return []byte{},nil
 }

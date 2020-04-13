@@ -440,6 +440,8 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	posconfig.Cfg().SyncTargetBlokcNum = height
 
+
+
 	log.Info("the lastest block number", "height", height)
 
 	origin, err := d.findAncestor(p, height)
