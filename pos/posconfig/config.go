@@ -102,7 +102,7 @@ const (
 	TestnetMercuryEpochId = 18246 //2019.12.16
 
 	MainnetVenusEpochId = 111
-	TestnetVenusEpochId = 110
+	TestnetVenusEpochId = 6610032
 )
 
 var TxDelay = K
@@ -209,6 +209,8 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		} else {
 			WhiteList = WhiteListOrig
 		}
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = TestnetVenusEpochId
 	} else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
