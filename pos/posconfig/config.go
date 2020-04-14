@@ -103,6 +103,11 @@ const (
 
 	MainnetVenusEpochId = 111
 	TestnetVenusEpochId = 6610032
+
+	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
+	RETURN_DIVIDE = 10000
+
+
 )
 
 var TxDelay = K

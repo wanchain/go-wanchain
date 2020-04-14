@@ -19,7 +19,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -259,4 +259,20 @@ func MemStat() uint64 {
 	memStat := new(runtime.MemStats)
 	runtime.ReadMemStats(memStat)
 	return memStat.Alloc
+}
+
+
+type PosAvgRetInterface interface {
+	GetOneEpochAvgReturn(epochID uint64) (uint64, error)
+}
+
+
+var posavginst PosAvgRetInterface
+func SetPosAvgInst(posavg PosAvgRetInterface) {
+	posavginst = posavg
+}
+
+func PosAvgRetInst() PosAvgRetInterface {
+	// if haven't switch to pos, it could be nil
+	return posavginst
 }

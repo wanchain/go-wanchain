@@ -2,6 +2,7 @@ package vm
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"errors" // this is not match with other
 	"github.com/wanchain/go-wanchain/params"
 	"math/big"
@@ -18,8 +19,8 @@ import (
 	"github.com/wanchain/go-wanchain/crypto/bn256"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/util"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
 	"github.com/wanchain/go-wanchain/rlp"
-	 posutil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 /* the contract interface described by solidity.
@@ -588,7 +589,7 @@ func init() {
 	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].Id())
 	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].Id())
 
-	copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturnId"].Id())
+	copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturn"].Id())
 }
 
 /////////////////////////////
@@ -1567,14 +1568,25 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
 	epochId,_ := posutil.CalEpochSlotID(timestamp)
+	inst := posutil.PosAvgRetInst()
 
-	r := GetStateR(evm.StateDB, epochId)
+	retTotal := uint64(0);
+	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
 
-	if r == nil {
-		r = big.NewInt(0)
+		ret,err := inst.GetOneEpochAvgReturn(epochId - i)
+		if err!= nil {
+			continue
+		}
+
+		retTotal += ret
 	}
 
-	return common.LeftPadBytes(r.Bytes(), 32), nil
+	avg := (retTotal/posconfig.TARGETS_LOCKED_EPOCH)
 
-	return []byte{},nil
+	////convert to byte array
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, avg)
+
+	return buf, nil
 }
+

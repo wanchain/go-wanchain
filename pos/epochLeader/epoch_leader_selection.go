@@ -19,10 +19,9 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-
 )
 
 var (
@@ -68,6 +67,7 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	if epocherInst == nil {
 		epocherInst = NewEpocherWithLBN(blc, posconfig.RbLocalDB, posconfig.EpLocalDB)
 	}
+
 
 	return epocherInst
 }

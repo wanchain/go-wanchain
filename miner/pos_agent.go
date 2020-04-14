@@ -3,6 +3,7 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wanchain/go-wanchain/pos/posavgretrate"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -58,6 +59,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	incentive.Init(epochSelector.GetEpochProbability, epochSelector.SetEpochIncentive, epochSelector.GetRBProposerGroup)
 
 	s.BlockChain().SetSlotValidator(sls)
+
+	pos.NewPosAveRet()
 
 	return epochSelector
 }
