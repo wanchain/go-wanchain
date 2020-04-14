@@ -1014,7 +1014,7 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 
 func (bc *BlockChain) biggerThanCriticalBlock(block *types.Block) bool{
 
-	diff := posconfig.Cfg().SyncTargetBlokcNum - block.NumberU64()
+	diff := int(posconfig.Cfg().SyncTargetBlokcNum - block.NumberU64())
 	if diff >  2*posconfig.SlotSecurityParam{
 		return false
 	} else {
