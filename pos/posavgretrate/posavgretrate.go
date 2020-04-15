@@ -37,7 +37,7 @@ func NewPosAveRet() *PosAvgRet {
 func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
 	val,err :=p.avgdb.GetWithIndex(epochID,0,"")
-	if err == nil {
+	if err == nil && val != nil{
 		return binary.BigEndian.Uint64(val),nil
 	}
 
