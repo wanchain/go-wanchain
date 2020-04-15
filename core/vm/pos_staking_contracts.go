@@ -1565,15 +1565,18 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 
 func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	//to do
-	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+	currentTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
-	epochId,_ := posutil.CalEpochSlotID(timestamp)
+	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
+	currentEpochId,_ := posutil.CalEpochSlotID(currentTime)
+
 	inst := posutil.PosAvgRetInst()
 
 	retTotal := uint64(0);
 	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
 
-		ret,err := inst.GetOneEpochAvgReturn(epochId - i)
+		ret,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId - i)
 		if err!= nil {
 			continue
 		}
@@ -1581,11 +1584,21 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		retTotal += ret
 	}
 
-	avg := (retTotal/posconfig.TARGETS_LOCKED_EPOCH)
+	p2 := (retTotal/posconfig.TARGETS_LOCKED_EPOCH)
+	curStake,curRet,err := inst.GetAllStakeAndReturn(currentEpochId)
+	if err != nil {
+		return []byte{0},nil
+	}
+
+	p2Big := big.NewInt(int64(p2))
+
+	p1Mul := p2Big.Mul(p2Big,curRet)
+
+	p1 := p1Mul.Div(p1Mul,curStake).Uint64()
 
 	////convert to byte array
 	var buf = make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, avg)
+	binary.BigEndian.PutUint64(buf, p1)
 
 	return buf, nil
 }

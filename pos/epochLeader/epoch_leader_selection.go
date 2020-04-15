@@ -635,6 +635,7 @@ func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []
 			info.ValidatorAddr = staker.Address
 			info.WalletAddr = c.Address
 			info.Probability = c.StakeAmount
+
 			totalProbability.Add(totalProbability, info.Probability)
 			infors = append(infors, info)
 		}

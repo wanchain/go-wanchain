@@ -30,7 +30,7 @@ func NewPosAveRet() *PosAvgRet {
 	return posavgret
 }
 
-func (p *PosAvgRet) GetOneEpochAvgReturn(epochID uint64) (uint64, error) {
+func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()
@@ -93,3 +93,46 @@ func (p *PosAvgRet) GetOneEpochAvgReturn(epochID uint64) (uint64, error) {
 
 
 
+func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int,*big.Int, error) {
+
+	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
+	epocherInst := epochLeader.GetEpocher()
+	if epocherInst == nil {
+		return nil,nil, errors.New("epocher instance do not exist")
+	}
+
+	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
+	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
+	if block == nil {
+		return nil,nil,errors.New("Unkown block")
+	}
+	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
+	if err != nil {
+		return nil,nil,err
+	}
+
+
+
+	totalAmount := stateDb.GetBalance(vm.WanCscPrecompileAddr)
+
+
+	c, err := incentive.GetEpochPayDetail(epochID)
+	if err != nil {
+		return nil,nil,err
+	}
+
+	incentiveTotal := big.NewInt(0)
+	for i := 0; i < len(c); i++ {
+		if len(c[i]) == 0 {
+			continue
+		}
+
+		for j:=0;j<len(c[i]);j++ {
+			incentiveTotal = incentiveTotal.Add(incentiveTotal,c[i][0].Incentive)
+		}
+
+	}
+
+	return totalAmount,incentiveTotal,nil
+
+}
