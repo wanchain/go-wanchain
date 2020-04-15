@@ -1564,6 +1564,11 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 }
 
 func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < posconfig.StoremanEpochid {
+		return []byte{0},nil
+	}
 	//to do
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 	currentTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
