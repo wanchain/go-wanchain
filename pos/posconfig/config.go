@@ -33,6 +33,8 @@ const (
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
+
+	AvgRetDB		 = "avgretdb"
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 
