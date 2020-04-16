@@ -100,6 +100,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 	binary.BigEndian.PutUint64(buf, ret)
 	p.avgdb.PutWithIndex(epochID,0,"",buf)
 
+
 	return ret,nil
 
 }

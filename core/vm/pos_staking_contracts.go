@@ -425,10 +425,13 @@ var (
 	{
 		"constant": true,
 		"inputs": [
-			{
-				"name": "timestamp",
+			{ "name": "groupStartTime",
 				"type": "uint256"
-			}
+			},
+			{
+				"name": "targetTime",
+				"type": "uint256"
+			}	
 		],
 		"name": "getPosAvgReturn",
 		"outputs": [
@@ -1573,12 +1576,12 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 	//to do
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
-	currentTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
+	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
-	calEpochId,_ := posutil.CalEpochSlotID(currentTime)
+	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
 
-	if groupStartEpochId > eid || calEpochId > eid {
+	if groupStartEpochId > eid || targetEpochId > eid {
 		return []byte{0},errors.New("wrong epochid")
 	}
 
@@ -1596,7 +1599,7 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-	curStake,curRet,err := inst.GetAllStakeAndReturn(calEpochId)
+	curStake,curRet,err := inst.GetAllStakeAndReturn(targetEpochId)
 	if err != nil {
 		return []byte{0},err
 	}
@@ -1611,6 +1614,6 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, p1)
 
-	return buf, nil
+	return common.LeftPadBytes(buf, 32), nil
 }
 
