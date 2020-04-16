@@ -1012,6 +1012,16 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 
 }
 
+func (bc *BlockChain) biggerThanCriticalBlock(block *types.Block) bool{
+
+	diff := int(posconfig.Cfg().SyncTargetBlokcNum - block.NumberU64())
+	if diff >  2*posconfig.SlotSecurityParam{
+		return false
+	} else {
+		return true
+	}
+}
+
 // WriteBlock writes the block to the chain.
 func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
@@ -1039,7 +1049,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		if !bc.isWriteBlockSecure(block) {
 
 			if bc.restartSucess {
-				return NonStatTy, ErrInsufficientCQ
+				//only worked after passing sync target block - 2*secpara
+				if bc.biggerThanCriticalBlock(block) {
+					return NonStatTy, ErrInsufficientCQ
+				}
 			}
 		}
 	}

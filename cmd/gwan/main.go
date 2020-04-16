@@ -19,7 +19,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/params"
+	"math/big"
 	"os"
 	"runtime"
 	"sort"
@@ -232,10 +235,20 @@ func main() {
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
 
-	//ctx.GlobalSet("txpool.nolocals","true")
-	ctx.GlobalSet("txpool.pricelimit","180000000000")
+
+	if ctx.IsSet(utils.GasPriceFlag.Name) {
+		v := utils.GlobalBig(ctx, utils.GasPriceFlag.Name)
+		if v.Cmp(big.NewInt(1*params.Shannon))<0 {
+			return errors.New("" + utils.GasPriceFlag.Name +" must bigger than " + big.NewInt(1*params.Shannon).Text(10) )
+		}
+	}
 
 	node := makeFullNode(ctx)
+
+	//set pos gas price
+	posconfig.Cfg().DefaultGasPrice = utils.GlobalBig(ctx, utils.GasPriceFlag.Name)
+
+
 	startNode(ctx, node)
 	node.Wait()
 	return nil
@@ -334,6 +347,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				th.SetThreads(threads)
 			}
 		}
+
+
+
 		// Set the gas price to the limits from the CLI and start mining
 		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := ethereum.StartMining(true); err != nil {

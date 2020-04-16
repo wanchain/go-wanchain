@@ -28,6 +28,8 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 		return common.Hash{}, errors.New("rc is not ready")
 	}
 
+	tx["gasPrice"] = "0x"+posconfig.Cfg().DefaultGasPrice.Text(16)
+
 	ctx := context.Background()
 	var txHash common.Hash
 	err := rc.CallContext(ctx, &txHash, "eth_sendPosTransaction", tx)
@@ -46,5 +48,8 @@ func SendPosTx(rc *rpc.Client, tx map[string]interface{})  {
 		time.Sleep(time.Duration(delay)*time.Second)
 		log.Debug("SendPosTx", "delay",delay )
 	}
+
+
+
 	SendTx(rc, tx)
 }

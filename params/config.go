@@ -438,10 +438,12 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 	return n.Cmp(c.PosFirstBlock) >= 0
 }
 
-var isPosActive = false
-const (
-	TestnetChainId = 3
-	MainnetChainId = 1
+var (
+
+	isPosActive = false
+	TestnetChainId = TestnetChainConfig.ChainId.Int64()
+	MainnetChainId = WanchainChainConfig.ChainId.Int64()
+
 )
 
 func IsPosActive() bool {

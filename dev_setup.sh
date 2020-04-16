@@ -16,3 +16,4 @@ if [ $? -eq 1 ]; then
 fi
 docker exec -it wanchainContainer /bin/sh
 
+

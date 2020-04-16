@@ -1077,6 +1077,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
+
 		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
 

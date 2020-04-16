@@ -760,6 +760,7 @@ func CleanInactiveValidator(stateDb *state.StateDB, epochID uint64){
 			}
 			coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.From, staker.Amount)
 			key := vm.GetStakeInKeyHash(staker.Address)
+
 			vm.UpdateInfo(stateDb, vm.StakersInfoAddr, key, nil)
 		}
 	}
