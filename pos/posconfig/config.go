@@ -103,8 +103,8 @@ const (
 	MainnetMercuryEpochId = 18250 //2019.12.20
 	TestnetMercuryEpochId = 18246 //2019.12.16
 
-	MainnetVenusEpochId = 111
-	TestnetVenusEpochId = 6610032
+	MainnetVenusEpochId = 11112222
+	TestnetVenusEpochId = 18369
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE = 10000
