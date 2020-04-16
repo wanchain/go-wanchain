@@ -146,7 +146,7 @@ func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int,*big.Int, err
 			}
 
 			for j := 0; j < len(c[i]); j++ {
-				incentiveTotal = incentiveTotal.Add(incentiveTotal, c[i][0].Incentive)
+				incentiveTotal = incentiveTotal.Add(incentiveTotal, c[i][j].Incentive)
 			}
 
 		}
