@@ -1567,14 +1567,20 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid < posconfig.StoremanEpochid {
-		return []byte{0},nil
+		return []byte{0},errors.New("not reach forked epochid")
 	}
+
+
 	//to do
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 	currentTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
-	currentEpochId,_ := posutil.CalEpochSlotID(currentTime)
+	calEpochId,_ := posutil.CalEpochSlotID(currentTime)
+
+	if groupStartEpochId > eid || calEpochId > eid {
+		return []byte{0},errors.New("wrong epochid")
+	}
 
 	inst := posutil.PosAvgRetInst()
 
@@ -1589,10 +1595,10 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		retTotal += ret
 	}
 
-	p2 := (retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-	curStake,curRet,err := inst.GetAllStakeAndReturn(currentEpochId)
+	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
+	curStake,curRet,err := inst.GetAllStakeAndReturn(calEpochId)
 	if err != nil {
-		return []byte{0},nil
+		return []byte{0},err
 	}
 
 	p2Big := big.NewInt(int64(p2))
