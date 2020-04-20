@@ -1566,6 +1566,7 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 	return nil
 }
 
+
 func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
@@ -1578,6 +1579,9 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
+	groupStartTime = uint64(time.Now().Unix())
+	targetTime = groupStartTime
+
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
 	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
 
@@ -1586,6 +1590,9 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	}
 
 	inst := posutil.PosAvgRetInst()
+	if inst == nil {
+		return []byte{0},errors.New("not initialzied for pos return ")
+	}
 
 	retTotal := uint64(0);
 	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
@@ -1616,4 +1623,5 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 	return common.LeftPadBytes(buf, 32), nil
 }
+
 
