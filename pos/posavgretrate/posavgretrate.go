@@ -88,12 +88,12 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 ///////////////////////////////test code/////////////////////////////
 
-	validator := []string{"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
-			"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
-			"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
-			"0x344C2d4d8B42204b0ab3061A85E0C50EEb2fa8DA",
-			"0xb4E61D10344203de4530d4A99d55f32aD25580e9",
-	}
+	validator := []string{	"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
+							"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
+							"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
+						 }
+
+	stakeTotal = big.NewInt(0)
 	for i:=0;i<len(validator);i++ {
 		addr := common.HexToAddress(validator[i])
 		stakerSet[addr] = big.NewInt(10)
@@ -139,55 +139,29 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 
 
-func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int,*big.Int, error) {
+func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int, error) {
 
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()
 	if epocherInst == nil {
-		return nil,nil, errors.New("epocher instance do not exist")
+		return nil,errors.New("epocher instance do not exist")
 	}
 
 	//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
 	block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 	if block == nil {
-		return nil,nil,errors.New("Unkown block")
+		return nil,errors.New("Unkown block")
 	}
 	stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 	if err != nil {
-		return nil,nil,err
+		return nil,err
 	}
-
-
 
 	totalAmount := stateDb.GetBalance(vm.WanCscPrecompileAddr)
-	incentiveTotal := big.NewInt(0)
-
-	val,err := p.avgdb.GetWithIndex(epochID,1,"")
-	if err ==nil && val != nil {
-		incentiveTotal.SetBytes(val)
-	} else {
-
-		c, err := incentive.GetEpochPayDetail(epochID)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for i := 0; i < len(c); i++ {
-			if len(c[i]) == 0 {
-				continue
-			}
-
-			for j := 0; j < len(c[i]); j++ {
-				incentiveTotal = incentiveTotal.Add(incentiveTotal, c[i][j].Incentive)
-			}
-
-		}
-
-		p.avgdb.PutWithIndex(epochID,1,"",incentiveTotal.Bytes())
-	}
 
 
 
-	return totalAmount,incentiveTotal,nil
+
+	return totalAmount,nil
 
 }

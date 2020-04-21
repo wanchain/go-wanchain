@@ -1579,11 +1579,16 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
+	////for test/////////////////////////////////
 	groupStartTime = uint64(time.Now().Unix())
 	targetTime = groupStartTime
 
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
+	groupStartEpochId--
+
 	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
+	targetEpochId--
+	/////////////////////////////////////////
 
 	if groupStartEpochId > eid || targetEpochId > eid {
 		return []byte{0},errors.New("wrong epochid")
@@ -1606,16 +1611,23 @@ func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-	curStake,curRet,err := inst.GetAllStakeAndReturn(targetEpochId)
+
+	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
 	if err != nil {
 		return []byte{0},err
 	}
 
+	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
+	if err != nil {
+		return []byte{0},err
+	}
+
+
 	p2Big := big.NewInt(int64(p2))
 
-	p1Mul := p2Big.Mul(p2Big,curRet)
+	p1Mul := p2Big.Mul(p2Big,stakeBegin)
 
-	p1 := p1Mul.Div(p1Mul,curStake).Uint64()
+	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
 
 	////convert to byte array
 	var buf = make([]byte, 8)
