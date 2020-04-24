@@ -23,371 +23,86 @@ const (
 
 var (
 	// pos staking contract abi definition
-solEnhanceDef = `
-[
+solEnhanceDef = ` [
 	{
-		"constant": false,
-		"inputs": [
+		"constant": true,
+		"inputs": [],
+		"name": "DIVISOR",
+		"outputs": [
 			{
-				"name": "addr",
-				"type": "address"
-			}
-		],
-		"name": "stakeAppend",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "addr",
-				"type": "address"
-			},
-			{
-				"name": "lockEpochs",
+				"name": "",
 				"type": "uint256"
 			}
 		],
-		"name": "stakeUpdate",
-		"outputs": [],
 		"payable": false,
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "secPk",
-				"type": "bytes"
-			},
-			{
-				"name": "bn256Pk",
-				"type": "bytes"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "secPk",
-				"type": "bytes"
-			},
-			{
-				"name": "bn256Pk",
-				"type": "bytes"
-			},
-			{
-				"name": "lockEpochs",
-				"type": "uint256"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			},
-			{
-				"name": "maxFeeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeRegister",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "addr",
-				"type": "address"
-			},
-			{
-				"name": "renewal",
-				"type": "bool"
-			}
-		],
-		"name": "partnerIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "delegateAddress",
-				"type": "address"
-			}
-		],
-		"name": "delegateIn",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "delegateAddress",
-				"type": "address"
-			}
-		],
-		"name": "delegateOut",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "addr",
-				"type": "address"
-			},
-			{
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeUpdateFeeRate",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "v",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "feeRate",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "lockEpoch",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "maxFeeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeRegister",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "v",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "feeRate",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "lockEpoch",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeIn",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeAppend",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "lockEpoch",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeUpdate",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "v",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "renewal",
-				"type": "bool"
-			}
-		],
-		"name": "partnerIn",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "delegateIn",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			}
-		],
-		"name": "delegateOut",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "posAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "feeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "stakeUpdateFeeRate",
-		"type": "event"
 	},
 	{
 		"constant": true,
 		"inputs": [
-			{ "name": "groupStartTime",
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "x",
+				"type": "uint256"
+			}
+		],
+		"name": "calPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "r",
+				"type": "uint256"
+			},
+			{
+				"name": "M",
+				"type": "uint256"
+			},
+			{
+				"name": "K",
+				"type": "uint256"
+			}
+		],
+		"name": "enc",
+		"outputs": [
+			{
+				"name": "c",
+				"type": "bytes"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "groupStartTime",
 				"type": "uint256"
 			},
 			{
 				"name": "targetTime",
 				"type": "uint256"
-			}	
+			}
 		],
 		"name": "getPosAvgReturn",
 		"outputs": [
@@ -399,9 +114,66 @@ solEnhanceDef = `
 		"payable": false,
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "mulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "add",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
-]
-`
+]`
 	// pos staking contract abi object
 	solenhanceAbi, errInit = abi.JSON(strings.NewReader(cscDefinition))
 
