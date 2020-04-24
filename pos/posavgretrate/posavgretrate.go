@@ -128,6 +128,8 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 	incentiveTotal = big.NewInt(0).Mul(incentiveTotal,big.NewInt(posconfig.RETURN_DIVIDE))
 	ret :=  big.NewInt(0).Div(incentiveTotal,stakeTotal).Uint64()
 
+
+
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, ret)
 	p.avgdb.PutWithIndex(epochID,0,"",buf)
@@ -158,7 +160,6 @@ func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int, error) {
 	}
 
 	totalAmount := stateDb.GetBalance(vm.WanCscPrecompileAddr)
-
 
 
 
