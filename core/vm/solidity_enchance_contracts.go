@@ -1,9 +1,12 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"encoding/binary"
 	"errors" // this is not match with other
 	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/ecies"
 	"math/big"
 	"strings"
 	"time"
@@ -297,16 +300,49 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+	if len(payload) < 128 {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+	x1 := big.NewInt(0).SetBytes(payload[:32])
+	y1 := big.NewInt(0).SetBytes(payload[32:64])
+
+	x2 := big.NewInt(0).SetBytes(payload[64:96])
+	y2 := big.NewInt(0).SetBytes(payload[96:128])
+
+	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+
+	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+
+	var buf = make([]byte, 64)
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
 
 
 }
 
-func (s *SolEnhance) mul(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-}
 
 func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+	if len(payload) == 0 || len(payload) > 32 {
+		return []byte{0},errors.New("the data length is not correct")
+	}
+
+	k := big.NewInt(0).SetBytes(payload[:32])
+
+
+
+	rx,ry := crypto.S256().ScalarBaseMult(k.Bytes());
+
+	var buf = make([]byte, 64)
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
 }
 
 
@@ -314,12 +350,71 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 
 func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+	len := len(payload)
+
+	if len%64 != 0 {
+		return []byte{0},nil
+	}
+
+	cnt := len/64 - 1;
+
+	pb := payload[len -64:len]
+
+	f := make(Polynomial,cnt);
+	for i:= 0;i<cnt;i++ {
+		f[i] = *big.NewInt(0).SetBytes(payload[i*64:i*64+64])
+	}
+
+	hashx := crypto.Keccak256(pb);
+	bigx := big.NewInt(0).SetBytes(hashx)
+
+	res := EvaluatePoly(f,bigx,cnt)
+
+	return res.Bytes(),nil
+
+}
+
+type Polynomial []big.Int
+
+// Calculate polynomial's evaluation at some point
+func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
+
+	sum := big.NewInt(0)
+
+	for i := 0; i < degree+1; i++ {
+
+		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), crypto.S256().Params().N)
+
+		temp1.Mod(temp1, crypto.S256().Params().N)
+
+		temp2 := new(big.Int).Mul(&f[i], temp1)
+
+		temp2.Mod(temp2, crypto.S256().Params().N)
+
+		sum.Add(sum, temp2)
+
+		sum.Mod(sum, crypto.S256().Params().N)
+	}
+	return *sum
 }
 
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-}
+	rb := payload[0:32]
+	message := payload[32:64]
+	pkb := payload[64:]
 
-func (s *SolEnhance) Decrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	pk := new(ecdsa.PublicKey)
+	pk.Curve = crypto.S256()
+	pk.X = new(big.Int).SetBytes(pkb[:32])
+	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
+
+	res,error := ecies.EncryptWithRandom(rb, ecies.ImportECDSAPublic(pk), message, nil, nil)
+
+	if error != nil {
+		return []byte{0},error
+	}
+
+	return res,nil
 }

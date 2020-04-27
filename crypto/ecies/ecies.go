@@ -111,6 +111,9 @@ func GenerateKey(rand io.Reader, curve elliptic.Curve, params *ECIESParams) (prv
 	return
 }
 
+
+
+
 // MaxSharedKeyLength returns the maximum length of the shared key the
 // public key can produce.
 func MaxSharedKeyLength(pub *PublicKey) int {
@@ -256,10 +259,13 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 			return
 		}
 	}
+
 	R, err := GenerateKey(rand, pub.Curve, params)
 	if err != nil {
 		return
 	}
+
+
 
 	hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
@@ -362,5 +368,129 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 	}
 
 	m, err = symDecrypt(rand, params, Ke, c[mStart:mEnd])
+	return
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+
+func EncryptWithRandom(rb []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,err error) {
+
+	params := pub.Params
+	if params == nil {
+		if params = ParamsFromCurve(pub.Curve); params == nil {
+			err = ErrUnsupportedECIESParameters
+			return
+		}
+	}
+
+	R, err := GenerateKeyWithR(rb, pub.Curve, params)
+	if err != nil {
+		return
+	}
+
+	hash := params.Hash()
+	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
+	if err != nil {
+		return
+	}
+	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
+	if err != nil {
+		return
+	}
+	Ke := K[:params.KeyLen]
+	Km := K[params.KeyLen:]
+	hash.Write(Km)
+	Km = hash.Sum(nil)
+	hash.Reset()
+
+	em, err := symEncryptWithSpecifyIV(rb, params, Ke, m)
+	if err != nil || len(em) <= params.BlockSize {
+		return
+	}
+
+	d := messageTag(params.Hash, Km, em, s2)
+
+	Rb := elliptic.Marshal(pub.Curve, R.PublicKey.X, R.PublicKey.Y)
+	ct = make([]byte, len(Rb)+len(em)+len(d))
+	copy(ct, Rb)
+	copy(ct[len(Rb):], em)
+	copy(ct[len(Rb)+len(em):], d)
+	return
+}
+
+var mask = []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
+
+// GenerateKey returns a public/private key pair. The private key is
+// generated using the given reader, which must return random data.
+func GenerateKeyWithSpeciedR(curve elliptic.Curve, rb []byte) (priv []byte, x, y *big.Int, err error) {
+	N := curve.Params().N
+	bitSize := N.BitLen()
+	byteLen := (bitSize + 7) >> 3
+	priv = make([]byte, byteLen)
+
+	for x == nil {
+
+		copy(priv,rb)
+		// We have to mask off any excess bits in the case that the size of the
+		// underlying field is not a whole number of bytes.
+		priv[0] &= mask[bitSize%8]
+		// This is because, in tests, rand will return all zeros and we don't
+		// want to get the point at infinity and loop forever.
+		priv[1] ^= 0x42
+
+		// If the scalar is out of range, sample another random number.
+		if new(big.Int).SetBytes(priv).Cmp(N) >= 0 {
+			continue
+		}
+
+		x, y = curve.ScalarBaseMult(priv)
+	}
+	return
+}
+
+// Generate an elliptic curve public / private keypair. If params is nil,
+// the recommended default parameters for the key will be chosen.
+func GenerateKeyWithR(rb []byte, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey,err error) {
+	pb, x, y, err := GenerateKeyWithSpeciedR(curve, rb)
+	if err != nil {
+		return
+	}
+	prv = new(PrivateKey)
+	prv.PublicKey.X = x
+	prv.PublicKey.Y = y
+	prv.PublicKey.Curve = curve
+	prv.D = new(big.Int).SetBytes(pb)
+	if params == nil {
+		params = ParamsFromCurve(curve)
+	}
+	prv.PublicKey.Params = params
+	return
+}
+
+
+// symEncrypt carries out CTR encryption using the block cipher specified in the
+// parameters.
+func symEncryptWithSpecifyIV(rb []byte, params *ECIESParams, key, m []byte) (ct []byte, err error) {
+	c, err := params.Cipher(key)
+	if err != nil {
+		return
+	}
+
+	iv := make([]byte, params.BlockSize)
+	for i:=0; i<params.BlockSize ;i++ {
+	 	idx := i%len(rb);
+		iv[i] = rb[idx]
+	}
+
+	if err != nil {
+		return
+	}
+	ctr := cipher.NewCTR(c, iv)
+
+	ct = make([]byte, len(m)+params.BlockSize)
+	copy(ct, iv)
+
+	ctr.XORKeyStream(ct[params.BlockSize:], m)
 	return
 }
