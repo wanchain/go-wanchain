@@ -180,6 +180,7 @@ solEnhanceDef = ` [
 
 	getPosAvgReturnId [4]byte
 
+
 )
 //
 // package initialize
@@ -294,3 +295,31 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 }
 
 
+func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+
+
+}
+
+func (s *SolEnhance) mul(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+}
+
+func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+}
+
+
+
+
+func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+}
+
+func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+}
+
+func (s *SolEnhance) Decrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+}
