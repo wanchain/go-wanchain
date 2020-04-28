@@ -1,7 +1,7 @@
 #!/bin/bash
 # set -x
 
-DOCKERIMG=wanchain/client-go:2.1.4
+DOCKERIMG=wanchain/client-go:2.1.5
 
 echo ''
 echo ''
@@ -64,7 +64,7 @@ fi
 
 echo 'Please wait a few seconds...'
 
-sleep 5
+sleep 10
 
 sudo rm ~/.wanchain/pw.txt
 
