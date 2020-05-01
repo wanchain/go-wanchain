@@ -2,8 +2,9 @@ package posconfig
 
 import "github.com/wanchain/go-wanchain/common"
 
-var PosOwnerAddrInternal = common.HexToAddress("0xcf696d8eea08a311780fb89b20d4f0895198a489")
-var PosOwnerAddrTestnet = common.HexToAddress("0x28CA21654E3E082A0D282DAF2010352c157008E0")
+var PosOwnerAddrInternal = common.HexToAddress("0x31BC508f0F6CA9384340a6B06A046baB1C91E624")
+var PosOwnerAddrTestnet  = common.HexToAddress("0x31BC508f0F6CA9384340a6B06A046baB1C91E624")
+
 
 //2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e
 //8b179c2b542f47bb2fb2dc40a3cf648aaae1df16

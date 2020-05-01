@@ -312,6 +312,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getEpRnpActivity',
+			call: 'pos_getEpRnpActivity',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getValidatorActivity',
 			call: 'pos_getValidatorActivity',
 			params: 1

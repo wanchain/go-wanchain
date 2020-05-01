@@ -599,6 +599,10 @@ func (self *StateDB) GetRefund() *big.Int {
 // Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {

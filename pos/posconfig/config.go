@@ -36,10 +36,11 @@ const (
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 
-
+	TestnetAdditionalBlock = 6661460
 )
 
 var EpochLeadersHold [][]byte
+var TestnetAdditionalValue = new(big.Int).Mul(big.NewInt(210000000),big.NewInt(1e18))
 
 const (
 	// EpochLeaderCount is count of pk in epoch leader group which is select by stake
@@ -63,6 +64,7 @@ const (
 	// K count of each epoch
 	KCount = 12
 	K      = 1440
+
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
 
@@ -98,6 +100,9 @@ const (
 
 	MainnetMercuryEpochId = 18250 //2019.12.20
 	TestnetMercuryEpochId = 18246 //2019.12.16
+
+	MainnetVenusEpochId = 11112222
+	TestnetVenusEpochId = 18369
 )
 
 var TxDelay = K
@@ -127,6 +132,10 @@ type Config struct {
 	SignEnd       uint64
 
 	MercuryEpochId uint64
+	VenusEpochId uint64
+	DefaultGasPrice	 *big.Int
+
+	SyncTargetBlokcNum uint64
 }
 
 var DefaultConfig = Config{
@@ -143,6 +152,11 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
+	0,
+
+	nil,
+
 	0,
 }
 
@@ -190,6 +204,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		PosOwnerAddr = PosOwnerAddrMainnet
 
 		DefaultConfig.MercuryEpochId = MainnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = MainnetVenusEpochId
 
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
@@ -198,15 +213,19 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		} else {
 			WhiteList = WhiteListOrig
 		}
+		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = TestnetVenusEpochId
 	} else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		WhiteList = WhiteListOrig
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId   = TestnetVenusEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
 
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
+		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

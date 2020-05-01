@@ -894,7 +894,12 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	}
 
 	weight := CalLocktimeWeight(uint64(realLockEpoch))
-	stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
+	epochid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if epochid < posconfig.Cfg().VenusEpochId {
+		stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
+	} else {
+		stakerInfo.StakeAmount.Add(stakerInfo.StakeAmount, big.NewInt(0).Mul(contract.Value(), big.NewInt(int64(weight))))
+	}
 	err = p.saveStakeInfo(evm, stakerInfo)
 	if err != nil {
 		return nil, err

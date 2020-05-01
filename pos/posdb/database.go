@@ -81,7 +81,7 @@ func (s *Db) DbInit(dbPath string) {
 		for i := 0; i < len(files); i++ {
 			os.RemoveAll(files[i])
 		}
-		
+
 		dirname, err = ioutil.TempDir(os.TempDir(), "wanpos_tmpdb_")
 		if err != nil {
 			panic("failed to create wanpos_tmpdb file: " + err.Error())
