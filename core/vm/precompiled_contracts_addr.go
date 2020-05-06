@@ -67,6 +67,8 @@ var (
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
 	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
 
+	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
+
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
 	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr
@@ -113,6 +115,8 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	PosControlPrecompileAddr:   &PosControl{},
 	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
+
+	SolEnhancePrecompileAddr:	&SolEnhance{},
 }
 
 func IsPosPrecompiledAddr(addr *common.Address) bool {
