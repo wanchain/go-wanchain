@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors" // this is not match with other
+	"fmt"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
@@ -26,7 +27,7 @@ const (
 
 var (
 	// pos staking contract abi definition
-solEnhanceDef = ` [
+solEnhanceDef = `[
 	{
 		"constant": true,
 		"inputs": [],
@@ -62,33 +63,10 @@ solEnhanceDef = ` [
 			{
 				"name": "sy",
 				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "r",
-				"type": "uint256"
 			},
 			{
-				"name": "M",
-				"type": "uint256"
-			},
-			{
-				"name": "K",
-				"type": "uint256"
-			}
-		],
-		"name": "enc",
-		"outputs": [
-			{
-				"name": "c",
-				"type": "bytes"
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -122,6 +100,37 @@ solEnhanceDef = ` [
 		"constant": true,
 		"inputs": [
 			{
+				"name": "r",
+				"type": "uint256"
+			},
+			{
+				"name": "M",
+				"type": "uint256"
+			},
+			{
+				"name": "K",
+				"type": "bytes"
+			}
+		],
+		"name": "enc",
+		"outputs": [
+			{
+				"name": "c",
+				"type": "bytes"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
 				"name": "scalar",
 				"type": "uint256"
 			}
@@ -135,6 +144,10 @@ solEnhanceDef = ` [
 			{
 				"name": "y",
 				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -164,12 +177,16 @@ solEnhanceDef = ` [
 		"name": "add",
 		"outputs": [
 			{
-				"name": "",
+				"name": "retx",
 				"type": "uint256"
 			},
 			{
-				"name": "",
+				"name": "rety",
 				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -181,7 +198,8 @@ solEnhanceDef = ` [
 	solenhanceAbi, errInit = abi.JSON(strings.NewReader(cscDefinition))
 
 
-	getPosAvgReturnId [4]byte
+	getPosAvgReturnId 	[4]byte
+	addid				[4]byte
 
 
 )
@@ -194,6 +212,10 @@ func init() {
 	}
 
 	copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturn"].Id())
+	copy(addid[:],cscAbi.Methods["add"].Id())
+
+	addid := common.Bytes2Hex(addid[:])
+	fmt.Println(""+addid)
 }
 
 /////////////////////////////
@@ -222,7 +244,14 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	if methodId == getPosAvgReturnId {
 		return s.getPosAvgReturn(input[4:], contract, evm)
+	} else if  methodId == addid{
+		return s.add(input[4:], contract, evm)
 	}
+
+	mid := common.Bytes2Hex(methodId[:])
+	fmt.Println(""+mid)
+
+
 
 	return nil, errMethodId
 }
@@ -309,6 +338,9 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	x2 := big.NewInt(0).SetBytes(payload[64:96])
 	y2 := big.NewInt(0).SetBytes(payload[96:128])
 
+
+
+
 	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
 		return []byte{0},errors.New("the point is not on curve")
 	}
@@ -318,6 +350,9 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	var buf = make([]byte, 64)
 	copy(buf,rx.Bytes())
 	copy(buf[32:],ry.Bytes())
+
+	//fmt.Println(common.Bytes2Hex(buf))
+
 
 	return buf, nil
 
