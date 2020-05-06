@@ -195,11 +195,12 @@ solEnhanceDef = `[
 	}
 ]`
 	// pos staking contract abi object
-	solenhanceAbi, errInit = abi.JSON(strings.NewReader(cscDefinition))
+	solenhanceAbi, errInit = abi.JSON(strings.NewReader(solEnhanceDef))
 
 
 	getPosAvgReturnId 	[4]byte
 	addid				[4]byte
+	mulGid				[4]byte
 
 
 )
@@ -207,15 +208,21 @@ solEnhanceDef = `[
 // package initialize
 //
 func init() {
+
 	if errCscInit != nil {
 		panic("err in csc abi initialize ")
 	}
 
-	copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturn"].Id())
-	copy(addid[:],cscAbi.Methods["add"].Id())
+	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
+	copy(addid[:],solenhanceAbi.Methods["add"].Id())
 
-	addid := common.Bytes2Hex(addid[:])
-	fmt.Println(""+addid)
+	addidStr := common.Bytes2Hex(addid[:])
+	fmt.Println(""+addidStr)
+
+	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
+
+	mulGidStr := common.Bytes2Hex(mulGid[:])
+	fmt.Println(""+mulGidStr)
 }
 
 /////////////////////////////
@@ -246,6 +253,8 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.getPosAvgReturn(input[4:], contract, evm)
 	} else if  methodId == addid{
 		return s.add(input[4:], contract, evm)
+	} else if  methodId == mulGid {
+		return s.mulG(input[4:], contract, evm)
 	}
 
 	mid := common.Bytes2Hex(methodId[:])
@@ -351,11 +360,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	copy(buf,rx.Bytes())
 	copy(buf[32:],ry.Bytes())
 
-	//fmt.Println(common.Bytes2Hex(buf))
-
-
 	return buf, nil
-
 
 }
 
@@ -367,13 +372,11 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 		return []byte{0},errors.New("the data length is not correct")
 	}
 
-	k := big.NewInt(0).SetBytes(payload[:32])
-
-
-
-	rx,ry := crypto.S256().ScalarBaseMult(k.Bytes());
+	k := payload[:32]
+	rx,ry := crypto.S256().ScalarBaseMult(k);
 
 	var buf = make([]byte, 64)
+
 	copy(buf,rx.Bytes())
 	copy(buf[32:],ry.Bytes())
 
