@@ -2,6 +2,7 @@ package vm
 
 import (
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors" // this is not match with other
 	"fmt"
@@ -31,6 +32,28 @@ solEnhanceDef = `[
 	{
 		"constant": true,
 		"inputs": [],
+		"name": "calPolyCommitTest",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
 		"name": "DIVISOR",
 		"outputs": [
 			{
@@ -44,24 +67,15 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [
-			{
-				"name": "polyCommit",
-				"type": "bytes"
-			},
-			{
-				"name": "x",
-				"type": "uint256"
-			}
-		],
-		"name": "calPolyCommit",
+		"inputs": [],
+		"name": "addTest",
 		"outputs": [
 			{
-				"name": "sx",
+				"name": "retx",
 				"type": "uint256"
 			},
 			{
-				"name": "sy",
+				"name": "rety",
 				"type": "uint256"
 			},
 			{
@@ -156,6 +170,28 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "mulGTest",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "x1",
@@ -192,6 +228,37 @@ solEnhanceDef = `[
 		"payable": false,
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "calPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]`
 	// pos staking contract abi object
@@ -201,27 +268,29 @@ solEnhanceDef = `[
 	getPosAvgReturnId 	[4]byte
 	addid				[4]byte
 	mulGid				[4]byte
+	calPolyCommitid		[4]byte
 
 
+
+)
+
+const (
+	POLY_CIMMIT_ITEM_LEN = 65
 )
 //
 // package initialize
 //
 func init() {
-
 	if errCscInit != nil {
 		panic("err in csc abi initialize ")
 	}
 
 	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
 	copy(addid[:],solenhanceAbi.Methods["add"].Id())
-
-	addidStr := common.Bytes2Hex(addid[:])
-	fmt.Println(""+addidStr)
-
 	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
+	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
 
-	mulGidStr := common.Bytes2Hex(mulGid[:])
+	mulGidStr := common.Bytes2Hex(calPolyCommitid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -255,6 +324,8 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.add(input[4:], contract, evm)
 	} else if  methodId == mulGid {
 		return s.mulG(input[4:], contract, evm)
+	} else if methodId == calPolyCommitid {
+		return s.calPolyCommit(input[4:], contract, evm)
 	}
 
 	mid := common.Bytes2Hex(methodId[:])
@@ -389,28 +460,39 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
+//	fmt.Println(common.Bytes2Hex(payload))
 
-	if len%64 != 0 {
-		return []byte{0},nil
+	degree := int(payload[len -1])
+
+	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0},errors.New("payload is not enough")
 	}
 
-	cnt := len/64 - 1;
-
-	pb := payload[len -64:len]
-
-	f := make(Polynomial,cnt);
-	for i:= 0;i<cnt;i++ {
-		f[i] = *big.NewInt(0).SetBytes(payload[i*64:i*64+64])
+	f := make(Polynomial,degree);
+	i := 0
+	for ;i< degree;i++ {
+		f[i] = *big.NewInt(0).SetBytes(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
 	}
 
-	hashx := crypto.Keccak256(pb);
-	bigx := big.NewInt(0).SetBytes(hashx)
+	pb := payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
 
-	res := EvaluatePoly(f,bigx,cnt)
+	hashx := sha256.Sum256(pb)
 
-	return res.Bytes(),nil
+	bigx := big.NewInt(0).SetBytes(hashx[:])
 
+	res := EvaluatePoly(f,bigx,degree)
+
+	fmt.Println(common.Bytes2Hex(res.Bytes()))
+
+
+	var buf = make([]byte, 64)
+	copy(buf,res.Bytes())
+	copy(buf[32:],res.Bytes())
+
+	return buf,nil
 }
+
+
 
 type Polynomial []big.Int
 
@@ -419,7 +501,7 @@ func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
 
 	sum := big.NewInt(0)
 
-	for i := 0; i < degree+1; i++ {
+	for i := 0; i < degree; i++ {
 
 		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), crypto.S256().Params().N)
 
@@ -433,8 +515,12 @@ func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
 
 		sum.Mod(sum, crypto.S256().Params().N)
 	}
+
 	return *sum
 }
+
+
+
 
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
