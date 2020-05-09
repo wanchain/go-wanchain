@@ -468,10 +468,11 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 		return []byte{0},errors.New("payload is not enough")
 	}
 
-	f := make(Polynomial,degree);
+	f := make([]*ecdsa.PublicKey,degree);
 	i := 0
 	for ;i< degree;i++ {
-		f[i] = *big.NewInt(0).SetBytes(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+		value := payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
+		f[i] = crypto.ToECDSAPub(value)
 	}
 
 	pb := payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
@@ -479,46 +480,47 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 	hashx := sha256.Sum256(pb)
 
 	bigx := big.NewInt(0).SetBytes(hashx[:])
+	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
 
-	res := EvaluatePoly(f,bigx,degree)
+	res,err := s.EvalByPolyG(f,degree - 1,bigx)
+	if err != nil {
+		return []byte{0},errors.New("error in caculate poly")
+	}
 
-	fmt.Println(common.Bytes2Hex(res.Bytes()))
+	fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
 
 
 	var buf = make([]byte, 64)
-	copy(buf,res.Bytes())
-	copy(buf[32:],res.Bytes())
+	copy(buf,res.X.Bytes())
+	copy(buf[32:],res.Y.Bytes())
 
 	return buf,nil
 }
 
 
 
-type Polynomial []big.Int
+func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int) (*ecdsa.PublicKey, error) {
+	// check input parameters
 
-// Calculate polynomial's evaluation at some point
-func EvaluatePoly(f Polynomial, x *big.Int, degree int) big.Int {
+	sumPk := new(ecdsa.PublicKey)
+	sumPk.Curve = crypto.S256()
+	sumPk.X, sumPk.Y = pks[0].X, pks[0].Y
 
-	sum := big.NewInt(0)
-
-	for i := 0; i < degree; i++ {
+	for i := 1; i < int(degree)+1; i++ {
 
 		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), crypto.S256().Params().N)
-
 		temp1.Mod(temp1, crypto.S256().Params().N)
 
-		temp2 := new(big.Int).Mul(&f[i], temp1)
+		temp1Pk := new(ecdsa.PublicKey)
+		temp1Pk.Curve = crypto.S256()
 
-		temp2.Mod(temp2, crypto.S256().Params().N)
+		temp1Pk.X, temp1Pk.Y = crypto.S256().ScalarMult(pks[i].X,pks[i].Y,temp1.Bytes())
 
-		sum.Add(sum, temp2)
+		sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X,sumPk.Y,temp1Pk.X,temp1Pk.Y)
 
-		sum.Mod(sum, crypto.S256().Params().N)
 	}
-
-	return *sum
+	return sumPk,nil
 }
-
 
 
 
