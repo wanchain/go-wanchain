@@ -198,7 +198,7 @@ contract Enhancement {
 
 
     string pk = "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4";
-    string poly = "c2d0052ee30a386ff1e08c948a4a7a654345d17e9a8fe1b6b4d2cf8c305dd16fa94b83e74e4f17d4a96044d51e038b86fa71a8220e328967693f183545711174c8f5fd08e531047a06e3c1093a22e0594c49245a8f5f5993a537a049d44ac03ca27b317cf91e779e0eba32d73e6958c38754c385020c06ea239814c6dd649db3821274ce0a8e505c3589da13437880d94aaf6dd53eeb55cd1d1e794f070a00a43ac85d55ae00d78eb7dfa9b5db63d16e559bc40e96c012799dc88c8cda2031d503c33f5e39216a58ca35afdb767b60a3248044ec2dd8374e05beb5cc7636c2e3eff123930b86a8534bb6c28943e080a5332844f1947208363f0ba5e15ea24e6e890b7356e82a61e51ac7dc6718c38f9fa2ba22d9ec01623e87db59c95612230128afe265149efa3d957e18e862aa6b26d68cefb0e7d1e6665df08aa47176f09007efa5e4bc433e9a6b4ca6d44356d2b290005fb3c3101dc2efaef4e87f8d9523a44a12418ddf1ac0caa9d1173381461d247793efb1619645e17f55c4e2cc732d17982cbbf093b009fd263ca6845814650c2b3cbaabca87761fa8cbc260993d911328f5a422e6823971effd422c09590029a2ad4643e402648621b21d7b0f205c136741660d40fb4ba37fa093e8ba806996a3d4c6d6170bc5043cd7d3f7f38aac75d57e6e0e75529d8478e43cb4f44f01c4f2c7ce9c29bd6a2dda2765d7bf407f44679a4c06d14b961d3f549850ac882cba2720b0ce4bde2f0a298f2801802fb0747cd4440a551ea600639f87b4bd5257aad2a96136502a584667aaafcd39d865";
+    string poly = "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901";
 
 
     function calPolyCommitTest()   public view returns(uint256 sx, uint256 sy,bool success) {
@@ -216,7 +216,10 @@ contract Enhancement {
        bytes32 functionSelector = 0xf9d9c3ff00000000000000000000000000000000000000000000000000000000;//keccak256("calPolyCommit(bytes,uint256)");
        address to = PRECOMPILE_CONTRACT_ADDR;
 
+       require((polyCommit.length + pk.length)%65 == 0);
+
        uint segcnt = (polyCommit.length + pk.length)/32 + 1;
+       uint polyCommitCnt = polyCommit.length/65;
 
        bytes memory wholeData = new bytes(segcnt*32);
 
@@ -231,9 +234,8 @@ contract Enhancement {
        }
 
        for(;i<segcnt*32;i++) {
-            wholeData[i] = bytes1(pk.length);
+            wholeData[i] = bytes1(polyCommitCnt);
        }
-      // uint loopCnt = 0;
 
        assembly {
             let loopCnt := 0
@@ -271,6 +273,46 @@ contract Enhancement {
             success := staticcall(gas,to, freePtr,100, freePtr, 64)
             c := freePtr
             returndatacopy(c, 0, returndatasize)
+        }
+    }
+
+    string senderPk="04d9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5";
+
+    bytes32 r = 0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac4995096a17;
+    bytes32 s = 0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90;
+    bytes32 hash = 0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1;
+
+    function checkSigTest () public view returns(bool) {
+        bytes memory pk =hexStr2bytes(senderPk);
+        return checkSig(hash,r,s,pk);
+
+    }
+
+    function checkSig (bytes32 hash, bytes32 r, bytes32 s, bytes pk) public view returns(bool) {
+       bytes32 functionSelector = 0x861731d500000000000000000000000000000000000000000000000000000000;
+       address to = PRECOMPILE_CONTRACT_ADDR;
+       uint256 result;
+       bool success;
+       assembly {
+            let freePtr := mload(0x40)
+
+            mstore(freePtr, functionSelector)
+            mstore(add(freePtr, 4), hash)
+            mstore(add(freePtr, 36), r)
+            mstore(add(freePtr, 68), s)
+            mstore(add(freePtr, 100), mload(add(pk,33)))
+            mstore(add(freePtr, 132), mload(add(pk,65)))
+
+            // call ERC20 Token contract transfer function
+            success := staticcall(gas, to, freePtr,164, freePtr, 32)
+
+            result := mload(freePtr)
+        }
+
+        if (success) {
+            return result == 1;
+        } else {
+            return false;
         }
     }
 

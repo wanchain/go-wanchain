@@ -91,6 +91,56 @@ solEnhanceDef = `[
 		"constant": true,
 		"inputs": [
 			{
+				"name": "hash",
+				"type": "bytes32"
+			},
+			{
+				"name": "r",
+				"type": "bytes"
+			},
+			{
+				"name": "s",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "checkSig",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "data",
+				"type": "string"
+			}
+		],
+		"name": "hexStr2bytes",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
 				"name": "groupStartTime",
 				"type": "uint256"
 			},
@@ -269,7 +319,7 @@ solEnhanceDef = `[
 	addid				[4]byte
 	mulGid				[4]byte
 	calPolyCommitid		[4]byte
-
+	checkSigid			[4]byte
 
 
 )
@@ -289,8 +339,9 @@ func init() {
 	copy(addid[:],solenhanceAbi.Methods["add"].Id())
 	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
 	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
+	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 
-	mulGidStr := common.Bytes2Hex(calPolyCommitid[:])
+	mulGidStr := common.Bytes2Hex(checkSigid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -326,7 +377,10 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.mulG(input[4:], contract, evm)
 	} else if methodId == calPolyCommitid {
 		return s.calPolyCommit(input[4:], contract, evm)
+	} else if methodId == checkSigid {
+		return s.checkSig(input[4:], contract, evm)
 	}
+
 
 	mid := common.Bytes2Hex(methodId[:])
 	fmt.Println(""+mid)
@@ -543,4 +597,32 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	}
 
 	return res,nil
+}
+
+
+func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	if len < 64 + 32*3 {
+		return []byte{0},nil
+	}
+
+	hash := payload[:32]
+	sr := big.NewInt(0).SetBytes(payload[32:64])
+	ss := big.NewInt(0).SetBytes(payload[64:96])
+	payload[95] = byte(4)
+	pub := crypto.ToECDSAPub(payload[95:160])
+
+
+	res := ecdsa.Verify(pub,hash,sr,ss)
+
+	var buf = make([]byte, 32)
+	if res {
+		buf[31] = byte(1);
+	} else {
+		buf[31] = byte(0);
+	}
+
+	return buf,nil
+
 }
