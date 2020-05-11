@@ -325,7 +325,7 @@ solEnhanceDef = `[
 )
 
 const (
-	POLY_CIMMIT_ITEM_LEN = 65
+	POLY_CIMMIT_ITEM_LEN = 64
 )
 //
 // package initialize
@@ -514,9 +514,13 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
-//	fmt.Println(common.Bytes2Hex(payload))
+	fmt.Println(common.Bytes2Hex(payload))
 
-	degree := int(payload[len -1])
+	if len%64 != 0 {
+		return []byte{0},errors.New("payload length is not correct")
+	}
+
+	degree := len/64 - 1;
 
 	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
 		return []byte{0},errors.New("payload is not enough")
@@ -524,15 +528,22 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 
 	f := make([]*ecdsa.PublicKey,degree);
 	i := 0
-	for ;i< degree;i++ {
-		value := payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
-		f[i] = crypto.ToECDSAPub(value)
+
+
+
+	for ;i< degree;i++ {		//set the oxo4 prevalue for publickey
+		byte65 := make([]byte,0)
+		byte65 = append(byte65,4)
+		byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
+		f[i] = crypto.ToECDSAPub(byte65)
 	}
 
-	pb := payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
+	//pb value
+	byte65 := make([]byte,0)
+	byte65 = append(byte65,4)
+	byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
 
-	hashx := sha256.Sum256(pb)
-
+	hashx := sha256.Sum256(byte65)
 	bigx := big.NewInt(0).SetBytes(hashx[:])
 	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
 

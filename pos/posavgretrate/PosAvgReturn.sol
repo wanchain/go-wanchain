@@ -218,38 +218,30 @@ contract Enhancement {
 
        require((polyCommit.length + pk.length)%65 == 0);
 
-       uint segcnt = (polyCommit.length + pk.length)/32 + 1;
        uint polyCommitCnt = polyCommit.length/65;
+       uint total = (polyCommitCnt + 1)*2;
 
-       bytes memory wholeData = new bytes(segcnt*32);
-
-       uint i = 0;
-       for(i=0;i<polyCommit.length;i++) {
-           wholeData[i] = polyCommit[i];
-       }
-
-       uint j =0;
-       for(j=0;j <pk.length;j++) {
-            wholeData[i++] = pk[j];
-       }
-
-       for(;i<segcnt*32;i++) {
-            wholeData[i] = bytes1(polyCommitCnt);
-       }
+       uint firstOffset = 33;
 
        assembly {
-            let loopCnt := 0
             let freePtr := mload(0x40)
             mstore(freePtr, functionSelector)
-
+            mstore(add(freePtr,4), mload(add(polyCommit,33)))
+            mstore(add(freePtr,36), mload(add(polyCommit,65)))
+            let loopCnt := 1
             loop:
-                jumpi(loopend, eq(loopCnt,segcnt))
-                mstore(add(freePtr,add(4,mul(loopCnt,32))), mload(add(wholeData,mul(add(loopCnt,1),32))))
+                jumpi(loopend, eq(loopCnt,polyCommitCnt))
+               // let ptr : = add(add(polyCommit,mul(add(loopCnt,1),32)),1)
+                mstore(add(freePtr,add(4,mul(loopCnt,64))),         mload(add(add(add(polyCommit,32),mul(loopCnt,65)),1)))
+                mstore(add(freePtr,add(4,add(mul(loopCnt,64),32))), mload(add(add(add(add(polyCommit,32),mul(loopCnt,65)),1),32)))
                 loopCnt := add(loopCnt, 1)
                 jump(loop)
             loopend:
 
-            success := staticcall(gas,to, freePtr,add(mul(segcnt,32),4), freePtr, 64)
+            mstore(add(freePtr,    add(4,mul(loopCnt,64))),     mload(add(pk,33)))
+            mstore(add(freePtr,add(add(4,mul(loopCnt,64)),32)), mload(add(pk,65)))
+
+            success := staticcall(gas,to, freePtr,add(mul(total,32),4), freePtr, 64)
 
             sx := mload(freePtr)
             sy := mload(add(freePtr, 32))
