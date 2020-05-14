@@ -36,6 +36,7 @@ import (
 	"crypto/hmac"
 	"crypto/subtle"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"hash"
 	"io"
 	"math/big"
@@ -223,10 +224,14 @@ func symEncrypt(rand io.Reader, params *ECIESParams, key, m []byte) (ct []byte, 
 	if err != nil {
 		return
 	}
+
+	fmt.Println("iv=" + common.ToHex(iv))
+
 	ctr := cipher.NewCTR(c, iv)
 
 	ct = make([]byte, len(m)+params.BlockSize)
 	copy(ct, iv)
+
 	ctr.XORKeyStream(ct[params.BlockSize:], m)
 	return
 }
@@ -266,6 +271,7 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 	}
 
 
+	fmt.Println("rbpri=" + R.D.Text(16));
 
 	hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
@@ -372,9 +378,7 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-
-
-func EncryptWithRandom(rb []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,err error) {
+func EncryptWithRandom(rb []byte,iv []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,err error) {
 
 	params := pub.Params
 	if params == nil {
@@ -388,6 +392,7 @@ func EncryptWithRandom(rb []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,e
 	if err != nil {
 		return
 	}
+
 
 	hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
@@ -404,7 +409,7 @@ func EncryptWithRandom(rb []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,e
 	Km = hash.Sum(nil)
 	hash.Reset()
 
-	em, err := symEncryptWithSpecifyIV(rb, params, Ke, m)
+	em, err := symEncryptWithSpecifyIV(iv, params, Ke, m)
 	if err != nil || len(em) <= params.BlockSize {
 		return
 	}

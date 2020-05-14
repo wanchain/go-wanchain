@@ -54,6 +54,51 @@ solEnhanceDef = `[
 	{
 		"constant": true,
 		"inputs": [],
+		"name": "checkSigTest",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "hash",
+				"type": "bytes32"
+			},
+			{
+				"name": "r",
+				"type": "bytes32"
+			},
+			{
+				"name": "s",
+				"type": "bytes32"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "checkSig",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
 		"name": "DIVISOR",
 		"outputs": [
 			{
@@ -80,37 +125,6 @@ solEnhanceDef = `[
 			},
 			{
 				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "r",
-				"type": "bytes"
-			},
-			{
-				"name": "s",
-				"type": "bytes"
-			},
-			{
-				"name": "pk",
-				"type": "bytes"
-			}
-		],
-		"name": "checkSig",
-		"outputs": [
-			{
-				"name": "",
 				"type": "bool"
 			}
 		],
@@ -162,17 +176,39 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "encTest",
+		"outputs": [
+			{
+				"name": "c",
+				"type": "bytes"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
-				"name": "r",
+				"name": "rbpri",
+				"type": "bytes32"
+			},
+			{
+				"name": "iv",
+				"type": "bytes32"
+			},
+			{
+				"name": "mes",
 				"type": "uint256"
 			},
 			{
-				"name": "M",
-				"type": "uint256"
-			},
-			{
-				"name": "K",
+				"name": "pub",
 				"type": "bytes"
 			}
 		],
@@ -320,7 +356,7 @@ solEnhanceDef = `[
 	mulGid				[4]byte
 	calPolyCommitid		[4]byte
 	checkSigid			[4]byte
-
+	encid				[4]byte
 
 )
 
@@ -340,8 +376,9 @@ func init() {
 	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
 	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
+	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
 
-	mulGidStr := common.Bytes2Hex(checkSigid[:])
+	mulGidStr := common.Bytes2Hex(encid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -379,6 +416,8 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.calPolyCommit(input[4:], contract, evm)
 	} else if methodId == checkSigid {
 		return s.checkSig(input[4:], contract, evm)
+	}  else if methodId == encid {
+		return s.encrypt(input[4:], contract, evm)
 	}
 
 
@@ -592,21 +631,28 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	rb := payload[0:32]
-	message := payload[32:64]
-	pkb := payload[64:]
+	iv := payload[32:64]
+	msg := payload[64:96]
 
+	pkb := payload[96:]
 	pk := new(ecdsa.PublicKey)
 	pk.Curve = crypto.S256()
 	pk.X = new(big.Int).SetBytes(pkb[:32])
 	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
+	fmt.Println(common.Bytes2Hex(rb))
+	fmt.Println(common.Bytes2Hex(iv))
+	fmt.Println(common.Bytes2Hex(msg))
+	fmt.Println(common.Bytes2Hex(pkb))
 
-	res,error := ecies.EncryptWithRandom(rb, ecies.ImportECDSAPublic(pk), message, nil, nil)
+
+	res,error := ecies.EncryptWithRandom(rb, iv, ecies.ImportECDSAPublic(pk), msg, nil, nil)
 
 	if error != nil {
 		return []byte{0},error
 	}
 
+	fmt.Println(common.Bytes2Hex(res))
 	return res,nil
 }
 

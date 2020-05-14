@@ -70,9 +70,6 @@ contract Enhancement {
     uint public constant DIVISOR = 10000;
     address constant PRECOMPILE_CONTRACT_ADDR = 0x268;
 
-
-
-
     function getPosAvgReturn(uint256 groupStartTime,uint256 targetTime)  public view returns(uint256) {
        bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
        (uint256 result, bool success) = callWith32BytesReturnsUint256(
@@ -213,6 +210,7 @@ contract Enhancement {
 
     function calPolyCommit(bytes polyCommit, bytes pk)   public view returns(uint256 sx, uint256 sy,bool success) {
 
+
        bytes32 functionSelector = 0xf9d9c3ff00000000000000000000000000000000000000000000000000000000;//keccak256("calPolyCommit(bytes,uint256)");
        address to = PRECOMPILE_CONTRACT_ADDR;
 
@@ -220,8 +218,6 @@ contract Enhancement {
 
        uint polyCommitCnt = polyCommit.length/65;
        uint total = (polyCommitCnt + 1)*2;
-
-       uint firstOffset = 33;
 
        assembly {
             let freePtr := mload(0x40)
@@ -231,7 +227,6 @@ contract Enhancement {
             let loopCnt := 1
             loop:
                 jumpi(loopend, eq(loopCnt,polyCommitCnt))
-               // let ptr : = add(add(polyCommit,mul(add(loopCnt,1),32)),1)
                 mstore(add(freePtr,add(4,mul(loopCnt,64))),         mload(add(add(add(polyCommit,32),mul(loopCnt,65)),1)))
                 mstore(add(freePtr,add(4,add(mul(loopCnt,64),32))), mload(add(add(add(add(polyCommit,32),mul(loopCnt,65)),1),32)))
                 loopCnt := add(loopCnt, 1)
@@ -246,26 +241,48 @@ contract Enhancement {
             sx := mload(freePtr)
             sy := mload(add(freePtr, 32))
         }
+
+
     }
 
 
+// iv: 64ffa714e095dc500e745dc4548ef97c
+// rbpri: 61b86aa80b3e23f2891513bbbe3d03126839d5109ef62be2d5c7f293a2a82d9c
+// msg: 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130
+// pub:0x04ed4f0d62e4fa939827f8c208c23271aef540653501a79d6bdca6c32d34aa3c90f7b0d83ca9091cbc8ef4e3191a451108a95a2ed584d8ed49cadf266c4d908e5d
+// encrypted:0x2e92b0fc3b89631db6b4349493f2dac68672fbbd8f1f2fb63836d053c395ae95e0da5bb1b1b4701fbcf8fed0b4565ba3
+    function encTest()   public view returns (bytes c,bool success) {
+     bytes32 iv = 0x64ffa714e095dc500e745dc4548ef97c;
+     bytes32 rbpri = 0x61b86aa80b3e23f2891513bbbe3d03126839d5109ef62be2d5c7f293a2a82d9c;
+     uint256 msg = 0x334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130;
+     bytes memory bpk = hexStr2bytes("04ed4f0d62e4fa939827f8c208c23271aef540653501a79d6bdca6c32d34aa3c90f7b0d83ca9091cbc8ef4e3191a451108a95a2ed584d8ed49cadf266c4d908e5d");
 
-    function enc(uint256 r, uint256 M, bytes K)   public view returns (bytes c,bool success) {
-       bytes32 functionSelector = keccak256("enc(uint256,uint256,uint256)");
+     return enc(rbpri,iv,msg,bpk);
+
+
+  }
+
+
+ function enc(bytes32 rbpri,bytes32 iv,uint256 mes, bytes pub)   public view returns (bytes,bool success) {
+       bytes32 functionSelector = 0xa1ecea4b00000000000000000000000000000000000000000000000000000000;
        address to = PRECOMPILE_CONTRACT_ADDR;
-
+       bytes memory cc = new bytes(1024);
        assembly {
            let freePtr := mload(0x40)
             mstore(freePtr, functionSelector)
-            mstore(add(freePtr, 4), r)
-            mstore(add(freePtr, 36), M)
-            mstore(add(freePtr, 68), K)
+            mstore(add(freePtr, 4), rbpri)
+            mstore(add(freePtr, 36), iv)
+            mstore(add(freePtr, 68), mes)
+            mstore(add(freePtr, 100), mload(add(pub,33)))
+            mstore(add(freePtr, 132), mload(add(pub,65)))
 
             // call ERC20 Token contract transfer function
-            success := staticcall(gas,to, freePtr,100, freePtr, 64)
-            c := freePtr
-            returndatacopy(c, 0, returndatasize)
+            success := staticcall(gas,to, freePtr,164, freePtr,1024)
+
+            mstore(add(cc,32),mload(add(freePtr,32)))
         }
+
+        return (cc,true);
     }
 
     string senderPk="04d9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5";
