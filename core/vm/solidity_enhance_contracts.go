@@ -9,11 +9,9 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"math/big"
 	"strings"
-	"time"
-
-	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
@@ -443,8 +441,8 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
 	////for test/////////////////////////////////
-	groupStartTime = uint64(time.Now().Unix())
-	targetTime = groupStartTime
+	//groupStartTime = uint64(time.Now().Unix())
+	//targetTime = groupStartTime
 
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
 	groupStartEpochId--

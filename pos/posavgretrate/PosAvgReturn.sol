@@ -70,39 +70,21 @@ contract Enhancement {
     uint public constant DIVISOR = 10000;
     address constant PRECOMPILE_CONTRACT_ADDR = 0x268;
 
-    function getPosAvgReturn(uint256 groupStartTime,uint256 targetTime)  public view returns(uint256) {
+    function getPosAvgReturn(uint256 groupStartTime,uint256 curTime)  public view returns(uint256 result,bool success) {
        bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
-       (uint256 result, bool success) = callWith32BytesReturnsUint256(
-                                            PRECOMPILE_CONTRACT_ADDR,
-                                            functionSelector,
-                                            bytes32(groupStartTime),
-                                            bytes32(targetTime)
-                                          );
+       address to = PRECOMPILE_CONTRACT_ADDR;
 
-        if (!success) {
-            return 0;
-        }
-        return result;
-    }
-
-    function callWith32BytesReturnsUint256(
-        address to,
-        bytes32 functionSelector,
-        bytes32 param1,
-        bytes32 param2
-    ) private view returns (uint256 result, bool success) {
-        assembly {
+       assembly {
             let freePtr := mload(0x40)
-
             mstore(freePtr, functionSelector)
-            mstore(add(freePtr, 4), param1)
-            mstore(add(freePtr, 36), param2)
+            mstore(add(freePtr, 4), groupStartTime)
+            mstore(add(freePtr, 36), curTime)
 
             // call ERC20 Token contract transfer function
             success := staticcall(gas, to, freePtr,68, freePtr, 32)
-
             result := mload(freePtr)
         }
+
     }
 
 

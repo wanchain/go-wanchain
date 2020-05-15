@@ -3,10 +3,10 @@ package pos
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -36,14 +36,28 @@ func NewPosAveRet() *PosAvgRet {
 	return posavgret
 }
 
+func (p *PosAvgRet) getStakeInfo(statedb *state.StateDB, addr common.Address) (*vm.StakerInfo, error) {
+
+	key := vm.GetStakeInKeyHash(addr)
+	stakerBytes, err := vm.GetInfo(statedb, vm.StakersInfoAddr, key)
+	if stakerBytes == nil {
+		return nil, errors.New("item doesn't exist")
+	}
+	var stakerInfo vm.StakerInfo
+	err = rlp.DecodeBytes(stakerBytes, &stakerInfo)
+	if err != nil {
+		return nil, errors.New("parse staker info error")
+	}
+	return &stakerInfo, nil
+}
 
 
 func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
-	val,err :=p.avgdb.GetWithIndex(epochID,0,"")
-	if err == nil && val != nil{
-		return binary.BigEndian.Uint64(val),nil
-	}
+	//val,err :=p.avgdb.GetWithIndex(epochID,0,"")
+	//if err == nil && val != nil{
+	//	return binary.BigEndian.Uint64(val),nil
+	//}
 
 	targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID)
 	epocherInst := epochLeader.GetEpocher()
@@ -62,32 +76,45 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 	}
 
 	stakerSet := make(map[common.Address]*big.Int)
+	selector := epochLeader.GetEpocher()
+	if selector == nil {
+		return 0, errors.New("GetEpocherInst error")
+	}
+
+	leaders := selector.GetEpochLeaders(epochID)
+	addrs := make([]common.Address, len(leaders))
+	for i := range leaders {
+		pub := crypto.ToECDSAPub(leaders[i])
+		if pub == nil {
+			continue
+		}
+
+		addrs[i] = crypto.PubkeyToAddress(*pub)
+
+	}
+
+	for _,addr := range addrs {
+		staker,err := p.getStakeInfo(stateDb,addr)
+		if err !=nil {
+			continue
+		}
+
+		if staker.LockEpochs == posconfig.TARGETS_LOCKED_EPOCH {
+			stakerSet[addr] = staker.Amount
+		}
+	}
+
 	stakeTotal := big.NewInt(0)
+	for _,val := range stakerSet {
+		stakeTotal = stakeTotal.Add(stakeTotal,val)
+	}
 
-	stateDb.ForEachStorageByteArray(vm.StakersInfoAddr, func(key common.Hash, value []byte) bool {
-
-		staker := vm.StakerInfo{}
-		err := rlp.DecodeBytes(value, &staker)
-		if err != nil {
-			log.SyslogErr(err.Error())
-			return true
-		}
-
-		fmt.Println(staker.LockEpochs)
-
-		//if staker.LockEpochs == posconfig.TARGETS_LOCKED_EPOCH {
-		if staker.LockEpochs <= posconfig.TARGETS_LOCKED_EPOCH {
-			stakerSet[staker.Address] = staker.Amount
-			stakeTotal = stakeTotal.Add(stakeTotal,staker.Amount)
-		}
-
-
-		return true
-
-	})
+	if stakeTotal.Cmp(big.NewInt(0)) == 0 {
+		return 0, errors.New("not get stake total")
+	}
 
 ///////////////////////////////test code/////////////////////////////
-
+/*
 	validator := []string{	"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
 							"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
 							"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
@@ -102,13 +129,11 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 		stakeTotal =  big.NewInt(0).Add(stakeTotal,stk)
 	}
-
+*/
 ////////////////////////////////////////////////////////////////////////
 
 
-	if stakeTotal.Cmp(big.NewInt(0)) == 0 {
-		return 0, errors.New("not get staker")
-	}
+
 
 	c, err := incentive.GetEpochPayDetail(epochID)
 	if err != nil {
@@ -120,10 +145,13 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		if len(c[i]) == 0 {
 			continue
 		}
+
 		if _,ok := stakerSet[c[i][0].ValidatorAddr]; ok {
 			incentiveTotal = incentiveTotal.Add(incentiveTotal,c[i][0].Incentive)
 		}
 	}
+
+
 
 	incentiveTotal = big.NewInt(0).Mul(incentiveTotal,big.NewInt(posconfig.RETURN_DIVIDE))
 	ret :=  big.NewInt(0).Div(incentiveTotal,stakeTotal).Uint64()
