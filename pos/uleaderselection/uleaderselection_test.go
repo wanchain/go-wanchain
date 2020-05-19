@@ -322,6 +322,7 @@ func TestGenerateSlotLeaderProof(t *testing.T) {
 		}
 		alphas = append(alphas, x)
 	}
+
 	ArrayReceived := make([]*ecdsa.PublicKey, 0) //need to make the order of received message the same among different users
 	for i := 0; i < Ne; i++ {
 		piece := new(ecdsa.PublicKey)

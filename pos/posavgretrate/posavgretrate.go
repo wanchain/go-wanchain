@@ -73,10 +73,10 @@ func (p *PosAvgRet) getStakeInfo(statedb *state.StateDB, addr common.Address) (*
 
 func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
-	//val,err :=p.avgdb.GetWithIndex(epochID,0,"")
-	//if err == nil && val != nil{
-	//	return binary.BigEndian.Uint64(val),nil
-	//}
+	val,err :=p.avgdb.GetWithIndex(epochID,0,"")
+	if err == nil && val != nil{
+		return binary.BigEndian.Uint64(val),nil
+	}
 
 	retTotal := uint64(0);
 
@@ -182,6 +182,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
+
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, p2)
 	p.avgdb.PutWithIndex(epochID,0,"",buf)

@@ -37,6 +37,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/wanchain/go-wanchain/common"
 	"math/big"
 	"testing"
 
@@ -264,11 +265,19 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 
 	message := []byte("Hello, world.")
+
+	fmt.Println("msg=" + common.Bytes2Hex(message))
+
+	pub := prv2.PublicKey;
+	fmt.Println("pub=0x04" + pub.X.Text(16) + pub.Y.Text(16))
+
 	ct, err := Encrypt(rand.Reader, &prv2.PublicKey, message, nil, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.FailNow()
 	}
+
+	fmt.Println("encrypted=:" + common.ToHex(ct))
 
 	pt, err := prv2.Decrypt(rand.Reader, ct, nil, nil)
 	if err != nil {

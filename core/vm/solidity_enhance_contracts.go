@@ -6,17 +6,16 @@ import (
 	"encoding/binary"
 	"errors" // this is not match with other
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"math/big"
-	"strings"
-
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
+	"math/big"
+	"strings"
 )
 
 
@@ -460,18 +459,12 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		return []byte{0},errors.New("not initialzied for pos return ")
 	}
 
-	retTotal := uint64(0);
-	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
 
-		ret,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId - i)
-		if err!= nil {
-			continue
-		}
 
-		retTotal += ret
+	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
+	if err != nil {
+		return []byte{0},err
 	}
-
-	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
 
 	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
 	if err != nil {
