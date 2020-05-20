@@ -20,7 +20,6 @@ import (
 
 type PosAvgRet struct {
 	avgdb *posdb.Db
-
 }
 
 var posavgret *PosAvgRet
@@ -34,9 +33,9 @@ func NewPosAveRet() *PosAvgRet {
 	}
 
 	util.SetPosAvgInst(posavgret)
-
 	return posavgret
 }
+
 
 func (p *PosAvgRet) getStakeInfo(statedb *state.StateDB, addr common.Address) (*vm.StakerInfo, error) {
 
@@ -79,35 +78,38 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 	}
 
 	retTotal := uint64(0);
-
 	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
+		epid := epochID - i
+		val,err :=p.avgdb.GetWithIndex(epid,1,"perepid")
+		if err == nil && val != nil{
+			retTotal += binary.BigEndian.Uint64(val)
+			continue
+		}
 
-		fmt.Println("" + strconv.Itoa(int(i)))
-
-		targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epochID - i)
+		targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epid)
 		epocherInst := epochLeader.GetEpocher()
 		if epocherInst == nil {
-			return 0, errors.New("epocher instance do not exist")
+			continue
 		}
 
 		//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
 		block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 		if block == nil {
-			return 0, errors.New("Unkown block")
+			continue
 		}
 
 		stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 		if err != nil {
-			return uint64(0), err
+			continue
 		}
 
 		stakerSet := make(map[common.Address]*big.Int)
 		selector := epochLeader.GetEpocher()
 		if selector == nil {
-			return 0, errors.New("GetEpocherInst error")
+			continue
 		}
 
-		leaders := selector.GetEpochLeaders(epochID - i)
+		leaders := selector.GetEpochLeaders(epid)
 		addrs := make([]common.Address, len(leaders))
 		for i := range leaders {
 			pub := crypto.ToECDSAPub(leaders[i])
@@ -136,31 +138,13 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		}
 
 		if stakeTotal.Cmp(big.NewInt(0)) == 0 {
-			return 0, errors.New("not get stake total")
+			continue
 		}
 
-	///////////////////////////////test code/////////////////////////////
-	/*
-	validator := []string{	"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
-							"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
-							"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
-						 }
 
-	stakeTotal = big.NewInt(0)
-	for i:=0;i<len(validator);i++ {
-		addr := common.HexToAddress(validator[i])
-		stakerSet[addr] = big.NewInt(10)
-
-		stk,_ := big.NewInt(0).SetString("10000000000000000000",10)
-
-		stakeTotal =  big.NewInt(0).Add(stakeTotal,stk)
-	}
-	*/
-	////////////////////////////////////////////////////////////////////////
-
-		c, err := incentive.GetEpochPayDetail(epochID - i)
+		c, err := incentive.GetEpochPayDetail(epid)
 		if err != nil {
-			return 0, err
+			continue
 		}
 
 		incentiveTotal := big.NewInt(0)
@@ -176,9 +160,15 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 		incentiveTotal = big.NewInt(0).Mul(incentiveTotal, big.NewInt(posconfig.RETURN_DIVIDE))
 
-		retTotal += big.NewInt(0).Div(incentiveTotal, stakeTotal).Uint64()
+		ret := big.NewInt(0).Div(incentiveTotal, stakeTotal).Uint64()
 
+		var buf = make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, ret)
+		p.avgdb.PutWithIndex(epid,1,"perepid",buf)
 
+		fmt.Println("epoch=" + strconv.Itoa(int(epid)) + " avg=" + strconv.Itoa(int(ret)))
+
+		retTotal += ret
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
