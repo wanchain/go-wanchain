@@ -71,7 +71,8 @@ contract Enhancement {
     address constant PRECOMPILE_CONTRACT_ADDR = 0x268;
 
     function getPosAvgReturn(uint256 groupStartTime,uint256 curTime)  public view returns(uint256 result,bool success) {
-       bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
+      // bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
+       bytes32 functionSelector = 0x8c114a5100000000000000000000000000000000000000000000000000000000;
        address to = PRECOMPILE_CONTRACT_ADDR;
 
        assembly {
