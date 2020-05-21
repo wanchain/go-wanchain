@@ -156,15 +156,19 @@ solEnhanceDef = `[
 				"type": "uint256"
 			},
 			{
-				"name": "targetTime",
+				"name": "curTime",
 				"type": "uint256"
 			}
 		],
 		"name": "getPosAvgReturn",
 		"outputs": [
 			{
-				"name": "",
+				"name": "result",
 				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -212,12 +216,39 @@ solEnhanceDef = `[
 		"name": "enc",
 		"outputs": [
 			{
-				"name": "c",
+				"name": "",
 				"type": "bytes"
 			},
 			{
 				"name": "success",
 				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -354,6 +385,7 @@ solEnhanceDef = `[
 	calPolyCommitid		[4]byte
 	checkSigid			[4]byte
 	encid				[4]byte
+	hardCapid			[4]byte
 
 )
 
@@ -374,8 +406,9 @@ func init() {
 	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
+	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
 
-	mulGidStr := common.Bytes2Hex(encid[:])
+	mulGidStr := common.Bytes2Hex(hardCapid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -413,8 +446,10 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.calPolyCommit(input[4:], contract, evm)
 	} else if methodId == checkSigid {
 		return s.checkSig(input[4:], contract, evm)
-	}  else if methodId == encid {
+	} else if methodId == encid {
 		return s.encrypt(input[4:], contract, evm)
+	} else if methodId == hardCapid {
+		return s.getPosTotalRet(input[4:], contract, evm)
 	}
 
 
@@ -673,4 +708,13 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	return buf,nil
 
+}
+
+
+func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	var buf = make([]byte, 32)
+
+
+	return buf,nil
 }
