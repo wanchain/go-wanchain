@@ -530,7 +530,10 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	targetEpochId--
 	/////////////////////////////////////////
 
-	if groupStartEpochId > eid || targetEpochId > eid {
+	if  groupStartEpochId <= posconfig.FirstEpochId ||
+		targetEpochId <= groupStartEpochId ||
+		groupStartEpochId > eid ||
+		targetEpochId > eid {
 		return []byte{0},errors.New("wrong epochid")
 	}
 
