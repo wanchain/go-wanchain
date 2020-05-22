@@ -193,7 +193,6 @@ contract Enhancement {
 
     function calPolyCommit(bytes polyCommit, bytes pk)   public view returns(uint256 sx, uint256 sy,bool success) {
 
-
        bytes32 functionSelector = 0xf9d9c3ff00000000000000000000000000000000000000000000000000000000;//keccak256("calPolyCommit(bytes,uint256)");
        address to = PRECOMPILE_CONTRACT_ADDR;
 
@@ -307,5 +306,31 @@ contract Enhancement {
             return false;
         }
     }
+
+    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+       bytes32 functionSelector = 0xaa2684b700000000000000000000000000000000000000000000000000000000;
+       address to = PRECOMPILE_CONTRACT_ADDR;
+       uint256 posReturn;
+       bool    success;
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(freePtr, functionSelector)
+            success := staticcall(gas, to, freePtr,4, freePtr, 32)
+            posReturn := mload(freePtr)
+        }
+
+        uint256 res = posReturn.mul(crossChainCoefficient).mul(chainTypeCoefficient);
+
+        return res.div(DIVISOR);
+
+    }
+
+
+    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+
+
+
+    }
+
 
 }
