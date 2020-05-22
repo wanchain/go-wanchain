@@ -765,6 +765,7 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 
 	time := big.NewInt(0).SetBytes(payload[:32])
 	epid,_ := posutil.CalEpochSlotID(time.Uint64())
+	epid--
 
 	inst := posutil.PosAvgRetInst()
 	if inst == nil {
