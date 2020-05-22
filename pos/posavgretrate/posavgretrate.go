@@ -79,6 +79,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 	retTotal := uint64(0);
 	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
+
 		epid := epochID - i
 		val,err :=p.avgdb.GetWithIndex(epid,1,"perepid")
 		if err == nil && val != nil{
@@ -86,30 +87,25 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			continue
 		}
 
-		targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epid)
+		targetBlkNum := util.GetEpochBlock(epid)
 		epocherInst := epochLeader.GetEpocher()
 		if epocherInst == nil {
-			continue
+			return 0,errors.New("not find epoch instance")
 		}
 
-		//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
 		block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 		if block == nil {
-			continue
+			return 0,errors.New("not find block")
 		}
 
 		stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 		if err != nil {
-			continue
+			return 0,errors.New("not find state db for pos return")
 		}
 
 		stakerSet := make(map[common.Address]*big.Int)
-		selector := epochLeader.GetEpocher()
-		if selector == nil {
-			continue
-		}
 
-		leaders := selector.GetEpochLeaders(epid)
+		leaders := epocherInst.GetEpochLeaders(epid)
 		addrs := make([]common.Address, len(leaders))
 		for i := range leaders {
 			pub := crypto.ToECDSAPub(leaders[i])
@@ -118,8 +114,8 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			}
 
 			addrs[i] = crypto.PubkeyToAddress(*pub)
-
 		}
+
 
 		for _, addr := range addrs {
 			staker, err := p.getStakeInfo(stateDb, addr)
@@ -138,12 +134,21 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		}
 
 		if stakeTotal.Cmp(big.NewInt(0)) == 0 {
+
+			var buf = make([]byte, 8)
+			binary.BigEndian.PutUint64(buf, 0)
+			p.avgdb.PutWithIndex(epid,1,"perepid",buf)
+
 			continue
 		}
 
 
 		c, err := incentive.GetEpochPayDetail(epid)
 		if err != nil {
+			var buf = make([]byte, 8)
+			binary.BigEndian.PutUint64(buf, 0)
+			p.avgdb.PutWithIndex(epid,1,"perepid",buf)
+
 			continue
 		}
 
