@@ -70,39 +70,22 @@ contract Enhancement {
     uint public constant DIVISOR = 10000;
     address constant PRECOMPILE_CONTRACT_ADDR = 0x268;
 
-    function getPosAvgReturn(uint256 groupStartTime,uint256 targetTime)  public view returns(uint256) {
-       bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
-       (uint256 result, bool success) = callWith32BytesReturnsUint256(
-                                            PRECOMPILE_CONTRACT_ADDR,
-                                            functionSelector,
-                                            bytes32(groupStartTime),
-                                            bytes32(targetTime)
-                                          );
+    function getPosAvgReturn(uint256 groupStartTime,uint256 curTime)  public view returns(uint256 result,bool success) {
+      // bytes32 functionSelector = keccak256("getPosAvgReturn(uint256,uint256)");
+       bytes32 functionSelector = 0x8c114a5100000000000000000000000000000000000000000000000000000000;
+       address to = PRECOMPILE_CONTRACT_ADDR;
 
-        if (!success) {
-            return 0;
-        }
-        return result;
-    }
-
-    function callWith32BytesReturnsUint256(
-        address to,
-        bytes32 functionSelector,
-        bytes32 param1,
-        bytes32 param2
-    ) private view returns (uint256 result, bool success) {
-        assembly {
+       assembly {
             let freePtr := mload(0x40)
-
             mstore(freePtr, functionSelector)
-            mstore(add(freePtr, 4), param1)
-            mstore(add(freePtr, 36), param2)
+            mstore(add(freePtr, 4), groupStartTime)
+            mstore(add(freePtr, 36), curTime)
 
             // call ERC20 Token contract transfer function
             success := staticcall(gas, to, freePtr,68, freePtr, 32)
-
             result := mload(freePtr)
         }
+
     }
 
 
@@ -209,7 +192,6 @@ contract Enhancement {
 
 
     function calPolyCommit(bytes polyCommit, bytes pk)   public view returns(uint256 sx, uint256 sy,bool success) {
-
 
        bytes32 functionSelector = 0xf9d9c3ff00000000000000000000000000000000000000000000000000000000;//keccak256("calPolyCommit(bytes,uint256)");
        address to = PRECOMPILE_CONTRACT_ADDR;
@@ -324,5 +306,31 @@ contract Enhancement {
             return false;
         }
     }
+
+    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+       bytes32 functionSelector = 0xaa2684b700000000000000000000000000000000000000000000000000000000;
+       address to = PRECOMPILE_CONTRACT_ADDR;
+       uint256 posReturn;
+       bool    success;
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(freePtr, functionSelector)
+            success := staticcall(gas, to, freePtr,4, freePtr, 32)
+            posReturn := mload(freePtr)
+        }
+
+        uint256 res = posReturn.mul(crossChainCoefficient).mul(chainTypeCoefficient);
+
+        return res.div(DIVISOR);
+
+    }
+
+
+    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+
+
+
+    }
+
 
 }

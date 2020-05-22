@@ -6,19 +6,16 @@ import (
 	"encoding/binary"
 	"errors" // this is not match with other
 	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
-	"math/big"
-	"strings"
-	"time"
-
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
+	"math/big"
+	"strings"
 )
 
 
@@ -159,15 +156,19 @@ solEnhanceDef = `[
 				"type": "uint256"
 			},
 			{
-				"name": "targetTime",
+				"name": "curTime",
 				"type": "uint256"
 			}
 		],
 		"name": "getPosAvgReturn",
 		"outputs": [
 			{
-				"name": "",
+				"name": "result",
 				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -215,12 +216,39 @@ solEnhanceDef = `[
 		"name": "enc",
 		"outputs": [
 			{
-				"name": "c",
+				"name": "",
 				"type": "bytes"
 			},
 			{
 				"name": "success",
 				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -357,6 +385,7 @@ solEnhanceDef = `[
 	calPolyCommitid		[4]byte
 	checkSigid			[4]byte
 	encid				[4]byte
+	hardCapid			[4]byte
 
 )
 
@@ -377,8 +406,9 @@ func init() {
 	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
+	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
 
-	mulGidStr := common.Bytes2Hex(encid[:])
+	mulGidStr := common.Bytes2Hex(hardCapid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -416,8 +446,10 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.calPolyCommit(input[4:], contract, evm)
 	} else if methodId == checkSigid {
 		return s.checkSig(input[4:], contract, evm)
-	}  else if methodId == encid {
+	} else if methodId == encid {
 		return s.encrypt(input[4:], contract, evm)
+	} else if methodId == hardCapid {
+		return s.getPosTotalRet(input[4:], contract, evm)
 	}
 
 
@@ -443,8 +475,8 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
 
 	////for test/////////////////////////////////
-	groupStartTime = uint64(time.Now().Unix())
-	targetTime = groupStartTime
+	//groupStartTime = uint64(time.Now().Unix())
+	//targetTime = groupStartTime
 
 	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
 	groupStartEpochId--
@@ -462,18 +494,12 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		return []byte{0},errors.New("not initialzied for pos return ")
 	}
 
-	retTotal := uint64(0);
-	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
 
-		ret,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId - i)
-		if err!= nil {
-			continue
-		}
 
-		retTotal += ret
+	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
+	if err != nil {
+		return []byte{0},err
 	}
-
-	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
 
 	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
 	if err != nil {
@@ -682,4 +708,13 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	return buf,nil
 
+}
+
+
+func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	var buf = make([]byte, 32)
+
+
+	return buf,nil
 }

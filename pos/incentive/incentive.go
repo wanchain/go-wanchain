@@ -17,6 +17,8 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 
 	"github.com/wanchain/go-wanchain/core/state"
+
+	posutil "github.com/wanchain/go-wanchain/pos/util"
 )
 
 var (
@@ -146,6 +148,33 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
 	saveRemain(epochID, remainsAll)
 
+//////////////////////////////////////////////////////////////////////////
+	//test code which will be deleted !!!!!!!!!!!!!!!
+/*
+	validator := []string{	"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
+							"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
+							"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
+							"0x344C2d4d8B42204b0ab3061A85E0C50EEb2fa8DA",
+							"0xb4E61D10344203de4530d4A99d55f32aD25580e9",
+							"0xf851B2eDAe9D24876ed7645062331622e4f18A05",
+						  }
+	finalIncentive = make([][]vm.ClientIncentive, 0)
+	for i := 0; i < len(validator); i++ {
+		cia := make([]vm.ClientIncentive, 0)
+
+		for m := 0; m < len(validator); m++ {
+			incent,_ := big.NewInt(0).SetString("1000000000000000000",10)
+			cia = append(cia,vm.ClientIncentive{ValidatorAddr:common.HexToAddress(validator[i]),
+												WalletAddr:common.HexToAddress(validator[i]),
+												Incentive:incent})
+
+		}
+
+		finalIncentive = append(finalIncentive,cia)
+	}
+*/
+/////////////////////////////////////////////////////////////////////////////////////
+
 	pay(finalIncentive, stateDb)
 
 	setStakerInfo(epochID, finalIncentive)
@@ -153,6 +182,13 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	localDbSetValue(epochID, dictEpochBlock, chain.CurrentHeader().Number)
 
 	finished(stateDb, epochID)
+
+	//cal return rate in advance
+	if epochID > posconfig.StoremanEpochid {
+		retrateInst := posutil.PosAvgRetInst();
+		go retrateInst.GetOneEpochAvgReturnFor90LockEpoch(epochID)
+	}
+
 	return true
 }
 

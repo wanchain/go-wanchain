@@ -109,7 +109,7 @@ const (
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE = 10000
 
-	StoremanEpochid  = 661003200
+	StoremanEpochid  =  ApolloEpochID + TARGETS_LOCKED_EPOCH
 )
 
 var TxDelay = K
