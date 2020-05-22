@@ -307,28 +307,52 @@ contract Enhancement {
         }
     }
 
-    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
-       bytes32 functionSelector = 0xaa2684b700000000000000000000000000000000000000000000000000000000;
+
+     function testGetHardCap ()  public view returns(uint256,bool) {
+         return getHardCap(1,1,now - 3600 * 24);
+     }
+
+
+    function getHardCap (uint256 crossChainCoefficient,uint256 chainTypeCoefficient,uint256 time) public view returns(uint256,bool) {
+       bytes32 functionSelector = 0xfa7c2faf00000000000000000000000000000000000000000000000000000000;
        address to = PRECOMPILE_CONTRACT_ADDR;
        uint256 posReturn;
        bool    success;
        assembly {
             let freePtr := mload(0x40)
             mstore(freePtr, functionSelector)
-            success := staticcall(gas, to, freePtr,4, freePtr, 32)
+            mstore(add(freePtr, 4), time)
+            success := staticcall(gas, to, freePtr,36, freePtr, 32)
             posReturn := mload(freePtr)
         }
 
+
         uint256 res = posReturn.mul(crossChainCoefficient).mul(chainTypeCoefficient);
 
-        return res.div(DIVISOR);
+        return (res.div(DIVISOR),success);
 
     }
 
 
-    function getHardCap (uint256 smgDeposit,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+    function getMinIncentive (uint256 smgDeposit,uint256 smgStartTime,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
+        uint256 p1;
+        bool    success;
 
+        (p1,success) = getPosAvgReturn(smgStartTime,now);
+        if(!success) {
+            return 0;
+        }
+        uint256 p1Return = smgDeposit.mul(p1).div(DIVISOR);
 
+        uint256 hardcap;
+        (hardcap,success) = getHardCap(crossChainCoefficient,chainTypeCoefficient,now);
+        if(!success) {
+            return 0;
+        }
+
+        uint256 hardcapReturn = smgDeposit.mul(hardcap).div(DIVISOR);
+
+        return hardcapReturn<=p1Return?hardcapReturn:p1Return;
 
     }
 
