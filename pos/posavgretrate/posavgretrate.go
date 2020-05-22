@@ -209,3 +209,8 @@ func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int, error) {
 	return totalAmount,nil
 
 }
+
+
+func (p *PosAvgRet) GetAllIncentive(epochID uint64) (*big.Int, error) {
+	return  incentive.GetEpochIncentive(epochID)
+}

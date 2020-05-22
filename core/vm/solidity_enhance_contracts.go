@@ -130,6 +130,33 @@ solEnhanceDef = `[
 		"type": "function"
 	},
 	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getMinIncentive",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"constant": false,
 		"inputs": [
 			{
@@ -195,6 +222,20 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "testGetHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "rbpri",
@@ -222,33 +263,6 @@ solEnhanceDef = `[
 			{
 				"name": "success",
 				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "smgDeposit",
-				"type": "uint256"
-			},
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
-				"type": "uint256"
-			}
-		],
-		"name": "getHardCap",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -368,6 +382,37 @@ solEnhanceDef = `[
 			{
 				"name": "success",
 				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "time",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -713,8 +758,26 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 
 func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	var buf = make([]byte, 32)
+	len := len(payload)
+	if len < 32 {
+		return []byte{0},nil
+	}
 
+	time := big.NewInt(0).SetBytes(payload[:32])
+	epid,_ := posutil.CalEpochSlotID(time.Uint64())
+
+	inst := posutil.PosAvgRetInst()
+	if inst == nil {
+		return []byte{0},errors.New("not initialzied for pos return ")
+	}
+
+	totalIncentive,err := inst.GetAllIncentive(epid)
+	if err != nil || totalIncentive == nil  {
+		return []byte{0},nil
+	}
+
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, totalIncentive.Uint64())
 
 	return buf,nil
 }
