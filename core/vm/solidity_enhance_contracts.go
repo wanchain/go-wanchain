@@ -780,8 +780,10 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 		return []byte{0},nil
 	}
 
+	totalIncentive = totalIncentive.Div(totalIncentive,ether)
+	ret := totalIncentive.Uint64()
 	var buf = make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, totalIncentive.Uint64())
+	binary.BigEndian.PutUint64(buf, ret)
 
-	return buf,nil
+	return common.LeftPadBytes(buf, 32), nil
 }

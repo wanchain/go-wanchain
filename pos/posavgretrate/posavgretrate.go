@@ -83,8 +83,8 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		epid := epochID - i
 		val,err :=p.avgdb.GetWithIndex(epid,1,"perepid")
 		if err == nil && val != nil{
-			retTotal += binary.BigEndian.Uint64(val)
-			continue
+			//retTotal += binary.BigEndian.Uint64(val)
+			//continue
 		}
 
 		targetBlkNum := util.GetEpochBlock(epid)
@@ -105,7 +105,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 		stakerSet := make(map[common.Address]*big.Int)
 
-		leaders := epocherInst.GetEpochLeaders(epid)
+		leaders := posdb.GetEpochLeaderGroup(epid)
 		addrs := make([]common.Address, len(leaders))
 		for i := range leaders {
 			pub := crypto.ToECDSAPub(leaders[i])
@@ -144,7 +144,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 
 
 		c, err := incentive.GetEpochPayDetail(epid)
-		if err != nil {
+		if err != nil || c== nil{
 			var buf = make([]byte, 8)
 			binary.BigEndian.PutUint64(buf, 0)
 			p.avgdb.PutWithIndex(epid,1,"perepid",buf)
@@ -163,9 +163,9 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			}
 		}
 
-		incentiveTotal = big.NewInt(0).Mul(incentiveTotal, big.NewInt(posconfig.RETURN_DIVIDE))
+		incentiveTotal = incentiveTotal.Mul(incentiveTotal, big.NewInt(posconfig.RETURN_DIVIDE))
 
-		ret := big.NewInt(0).Div(incentiveTotal, stakeTotal).Uint64()
+		ret := incentiveTotal.Div(incentiveTotal, stakeTotal).Uint64()
 
 		var buf = make([]byte, 8)
 		binary.BigEndian.PutUint64(buf, ret)
