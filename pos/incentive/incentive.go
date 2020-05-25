@@ -184,10 +184,11 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	finished(stateDb, epochID)
 
 	//cal return rate in advance
-	if epochID > posconfig.StoremanEpochid {
+	if epochID > posconfig.FirstEpochId + posconfig.TARGETS_LOCKED_EPOCH {
 		retrateInst := posutil.PosAvgRetInst();
 		go retrateInst.GetOneEpochAvgReturnFor90LockEpoch(epochID)
 	}
+
 
 	return true
 }
