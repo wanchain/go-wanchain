@@ -3,11 +3,11 @@ package pos
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -73,8 +73,12 @@ func (p *PosAvgRet) getStakeInfo(statedb *state.StateDB, addr common.Address) (*
 func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
 	val,err :=p.avgdb.GetWithIndex(epochID,0,"")
+
 	if err == nil && val != nil{
-		return binary.BigEndian.Uint64(val),nil
+		p2 := binary.BigEndian.Uint64(val)
+		if p2 != 0 {
+			return p2,nil
+		}
 	}
 
 	retTotal := uint64(0);
@@ -171,15 +175,17 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		binary.BigEndian.PutUint64(buf, ret)
 		p.avgdb.PutWithIndex(epid,1,"perepid",buf)
 
-		fmt.Println("epoch=" + strconv.Itoa(int(epid)) + " avg=" + strconv.Itoa(int(ret)))
+		log.Info("epoch=" + strconv.Itoa(int(epid)) + " avg=" + strconv.Itoa(int(ret)))
 
 		retTotal += ret
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-
+	log.Info("p2(90 days) epoch=" + strconv.Itoa(int(epochID)) + " avg=" + strconv.Itoa(int(p2)))
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, p2)
+
+
 	p.avgdb.PutWithIndex(epochID,0,"",buf)
 
 
