@@ -714,13 +714,18 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	pk.X = new(big.Int).SetBytes(pkb[:32])
 	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
+
+	rbprv := new(ecdsa.PrivateKey)
+	rbprv.Curve = crypto.S256()
+	rbprv.D = new(big.Int).SetBytes(rb)
+
 	fmt.Println(common.Bytes2Hex(rb))
 	fmt.Println(common.Bytes2Hex(iv))
 	fmt.Println(common.Bytes2Hex(msg))
 	fmt.Println(common.Bytes2Hex(pkb))
 
 
-	res,error := ecies.EncryptWithRandom(rb, iv, ecies.ImportECDSAPublic(pk), msg, nil, nil)
+	res,error := ecies.EncryptWithRandom(ecies.ImportECDSA(rbprv), ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
 
 	if error != nil {
 		return []byte{0},error
@@ -779,7 +784,7 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	if err != nil || totalIncentive == nil  {
 		return []byte{0},nil
 	}
-
+	totalIncentive = totalIncentive.Mul(totalIncentive,big.NewInt(10000))//keep 4 dots parts
 	totalIncentive = totalIncentive.Div(totalIncentive,ether)
 	ret := totalIncentive.Uint64()
 	var buf = make([]byte, 8)

@@ -271,7 +271,7 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 	}
 
 
-	fmt.Println("rbpri=" + R.D.Text(16));
+	//fmt.Println("rbpri=" + R.D.Text(16));
 
 	hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
@@ -378,7 +378,7 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-func EncryptWithRandom(rb []byte,iv []byte, pub *PublicKey, m, s1, s2 []byte) (ct []byte,err error) {
+func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []byte) (ct []byte,err error) {
 
 	params := pub.Params
 	if params == nil {
@@ -388,17 +388,20 @@ func EncryptWithRandom(rb []byte,iv []byte, pub *PublicKey, m, s1, s2 []byte) (c
 		}
 	}
 
-	R, err := GenerateKeyWithR(rb, pub.Curve, params)
-	if err != nil {
-		return
-	}
+	//rbpri,err := ImportECDSAPublic()
+	////R, err := GenerateKeyWithR(rb, pub.Curve, params)
+	//if err != nil {
+	//	return
+	//}
 
 
 	hash := params.Hash()
-	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
+
+	z, err := GenerateShared(rbprv,pub, pub.Params.KeyLen, params.KeyLen)
 	if err != nil {
 		return
 	}
+
 	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
 	if err != nil {
 		return
@@ -416,7 +419,7 @@ func EncryptWithRandom(rb []byte,iv []byte, pub *PublicKey, m, s1, s2 []byte) (c
 
 	d := messageTag(params.Hash, Km, em, s2)
 
-	Rb := elliptic.Marshal(pub.Curve, R.PublicKey.X, R.PublicKey.Y)
+	Rb := elliptic.Marshal(pub.Curve, pub.X,pub.Y)
 	ct = make([]byte, len(Rb)+len(em)+len(d))
 	copy(ct, Rb)
 	copy(ct[len(Rb):], em)
@@ -454,6 +457,30 @@ func GenerateKeyWithSpeciedR(curve elliptic.Curve, rb []byte) (priv []byte, x, y
 	return
 }
 
+
+
+// ECDH key agreement method used to establish secret keys for encryption.
+func GenerateShared(prv *PrivateKey,pub *PublicKey, skLen, macLen int) (sk []byte, err error) {
+
+	if prv.PublicKey.Curve != pub.Curve {
+		return nil, ErrInvalidCurve
+	}
+
+	if skLen+macLen > MaxSharedKeyLength(pub) {
+		return nil, ErrSharedKeyTooBig
+	}
+
+	x, _ := pub.Curve.ScalarMult(pub.X, pub.Y, prv.D.Bytes())
+	if x == nil {
+		return nil, ErrSharedKeyIsPointAtInfinity
+	}
+
+	sk = make([]byte, skLen+macLen)
+	skBytes := x.Bytes()
+	copy(sk[len(sk)-len(skBytes):], skBytes)
+	return sk, nil
+}
+
 // Generate an elliptic curve public / private keypair. If params is nil,
 // the recommended default parameters for the key will be chosen.
 func GenerateKeyWithR(rb []byte, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey,err error) {
@@ -466,6 +493,7 @@ func GenerateKeyWithR(rb []byte, curve elliptic.Curve, params *ECIESParams) (prv
 	prv.PublicKey.Y = y
 	prv.PublicKey.Curve = curve
 	prv.D = new(big.Int).SetBytes(pb)
+
 	if params == nil {
 		params = ParamsFromCurve(curve)
 	}
