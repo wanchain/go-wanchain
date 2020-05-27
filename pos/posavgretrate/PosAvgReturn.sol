@@ -309,7 +309,7 @@ contract Enhancement {
 
 
      function testGetHardCap ()  public view returns(uint256,bool) {
-         return getHardCap(1,1,now - 3600 * 24);
+         return getHardCap(10000,10000,now - 3600 * 24);
      }
 
 
@@ -327,12 +327,21 @@ contract Enhancement {
         }
 
 
-        uint256 res = posReturn.mul(crossChainCoefficient).mul(chainTypeCoefficient);
+        uint256 res = posReturn.mul(crossChainCoefficient).mul(chainTypeCoefficient).div(DIVISOR*DIVISOR);
 
-        return (res.div(DIVISOR),success);
+        return (res,success);
 
     }
 
+
+     function getMinIncentive1 ()  public view returns(uint256,uint256) {
+         return (getMinIncentive(100000 ether,now - 86400 * 4,10000,10000),0);
+     }
+
+
+     function getMinIncentive2 ()  public view returns(uint256,uint256) {
+         return (getMinIncentive(10000000 ether,now - 86400 * 4,10000,10000),0);
+     }
 
     function getMinIncentive (uint256 smgDeposit,uint256 smgStartTime,uint256 crossChainCoefficient,uint256 chainTypeCoefficient) public view returns(uint256) {
         uint256 p1;
@@ -350,10 +359,9 @@ contract Enhancement {
             return 0;
         }
 
-        uint256 hardcapReturn = smgDeposit.mul(hardcap).div(DIVISOR);
+        uint256 hardcapReturn = hardcap.mul(1 ether).div(DIVISOR);
 
         return hardcapReturn<=p1Return?hardcapReturn:p1Return;
-
     }
 
 
