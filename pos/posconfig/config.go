@@ -33,6 +33,8 @@ const (
 	PosLocalDB       = "pos"
 	IncentiveLocalDB = "incentive"
 	ReorgLocalDB     = "forkdb"
+
+	AvgRetDB		 = "avgretdb"
 	ApolloEpochID     = 18104
 	AugustEpochID     = 18116  //TODO change it as mainnet 8.8
 
@@ -103,6 +105,11 @@ const (
 
 	MainnetVenusEpochId = 11112222
 	TestnetVenusEpochId = 18369
+
+	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
+	RETURN_DIVIDE = 10000
+
+	StoremanEpochid  =  ApolloEpochID + TARGETS_LOCKED_EPOCH
 )
 
 var TxDelay = K

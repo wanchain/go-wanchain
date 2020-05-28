@@ -419,6 +419,28 @@ var (
 		],
 		"name": "stakeUpdateFeeRate",
 		"type": "event"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{ "name": "groupStartTime",
+				"type": "uint256"
+			},
+			{
+				"name": "targetTime",
+				"type": "uint256"
+			}	
+		],
+		"name": "getPosAvgReturn",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]
 `
@@ -434,6 +456,8 @@ var (
 	delegateInId  [4]byte
 	delegateOutId [4]byte
 	stakeUpdateFeeRateId [4]byte
+
+	//getPosAvgReturnId [4]byte
 
 	maxEpochNum                = big.NewInt(PSMaxEpochNum)
 	minEpochNum                = big.NewInt(PSMinEpochNum)
@@ -565,6 +589,8 @@ func init() {
 	copy(delegateInId[:], cscAbi.Methods["delegateIn"].Id())
 	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].Id())
 	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].Id())
+
+	//copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturn"].Id())
 }
 
 /////////////////////////////
@@ -610,6 +636,7 @@ func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	} else if methodId == stakeUpdateFeeRateId {
 		return p.StakeUpdateFeeRate(input[4:], contract, evm)
 	}
+
 	return nil, errMethodId
 }
 
@@ -1535,3 +1562,75 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 	}
 	return nil
 }
+
+
+//func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+//
+//	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+//	if eid < posconfig.StoremanEpochid {
+//		return []byte{0},errors.New("not reach forked epochid")
+//	}
+//
+//
+//	//to do
+//	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+//	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
+//
+//	////for test/////////////////////////////////
+//	groupStartTime = uint64(time.Now().Unix())
+//	targetTime = groupStartTime
+//
+//	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
+//	groupStartEpochId--
+//
+//	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
+//	targetEpochId--
+//	/////////////////////////////////////////
+//
+//	if groupStartEpochId > eid || targetEpochId > eid {
+//		return []byte{0},errors.New("wrong epochid")
+//	}
+//
+//	inst := posutil.PosAvgRetInst()
+//	if inst == nil {
+//		return []byte{0},errors.New("not initialzied for pos return ")
+//	}
+//
+//	retTotal := uint64(0);
+//	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
+//
+//		ret,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId - i)
+//		if err!= nil {
+//			continue
+//		}
+//
+//		retTotal += ret
+//	}
+//
+//	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
+//
+//	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
+//	if err != nil {
+//		return []byte{0},err
+//	}
+//
+//	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
+//	if err != nil {
+//		return []byte{0},err
+//	}
+//
+//
+//	p2Big := big.NewInt(int64(p2))
+//
+//	p1Mul := p2Big.Mul(p2Big,stakeBegin)
+//
+//	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
+//
+//	////convert to byte array
+//	var buf = make([]byte, 8)
+//	binary.BigEndian.PutUint64(buf, p1)
+//
+//	return common.LeftPadBytes(buf, 32), nil
+//}
+
+

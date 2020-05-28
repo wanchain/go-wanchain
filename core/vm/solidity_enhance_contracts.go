@@ -1,0 +1,794 @@
+package vm
+
+import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/binary"
+	"errors" // this is not match with other
+	"fmt"
+	"github.com/wanchain/go-wanchain/accounts/abi"
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/ecies"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
+	"math/big"
+	"strings"
+)
+
+
+const (
+
+)
+
+var (
+	// pos staking contract abi definition
+solEnhanceDef = `[
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "calPolyCommitTest",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "checkSigTest",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "hash",
+				"type": "bytes32"
+			},
+			{
+				"name": "r",
+				"type": "bytes32"
+			},
+			{
+				"name": "s",
+				"type": "bytes32"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "checkSig",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "DIVISOR",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "addTest",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getMinIncentive",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "data",
+				"type": "string"
+			}
+		],
+		"name": "hexStr2bytes",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "groupStartTime",
+				"type": "uint256"
+			},
+			{
+				"name": "curTime",
+				"type": "uint256"
+			}
+		],
+		"name": "getPosAvgReturn",
+		"outputs": [
+			{
+				"name": "result",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "encTest",
+		"outputs": [
+			{
+				"name": "c",
+				"type": "bytes"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "testGetHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "rbpri",
+				"type": "bytes32"
+			},
+			{
+				"name": "iv",
+				"type": "bytes32"
+			},
+			{
+				"name": "mes",
+				"type": "uint256"
+			},
+			{
+				"name": "pub",
+				"type": "bytes"
+			}
+		],
+		"name": "enc",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "mulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "mulGTest",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "add",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "calPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "time",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
+]`
+	// pos staking contract abi object
+	solenhanceAbi, errInit = abi.JSON(strings.NewReader(solEnhanceDef))
+
+
+	getPosAvgReturnId 	[4]byte
+	addid				[4]byte
+	mulGid				[4]byte
+	calPolyCommitid		[4]byte
+	checkSigid			[4]byte
+	encid				[4]byte
+	hardCapid			[4]byte
+
+)
+
+const (
+	POLY_CIMMIT_ITEM_LEN = 64
+)
+//
+// package initialize
+//
+func init() {
+	if errCscInit != nil {
+		panic("err in csc abi initialize ")
+	}
+
+	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
+	copy(addid[:],solenhanceAbi.Methods["add"].Id())
+	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
+	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
+	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
+	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
+	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
+
+	mulGidStr := common.Bytes2Hex(hardCapid[:])
+	fmt.Println(""+mulGidStr)
+}
+
+/////////////////////////////
+type SolEnhance struct {
+
+}
+
+//
+// contract interfaces
+//
+func (s *SolEnhance) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
+func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
+func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if len(input) < 4 {
+		return nil, errors.New("parameter is wrong")
+	}
+
+	var methodId [4]byte
+	copy(methodId[:], input[:4])
+
+	if methodId == getPosAvgReturnId {
+		return s.getPosAvgReturn(input[4:], contract, evm)
+	} else if  methodId == addid{
+		return s.add(input[4:], contract, evm)
+	} else if  methodId == mulGid {
+		return s.mulG(input[4:], contract, evm)
+	} else if methodId == calPolyCommitid {
+		return s.calPolyCommit(input[4:], contract, evm)
+	} else if methodId == checkSigid {
+		return s.checkSig(input[4:], contract, evm)
+	} else if methodId == encid {
+		return s.encrypt(input[4:], contract, evm)
+	} else if methodId == hardCapid {
+		return s.getPosTotalRet(input[4:], contract, evm)
+	}
+
+
+	mid := common.Bytes2Hex(methodId[:])
+	fmt.Println(""+mid)
+
+
+
+	return nil, errMethodId
+}
+
+
+func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	if eid < posconfig.StoremanEpochid {
+		return []byte{0},errors.New("not reach forked epochid")
+	}
+
+
+	//to do
+	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
+	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
+
+	////for test/////////////////////////////////
+	//groupStartTime = uint64(time.Now().Unix())
+	//targetTime = groupStartTime
+
+	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
+	groupStartEpochId--
+
+	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
+	targetEpochId--
+	/////////////////////////////////////////
+
+	if  groupStartEpochId <= posconfig.FirstEpochId ||
+		targetEpochId <= groupStartEpochId ||
+		groupStartEpochId > eid ||
+		targetEpochId > eid {
+		return []byte{0},errors.New("wrong epochid")
+	}
+
+	inst := posutil.PosAvgRetInst()
+	if inst == nil {
+		return []byte{0},errors.New("not initialzied for pos return ")
+	}
+
+
+
+	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
+	if err != nil {
+		return []byte{0},err
+	}
+
+	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
+	if err != nil {
+		return []byte{0},err
+	}
+
+	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
+	if err != nil {
+		return []byte{0},err
+	}
+
+
+	p2Big := big.NewInt(int64(p2))
+
+	p1Mul := p2Big.Mul(p2Big,stakeBegin)
+
+	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
+
+	////convert to byte array
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, p1)
+
+	return common.LeftPadBytes(buf, 32), nil
+}
+
+
+func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) < 128 {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+	x1 := big.NewInt(0).SetBytes(payload[:32])
+	y1 := big.NewInt(0).SetBytes(payload[32:64])
+
+	x2 := big.NewInt(0).SetBytes(payload[64:96])
+	y2 := big.NewInt(0).SetBytes(payload[96:128])
+
+
+
+
+	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+
+	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+
+	var buf = make([]byte, 64)
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
+
+}
+
+
+
+func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) == 0 || len(payload) > 32 {
+		return []byte{0},errors.New("the data length is not correct")
+	}
+
+	k := payload[:32]
+	rx,ry := crypto.S256().ScalarBaseMult(k);
+
+	var buf = make([]byte, 64)
+
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
+}
+
+
+
+
+func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	fmt.Println(common.Bytes2Hex(payload))
+
+	if len%64 != 0 {
+		return []byte{0},errors.New("payload length is not correct")
+	}
+
+	degree := len/64 - 1;
+
+	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0},errors.New("payload is not enough")
+	}
+
+	f := make([]*ecdsa.PublicKey,degree);
+	i := 0
+
+
+
+	for ;i< degree;i++ {		//set the oxo4 prevalue for publickey
+		byte65 := make([]byte,0)
+		byte65 = append(byte65,4)
+		byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
+		f[i] = crypto.ToECDSAPub(byte65)
+	}
+
+	//pb value
+	byte65 := make([]byte,0)
+	byte65 = append(byte65,4)
+	byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
+
+	hashx := sha256.Sum256(byte65)
+	bigx := big.NewInt(0).SetBytes(hashx[:])
+	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
+
+	res,err := s.EvalByPolyG(f,degree - 1,bigx)
+	if err != nil {
+		return []byte{0},errors.New("error in caculate poly")
+	}
+
+	fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
+
+
+	var buf = make([]byte, 64)
+	copy(buf,res.X.Bytes())
+	copy(buf[32:],res.Y.Bytes())
+
+	return buf,nil
+}
+
+
+
+func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int) (*ecdsa.PublicKey, error) {
+	// check input parameters
+
+	sumPk := new(ecdsa.PublicKey)
+	sumPk.Curve = crypto.S256()
+	sumPk.X, sumPk.Y = pks[0].X, pks[0].Y
+
+	for i := 1; i < int(degree)+1; i++ {
+
+		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), crypto.S256().Params().N)
+		temp1.Mod(temp1, crypto.S256().Params().N)
+
+		temp1Pk := new(ecdsa.PublicKey)
+		temp1Pk.Curve = crypto.S256()
+
+		temp1Pk.X, temp1Pk.Y = crypto.S256().ScalarMult(pks[i].X,pks[i].Y,temp1.Bytes())
+
+		sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X,sumPk.Y,temp1Pk.X,temp1Pk.Y)
+
+	}
+	return sumPk,nil
+}
+
+
+
+func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	rb := payload[0:32]
+	iv := payload[32:64]
+	msg := payload[64:96]
+
+	pkb := payload[96:]
+	pk := new(ecdsa.PublicKey)
+	pk.Curve = crypto.S256()
+	pk.X = new(big.Int).SetBytes(pkb[:32])
+	pk.Y = new(big.Int).SetBytes(pkb[32:])
+
+
+	rbprv := new(ecdsa.PrivateKey)
+	rbprv.Curve = crypto.S256()
+	rbprv.D = new(big.Int).SetBytes(rb)
+
+	fmt.Println(common.Bytes2Hex(rb))
+	fmt.Println(common.Bytes2Hex(iv))
+	fmt.Println(common.Bytes2Hex(msg))
+	fmt.Println(common.Bytes2Hex(pkb))
+
+
+	res,error := ecies.EncryptWithRandom(ecies.ImportECDSA(rbprv), ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
+
+	if error != nil {
+		return []byte{0},error
+	}
+
+	fmt.Println(common.Bytes2Hex(res))
+	return res,nil
+}
+
+
+func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	if len < 64 + 32*3 {
+		return []byte{0},nil
+	}
+
+	hash := payload[:32]
+	sr := big.NewInt(0).SetBytes(payload[32:64])
+	ss := big.NewInt(0).SetBytes(payload[64:96])
+	payload[95] = byte(4)
+	pub := crypto.ToECDSAPub(payload[95:160])
+
+
+	res := ecdsa.Verify(pub,hash,sr,ss)
+
+	var buf = make([]byte, 32)
+	if res {
+		buf[31] = byte(1);
+	} else {
+		buf[31] = byte(0);
+	}
+
+	return buf,nil
+
+}
+
+
+func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	if len < 32 {
+		return []byte{0},nil
+	}
+
+	time := big.NewInt(0).SetBytes(payload[:32])
+	epid,_ := posutil.CalEpochSlotID(time.Uint64())
+	epid--
+
+	inst := posutil.PosAvgRetInst()
+	if inst == nil {
+		return []byte{0},errors.New("not initialzied for pos return ")
+	}
+
+	totalIncentive,err := inst.GetAllIncentive(epid)
+	if err != nil || totalIncentive == nil  {
+		return []byte{0},nil
+	}
+	totalIncentive = totalIncentive.Mul(totalIncentive,big.NewInt(10000))//keep 4 dots parts
+	totalIncentive = totalIncentive.Div(totalIncentive,ether)
+	ret := totalIncentive.Uint64()
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, ret)
+
+	return common.LeftPadBytes(buf, 32), nil
+}

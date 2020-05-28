@@ -925,6 +925,29 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) 
 	return n
 }
 
+func (bc *BlockChain) ChainQualityHistory(epochid uint64, slotid uint64) (uint64, error) {
+	    curBlk := bc.CurrentBlock()
+	    startBlkNumber := curBlk.NumberU64() - posconfig.BlockSecurityParam
+
+		for{
+
+			bh := bc.GetHeaderByNumber(startBlkNumber)
+
+			blkEpid, blkSlid := posUtil.CalEpSlbyTd(bh.Difficulty.Uint64())
+			if (epochid<=blkEpid && blkSlid<=slotid) {
+				break
+			}
+
+			startBlkNumber--
+		}
+
+	    tblk := bc.GetBlockByNumber(startBlkNumber)
+		blocksIn2K := bc.getBlocksCountIn2KSlots(tblk,posconfig.SlotSecurityParam)
+
+		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
+
+		return uint64(quality), nil
+}
 
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
@@ -955,13 +978,21 @@ func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
 
+
+
 	blocksIn2K := 0
 
 	curBlk := bc.CurrentBlock()
 
 	blkEpid, blkSlid := posUtil.CalEpSlbyTd(curBlk.Difficulty().Uint64())
 	blkSlots := blkEpid*posconfig.SlotCount + blkSlid
+
 	expSlots := epochid*posconfig.SlotCount + slotid
+
+	//get chainquality in history
+	if(expSlots< blkSlots - posconfig.BlockSecurityParam ) {
+		return bc.ChainQualityHistory(epochid,slotid)
+	}
 
 	if expSlots >= (blkSlots+posconfig.SlotSecurityParam) || (epochid == posconfig.FirstEpochId && slotid == 0) {
 		return 0, errors.New("wrong epoid or slotid")
@@ -1051,7 +1082,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			if bc.restartSucess {
 				//only worked after passing sync target block - 2*secpara
 				if bc.biggerThanCriticalBlock(block) {
-					return NonStatTy, ErrInsufficientCQ
+					//return NonStatTy, ErrInsufficientCQ
 				}
 			}
 		}
