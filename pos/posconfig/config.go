@@ -65,7 +65,7 @@ const (
 
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 10
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
@@ -109,7 +109,7 @@ const (
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE = 10000
 
-	StoremanEpochid  =  ApolloEpochID + TARGETS_LOCKED_EPOCH
+	StoremanEpochid  = 90 // ApolloEpochID + TARGETS_LOCKED_EPOCH
 )
 
 var TxDelay = K
