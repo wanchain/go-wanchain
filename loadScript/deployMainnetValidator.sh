@@ -15,7 +15,7 @@ read -s PASSWD
 echo 'Confirm your password of validator account:'
 read -s PASSWD2
 echo ''
-DOCKERIMG=wanchain/client-go:2.1.4
+DOCKERIMG=wanchain/client-go:2.1.5
 
 if [ ${PASSWD} != ${PASSWD2} ]
 then
