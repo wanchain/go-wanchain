@@ -3,11 +3,11 @@ package pos
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/epochLeader"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -73,12 +73,17 @@ func (p *PosAvgRet) getStakeInfo(statedb *state.StateDB, addr common.Address) (*
 func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error) {
 
 	val,err :=p.avgdb.GetWithIndex(epochID,0,"")
+
 	if err == nil && val != nil{
-		return binary.BigEndian.Uint64(val),nil
+		p2 := binary.BigEndian.Uint64(val)
+		if p2 != 0 {
+			return p2,nil
+		}
 	}
 
 	retTotal := uint64(0);
 	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
+
 		epid := epochID - i
 		val,err :=p.avgdb.GetWithIndex(epid,1,"perepid")
 		if err == nil && val != nil{
@@ -86,30 +91,25 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			continue
 		}
 
-		targetBlkNum := epochLeader.GetEpocher().GetTargetBlkNumber(epid)
+		targetBlkNum := util.GetEpochBlock(epid)
 		epocherInst := epochLeader.GetEpocher()
 		if epocherInst == nil {
-			continue
+			return 0,errors.New("not find epoch instance")
 		}
 
-		//block := epocherInst.GetBlkChain().GetBlockByNumber(targetBlkNum)
 		block := epocherInst.GetBlkChain().GetHeaderByNumber(targetBlkNum)
 		if block == nil {
-			continue
+			return 0,errors.New("not find block")
 		}
 
 		stateDb, err := epocherInst.GetBlkChain().StateAt(block.Root)
 		if err != nil {
-			continue
+			return 0,errors.New("not find state db for pos return")
 		}
 
 		stakerSet := make(map[common.Address]*big.Int)
-		selector := epochLeader.GetEpocher()
-		if selector == nil {
-			continue
-		}
 
-		leaders := selector.GetEpochLeaders(epid)
+		leaders := posdb.GetEpochLeaderGroup(epid)
 		addrs := make([]common.Address, len(leaders))
 		for i := range leaders {
 			pub := crypto.ToECDSAPub(leaders[i])
@@ -118,8 +118,8 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			}
 
 			addrs[i] = crypto.PubkeyToAddress(*pub)
-
 		}
+
 
 		for _, addr := range addrs {
 			staker, err := p.getStakeInfo(stateDb, addr)
@@ -138,12 +138,21 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		}
 
 		if stakeTotal.Cmp(big.NewInt(0)) == 0 {
+
+			var buf = make([]byte, 8)
+			binary.BigEndian.PutUint64(buf, 0)
+			p.avgdb.PutWithIndex(epid,1,"perepid",buf)
+
 			continue
 		}
 
 
 		c, err := incentive.GetEpochPayDetail(epid)
-		if err != nil {
+		if err != nil || c== nil{
+			var buf = make([]byte, 8)
+			binary.BigEndian.PutUint64(buf, 0)
+			p.avgdb.PutWithIndex(epid,1,"perepid",buf)
+
 			continue
 		}
 
@@ -158,23 +167,25 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 			}
 		}
 
-		incentiveTotal = big.NewInt(0).Mul(incentiveTotal, big.NewInt(posconfig.RETURN_DIVIDE))
+		incentiveTotal = incentiveTotal.Mul(incentiveTotal, big.NewInt(posconfig.RETURN_DIVIDE))
 
-		ret := big.NewInt(0).Div(incentiveTotal, stakeTotal).Uint64()
+		ret := incentiveTotal.Div(incentiveTotal, stakeTotal).Uint64()
 
 		var buf = make([]byte, 8)
 		binary.BigEndian.PutUint64(buf, ret)
 		p.avgdb.PutWithIndex(epid,1,"perepid",buf)
 
-		fmt.Println("epoch=" + strconv.Itoa(int(epid)) + " avg=" + strconv.Itoa(int(ret)))
+		log.Info("epoch=" + strconv.Itoa(int(epid)) + " avg=" + strconv.Itoa(int(ret)))
 
 		retTotal += ret
 	}
 
 	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-
+	log.Info("p2(90 days) epoch=" + strconv.Itoa(int(epochID)) + " avg=" + strconv.Itoa(int(p2)))
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, p2)
+
+
 	p.avgdb.PutWithIndex(epochID,0,"",buf)
 
 
@@ -208,4 +219,9 @@ func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int, error) {
 
 	return totalAmount,nil
 
+}
+
+
+func (p *PosAvgRet) GetAllIncentive(epochID uint64) (*big.Int, error) {
+	return  incentive.GetEpochIncentive(epochID)
 }

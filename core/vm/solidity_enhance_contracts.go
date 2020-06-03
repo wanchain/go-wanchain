@@ -130,6 +130,33 @@ solEnhanceDef = `[
 		"type": "function"
 	},
 	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getMinIncentive",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"constant": false,
 		"inputs": [
 			{
@@ -195,6 +222,20 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "testGetHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "rbpri",
@@ -222,33 +263,6 @@ solEnhanceDef = `[
 			{
 				"name": "success",
 				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "smgDeposit",
-				"type": "uint256"
-			},
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
-				"type": "uint256"
-			}
-		],
-		"name": "getHardCap",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -373,6 +387,37 @@ solEnhanceDef = `[
 		"payable": false,
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "time",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]`
 	// pos staking contract abi object
@@ -463,12 +508,14 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 
 func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, 0)
+	common.LeftPadBytes(buf, 32)
 
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid < posconfig.StoremanEpochid {
-		return []byte{0},errors.New("not reach forked epochid")
+		return buf,errors.New("not reach forked epochid")
 	}
-
 
 	//to do
 	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
@@ -485,30 +532,33 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	targetEpochId--
 	/////////////////////////////////////////
 
-	if groupStartEpochId > eid || targetEpochId > eid {
-		return []byte{0},errors.New("wrong epochid")
+	if  groupStartEpochId <= posconfig.FirstEpochId ||
+		targetEpochId <= groupStartEpochId ||
+		groupStartEpochId > eid ||
+		targetEpochId > eid {
+		return buf,errors.New("wrong epochid")
 	}
 
 	inst := posutil.PosAvgRetInst()
 	if inst == nil {
-		return []byte{0},errors.New("not initialzied for pos return ")
+		return buf,errors.New("not initialzied for pos return ")
 	}
 
 
 
 	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
 	if err != nil {
-		return []byte{0},err
+		return buf,err
 	}
 
 	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
 	if err != nil {
-		return []byte{0},err
+		return buf,err
 	}
 
 	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
 	if err != nil {
-		return []byte{0},err
+		return buf,err
 	}
 
 
@@ -518,10 +568,8 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
 
-	////convert to byte array
-	var buf = make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, p1)
 
+	binary.BigEndian.PutUint64(buf, p1)
 	return common.LeftPadBytes(buf, 32), nil
 }
 
@@ -666,13 +714,18 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	pk.X = new(big.Int).SetBytes(pkb[:32])
 	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
+
+	rbprv := new(ecdsa.PrivateKey)
+	rbprv.Curve = crypto.S256()
+	rbprv.D = new(big.Int).SetBytes(rb)
+
 	fmt.Println(common.Bytes2Hex(rb))
 	fmt.Println(common.Bytes2Hex(iv))
 	fmt.Println(common.Bytes2Hex(msg))
 	fmt.Println(common.Bytes2Hex(pkb))
 
 
-	res,error := ecies.EncryptWithRandom(rb, iv, ecies.ImportECDSAPublic(pk), msg, nil, nil)
+	res,error := ecies.EncryptWithRandom(ecies.ImportECDSA(rbprv), ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
 
 	if error != nil {
 		return []byte{0},error
@@ -713,8 +766,29 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 
 func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	var buf = make([]byte, 32)
+	len := len(payload)
+	if len < 32 {
+		return []byte{0},nil
+	}
 
+	time := big.NewInt(0).SetBytes(payload[:32])
+	epid,_ := posutil.CalEpochSlotID(time.Uint64())
+	epid--
 
-	return buf,nil
+	inst := posutil.PosAvgRetInst()
+	if inst == nil {
+		return []byte{0},errors.New("not initialzied for pos return ")
+	}
+
+	totalIncentive,err := inst.GetAllIncentive(epid)
+	if err != nil || totalIncentive == nil  {
+		return []byte{0},nil
+	}
+	totalIncentive = totalIncentive.Mul(totalIncentive,big.NewInt(10000))//keep 4 dots parts
+	totalIncentive = totalIncentive.Div(totalIncentive,ether)
+	ret := totalIncentive.Uint64()
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, ret)
+
+	return common.LeftPadBytes(buf, 32), nil
 }

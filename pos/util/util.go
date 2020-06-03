@@ -265,6 +265,7 @@ func MemStat() uint64 {
 type PosAvgRetInterface interface {
 	GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error)
 	GetAllStakeAndReturn(epochID uint64) (*big.Int, error)
+    GetAllIncentive(epochID uint64) (*big.Int, error)
 }
 
 
