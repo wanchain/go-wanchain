@@ -30,10 +30,13 @@
 package ecies
 
 import (
+	"bytes"
+	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
@@ -92,6 +95,7 @@ func ImportECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 	pub := ImportECDSAPublic(&prv.PublicKey)
 	return &PrivateKey{*pub, prv.D}
 }
+
 
 // Generate an elliptic curve public / private keypair. If params is nil,
 // the recommended default parameters for the key will be chosen.
@@ -195,6 +199,46 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 	return
 }
 
+
+func concatKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
+
+	prf := hmac.New(h, password)
+	hashLen := prf.Size()
+	numBlocks := (keyLen + hashLen - 1) / hashLen
+
+	var buf [4]byte
+	dk := make([]byte, 0, numBlocks*hashLen)
+	U := make([]byte, hashLen)
+	for block := 1; block <= numBlocks; block++ {
+		// N.B.: || means concatenation, ^ means XOR
+		// for each block T_i = U_1 ^ U_2 ^ ... ^ U_iter
+		// U_1 = PRF(password, salt || uint(i))
+		prf.Reset()
+		prf.Write(salt)
+		buf[0] = byte(block >> 24)
+		buf[1] = byte(block >> 16)
+		buf[2] = byte(block >> 8)
+		buf[3] = byte(block)
+		prf.Write(buf[:4])
+		dk = prf.Sum(dk)
+		T := dk[len(dk)-hashLen:]
+		copy(U, T)
+
+		// U_n = PRF(password, U_(n-1))
+		for n := 2; n <= iter; n++ {
+			prf.Reset()
+			prf.Write(U)
+			U = U[:0]
+			U = prf.Sum(U)
+			for x := range U {
+				T[x] ^= U[x]
+			}
+		}
+	}
+
+	return dk[:keyLen]
+}
+
 // messageTag computes the MAC of a message (called the tag) as per
 // SEC 1, 3.5.
 func messageTag(hash func() hash.Hash, km, msg, shared []byte) []byte {
@@ -278,14 +322,18 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 	if err != nil {
 		return
 	}
+
 	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
 	if err != nil {
 		return
 	}
 	Ke := K[:params.KeyLen]
 	Km := K[params.KeyLen:]
+
 	hash.Write(Km)
 	Km = hash.Sum(nil)
+
+
 	hash.Reset()
 
 	em, err := symEncrypt(rand, params, Ke, m)
@@ -298,7 +346,9 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 	Rb := elliptic.Marshal(pub.Curve, R.PublicKey.X, R.PublicKey.Y)
 	ct = make([]byte, len(Rb)+len(em)+len(d))
 	copy(ct, Rb)
+
 	copy(ct[len(Rb):], em)
+
 	copy(ct[len(Rb)+len(em):], d)
 	return
 }
@@ -388,142 +438,114 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 		}
 	}
 
-	//rbpri,err := ImportECDSAPublic()
-	////R, err := GenerateKeyWithR(rb, pub.Curve, params)
-	//if err != nil {
-	//	return
-	//}
-
-
-	hash := params.Hash()
-
-	z, err := GenerateShared(rbprv,pub, pub.Params.KeyLen, params.KeyLen)
+	shared, err := rbprv.GenerateShared(pub,16,16)
 	if err != nil {
 		return
 	}
+	sharedStr := common.Bytes2Hex(shared)
 
-	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
-	if err != nil {
-		return
-	}
-	Ke := K[:params.KeyLen]
-	Km := K[params.KeyLen:]
+	fmt.Println("GenerateShared=" + sharedStr)
+
+	//msg := []byte("Hello, world")
+	hash := sha256.New()
+
+
+
+	K := concatKDF2([]byte(sharedStr), []byte(" "),2,64,sha256.New)
+
+	fmt.Println("concatKDF=" + common.Bytes2Hex(K))
+
+	Ke := K[:16]
+	Km := K[16:32]
+
 	hash.Write(Km)
 	Km = hash.Sum(nil)
+
 	hash.Reset()
 
-	em, err := symEncryptWithSpecifyIV(iv, params, Ke, m)
-	if err != nil || len(em) <= params.BlockSize {
+	em := AES_CBC_Encrypt(m,Ke,iv)
+	if len(em) <= params.BlockSize {
 		return
 	}
+	fmt.Println("encrypt message=" + common.Bytes2Hex(em))
+
 
 	d := messageTag(params.Hash, Km, em, s2)
 
-	Rb := elliptic.Marshal(pub.Curve, pub.X,pub.Y)
-	ct = make([]byte, len(Rb)+len(em)+len(d))
-	copy(ct, Rb)
-	copy(ct[len(Rb):], em)
-	copy(ct[len(Rb)+len(em):], d)
-	return
-}
+	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
+	ct = make([]byte, len(empub)+len(em)+len(d))
+	copy(ct, empub)
 
-var mask = []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
+	fmt.Println("empub =" + common.Bytes2Hex(empub))
 
-// GenerateKey returns a public/private key pair. The private key is
-// generated using the given reader, which must return random data.
-func GenerateKeyWithSpeciedR(curve elliptic.Curve, rb []byte) (priv []byte, x, y *big.Int, err error) {
-	N := curve.Params().N
-	bitSize := N.BitLen()
-	byteLen := (bitSize + 7) >> 3
-	priv = make([]byte, byteLen)
 
-	for x == nil {
+	copy(ct[len(empub):], em)
 
-		copy(priv,rb)
-		// We have to mask off any excess bits in the case that the size of the
-		// underlying field is not a whole number of bytes.
-		priv[0] &= mask[bitSize%8]
-		// This is because, in tests, rand will return all zeros and we don't
-		// want to get the point at infinity and loop forever.
-		priv[1] ^= 0x42
 
-		// If the scalar is out of range, sample another random number.
-		if new(big.Int).SetBytes(priv).Cmp(N) >= 0 {
-			continue
-		}
 
-		x, y = curve.ScalarBaseMult(priv)
-	}
+	copy(ct[len(empub)+len(em):], d)
+
+
+	fmt.Println("mac=" + common.Bytes2Hex(d))
+
 	return
 }
 
 
-
-// ECDH key agreement method used to establish secret keys for encryption.
-func GenerateShared(prv *PrivateKey,pub *PublicKey, skLen, macLen int) (sk []byte, err error) {
-
-	if prv.PublicKey.Curve != pub.Curve {
-		return nil, ErrInvalidCurve
+//AEC加密（CBC模式）
+func AES_CBC_Encrypt(plainText []byte,key []byte,iv []byte) []byte{
+	//指定加密算法，返回一个AES算法的Block接口对象
+	block,err:=aes.NewCipher(key)
+	if err!=nil{
+		panic(err)
 	}
+	//进行填充
+	plainText=Padding(plainText,block.BlockSize())
 
-	if skLen+macLen > MaxSharedKeyLength(pub) {
-		return nil, ErrSharedKeyTooBig
-	}
-
-	x, _ := pub.Curve.ScalarMult(pub.X, pub.Y, prv.D.Bytes())
-	if x == nil {
-		return nil, ErrSharedKeyIsPointAtInfinity
-	}
-
-	sk = make([]byte, skLen+macLen)
-	skBytes := x.Bytes()
-	copy(sk[len(sk)-len(skBytes):], skBytes)
-	return sk, nil
-}
-
-// Generate an elliptic curve public / private keypair. If params is nil,
-// the recommended default parameters for the key will be chosen.
-func GenerateKeyWithR(rb []byte, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey,err error) {
-	pb, x, y, err := GenerateKeyWithSpeciedR(curve, rb)
-	if err != nil {
-		return
-	}
-	prv = new(PrivateKey)
-	prv.PublicKey.X = x
-	prv.PublicKey.Y = y
-	prv.PublicKey.Curve = curve
-	prv.D = new(big.Int).SetBytes(pb)
-
-	if params == nil {
-		params = ParamsFromCurve(curve)
-	}
-	prv.PublicKey.Params = params
-	return
+	//指定分组模式，返回一个BlockMode接口对象
+	blockMode:=cipher.NewCBCEncrypter(block,iv)
+	//加密连续数据库
+	cipherText:=make([]byte,len(plainText))
+	blockMode.CryptBlocks(cipherText,plainText)
+	//返回密文
+	return cipherText
 }
 
 
-// symEncrypt carries out CTR encryption using the block cipher specified in the
-// parameters.
-func symEncryptWithSpecifyIV(rb []byte, params *ECIESParams, key, m []byte) (ct []byte, err error) {
-	c, err := params.Cipher(key)
-	if err != nil {
-		return
+//对明文进行填充
+func Padding(plainText []byte,blockSize int) []byte{
+	//计算要填充的长度
+	n:= blockSize-len(plainText)%blockSize
+	//对原来的明文填充n个n
+	temp:=bytes.Repeat([]byte{byte(n)},n)
+	plainText=append(plainText,temp...)
+	return plainText
+}
+//对密文删除填充
+func UnPadding(cipherText []byte) []byte{
+	//取出密文最后一个字节end
+	end:=cipherText[len(cipherText)-1]
+	//删除填充
+	cipherText=cipherText[:len(cipherText)-int(end)]
+	return cipherText
+}
+
+
+//AEC解密（CBC模式）
+func AES_CBC_Decrypt(cipherText []byte,key []byte) []byte{
+	//指定解密算法，返回一个AES算法的Block接口对象
+	block,err:=aes.NewCipher(key)
+	if err!=nil{
+		panic(err)
 	}
-
-	iv := make([]byte, params.BlockSize)
-	for i:=0; i<params.BlockSize ;i++ {
-	 	idx := i%len(rb);
-		iv[i] = rb[idx]
-	}
-
-	if err != nil {
-		return
-	}
-	ctr := cipher.NewCTR(c, iv)
-
-	ct = make([]byte, len(m)+params.BlockSize)
-	copy(ct, iv)
-
-	ctr.XORKeyStream(ct[params.BlockSize:], m)
-	return
+	//指定初始化向量IV,和加密的一致
+	iv:=[]byte("12345678abcdefgh")
+	//指定分组模式，返回一个BlockMode接口对象
+	blockMode:=cipher.NewCBCDecrypter(block,iv)
+	//解密
+	plainText:=make([]byte,len(cipherText))
+	blockMode.CryptBlocks(plainText,cipherText)
+	//删除填充
+	plainText=UnPadding(plainText)
+	return plainText
 }
