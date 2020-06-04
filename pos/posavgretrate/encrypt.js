@@ -33,7 +33,8 @@ var eccEncrypt = async function secp256k1Encrypt(publicKey, data) {
     ecdh.setPrivateKey(rbPriv);
     var rbpub = Buffer.from(ecdh.getPublicKey('hex', 'compressed'), 'hex');
     console.log("rbpub=" + rbpub.toString('hex'))
-
+    var rbpubun = Buffer.from(ecdh.getPublicKey('hex', 'uncompressed'), 'hex');
+    console.log("rbpubuncom=" + rbpubun.toString('hex'))
 
     var shared = ecdh.computeSecret(publicKey, null, 'hex');
     console.log("sharedKey=" + shared.toString('hex'))
@@ -58,12 +59,12 @@ var eccEncrypt = async function secp256k1Encrypt(publicKey, data) {
     console.log("encryptedMsg=" + em.toString('hex'))
 
     let hmac = crypto.createHmac('sha256', macKey);
-    hmac.update(iv.toString('hex') + em,'hex');
-    var mac = hmac.digest('hex');
-    console.log("mac=" + em.toString('hex'))
+    hmac.update(em,'hex');
+    var mac = hmac.digest();
+    console.log("mac=" + mac.toString('hex'))
 
 
-    var res = rbpub.toString('hex');
+    var res = rbpubun.toString('hex');
     res += iv.toString('hex');
     res += em.toString('hex');
     res += mac.toString('hex');
@@ -91,3 +92,13 @@ var asedecrypt = function (key, iv, crypted) {
     decoded += decipher.final('utf8');
     return decoded;
 };
+
+
+
+async function main() {
+   // await testCrypto();
+    await eccEncryptTest();
+
+}
+
+main()

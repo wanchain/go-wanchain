@@ -446,10 +446,8 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 
 	fmt.Println("GenerateShared=" + sharedStr)
 
-	//msg := []byte("Hello, world")
+
 	hash := sha256.New()
-
-
 
 	K := concatKDF2([]byte(sharedStr), []byte(" "),2,64,sha256.New)
 
@@ -461,6 +459,7 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 	hash.Write(Km)
 	Km = hash.Sum(nil)
 
+	fmt.Println("macKey=" + common.Bytes2Hex(Km))
 	hash.Reset()
 
 	em := AES_CBC_Encrypt(m,Ke,iv)
@@ -470,21 +469,22 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 	fmt.Println("encrypt message=" + common.Bytes2Hex(em))
 
 
-	d := messageTag(params.Hash, Km, em, s2)
-
-	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
-	ct = make([]byte, len(empub)+len(em)+len(d))
-	copy(ct, empub)
-
-	fmt.Println("empub =" + common.Bytes2Hex(empub))
-
-
-	copy(ct[len(empub):], em)
-
-	copy(ct[len(empub)+len(em):], d)
-
+	d := hmacSha256(em,Km)
 
 	fmt.Println("mac=" + common.Bytes2Hex(d))
+
+	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
+
+	ct = make([]byte, len(empub)+len(iv) + len(em)+len(d))
+
+	copy(ct, empub)
+	copy(ct[len(empub):],iv)
+
+	copy(ct[len(empub)+len(iv):], em)
+
+	copy(ct[len(empub)+len(iv)+len(em):], d)
+
+	fmt.Println("eccEncWhole=" + common.Bytes2Hex(ct))
 
 	return
 }
@@ -542,4 +542,11 @@ func AES_CBC_Decrypt(cipherText []byte,key []byte,iv []byte) []byte{
 
 	plainText=UnPadding(plainText)
 	return plainText
+}
+
+
+func hmacSha256(data []byte, secret []byte) []byte {
+	h := hmac.New(sha256.New, secret)
+	h.Write([]byte(data))
+	return h.Sum(nil)
 }
