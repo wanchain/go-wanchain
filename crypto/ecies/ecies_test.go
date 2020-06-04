@@ -57,7 +57,7 @@ func TestKDF(t *testing.T) {
 	msg := []byte("Hello, world")
 	h := sha256.New()
 
-	k, err := concatKDF(h, msg, nil, 64)
+	k, err := concatKDF(h, msg, []byte(" "), 64)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.FailNow()
@@ -66,6 +66,23 @@ func TestKDF(t *testing.T) {
 		fmt.Printf("KDF: generated key is the wrong size (%d instead of 64\n", len(k))
 		t.FailNow()
 	}
+	fmt.Println(common.Bytes2Hex(k))
+}
+
+
+func TestKDF2(t *testing.T) {
+	msg := []byte("Hello, world")
+	//h := sha256.New()
+	msg = []byte("93f38e548e1aa496fdc0c3e643794bf6046467c3fea224c57d309b389766a063");
+	k := concatKDF2(msg, []byte(" "), 2,64,sha256.New)
+
+
+	if len(k) != 64 {
+		fmt.Printf("KDF: generated key is the wrong size (%d instead of 64\n", len(k))
+		t.FailNow()
+	}
+
+	fmt.Println(common.Bytes2Hex(k))
 }
 
 var ErrBadSharedKeys = fmt.Errorf("ecies: shared keys don't match")

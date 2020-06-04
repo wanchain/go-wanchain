@@ -708,24 +708,24 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	iv := payload[32:64]
 	msg := payload[64:96]
 
+	prv := hexKey(common.Bytes2Hex(rb))
+
 	pkb := payload[96:]
 	pk := new(ecdsa.PublicKey)
-	pk.Curve = crypto.S256()
+	pk.Curve = prv.PublicKey.Curve
 	pk.X = new(big.Int).SetBytes(pkb[:32])
 	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
 
-	rbprv := new(ecdsa.PrivateKey)
-	rbprv.Curve = crypto.S256()
-	rbprv.D = new(big.Int).SetBytes(rb)
 
-	fmt.Println(common.Bytes2Hex(rb))
+	fmt.Println("rbPriv"+common.Bytes2Hex(rb))
 	fmt.Println(common.Bytes2Hex(iv))
 	fmt.Println(common.Bytes2Hex(msg))
 	fmt.Println(common.Bytes2Hex(pkb))
 
 
-	res,error := ecies.EncryptWithRandom(ecies.ImportECDSA(rbprv), ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
+
+	res,error := ecies.EncryptWithRandom(prv, ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
 
 	if error != nil {
 		return []byte{0},error
@@ -791,4 +791,12 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	binary.BigEndian.PutUint64(buf, ret)
 
 	return common.LeftPadBytes(buf, 32), nil
+}
+
+func hexKey(prv string) *ecies.PrivateKey {
+	key, err := crypto.HexToECDSA(prv)
+	if err != nil {
+		panic(err)
+	}
+	return ecies.ImportECDSA(key)
 }
