@@ -22,10 +22,14 @@ var eccEncryptTest = async function() {
 
     console.log("eccEncWhole=" + eccem);
 
+    var eccdm = await eccDecrypt(privateKey1,eccem)
+
+    console.log("decrypt msg=" + eccdm);
+
 }
 
 var eccEncrypt = async function secp256k1Encrypt(publicKey, data) {
-
+    console.log("plainMsg=" + data)
     var ecdh = crypto.createECDH('secp256k1');
 
     var rbPriv = crypto.randomBytes(32);
@@ -74,6 +78,57 @@ var eccEncrypt = async function secp256k1Encrypt(publicKey, data) {
 }
 
 
+var eccDecrypt = async function secp256k1Decrypt(privateKey, data) {
+
+    var ecdh = crypto.createECDH('secp256k1');
+    ecdh.setPrivateKey(privateKey);
+
+    var len = Buffer.byteLength(data,'hex');
+    console.log("data length=" + len)
+    var bufferData = Buffer.from(data,'hex');
+
+    var rbpub = bufferData.slice(0,65);
+    console.log("rbpub=" + rbpub.toString('hex'));
+
+    var iv =  bufferData.slice(65,65 + 16);
+    console.log("iv = " + iv.toString('hex'));
+
+    var em = bufferData.slice(65 + 16,len - 32)
+    console.log("em = " + em.toString('hex'));
+
+    var mac = bufferData.slice(len - 32)
+    console.log("mac = " + mac.toString('hex'));
+
+
+    var shared = ecdh.computeSecret(rbpub, null, 'hex');
+    console.log("sharedKey=" + shared.toString('hex'))
+
+    var derivedKey = crypto.pbkdf2Sync(shared,' ',2, 64, 'sha256');
+    console.log("derivedKey=" + derivedKey.toString('hex'))
+
+    var encKey = derivedKey.slice(0,16)
+    console.log("encKey=" + encKey.toString('hex'))
+
+    var macKey = derivedKey.slice(16,32)
+    console.log("macKey=" + macKey.toString('hex'))
+
+    var keyHash = crypto.createHash('sha256');
+    macKey = keyHash.update(macKey).digest();
+    console.log("hashmacKey=" + macKey.toString('hex'))
+
+    let hmac = crypto.createHmac('sha256', macKey);
+    hmac.update(em,'hex');
+    var commac = hmac.digest();
+    if (commac.toString('hex') != mac.toString('hex')) {
+        return "";
+    }
+
+    var dm = asedecrypt(encKey,iv,em.toString('hex'));
+
+    return dm;
+}
+
+
 
 var aesencrypt = function (key, iv, data) {
     var cipher = crypto.createCipheriv('aes-128-cbc',key, iv);
@@ -86,10 +141,10 @@ var aesencrypt = function (key, iv, data) {
 
 
 var asedecrypt = function (key, iv, crypted) {
-    crypted = Buffer.from(crypted, 'base64').toString('binary');
+    crypted = Buffer.from(crypted, 'hex').toString('hex');
     var decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
-    var decoded = decipher.update(crypted, 'binary', 'utf8');
-    decoded += decipher.final('utf8');
+    var decoded = decipher.update(crypted, 'hex', 'hex');
+    decoded += decipher.final('hex');
     return decoded;
 };
 
