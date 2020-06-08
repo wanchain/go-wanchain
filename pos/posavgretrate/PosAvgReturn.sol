@@ -261,7 +261,7 @@ contract Enhancement {
     }
 
 
-msg = 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130	
+// msg = 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130	
 
 // Private key-1:[8cdf775872f31d7ddcc18000edcbede9463b6c65c4d288af776075addb25a7c7]
 // Public key-1:[041fc83598dbd36792d8246c7651631535953c741bf93ba32f1dc2960e92fc2f276fdfb930c4a84b39bc84b0f149323e5a6b10092acaf31f31b9f8a0946f6643d0]
@@ -288,7 +288,7 @@ msg = 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130
 
 // 0x04a804abfeff33e966dabe0bbdb7ab6bca5c54c96b5000ae41391d9f30e9aeb63a05f49fb1adbbff4e7390ce29381db7c8c14c442d4a773891a9326c6db2c6792bc5fd3f6b773f094d146a255946114822b382f2e2b6bd7a310fa6961efa3d84c60028aa9224148c221d3c8a697bec289fd09601985302264c1033de1c282e456f332f808ae60eb6cb75123153d6e7767627bce7f0d752f866116727185e2d7d
 
-	
+
  function encTest()   public view returns (bytes c,bool success) {
 
      bytes memory bpk = hexStr2bytes("041fc83598dbd36792d8246c7651631535953c741bf93ba32f1dc2960e92fc2f276fdfb930c4a84b39bc84b0f149323e5a6b10092acaf31f31b9f8a0946f6643d0");
@@ -299,8 +299,8 @@ msg = 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130
      uint256 msg = 0x334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130;
 
      return enc(rbpri,iv,msg,bpk);
+
   }
- 
 
  function enc(bytes32 rbpri,bytes32 iv,uint256 mes, bytes pub)   public view returns (bytes,bool success) {
        bytes32 functionSelector = 0xa1ecea4b00000000000000000000000000000000000000000000000000000000;
@@ -427,5 +427,38 @@ msg = 334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130
         return hardcapReturn<=p1Return?hardcapReturn:p1Return;
     }
     
+function mulPkTest()   public
+    view
+    returns (uint256 x, uint256 y, bool success)  {
+        
+    uint256 scalar = 0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae;
+    uint256 xPk = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798;
+    uint256 yPk = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8;
+    
+    return mulPk(scalar,yPk,xPk);
 
+}    
+    
+function mulPk(uint256 scalar, uint256 xPk, uint256 yPk)
+    public
+    view
+    returns (uint256 x, uint256 y, bool success) {
+       bytes32 functionSelector = 0xa99aa2f200000000000000000000000000000000000000000000000000000000;
+       address to = PRECOMPILE_CONTRACT_ADDR;
+       
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(freePtr, functionSelector)
+            mstore(add(freePtr, 4), scalar)
+            mstore(add(freePtr,36), xPk)
+            mstore(add(freePtr,68), yPk)
+            
+            success := staticcall(gas, to, freePtr,100, freePtr, 64)
+            
+            x := mload(freePtr)
+            y := mload(add(freePtr,32))
+        }
+        
+    }
+    
 }

@@ -109,6 +109,37 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [
+			{
+				"name": "smgDeposit",
+				"type": "uint256"
+			},
+			{
+				"name": "smgStartTime",
+				"type": "uint256"
+			},
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			}
+		],
+		"name": "getMinIncentive",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [],
 		"name": "addTest",
 		"outputs": [
@@ -133,19 +164,11 @@ solEnhanceDef = `[
 		"constant": true,
 		"inputs": [
 			{
-				"name": "smgDeposit",
-				"type": "uint256"
-			},
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
+				"name": "blockTime",
 				"type": "uint256"
 			}
 		],
-		"name": "getMinIncentive",
+		"name": "getEpochId",
 		"outputs": [
 			{
 				"name": "",
@@ -173,6 +196,24 @@ solEnhanceDef = `[
 		],
 		"payable": false,
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getMinIncentive1",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -228,6 +269,10 @@ solEnhanceDef = `[
 			{
 				"name": "",
 				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -262,6 +307,72 @@ solEnhanceDef = `[
 			},
 			{
 				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "mulPk",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "crossChainCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "chainTypeCoefficient",
+				"type": "uint256"
+			},
+			{
+				"name": "time",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
 				"type": "bool"
 			}
 		],
@@ -359,6 +470,24 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "getMinIncentive2",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "polyCommit",
@@ -387,37 +516,6 @@ solEnhanceDef = `[
 		"payable": false,
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "smgDeposit",
-				"type": "uint256"
-			},
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "time",
-				"type": "uint256"
-			}
-		],
-		"name": "getHardCap",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
 	}
 ]`
 	// pos staking contract abi object
@@ -431,7 +529,7 @@ solEnhanceDef = `[
 	checkSigid			[4]byte
 	encid				[4]byte
 	hardCapid			[4]byte
-
+	mulPkid				[4]byte
 )
 
 const (
@@ -452,8 +550,9 @@ func init() {
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
 	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
+	copy(mulPkid[:],solenhanceAbi.Methods["mulPk"].Id())
 
-	mulGidStr := common.Bytes2Hex(hardCapid[:])
+	mulGidStr := common.Bytes2Hex(mulPkid[:])
 	fmt.Println(""+mulGidStr)
 }
 
@@ -495,6 +594,8 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.encrypt(input[4:], contract, evm)
 	} else if methodId == hardCapid {
 		return s.getPosTotalRet(input[4:], contract, evm)
+	} else if methodId == mulPkid {
+		return s.mulPk(input[4:], contract, evm)
 	}
 
 
@@ -602,6 +703,34 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 
 }
 
+
+
+func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) == 0 {
+		return []byte{0},errors.New("the data length is not correct")
+	}
+
+	scalar := payload[:32]
+	xPK := payload[32:64]
+	yPK := payload[64:96]
+
+
+
+	fmt.Println("x="+common.ToHex(xPK))
+	fmt.Println("y="+common.ToHex(yPK))
+	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
+
+	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
+
+
+	var buf = make([]byte, 64)
+
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
+}
 
 
 func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
