@@ -1,5 +1,9 @@
-var eccEncryptTest = async function() {
+let assert = require('assert');
 
+const crypto = require('crypto');
+
+
+var eccEncryptTest = async function() {
 
     const ecdh1 = crypto.createECDH('secp256k1');
 
@@ -157,3 +161,6 @@ async function main() {
 }
 
 main()
+
+
+
