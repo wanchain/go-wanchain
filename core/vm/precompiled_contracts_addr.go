@@ -69,6 +69,9 @@ var (
 
 	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
 
+	s256AddPrecompileAddr       = common.BytesToAddress([]byte{666})
+	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{777})
+
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
 	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr

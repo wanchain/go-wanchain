@@ -11,6 +11,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
+	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
@@ -928,4 +929,83 @@ func hexKey(prv string) *ecies.PrivateKey {
 		panic(err)
 	}
 	return ecies.ImportECDSA(key)
+}
+
+
+
+
+// bn256Add implements a native elliptic curve point addition.
+type s256Add struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (s *s256Add) RequiredGas(input []byte) uint64 {
+	return params.Bn256AddGas
+}
+
+func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if len(payload) < 128 {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+
+	x1 := big.NewInt(0).SetBytes(payload[:32])
+	y1 := big.NewInt(0).SetBytes(payload[32:64])
+
+	x2 := big.NewInt(0).SetBytes(payload[64:96])
+	y2 := big.NewInt(0).SetBytes(payload[96:128])
+
+	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
+		return []byte{0},errors.New("the point is not on 256 curve")
+	}
+
+	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+
+	var buf = make([]byte, 64)
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
+
+
+}
+
+func (s *s256Add) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
+}
+
+// bn256ScalarMul implements a native elliptic curve scalar multiplication.
+type s256ScalarMul struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
+	return params.Bn256ScalarMulGas
+}
+
+func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) == 0 {
+		return []byte{0},errors.New("the data length is not correct")
+	}
+
+	scalar := payload[:32]
+
+	xPK := payload[32:64]
+	yPK := payload[64:96]
+
+	fmt.Println("x="+common.ToHex(xPK))
+	fmt.Println("y="+common.ToHex(yPK))
+	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
+
+	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
+
+
+	var buf = make([]byte, 64)
+
+	copy(buf,rx.Bytes())
+	copy(buf[32:],ry.Bytes())
+
+	return buf, nil
+}
+
+func (s *s256ScalarMul) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
+	return nil
 }
