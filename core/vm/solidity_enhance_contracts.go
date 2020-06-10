@@ -977,12 +977,12 @@ type s256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas
+	return params.Bn256ScalarMulGas>>1
 }
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) == 0 {
+	if len(payload) < 96{
 		return []byte{0},errors.New("the data length is not correct")
 	}
 

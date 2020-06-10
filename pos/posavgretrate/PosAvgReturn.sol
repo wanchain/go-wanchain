@@ -460,5 +460,68 @@ function mulPk(uint256 scalar, uint256 xPk, uint256 yPk)
         }
         
     }
+
+function s256calarMulTest()   public
+    view
+    returns (uint256 x, uint256 y, bool success)  {
+
+    uint256 scalar = 0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae;
+    uint256 xPk = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798;
+    uint256 yPk = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8;
+
+    return s256ScalarMul(scalar,yPk,xPk);
+}
+
+function s256ScalarMul(uint256 scalar, uint256 xPk, uint256 yPk)
+    public
+    view
+    returns (uint256 x, uint256 y, bool success) {
+       address to = 0x43;
+
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(add(freePtr, 0), scalar)
+            mstore(add(freePtr,32), xPk)
+            mstore(add(freePtr,64), yPk)
+
+            success := staticcall(gas, to, freePtr,100, freePtr, 64)
+
+            x := mload(freePtr)
+            y := mload(add(freePtr,32))
+        }
+
+    }
+
+
+function s256AddTest() public view returns(uint256 retx, uint256 rety,bool success) {
+       uint256 x1 = 0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4abcb;
+       uint256 y1 = 0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f0912906;
+
+       uint256 x2 = 0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6;
+       uint256 y2 = 0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240;
+
+       return s256add(x1,y1,x2,y2);
+ }
+
+function s256add(uint256 x1, uint256 y1, uint256 x2,uint256 y2)  public view returns(uint256 retx, uint256 rety,bool success) {
+
+       address to = 0X42;
+
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(add(freePtr, 0), x1)
+            mstore(add(freePtr, 32), y1)
+            mstore(add(freePtr, 64), x2)
+            mstore(add(freePtr, 96), y2)
+
+            // call ERC20 Token contract transfer function
+            success := staticcall(gas,to, freePtr,132, freePtr, 64)
+
+            retx := mload(freePtr)
+            rety := mload(add(freePtr,32))
+        }
+
+    }
+
     
 }

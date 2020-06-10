@@ -22,6 +22,10 @@ var (
 	bn256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{7})
 	bn256PairingPrecompileAddr   = common.BytesToAddress([]byte{8})
 
+	s256AddPrecompileAddr       = common.BytesToAddress([]byte{66})
+	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{67})
+
+
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
@@ -69,8 +73,6 @@ var (
 
 	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
 
-	s256AddPrecompileAddr       = common.BytesToAddress([]byte{666})
-	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{777})
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
@@ -120,6 +122,9 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 
 	SolEnhancePrecompileAddr:	&SolEnhance{},
+
+	s256AddPrecompileAddr:       &s256Add{},
+	s256ScalarMulPrecompileAddr: &s256ScalarMul{},
 }
 
 func IsPosPrecompiledAddr(addr *common.Address) bool {
