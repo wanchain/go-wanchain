@@ -11,7 +11,8 @@ Follow below command to clone wanchain source code from git
 
 ##start wanchain develelop chain##
 > 
-Follow below command to start in the directory  ~/wanchain/src/github.com/wanchain/
+Follow below command to start develop chain
 
-1 ./run_dev.sh
+1. cd ~/wanchain/src/github.com/wanchain/go-wanchain/
+2. ./dev_run.sh
 
