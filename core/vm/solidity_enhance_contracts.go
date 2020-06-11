@@ -743,6 +743,10 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 	k := payload[:32]
 	rx,ry := crypto.S256().ScalarBaseMult(k);
 
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("k value is not correct")
+	}
+
 	var buf = make([]byte, 64)
 
 	copy(buf,rx.Bytes())
