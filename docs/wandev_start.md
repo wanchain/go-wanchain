@@ -1,5 +1,5 @@
-#How to start wanchain develop chain#
-##Download wanchain source code##
+# How to start wanchain develop chain
+## Download wanchain source code
 > 
 Follow below command to clone wanchain source code from git
 
@@ -9,7 +9,7 @@ Follow below command to clone wanchain source code from git
 
 
 
-##start wanchain develelop chain##
+## Start wanchain develelop chain
 > 
 Follow below command to start develop chain
 
