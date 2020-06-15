@@ -15,6 +15,9 @@ read -s PASSWD
 echo 'Confirm your password of validator account:'
 read -s PASSWD2
 echo ''
+read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
+
+
 DOCKERIMG=wanchain/client-go:2.1.5
 
 if [ ${PASSWD} != ${PASSWD2} ]
@@ -72,7 +75,11 @@ echo 'Please wait a few seconds...'
 
 sleep 5
 
-sudo rm ~/.wanchain/pw.txt
+if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
+    docker container update --restart=always gwan
+else
+    sudo rm ~/.wanchain/pw.txt
+fi
 
 KEYSTOREFILE=$(sudo ls ~/.wanchain/keystore/)
 

@@ -23,6 +23,7 @@ echo 'Please Enter your validator Address'
 read addrNew
 echo 'Please Enter your password of Validator account:'
 read -s PASSWD
+read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 echo ''
 echo ''
 echo ''
@@ -66,7 +67,11 @@ echo 'Please wait a few seconds...'
 
 sleep 10
 
-sudo rm ~/.wanchain/pw.txt
+if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
+    docker container update --restart=always gwan
+else
+    sudo rm ~/.wanchain/pw.txt
+fi
 
 if [ $? -ne 0 ]; then
     echo "rm pw.txt failed"
