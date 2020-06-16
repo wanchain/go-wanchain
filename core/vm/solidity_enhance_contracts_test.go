@@ -1,191 +1,169 @@
 package vm
 
 import (
-	"crypto/ecdsa"
-	Rand "crypto/rand"
 	"fmt"
 	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"io"
-	"math/big"
 	"testing"
 )
-var (
-	Big1                       = big.NewInt(1)
-	Big0                        = big.NewInt(0)
-	Ne                         = 10
-)
 
-func randFieldElement(rand io.Reader) (k *big.Int, err error) {
-	params := crypto.S256().Params()
-	b := make([]byte, params.BitSize/8+8)
-	_, err = io.ReadFull(rand, b)
+/*
+ *test case,normal operation, should work well
+ */
+func TestAdd_1(t *testing.T) {
+
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4abcb"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f0912906"
+
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
+
+	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c";
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
+
+	seh := &SolEnhance{}
+
+	res,err :=seh.add(input,nil,nil)
+
 	if err != nil {
-		return
+		t.Fatalf("error happens")
 	}
-	k = new(big.Int).SetBytes(b)
-	n := new(big.Int).Sub(params.N, Big1)
-	k.Mod(k, n)
-	k.Add(k, Big1)
-	return
+
+
+	if exp != common.Bytes2Hex(res) {
+		t.Fatalf("the result is not match")
+	}
 }
 
+/*
+ *test case,data length is not enough,failed
+ */
+func TestAadd_2(t *testing.T) {
 
-func TestPloy(t *testing.T) {
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4a"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f0912"
 
-	// Number of storeman nodes
-	const Nstm = 21
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	// Threshold for storeman signature
-	const Thres = 18
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
 
-	// Polynomial degree for shamir secret sharing
-	const Degree = Thres - 1
+	seh := &SolEnhance{}
 
-	// Generate storeman's public key and private key
-	Pubkey := make([]*ecdsa.PublicKey, Nstm)
-	Prikey := make([]*ecdsa.PrivateKey, Nstm)
+	_,err :=seh.add(input,nil,nil)
 
-	for i := 0; i < Nstm; i++ {
-		Prikey[i], _ = ecdsa.GenerateKey(crypto.S256(), Rand.Reader)
-		Pubkey[i] = &Prikey[i].PublicKey
+	if err == nil {
+		t.Fatalf("error happens")
 	}
-
-	x := make([]big.Int, Nstm)
-	for i := 0; i < Nstm; i++ {
-		x[i].SetBytes(crypto.Keccak256(crypto.FromECDSAPub(Pubkey[i])))
-		x[i].Mod(&x[i], crypto.S256().Params().N)
-	}
-
-	// Each of storeman node generates a random si
-	s := make([]*big.Int, Nstm)
-
-	for i := 0; i < Nstm; i++ {
-		s[i], _ = Rand.Int(Rand.Reader, crypto.S256().Params().N)
-	}
-
-	poly := make([]Polynomial, Nstm)
-
-	poly[0] = RandPoly(Degree, *s[0])
-
-
-	pb := crypto.FromECDSAPub(Pubkey[0])
-	pbs := common.Bytes2Hex(pb);
-
-
-	fmt.Println("pubkey= " + pbs)
-
-	ws := ""
-	for i := 0; i < len(poly[0]); i++ {
-		ba := poly[0][i].Bytes();
-		baHex := common.Bytes2Hex(ba)
-		ws = ws + "||"   + baHex
-	}
-
-
-	fmt.Println("ws= " +ws)
-
-	var sshare [Nstm][Nstm]big.Int
-
-	sshare[0][0] = EvaluatePoly(poly[0], &x[0], Degree)
-
-
-
-
-	//for i := 0; i < Nstm; i++ {
-	//
-	//	poly[i] = RandPoly(Degree, *s[i]) // fi(x), set si as its constant term
-	//
-	//	for j := 0; j < Nstm; j++ {
-	//		// share for j is fi(x) evaluation result on x[j]=Hash(Pub[j])
-	//		sshare[i][j] = EvaluatePoly(poly[i], &x[j], Degree)
-	//	}
-	//}
 
 }
 
-const PkLength = 65
+/*
+ *test case,point is not on curve,failed
+ */
+func TestAadd_3(t *testing.T) {
 
-// Generate a random polynomial, its constant item is nominated
-func RandPoly(degree int, constant big.Int) Polynomial {
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4a11"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f091211"
 
-	poly := make(Polynomial, degree+1)
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	poly[0].Mod(&constant, crypto.S256().Params().N)
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
 
-	for i := 1; i < degree+1; i++ {
+	seh := &SolEnhance{}
 
-		temp, _ := Rand.Int(Rand.Reader, crypto.S256().Params().N)
+	_,err :=seh.add(input,nil,nil)
 
-		// in case of polynomial degenerating
-		poly[i] = *temp.Add(temp, Big1)
+	if err == nil {
+		t.Fatalf("error happens")
 	}
-	return poly
+
 }
 
 
-// Whole Flow Test
-func TestAadd(t *testing.T) {
+/*
+ *test case,normal operation, should work well
+ */
+func TestMulPk_1(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+	exp := "979425111f1b36b6e0426988d3a0f4724aaa57db4ef14720667cd42b9f5f456a854f45e729f2c1ed6f2051b295b80c5729857385794a469f3436385c67d7a021"
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
 
-	Pubkey := make([]*ecdsa.PublicKey, Ne)
-	Prikey := make([]*ecdsa.PrivateKey, Ne)
 
-	for i := 0; i < Ne; i++ {
-		Prikey[i], _ = ecdsa.GenerateKey(crypto.S256(), Rand.Reader)
-		Pubkey[i] = &Prikey[i].PublicKey
+	seh := &SolEnhance{}
+	res,err := seh.mulPk(input,nil,nil)
+
+	if err != nil {
+		t.Fatalf("test failed,error happens")
 	}
 
-	alphas := make([]*big.Int, 0)
-	for i := 0; i < Ne; i++ {
-		x, err := randFieldElement(Rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		alphas = append(alphas, x)
+	fmt.Println(common.Bytes2Hex(res))
+	if common.Bytes2Hex(res) != exp {
+		t.Fatalf("test failed, the result do not mathc with expect")
 	}
 
-	ArrayReceived := make([]*ecdsa.PublicKey, 0) //need to make the order of received message the same among different users
-	for i := 0; i < Ne; i++ {
-		piece := new(ecdsa.PublicKey)
-		piece.Curve = crypto.S256()
-		piece.X, piece.Y = crypto.S256().ScalarMult(Prikey[i].PublicKey.X, Prikey[i].PublicKey.Y, alphas[i].Bytes())
-		ArrayReceived = append(ArrayReceived, piece)
+}
+
+/*
+ *test case,data length is not enough
+ */
+func TestMulPk_2(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
 
 
+	seh := &SolEnhance{}
+	_,err := seh.mulPk(input,nil,nil)
+
+	if err == nil {
+		t.Fatalf("test failed,no error happens")
 	}
 
-	skGt := new(ecdsa.PublicKey)
-	skGt.Curve = crypto.S256()
+}
 
-	skGt.X = new(big.Int).Set(ArrayReceived[0].X)
-	skGt.Y = new(big.Int).Set(ArrayReceived[0].Y)
+/*
+ *test case,data length is not enough
+ */
+func TestMulPk_3(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81700"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d499"
 
-	fmt.Println(common.ToHex(skGt.X.Bytes()))
-	fmt.Println(common.ToHex(skGt.Y.Bytes()))
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
 
 
-	skGt1 := new(ecdsa.PublicKey)
-	skGt1.Curve = crypto.S256()
+	seh := &SolEnhance{}
+	_,err := seh.mulPk(input,nil,nil)
 
-	skGt1.X = new(big.Int).Set(ArrayReceived[1].X)
-	skGt1.Y = new(big.Int).Set(ArrayReceived[1].Y)
-
-	fmt.Println(common.ToHex(skGt1.X.Bytes()))
-	fmt.Println(common.ToHex(skGt1.Y.Bytes()))
-
-	res := crypto.S256().IsOnCurve(skGt.X,skGt.Y)
-
-	res1 := crypto.S256().IsOnCurve(skGt1.X,skGt1.Y)
-
-	if res == res1 {
-		fmt.Println("")
+	if err == nil {
+		t.Fatalf("test failed,no error happens")
 	}
-
-
-
-	//for j := 1; j < Ne; j++ {
-	//	skGt.X, skGt.Y = crypto.S256().Add(skGt.X, skGt.Y, ArrayReceived[j].X, ArrayReceived[j].Y)
-	//}
-
 
 }

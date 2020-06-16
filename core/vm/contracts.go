@@ -853,6 +853,7 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 	return []byte{1}, nil
 
 }
+
 func DecodeRingSignOut(s string) (error, []*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int) {
 	ss := strings.Split(s, "+")
 	if len(ss) < 4 {

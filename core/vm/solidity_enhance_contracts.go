@@ -681,6 +681,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	if len(payload) < 128 {
 		return []byte{0},errors.New("the point is not on curve")
 	}
+
 	x1 := big.NewInt(0).SetBytes(payload[:32])
 	y1 := big.NewInt(0).SetBytes(payload[32:64])
 
@@ -708,7 +709,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 
 func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) == 0 {
+	if len(payload) < 96{
 		return []byte{0},errors.New("the data length is not correct")
 	}
 
@@ -716,7 +717,9 @@ func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte
 	xPK := payload[32:64]
 	yPK := payload[64:96]
 
-
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
 
 	fmt.Println("x="+common.ToHex(xPK))
 	fmt.Println("y="+common.ToHex(yPK))
