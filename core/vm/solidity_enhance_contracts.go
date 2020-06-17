@@ -786,6 +786,9 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 		byte65 = append(byte65,4)
 		byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
 		f[i] = crypto.ToECDSAPub(byte65)
+		if f[i] == nil {
+			return []byte{0},errors.New("commit data is not correct")
+		}
 	}
 
 	//pb value
