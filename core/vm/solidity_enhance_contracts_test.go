@@ -306,3 +306,248 @@ func TestCalPolyCommit_3(t *testing.T)  {
 		t.Fatalf("errors happend during caculating")
 	}
 }
+
+
+/*
+ *test case,normal operation, should work well
+ */
+func TestCheckSig_1(t *testing.T)  {
+
+	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac4995096a17"
+	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
+	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
+	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+
+	expected := "0000000000000000000000000000000000000000000000000000000000000001"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(hash)...)
+	input = append(input,common.FromHex(r)...)
+	input = append(input,common.FromHex(s)...)
+	input = append(input,common.FromHex(pk)...)
+
+	seh := &SolEnhance{}
+	ret,err := seh.checkSig(input,nil,nil)
+	if err != nil {
+		t.Fatalf("errors happend during caculating")
+	}
+	fmt.Println(common.Bytes2Hex(ret))
+	if expected != common.Bytes2Hex(ret) {
+		t.Fatalf("the result is not match with expected value")
+	}
+
+}
+
+
+
+/*
+ *test case,wrong data length,should failed
+ */
+func TestCheckSig_2(t *testing.T)  {
+
+	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac499509"
+	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
+	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
+	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(hash)...)
+	input = append(input,common.FromHex(r)...)
+	input = append(input,common.FromHex(s)...)
+	input = append(input,common.FromHex(pk)...)
+
+	seh := &SolEnhance{}
+	_,err := seh.checkSig(input,nil,nil)
+	if err != nil {
+		t.Fatalf("errors happend during caculating")
+	}
+
+}
+
+
+/*
+ *test case,wrong r,s,should return 0
+ */
+func TestCheckSig_3(t *testing.T)  {
+
+	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac4995096a19"
+	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
+	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
+	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+
+	expected := "0000000000000000000000000000000000000000000000000000000000000000"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(hash)...)
+	input = append(input,common.FromHex(r)...)
+	input = append(input,common.FromHex(s)...)
+	input = append(input,common.FromHex(pk)...)
+
+	seh := &SolEnhance{}
+	ret,err := seh.checkSig(input,nil,nil)
+	if err != nil {
+		t.Fatalf("errors happend during caculating")
+	}
+	fmt.Println(common.Bytes2Hex(ret))
+	if expected != common.Bytes2Hex(ret) {
+		t.Fatalf("the result is not match with expected value")
+	}
+}
+
+
+/*
+ *test case,normal operation, should work well
+ */
+func TestS256Add_1(t *testing.T) {
+
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4abcb"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f0912906"
+
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
+
+	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c";
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
+
+	s := &s256Add{}
+	res,err :=s.Run(input,nil,nil)
+
+	if err != nil {
+		t.Fatalf("error happens")
+	}
+
+
+	if exp != common.Bytes2Hex(res) {
+		t.Fatalf("the result is not match")
+	}
+}
+
+/*
+ *test case,data length is not enough,failed
+ */
+func TestS256Add_2(t *testing.T) {
+
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4a"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f0912"
+
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
+
+	s := &s256Add{}
+	_,err :=s.Run(input,nil,nil)
+
+	if err == nil {
+		t.Fatalf("error happens")
+	}
+
+}
+
+/*
+ *test case,point is not on curve,failed
+ */
+func TestS256Add_3(t *testing.T) {
+
+	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4a11"
+	y1 := "0x5d4c67c05b0a693fb72b47abf7e0d6381fc722ca45c8bb076e6cb4f9f091211"
+
+	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
+	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
+
+	s := &s256Add{}
+	_,err :=s.Run(input,nil,nil)
+
+	if err == nil {
+		t.Fatalf("error happens")
+	}
+
+}
+
+
+/*
+ *test case,normal operation, should work well
+ */
+func TestS256ScalarMul_1(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+	exp := "979425111f1b36b6e0426988d3a0f4724aaa57db4ef14720667cd42b9f5f456a854f45e729f2c1ed6f2051b295b80c5729857385794a469f3436385c67d7a021"
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
+
+
+	s := &s256ScalarMul{}
+	res,err := s.Run(input,nil,nil)
+
+	if err != nil {
+		t.Fatalf("test failed,error happens")
+	}
+
+	fmt.Println(common.Bytes2Hex(res))
+	if common.Bytes2Hex(res) != exp {
+		t.Fatalf("test failed, the result do not mathc with expect")
+	}
+
+}
+
+/*
+ *test case,data length is not enough
+ */
+func TestS256ScalarMul_2(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
+
+	s := &s256ScalarMul{}
+	_,err := s.Run(input,nil,nil)
+	if err == nil {
+		t.Fatalf("test failed,no error happens")
+	}
+
+}
+
+/*
+ *test case,data length is not enough
+ */
+func TestS256ScalarMul_3(t *testing.T)  {
+	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
+	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81700"
+	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d491"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(scalar)...)
+	input = append(input,common.FromHex(xPk)...)
+	input = append(input,common.FromHex(yPk)...)
+
+	s := &s256ScalarMul{}
+	_,err := s.Run(input,nil,nil)
+
+	if err == nil {
+		t.Fatalf("test failed,no error happens")
+	}
+
+}

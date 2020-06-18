@@ -1005,8 +1005,16 @@ func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byt
 	fmt.Println("y="+common.ToHex(yPK))
 	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+
+
 	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
 
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("k value is not correct")
+	}
 
 	var buf = make([]byte, 64)
 
