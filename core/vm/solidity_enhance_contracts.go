@@ -844,6 +844,10 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+	if len(payload) < 160 {
+		return []byte{0},errors.New("data is not enough")
+	}
+
 	rb := payload[0:32]
 	iv := payload[32:64]
 	msg := payload[64:96]
