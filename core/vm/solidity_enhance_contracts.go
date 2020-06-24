@@ -681,6 +681,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	if len(payload) < 128 {
 		return []byte{0},errors.New("the point is not on curve")
 	}
+
 	x1 := big.NewInt(0).SetBytes(payload[:32])
 	y1 := big.NewInt(0).SetBytes(payload[32:64])
 
@@ -708,7 +709,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 
 func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) == 0 {
+	if len(payload) < 96{
 		return []byte{0},errors.New("the data length is not correct")
 	}
 
@@ -716,7 +717,9 @@ func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte
 	xPK := payload[32:64]
 	yPK := payload[64:96]
 
-
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
 
 	fmt.Println("x="+common.ToHex(xPK))
 	fmt.Println("y="+common.ToHex(yPK))
@@ -783,6 +786,9 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 		byte65 = append(byte65,4)
 		byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
 		f[i] = crypto.ToECDSAPub(byte65)
+		if f[i] == nil {
+			return []byte{0},errors.New("commit data is not correct")
+		}
 	}
 
 	//pb value
@@ -837,6 +843,10 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 
 
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) < 160 {
+		return []byte{0},errors.New("data is not enough")
+	}
 
 	rb := payload[0:32]
 	iv := payload[32:64]
@@ -999,8 +1009,16 @@ func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byt
 	fmt.Println("y="+common.ToHex(yPK))
 	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0},errors.New("the point is not on curve")
+	}
+
+
 	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
 
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("k value is not correct")
+	}
 
 	var buf = make([]byte, 64)
 
