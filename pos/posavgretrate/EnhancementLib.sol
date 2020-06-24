@@ -398,14 +398,13 @@ library EnhancementLib {
     view
     returns (uint256 x, uint256 y, bool success) {
        address to = 0x43;
-       
        assembly {
             let freePtr := mload(0x40)
             mstore(add(freePtr, 0), scalar)
             mstore(add(freePtr,32), xPk)
             mstore(add(freePtr,64), yPk)
             
-            success := staticcall(gas, to, freePtr,100, freePtr, 64)
+            success := staticcall(gas, to, freePtr,96, freePtr, 64)
             
             x := mload(freePtr)
             y := mload(add(freePtr,32))
@@ -435,14 +434,98 @@ library EnhancementLib {
             mstore(add(freePtr, 96), y2)
 
             // call ERC20 Token contract transfer function
-            success := staticcall(gas,to, freePtr,132, freePtr, 64)
+            success := staticcall(gas,to, freePtr,128, freePtr, 64)
 
             retx := mload(freePtr)
             rety := mload(add(freePtr,32))
         }
 
     }
- 
+
+
+    /**
+     * public function     
+     * @dev point on curve to multiple scalar on s256
+     * @param scalar for mul 
+     * @return xPk the x value for result point
+     * @return yPk the y value for result point
+     * @return success the result for calling precompile contract,true is success,false is failed
+     */   
+    function bn256ScalarMul(uint256 scalar, uint256 xPk, uint256 yPk)
+    public
+    view
+    returns (uint256 x, uint256 y, bool success) {
+       address to = 0x7;
+       
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(add(freePtr,0), xPk)
+            mstore(add(freePtr,32), yPk)
+            mstore(add(freePtr, 64), scalar)
+            
+            success := staticcall(gas, to, freePtr,96, freePtr, 64)
+            
+            x := mload(freePtr)
+            y := mload(add(freePtr,32))
+        }
+        
+    } 
+
+
+    /**
+     * public function     
+     * @dev add 2 point on the curve bn256
+     * @param x1 the x value for first point 
+     * @param y1 the y value for first point 
+     * @param x2 the x value for second point 
+     * @param y2 the y value for second point
+     * @return retx the x value for result point
+     * @return rety the y value for result point
+     * @return success the result for calling precompile contract,true is success,false is failed
+     */
+    function bn256add(uint256 x1, uint256 y1, uint256 x2,uint256 y2)  public view returns(uint256 retx, uint256 rety,bool success) {
+       address to = 0x6;
+       assembly {
+            let freePtr := mload(0x40)
+            mstore(add(freePtr, 0), x1)
+            mstore(add(freePtr, 32), y1)
+            mstore(add(freePtr, 64), x2)
+            mstore(add(freePtr, 96), y2)
+
+            // call ERC20 Token contract transfer function
+            success := staticcall(gas,to, freePtr,128, freePtr, 64)
+
+            retx := mload(freePtr)
+            rety := mload(add(freePtr,32))
+        }
+
+    }
+  
+   /**
+     * public function     
+     * @dev point on curve to multiple scalar on s256
+     * @param input check paring data
+     * @return success the result for calling precompile contract,true is success,false is failed
+     */   
+    function bn256Pairing(bytes memory input) public returns (bytes32 result) {
+        // input is a serialized bytes stream of (a1, b1, a2, b2, ..., ak, bk) from (G_1 x G_2)^k
+        uint256 len = input.length;
+        require(len % 192 == 0);
+        assembly {
+            let memPtr := mload(0x40)
+            let success := call(gas, 0x08, 0, add(input, 0x20), len, memPtr, 0x20)
+            switch success
+            case 0 {
+                revert(0,0)
+            } default {
+                result := mload(memPtr)
+            }
+        }
+        
+        
+    }
+    
+        
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////   
     function callWith32BytesReturnsUint256(
         address to,
@@ -461,5 +544,7 @@ library EnhancementLib {
             result := mload(freePtr)
         }
     }      
+ 
+ 
     
 }
