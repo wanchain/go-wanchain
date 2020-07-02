@@ -168,6 +168,8 @@ func TestRandomBeacon_GetMyRBProposerId(t *testing.T) {
 	commityPrivate.D	 = posconfig.Cfg().GetMinerBn256SK()
 	commityPrivate.G1 	 = posconfig.Cfg().GetMinerBn256PK()
 
+	fmt.Println(len(commityPrivate.G1.Marshal()))
+
 	// commityPrivate not equal selfPrivate
 	key.PrivateKey2, err = crypto.GenerateKey()
 	if err != nil {

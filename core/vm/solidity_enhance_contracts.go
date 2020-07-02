@@ -10,6 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -28,16 +29,52 @@ var (
 	// pos staking contract abi definition
 solEnhanceDef = `[
 	{
-		"constant": true,
-		"inputs": [],
-		"name": "calPolyCommitTest",
+		"constant": false,
+		"inputs": [
+			{
+				"name": "input",
+				"type": "bytes"
+			}
+		],
+		"name": "bn256Pairing",
 		"outputs": [
 			{
-				"name": "sx",
+				"name": "result",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
 				"type": "uint256"
 			},
 			{
-				"name": "sy",
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "bn256add",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
 				"type": "uint256"
 			},
 			{
@@ -51,11 +88,36 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "checkSigTest",
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "s256add",
 		"outputs": [
 			{
-				"name": "",
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
 				"type": "bool"
 			}
 		],
@@ -141,28 +203,6 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "addTest",
-		"outputs": [
-			{
-				"name": "retx",
-				"type": "uint256"
-			},
-			{
-				"name": "rety",
-				"type": "uint256"
-			},
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
 		"inputs": [
 			{
 				"name": "blockTime",
@@ -181,36 +221,61 @@ solEnhanceDef = `[
 		"type": "function"
 	},
 	{
-		"constant": false,
+		"constant": true,
 		"inputs": [
 			{
-				"name": "data",
-				"type": "string"
-			}
-		],
-		"name": "hexStr2bytes",
-		"outputs": [
+				"name": "polyCommit",
+				"type": "bytes"
+			},
 			{
-				"name": "",
+				"name": "pk",
 				"type": "bytes"
 			}
 		],
+		"name": "s256CalPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
 		"payable": false,
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "getMinIncentive1",
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "bn256CalPolyCommit",
 		"outputs": [
 			{
-				"name": "",
+				"name": "sx",
 				"type": "uint256"
 			},
 			{
-				"name": "",
+				"name": "sy",
 				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -246,33 +311,32 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "encTest",
-		"outputs": [
+		"inputs": [
 			{
-				"name": "c",
-				"type": "bytes"
-			},
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "testGetHardCap",
-		"outputs": [
-			{
-				"name": "",
+				"name": "scalar",
 				"type": "uint256"
 			},
 			{
-				"name": "",
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "s256ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
 				"type": "bool"
 			}
 		],
@@ -410,28 +474,6 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "mulGTest",
-		"outputs": [
-			{
-				"name": "retx",
-				"type": "uint256"
-			},
-			{
-				"name": "rety",
-				"type": "uint256"
-			},
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
 		"inputs": [
 			{
 				"name": "x1",
@@ -471,42 +513,28 @@ solEnhanceDef = `[
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "getMinIncentive2",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
 		"inputs": [
 			{
-				"name": "polyCommit",
-				"type": "bytes"
-			},
-			{
-				"name": "pk",
-				"type": "bytes"
-			}
-		],
-		"name": "calPolyCommit",
-		"outputs": [
-			{
-				"name": "sx",
+				"name": "scalar",
 				"type": "uint256"
 			},
 			{
-				"name": "sy",
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "bn256ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
 				"type": "uint256"
 			},
 			{
@@ -523,14 +551,15 @@ solEnhanceDef = `[
 	solenhanceAbi, errInit = abi.JSON(strings.NewReader(solEnhanceDef))
 
 
-	getPosAvgReturnId 	[4]byte
-	addid				[4]byte
-	mulGid				[4]byte
-	calPolyCommitid		[4]byte
-	checkSigid			[4]byte
-	encid				[4]byte
-	hardCapid			[4]byte
-	mulPkid				[4]byte
+	getPosAvgReturnId 		[4]byte
+	addid					[4]byte
+	mulGid					[4]byte
+	checkSigid				[4]byte
+	encid					[4]byte
+	hardCapid				[4]byte
+	mulPkid					[4]byte
+	s256CalPolyCommitid		[4]byte
+	bn256CalPolyCommitid	[4]byte
 )
 
 const (
@@ -547,14 +576,16 @@ func init() {
 	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
 	copy(addid[:],solenhanceAbi.Methods["add"].Id())
 	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
-	copy(calPolyCommitid[:],solenhanceAbi.Methods["calPolyCommit"].Id())
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
 	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
 	copy(mulPkid[:],solenhanceAbi.Methods["mulPk"].Id())
 
-	mulGidStr := common.Bytes2Hex(mulPkid[:])
-	fmt.Println(""+mulGidStr)
+	copy(s256CalPolyCommitid[:],solenhanceAbi.Methods["s256CalPolyCommit"].Id())
+	copy(bn256CalPolyCommitid[:],solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
+
+	//mulGidStr := common.Bytes2Hex(bn256CalPolyCommitid[:])
+	//fmt.Println(""+mulGidStr)
 }
 
 /////////////////////////////
@@ -587,7 +618,7 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.add(input[4:], contract, evm)
 	} else if  methodId == mulGid {
 		return s.mulG(input[4:], contract, evm)
-	} else if methodId == calPolyCommitid {
+	} else if methodId == s256CalPolyCommitid {
 		return s.calPolyCommit(input[4:], contract, evm)
 	} else if methodId == checkSigid {
 		return s.checkSig(input[4:], contract, evm)
@@ -597,13 +628,12 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.getPosTotalRet(input[4:], contract, evm)
 	} else if methodId == mulPkid {
 		return s.mulPk(input[4:], contract, evm)
+	} else if methodId == bn256CalPolyCommitid {
+		return s.bn256CalPolyCommit(input[4:], contract, evm)
 	}
-
 
 	mid := common.Bytes2Hex(methodId[:])
 	fmt.Println(""+mid)
-
-
 
 	return nil, errMethodId
 }
@@ -818,7 +848,9 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 
 
 func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int) (*ecdsa.PublicKey, error) {
-	// check input parameters
+	if len(pks) < 1 || degree != len(pks) - 1 {
+		return nil, errors.New("invalid polynomial len")
+	}
 
 	sumPk := new(ecdsa.PublicKey)
 	sumPk.Curve = crypto.S256()
@@ -838,6 +870,71 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 
 	}
 	return sumPk,nil
+}
+
+
+func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	fmt.Println(common.Bytes2Hex(payload))
+
+	if len%64 != 0 {
+		return []byte{0},errors.New("payload length is not correct")
+	}
+
+	degree := len/64 - 1;
+
+	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0},errors.New("payload is not enough")
+	}
+
+	f := make([]*big.Int,degree)
+	i := 0
+	for ;i< degree;i++ {
+		f[i] = big.NewInt(0).SetBytes(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+		if f[i] == nil {
+			return []byte{0},errors.New("commit data is not correct")
+		}
+	}
+
+
+	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+	bigx := big.NewInt(0).SetBytes(hashx[:])
+	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
+
+	res,err := s.bn256EvalByPolyG(f,degree - 1,bigx)
+	if err != nil {
+		return []byte{0},errors.New("error in caculate poly")
+	}
+	fmt.Println(common.Bytes2Hex(res.Bytes()))
+
+	return res.Bytes(),nil
+}
+
+
+func  (s *SolEnhance)  bn256EvalByPolyG(pks []*big.Int,degree int,x *big.Int) (*big.Int, error) {
+	if len(pks) < 1 || degree != len(pks) - 1 {
+		return nil, errors.New("invalid polynomial len")
+	}
+
+	sum := big.NewInt(0)
+	for i := 0; i < degree+1; i++ {
+
+		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), bn256.Order)
+
+		temp1.Mod(temp1, bn256.Order)
+
+		temp2 := new(big.Int).Mul(pks[i], temp1)
+
+		temp2.Mod(temp2, bn256.Order)
+
+		sum.Add(sum, temp2)
+
+		sum.Mod(sum, bn256.Order)
+	}
+
+	return sum, nil
+
 }
 
 
