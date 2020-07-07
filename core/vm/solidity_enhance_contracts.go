@@ -789,14 +789,11 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 }
 
 
-
-
 func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
-	fmt.Println(common.Bytes2Hex(payload))
-
-	if len%64 != 0 {
+	//4 point and one ok
+	if len < 64*5 || len%64 != 0 {
 		return []byte{0},errors.New("payload length is not correct")
 	}
 
@@ -878,12 +875,12 @@ func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm 
 	len := len(payload)
 	fmt.Println(common.Bytes2Hex(payload))
 
-	if len%64 != 0 {
+	//4 point and one ok
+	if len < 64*5 || len%64 != 0 {
 		return []byte{0},errors.New("payload length is not correct")
 	}
 
 	degree := len/64 - 1;
-
 	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
 		return []byte{0},errors.New("payload is not enough")
 	}
