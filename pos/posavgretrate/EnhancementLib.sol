@@ -320,8 +320,8 @@ library EnhancementLib {
             mstore(add(freePtr, 4), hash)
             mstore(add(freePtr, 36), r)
             mstore(add(freePtr, 68), s)
-            mstore(add(freePtr, 100), mload(add(pk,33)))
-            mstore(add(freePtr, 132), mload(add(pk,65)))
+            mstore(add(freePtr, 100), mload(add(pk,32)))
+            mstore(add(freePtr, 132), mload(add(pk,64)))
 
             // call ERC20 Token contract transfer function
             success := staticcall(gas, to, freePtr,164, freePtr, 32)

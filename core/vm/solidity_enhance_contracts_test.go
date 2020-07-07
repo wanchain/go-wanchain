@@ -399,6 +399,39 @@ func TestCheckSig_3(t *testing.T)  {
 /*
  *test case,normal operation, should work well
  */
+func TestCheckSig_4(t *testing.T)  {
+
+	r := "0xaccf947372cef4a8d3541ff7ecf245f416c7f84d8a09c5ce3cec4c348fb6fdab"
+	s := "0x50e224d078b209bd2c9cbbc9ff13f640f50529f7c4d8f679b7c98756329c73ab"
+
+	hash := "0x950d4c7ddb6079061db24ec3c208400572d4b805ebf00db72ada8703b6b47a01"
+
+	pk :="0xbe3b7fd88613dc272a36f4de570297f5f33b87c26de3060ad04e2ea697e13125a2454acd296e1879a7ddd0084d9e4e724fca9ef610b21420978476e2632a1782"
+
+	expected := "0000000000000000000000000000000000000000000000000000000000000001"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(hash)...)
+	input = append(input,common.FromHex(r)...)
+	input = append(input,common.FromHex(s)...)
+	input = append(input,common.FromHex(pk)...)
+
+	seh := &SolEnhance{}
+	ret,err := seh.checkSig(input,nil,nil)
+	if err != nil {
+		t.Fatalf("errors happend during caculating")
+	}
+	fmt.Println(common.Bytes2Hex(ret))
+	if expected != common.Bytes2Hex(ret) {
+		t.Fatalf("the result is not match with expected value")
+	}
+
+}
+
+
+/*
+ *test case,normal operation, should work well
+ */
 func TestS256Add_1(t *testing.T) {
 
 	x1 := "0x69088a1c79a78b5e66859a5e6594d70c8f12a1ff882d84a05ffdbbcff5a4abcb"

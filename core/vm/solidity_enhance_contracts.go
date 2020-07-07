@@ -831,7 +831,7 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
 
 	res,err := s.EvalByPolyG(f,degree - 1,bigx)
-	if err != nil {
+	if err != nil || res == nil{
 		return []byte{0},errors.New("error in caculate poly")
 	}
 
@@ -987,7 +987,11 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 	hash := payload[:32]
 	sr := big.NewInt(0).SetBytes(payload[32:64])
 	ss := big.NewInt(0).SetBytes(payload[64:96])
+
+	fmt.Println(common.Bytes2Hex(payload[64:96]))
 	payload[95] = byte(4)
+
+	fmt.Println(common.Bytes2Hex(payload[95:160]))
 	pub := crypto.ToECDSAPub(payload[95:160])
 	if pub == nil {
 		return []byte{0},errors.New("wrong data for publlic key")
