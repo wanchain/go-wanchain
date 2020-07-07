@@ -981,7 +981,7 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	len := len(payload)
 	if len < 64 + 32*3 {
-		return []byte{0},nil
+		return []byte{0},errors.New("wrong data length")
 	}
 
 	hash := payload[:32]
@@ -989,7 +989,9 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 	ss := big.NewInt(0).SetBytes(payload[64:96])
 	payload[95] = byte(4)
 	pub := crypto.ToECDSAPub(payload[95:160])
-
+	if pub == nil {
+		return []byte{0},errors.New("wrong data for publlic key")
+	}
 
 	res := ecdsa.Verify(pub,hash,sr,ss)
 
