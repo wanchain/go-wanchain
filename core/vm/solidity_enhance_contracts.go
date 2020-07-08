@@ -793,7 +793,7 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 
 	len := len(payload)
 	//4 point and one ok
-	if len < 64*5 || len%64 != 0 {
+	if len < 64*4 || len%64 != 0 {
 		return []byte{0},errors.New("payload length is not correct")
 	}
 
@@ -806,8 +806,6 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 	f := make([]*ecdsa.PublicKey,degree);
 	i := 0
 
-
-
 	for ;i< degree;i++ {		//set the oxo4 prevalue for publickey
 		byte65 := make([]byte,0)
 		byte65 = append(byte65,4)
@@ -818,12 +816,8 @@ func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM)
 		}
 	}
 
-	//pb value
-	byte65 := make([]byte,0)
-	byte65 = append(byte65,4)
-	byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
 
-	hashx := sha256.Sum256(byte65)
+	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
 	bigx := big.NewInt(0).SetBytes(hashx[:])
 	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
 
@@ -873,10 +867,10 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
-	fmt.Println(common.Bytes2Hex(payload))
+	//fmt.Println(common.Bytes2Hex(payload))
 
 	//4 point and one ok
-	if len < 64*5 || len%64 != 0 {
+	if len < 64*4 || len%64 != 0 {
 		return []byte{0},errors.New("payload length is not correct")
 	}
 
@@ -885,55 +879,60 @@ func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm 
 		return []byte{0},errors.New("payload is not enough")
 	}
 
-	f := make([]*big.Int,degree)
+	f := make([][]byte,degree)
 	i := 0
 	for ;i< degree;i++ {
-		f[i] = big.NewInt(0).SetBytes(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
-		if f[i] == nil {
-			return []byte{0},errors.New("commit data is not correct")
-		}
+		f[i] = payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
 	}
 
-
+	//fmt.Println(common.Bytes2Hex(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]))
 	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+	//fmt.Println(common.Bytes2Hex(hashx[:]))
 	bigx := big.NewInt(0).SetBytes(hashx[:])
-	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
+	bigx = bigx.Mod(bigx, bn256.Order)
 
 	res,err := s.bn256EvalByPolyG(f,degree - 1,bigx)
 	if err != nil {
 		return []byte{0},errors.New("error in caculate poly")
 	}
-	fmt.Println(common.Bytes2Hex(res.Bytes()))
+	//fmt.Println(common.Bytes2Hex(res))
 
-	return res.Bytes(),nil
+	return res,nil
 }
 
 
-func  (s *SolEnhance)  bn256EvalByPolyG(pks []*big.Int,degree int,x *big.Int) (*big.Int, error) {
-	if len(pks) < 1 || degree != len(pks) - 1 {
-		return nil, errors.New("invalid polynomial len")
+func  (s *SolEnhance)  bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) ([]byte, error) {
+	if len(pkbytes) == 0 || x.Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("len(pks)==0 or xvalue is zero")
 	}
 
-	sum := big.NewInt(0)
-	for i := 0; i < degree+1; i++ {
+	if len(pkbytes) != int(degree+1) {
+		return nil, errors.New("degree is not content with the len(pks)")
+	}
+
+	pks := make([]*bn256.G1,0)
+	for _, val := range pkbytes {
+		//fmt.Println(common.Bytes2Hex(val))
+		pk,err := newCurvePoint(val)
+		if err != nil {
+			return nil,err
+		}
+		pks = append(pks,pk)
+	}
+
+	sumPk := new(bn256.G1)
+	for i := 0; i < int(degree)+1; i++ {
 
 		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), bn256.Order)
-
 		temp1.Mod(temp1, bn256.Order)
 
-		temp2 := new(big.Int).Mul(pks[i], temp1)
-
-		temp2.Mod(temp2, bn256.Order)
-
-		sum.Add(sum, temp2)
-
-		sum.Mod(sum, bn256.Order)
+		temp1Pk := new(bn256.G1).ScalarMult(pks[i], temp1)
+		sumPk.Add(sumPk, temp1Pk)
 	}
 
-	return sum, nil
+	return sumPk.Marshal(), nil
 
 }
-
 
 
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
