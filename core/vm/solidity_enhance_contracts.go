@@ -129,6 +129,33 @@ solEnhanceDef = `[
 		"constant": true,
 		"inputs": [
 			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "bn256MulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
 				"name": "hash",
 				"type": "bytes32"
 			},
@@ -560,6 +587,7 @@ solEnhanceDef = `[
 	mulPkid					[4]byte
 	s256CalPolyCommitid		[4]byte
 	bn256CalPolyCommitid	[4]byte
+	bn256MulG				[4]byte
 )
 
 const (
@@ -583,6 +611,7 @@ func init() {
 
 	copy(s256CalPolyCommitid[:],solenhanceAbi.Methods["s256CalPolyCommit"].Id())
 	copy(bn256CalPolyCommitid[:],solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
+	copy(bn256MulG[:],solenhanceAbi.Methods["bn256MulG"].Id())
 
 	//mulGidStr := common.Bytes2Hex(bn256CalPolyCommitid[:])
 	//fmt.Println(""+mulGidStr)
@@ -775,6 +804,9 @@ func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte
 }
 
 
+
+
+
 func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) == 0 || len(payload) > 32 {
@@ -794,6 +826,23 @@ func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte,
 	copy(buf[32:],ry.Bytes())
 
 	return buf, nil
+}
+
+
+
+func (s *SolEnhance) bn256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) == 0 || len(payload) > 32 {
+		return []byte{0},errors.New("the data length is not correct")
+	}
+
+	k := payload[:32]
+	gk := new(bn256.G1).ScalarBaseMult(big.NewInt(0).SetBytes(k));
+	if gk==nil {
+		return nil,errors.New("errors in g1 base mult")
+	}
+
+	return gk.Marshal(), nil
 }
 
 
