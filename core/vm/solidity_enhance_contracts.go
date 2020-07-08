@@ -587,7 +587,7 @@ solEnhanceDef = `[
 	mulPkid					[4]byte
 	s256CalPolyCommitid		[4]byte
 	bn256CalPolyCommitid	[4]byte
-	bn256MulG				[4]byte
+	bn256MulGid				[4]byte
 )
 
 const (
@@ -611,10 +611,10 @@ func init() {
 
 	copy(s256CalPolyCommitid[:],solenhanceAbi.Methods["s256CalPolyCommit"].Id())
 	copy(bn256CalPolyCommitid[:],solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
-	copy(bn256MulG[:],solenhanceAbi.Methods["bn256MulG"].Id())
+	copy(bn256MulGid[:],solenhanceAbi.Methods["bn256MulG"].Id())
 
-	//mulGidStr := common.Bytes2Hex(bn256CalPolyCommitid[:])
-	//fmt.Println(""+mulGidStr)
+	mulGidStr := common.Bytes2Hex(bn256MulGid[:])
+	fmt.Println(""+mulGidStr)
 }
 
 /////////////////////////////
@@ -659,6 +659,8 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.mulPk(input[4:], contract, evm)
 	} else if methodId == bn256CalPolyCommitid {
 		return s.bn256CalPolyCommit(input[4:], contract, evm)
+	} else if methodId == bn256MulGid {
+		return s.bn256MulG(input[4:], contract, evm)
 	}
 
 	mid := common.Bytes2Hex(methodId[:])
