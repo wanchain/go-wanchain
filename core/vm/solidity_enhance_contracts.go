@@ -640,6 +640,10 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 
 func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if len(payload) < 64 {
+		return nil,errors.New("wrong data length")
+	}
+
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, 0)
 	common.LeftPadBytes(buf, 32)
@@ -675,7 +679,6 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	if inst == nil {
 		return buf,errors.New("not initialzied for pos return ")
 	}
-
 
 
 	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
@@ -726,6 +729,9 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 	}
 
 	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("errors in caculation")
+	}
 
 	var buf = make([]byte, 64)
 	copy(buf,rx.Bytes())
@@ -751,12 +757,14 @@ func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte
 		return []byte{0},errors.New("the point is not on curve")
 	}
 
-	fmt.Println("x="+common.ToHex(xPK))
-	fmt.Println("y="+common.ToHex(yPK))
-	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
+	//fmt.Println("x="+common.ToHex(xPK))
+	//fmt.Println("y="+common.ToHex(yPK))
+	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
 	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
-
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("errors in caculation")
+	}
 
 	var buf = make([]byte, 64)
 
@@ -955,12 +963,10 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 
 
 
-	fmt.Println("rbPriv"+common.Bytes2Hex(rb))
-	fmt.Println(common.Bytes2Hex(iv))
-	fmt.Println(common.Bytes2Hex(msg))
-	fmt.Println(common.Bytes2Hex(pkb))
-
-
+	//fmt.Println("rbPriv"+common.Bytes2Hex(rb))
+	//fmt.Println(common.Bytes2Hex(iv))
+	//fmt.Println(common.Bytes2Hex(msg))
+	//fmt.Println(common.Bytes2Hex(pkb))
 
 	res,error := ecies.EncryptWithRandom(prv, ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
 
@@ -984,10 +990,10 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 	sr := big.NewInt(0).SetBytes(payload[32:64])
 	ss := big.NewInt(0).SetBytes(payload[64:96])
 
-	fmt.Println(common.Bytes2Hex(payload[64:96]))
+	//fmt.Println(common.Bytes2Hex(payload[64:96]))
 	payload[95] = byte(4)
 
-	fmt.Println(common.Bytes2Hex(payload[95:160]))
+	//fmt.Println(common.Bytes2Hex(payload[95:160]))
 	pub := crypto.ToECDSAPub(payload[95:160])
 	if pub == nil {
 		return []byte{0},errors.New("wrong data for publlic key")
@@ -1023,10 +1029,12 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 		return []byte{0},errors.New("not initialzied for pos return ")
 	}
 
+
 	totalIncentive,err := inst.GetAllIncentive(epid)
 	if err != nil || totalIncentive == nil  {
 		return []byte{0},nil
 	}
+
 	totalIncentive = totalIncentive.Mul(totalIncentive,big.NewInt(10000))//keep 4 dots parts
 	totalIncentive = totalIncentive.Div(totalIncentive,ether)
 	ret := totalIncentive.Uint64()
