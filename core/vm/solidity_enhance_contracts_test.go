@@ -27,7 +27,7 @@ func TestAdd_1(t *testing.T) {
 
 	seh := &SolEnhance{}
 
-	res,err :=seh.add(input,nil,nil)
+	res,err :=seh.s256Add(input,nil,nil)
 
 	if err != nil {
 		t.Fatalf("error happens")
@@ -58,7 +58,7 @@ func TestAadd_2(t *testing.T) {
 
 	seh := &SolEnhance{}
 
-	_,err :=seh.add(input,nil,nil)
+	_,err :=seh.s256Add(input,nil,nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -85,7 +85,7 @@ func TestAadd_3(t *testing.T) {
 
 	seh := &SolEnhance{}
 
-	_,err :=seh.add(input,nil,nil)
+	_,err :=seh.s256Add(input,nil,nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -109,7 +109,7 @@ func TestMulPk_1(t *testing.T)  {
 
 
 	seh := &SolEnhance{}
-	res,err := seh.mulPk(input,nil,nil)
+	res,err := seh.s256MulPk(input,nil,nil)
 
 	if err != nil {
 		t.Fatalf("test failed,error happens")
@@ -137,7 +137,7 @@ func TestMulPk_2(t *testing.T)  {
 
 
 	seh := &SolEnhance{}
-	_,err := seh.mulPk(input,nil,nil)
+	_,err := seh.s256MulPk(input,nil,nil)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
@@ -160,7 +160,7 @@ func TestMulPk_3(t *testing.T)  {
 
 
 	seh := &SolEnhance{}
-	_,err := seh.mulPk(input,nil,nil)
+	_,err := seh.s256MulPk(input,nil,nil)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
@@ -181,7 +181,7 @@ func TestMulG_1(t *testing.T)  {
 
 
 	seh := &SolEnhance{}
-	res,err := seh.mulG(input,nil,nil)
+	res,err := seh.s256MulG(input,nil,nil)
 
 	fmt.Println(common.Bytes2Hex(res))
 	if err != nil {
@@ -205,7 +205,7 @@ func TestMulG_2(t *testing.T)  {
 	input = append(input,common.FromHex(scalar)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.mulG(input,nil,nil)
+	_,err := seh.s256MulG(input,nil,nil)
 
 	if err != nil {
 		t.Fatalf("test failed,no error happens")
@@ -224,7 +224,7 @@ func TestMulG_3(t *testing.T)  {
 	input = append(input,common.FromHex(scalar)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.mulG(input,nil,nil)
+	_,err := seh.s256MulG(input,nil,nil)
 
 	if err != nil {
 		t.Fatalf("test failed,no error happens")
@@ -238,7 +238,7 @@ func TestMulG_3(t *testing.T)  {
 func TestCalPolyCommit_1(t *testing.T)  {
 	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4";
 	poly := "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901";
-	exp := "e6a38df3bb7511cbf03dfd738f0d2086f5e4088d17ec3bbce352880341ddf663f265073ba814058800cb26038c622d54573849a65830711908ba7776660a6348"
+	exp := "f8ad19ab9967c293c57a258bae7063dc5e206b90e0cc1d4b4accf240626a0ddcc124462a80d316f7974cf84107945ae16d74d010c9632333651a02fa7e4b068d"
 	input := make([]byte,0)
 
 	for i:=0;i<len(poly);i+=130 {
@@ -249,12 +249,12 @@ func TestCalPolyCommit_1(t *testing.T)  {
 	input = append(input,common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	res,err := seh.calPolyCommit(input,nil,nil)
+	res,err := seh.s256CalPolyCommit(input,nil,nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
 
-	fmt.Println(common.Bytes2Hex(res))
+	//fmt.Println(common.Bytes2Hex(res))
 
 	if common.Bytes2Hex(res) != exp {
 		t.Fatalf("the result do not match with expected value")
@@ -278,7 +278,7 @@ func TestCalPolyCommit_2(t *testing.T)  {
 	input = append(input,common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	_,err := seh.calPolyCommit(input,nil,nil)
+	_,err := seh.s256CalPolyCommit(input,nil,nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -301,7 +301,7 @@ func TestCalPolyCommit_3(t *testing.T)  {
 	input = append(input,common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	_,err := seh.calPolyCommit(input,nil,nil)
+	_,err := seh.s256CalPolyCommit(input,nil,nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -359,7 +359,7 @@ func TestCheckSig_2(t *testing.T)  {
 
 	seh := &SolEnhance{}
 	_,err := seh.checkSig(input,nil,nil)
-	if err != nil {
+	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
 
