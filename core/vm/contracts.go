@@ -20,11 +20,14 @@ package vm
 import (
 	"crypto/sha256"
 	"errors"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 
 	"crypto/ecdsa"
 	"strings"
 
+	"fmt"
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -36,7 +39,6 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"golang.org/x/crypto/ripemd160"
-	"fmt"
 )
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -289,7 +291,13 @@ type bn256Add struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256Add) RequiredGas(input []byte) uint64 {
-	return params.Bn256AddGas
+	epid,_ := util.GetCurrentBlkEpochSlotID();
+	if epid < posconfig.StoremanEpochid {
+		return params.Bn256AddGas
+	}
+
+	return 0
+
 }
 
 func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -315,7 +323,11 @@ type bn256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas
+	epid,_ := util.GetCurrentBlkEpochSlotID();
+	if epid < posconfig.StoremanEpochid {
+		return params.Bn256ScalarMulGas
+	}
+	return 0
 }
 
 func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {

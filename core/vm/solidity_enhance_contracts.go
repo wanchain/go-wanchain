@@ -634,6 +634,12 @@ func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 }
 
 func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	if epid < posconfig.StoremanEpochid {
+		return nil,errors.New("not reach forked epochid")
+	}
+
 	if len(input) < 4 {
 		return nil, errors.New("parameter is wrong")
 	}
