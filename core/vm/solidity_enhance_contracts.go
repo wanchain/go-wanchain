@@ -579,12 +579,12 @@ solEnhanceDef = `[
 
 
 	getPosAvgReturnId 		[4]byte
-	addid					[4]byte
-	mulGid					[4]byte
+	s256Addid				[4]byte
+	s256MulGid				[4]byte
 	checkSigid				[4]byte
 	encid					[4]byte
 	hardCapid				[4]byte
-	mulPkid					[4]byte
+	s256MulPkid				[4]byte
 	s256CalPolyCommitid		[4]byte
 	bn256CalPolyCommitid	[4]byte
 	bn256MulGid				[4]byte
@@ -602,12 +602,12 @@ func init() {
 	}
 
 	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
-	copy(addid[:],solenhanceAbi.Methods["add"].Id())
-	copy(mulGid[:],solenhanceAbi.Methods["mulG"].Id())
+	copy(s256Addid[:],solenhanceAbi.Methods["add"].Id())
+	copy(s256MulGid[:],solenhanceAbi.Methods["mulG"].Id())
 	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
 	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
 	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
-	copy(mulPkid[:],solenhanceAbi.Methods["mulPk"].Id())
+	copy(s256MulPkid[:],solenhanceAbi.Methods["mulPk"].Id())
 
 	copy(s256CalPolyCommitid[:],solenhanceAbi.Methods["s256CalPolyCommit"].Id())
 	copy(bn256CalPolyCommitid[:],solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
@@ -643,20 +643,20 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	if methodId == getPosAvgReturnId {
 		return s.getPosAvgReturn(input[4:], contract, evm)
-	} else if  methodId == addid{
-		return s.add(input[4:], contract, evm)
-	} else if  methodId == mulGid {
-		return s.mulG(input[4:], contract, evm)
+	} else if  methodId == s256Addid{
+		return s.s256Add(input[4:], contract, evm)
+	} else if  methodId == s256MulGid {
+		return s.s256MulG(input[4:], contract, evm)
 	} else if methodId == s256CalPolyCommitid {
-		return s.calPolyCommit(input[4:], contract, evm)
+		return s.s256CalPolyCommit(input[4:], contract, evm)
 	} else if methodId == checkSigid {
 		return s.checkSig(input[4:], contract, evm)
 	} else if methodId == encid {
 		return s.encrypt(input[4:], contract, evm)
 	} else if methodId == hardCapid {
 		return s.getPosTotalRet(input[4:], contract, evm)
-	} else if methodId == mulPkid {
-		return s.mulPk(input[4:], contract, evm)
+	} else if methodId == s256MulPkid {
+		return s.s256MulPk(input[4:], contract, evm)
 	} else if methodId == bn256CalPolyCommitid {
 		return s.bn256CalPolyCommit(input[4:], contract, evm)
 	} else if methodId == bn256MulGid {
@@ -740,7 +740,7 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 }
 
 
-func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (s *SolEnhance) s256Add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 128 {
 		return []byte{0},errors.New("the point is not on curve")
@@ -774,7 +774,7 @@ func (s *SolEnhance) add(payload []byte, contract *Contract, evm *EVM) ([]byte, 
 
 
 
-func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (s *SolEnhance) s256MulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 96{
 		return []byte{0},errors.New("the data length is not correct")
@@ -809,7 +809,7 @@ func (s *SolEnhance) mulPk(payload []byte, contract *Contract, evm *EVM) ([]byte
 
 
 
-func (s *SolEnhance) mulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) == 0 || len(payload) > 32 {
 		return []byte{0},errors.New("the data length is not correct")
@@ -848,7 +848,7 @@ func (s *SolEnhance) bn256MulG(payload []byte, contract *Contract, evm *EVM) ([]
 }
 
 
-func (s *SolEnhance) calPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (s *SolEnhance) s256CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
 	//4 point and one ok
