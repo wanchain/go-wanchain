@@ -638,3 +638,85 @@ func TestEncrypt_2(t *testing.T)  {
 
 }
 
+/*
+ *test case,normal operation, should work well
+ */
+func TestBn256CalPolyCommit_1(t *testing.T)  {
+	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4";
+	exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
+	input := make([]byte,0)
+
+	for i:=0;i<len(poly);i+=128 {
+		subStr := poly[i:i+128]
+		input = append(input, common.FromHex(subStr)...)
+	}
+
+	input = append(input,common.FromHex(pk[0:])...)
+
+	seh := &SolEnhance{}
+	res,err := seh.bn256CalPolyCommit(input,nil,nil)
+	if err != nil {
+		t.Fatalf("errors happend during caculating")
+	}
+
+	fmt.Println(common.Bytes2Hex(res))
+
+	if common.Bytes2Hex(res) != exp {
+		t.Fatalf("the result do not match with expected value")
+	}
+
+}
+
+
+/*
+ *test case,normal operation, should happen error
+ */
+func TestBn256CalPolyCommit_2(t *testing.T)  {
+	pk := "b2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4";
+	//exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
+	input := make([]byte,0)
+
+	for i:=0;i<len(poly);i+=128 {
+		subStr := poly[i:i+128]
+		input = append(input, common.FromHex(subStr)...)
+	}
+
+	input = append(input,common.FromHex(pk[0:])...)
+
+	seh := &SolEnhance{}
+	res,err := seh.bn256CalPolyCommit(input,nil,nil)
+	if err == nil {
+		t.Fatalf("errors happend during caculating")
+	}
+
+	fmt.Println(common.Bytes2Hex(res))
+
+}
+
+
+/*
+ *test case,normal operation, should work well
+ */
+func TestBn256CalPolyCommit_3(t *testing.T)  {
+	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f";
+	//exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
+	input := make([]byte,0)
+
+	for i:=0;i<len(poly);i+=128 {
+		subStr := poly[i:i+128]
+		input = append(input, common.FromHex(subStr)...)
+	}
+
+	input = append(input,common.FromHex(pk[0:])...)
+
+	seh := &SolEnhance{}
+	_,err := seh.bn256CalPolyCommit(input,nil,nil)
+	if err == nil {
+		t.Fatalf("errors happend during caculating")
+	}
+
+
+}
