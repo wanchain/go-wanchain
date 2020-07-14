@@ -817,7 +817,7 @@ func (s *SolEnhance) s256MulPk(payload []byte, contract *Contract, evm *EVM) ([]
 
 func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) == 0 || len(payload) > 32 {
+	if len(payload) < 32 {
 		return []byte{0},errors.New("the data length is not correct")
 	}
 
@@ -840,7 +840,7 @@ func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]b
 
 func (s *SolEnhance) bn256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) == 0 || len(payload) > 32 {
+	if len(payload) < 32 {
 		return []byte{0},errors.New("the data length is not correct")
 	}
 
@@ -1031,7 +1031,7 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 		return []byte{0},error
 	}
 
-	fmt.Println(common.Bytes2Hex(res))
+	//fmt.Println(common.Bytes2Hex(res))
 	return res,nil
 }
 
@@ -1136,6 +1136,9 @@ func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, err
 	}
 
 	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+	if rx == nil || ry == nil {
+		return []byte{0},errors.New("errors in curve add")
+	}
 
 	var buf = make([]byte, 64)
 	copy(buf,rx.Bytes())
@@ -1169,9 +1172,9 @@ func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byt
 	xPK := payload[32:64]
 	yPK := payload[64:96]
 
-	fmt.Println("x="+common.ToHex(xPK))
-	fmt.Println("y="+common.ToHex(yPK))
-	fmt.Println("scalar=" + common.Bytes2Hex(scalar))
+	//fmt.Println("x="+common.ToHex(xPK))
+	//fmt.Println("y="+common.ToHex(yPK))
+	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
 	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
 		return []byte{0},errors.New("the point is not on curve")
