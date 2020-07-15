@@ -12,7 +12,6 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
-	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
@@ -1117,7 +1116,7 @@ type s256Add struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (s *s256Add) RequiredGas(input []byte) uint64 {
-	return params.Bn256AddGas
+	return 0
 }
 
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1163,7 +1162,7 @@ type s256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas>>1
+	return 0
 }
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
