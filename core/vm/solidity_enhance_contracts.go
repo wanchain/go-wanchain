@@ -1121,6 +1121,11 @@ func (s *s256Add) RequiredGas(input []byte) uint64 {
 }
 
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	if epid < posconfig.StoremanEpochid {
+		return nil,errors.New("not reach forked epochid")
+	}
+
 	if len(payload) < 128 {
 		return []byte{0},errors.New("the point is not on curve")
 	}
@@ -1162,6 +1167,11 @@ func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
 }
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	if epid < posconfig.StoremanEpochid {
+		return nil,errors.New("not reach forked epochid")
+	}
 
 	if len(payload) < 96{
 		return []byte{0},errors.New("the data length is not correct")
