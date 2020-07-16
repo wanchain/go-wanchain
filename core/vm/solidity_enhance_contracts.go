@@ -20,10 +20,6 @@ import (
 )
 
 
-const (
-
-)
-
 var (
 	// pos staking contract abi definition
 solEnhanceDef = `[
@@ -770,12 +766,13 @@ func (s *SolEnhance) s256Add(payload []byte, contract *Contract, evm *EVM) ([]by
 	}
 
 	var buf = make([]byte, 64)
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf,common.LeftPadBytes(rx.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(ry.Bytes(),32))
 
 	return buf, nil
 
 }
+
 
 
 
@@ -804,14 +801,11 @@ func (s *SolEnhance) s256MulPk(payload []byte, contract *Contract, evm *EVM) ([]
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf,common.LeftPadBytes(rx.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(ry.Bytes(),32))
 
 	return buf, nil
 }
-
-
-
 
 
 func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -829,8 +823,8 @@ func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf,common.LeftPadBytes(rx.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(ry.Bytes(),32))
 
 	return buf, nil
 }
@@ -890,12 +884,12 @@ func (s *SolEnhance) s256CalPolyCommit(payload []byte, contract *Contract, evm *
 		return []byte{0},errors.New("error in caculate poly")
 	}
 
-	fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
+	//fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
 
 
 	var buf = make([]byte, 64)
-	copy(buf,res.X.Bytes())
-	copy(buf[32:],res.Y.Bytes())
+	copy(buf,common.LeftPadBytes(res.X.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(res.Y.Bytes(),32))
 
 	return buf,nil
 }
@@ -1145,8 +1139,8 @@ func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, err
 	}
 
 	var buf = make([]byte, 64)
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf,common.LeftPadBytes(rx.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(ry.Bytes(),32))
 
 	return buf, nil
 
@@ -1198,8 +1192,8 @@ func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byt
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf,common.LeftPadBytes(rx.Bytes(),32))
+	copy(buf[32:],common.LeftPadBytes(ry.Bytes(),32))
 
 	return buf, nil
 }
