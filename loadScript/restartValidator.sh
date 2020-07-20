@@ -29,7 +29,7 @@ echo 'Please wait a few seconds...'
 sleep 5
 
 if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
-    docker container update --restart=always gwan
+    sudo docker container update --restart=always gwan
 else
     sudo rm ~/.wanchain/pw.txt
 fi
