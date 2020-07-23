@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
@@ -1133,9 +1134,15 @@ func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, err
 		return []byte{0},errors.New("the point is not on 256 curve")
 	}
 
-	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+	var rx, ry *big.Int
+	if bytes.Equal(x1.Bytes(),x2.Bytes()) && bytes.Equal(y1.Bytes(),y2.Bytes()) {
+		rx,ry = crypto.S256().Double(x1,y1)
+	} else {
+		rx, ry = crypto.S256().Add(x1, y1, x2, y2)
+	}
+
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("errors in curve add")
+		return []byte{0}, errors.New("errors in curve add")
 	}
 
 	var buf = make([]byte, 64)

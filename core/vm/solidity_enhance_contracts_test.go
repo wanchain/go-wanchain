@@ -513,7 +513,28 @@ func TestS256Add_3(t *testing.T) {
 
 }
 
+func TestS256Add_4(t *testing.T) {
 
+	x1 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
+	y1 := "0x54506d471f9040b47e839a1fc2779a61ad1520984ee0cf23e66449a5f413be1d"
+
+	x2 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
+	y2 := "0x54506d471f9040b47e839a1fc2779a61ad1520984ee0cf23e66449a5f413be1d"
+
+	input := make([]byte,0)
+	input = append(input,common.FromHex(x1)...)
+	input = append(input,common.FromHex(y1)...)
+	input = append(input,common.FromHex(x2)...)
+	input = append(input,common.FromHex(y2)...)
+
+	s := &s256Add{}
+	_,err :=s.Run(input,nil,nil)
+
+	if err == nil {
+		t.Fatalf("error happens")
+	}
+
+}
 /*
  *test case,normal operation, should work well
  */
