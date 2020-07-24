@@ -6,27 +6,25 @@ import (
 	"encoding/binary"
 	"errors" // this is not match with other
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
-	"math/big"
-	"strings"
 )
 
-
-const (
-
-)
+const ()
 
 var (
 	// pos staking contract abi definition
-solEnhanceDef = `[
+	solEnhanceDef = `[
 	{
 		"constant": false,
 		"inputs": [
@@ -576,22 +574,22 @@ solEnhanceDef = `[
 	// pos staking contract abi object
 	solenhanceAbi, errInit = abi.JSON(strings.NewReader(solEnhanceDef))
 
-
-	getPosAvgReturnId 		[4]byte
-	s256Addid				[4]byte
-	s256MulGid				[4]byte
-	checkSigid				[4]byte
-	encid					[4]byte
-	hardCapid				[4]byte
-	s256MulPkid				[4]byte
-	s256CalPolyCommitid		[4]byte
-	bn256CalPolyCommitid	[4]byte
-	bn256MulGid				[4]byte
+	getPosAvgReturnId    [4]byte
+	s256Addid            [4]byte
+	s256MulGid           [4]byte
+	checkSigid           [4]byte
+	encid                [4]byte
+	hardCapid            [4]byte
+	s256MulPkid          [4]byte
+	s256CalPolyCommitid  [4]byte
+	bn256CalPolyCommitid [4]byte
+	bn256MulGid          [4]byte
 )
 
 const (
 	POLY_CIMMIT_ITEM_LEN = 64
 )
+
 //
 // package initialize
 //
@@ -601,24 +599,23 @@ func init() {
 	}
 
 	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
-	copy(s256Addid[:],solenhanceAbi.Methods["add"].Id())
-	copy(s256MulGid[:],solenhanceAbi.Methods["mulG"].Id())
-	copy(checkSigid[:],solenhanceAbi.Methods["checkSigid"].Id())
-	copy(encid[:],solenhanceAbi.Methods["enc"].Id())
-	copy(hardCapid[:],solenhanceAbi.Methods["getHardCap"].Id())
-	copy(s256MulPkid[:],solenhanceAbi.Methods["mulPk"].Id())
+	copy(s256Addid[:], solenhanceAbi.Methods["add"].Id())
+	copy(s256MulGid[:], solenhanceAbi.Methods["mulG"].Id())
+	copy(checkSigid[:], solenhanceAbi.Methods["checkSigid"].Id())
+	copy(encid[:], solenhanceAbi.Methods["enc"].Id())
+	copy(hardCapid[:], solenhanceAbi.Methods["getHardCap"].Id())
+	copy(s256MulPkid[:], solenhanceAbi.Methods["mulPk"].Id())
 
-	copy(s256CalPolyCommitid[:],solenhanceAbi.Methods["s256CalPolyCommit"].Id())
-	copy(bn256CalPolyCommitid[:],solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
-	copy(bn256MulGid[:],solenhanceAbi.Methods["bn256MulG"].Id())
+	copy(s256CalPolyCommitid[:], solenhanceAbi.Methods["s256CalPolyCommit"].Id())
+	copy(bn256CalPolyCommitid[:], solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
+	copy(bn256MulGid[:], solenhanceAbi.Methods["bn256MulG"].Id())
 
 	mulGidStr := common.Bytes2Hex(bn256MulGid[:])
-	fmt.Println(""+mulGidStr)
+	fmt.Println("" + mulGidStr)
 }
 
 /////////////////////////////
 type SolEnhance struct {
-
 }
 
 //
@@ -634,9 +631,10 @@ func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 
 func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
 	if epid < posconfig.StoremanEpochid {
-		return nil,errors.New("not reach forked epochid")
+		// return nil,errors.New("not reach forked epochid")
+		return nil, nil
 	}
 
 	if len(input) < 4 {
@@ -648,9 +646,9 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	if methodId == getPosAvgReturnId {
 		return s.getPosAvgReturn(input[4:], contract, evm)
-	} else if  methodId == s256Addid{
+	} else if methodId == s256Addid {
 		return s.s256Add(input[4:], contract, evm)
-	} else if  methodId == s256MulGid {
+	} else if methodId == s256MulGid {
 		return s.s256MulG(input[4:], contract, evm)
 	} else if methodId == s256CalPolyCommitid {
 		return s.s256CalPolyCommit(input[4:], contract, evm)
@@ -669,15 +667,14 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 
 	mid := common.Bytes2Hex(methodId[:])
-	fmt.Println(""+mid)
+	fmt.Println("" + mid)
 
 	return nil, errMethodId
 }
 
-
 func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	if len(payload) < 64 {
-		return nil,errors.New("wrong data length")
+		return nil, errors.New("wrong data length")
 	}
 
 	var buf = make([]byte, 8)
@@ -686,7 +683,7 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
 	if eid < posconfig.StoremanEpochid {
-		return buf,errors.New("not reach forked epochid")
+		return buf, errors.New("not reach forked epochid")
 	}
 
 	//to do
@@ -697,58 +694,54 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	//groupStartTime = uint64(time.Now().Unix())
 	//targetTime = groupStartTime
 
-	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
+	groupStartEpochId, _ := posutil.CalEpochSlotID(groupStartTime)
 	groupStartEpochId--
 
-	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
+	targetEpochId, _ := posutil.CalEpochSlotID(targetTime)
 	targetEpochId--
 	/////////////////////////////////////////
 
-	if  groupStartEpochId <= posconfig.FirstEpochId ||
+	if groupStartEpochId <= posconfig.FirstEpochId ||
 		targetEpochId <= groupStartEpochId ||
 		groupStartEpochId > eid ||
 		targetEpochId > eid {
-		return buf,errors.New("wrong epochid")
+		return buf, errors.New("wrong epochid")
 	}
 
 	inst := posutil.PosAvgRetInst()
 	if inst == nil {
-		return buf,errors.New("not initialzied for pos return ")
+		return buf, errors.New("not initialzied for pos return ")
 	}
 
-
-	p2,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId);
+	p2, err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId)
 	if err != nil {
-		return buf,err
+		return buf, err
 	}
 
-	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
+	stakeBegin, err := inst.GetAllStakeAndReturn(targetEpochId - 1)
 	if err != nil {
-		return buf,err
+		return buf, err
 	}
 
-	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
+	stakeEnd, err := inst.GetAllStakeAndReturn(targetEpochId)
 	if err != nil {
-		return buf,err
+		return buf, err
 	}
-
 
 	p2Big := big.NewInt(int64(p2))
 
-	p1Mul := p2Big.Mul(p2Big,stakeBegin)
+	p1Mul := p2Big.Mul(p2Big, stakeBegin)
 
-	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
-
+	p1 := p1Mul.Div(p1Mul, stakeEnd).Uint64()
 
 	binary.BigEndian.PutUint64(buf, p1)
 	return common.LeftPadBytes(buf, 32), nil
 }
 
-
 func (s *SolEnhance) s256Add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 128 {
-		return []byte{0},errors.New("the point is not on curve")
+		return []byte{0}, errors.New("the point is not on curve")
 	}
 
 	x1 := big.NewInt(0).SetBytes(payload[:32])
@@ -757,153 +750,137 @@ func (s *SolEnhance) s256Add(payload []byte, contract *Contract, evm *EVM) ([]by
 	x2 := big.NewInt(0).SetBytes(payload[64:96])
 	y2 := big.NewInt(0).SetBytes(payload[96:128])
 
-
-
-
-	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
-		return []byte{0},errors.New("the point is not on curve")
+	if !crypto.S256().IsOnCurve(x1, y1) || !crypto.S256().IsOnCurve(x2, y2) {
+		return []byte{0}, errors.New("the point is not on curve")
 	}
 
-	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+	rx, ry := crypto.S256().Add(x1, y1, x2, y2)
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("errors in caculation")
+		return []byte{0}, errors.New("errors in caculation")
 	}
 
 	var buf = make([]byte, 64)
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf, rx.Bytes())
+	copy(buf[32:], ry.Bytes())
 
 	return buf, nil
 
 }
 
-
-
 func (s *SolEnhance) s256MulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	if len(payload) < 96{
-		return []byte{0},errors.New("the data length is not correct")
+	if len(payload) < 96 {
+		return []byte{0}, errors.New("the data length is not correct")
 	}
 
 	scalar := payload[:32]
 	xPK := payload[32:64]
 	yPK := payload[64:96]
 
-	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
-		return []byte{0},errors.New("the point is not on curve")
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0}, errors.New("the point is not on curve")
 	}
 
 	//fmt.Println("x="+common.ToHex(xPK))
 	//fmt.Println("y="+common.ToHex(yPK))
 	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
-	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
+	rx, ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK), scalar)
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("errors in caculation")
+		return []byte{0}, errors.New("errors in caculation")
 	}
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf, rx.Bytes())
+	copy(buf[32:], ry.Bytes())
 
 	return buf, nil
 }
-
-
-
-
 
 func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 32 {
-		return []byte{0},errors.New("the data length is not correct")
+		return []byte{0}, errors.New("the data length is not correct")
 	}
 
 	k := payload[:32]
-	rx,ry := crypto.S256().ScalarBaseMult(k);
+	rx, ry := crypto.S256().ScalarBaseMult(k)
 
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("k value is not correct")
+		return []byte{0}, errors.New("k value is not correct")
 	}
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf, rx.Bytes())
+	copy(buf[32:], ry.Bytes())
 
 	return buf, nil
 }
 
-
-
 func (s *SolEnhance) bn256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 32 {
-		return []byte{0},errors.New("the data length is not correct")
+		return []byte{0}, errors.New("the data length is not correct")
 	}
 
 	k := payload[:32]
-	gk := new(bn256.G1).ScalarBaseMult(big.NewInt(0).SetBytes(k));
-	if gk==nil {
-		return nil,errors.New("errors in g1 base mult")
+	gk := new(bn256.G1).ScalarBaseMult(big.NewInt(0).SetBytes(k))
+	if gk == nil {
+		return nil, errors.New("errors in g1 base mult")
 	}
 
 	return gk.Marshal(), nil
 }
-
 
 func (s *SolEnhance) s256CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
 	//4 point and one ok
 	if len < 64*4 || len%64 != 0 {
-		return []byte{0},errors.New("payload length is not correct")
+		return []byte{0}, errors.New("payload length is not correct")
 	}
 
-	degree := len/64 - 1;
+	degree := len/64 - 1
 
-	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
-		return []byte{0},errors.New("payload is not enough")
+	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0}, errors.New("payload is not enough")
 	}
 
-	f := make([]*ecdsa.PublicKey,degree);
+	f := make([]*ecdsa.PublicKey, degree)
 	i := 0
 
-	for ;i< degree;i++ {		//set the oxo4 prevalue for publickey
-		byte65 := make([]byte,0)
-		byte65 = append(byte65,4)
-		byte65 = append(byte65,payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
+	for ; i < degree; i++ { //set the oxo4 prevalue for publickey
+		byte65 := make([]byte, 0)
+		byte65 = append(byte65, 4)
+		byte65 = append(byte65, payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
 		f[i] = crypto.ToECDSAPub(byte65)
 		if f[i] == nil {
-			return []byte{0},errors.New("commit data is not correct")
+			return []byte{0}, errors.New("commit data is not correct")
 		}
 	}
 
-
-	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN : (i+1)*POLY_CIMMIT_ITEM_LEN])
 	bigx := big.NewInt(0).SetBytes(hashx[:])
 	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
 
-	res,err := s.EvalByPolyG(f,degree - 1,bigx)
-	if err != nil || res == nil{
-		return []byte{0},errors.New("error in caculate poly")
+	res, err := s.EvalByPolyG(f, degree-1, bigx)
+	if err != nil || res == nil {
+		return []byte{0}, errors.New("error in caculate poly")
 	}
 
 	fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
 
-
 	var buf = make([]byte, 64)
-	copy(buf,res.X.Bytes())
-	copy(buf[32:],res.Y.Bytes())
+	copy(buf, res.X.Bytes())
+	copy(buf[32:], res.Y.Bytes())
 
-	return buf,nil
+	return buf, nil
 }
 
-
-
-func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int) (*ecdsa.PublicKey, error) {
-	if len(pks) < 1 || degree != len(pks) - 1 {
+func (s *SolEnhance) EvalByPolyG(pks []*ecdsa.PublicKey, degree int, x *big.Int) (*ecdsa.PublicKey, error) {
+	if len(pks) < 1 || degree != len(pks)-1 {
 		return nil, errors.New("invalid polynomial len")
 	}
 
@@ -919,14 +896,13 @@ func  (s *SolEnhance)  EvalByPolyG(pks []*ecdsa.PublicKey,degree int,x *big.Int)
 		temp1Pk := new(ecdsa.PublicKey)
 		temp1Pk.Curve = crypto.S256()
 
-		temp1Pk.X, temp1Pk.Y = crypto.S256().ScalarMult(pks[i].X,pks[i].Y,temp1.Bytes())
+		temp1Pk.X, temp1Pk.Y = crypto.S256().ScalarMult(pks[i].X, pks[i].Y, temp1.Bytes())
 
-		sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X,sumPk.Y,temp1Pk.X,temp1Pk.Y)
+		sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X, sumPk.Y, temp1Pk.X, temp1Pk.Y)
 
 	}
-	return sumPk,nil
+	return sumPk, nil
 }
-
 
 func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
@@ -935,37 +911,36 @@ func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm 
 
 	//4 point and one ok
 	if len < 64*4 || len%64 != 0 {
-		return []byte{0},errors.New("payload length is not correct")
+		return []byte{0}, errors.New("payload length is not correct")
 	}
 
-	degree := len/64 - 1;
-	if len < (degree + 1)*POLY_CIMMIT_ITEM_LEN {
-		return []byte{0},errors.New("payload is not enough")
+	degree := len/64 - 1
+	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0}, errors.New("payload is not enough")
 	}
 
-	f := make([][]byte,degree)
+	f := make([][]byte, degree)
 	i := 0
-	for ;i< degree;i++ {
-		f[i] = payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]
+	for ; i < degree; i++ {
+		f[i] = payload[i*POLY_CIMMIT_ITEM_LEN : (i+1)*POLY_CIMMIT_ITEM_LEN]
 	}
 
 	//fmt.Println(common.Bytes2Hex(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]))
-	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN])
+	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN : (i+1)*POLY_CIMMIT_ITEM_LEN])
 	//fmt.Println(common.Bytes2Hex(hashx[:]))
 	bigx := big.NewInt(0).SetBytes(hashx[:])
 	bigx = bigx.Mod(bigx, bn256.Order)
 
-	res,err := s.bn256EvalByPolyG(f,degree - 1,bigx)
+	res, err := s.bn256EvalByPolyG(f, degree-1, bigx)
 	if err != nil {
-		return []byte{0},errors.New("error in caculate poly")
+		return []byte{0}, errors.New("error in caculate poly")
 	}
 	//fmt.Println(common.Bytes2Hex(res))
 
-	return res,nil
+	return res, nil
 }
 
-
-func  (s *SolEnhance)  bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) ([]byte, error) {
+func (s *SolEnhance) bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) ([]byte, error) {
 	if len(pkbytes) == 0 || x.Cmp(big.NewInt(0)) == 0 {
 		return nil, errors.New("len(pks)==0 or xvalue is zero")
 	}
@@ -974,14 +949,14 @@ func  (s *SolEnhance)  bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int
 		return nil, errors.New("degree is not content with the len(pks)")
 	}
 
-	pks := make([]*bn256.G1,0)
+	pks := make([]*bn256.G1, 0)
 	for _, val := range pkbytes {
 		//fmt.Println(common.Bytes2Hex(val))
-		pk,err := newCurvePoint(val)
+		pk, err := newCurvePoint(val)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		pks = append(pks,pk)
+		pks = append(pks, pk)
 	}
 
 	sumPk := new(bn256.G1)
@@ -998,11 +973,10 @@ func  (s *SolEnhance)  bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int
 
 }
 
-
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 160 {
-		return []byte{0},errors.New("data is not enough")
+		return []byte{0}, errors.New("data is not enough")
 	}
 
 	rb := payload[0:32]
@@ -1017,29 +991,26 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	pk.X = new(big.Int).SetBytes(pkb[:32])
 	pk.Y = new(big.Int).SetBytes(pkb[32:])
 
-
-
 	//fmt.Println("rbPriv"+common.Bytes2Hex(rb))
 	//fmt.Println(common.Bytes2Hex(iv))
 	//fmt.Println(common.Bytes2Hex(msg))
 	//fmt.Println(common.Bytes2Hex(pkb))
 
-	res,error := ecies.EncryptWithRandom(prv, ecies.ImportECDSAPublic(pk),iv[16:],  msg, nil, nil)
+	res, error := ecies.EncryptWithRandom(prv, ecies.ImportECDSAPublic(pk), iv[16:], msg, nil, nil)
 
 	if error != nil {
-		return []byte{0},error
+		return []byte{0}, error
 	}
 
 	//fmt.Println(common.Bytes2Hex(res))
-	return res,nil
+	return res, nil
 }
-
 
 func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
-	if len < 64 + 32*3 {
-		return []byte{0},errors.New("wrong data length")
+	if len < 64+32*3 {
+		return []byte{0}, errors.New("wrong data length")
 	}
 
 	hash := payload[:32]
@@ -1052,47 +1023,45 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 	//fmt.Println(common.Bytes2Hex(payload[95:160]))
 	pub := crypto.ToECDSAPub(payload[95:160])
 	if pub == nil {
-		return []byte{0},errors.New("wrong data for publlic key")
+		return []byte{0}, errors.New("wrong data for publlic key")
 	}
 
-	res := ecdsa.Verify(pub,hash,sr,ss)
+	res := ecdsa.Verify(pub, hash, sr, ss)
 
 	var buf = make([]byte, 32)
 	if res {
-		buf[31] = byte(1);
+		buf[31] = byte(1)
 	} else {
-		buf[31] = byte(0);
+		buf[31] = byte(0)
 	}
 
-	return buf,nil
+	return buf, nil
 
 }
-
 
 func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
 	if len < 32 {
-		return []byte{0},nil
+		return []byte{0}, nil
 	}
 
 	time := big.NewInt(0).SetBytes(payload[:32])
-	epid,_ := posutil.CalEpochSlotID(time.Uint64())
+	epid, _ := posutil.CalEpochSlotID(time.Uint64())
 	epid--
 
 	inst := posutil.PosAvgRetInst()
 	if inst == nil {
-		return []byte{0},errors.New("not initialzied for pos return ")
+		return []byte{0}, errors.New("not initialzied for pos return ")
 	}
 
-
-	totalIncentive,err := inst.GetAllIncentive(epid)
-	if err != nil || totalIncentive == nil  {
-		return []byte{0},nil
+	totalIncentive, err := inst.GetAllIncentive(epid)
+	if err != nil || totalIncentive == nil {
+		return []byte{0}, nil
 	}
 
-	totalIncentive = totalIncentive.Mul(totalIncentive,big.NewInt(10000))//keep 4 dots parts
-	totalIncentive = totalIncentive.Div(totalIncentive,ether)
+	totalIncentive = totalIncentive.Mul(totalIncentive, big.NewInt(10000)) //keep 4 dots parts
+	totalIncentive = totalIncentive.Div(totalIncentive, ether)
 	ret := totalIncentive.Uint64()
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, ret)
@@ -1108,9 +1077,6 @@ func hexKey(prv string) *ecies.PrivateKey {
 	return ecies.ImportECDSA(key)
 }
 
-
-
-
 // bn256Add implements a native elliptic curve point addition.
 type s256Add struct{}
 
@@ -1120,13 +1086,13 @@ func (s *s256Add) RequiredGas(input []byte) uint64 {
 }
 
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
 	if epid < posconfig.StoremanEpochid {
-		return nil,errors.New("not reach forked epochid")
+		return nil, nil
 	}
 
 	if len(payload) < 128 {
-		return []byte{0},errors.New("the point is not on curve")
+		return []byte{0}, errors.New("the point is not on curve")
 	}
 
 	x1 := big.NewInt(0).SetBytes(payload[:32])
@@ -1135,21 +1101,20 @@ func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, err
 	x2 := big.NewInt(0).SetBytes(payload[64:96])
 	y2 := big.NewInt(0).SetBytes(payload[96:128])
 
-	if !crypto.S256().IsOnCurve(x1,y1) || !crypto.S256().IsOnCurve(x2,y2) {
-		return []byte{0},errors.New("the point is not on 256 curve")
+	if !crypto.S256().IsOnCurve(x1, y1) || !crypto.S256().IsOnCurve(x2, y2) {
+		return []byte{0}, errors.New("the point is not on 256 curve")
 	}
 
-	rx,ry := crypto.S256().Add(x1,y1,x2, y2)
+	rx, ry := crypto.S256().Add(x1, y1, x2, y2)
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("errors in curve add")
+		return []byte{0}, errors.New("errors in curve add")
 	}
 
 	var buf = make([]byte, 64)
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf, rx.Bytes())
+	copy(buf[32:], ry.Bytes())
 
 	return buf, nil
-
 
 }
 
@@ -1167,13 +1132,13 @@ func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
-	epid,_ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
 	if epid < posconfig.StoremanEpochid {
-		return nil,errors.New("not reach forked epochid")
+		return nil, nil
 	}
 
-	if len(payload) < 96{
-		return []byte{0},errors.New("the data length is not correct")
+	if len(payload) < 96 {
+		return []byte{0}, errors.New("the data length is not correct")
 	}
 
 	scalar := payload[:32]
@@ -1185,21 +1150,20 @@ func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byt
 	//fmt.Println("y="+common.ToHex(yPK))
 	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
 
-	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK)) {
-		return []byte{0},errors.New("the point is not on curve")
+	if !crypto.S256().IsOnCurve(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0}, errors.New("the point is not on curve")
 	}
 
-
-	rx,ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK),big.NewInt(0).SetBytes(yPK),scalar)
+	rx, ry := crypto.S256().ScalarMult(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK), scalar)
 
 	if rx == nil || ry == nil {
-		return []byte{0},errors.New("k value is not correct")
+		return []byte{0}, errors.New("k value is not correct")
 	}
 
 	var buf = make([]byte, 64)
 
-	copy(buf,rx.Bytes())
-	copy(buf[32:],ry.Bytes())
+	copy(buf, rx.Bytes())
+	copy(buf[32:], ry.Bytes())
 
 	return buf, nil
 }
