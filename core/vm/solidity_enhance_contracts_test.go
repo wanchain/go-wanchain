@@ -1,9 +1,14 @@
 package vm
 
 import (
+	"crypto/rand"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common"
+	"io"
+	"math/big"
 	"testing"
+
+	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/crypto"
 )
 
 /*
@@ -17,22 +22,21 @@ func TestAdd_1(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c";
+	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	seh := &SolEnhance{}
 
-	res,err :=seh.s256Add(input,nil,nil)
+	res, err := seh.s256Add(input, nil, nil)
 
 	if err != nil {
 		t.Fatalf("error happens")
 	}
-
 
 	if exp != common.Bytes2Hex(res) {
 		t.Fatalf("the result is not match")
@@ -50,15 +54,15 @@ func TestAadd_2(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	seh := &SolEnhance{}
 
-	_,err :=seh.s256Add(input,nil,nil)
+	_, err := seh.s256Add(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -77,15 +81,15 @@ func TestAadd_3(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	seh := &SolEnhance{}
 
-	_,err :=seh.s256Add(input,nil,nil)
+	_, err := seh.s256Add(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -93,23 +97,112 @@ func TestAadd_3(t *testing.T) {
 
 }
 
+/*
+ * test case, point is same, success
+ */
+func TestAadd_4(t *testing.T) {
+
+	x1 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
+	y1 := "0x54506d471f9040b47e839a1fc2779a61ad1520984ee0cf23e66449a5f413be1d"
+
+	x2 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
+	y2 := "0x54506d471f9040b47e839a1fc2779a61ad1520984ee0cf23e66449a5f413be1d"
+
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
+
+	seh := &SolEnhance{}
+	_, err := seh.s256Add(input, nil, nil)
+
+	if err != nil {
+		t.Fatalf("error happens")
+	}
+
+	x1 = "0x1f76ef18799d9d9fec8e76b70f0afad46ce58c71b9c53a0a3ec7682dfe7b11bb"
+	y1 = "0x2e1a929d16546d37aaabb2522d3cf275c937b03331564eb222ae739b1528928e"
+
+	x2 = x1
+	y2 = y1
+
+	input = make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
+
+	s := &bn256Add{}
+
+	ret, err := s.Run(input, nil, nil)
+	if err != nil {
+		t.Fatalf("error happens")
+	}
+
+	fmt.Println(ret)
+
+}
+
+func randomK(r io.Reader) (k *big.Int, err error) {
+	for {
+		k, err = rand.Int(r, crypto.S256().Params().N)
+		if k.Sign() > 0 || err != nil {
+			return
+		}
+	}
+}
+
+func sec256Add(x1, y1, x2, y2 *big.Int, i, j int, t *testing.T) {
+	input := make([]byte, 0)
+	input = append(input, common.LeftPadBytes(x1.Bytes(), 32)...)
+	input = append(input, common.LeftPadBytes(y1.Bytes(), 32)...)
+	input = append(input, common.LeftPadBytes(x2.Bytes(), 32)...)
+	input = append(input, common.LeftPadBytes(y2.Bytes(), 32)...)
+
+	seh := &SolEnhance{}
+
+	_, err := seh.s256Add(input, nil, nil)
+
+	if err != nil {
+		fmt.Println(i, j)
+		seh.s256Add(input, nil, nil)
+		t.Fatalf("error happens")
+	}
+}
+
+func TestPressTest(t *testing.T) {
+	count := 1000
+	pointsX := make([]*big.Int, count)
+	pointsY := make([]*big.Int, count)
+
+	for i := 0; i < count; i++ {
+		k, _ := randomK(rand.Reader)
+		pointsX[i], pointsY[i] = crypto.S256().ScalarBaseMult(k.Bytes())
+	}
+
+	for i := 0; i < count; i++ {
+		for j := 0; j < count; j++ {
+			sec256Add(pointsX[i], pointsY[i], pointsX[j], pointsY[j], i, j, t)
+		}
+	}
+}
 
 /*
  *test case,normal operation, should work well
  */
-func TestMulPk_1(t *testing.T)  {
+func TestMulPk_1(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
 	exp := "979425111f1b36b6e0426988d3a0f4724aaa57db4ef14720667cd42b9f5f456a854f45e729f2c1ed6f2051b295b80c5729857385794a469f3436385c67d7a021"
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
-
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	seh := &SolEnhance{}
-	res,err := seh.s256MulPk(input,nil,nil)
+	res, err := seh.s256MulPk(input, nil, nil)
 
 	if err != nil {
 		t.Fatalf("test failed,error happens")
@@ -125,19 +218,18 @@ func TestMulPk_1(t *testing.T)  {
 /*
  *test case,data length is not enough
  */
-func TestMulPk_2(t *testing.T)  {
+func TestMulPk_2(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
-
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256MulPk(input,nil,nil)
+	_, err := seh.s256MulPk(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
@@ -148,19 +240,18 @@ func TestMulPk_2(t *testing.T)  {
 /*
  *test case,data length is not enough
  */
-func TestMulPk_3(t *testing.T)  {
+func TestMulPk_3(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81700"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d499"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
-
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256MulPk(input,nil,nil)
+	_, err := seh.s256MulPk(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
@@ -171,17 +262,16 @@ func TestMulPk_3(t *testing.T)  {
 /*
  *test case,normal operation, should work well
  */
-func TestMulG_1(t *testing.T)  {
+func TestMulG_1(t *testing.T) {
 
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
 	exp := "979425111f1b36b6e0426988d3a0f4724aaa57db4ef14720667cd42b9f5f456a854f45e729f2c1ed6f2051b295b80c5729857385794a469f3436385c67d7a021"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
 
 	seh := &SolEnhance{}
-	res,err := seh.s256MulG(input,nil,nil)
+	res, err := seh.s256MulG(input, nil, nil)
 
 	fmt.Println(common.Bytes2Hex(res))
 	if err != nil {
@@ -197,59 +287,57 @@ func TestMulG_1(t *testing.T)  {
 /*
  *test case,short scalar data, should failed
  */
-func TestMulG_2(t *testing.T)  {
+func TestMulG_2(t *testing.T) {
 
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256MulG(input,nil,nil)
+	_, err := seh.s256MulG(input, nil, nil)
 
-	if err != nil {
+	if err == nil {
 		t.Fatalf("test failed,no error happens")
 	}
 }
-
 
 /*
  *test case,input wrong scalar data,should failed
  */
-func TestMulG_3(t *testing.T)  {
+func TestMulG_3(t *testing.T) {
 
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa8100"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256MulG(input,nil,nil)
+	_, err := seh.s256MulG(input, nil, nil)
 
 	if err != nil {
 		t.Fatalf("test failed,no error happens")
 	}
 }
 
-
 /*
  *test case,normal operation, should work well
  */
-func TestCalPolyCommit_1(t *testing.T)  {
-	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4";
-	poly := "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901";
+func TestCalPolyCommit_1(t *testing.T) {
+	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4"
+	poly := "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901"
 	exp := "f8ad19ab9967c293c57a258bae7063dc5e206b90e0cc1d4b4accf240626a0ddcc124462a80d316f7974cf84107945ae16d74d010c9632333651a02fa7e4b068d"
-	input := make([]byte,0)
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=130 {
-		subStr := poly[i+2:i+130]
+	for i := 0; i < len(poly); i += 130 {
+		subStr := poly[i+2 : i+130]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[2:])...)
+	input = append(input, common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	res,err := seh.s256CalPolyCommit(input,nil,nil)
+	res, err := seh.s256CalPolyCommit(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -265,20 +353,20 @@ func TestCalPolyCommit_1(t *testing.T)  {
 /*
  *test case,input wrong data, should fail
  */
-func TestCalPolyCommit_2(t *testing.T)  {
-	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcb";
-	poly := "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901";
-	input := make([]byte,0)
+func TestCalPolyCommit_2(t *testing.T) {
+	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcb"
+	poly := "0477947c2048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901"
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=130 {
-		subStr := poly[i+2:i+130]
+	for i := 0; i < len(poly); i += 130 {
+		subStr := poly[i+2 : i+130]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[2:])...)
+	input = append(input, common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256CalPolyCommit(input,nil,nil)
+	_, err := seh.s256CalPolyCommit(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -288,46 +376,45 @@ func TestCalPolyCommit_2(t *testing.T)  {
 /*
  *test case,input wrong data, should fail
  */
-func TestCalPolyCommit_3(t *testing.T)  {
-	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4";
-	poly := "047788882048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901";
-	input := make([]byte,0)
+func TestCalPolyCommit_3(t *testing.T) {
+	pk := "042bda949acb1f1d5e6a2952c928a0524ee088e79bb71be990274ad0d3884230544b0f95d167eef4f76962a5cf569dabc018d025d7494986f7f0b11af7f0bdcbf4"
+	poly := "047788882048cefbeb637ca46d98a1992c8f0a832e288be5adb36bce9ffb7965deef0024de93f1c30255a6b7deec2ba09d14f0c2f457416098b8266bb16a67e52004e84e2ab12f974cea11c948d276ce38b75638907f3259e8c60db07cf80b492d7da5a4c6e915ab16ba695a9825e6e4441cc843016100534fbce9a7d947d290afc904d665dd602ca1bc43245843dd4721dc7e4509b89c0b94e4744366c4ec491e9aad6efde662ab34bc836724db7f8613ff9131986fc21338e0f2352134b7f915f3d80425e027d24a8c65c0264ae8afbc4218cdd72266f8f245017b8725ef730ad4e80884dd77fbac60297ff6cf5cf6cb130b03b4551605cb5fc85f23ad98a9c6ea24d204367763779f7857ff97a304042885516f70e215ba57852d2763692ea8c6be93a7af3551a2014f7d2a1174335ce69808c57b8dc3c8b2f4ae948696052d8b81034304f6c5c039d2dc4d70aad4baefec8e31a5cc9ebd628cda32da8ed770189cf0dee3d5d5688618ff76e46bd3d40b1aa68b122c5c73af09060c065900790c68ee535304eff4a83c31442c94afd04414d7d4a41ecc20dfd6c587b94fd6a0398555c5dacf350411dab79965e9ef184b443b711b666aa290cfb0e2c263a317be9d0d3ec79a049eb4a277716d47fb868daab644eb66f0fff79a931b483af19a11fb2d097d59c09e73d02d7de04f099f463f10a368334e5b94a618eb6dfd80cfa29f6d9c5832e4047f33a451cb89f81d03823b73bbcc3e3efcaddc015c5e2907d2d4a9535eb6ecf23790c8451554319cec0848b1043281fde3d656e4d89f4041718221ad91cbd71a04e6b755737ccb1afcf5a839869a6d6dab529d263796a06e839190b25a45b31c8696659dade33df0be779a2d3aa987810bcf85d45a7e4d905c3ecf0b977a5dfc9f044c9c5be87bd1f4b334b4a34eac2fac1fb45a248eb071a077fb65e725670fa2367a9ffdb79233769859d44511f01f17a8eb3ae5092c739f2f37d07d656c440cd4043c188a61cdf98bc160935134a039acf3bf1a76d5389841fe93e93317fae34bc15d26c76d926650944c1d8c696212d48691540b04a362ff9e710f8fba967fb58004e919ca4d9a9f59b925579c17fd27fddbf144259a64562051cd93f1672729c3cb24ef17632d7538aa0f49c44b591f26685d3e0edba529e8f868f091839802c037043680e14d808cb3d9f34243204b16f6cdaf172253100526b3a774bc5cb1cbd70d2f9f5f52793b5aeb8b2e22861be26f71ee762aed65b983910fcfe6cab00d4f1704e03eee5f2f37368d687350ee6088d5255263c145ac7c65d630a2d3d7f81452a7d474e5f92e76f0fafddec74e4b0cc65499a34965e6485e3474166a21d6262cbc0444ca736fcd0476b316701d4c636f4abe69bca60e9f66f80293d821fdf3549d604c45dabc802c75c68ff9de8dff63e946d62a44c99c108558addd4568f63cdc66047021ed3d4f2d75ec7dbbdb4fffd429f9784cd4781481b6bb03f80673190751f0cb5f4d690ded3c1cecd9181fab90ed34bec67c1af519caa36e8c24bdd6430901"
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=130 {
-		subStr := poly[i+2:i+130]
+	for i := 0; i < len(poly); i += 130 {
+		subStr := poly[i+2 : i+130]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[2:])...)
+	input = append(input, common.FromHex(pk[2:])...)
 
 	seh := &SolEnhance{}
-	_,err := seh.s256CalPolyCommit(input,nil,nil)
+	_, err := seh.s256CalPolyCommit(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
 }
 
-
 /*
  *test case,normal operation, should work well
  */
-func TestCheckSig_1(t *testing.T)  {
+func TestCheckSig_1(t *testing.T) {
 
 	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac4995096a17"
 	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
 	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
-	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+	pk := "0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
 
 	expected := "0000000000000000000000000000000000000000000000000000000000000001"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(hash)...)
-	input = append(input,common.FromHex(r)...)
-	input = append(input,common.FromHex(s)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(hash)...)
+	input = append(input, common.FromHex(r)...)
+	input = append(input, common.FromHex(s)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	ret,err := seh.checkSig(input,nil,nil)
+	ret, err := seh.checkSig(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -338,54 +425,50 @@ func TestCheckSig_1(t *testing.T)  {
 
 }
 
-
-
 /*
  *test case,wrong data length,should failed
  */
-func TestCheckSig_2(t *testing.T)  {
+func TestCheckSig_2(t *testing.T) {
 
 	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac499509"
 	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
 	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
-	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+	pk := "0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
 
-
-	input := make([]byte,0)
-	input = append(input,common.FromHex(hash)...)
-	input = append(input,common.FromHex(r)...)
-	input = append(input,common.FromHex(s)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(hash)...)
+	input = append(input, common.FromHex(r)...)
+	input = append(input, common.FromHex(s)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.checkSig(input,nil,nil)
+	_, err := seh.checkSig(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
 
 }
 
-
 /*
  *test case,wrong r,s,should return 0
  */
-func TestCheckSig_3(t *testing.T)  {
+func TestCheckSig_3(t *testing.T) {
 
 	r := "0xba1d75823c0f4c07be3e07723e54c3d503829d3c9d0599a78426ac4995096a19"
 	s := "0x9a3b16eac39592d14e53b030e0275d087b9e6b38dc9d47a7383df40b4c7aec90"
 	hash := "0xb536ad7724251502d75380d774ecb5c015fd8a191dd6ceb05abf677e281b81e1"
-	pk :="0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
+	pk := "0xd9482a01dd8bb0fb997561e734823d6cf341557ab117b7f0de72530c5e2f0913ef74ac187589ed90a2b9b69f736af4b9f87c68ae34c550a60f4499e2559cbfa5"
 
 	expected := "0000000000000000000000000000000000000000000000000000000000000000"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(hash)...)
-	input = append(input,common.FromHex(r)...)
-	input = append(input,common.FromHex(s)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(hash)...)
+	input = append(input, common.FromHex(r)...)
+	input = append(input, common.FromHex(s)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	ret,err := seh.checkSig(input,nil,nil)
+	ret, err := seh.checkSig(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -395,29 +478,28 @@ func TestCheckSig_3(t *testing.T)  {
 	}
 }
 
-
 /*
  *test case,normal operation, should work well
  */
-func TestCheckSig_4(t *testing.T)  {
+func TestCheckSig_4(t *testing.T) {
 
 	r := "0xaccf947372cef4a8d3541ff7ecf245f416c7f84d8a09c5ce3cec4c348fb6fdab"
 	s := "0x50e224d078b209bd2c9cbbc9ff13f640f50529f7c4d8f679b7c98756329c73ab"
 
 	hash := "0x950d4c7ddb6079061db24ec3c208400572d4b805ebf00db72ada8703b6b47a01"
 
-	pk :="0xbe3b7fd88613dc272a36f4de570297f5f33b87c26de3060ad04e2ea697e13125a2454acd296e1879a7ddd0084d9e4e724fca9ef610b21420978476e2632a1782"
+	pk := "0xbe3b7fd88613dc272a36f4de570297f5f33b87c26de3060ad04e2ea697e13125a2454acd296e1879a7ddd0084d9e4e724fca9ef610b21420978476e2632a1782"
 
 	expected := "0000000000000000000000000000000000000000000000000000000000000001"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(hash)...)
-	input = append(input,common.FromHex(r)...)
-	input = append(input,common.FromHex(s)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(hash)...)
+	input = append(input, common.FromHex(r)...)
+	input = append(input, common.FromHex(s)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	ret,err := seh.checkSig(input,nil,nil)
+	ret, err := seh.checkSig(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -427,7 +509,6 @@ func TestCheckSig_4(t *testing.T)  {
 	}
 
 }
-
 
 /*
  *test case,normal operation, should work well
@@ -440,21 +521,20 @@ func TestS256Add_1(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c";
+	exp := "3e758e5b2af18254a885210d63c573facc2bd85edb27fdb98e3d0b0ab2dfcd1b7e14602a338ed7011b8f22b4752234619011482fe8b6dcee0e2eeb96c721318c"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	res,err :=s.Run(input,nil,nil)
+	res, err := s.Run(input, nil, nil)
 
 	if err != nil {
 		t.Fatalf("error happens")
 	}
-
 
 	if exp != common.Bytes2Hex(res) {
 		t.Fatalf("the result is not match")
@@ -472,14 +552,14 @@ func TestS256Add_2(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_,err :=s.Run(input,nil,nil)
+	_, err := s.Run(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -498,14 +578,14 @@ func TestS256Add_3(t *testing.T) {
 	x2 := "0xfb4a50e7008341df6390ad3dcd758b1498959bf18369edc335435367088910c6"
 	y2 := "0xe55f58908701c932768c2fd16932f694acd30e21a5f2a4f6242b5f0567696240"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_,err :=s.Run(input,nil,nil)
+	_, err := s.Run(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -513,6 +593,9 @@ func TestS256Add_3(t *testing.T) {
 
 }
 
+/*
+ * test case, point is same, success
+ */
 func TestS256Add_4(t *testing.T) {
 
 	x1 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
@@ -521,36 +604,36 @@ func TestS256Add_4(t *testing.T) {
 	x2 := "0xa907b041f9339a35b352a6fad05094e5c47a957863ef926d3a5afe8a97ac2308"
 	y2 := "0x54506d471f9040b47e839a1fc2779a61ad1520984ee0cf23e66449a5f413be1d"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(x1)...)
-	input = append(input,common.FromHex(y1)...)
-	input = append(input,common.FromHex(x2)...)
-	input = append(input,common.FromHex(y2)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(x1)...)
+	input = append(input, common.FromHex(y1)...)
+	input = append(input, common.FromHex(x2)...)
+	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_,err :=s.Run(input,nil,nil)
+	_, err := s.Run(input, nil, nil)
 
-	if err == nil {
+	if err != nil {
 		t.Fatalf("error happens")
 	}
 
 }
+
 /*
  *test case,normal operation, should work well
  */
-func TestS256ScalarMul_1(t *testing.T)  {
+func TestS256ScalarMul_1(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
 	exp := "979425111f1b36b6e0426988d3a0f4724aaa57db4ef14720667cd42b9f5f456a854f45e729f2c1ed6f2051b295b80c5729857385794a469f3436385c67d7a021"
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
-
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	res,err := s.Run(input,nil,nil)
+	res, err := s.Run(input, nil, nil)
 
 	if err != nil {
 		t.Fatalf("test failed,error happens")
@@ -566,18 +649,18 @@ func TestS256ScalarMul_1(t *testing.T)  {
 /*
  *test case,data length is not enough
  */
-func TestS256ScalarMul_2(t *testing.T)  {
+func TestS256ScalarMul_2(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	_,err := s.Run(input,nil,nil)
+	_, err := s.Run(input, nil, nil)
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
 	}
@@ -587,18 +670,18 @@ func TestS256ScalarMul_2(t *testing.T)  {
 /*
  *test case,data length is not enough
  */
-func TestS256ScalarMul_3(t *testing.T)  {
+func TestS256ScalarMul_3(t *testing.T) {
 	scalar := "0xeb94edbc8d5113cc505ebb489d47ade76bc3f02fd02445f7f47fea454faa81ae"
 	xPk := "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81700"
 	yPk := "0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d491"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(scalar)...)
-	input = append(input,common.FromHex(xPk)...)
-	input = append(input,common.FromHex(yPk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(scalar)...)
+	input = append(input, common.FromHex(xPk)...)
+	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	_,err := s.Run(input,nil,nil)
+	_, err := s.Run(input, nil, nil)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
@@ -610,21 +693,21 @@ func TestS256ScalarMul_3(t *testing.T)  {
  *test case,normal operation, should work well
  */
 
-func TestEncrypt_1(t *testing.T)  {
+func TestEncrypt_1(t *testing.T) {
 	pk := "0x1fc83598dbd36792d8246c7651631535953c741bf93ba32f1dc2960e92fc2f276fdfb930c4a84b39bc84b0f149323e5a6b10092acaf31f31b9f8a0946f6643d0"
 	iv := "0x00000000000000000000000000000000c5fd3f6b773f094d146a255946114822"
 	rbpri := "0x53b7bccfd434a359b56f5bac592935802c3e30f6e69e30e0bc6bb4ac1108f1b7"
 	msg := "0x334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9e130"
 	exp := "04a804abfeff33e966dabe0bbdb7ab6bca5c54c96b5000ae41391d9f30e9aeb63a05f49fb1adbbff4e7390ce29381db7c8c14c442d4a773891a9326c6db2c6792bc5fd3f6b773f094d146a255946114822b382f2e2b6bd7a310fa6961efa3d84c60028aa9224148c221d3c8a697bec289fd09601985302264c1033de1c282e456f332f808ae60eb6cb75123153d6e7767627bce7f0d752f866116727185e2d7d7b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(rbpri)...)
-	input = append(input,common.FromHex(iv)...)
-	input = append(input,common.FromHex(msg)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(rbpri)...)
+	input = append(input, common.FromHex(iv)...)
+	input = append(input, common.FromHex(msg)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	ret,err := seh.encrypt(input,nil,nil)
+	ret, err := seh.encrypt(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -634,25 +717,24 @@ func TestEncrypt_1(t *testing.T)  {
 	}
 }
 
-
 /*
  *test case,data length is not enough,error will happen
  */
 
-func TestEncrypt_2(t *testing.T)  {
+func TestEncrypt_2(t *testing.T) {
 	pk := "0x1fc83598dbd36792d8246c7651631535953c741bf93ba32f1dc2960e92fc2f276fdfb930c4a84b39bc84b0f149323e5a6b10092acaf31f31b9f8a0946f6643d0"
 	iv := "0x00000000000000000000000000000000c5fd3f6b773f094d146a255946114822"
 	rbpri := "0x53b7bccfd434a359b56f5bac592935802c3e30f6e69e30e0bc6bb4ac1108f1b7"
 	msg := "0x334dd1fdf10ae8dc29e1d2e46309a8700b95cc103bad30c246901be4a4f9"
 
-	input := make([]byte,0)
-	input = append(input,common.FromHex(rbpri)...)
-	input = append(input,common.FromHex(iv)...)
-	input = append(input,common.FromHex(msg)...)
-	input = append(input,common.FromHex(pk)...)
+	input := make([]byte, 0)
+	input = append(input, common.FromHex(rbpri)...)
+	input = append(input, common.FromHex(iv)...)
+	input = append(input, common.FromHex(msg)...)
+	input = append(input, common.FromHex(pk)...)
 
 	seh := &SolEnhance{}
-	_,err := seh.encrypt(input,nil,nil)
+	_, err := seh.encrypt(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -662,21 +744,21 @@ func TestEncrypt_2(t *testing.T)  {
 /*
  *test case,normal operation, should work well
  */
-func TestBn256CalPolyCommit_1(t *testing.T)  {
-	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
-	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4";
+func TestBn256CalPolyCommit_1(t *testing.T) {
+	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f"
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4"
 	exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
-	input := make([]byte,0)
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=128 {
-		subStr := poly[i:i+128]
+	for i := 0; i < len(poly); i += 128 {
+		subStr := poly[i : i+128]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[0:])...)
+	input = append(input, common.FromHex(pk[0:])...)
 
 	seh := &SolEnhance{}
-	res,err := seh.bn256CalPolyCommit(input,nil,nil)
+	res, err := seh.bn256CalPolyCommit(input, nil, nil)
 	if err != nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -689,25 +771,24 @@ func TestBn256CalPolyCommit_1(t *testing.T)  {
 
 }
 
-
 /*
  *test case,normal operation, should happen error
  */
-func TestBn256CalPolyCommit_2(t *testing.T)  {
-	pk := "b2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
-	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4";
+func TestBn256CalPolyCommit_2(t *testing.T) {
+	pk := "b2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f"
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f0050e7fb3f430cf86b9f1befa71fb577f3970929012bb233817eb684491885eb135362ac772a861d80a9e5e787a82254d925c6201111ba1400206fad29aafd1e0bbd96f03ab2fa7454fe3b4f21245c4dfcc5bebd65bf2f91309ef9843d29f01b0ae491219423a2caad81acfaa3bff77022a0b604f0ee51091f0111b5ed6f79a4"
 	//exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
-	input := make([]byte,0)
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=128 {
-		subStr := poly[i:i+128]
+	for i := 0; i < len(poly); i += 128 {
+		subStr := poly[i : i+128]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[0:])...)
+	input = append(input, common.FromHex(pk[0:])...)
 
 	seh := &SolEnhance{}
-	res,err := seh.bn256CalPolyCommit(input,nil,nil)
+	res, err := seh.bn256CalPolyCommit(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
@@ -716,28 +797,26 @@ func TestBn256CalPolyCommit_2(t *testing.T)  {
 
 }
 
-
 /*
  *test case,normal operation, should work well
  */
-func TestBn256CalPolyCommit_3(t *testing.T)  {
-	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f";
-	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f";
+func TestBn256CalPolyCommit_3(t *testing.T) {
+	pk := "2ab2e3655ebd58b188f9ed3ba466e3ae39f4f6e9bcbe80e355be8f1ccd222f97175ebb6b000cb43a3aa6e69dd05d1710719559b17983a0067420de99f3c3cd9f"
+	poly := "0b4a75cd5ab9b0aea1cd75504797531f38134b17a6658bb52bcacb6c5a9a9bcf252d7799c95874e4e525e5647424153977a77c8824a50627db6f8b81f3fd891f"
 	//exp := "29727fbaf2c569bfae775061b3402945cf5b0c5b431d7961e62f67b7d548c63f2e1c7408cd3de3c1c39055d28a542f5918a180163f73bc0a165d9dda192f2e41"
-	input := make([]byte,0)
+	input := make([]byte, 0)
 
-	for i:=0;i<len(poly);i+=128 {
-		subStr := poly[i:i+128]
+	for i := 0; i < len(poly); i += 128 {
+		subStr := poly[i : i+128]
 		input = append(input, common.FromHex(subStr)...)
 	}
 
-	input = append(input,common.FromHex(pk[0:])...)
+	input = append(input, common.FromHex(pk[0:])...)
 
 	seh := &SolEnhance{}
-	_,err := seh.bn256CalPolyCommit(input,nil,nil)
+	_, err := seh.bn256CalPolyCommit(input, nil, nil)
 	if err == nil {
 		t.Fatalf("errors happend during caculating")
 	}
-
 
 }

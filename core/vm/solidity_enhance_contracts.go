@@ -753,7 +753,13 @@ func (s *SolEnhance) s256Add(payload []byte, contract *Contract, evm *EVM) ([]by
 		return []byte{0}, errors.New("the point is not on curve")
 	}
 
-	rx, ry := crypto.S256().Add(x1, y1, x2, y2)
+	var rx, ry *big.Int
+	if bytes.Equal(x1.Bytes(), x2.Bytes()) && bytes.Equal(y1.Bytes(), y2.Bytes()) {
+		rx, ry = crypto.S256().Double(x1, y1)
+	} else {
+		rx, ry = crypto.S256().Add(x1, y1, x2, y2)
+	}
+
 	if rx == nil || ry == nil {
 		return []byte{0}, errors.New("errors in caculation")
 	}
@@ -1085,9 +1091,11 @@ func (s *s256Add) RequiredGas(input []byte) uint64 {
 }
 
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
-	if epid < posconfig.StoremanEpochid {
-		return nil, nil
+	if evm != nil {
+		epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
+		if epid < posconfig.StoremanEpochid {
+			return nil, nil
+		}
 	}
 
 	if len(payload) < 128 {
@@ -1136,10 +1144,11 @@ func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
 }
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-
-	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
-	if epid < posconfig.StoremanEpochid {
-		return nil, nil
+	if evm != nil {
+		epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
+		if epid < posconfig.StoremanEpochid {
+			return nil, nil
+		}
 	}
 
 	if len(payload) < 96 {
