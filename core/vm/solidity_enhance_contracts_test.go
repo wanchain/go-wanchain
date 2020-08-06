@@ -153,38 +153,59 @@ func randomK(r io.Reader) (k *big.Int, err error) {
 	}
 }
 
-func sec256Add(x1, y1, x2, y2 *big.Int, i, j int, t *testing.T) {
+func sec256Mul(x, y, k *big.Int, t *testing.T) (x3, y3 *big.Int) {
+	input := make([]byte, 0)
+	input = append(input, common.LeftPadBytes(k.Bytes(), 32)...)
+	input = append(input, common.LeftPadBytes(x.Bytes(), 32)...)
+	input = append(input, common.LeftPadBytes(y.Bytes(), 32)...)
+
+	s := &s256ScalarMul{}
+	res, err := s.Run(input, nil, nil)
+
+	if err != nil {
+		t.Fatalf("sec256Mul failed,error happens")
+	}
+
+	return big.NewInt(0).SetBytes(res[:32]), big.NewInt(0).SetBytes(res[32:64])
+}
+
+func sec256Add(x1, y1, x2, y2 *big.Int, i, j int, t *testing.T) (x3, y3 *big.Int) {
 	input := make([]byte, 0)
 	input = append(input, common.LeftPadBytes(x1.Bytes(), 32)...)
 	input = append(input, common.LeftPadBytes(y1.Bytes(), 32)...)
 	input = append(input, common.LeftPadBytes(x2.Bytes(), 32)...)
 	input = append(input, common.LeftPadBytes(y2.Bytes(), 32)...)
 
-	seh := &SolEnhance{}
+	seh := &s256Add{}
 
-	_, err := seh.s256Add(input, nil, nil)
+	res, err := seh.Run(input, nil, nil)
 
 	if err != nil {
 		fmt.Println(i, j)
-		seh.s256Add(input, nil, nil)
-		t.Fatalf("error happens")
+		// seh.s256Add(input, nil, nil)
+		t.Fatalf("sec256Add error happens")
 	}
+	return big.NewInt(0).SetBytes(res[:32]), big.NewInt(0).SetBytes(res[32:64])
 }
 
 func TestPressTest(t *testing.T) {
-	count := 1000
+	count := 100
 	pointsX := make([]*big.Int, count)
 	pointsY := make([]*big.Int, count)
+	randoms := make([]*big.Int, count)
 
 	for i := 0; i < count; i++ {
 		k, _ := randomK(rand.Reader)
+		randoms[i] = k
 		pointsX[i], pointsY[i] = crypto.S256().ScalarBaseMult(k.Bytes())
 	}
 
 	for i := 0; i < count; i++ {
 		for j := 0; j < count; j++ {
-			sec256Add(pointsX[i], pointsY[i], pointsX[j], pointsY[j], i, j, t)
+			x, y := sec256Add(pointsX[i], pointsY[i], pointsX[j], pointsY[j], i, j, t)
+			sec256Mul(x, y, randoms[i], t)
 		}
+		fmt.Println(i * count)
 	}
 }
 
