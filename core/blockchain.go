@@ -1082,6 +1082,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			if bc.restartSucess {
 				//only worked after passing sync target block - 2*secpara
 				if bc.biggerThanCriticalBlock(block) {
+                    // TODO: is this for test commit?
 					//return NonStatTy, ErrInsufficientCQ
 				}
 			}

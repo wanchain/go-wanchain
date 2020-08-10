@@ -62,7 +62,8 @@ const (
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
 	IncentiveStartStage  = Stage2K
-
+    
+    // TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
 	K      = 10

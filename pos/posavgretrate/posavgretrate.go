@@ -24,7 +24,7 @@ type PosAvgRet struct {
 }
 
 var posavgret *PosAvgRet
-var Testinjected = false
+var Testinjected = false // TODO: remove
 
 func NewPosAveRet() *PosAvgRet {
 
