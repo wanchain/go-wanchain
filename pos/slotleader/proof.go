@@ -38,8 +38,13 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
 
 	if isDefault {
-		log.Debug("VerifySlotProof", "isDefault", isDefault, "epochID", epochID)
-		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		if epochID < posconfig.Cfg().MarsEpochId {
+			log.Debug("VerifySlotProof", "isDefault", isDefault, "epochID", epochID)
+			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		}
+		log.Debug("VerifySlotProof Mars", "isDefault", isDefault, "epochID", epochID)
+		epRecovery := GetRecoveryEpochID(epochID)
+		return s.VerifySlotProof(block, epRecovery, slotID, Proof, ProofMeg)
 	}
 
 	rbPtr, err := s.getRandom(block, epochID)
@@ -198,8 +203,14 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	}
 	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
 	if isDefault {
-		log.Warn("getSlotLeaderProof", "isDefault", isDefault)
-		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+		if epochID < posconfig.Cfg().MarsEpochId {
+			log.Warn("getSlotLeaderProof", "isDefault", isDefault)
+			return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+		}
+
+		log.Warn("getSlotLeaderProof Mars", "isDefault", isDefault)
+		epRecovery := GetRecoveryEpochID(epochID)
+		return s.getSlotLeaderProof(PrivateKey, epRecovery, slotID)
 	}
 
 	//SMA PRE

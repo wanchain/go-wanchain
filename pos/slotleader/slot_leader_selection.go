@@ -140,17 +140,22 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 
 	_, isGenesis, _ := s.getSMAPieces(epochID)
 	if isGenesis {
-		log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
+		if epochID < posconfig.Cfg().MarsEpochId {
+			log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
 
-		if s.getDefaultSlotLeader(slotID) != nil {
-			log.Info("GetSlotLeader:getDefaultSlotLeader",
-				"epochID", epochID,
-				"slotID", slotID,
-				"slot leader", hex.EncodeToString(crypto.FromECDSAPub(s.getDefaultSlotLeader(slotID))))
-		} else {
-			log.Warn("GetSlotLeader slot leader is nil")
+			if s.getDefaultSlotLeader(slotID) != nil {
+				log.Info("GetSlotLeader:getDefaultSlotLeader",
+					"epochID", epochID,
+					"slotID", slotID,
+					"slot leader", hex.EncodeToString(crypto.FromECDSAPub(s.getDefaultSlotLeader(slotID))))
+			} else {
+				log.Warn("GetSlotLeader slot leader is nil")
+			}
+			return s.getDefaultSlotLeader(slotID), nil
 		}
-		return s.getDefaultSlotLeader(slotID), nil
+		log.Info("GetSlotLeader use getDefaultSlotLeader Mars")
+		epRecovery := GetRecoveryEpochID(epochID)
+		return s.GetSlotLeader(epRecovery, slotID)
 	}
 
 	return s.getSlotLeader(epochID, slotID)
