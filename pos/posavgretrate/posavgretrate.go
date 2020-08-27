@@ -87,8 +87,7 @@ func (p *PosAvgRet) GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, 
 		val, err := p.avgdb.GetWithIndex(epid, 1, "perepid")
 		if err == nil && val != nil {
 			retTotal += binary.BigEndian.Uint64(val)
-			// TODO
-			//continue
+			continue
 		}
 
 		targetBlkNum := util.GetEpochBlock(epid)

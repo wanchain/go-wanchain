@@ -16,6 +16,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
+	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
@@ -621,7 +622,7 @@ type SolEnhance struct {
 // contract interfaces
 //
 func (s *SolEnhance) RequiredGas(input []byte) uint64 {
-	return 0
+	return params.GasForSolEnhance
 }
 
 func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
@@ -1087,7 +1088,7 @@ type s256Add struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (s *s256Add) RequiredGas(input []byte) uint64 {
-	return 0
+	return params.S256AddGas
 }
 
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1140,7 +1141,7 @@ type s256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
-	return 0
+	return params.S256ScalarMulGas
 }
 
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {

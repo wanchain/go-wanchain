@@ -69,12 +69,16 @@ const (
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
-
-	RequiredGasPerMixPub uint64 = 4000 // ring signature mix difficulty gas
-	GetOTAMixSetMaxSize  uint64 = 20   // Max number of mix ota set size from once getting
-
+	Bn256AddGasV2           uint64 = 50     // Gas needed for an elliptic curve addition
+	Bn256ScalarMulGasV2     uint64 = 100
+	RequiredGasPerMixPub    uint64 = 4000 // ring signature mix difficulty gas
+	GetOTAMixSetMaxSize     uint64 = 20   // Max number of mix ota set size from once getting
+	GasForSolEnhance        uint64 = 100
+	S256AddGas              uint64 = 50 // Gas needed for an elliptic curve addition
+	S256ScalarMulGas        uint64 = 100
 	//SlsStgOnePerByteGas		uint64 = 20      // per byte gas for SlsStgOnePerByteGas
 	SlsStgTwoPerByteGas uint64 = 20 // per byte gas for SlsStgOnePerByteGas
+
 )
 
 var (

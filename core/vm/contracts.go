@@ -298,7 +298,7 @@ func (c *bn256Add) RequiredGas(input []byte) uint64 {
 		return params.Bn256AddGas
 	}
 
-	return 0
+	return params.Bn256AddGasV2
 
 }
 
@@ -329,7 +329,7 @@ func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
 	if epid < posconfig.Cfg().MarsEpochId {
 		return params.Bn256ScalarMulGas
 	}
-	return 0
+	return params.Bn256ScalarMulGasV2
 }
 
 func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {

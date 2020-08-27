@@ -34,7 +34,7 @@ func GetRecoveryEpochID(epochID uint64) uint64 {
 
 	var epochGet uint64
 
-	if t1-t2 <= (posconfig.SlotCount+posconfig.K)*posconfig.SlotTime {
+	if t1-t2 <= posconfig.SlotCount*posconfig.SlotTime {
 		if preEpochBlock <= posconfig.Pow2PosUpgradeBlockNumber {
 			return posconfig.FirstEpochId
 		}

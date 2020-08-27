@@ -57,7 +57,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 2
+	SlotTime = 5
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -66,7 +66,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 10
+	K      = 1440
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
@@ -107,8 +107,8 @@ const (
 	MainnetVenusEpochId = 11112222
 	TestnetVenusEpochId = 18369
 
-	MainnetMarsEpochId = 11112222
-	TestnetMarsEpochId = 6660056
+	MainnetMarsEpochId = MainnetVenusEpochId
+	TestnetMarsEpochId = 18501
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
