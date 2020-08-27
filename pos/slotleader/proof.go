@@ -364,7 +364,7 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 		var alphaPki []*ecdsa.PublicKey
 		alphaPkiCached, ok := APkiCache.Get(ckey)
 		if hash.String() == "0x0000000000000000000000000000000000000000000000000000000000000000" || !ok {
-			log.Info("no APkiCache", "ckey", ckey)
+			// log.Info("no APkiCache", "ckey", ckey)
 			var err error
 			statedb, _ := s.getCurrentStateDb()
 			alphaPki, _, err = vm.GetStage2TxAlphaPki(statedb, epochID-1, uint64(i))
@@ -378,7 +378,7 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 			}
 		} else {
 			alphaPki = alphaPkiCached.([]*ecdsa.PublicKey)
-			log.Info("use APkiCache", "ckey", ckey, "alphaPki0", hex.EncodeToString(crypto.FromECDSAPub(alphaPki[0])))
+			// log.Info("use APkiCache", "ckey", ckey, "alphaPki0", hex.EncodeToString(crypto.FromECDSAPub(alphaPki[0])))
 		}
 		for j := 0; j < posconfig.EpochLeaderCount; j++ {
 			stageTwoAlphaPKi[i][j] = alphaPki[j]

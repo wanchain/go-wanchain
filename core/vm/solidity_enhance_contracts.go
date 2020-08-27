@@ -631,7 +631,7 @@ func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
-	if epid < posconfig.StoremanEpochid {
+	if epid < posconfig.Cfg().MarsEpochId {
 		// return nil,errors.New("not reach forked epochid")
 		return nil, nil
 	}
@@ -681,7 +681,7 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 	common.LeftPadBytes(buf, 32)
 
 	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eid < posconfig.StoremanEpochid {
+	if eid < posconfig.Cfg().MarsEpochId {
 		return buf, errors.New("not reach forked epochid")
 	}
 
@@ -1093,7 +1093,7 @@ func (s *s256Add) RequiredGas(input []byte) uint64 {
 func (s *s256Add) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	if evm != nil {
 		epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
-		if epid < posconfig.StoremanEpochid {
+		if epid < posconfig.Cfg().MarsEpochId {
 			return nil, nil
 		}
 	}
@@ -1146,7 +1146,7 @@ func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
 func (s *s256ScalarMul) Run(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	if evm != nil {
 		epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
-		if epid < posconfig.StoremanEpochid {
+		if epid < posconfig.Cfg().MarsEpochId {
 			return nil, nil
 		}
 	}

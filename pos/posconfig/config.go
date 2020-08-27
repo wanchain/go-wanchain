@@ -113,7 +113,8 @@ const (
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
 
-	StoremanEpochid = ApolloEpochID + TARGETS_LOCKED_EPOCH
+	// StoremanEpochid -> posconfig.Cfg().MarsEpochId
+	// StoremanEpochid = ApolloEpochID + TARGETS_LOCKED_EPOCH
 
 	SeekBackCount = uint64(10) // use 10 epoch before state
 )

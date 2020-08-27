@@ -20,14 +20,16 @@ package vm
 import (
 	"crypto/sha256"
 	"errors"
+	"math/big"
+
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
-	"math/big"
 
 	"crypto/ecdsa"
 	"strings"
 
 	"fmt"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
 	"github.com/wanchain/go-wanchain/common"
@@ -291,8 +293,8 @@ type bn256Add struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256Add) RequiredGas(input []byte) uint64 {
-	epid,_ := util.GetCurrentBlkEpochSlotID();
-	if epid < posconfig.StoremanEpochid {
+	epid, _ := util.GetCurrentBlkEpochSlotID()
+	if epid < posconfig.Cfg().MarsEpochId {
 		return params.Bn256AddGas
 	}
 
@@ -323,8 +325,8 @@ type bn256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
-	epid,_ := util.GetCurrentBlkEpochSlotID();
-	if epid < posconfig.StoremanEpochid {
+	epid, _ := util.GetCurrentBlkEpochSlotID()
+	if epid < posconfig.Cfg().MarsEpochId {
 		return params.Bn256ScalarMulGas
 	}
 	return 0
@@ -860,7 +862,6 @@ func (c *wanCoinSC) refund(all []byte, contract *Contract, evm *EVM) ([]byte, er
 
 	addrSrc := contract.CallerAddress
 
-
 	evm.StateDB.AddBalance(addrSrc, value)
 	return []byte{1}, nil
 
@@ -1013,5 +1014,3 @@ func GetSupportStampOTABalances() []*big.Int {
 
 	return stampBalances
 }
-
-
