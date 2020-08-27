@@ -181,7 +181,7 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
-	if epochID >= posconfig.Cfg().MarsEpochId || epochID > posconfig.FirstEpochId+2 {
+	if epochID >= posconfig.Cfg().MarsEpochId && epochID > posconfig.FirstEpochId+2 {
 		epRecovery := GetRecoveryEpochID(epochID)
 		_, isDefault := s.GetPreEpochLeadersPK(epRecovery)
 		_, isGenesis, _ := s.getSMAPieces(epRecovery)
