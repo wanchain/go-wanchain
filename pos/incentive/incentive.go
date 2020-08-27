@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/log"
 
@@ -54,7 +55,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bool {
+func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, header *types.Header) bool {
 	if chain == nil || stateDb == nil {
 		log.SyslogErr("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false
@@ -74,7 +75,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	rpAddrs, rpAct := getRandomProposerInfo(stateDb, epochID)
 	log.Info("rp Addrs", "len", len(rpAddrs))
 
-	slAddrs, slBlk, slAct, ctrlCount := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount)
+	slAddrs, slBlk, slAct, ctrlCount := getSlotLeaderInfo(chain, epochID, posconfig.SlotCount, header)
 	log.Info("sl Addr ", "len", len(slAddrs), "slAct", slAct, "ctrlCount", ctrlCount)
 	log.Info("sl Blk ", "len", len(slBlk), "blks", slBlk)
 
@@ -148,33 +149,6 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	addRemainIncentivePool(stateDb, epochID, remainsAll)
 	saveRemain(epochID, remainsAll)
 
-//////////////////////////////////////////////////////////////////////////
-	//test code which will be deleted !!!!!!!!!!!!!!!
-/*
-	validator := []string{	"0xf7a2681f8Cf9661B6877de86034166422cd8C308",
-							"0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8",
-							"0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e",
-							"0x344C2d4d8B42204b0ab3061A85E0C50EEb2fa8DA",
-							"0xb4E61D10344203de4530d4A99d55f32aD25580e9",
-							"0xf851B2eDAe9D24876ed7645062331622e4f18A05",
-						  }
-	finalIncentive = make([][]vm.ClientIncentive, 0)
-	for i := 0; i < len(validator); i++ {
-		cia := make([]vm.ClientIncentive, 0)
-
-		for m := 0; m < len(validator); m++ {
-			incent,_ := big.NewInt(0).SetString("1000000000000000000",10)
-			cia = append(cia,vm.ClientIncentive{ValidatorAddr:common.HexToAddress(validator[i]),
-												WalletAddr:common.HexToAddress(validator[i]),
-												Incentive:incent})
-
-		}
-
-		finalIncentive = append(finalIncentive,cia)
-	}
-*/
-/////////////////////////////////////////////////////////////////////////////////////
-
 	pay(finalIncentive, stateDb)
 
 	setStakerInfo(epochID, finalIncentive)
@@ -184,11 +158,10 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64) bo
 	finished(stateDb, epochID)
 
 	//cal return rate in advance
-	if epochID > posconfig.FirstEpochId + posconfig.TARGETS_LOCKED_EPOCH {
-		retrateInst := posutil.PosAvgRetInst();
+	if epochID > posconfig.FirstEpochId+posconfig.TARGETS_LOCKED_EPOCH {
+		retrateInst := posutil.PosAvgRetInst()
 		go retrateInst.GetOneEpochAvgReturnFor90LockEpoch(epochID)
 	}
-
 
 	return true
 }

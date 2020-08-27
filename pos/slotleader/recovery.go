@@ -1,22 +1,55 @@
 package slotleader
 
+import (
+	"github.com/wanchain/go-wanchain/log"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/util"
+)
+
 // GetRecoveryEpochID used to get the recovery default epochID
 func GetRecoveryEpochID(epochID uint64) uint64 {
-	seekBackCount := uint64(10) // use 10 epoch before state
+	preEpochBlock := util.GetEpochBlock(epochID - 1)
+	log.Info("GetRecoveryEpochID GetEpochBlock", "epochID", epochID-1, "ret", preEpochBlock, "realEpoch", GetSlotLeaderSelection().getEpochIDFromBlockNumber(preEpochBlock))
 
-	// get the last epochID in blockchain
-	epochLast := GetSlotLeaderSelection().getLastEpochIDFromChain()
+	prePreEpochBlock := util.GetEpochBlock(epochID - 2)
+	log.Info("GetRecoveryEpochID GetEpochBlock", "epochID", epochID-2, "ret", prePreEpochBlock, "realEpoch", GetSlotLeaderSelection().getEpochIDFromBlockNumber(prePreEpochBlock))
 
-	// first get
-	if epochLast < epochID {
-		return epochLast - seekBackCount
+	t1 := GetSlotLeaderSelection().getBlockTime(preEpochBlock)
+	t2 := GetSlotLeaderSelection().getBlockTime(prePreEpochBlock)
+
+	// In normal case t1 should >= t2, if not, we should get new t1 and t2 from block chain, not memory cache.
+	if t1 < t2 {
+		util.RemoveEpochBlockCache(preEpochBlock)
+		util.RemoveEpochBlockCache(prePreEpochBlock)
+
+		preEpochBlock = util.GetEpochBlock(epochID - 1)
+		log.Info("GetRecoveryEpochID GetEpochBlock", "epochID", epochID-1, "ret", preEpochBlock, "realEpoch", GetSlotLeaderSelection().getEpochIDFromBlockNumber(preEpochBlock))
+
+		prePreEpochBlock = util.GetEpochBlock(epochID - 2)
+		log.Info("GetRecoveryEpochID GetEpochBlock", "epochID", epochID-2, "ret", prePreEpochBlock, "realEpoch", GetSlotLeaderSelection().getEpochIDFromBlockNumber(prePreEpochBlock))
+
+		t1 = GetSlotLeaderSelection().getBlockTime(preEpochBlock)
+		t2 = GetSlotLeaderSelection().getBlockTime(prePreEpochBlock)
 	}
 
-	// seek recovery failed.
-	if epochID < epochLast-10*seekBackCount {
-		return 0
+	var epochGet uint64
+
+	if t1-t2 <= (posconfig.SlotCount+posconfig.K)*posconfig.SlotTime {
+		if preEpochBlock <= posconfig.Pow2PosUpgradeBlockNumber {
+			return posconfig.FirstEpochId
+		}
+		// get the last epochID in blockchain
+		epochGet = GetSlotLeaderSelection().getEpochIDFromBlockNumber(preEpochBlock)
+	} else {
+		if prePreEpochBlock <= posconfig.Pow2PosUpgradeBlockNumber {
+			return posconfig.FirstEpochId
+		}
+		// get the last epochID in blockchain
+		epochGet = GetSlotLeaderSelection().getEpochIDFromBlockNumber(prePreEpochBlock)
 	}
 
+	log.Info("GetRecoveryEpochID", "inputEpochId=", epochID, "outputEpochId=", epochGet-posconfig.SeekBackCount,
+		"preEpochBlock", preEpochBlock, "prePreEpochBlock", prePreEpochBlock, "t1", t1, "t2", t2, "sub", t1-t2, "epochGet", epochGet)
 	// get more times or in same epoch
-	return epochID - seekBackCount
+	return epochGet - posconfig.SeekBackCount
 }

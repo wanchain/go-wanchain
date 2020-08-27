@@ -14,8 +14,8 @@ import (
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
-    "github.com/wanchain/go-wanchain/pos/util"
-    "github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/wanchain/go-wanchain/pos/util/convert"
 )
 
 type TestChainReader struct {
@@ -33,7 +33,7 @@ func (t *TestChainReader) Config() *params.ChainConfig                          
 func (t *TestChainReader) GetHeader(hash common.Hash, number uint64) *types.Header { return nil }
 func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header          { return nil }
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
-func (t *TestSelectLead) GetCurrentHeader() *types.Header {return nil}
+func (t *TestSelectLead) GetCurrentHeader() *types.Header                          { return nil }
 
 func TestGetSlotLeaderActivity(t *testing.T) {
 	posconfig.Init(nil, 4)
@@ -42,7 +42,7 @@ func TestGetSlotLeaderActivity(t *testing.T) {
 	generateTestStaker()
 
 	chain := &TestChainReader{}
-	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100)
+	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100, chain.CurrentHeader())
 	fmt.Println(addrs, blks, activity)
 
 	if activity != 0.99 {

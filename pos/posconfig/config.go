@@ -57,7 +57,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 5
+	SlotTime = 2
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -108,12 +108,14 @@ const (
 	TestnetVenusEpochId = 18369
 
 	MainnetMarsEpochId = 11112222
-	TestnetMarsEpochId = 33334444555666
+	TestnetMarsEpochId = 6660056
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
 
 	StoremanEpochid = ApolloEpochID + TARGETS_LOCKED_EPOCH
+
+	SeekBackCount = uint64(10) // use 10 epoch before state
 )
 
 var TxDelay = K

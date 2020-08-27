@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/wanchain/go-wanchain/common/hexutil"
+	"github.com/wanchain/go-wanchain/log"
 
 	"sync"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
@@ -55,8 +56,6 @@ func CalEpochSlotIDByNow() {
 	//fmt.Println("CalEpochSlotID:", curEpochId, curSlotId)
 }
 
-
-
 //PkEqual only can use in same curve. return whether the two points equal
 func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
 	if pk1 == nil || pk2 == nil {
@@ -82,19 +81,18 @@ type SelectLead interface {
 
 func GetCurrentBlkEpochSlotID() (epochID, slotID uint64) {
 
-	inst :=  GetEpocherInst()
+	inst := GetEpocherInst()
 	if inst == nil {
-		return 0,0
+		return 0, 0
 	}
 
 	curheader := inst.GetCurrentHeader()
 	if curheader == nil {
-		return 0,0
+		return 0, 0
 	}
 
 	return GetEpochSlotIDFromDifficulty(curheader.Difficulty)
 }
-
 
 var (
 	lastBlockEpoch     = make(map[uint64]uint64)
@@ -138,7 +136,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
-
+	log.Info("SetEpochBlock", "epochID", epochID, "blockNumber", blockNumber, "hash", hash)
 	SetEpochBlock(epochID, blockNumber, hash)
 }
 
@@ -163,10 +161,18 @@ func GetEpochBlock(epochID uint64) uint64 {
 	return b
 }
 
+func RemoveEpochBlockCache(epochID uint64) {
+	lbe.Lock()
+	delete(lastBlockEpoch, epochID)
+	delete(lastBlockHashEpoch, epochID)
+	lbe.Unlock()
+}
+
 func GetEpochBlockHash(epochID uint64) common.Hash {
 	lbe.Lock()
 	bh := lastBlockHashEpoch[epochID]
 	lbe.Unlock()
+	log.Info("GetEpochBlockHash", "hash", bh, "epochID", epochID)
 	return bh
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {
@@ -261,15 +267,14 @@ func MemStat() uint64 {
 	return memStat.Alloc
 }
 
-
 type PosAvgRetInterface interface {
 	GetOneEpochAvgReturnFor90LockEpoch(epochID uint64) (uint64, error)
 	GetAllStakeAndReturn(epochID uint64) (*big.Int, error)
-    GetAllIncentive(epochID uint64) (*big.Int, error)
+	GetAllIncentive(epochID uint64) (*big.Int, error)
 }
 
-
 var posavginst PosAvgRetInterface
+
 func SetPosAvgInst(posavg PosAvgRetInterface) {
 	posavginst = posavg
 }

@@ -406,6 +406,11 @@ web3._extend({
 			call: 'pos_getTps',
 			params: 2
 		}),
+		new  web3._extend.Method({
+			name: 'getPosAverageReward',
+			call: 'getPosAverageReward',
+			param: 1
+		}),
 	]
 });
 `

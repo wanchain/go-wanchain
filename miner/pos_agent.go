@@ -3,7 +3,8 @@ package miner
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posavgretrate"
+
+	pos "github.com/wanchain/go-wanchain/pos/posavgretrate"
 
 	"github.com/wanchain/go-wanchain/accounts"
 	"github.com/wanchain/go-wanchain/accounts/keystore"
@@ -165,20 +166,33 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		sls.Loop(rc, key, epochID, slotID)
 
 		prePks, isDefault := sls.GetPreEpochLeadersPK(epochID)
+		log.Info("backendTimerLoop", "i", 0, "prePks", hex.EncodeToString(crypto.FromECDSAPub(prePks[0])), "isDefault", isDefault)
+
 		targetEpochLeaderID := epochID
 		if isDefault {
+			targetEpochLeaderID = 0
 			if epochID > posconfig.FirstEpochId+2 {
 				log.Info("backendTimerLoop use default epoch leader.")
+				if epochID >= posconfig.Cfg().MarsEpochId {
+					log.Info("backendTimerLoop use Mars default epoch leader.", "epochId", epochID, "FirstEpochId", posconfig.FirstEpochId)
+					epRecovery := epochID
+					epRecovery = slotleader.GetRecoveryEpochID(epRecovery)
+					prePks, isDefault = sls.GetPreEpochLeadersPK(epRecovery)
+					if !isDefault {
+						targetEpochLeaderID = epRecovery
+					}
+				}
 			}
-			targetEpochLeaderID = 0
 		}
+
+		log.Info("IsLocalPkInEpochLeaders", "in", sls.IsLocalPkInEpochLeaders(prePks), "prePks", hex.EncodeToString(crypto.FromECDSAPub(prePks[0])))
 		if sls.IsLocalPkInEpochLeaders(prePks) {
 			leaderPub, err := sls.GetSlotLeader(targetEpochLeaderID, slotID)
 			if err == nil {
 				slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
 				leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
 				log.Info("leader ", "leader", leader)
-				if leader == localPublicKey && len(self.worker.chainSlotTimer)< chainTimerSlotSize{
+				if leader == localPublicKey && len(self.worker.chainSlotTimer) < chainTimerSlotSize {
 					self.worker.chainSlotTimer <- slotTime
 				}
 			}

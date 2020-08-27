@@ -21,13 +21,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posdb"
 	"io"
 	"math/big"
 	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/wanchain/go-wanchain/pos/util"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/wanchain/go-wanchain/common"
@@ -58,9 +60,9 @@ var (
 )
 
 const (
-	bodyCacheLimit      = 256
-	blockCacheLimit     = 256
-	maxFutureBlocks     = 256
+	bodyCacheLimit  = 256
+	blockCacheLimit = 256
+	maxFutureBlocks = 256
 	//maxTimeFutureBlocks = 30
 	maxTimeFutureBlocks = 3
 	badBlockLimit       = 10
@@ -135,12 +137,11 @@ type BlockChain struct {
 	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
 	checkCQBlk       *types.Block
 
-	cqCache  	  *lru.ARCCache
-	cqLastSlot    uint64
+	cqCache    *lru.ARCCache
+	cqLastSlot uint64
 
 	stopSlot      uint64 //the best peer's latest slot
 	restartSucess bool
-
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -170,8 +171,6 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 		checkCQStartSlot: INITRESTARTING,
 		restartSucess:    false,
 	}
-
-
 
 	c, e := lru.NewARC(posconfig.SlotSecurityParam)
 	if e != nil || c == nil {
@@ -217,25 +216,24 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 
 	t := time.Now()
 	//check the blokc cq and keep it in cache
-	for i := bc.currentBlock.Number().Uint64();i>posconfig.Pow2PosUpgradeBlockNumber;i-- {
+	for i := bc.currentBlock.Number().Uint64(); i > posconfig.Pow2PosUpgradeBlockNumber; i-- {
 		blkHeader := bc.GetHeaderByNumber(i)
-		epochid,slotid := posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
+		epochid, slotid := posUtil.CalEpochSlotID(blkHeader.Time.Uint64())
 
 		flatSlotId := epochid*posconfig.SlotCount + slotid
 		bc.cqCache.Add(flatSlotId, blkHeader.Number.Uint64())
 
-		if i ==  bc.currentBlock.Number().Uint64() {
+		if i == bc.currentBlock.Number().Uint64() {
 			bc.cqLastSlot = flatSlotId
 		}
 
-		if  (bc.cqLastSlot - flatSlotId) > posconfig.SlotSecurityParam {
+		if (bc.cqLastSlot - flatSlotId) > posconfig.SlotSecurityParam {
 			break
 		}
 	}
 
-	log.Info("loaded cq cache","eclapsed",time.Since(t),"length",bc.cqCache.Len())
+	log.Info("loaded cq cache", "eclapsed", time.Since(t), "length", bc.cqCache.Len())
 	// Take ownership of this particular state
-
 
 	epid, slid := posUtil.CalEpochSlotID(uint64(time.Now().Unix()))
 	//record the restarting slot point
@@ -871,9 +869,6 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-
-
-
 // Count blocks in front of specified block within 2k slots(exclude the specified block!!!).
 // pos block number begin with 1, epoc and slot index begin from 0
 //posconfig.SlotSecurityParam
@@ -895,7 +890,6 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) 
 	blkHeader := blk.Header()
 	blkNumber := blk.NumberU64()
 	for {
-
 
 		blkNumber = blkHeader.Number.Uint64() - 1
 		blkHeader = bc.GetHeaderByNumber(blkNumber)
@@ -921,64 +915,64 @@ func (bc *BlockChain) getBlocksCountIn2KSlots(blk *types.Block, secPara uint64) 
 		}
 	}
 
-
 	return n
 }
 
 func (bc *BlockChain) ChainQualityHistory(epochid uint64, slotid uint64) (uint64, error) {
-	    curBlk := bc.CurrentBlock()
-	    startBlkNumber := curBlk.NumberU64() - posconfig.BlockSecurityParam
+	curBlk := bc.CurrentBlock()
+	startBlkNumber := curBlk.NumberU64() - posconfig.BlockSecurityParam
 
-		for{
+	for {
 
-			bh := bc.GetHeaderByNumber(startBlkNumber)
-
+		bh := bc.GetHeaderByNumber(startBlkNumber)
+		if bh != nil {
 			blkEpid, blkSlid := posUtil.CalEpSlbyTd(bh.Difficulty.Uint64())
-			if (epochid<=blkEpid && blkSlid<=slotid) {
+			if epochid <= blkEpid && blkSlid <= slotid {
 				break
 			}
-
-			startBlkNumber--
 		}
 
-	    tblk := bc.GetBlockByNumber(startBlkNumber)
-		blocksIn2K := bc.getBlocksCountIn2KSlots(tblk,posconfig.SlotSecurityParam)
+		startBlkNumber--
+		if startBlkNumber < util.FirstPosBlockNumber() {
+			return uint64(0), nil
+		}
+	}
 
-		quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
+	tblk := bc.GetBlockByNumber(startBlkNumber)
+	blocksIn2K := bc.getBlocksCountIn2KSlots(tblk, posconfig.SlotSecurityParam)
 
-		return uint64(quality), nil
+	quality := blocksIn2K * 1000 / (posconfig.SlotSecurityParam)
+
+	return uint64(quality), nil
 }
-
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
 	epochId, slotId := posUtil.CalEpochSlotID(block.Time().Uint64())
 
 	endFlatSlotId := epochId*posconfig.SlotCount + slotId
-	startId := endFlatSlotId - posconfig.SlotSecurityParam -1
+	startId := endFlatSlotId - posconfig.SlotSecurityParam - 1
 
-	if  bc.cqCache.Len() > posconfig.BlockSecurityParam{
+	if bc.cqCache.Len() > posconfig.BlockSecurityParam {
 
 		if startId > bc.cqLastSlot {
 			bc.cqCache.Purge()
 		} else {
 			k := bc.cqLastSlot - posconfig.SlotSecurityParam
-			for ;k<= startId;k++ {
+			for ; k <= startId; k++ {
 				bc.cqCache.Remove(k)
 			}
 		}
 
 		blocksIn2K := bc.cqCache.Len()
 
-		return  blocksIn2K > posconfig.K
+		return blocksIn2K > posconfig.K
 	}
 
 	return false
 }
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
-
-
 
 	blocksIn2K := 0
 
@@ -990,8 +984,8 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 	expSlots := epochid*posconfig.SlotCount + slotid
 
 	//get chainquality in history
-	if(expSlots< blkSlots - posconfig.BlockSecurityParam ) {
-		return bc.ChainQualityHistory(epochid,slotid)
+	if expSlots < blkSlots-posconfig.BlockSecurityParam {
+		return bc.ChainQualityHistory(epochid, slotid)
 	}
 
 	if expSlots >= (blkSlots+posconfig.SlotSecurityParam) || (epochid == posconfig.FirstEpochId && slotid == 0) {
@@ -1021,12 +1015,12 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 
 		flatSlotId := epochid*posconfig.SlotCount + slotid
 
-		cacheBeginId :=  bc.cqLastSlot - posconfig.SlotSecurityParam
+		cacheBeginId := bc.cqLastSlot - posconfig.SlotSecurityParam
 		if flatSlotId <= bc.cqLastSlot && flatSlotId > cacheBeginId && bc.cqCache.Len() > posconfig.BlockSecurityParam {
 
-			for ;flatSlotId > cacheBeginId;flatSlotId-- {
-				blks,ok := bc.cqCache.Get(flatSlotId)
-				if ok  && blks != 0{
+			for ; flatSlotId > cacheBeginId; flatSlotId-- {
+				blks, ok := bc.cqCache.Get(flatSlotId)
+				if ok && blks != 0 {
 					blocksIn2K++
 				}
 			}
@@ -1043,10 +1037,10 @@ func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error
 
 }
 
-func (bc *BlockChain) biggerThanCriticalBlock(block *types.Block) bool{
+func (bc *BlockChain) biggerThanCriticalBlock(block *types.Block) bool {
 
 	diff := int(posconfig.Cfg().SyncTargetBlokcNum - block.NumberU64())
-	if diff >  2*posconfig.SlotSecurityParam{
+	if diff > 2*posconfig.SlotSecurityParam {
 		return false
 	} else {
 		return true
@@ -1062,16 +1056,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// cq, _ := bc.ChainQuality(epid, slid)
 	// log.Trace("current chain", "quality", cq, "block number", block.NumberU64())
 
-
-
-	if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1  {
+	if bc.config.IsPosActive && epid > posconfig.FirstEpochId+1 {
 
 		//res, _ := bc.ChainRestartStatus()
 
-
 		if !bc.restartSucess {
 			restartEpid := bc.checkCQStartSlot / posconfig.SlotCount
-			if (int64)(epid) - (int64)(restartEpid) > 2 {
+			if (int64)(epid)-(int64)(restartEpid) > 2 {
 				log.Info("set restart success", "current epid", epid, "restart epochid", restartEpid)
 				bc.SetChainRestartSuccess()
 			}
@@ -1082,14 +1073,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 			if bc.restartSucess {
 				//only worked after passing sync target block - 2*secpara
 				if bc.biggerThanCriticalBlock(block) {
-                    // TODO: is this for test commit?
-					//return NonStatTy, ErrInsufficientCQ
+					// TODO: is this for test commit?
+					return NonStatTy, ErrInsufficientCQ
 				}
 			}
 		}
 	}
-
-
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1163,7 +1152,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		bc.insert(block)
 		if bc.config.IsPosActive {
 			posUtil.UpdateEpochBlock(block)
-			
+
 			flatSlotId := epid*posconfig.SlotCount + slotId
 			bc.cqCache.Add(flatSlotId, block.Number().Uint64())
 			bc.cqLastSlot = flatSlotId
@@ -1659,7 +1648,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		// insert the block in the canonical way, re-writing history
 		bc.insert(block)
 
-		log.Debug("blockchain reorg","new chain", block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
+		log.Debug("blockchain reorg", "new chain", block.Number().String(), common.ToHex(block.Hash().Bytes()), common.ToHex(block.ParentHash().Bytes()))
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
 			return err
@@ -1905,7 +1894,6 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
 
-
 func (bc *BlockChain) SetSlotValidator(validator Validator) {
 	bc.slotValidator = validator
 }
@@ -2040,4 +2028,3 @@ func (bc *BlockChain) updateReOrg(epochId uint64, slotid uint64, length uint64) 
 	binary.BigEndian.PutUint64(b, length)
 	reOrgDb.Put(epochId, "reorgLength", b)
 }
-

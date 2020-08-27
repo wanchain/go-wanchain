@@ -123,7 +123,7 @@ func localDbAddValue(epochID uint64, key string, value *big.Int) {
 func GetEpochPayDetail(epochID uint64) ([][]vm.ClientIncentive, error) {
 	buf, err := localDb.Get(epochID, dictEpochPayDetail)
 	if err != nil {
-		log.SyslogErr(err.Error())
+		log.SyslogErr("GetEpochPayDetail err", "error", err.Error())
 		return nil, err
 	}
 
@@ -204,5 +204,5 @@ func GetEpochRBLeaderActivity(stateDb vm.StateDB, epochID uint64) ([]common.Addr
 
 // GetSlotLeaderActivity can get the address, blockCnt, and activity of slotleader
 func GetSlotLeaderActivity(chain consensus.ChainReader, epochID uint64) ([]common.Address, []int, float64, int) {
-	return getSlotLeaderActivity(chain, epochID, posconfig.SlotCount)
+	return getSlotLeaderActivity(chain, epochID, posconfig.SlotCount, chain.CurrentHeader())
 }

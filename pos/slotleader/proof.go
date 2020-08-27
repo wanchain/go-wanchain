@@ -29,22 +29,16 @@ const (
 //Proof 	= [e,z] 			[]*big.Int
 func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int, ProofMeg []*ecdsa.PublicKey) bool {
 	if epochID <= posconfig.FirstEpochId+2 {
-		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 	}
 
 	var epochLeadersPtrPre []*ecdsa.PublicKey
 	var isDefault bool
 
 	epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
-
+	log.Info("VerifySlotProof", "isDefault", isDefault, "epochID", epochID, "block", block.Number().Uint64())
 	if isDefault {
-		if epochID < posconfig.Cfg().MarsEpochId {
-			log.Debug("VerifySlotProof", "isDefault", isDefault, "epochID", epochID)
-			return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
-		}
-		log.Debug("VerifySlotProof Mars", "isDefault", isDefault, "epochID", epochID)
-		epRecovery := GetRecoveryEpochID(epochID)
-		return s.VerifySlotProof(block, epRecovery, slotID, Proof, ProofMeg)
+		return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 	}
 
 	rbPtr, err := s.getRandom(block, epochID)
@@ -59,12 +53,12 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	if err != nil {
 		log.SyslogErr(err.Error())
 		// no stage2 trans on the block chain.
-		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 	}
 
 	var hasValidTx bool
 	hasValidTx = false
-	log.Debug("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
+	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
 	for _, valid := range validEpochLeadersIndex {
 
 		if valid {
@@ -73,7 +67,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		}
 	}
 	if !hasValidTx {
-		return s.verifySlotProofByGenesis(epochID, slotID, Proof, ProofMeg)
+		return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 	}
 
 	var publicKey *ecdsa.PublicKey
@@ -114,6 +108,10 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 
 		// get skGT from trans
 		skGt := s.getSkGtFromTrans(epochLeadersPtrPre, epochID, slotID, rbBytes[:], smaPieces[:])
+
+		log.Info("getSkGtFromTrans", "epochLeadersPtrPre[0]", hex.EncodeToString(crypto.FromECDSAPub(epochLeadersPtrPre[0])),
+			"epochID", epochID, "slotID", slotID, "rb", hex.EncodeToString(rbBytes[:]), "sma[0]", smaPiecesHexStr[0])
+		log.Info("skGt", "skGt", hex.EncodeToString(crypto.FromECDSAPub(skGt)), "ProofMeg[2]", hex.EncodeToString(crypto.FromECDSAPub(ProofMeg[2])))
 
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true
@@ -183,6 +181,18 @@ func (s *SLS) GetInfoFromHeadExtra(epochID uint64, input []byte) ([]*big.Int, []
 func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 
+	if epochID >= posconfig.Cfg().MarsEpochId || epochID > posconfig.FirstEpochId+2 {
+		epRecovery := GetRecoveryEpochID(epochID)
+		_, isDefault := s.GetPreEpochLeadersPK(epRecovery)
+		_, isGenesis, _ := s.getSMAPieces(epRecovery)
+		log.Info("getSlotLeaderProof Mars", "epochID", epochID, "epRecovery", epRecovery, "isDefault", isDefault, "isGenesis", isGenesis)
+		if !isDefault && !isGenesis {
+			return s.getSlotLeaderProof(PrivateKey, epRecovery, slotID)
+		}
+	}
+
+	epochID = 0
+
 	//1. SMA PRE
 	smaPiecesPtr := s.smaGenesis
 	epochLeadersPtrPre := s.epochLeadersPtrArrayGenesis
@@ -199,24 +209,15 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	slotID uint64) ([]*ecdsa.PublicKey, []*big.Int, error) {
 	if epochID <= posconfig.FirstEpochId+2 {
-		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
+
 	epochLeadersPtrPre, isDefault := s.GetPreEpochLeadersPK(epochID)
-	if isDefault {
-		if epochID < posconfig.Cfg().MarsEpochId {
-			log.Warn("getSlotLeaderProof", "isDefault", isDefault)
-			return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
-		}
-
-		log.Warn("getSlotLeaderProof Mars", "isDefault", isDefault)
-		epRecovery := GetRecoveryEpochID(epochID)
-		return s.getSlotLeaderProof(PrivateKey, epRecovery, slotID)
-	}
-
-	//SMA PRE
 	smaPiecesPtr, isGenesis, _ := s.getSMAPieces(epochID)
-	if isGenesis {
-		return s.getSlotLeaderProofByGenesis(PrivateKey, 0, slotID)
+
+	log.Info("getSlotLeaderProof call", "epochID", epochID, "isEpDefault", isDefault, "isSmaGenesis", isGenesis)
+	if isDefault || isGenesis {
+		return s.getSlotLeaderProofByGenesis(PrivateKey, epochID, slotID)
 	}
 
 	//RB PRE
@@ -245,8 +246,18 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	return profMeg, proof, err
 }
 
-func (s *SLS) verifySlotProofByGenesis(epochID uint64, slotID uint64, Proof []*big.Int,
+func (s *SLS) verifySlotProofByGenesis(block *types.Block, epochID uint64, slotID uint64, Proof []*big.Int,
 	ProofMeg []*ecdsa.PublicKey) bool {
+
+	if epochID >= posconfig.Cfg().MarsEpochId && epochID > posconfig.FirstEpochId+2 {
+		epRecovery := GetRecoveryEpochID(epochID)
+		_, isDefault := s.GetPreEpochLeadersPK(epRecovery)
+		if !isDefault {
+			ret := s.VerifySlotProof(block, epRecovery, slotID, Proof, ProofMeg)
+			log.Info("verifySlotProofByGenesis Mars", "epochID", epochID, "slotID", slotID, "epRecovery", epRecovery, "result", ret)
+			return ret
+		}
+	}
 
 	var publicKey *ecdsa.PublicKey
 	publicKey = ProofMeg[0]
@@ -352,7 +363,8 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 
 		var alphaPki []*ecdsa.PublicKey
 		alphaPkiCached, ok := APkiCache.Get(ckey)
-		if !ok {
+		if hash.String() == "0x0000000000000000000000000000000000000000000000000000000000000000" || !ok {
+			log.Info("no APkiCache", "ckey", ckey)
 			var err error
 			statedb, _ := s.getCurrentStateDb()
 			alphaPki, _, err = vm.GetStage2TxAlphaPki(statedb, epochID-1, uint64(i))
@@ -361,9 +373,12 @@ func (s *SLS) getStageTwoFromTrans(epochID uint64) (validEpochLeadersIndex [posc
 				validEpochLeadersIndex[i] = false
 				continue
 			}
-			APkiCache.Add(ckey, alphaPki)
+			if hash.String() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
+				APkiCache.Add(ckey, alphaPki)
+			}
 		} else {
 			alphaPki = alphaPkiCached.([]*ecdsa.PublicKey)
+			log.Info("use APkiCache", "ckey", ckey, "alphaPki0", hex.EncodeToString(crypto.FromECDSAPub(alphaPki[0])))
 		}
 		for j := 0; j < posconfig.EpochLeaderCount; j++ {
 			stageTwoAlphaPKi[i][j] = alphaPki[j]

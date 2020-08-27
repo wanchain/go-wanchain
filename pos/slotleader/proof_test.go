@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/wanchain/go-wanchain/pos/uleaderselection"
 
 	"github.com/wanchain/go-wanchain/crypto"
 )
@@ -221,7 +222,7 @@ func TestVerifySlotProofByGenesis(t *testing.T) {
 		t.Fail()
 	}
 
-	if !s.verifySlotProofByGenesis(0, 0, proof, profMeg) {
+	if !s.verifySlotProofByGenesis(nil, 0, 0, proof, profMeg) {
 		t.Fail()
 	}
 }

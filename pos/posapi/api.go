@@ -977,3 +977,22 @@ func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
 
 	return sRet, nil
 }
+
+// GetPosAverageReward Get One Epoch Avg Return For 90 Lock Epoch
+func (a PosApi) GetPosAverageReward(epochID uint64) (uint64, error) {
+	if epochID <= posconfig.FirstEpochId+90 {
+		return 0, fmt.Errorf("epochID error")
+	}
+
+	inst := util.PosAvgRetInst()
+	if inst == nil {
+		return 0, errors.New("not initialzied for pos return ")
+	}
+
+	p2, err := inst.GetOneEpochAvgReturnFor90LockEpoch(epochID)
+	if err != nil {
+		return 0, err
+	}
+
+	return p2, nil
+}

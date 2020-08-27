@@ -139,8 +139,9 @@ func (s *SLS) GetSlotLeader(epochID uint64, slotID uint64) (slotLeader *ecdsa.Pu
 	}
 
 	_, isGenesis, _ := s.getSMAPieces(epochID)
+	log.Info("getSMAPieces", "isGenesis", isGenesis, "epochID", epochID)
 	if isGenesis {
-		if epochID < posconfig.Cfg().MarsEpochId {
+		if epochID < posconfig.Cfg().MarsEpochId || epochID <= posconfig.FirstEpochId+2 {
 			log.Info("GetSlotLeader use getDefaultSlotLeader", "isGenesis", isGenesis)
 
 			if s.getDefaultSlotLeader(slotID) != nil {
@@ -383,6 +384,7 @@ func (s *SLS) GetEpochDefaultLeadersPK(epochID uint64) []*ecdsa.PublicKey {
 }
 func (s *SLS) IsLocalPkInEpochLeaders(pks []*ecdsa.PublicKey) bool {
 	localPk, err := s.getLocalPublicKey()
+	log.Info("IsLocalPkInEpochLeaders", "localPk", hex.EncodeToString(crypto.FromECDSAPub(localPk)))
 	if err != nil {
 		log.Error("IsLocalPkInEpochLeaders", "error", err)
 		return false

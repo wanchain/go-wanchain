@@ -19,8 +19,8 @@ package pluto
 
 import (
 	"errors"
-	"math/big"
 	"math"
+	"math/big"
 
 	//"math/rand"
 	"sync"
@@ -588,7 +588,7 @@ func (c *Pluto) verifySeal(chain consensus.ChainReader, header *types.Header, pa
 
 	epochID, slotID := util.GetEpochSlotIDFromDifficulty(header.Difficulty)
 
-	if epidTime != epochID || slIdTime != slotID || header.Difficulty.Cmp(new(big.Int).SetUint64(math.MaxUint64))>0 {
+	if epidTime != epochID || slIdTime != slotID || header.Difficulty.Cmp(new(big.Int).SetUint64(math.MaxUint64)) > 0 {
 		log.SyslogErr("epochId or slotid do not match", "epidTime=", epidTime, "slIdTime=", slIdTime, "epidFromDiffulty=", epochID, "slotIDFromDifficulty=", slotID)
 		return errors.New("epochId or slotid do not match")
 	}
@@ -764,7 +764,7 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 	if posconfig.FirstEpochId != 0 && epochID > posconfig.FirstEpochId+2 && epochID >= posconfig.IncentiveDelayEpochs && slotID > posconfig.IncentiveStartStage {
 		log.Debug("--------Incentive Start--------", "number", header.Number.String(), "epochID", epochID)
 		snap := state.Snapshot()
-		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs) {
+		if !incentive.Run(chain, state, epochID-posconfig.IncentiveDelayEpochs, header) {
 			log.SyslogAlert("********Incentive Failed********", "number", header.Number.String(), "epochID", epochID)
 			state.RevertToSnapshot(snap)
 		} else {
@@ -778,7 +778,7 @@ func (c *Pluto) Finalize(chain consensus.ChainReader, header *types.Header, stat
 		}
 	}
 
-	if chain.Config().ChainId.Int64() == params.TestnetChainId && header.Number.Uint64() == posconfig.TestnetAdditionalBlock   {
+	if chain.Config().ChainId.Int64() == params.TestnetChainId && header.Number.Uint64() == posconfig.TestnetAdditionalBlock {
 		log.Info("Finalize testnet", "blockNumber", posconfig.TestnetAdditionalBlock)
 		state.AddBalance(posconfig.PosOwnerAddrTestnet, posconfig.TestnetAdditionalValue)
 		epochLeader.CleanInactiveValidator(state, epochID)

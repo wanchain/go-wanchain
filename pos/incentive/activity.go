@@ -4,6 +4,7 @@ import (
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/wanchain/go-wanchain/core/types"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
 	"github.com/wanchain/go-wanchain/log"
@@ -145,24 +146,36 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	return addrs, activity
 }
 
-func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int) ([]common.Address, []int, float64, int) {
+func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int, headerInput *types.Header) ([]common.Address, []int, float64, int) {
 	if chain == nil {
 		log.SyslogErr("getSlotLeaderActivity chain reader is empty.")
 		return []common.Address{}, []int{}, float64(0), 0
 	}
+
+	if headerInput == nil {
+		log.SyslogErr("getSlotLeaderActivity headerInput is nil.")
+		return []common.Address{}, []int{}, float64(0), 0
+	}
+
+	header := headerInput
+	currentNumber := header.Number.Uint64()
+	log.Info("getSlotLeaderActivity", "currentNumber", currentNumber, "epochID", epochID)
+
 	ctrlCount := 0
-	currentNumber := chain.CurrentHeader().Number.Uint64()
 	if currentNumber == 0 {
 		return []common.Address{}, []int{}, float64(0), 0
 	}
 	miners := make(map[common.Address]int)
 	for i := currentNumber - 1; (i >= util.FirstPosBlockNumber()) && (i != 0); i-- {
-		header := chain.GetHeaderByNumber(i)
+		header = chain.GetHeaderByHash(header.ParentHash)
 		if header == nil {
-			continue
+			log.Error("getSlotLeaderActivity header == nil")
+			break
 		}
 
 		epID := getEpochIDFromDifficulty(header.Difficulty)
+		log.Info("getSlotLeaderActivity find", "header", header.Hash, "Number", header.Number, "epochID", epID)
+
 		if epID == epochID {
 			if isInWhiteList(header.Coinbase) {
 				ctrlCount++
@@ -179,6 +192,7 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 		}
 
 		if epID < epochID {
+			log.Info("getSlotLeaderActivity finish", "header", header.Hash, "Number", header.Number, "epochID", epID)
 			break
 		}
 	}

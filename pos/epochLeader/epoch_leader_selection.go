@@ -2,6 +2,7 @@ package epochLeader
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -17,7 +18,7 @@ import (
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/vm"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/incentive"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
@@ -46,15 +47,14 @@ type Epocher struct {
 }
 
 type RefundInfo struct {
-	Addr common.Address
+	Addr   common.Address
 	Amount *big.Int
 }
 
 type EpochInfo struct {
-	EpochID uint64
+	EpochID     uint64
 	BlockNumber uint64
 }
-
 
 var epocherInst *Epocher = nil
 
@@ -67,7 +67,6 @@ func NewEpocher(blc *core.BlockChain) *Epocher {
 	if epocherInst == nil {
 		epocherInst = NewEpocherWithLBN(blc, posconfig.RbLocalDB, posconfig.EpLocalDB)
 	}
-
 
 	return epocherInst
 }
@@ -100,7 +99,6 @@ func (e *Epocher) GetCurrentHeader() *types.Header {
 	return inst.CurrentHeader()
 }
 
-
 func (e *Epocher) GetTargetBlkNumber(epochId uint64) uint64 {
 	if epochId < 2 {
 		return uint64(0)
@@ -118,12 +116,17 @@ NOTE: if the targetEpochId is future, will return current blockNumber.
 func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	var curBlockHeader *types.Header
+	var curEpochId uint64
 
 	curNum := e.blkChain.CurrentBlock().NumberU64()
 	for {
-		curBlockHeader := e.blkChain.GetHeaderByNumber(curNum)
-		curEpochId, _ := util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
+		curBlockHeader = e.blkChain.GetHeaderByNumber(curNum)
+		curEpochId, _ = util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
 		if curEpochId <= targetEpochId {
+			log.Info("GetEpochLastBlkNumber", "targetEpochId", targetEpochId, "curEpochId", curEpochId)
+			// if targetEpochId-curEpochId > 20 {
+			// 	panic("GetEpochLastBlkNumber err") // TODO debug remove
+			// }
 			break
 		}
 		curNum--
@@ -131,7 +134,8 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 
 	targetBlkNum := curNum
 	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
-	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId {
+	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId && targetEpochId == curEpochId {
+		log.Info("SetEpochBlock 2", "targetEpochId", targetEpochId, "targetBlkNum", targetBlkNum, "hash", curBlockHeader.Hash())
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlockHeader.Hash())
 	}
 
@@ -171,7 +175,7 @@ func (e *Epocher) reportSelectELFailed(epochId uint64) {
 	if epochId == 0 {
 		return
 	}
-	
+
 	failedTimes := 1
 	if epochId > 0 {
 		if !e.IsGenerateELSuc(epochId - 1) {
@@ -333,7 +337,10 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 	cr := crypto.Keccak256(r0) //cr = hash(r0)
 
 	//randomProposerPublicKeys := make([]*ecdsa.PublicKey, 0)  //store the selected publickeys
-	log.Debug("epochLeaderSelection selecting")
+	log.Info("epochLeaderSelection selecting", "epochId", epochId, "tp", tp)
+	for i := 0; i < len(ps); i++ {
+		log.Info("ps", "ps", hex.EncodeToString(ps[i].PubSec256), "i", i)
+	}
 	selectionCount := posconfig.EpochLeaderCount
 	info, err := e.GetWhiteInfo(epochId)
 	if err == nil {
@@ -348,7 +355,7 @@ func (e *Epocher) epochLeaderSelection(r []byte, ps ProposerSorter, epochId uint
 		//select pki whose probability bigger than cr_big left
 		idx := sort.Search(len(ps), func(i int) bool { return ps[i].Probabilities.Cmp(crBig) > 0 })
 
-		log.Debug("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", ps[idx].PubSec256)
+		log.Info("select epoch leader", "epochid=", epochId, "idx=", i, "pub=", hex.EncodeToString(ps[idx].PubSec256))
 		//randomProposerPublicKeys = append(randomProposerPublicKeys, ps[idx].PubSec256)
 		val, err := rlp.EncodeToBytes(&ps[idx])
 		if err != nil {
@@ -703,9 +710,9 @@ func (e *Epocher) SetEpochIncentive(epochId uint64, infors [][]vm.ClientIncentiv
 	return nil
 }
 
-func recordStakeOut(infos []RefundInfo, addr common.Address, amount *big.Int)([]RefundInfo) {
-	record :=  RefundInfo{
-		Addr: addr,
+func recordStakeOut(infos []RefundInfo, addr common.Address, amount *big.Int) []RefundInfo {
+	record := RefundInfo{
+		Addr:   addr,
 		Amount: amount,
 	}
 	infos = append(infos, record)
@@ -716,25 +723,25 @@ func saveStakeOut(stakeOutInfo []RefundInfo, epochID uint64) error {
 	if err != nil {
 		return err
 	}
-	_, err = posdb.GetDb().Put(epochID, posconfig.StakeOutEpochKey,stakeByte)
+	_, err = posdb.GetDb().Put(epochID, posconfig.StakeOutEpochKey, stakeByte)
 	if err != nil {
 		log.Error("saveStakeOut Failed:", "error", err)
 		return err
 	}
-	log.Info("Save refund information done.","epochID",epochID)
+	log.Info("Save refund information done.", "epochID", epochID)
 	return nil
 }
 func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 	if core.CanTransfer(db, sender, amount) {
-		core.Transfer(db, sender, recipient,amount)
+		core.Transfer(db, sender, recipient, amount)
 	}
 }
-func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId uint64) bool{
+func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId uint64) bool {
 	checkCount := (uint64)(64)
-	for i:=(uint64)(1); i<=checkCount; i++ {
-		addrs,incents := incentive.GetEpochRBLeaderActivity(state, baseEpochId-i)
-		for k:=0; k<len(addrs); k++ {
-			if addrs[k] == addr && incents[k]==1{
+	for i := (uint64)(1); i <= checkCount; i++ {
+		addrs, incents := incentive.GetEpochRBLeaderActivity(state, baseEpochId-i)
+		for k := 0; k < len(addrs); k++ {
+			if addrs[k] == addr && incents[k] == 1 {
 				return false
 			}
 		}
@@ -744,15 +751,15 @@ func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId 
 func ListValidator(stateDb *state.StateDB) {
 	stakers := vm.GetStakersSnap(stateDb)
 	for i := 0; i < len(stakers); i++ {
-		log.Info("ListValidator", "i",i,"address",stakers[i].Address)
+		log.Info("ListValidator", "i", i, "address", stakers[i].Address)
 	}
 }
-func CleanInactiveValidator(stateDb *state.StateDB, epochID uint64){
+func CleanInactiveValidator(stateDb *state.StateDB, epochID uint64) {
 	stakers := vm.GetStakersSnap(stateDb)
 	for i := 0; i < len(stakers); i++ {
 		staker := stakers[i]
 		if isInactiveValidator(stateDb, staker.Address, epochID) {
-			log.Info("CleanInactiveValidator", "address",staker.Address)
+			log.Info("CleanInactiveValidator", "address", staker.Address)
 			for j := 0; j < len(staker.Clients); j++ {
 				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
@@ -771,7 +778,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		return true
 	}
 	vm.StakeoutSetEpoch(stateDb, epochID)
-	stakeOutInfo := make([]RefundInfo,0)
+	stakeOutInfo := make([]RefundInfo, 0)
 	stakers := vm.GetStakersSnap(stateDb)
 	for i := 0; i < len(stakers); i++ {
 		// stakeout delegated client. client will expire at the same time with delegate node
@@ -835,7 +842,7 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		partnerchanged := false
 		for j := 0; j < len(staker.Partners); j++ {
 			// edit the validator Amount
-			if epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs {
+			if (epochID >= staker.Partners[j].StakingEpoch+staker.Partners[j].LockEpochs) && !staker.Partners[j].Renewal {
 				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Partners[j].Address, staker.Partners[j].Amount)
 				partnerchanged = true
@@ -847,10 +854,10 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 			staker.Partners = newPartners
 		}
 
-		if epochID >= staker.StakingEpoch+staker.LockEpochs {
+		if (epochID >= staker.StakingEpoch+staker.LockEpochs) && staker.NextLockEpochs == 0 {
 			for j := 0; j < len(staker.Clients); j++ {
 				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
-				stakeOutInfo = recordStakeOut(stakeOutInfo,staker.Clients[j].Address, staker.Clients[j].Amount)
+				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Clients[j].Address, staker.Clients[j].Amount)
 			}
 			for j := 0; j < len(staker.Partners); j++ {
 				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Partners[j].Address, staker.Partners[j].Amount)

@@ -2,6 +2,7 @@ package slotleader
 
 import (
 	"errors"
+
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/core/state"
@@ -35,4 +36,12 @@ func (s *SLS) getLastSlotIDFromChain() uint64 {
 
 func (s *SLS) getBlockChainHeight() uint64 {
 	return s.blockChain.CurrentBlock().NumberU64()
+}
+
+func (s *SLS) getBlockTime(number uint64) uint64 {
+	return s.blockChain.GetBlockByNumber(number).Time().Uint64()
+}
+
+func (s *SLS) getEpochIDFromBlockNumber(number uint64) uint64 {
+	return uint64(s.blockChain.GetBlockByNumber(number).Difficulty().Int64() >> 32)
 }
