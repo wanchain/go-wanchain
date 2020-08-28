@@ -136,7 +136,7 @@ func updateEpochBlock(epochID uint64, slotID uint64, blockNumber uint64, hash co
 		go GetEpocherInst().SelectLeadersLoop(epochID + 1)
 		selectedEpochId = epochID + 1
 	}
-	log.Info("SetEpochBlock", "epochID", epochID, "blockNumber", blockNumber, "hash", hash)
+	log.Debug("SetEpochBlock", "epochID", epochID, "blockNumber", blockNumber, "hash", hash)
 	SetEpochBlock(epochID, blockNumber, hash)
 }
 
@@ -172,7 +172,7 @@ func GetEpochBlockHash(epochID uint64) common.Hash {
 	lbe.Lock()
 	bh := lastBlockHashEpoch[epochID]
 	lbe.Unlock()
-	log.Info("GetEpochBlockHash", "hash", bh, "epochID", epochID)
+	log.Debug("GetEpochBlockHash", "hash", bh, "epochID", epochID)
 	return bh
 }
 func GetProposerBn256PK(epochID uint64, idx uint64, addr common.Address) []byte {

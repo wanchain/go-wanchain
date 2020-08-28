@@ -36,7 +36,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	var isDefault bool
 
 	epochLeadersPtrPre, isDefault = s.GetPreEpochLeadersPK(epochID)
-	log.Info("VerifySlotProof", "isDefault", isDefault, "epochID", epochID, "block", block.Number().Uint64())
+	log.Debug("VerifySlotProof", "isDefault", isDefault, "epochID", epochID, "block", block.Number().Uint64())
 	if isDefault {
 		return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 	}
@@ -58,7 +58,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 
 	var hasValidTx bool
 	hasValidTx = false
-	log.Info("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
+	log.Debug("VerifySlotProof:VerifyDleqProof", "validEpochLeadersIndex", validEpochLeadersIndex)
 	for _, valid := range validEpochLeadersIndex {
 
 		if valid {
@@ -109,9 +109,9 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		// get skGT from trans
 		skGt := s.getSkGtFromTrans(epochLeadersPtrPre, epochID, slotID, rbBytes[:], smaPieces[:])
 
-		log.Info("getSkGtFromTrans", "epochLeadersPtrPre[0]", hex.EncodeToString(crypto.FromECDSAPub(epochLeadersPtrPre[0])),
+		log.Debug("getSkGtFromTrans", "epochLeadersPtrPre[0]", hex.EncodeToString(crypto.FromECDSAPub(epochLeadersPtrPre[0])),
 			"epochID", epochID, "slotID", slotID, "rb", hex.EncodeToString(rbBytes[:]), "sma[0]", smaPiecesHexStr[0])
-		log.Info("skGt", "skGt", hex.EncodeToString(crypto.FromECDSAPub(skGt)), "ProofMeg[2]", hex.EncodeToString(crypto.FromECDSAPub(ProofMeg[2])))
+		log.Debug("skGt", "skGt", hex.EncodeToString(crypto.FromECDSAPub(skGt)), "ProofMeg[2]", hex.EncodeToString(crypto.FromECDSAPub(ProofMeg[2])))
 
 		if uleaderselection.PublicKeyEqual(skGt, ProofMeg[2]) {
 			skGtValid = true

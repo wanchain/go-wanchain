@@ -39,10 +39,11 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common"
 	"hash"
 	"io"
 	"math/big"
+
+	"github.com/wanchain/go-wanchain/common"
 )
 
 var (
@@ -96,7 +97,6 @@ func ImportECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 	return &PrivateKey{*pub, prv.D}
 }
 
-
 // Generate an elliptic curve public / private keypair. If params is nil,
 // the recommended default parameters for the key will be chosen.
 func GenerateKey(rand io.Reader, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey, err error) {
@@ -115,9 +115,6 @@ func GenerateKey(rand io.Reader, curve elliptic.Curve, params *ECIESParams) (prv
 	prv.PublicKey.Params = params
 	return
 }
-
-
-
 
 // MaxSharedKeyLength returns the maximum length of the shared key the
 // public key can produce.
@@ -199,7 +196,6 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 	return
 }
 
-
 func concatKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
 
 	prf := hmac.New(h, password)
@@ -269,7 +265,7 @@ func symEncrypt(rand io.Reader, params *ECIESParams, key, m []byte) (ct []byte, 
 		return
 	}
 
-	fmt.Println("iv=" + common.ToHex(iv))
+	// fmt.Println("iv=" + common.ToHex(iv))
 
 	ctr := cipher.NewCTR(c, iv)
 
@@ -314,7 +310,6 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 		return
 	}
 
-
 	//fmt.Println("rbpri=" + R.D.Text(16));
 
 	hash := params.Hash()
@@ -332,7 +327,6 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 
 	hash.Write(Km)
 	Km = hash.Sum(nil)
-
 
 	hash.Reset()
 
@@ -428,7 +422,7 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []byte) (ct []byte,err error) {
+func EncryptWithRandom(rbprv *PrivateKey, pub *PublicKey, iv []byte, m, s1, s2 []byte) (ct []byte, err error) {
 
 	params := pub.Params
 	if params == nil {
@@ -438,7 +432,7 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 		}
 	}
 
-	shared, err := rbprv.GenerateShared(pub,16,16)
+	shared, err := rbprv.GenerateShared(pub, 16, 16)
 	if err != nil {
 		return
 	}
@@ -446,10 +440,9 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 
 	fmt.Println("GenerateShared=" + sharedStr)
 
-
 	hash := sha256.New()
 
-	K := concatKDF2([]byte(sharedStr), []byte(" "),2,64,sha256.New)
+	K := concatKDF2([]byte(sharedStr), []byte(" "), 2, 64, sha256.New)
 
 	fmt.Println("concatKDF=" + common.Bytes2Hex(K))
 
@@ -462,23 +455,22 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 	fmt.Println("macKey=" + common.Bytes2Hex(Km))
 	hash.Reset()
 
-	em := AES_CBC_Encrypt(m,Ke,iv)
+	em := AES_CBC_Encrypt(m, Ke, iv)
 	if len(em) <= params.BlockSize {
 		return
 	}
 	fmt.Println("encrypt message=" + common.Bytes2Hex(em))
 
-
-	d := hmacSha256(em,Km)
+	d := hmacSha256(em, Km)
 
 	fmt.Println("mac=" + common.Bytes2Hex(d))
 
 	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
 
-	ct = make([]byte, ((len(empub)+len(iv) + len(em)+len(d)/32 + 1)*32))
+	ct = make([]byte, ((len(empub) + len(iv) + len(em) + len(d)/32 + 1) * 32))
 
 	copy(ct, empub)
-	copy(ct[len(empub):],iv)
+	copy(ct[len(empub):], iv)
 
 	copy(ct[len(empub)+len(iv):], em)
 
@@ -489,61 +481,54 @@ func EncryptWithRandom(rbprv *PrivateKey,pub *PublicKey,iv []byte,m, s1, s2 []by
 	return
 }
 
+func AES_CBC_Encrypt(plainText []byte, key []byte, iv []byte) []byte {
 
-
-func AES_CBC_Encrypt(plainText []byte,key []byte,iv []byte) []byte{
-
-	block,err:=aes.NewCipher(key)
-	if err!=nil{
+	block, err := aes.NewCipher(key)
+	if err != nil {
 		panic(err)
 	}
 
-	plainText=Padding(plainText,block.BlockSize())
+	plainText = Padding(plainText, block.BlockSize())
 
+	blockMode := cipher.NewCBCEncrypter(block, iv)
 
-	blockMode:=cipher.NewCBCEncrypter(block,iv)
-
-	cipherText:=make([]byte,len(plainText))
-	blockMode.CryptBlocks(cipherText,plainText)
+	cipherText := make([]byte, len(plainText))
+	blockMode.CryptBlocks(cipherText, plainText)
 
 	return cipherText
 }
 
+func Padding(plainText []byte, blockSize int) []byte {
 
+	n := blockSize - len(plainText)%blockSize
 
-func Padding(plainText []byte,blockSize int) []byte{
-
-	n:= blockSize-len(plainText)%blockSize
-
-	temp:=bytes.Repeat([]byte{byte(n)},n)
-	plainText=append(plainText,temp...)
+	temp := bytes.Repeat([]byte{byte(n)}, n)
+	plainText = append(plainText, temp...)
 	return plainText
 }
 
-func UnPadding(cipherText []byte) []byte{
+func UnPadding(cipherText []byte) []byte {
 
-	end:=cipherText[len(cipherText)-1]
+	end := cipherText[len(cipherText)-1]
 
-	cipherText=cipherText[:len(cipherText)-int(end)]
+	cipherText = cipherText[:len(cipherText)-int(end)]
 	return cipherText
 }
 
-
-func AES_CBC_Decrypt(cipherText []byte,key []byte,iv []byte) []byte{
-	block,err:=aes.NewCipher(key)
-	if err!=nil{
+func AES_CBC_Decrypt(cipherText []byte, key []byte, iv []byte) []byte {
+	block, err := aes.NewCipher(key)
+	if err != nil {
 		panic(err)
 	}
 
-	blockMode:=cipher.NewCBCDecrypter(block,iv)
+	blockMode := cipher.NewCBCDecrypter(block, iv)
 
-	plainText:=make([]byte,len(cipherText))
-	blockMode.CryptBlocks(plainText,cipherText)
+	plainText := make([]byte, len(cipherText))
+	blockMode.CryptBlocks(plainText, cipherText)
 
-	plainText=UnPadding(plainText)
+	plainText = UnPadding(plainText)
 	return plainText
 }
-
 
 func hmacSha256(data []byte, secret []byte) []byte {
 	h := hmac.New(sha256.New, secret)

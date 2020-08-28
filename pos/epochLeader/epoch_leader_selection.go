@@ -135,7 +135,7 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	targetBlkNum := curNum
 	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId && targetEpochId == curEpochId {
-		log.Info("SetEpochBlock 2", "targetEpochId", targetEpochId, "targetBlkNum", targetBlkNum, "hash", curBlockHeader.Hash())
+		log.Debug("SetEpochBlock 2", "targetEpochId", targetEpochId, "targetBlkNum", targetBlkNum, "hash", curBlockHeader.Hash())
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlockHeader.Hash())
 	}
 
