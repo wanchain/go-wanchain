@@ -408,7 +408,7 @@ web3._extend({
 		}),
 		new  web3._extend.Method({
 			name: 'getPosAverageReward',
-			call: 'getPosAverageReward',
+			call: 'pos_getPosAverageReward',
 			param: 1
 		}),
 	]
