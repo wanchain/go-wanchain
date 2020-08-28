@@ -686,24 +686,12 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		return buf, errors.New("not reach forked epochid")
 	}
 
-	//to do
-	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
-	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
-
-	////for test/////////////////////////////////
-	//groupStartTime = uint64(time.Now().Unix())
-	//targetTime = groupStartTime
-
-	groupStartEpochId, _ := posutil.CalEpochSlotID(groupStartTime)
-	groupStartEpochId--
+	targetTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
 	targetEpochId, _ := posutil.CalEpochSlotID(targetTime)
-	targetEpochId--
 	/////////////////////////////////////////
 
-	if groupStartEpochId <= posconfig.FirstEpochId ||
-		targetEpochId <= groupStartEpochId ||
-		groupStartEpochId > eid ||
+	if targetEpochId <= posconfig.FirstEpochId ||
 		targetEpochId > eid {
 		return buf, errors.New("wrong epochid")
 	}
@@ -713,28 +701,12 @@ func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EV
 		return buf, errors.New("not initialzied for pos return ")
 	}
 
-	p2, err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId)
+	p2, err := inst.GetPosAverageReturnRate(targetEpochId)
 	if err != nil {
 		return buf, err
 	}
 
-	stakeBegin, err := inst.GetAllStakeAndReturn(targetEpochId - 1)
-	if err != nil {
-		return buf, err
-	}
-
-	stakeEnd, err := inst.GetAllStakeAndReturn(targetEpochId)
-	if err != nil {
-		return buf, err
-	}
-
-	p2Big := big.NewInt(int64(p2))
-
-	p1Mul := p2Big.Mul(p2Big, stakeBegin)
-
-	p1 := p1Mul.Div(p1Mul, stakeEnd).Uint64()
-
-	binary.BigEndian.PutUint64(buf, p1)
+	binary.BigEndian.PutUint64(buf, p2)
 	return common.LeftPadBytes(buf, 32), nil
 }
 

@@ -40,6 +40,9 @@ func NewDb(fileName string) *Db {
 	}
 
 	dbInst := &Db{db: nil}
+	if fileName == "" {
+		return dbInst
+	}
 
 	dbInst.DbInit(fileName)
 

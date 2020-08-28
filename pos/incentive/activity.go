@@ -174,7 +174,7 @@ func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCoun
 		}
 
 		epID := getEpochIDFromDifficulty(header.Difficulty)
-		log.Info("getSlotLeaderActivity find", "header", header.Hash, "Number", header.Number, "epochID", epID)
+		log.Debug("getSlotLeaderActivity find", "header", header.Hash, "Number", header.Number, "epochID", epID)
 
 		if epID == epochID {
 			if isInWhiteList(header.Coinbase) {

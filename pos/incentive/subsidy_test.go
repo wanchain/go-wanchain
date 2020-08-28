@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/wanchain/go-wanchain/common"
+	"github.com/wanchain/go-wanchain/pos/posconfig"
 )
 
 func TestCalcBaseSubsidy(t *testing.T) {
@@ -43,5 +44,14 @@ func TestGetBaseSubsidyTotal(t *testing.T) {
 			fmt.Println("error: ", subsidy.Uint64(), base.String())
 			t.FailNow()
 		}
+	}
+}
+
+func TestYearReward(t *testing.T) {
+	posconfig.FirstEpochId = 18141
+
+	for i := 0; i < 100; i++ {
+		ret := YearReward(posconfig.FirstEpochId + uint64(365*i))
+		fmt.Println(ret)
 	}
 }

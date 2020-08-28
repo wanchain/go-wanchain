@@ -10,6 +10,12 @@ import (
 	"github.com/wanchain/go-wanchain/log"
 )
 
+func YearReward(epochID uint64) *big.Int {
+	epochIDOffset := epochID - posconfig.FirstEpochId
+	redutionRateNow := math.Pow(redutionRateBase, float64(epochIDOffset/subsidyReductionInterval))
+	return calcPercent(firstPeriodReward, redutionRateNow*100.0)
+}
+
 // calcBaseSubsidy calc the base subsidy of epoch base on subsidyReductionInterval. input is wei.
 func calcBaseSubsidy(baseValue *big.Int) *big.Int {
 	if baseValue == nil {

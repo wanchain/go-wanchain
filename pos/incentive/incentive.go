@@ -160,7 +160,7 @@ func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, he
 	//cal return rate in advance
 	if posconfig.Cfg().MarsEpochId > posconfig.TARGETS_LOCKED_EPOCH && epochID > posconfig.Cfg().MarsEpochId-posconfig.TARGETS_LOCKED_EPOCH {
 		retrateInst := posutil.PosAvgRetInst()
-		go retrateInst.GetOneEpochAvgReturnFor90LockEpoch(epochID)
+		go retrateInst.GetPosAverageReturnRate(epochID)
 	}
 
 	return true
