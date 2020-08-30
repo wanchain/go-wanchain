@@ -48,84 +48,6 @@ var (
 		"constant": true,
 		"inputs": [
 			{
-				"name": "x1",
-				"type": "uint256"
-			},
-			{
-				"name": "y1",
-				"type": "uint256"
-			},
-			{
-				"name": "x2",
-				"type": "uint256"
-			},
-			{
-				"name": "y2",
-				"type": "uint256"
-			}
-		],
-		"name": "bn256add",
-		"outputs": [
-			{
-				"name": "retx",
-				"type": "uint256"
-			},
-			{
-				"name": "rety",
-				"type": "uint256"
-			},
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "x1",
-				"type": "uint256"
-			},
-			{
-				"name": "y1",
-				"type": "uint256"
-			},
-			{
-				"name": "x2",
-				"type": "uint256"
-			},
-			{
-				"name": "y2",
-				"type": "uint256"
-			}
-		],
-		"name": "s256add",
-		"outputs": [
-			{
-				"name": "retx",
-				"type": "uint256"
-			},
-			{
-				"name": "rety",
-				"type": "uint256"
-			},
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
 				"name": "scalar",
 				"type": "uint256"
 			}
@@ -174,70 +96,6 @@ var (
 			{
 				"name": "",
 				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "DIVISOR",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "smgDeposit",
-				"type": "uint256"
-			},
-			{
-				"name": "smgStartTime",
-				"type": "uint256"
-			},
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
-				"type": "uint256"
-			}
-		],
-		"name": "getMinIncentive",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "blockTime",
-				"type": "uint256"
-			}
-		],
-		"name": "getEpochId",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -309,10 +167,6 @@ var (
 	{
 		"constant": true,
 		"inputs": [
-			{
-				"name": "groupStartTime",
-				"type": "uint256"
-			},
 			{
 				"name": "curTime",
 				"type": "uint256"
@@ -673,7 +527,7 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 }
 
 func (s *SolEnhance) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if len(payload) < 64 {
+	if len(payload) < 32 {
 		return nil, errors.New("wrong data length")
 	}
 
