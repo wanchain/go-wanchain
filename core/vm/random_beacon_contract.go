@@ -5,18 +5,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/pos/rbselection"
-	"github.com/wanchain/go-wanchain/pos/util"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/wanchain/go-wanchain/pos/rbselection"
+	"github.com/wanchain/go-wanchain/pos/util"
+
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	posutil "github.com/wanchain/go-wanchain/pos/util"
@@ -143,11 +144,11 @@ var (
 	rbSCAbi, errRbSCInit = abi.JSON(strings.NewReader(rbSCDefinition))
 
 	// function "dkg1" "dkg2" "sigShare" 's solidity binary id
-	dkg1Id     [4]byte
-	dkg2Id     [4]byte
-	sigShareId [4]byte
-	getEpochIdId [4]byte
-	getRandomNumberByEpochIdId [4]byte
+	dkg1Id                       [4]byte
+	dkg2Id                       [4]byte
+	sigShareId                   [4]byte
+	getEpochIdId                 [4]byte
+	getRandomNumberByEpochIdId   [4]byte
 	getRandomNumberByTimestampId [4]byte
 
 	// prefix for the key hash
@@ -159,16 +160,16 @@ var (
 	hBase = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
 
 	// errors
-	errDkg1Parse           = errors.New("dkg1 payload parse failed")
-	errDkg2Parse           = errors.New("dkg2 payload parse failed")
-	errSigParse            = errors.New("sig payload parse failed")
-	errRSCode              = errors.New("rs code verify failed")
-	errDiscreteLogarithmsEQ = errors.New("the equality of discrete logarithms verify failed")
-	errRlpCij              = errors.New("rlp encode cij failed")
-	errRlpEncryptShare     = errors.New("rlp encode encrypt share failed")
-	errUnRlpCij            = errors.New("rlp decode cij failed")
-	errUnRlpEncryptShare   = errors.New("rlp decode encrypt share failed")
-	errInvalidCommitBytes  = errors.New("invalid dkg commit bytes")
+	errDkg1Parse                = errors.New("dkg1 payload parse failed")
+	errDkg2Parse                = errors.New("dkg2 payload parse failed")
+	errSigParse                 = errors.New("sig payload parse failed")
+	errRSCode                   = errors.New("rs code verify failed")
+	errDiscreteLogarithmsEQ     = errors.New("the equality of discrete logarithms verify failed")
+	errRlpCij                   = errors.New("rlp encode cij failed")
+	errRlpEncryptShare          = errors.New("rlp encode encrypt share failed")
+	errUnRlpCij                 = errors.New("rlp decode cij failed")
+	errUnRlpEncryptShare        = errors.New("rlp decode encrypt share failed")
+	errInvalidCommitBytes       = errors.New("invalid dkg commit bytes")
 	errInvalidEncryptShareBytes = errors.New("invalid dkg encrypt share bytes")
 )
 
@@ -237,7 +238,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		epochId,_ :=util.CalEpochSlotID(evm.Time.Uint64())
+		epochId, _ := util.CalEpochSlotID(evm.Time.Uint64())
 		if epochId >= posconfig.Cfg().MercuryEpochId {
 			if methodId == getEpochIdId {
 				return c.getEpochId(input[4:], contract, evm)
@@ -247,7 +248,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 				return c.getRandomNumberByTimestamp(input[4:], contract, evm)
 			}
 		}
-		log.SyslogErr("random beacon contract no match id found")
+		log.SyslogErr("random beacon contract no match id found", "methodId", common.ToHex(methodId[:]))
 		return nil, errors.New("no function")
 	}
 }
@@ -255,7 +256,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 func (c *RandomBeaconContract) getEpochId(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
-	epochId,_ := posutil.CalEpochSlotID(timestamp)
+	epochId, _ := posutil.CalEpochSlotID(timestamp)
 
 	eBig := new(big.Int).SetUint64(epochId)
 	return common.LeftPadBytes(eBig.Bytes(), 32), nil
@@ -276,7 +277,7 @@ func (c *RandomBeaconContract) getRandomNumberByEpochId(payload []byte, contract
 func (c *RandomBeaconContract) getRandomNumberByTimestamp(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	timestamp := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
 
-	epochId,_ := posutil.CalEpochSlotID(timestamp)
+	epochId, _ := posutil.CalEpochSlotID(timestamp)
 
 	r := GetStateR(evm.StateDB, epochId)
 
@@ -289,7 +290,7 @@ func (c *RandomBeaconContract) getRandomNumberByTimestamp(payload []byte, contra
 
 func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {
 	if posconfig.FirstEpochId == 0 {
-		return  errParameters
+		return errParameters
 	}
 	if stateDB == nil || signer == nil || tx == nil {
 		return errParameters
@@ -307,16 +308,16 @@ func (c *RandomBeaconContract) ValidTx(stateDB StateDB, signer types.Signer, tx 
 
 	return ValidPosRBTx(stateDB, from, payload)
 }
-func getRBProposerGroup(eid uint64)([]bn256.G1,error){
+func getRBProposerGroup(eid uint64) ([]bn256.G1, error) {
 	ep := util.GetEpocherInst()
 	if ep == nil {
-		return nil,  errors.New("GetEpocherInst() == nil")
+		return nil, errors.New("GetEpocherInst() == nil")
 	}
-		pks := ep.GetRBProposerG1(eid)
+	pks := ep.GetRBProposerG1(eid)
 	if len(pks) == 0 {
 		return nil, errors.New("len(pks) == 0")
 	}
-	return pks,nil
+	return pks, nil
 }
 
 //
@@ -737,7 +738,7 @@ type RbDKG2FlatTxPayload struct {
 type RbSIGTxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
-	GSignShare  *bn256.G1
+	GSignShare *bn256.G1
 }
 
 //
@@ -753,8 +754,8 @@ type RbDKG2TxPayload struct {
 	EpochId    uint64
 	ProposerId uint32
 	// encrypt share
-	EnShare    []*bn256.G1
-	Proof      []rbselection.DLEQproof
+	EnShare []*bn256.G1
+	Proof   []rbselection.DLEQproof
 }
 
 //
@@ -933,7 +934,7 @@ func isValidEpochStage(epochId uint64, stage int, time uint64) bool {
 }
 
 func isInRandomGroup(pks []bn256.G1, epochId uint64, proposerId uint32, address common.Address) bool {
-	if len(pks) <= int(proposerId) || int(proposerId)<0 {
+	if len(pks) <= int(proposerId) || int(proposerId) < 0 {
 		return false
 	}
 	ep := util.GetEpocherInst()
@@ -1148,7 +1149,6 @@ func computeRandom(stateDB StateDB, epochId uint64, dkgData []RbCijDataCollector
 	log.SyslogInfo("compute random success", "epochId", epochId+1, "random", common.ToHex(random))
 	return big.NewInt(0).SetBytes(random), nil
 }
-
 
 func GetValidDkg1Cnt(db StateDB, epochId uint64) uint64 {
 	if db == nil {
