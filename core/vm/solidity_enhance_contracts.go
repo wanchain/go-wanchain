@@ -16,6 +16,7 @@ import (
 	"github.com/wanchain/go-wanchain/crypto"
 	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
 	"github.com/wanchain/go-wanchain/crypto/ecies"
+	"github.com/wanchain/go-wanchain/log"
 	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 	"github.com/wanchain/go-wanchain/pos/util"
@@ -295,14 +296,6 @@ var (
 	{
 		"constant": true,
 		"inputs": [
-			{
-				"name": "crossChainCoefficient",
-				"type": "uint256"
-			},
-			{
-				"name": "chainTypeCoefficient",
-				"type": "uint256"
-			},
 			{
 				"name": "time",
 				"type": "uint256"
@@ -872,9 +865,11 @@ func (s *SolEnhance) checkSig(payload []byte, contract *Contract, evm *EVM) ([]b
 }
 
 func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-
 	len := len(payload)
+	log.Info("getPosTotalRet", "payload", len)
+
 	if len < 32 {
+		log.Warn("getPosTotalRet", "payload", len)
 		return []byte{0}, nil
 	}
 
@@ -884,11 +879,13 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 
 	inst := posutil.PosAvgRetInst()
 	if inst == nil {
+		log.Warn("not initialzied for pos return", "time", time, "epid", epid)
 		return []byte{0}, errors.New("not initialzied for pos return ")
 	}
 
 	totalIncentive, err := inst.GetAllIncentive(epid)
 	if err != nil || totalIncentive == nil {
+		log.Warn("GetAllIncentive failed", "err", err, "time", time, "epid", epid)
 		return []byte{0}, nil
 	}
 
@@ -897,7 +894,7 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	ret := totalIncentive.Uint64()
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, ret)
-
+	log.Info("getPosTotalRet return")
 	return common.LeftPadBytes(buf, 32), nil
 }
 
