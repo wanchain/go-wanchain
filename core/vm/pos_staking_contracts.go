@@ -3,10 +3,11 @@ package vm
 import (
 	"crypto/ecdsa"
 	"errors" // this is not match with other
-	"github.com/wanchain/go-wanchain/params"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/wanchain/go-wanchain/params"
 
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
@@ -52,7 +53,7 @@ const (
 	PSMinDelegatorStake   = 100
 	PSMinFeeRate          = 0
 	PSMaxFeeRate          = 10000
-	PSFeeRateStep		  = 100
+	PSFeeRateStep         = 100
 	PSNodeleFeeRate       = 10000
 	PSMinPartnerIn        = 10000
 	MaxTimeDelegate       = 10
@@ -419,28 +420,6 @@ var (
 		],
 		"name": "stakeUpdateFeeRate",
 		"type": "event"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{ "name": "groupStartTime",
-				"type": "uint256"
-			},
-			{
-				"name": "targetTime",
-				"type": "uint256"
-			}	
-		],
-		"name": "getPosAvgReturn",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
 	}
 ]
 `
@@ -448,13 +427,13 @@ var (
 	cscAbi, errCscInit = abi.JSON(strings.NewReader(cscDefinition))
 
 	// function "stakeIn" "delegateIn" 's solidity binary id
-	stakeRegisterId [4]byte
-	stakeInId     [4]byte
-	stakeUpdateId [4]byte
-	stakeAppendId [4]byte
-	partnerInId   [4]byte
-	delegateInId  [4]byte
-	delegateOutId [4]byte
+	stakeRegisterId      [4]byte
+	stakeInId            [4]byte
+	stakeUpdateId        [4]byte
+	stakeAppendId        [4]byte
+	partnerInId          [4]byte
+	delegateInId         [4]byte
+	delegateOutId        [4]byte
 	stakeUpdateFeeRateId [4]byte
 
 	//getPosAvgReturnId [4]byte
@@ -498,7 +477,7 @@ type DelegateParam struct {
 	DelegateAddress common.Address //delegation’s address
 }
 type UpdateFeeRateParam struct {
-	Addr common.Address
+	Addr    common.Address
 	FeeRate *big.Int
 }
 
@@ -546,11 +525,12 @@ type PartnerInfo struct {
 }
 
 type UpdateFeeRate struct {
-	ValidatorAddr    common.Address
-	MaxFeeRate uint64
-	FeeRate uint64
-	ChangedEpoch uint64
+	ValidatorAddr common.Address
+	MaxFeeRate    uint64
+	FeeRate       uint64
+	ChangedEpoch  uint64
 }
+
 //
 // public helper structures
 //
@@ -589,8 +569,6 @@ func init() {
 	copy(delegateInId[:], cscAbi.Methods["delegateIn"].Id())
 	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].Id())
 	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].Id())
-
-	//copy(getPosAvgReturnId[:], cscAbi.Methods["getPosAvgReturn"].Id())
 }
 
 /////////////////////////////
@@ -655,7 +633,7 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	if methodId == stakeRegisterId {
 		eidNow, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 		if eidNow < posconfig.ApolloEpochID {
-			return  errors.New("stakeRegister haven't enabled.")
+			return errors.New("stakeRegister haven't enabled.")
 		}
 		_, err := p.stakeRegisterParseAndValid(input[4:])
 		if err != nil {
@@ -701,7 +679,7 @@ func (p *PosStaking) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 	} else if methodId == stakeUpdateFeeRateId {
 		eidNow, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 		if eidNow < posconfig.ApolloEpochID {
-			return  errors.New("stakeUpdateFeeRateId haven't enabled.")
+			return errors.New("stakeUpdateFeeRateId haven't enabled.")
 		}
 		_, err := p.updateFeeRateParseAndValid(input[4:])
 		if err != nil {
@@ -738,7 +716,6 @@ func (p *PosStaking) getStakeInfo(evm *EVM, addr common.Address) (*StakerInfo, e
 	}
 	return &stakerInfo, nil
 }
-
 
 func (p *PosStaking) getStakeFeeRate(evm *EVM, address common.Address) (*UpdateFeeRate, error) {
 	key := GetStakeInKeyHash(address)
@@ -810,7 +787,7 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 	}
 
 	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
-	if eidNow >= posconfig.ApolloEpochID &&  eidNow < posconfig.AugustEpochID{
+	if eidNow >= posconfig.ApolloEpochID && eidNow < posconfig.AugustEpochID {
 		if contract.Value().Cmp(minPartnerIn) < 0 {
 			return nil, errors.New("min wan amount should >= 10000")
 		}
@@ -949,9 +926,9 @@ func (p *PosStaking) StakeRegister(payload []byte, contract *Contract, evm *EVM)
 	maxFeeRate := info.MaxFeeRate.Uint64()
 	feeUpdate := &UpdateFeeRate{
 		ValidatorAddr: stakerInfo.Address,
-		MaxFeeRate: maxFeeRate,
-		FeeRate: stakerInfo.FeeRate,
-		ChangedEpoch: uint64(0),
+		MaxFeeRate:    maxFeeRate,
+		FeeRate:       stakerInfo.FeeRate,
+		ChangedEpoch:  uint64(0),
 	}
 	err = p.saveStakeFeeRate(evm, feeUpdate, stakerInfo.Address)
 	if err != nil {
@@ -1142,8 +1119,6 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	return nil, nil
 }
 
-
-
 func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	feeRateParam, err := p.updateFeeRateParseAndValid(payload)
 	if err != nil {
@@ -1155,7 +1130,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	}
 
 	// if feeRate == 10000, can't change
-	if stakeInfo.FeeRate == PSMaxFeeRate || feeRateParam.FeeRate.Uint64() == PSMaxFeeRate  {
+	if stakeInfo.FeeRate == PSMaxFeeRate || feeRateParam.FeeRate.Uint64() == PSMaxFeeRate {
 		return nil, errors.New("feeRate equal 10000, can't change")
 	}
 
@@ -1176,9 +1151,9 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if oldFee == nil {
 		oldFee = &UpdateFeeRate{
 			ValidatorAddr: stakeInfo.Address,
-			MaxFeeRate: stakeInfo.FeeRate,
-			FeeRate: stakeInfo.FeeRate,
-			ChangedEpoch: eid,
+			MaxFeeRate:    stakeInfo.FeeRate,
+			FeeRate:       stakeInfo.FeeRate,
+			ChangedEpoch:  eid,
 		}
 	} else if oldFee.ChangedEpoch == eid {
 		return nil, errors.New("one epoch can only change one time")
@@ -1189,7 +1164,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 	if feeRate > oldFee.MaxFeeRate {
 		return nil, errors.New("fee rate can't bigger than old")
 	}
-	if feeRate > stakeInfo.FeeRate + PSFeeRateStep {
+	if feeRate > stakeInfo.FeeRate+PSFeeRateStep {
 		return nil, errors.New("0 <= newFeeRate <= oldFeerate + 100")
 	}
 
@@ -1317,6 +1292,7 @@ func (p *PosStaking) doStakeInParseAndValid(info *StakeInParam) error {
 	}
 	return nil
 }
+
 //
 // package param check helper functions
 //
@@ -1562,75 +1538,3 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 	}
 	return nil
 }
-
-
-//func (p *PosStaking) getPosAvgReturn(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-//
-//	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
-//	if eid < posconfig.StoremanEpochid {
-//		return []byte{0},errors.New("not reach forked epochid")
-//	}
-//
-//
-//	//to do
-//	groupStartTime := new(big.Int).SetBytes(getData(payload, 0, 32)).Uint64()
-//	targetTime := new(big.Int).SetBytes(getData(payload, 32, 32)).Uint64()
-//
-//	////for test/////////////////////////////////
-//	groupStartTime = uint64(time.Now().Unix())
-//	targetTime = groupStartTime
-//
-//	groupStartEpochId,_ := posutil.CalEpochSlotID(groupStartTime)
-//	groupStartEpochId--
-//
-//	targetEpochId,_ := posutil.CalEpochSlotID(targetTime)
-//	targetEpochId--
-//	/////////////////////////////////////////
-//
-//	if groupStartEpochId > eid || targetEpochId > eid {
-//		return []byte{0},errors.New("wrong epochid")
-//	}
-//
-//	inst := posutil.PosAvgRetInst()
-//	if inst == nil {
-//		return []byte{0},errors.New("not initialzied for pos return ")
-//	}
-//
-//	retTotal := uint64(0);
-//	for i:=uint64(0);i<posconfig.TARGETS_LOCKED_EPOCH;i++ {
-//
-//		ret,err := inst.GetOneEpochAvgReturnFor90LockEpoch(groupStartEpochId - i)
-//		if err!= nil {
-//			continue
-//		}
-//
-//		retTotal += ret
-//	}
-//
-//	p2 := uint64(retTotal/posconfig.TARGETS_LOCKED_EPOCH)
-//
-//	stakeBegin,err := inst.GetAllStakeAndReturn(targetEpochId - 1)
-//	if err != nil {
-//		return []byte{0},err
-//	}
-//
-//	stakeEnd,err := inst.GetAllStakeAndReturn(targetEpochId)
-//	if err != nil {
-//		return []byte{0},err
-//	}
-//
-//
-//	p2Big := big.NewInt(int64(p2))
-//
-//	p1Mul := p2Big.Mul(p2Big,stakeBegin)
-//
-//	p1 := p1Mul.Div(p1Mul,stakeEnd).Uint64()
-//
-//	////convert to byte array
-//	var buf = make([]byte, 8)
-//	binary.BigEndian.PutUint64(buf, p1)
-//
-//	return common.LeftPadBytes(buf, 32), nil
-//}
-
-

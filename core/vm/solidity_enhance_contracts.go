@@ -168,7 +168,7 @@ var (
 		"constant": true,
 		"inputs": [
 			{
-				"name": "curTime",
+				"name": "targetSecond",
 				"type": "uint256"
 			}
 		],
