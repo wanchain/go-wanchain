@@ -108,7 +108,7 @@ const (
 	TestnetVenusEpochId = 18369
 
 	MainnetMarsEpochId = MainnetVenusEpochId
-	TestnetMarsEpochId = 18506
+	TestnetMarsEpochId = 18506 //2020.09.01
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
