@@ -456,9 +456,6 @@ func init() {
 	copy(s256CalPolyCommitid[:], solenhanceAbi.Methods["s256CalPolyCommit"].Id())
 	copy(bn256CalPolyCommitid[:], solenhanceAbi.Methods["bn256CalPolyCommit"].Id())
 	copy(bn256MulGid[:], solenhanceAbi.Methods["bn256MulG"].Id())
-
-	mulGidStr := common.Bytes2Hex(bn256MulGid[:])
-	fmt.Println("" + mulGidStr)
 }
 
 /////////////////////////////
