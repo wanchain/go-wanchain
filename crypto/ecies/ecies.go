@@ -467,7 +467,7 @@ func EncryptWithRandom(rbprv *PrivateKey, pub *PublicKey, iv []byte, m, s1, s2 [
 
 	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
 
-	ct = make([]byte, ((len(empub) + len(iv) + len(em) + len(d)/32 + 1) * 32))
+	ct = make([]byte, (((len(empub)+len(iv)+len(em)+len(d))/32 + 1) * 32))
 
 	copy(ct, empub)
 	copy(ct[len(empub):], iv)
