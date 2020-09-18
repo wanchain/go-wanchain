@@ -9,6 +9,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
+	posutil "github.com/wanchain/go-wanchain/pos/util"
 
 	"github.com/wanchain/go-wanchain/accounts/abi"
 	"github.com/wanchain/go-wanchain/core/types"
@@ -100,9 +101,15 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	}
 
 	// check only the owner could run it.
-	if contract.Caller()  != posconfig.PosOwnerAddr {
+	if contract.Caller() != posconfig.PosOwnerAddr {
 		return nil, errParameters
 	}
+
+	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	if epid >= posconfig.Cfg().MarsEpochId {
+		return nil, errors.New("pos_control_not_support_anymore")
+	}
+
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
@@ -138,7 +145,7 @@ func (p *PosControl) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 
 func posControlCheckEpoch(epochId uint64, time uint64) bool {
 	eid, _ := util.CalEpochSlotID(time)
-	if  eid+posconfig.PosUpgradeEpochID >  epochId { // must send tx some epochs in advance.
+	if eid+posconfig.PosUpgradeEpochID > epochId { // must send tx some epochs in advance.
 		return false
 	}
 	return true
