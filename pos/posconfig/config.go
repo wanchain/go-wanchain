@@ -104,7 +104,7 @@ const (
 	MainnetMercuryEpochId = 18250 //2019.12.20
 	TestnetMercuryEpochId = 18246 //2019.12.16
 
-	MainnetVenusEpochId = 11112222
+	MainnetVenusEpochId = 18557
 	TestnetVenusEpochId = 18369
 
 	MainnetMarsEpochId = MainnetVenusEpochId
