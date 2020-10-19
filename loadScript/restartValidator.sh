@@ -20,7 +20,7 @@ read -p "Do you want save your password to disk for auto restart? (N/y): " savep
 
 sudo docker stop gwan
 
-echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
+sudo rm ~/.wanchain/pw.txt && echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
 
 sudo docker start gwan
 
