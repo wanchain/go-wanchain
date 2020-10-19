@@ -50,7 +50,7 @@ sudo docker stop gwan >/dev/null 2>&1
 
 sudo docker rm gwan >/dev/null 2>&1
 
-sudo rm ~/.wanchain/pw.txt && echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
+echo ${PASSWD} | sudo tee ~/.wanchain/pw.txt > /dev/null
 if [ $? -ne 0 ]; then
     echo "Write pw.txt failed"
     exit 1
