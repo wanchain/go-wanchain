@@ -56,7 +56,7 @@ PK=$getPK
 
 echo $PK
 
-echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
+sudo rm ~/.wanchain/pw.txt && echo ${PASSWD} | sudo tee -a ~/.wanchain/pw.txt > /dev/null
 if [ $? -ne 0 ]; then
     echo "write pw.txt failed"
     exit 1
