@@ -58,7 +58,7 @@ const (
 
 var (
 	//defaultGasPrice = big.NewInt(0).Mul(big.NewInt(18*params.Shannon), params.WanGasTimesFactor)
-	defaultGasPrice = big.NewInt(1*params.Shannon)
+	defaultGasPrice = big.NewInt(1 * params.Shannon)
 )
 
 var (
@@ -658,6 +658,11 @@ type PublicBlockChainAPI struct {
 // NewPublicBlockChainAPI creates a new Ethereum blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
+}
+
+// ChainId returns the chainID value for transaction replay protection.
+func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
+	return (*hexutil.Big)(s.b.ChainConfig().ChainId)
 }
 
 // BlockNumber returns the block number of the chain head.
@@ -1413,10 +1418,8 @@ func (s *PublicTransactionPoolAPI) SendPosTransaction(ctx context.Context, args 
 		return common.Hash{}, err
 	}
 
-
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
-
 
 	tx.SetTxtype(types.POS_TX)
 	var chainID *big.Int
