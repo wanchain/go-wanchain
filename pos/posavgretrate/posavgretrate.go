@@ -33,14 +33,14 @@ func NewPosAveRet() *PosAvgRet {
 
 func (p *PosAvgRet) GetPosAverageReturnRate(epochID uint64) (uint64, error) {
 
-	val, err := p.avgdb.GetWithIndex(epochID, 0, "")
+	// val, err := p.avgdb.GetWithIndex(epochID, 0, "")
 
-	if err == nil && val != nil {
-		p2 := binary.BigEndian.Uint64(val)
-		if p2 != 0 {
-			return p2, nil
-		}
-	}
+	// if err == nil && val != nil {
+	// 	p2 := binary.BigEndian.Uint64(val)
+	// 	if p2 != 0 {
+	// 		return p2, nil
+	// 	}
+	// }
 
 	reward := incentive.YearReward(epochID)
 
@@ -55,7 +55,7 @@ func (p *PosAvgRet) GetPosAverageReturnRate(epochID uint64) (uint64, error) {
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, p2)
 
-	p.avgdb.PutWithIndex(epochID, 0, "", buf)
+	// p.avgdb.PutWithIndex(epochID, 0, "", buf)
 
 	return p2, nil
 
