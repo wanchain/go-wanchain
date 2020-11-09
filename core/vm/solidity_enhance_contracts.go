@@ -720,7 +720,11 @@ func (s *SolEnhance) EvalByPolyG(pks []*ecdsa.PublicKey, degree int, x *big.Int)
 
 		temp1Pk.X, temp1Pk.Y = crypto.S256().ScalarMult(pks[i].X, pks[i].Y, temp1.Bytes())
 
-		sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X, sumPk.Y, temp1Pk.X, temp1Pk.Y)
+		if bytes.Equal(sumPk.X.Bytes(), temp1Pk.X.Bytes()) && bytes.Equal(sumPk.Y.Bytes(), temp1Pk.Y.Bytes()) {
+			sumPk.X, sumPk.Y = crypto.S256().Double(sumPk.X, sumPk.Y)
+		} else {
+			sumPk.X, sumPk.Y = crypto.S256().Add(sumPk.X, sumPk.Y, temp1Pk.X, temp1Pk.Y)
+		}
 
 	}
 	return sumPk, nil
