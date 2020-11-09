@@ -403,6 +403,13 @@ var (
 	ErrRingSignFail          = errors.New("ring sign fail")
 )
 
+func Wadd(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
+	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
+		return S256().Double(x1, y1)
+	} else {
+		return S256().Add(x1, y1, x2, y2)
+	}
+}
 // RingSign is the function of ring signature
 // Pengbo added, Shi,TeemoGuo revised
 func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.PublicKey, *ecdsa.PublicKey, []*big.Int, []*big.Int, error) {
@@ -466,7 +473,7 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 				return nil, nil, nil, nil, ErrRingSignFail
 			}
 
-			Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[qi]G+[wi]Pi
+			Lpub.X, Lpub.Y = Wadd(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[qi]G+[wi]Pi
 
 			SumC.Add(SumC, w[i])
 			SumC.Mod(SumC, secp256k1_N)
@@ -489,7 +496,7 @@ func RingSign(M []byte, x *big.Int, PublicKeys []*ecdsa.PublicKey) ([]*ecdsa.Pub
 				return nil, nil, nil, nil, ErrRingSignFail
 			}
 
-			Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
+			Rpub.X, Rpub.Y = Wadd(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
 		}
 
 		d.Write(FromECDSAPub(Rpub))
@@ -559,7 +566,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 			return false
 		}
 
-		Lpub.X, Lpub.Y = S256().Add(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[ri]G+[ci]Pi
+		Lpub.X, Lpub.Y = Wadd(Lpub.X, Lpub.Y, Ppub.X, Ppub.Y) //[ri]G+[ci]Pi
 		SumC.Add(SumC, c[i])
 		SumC.Mod(SumC, secp256k1_N)
 		d.Write(FromECDSAPub(Lpub))
@@ -579,7 +586,7 @@ func VerifyRingSign(M []byte, PublicKeys []*ecdsa.PublicKey, I *ecdsa.PublicKey,
 			return false
 		}
 
-		Rpub.X, Rpub.Y = S256().Add(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
+		Rpub.X, Rpub.Y = Wadd(Rpub.X, Rpub.Y, Ppub.X, Ppub.Y) //[qi]HashPi+[wi]I
 		log.Debug("RPublicKeys", "i", i, "Rpub", common.ToHex(FromECDSAPub(Rpub)))
 
 		d.Write(FromECDSAPub(Rpub))
@@ -604,7 +611,7 @@ func generateA1(r []byte, A *ecdsa.PublicKey, B *ecdsa.PublicKey) ecdsa.PublicKe
 	A1Bytes := Keccak256(FromECDSAPub(A1))        //hash([r]B)
 	A1.X, A1.Y = S256().ScalarBaseMult(A1Bytes)   //[hash([r]B)]G
 
-	A1.X, A1.Y = S256().Add(A1.X, A1.Y, A.X, A.Y) //A1=[hash([r]B)]G+A
+	A1.X, A1.Y = Wadd(A1.X, A1.Y, A.X, A.Y) //A1=[hash([r]B)]G+A
 	A1.Curve = S256()
 	return *A1
 }
