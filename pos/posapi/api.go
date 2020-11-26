@@ -701,6 +701,14 @@ func (a PosApi) GetSlotID() uint64 {
 	return sl
 }
 
+func (a PosApi) GetEpochBlock(epochId uint64) (uint64, error) {
+	ep, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
+	if epochId <= posconfig.FirstEpochId || epochId >= ep {
+		return 0, fmt.Errorf("epochID error")
+	}
+	return util.GetEpochBlock(epochId), nil
+}
+
 func (a PosApi) GetSlotCount() int {
 	return posconfig.SlotCount
 }

@@ -332,6 +332,11 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'getEpochBlock',
+			call: 'pos_getEpochBlock',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getSlotID',
 			call: 'pos_getSlotID',
 			params: 0
