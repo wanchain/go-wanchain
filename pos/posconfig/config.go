@@ -110,6 +110,9 @@ const (
 	MainnetMarsEpochId = MainnetVenusEpochId
 	TestnetMarsEpochId = 18506 //2020.09.01
 
+	MainnetJupiterEpochId = 99999
+	TestnetJupiterEpochId = 1
+
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
 
@@ -148,6 +151,7 @@ type Config struct {
 	MercuryEpochId  uint64
 	VenusEpochId    uint64
 	MarsEpochId     uint64
+	JupiterEpochId  uint64
 	DefaultGasPrice *big.Int
 
 	SyncTargetBlokcNum uint64
@@ -170,7 +174,7 @@ var DefaultConfig = Config{
 	0,
 	0,
 	0,
-
+	0,
 	nil,
 
 	0,
@@ -222,6 +226,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.MercuryEpochId = MainnetMercuryEpochId
 		DefaultConfig.VenusEpochId = MainnetVenusEpochId
 		DefaultConfig.MarsEpochId = MainnetMarsEpochId
+		DefaultConfig.JupiterEpochId = MainnetJupiterEpochId
 
 	} else if networkId == 6 {
 		PosOwnerAddr = PosOwnerAddrInternal
@@ -234,6 +239,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
+		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
 	} else if networkId == 4 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		// TODO: for debug set to WhiteListOrig -> WhiteListDev
@@ -241,6 +247,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
+		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
@@ -248,6 +255,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
+		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

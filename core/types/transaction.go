@@ -74,6 +74,31 @@ type txdata struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
+type TransactionJupiter struct {
+	data txdataJupiter
+	// caches
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+}
+
+type txdataJupiter struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
 type txdataMarshaling struct {
 	Txtype hexutil.Uint64
 
@@ -85,6 +110,29 @@ type txdataMarshaling struct {
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
+}
+
+func (tx *TransactionJupiter) GetData() *txdataJupiter {
+	return &tx.data
+}
+
+func (tx *Transaction) GetData() *txdata {
+	return &tx.data
+}
+
+func (tx *Transaction) ConvertFromNoTxtype(tx2 *TransactionJupiter) {
+	tx.data.Txtype = JUPITER_TX
+	tx2Data := tx2.GetData()
+	tx.data.AccountNonce = tx2Data.AccountNonce
+	tx.data.Price = tx2Data.Price
+	tx.data.GasLimit = tx2Data.GasLimit
+	tx.data.Recipient = tx2Data.Recipient
+	tx.data.Amount = tx2Data.Amount
+	tx.data.Payload = tx2Data.Payload
+	tx.data.V = tx2Data.V
+	tx.data.R = tx2Data.R
+	tx.data.S = tx2Data.S
+	tx.data.Hash = tx2Data.Hash
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
@@ -159,6 +207,22 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
+// DecodeRLP implements rlp.Encoder
+func (tx *TransactionJupiter) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, &tx.data)
+}
+
+// DecodeRLP implements rlp.Decoder
+func (tx *TransactionJupiter) DecodeRLP(s *rlp.Stream) error {
+	_, size, _ := s.Kind()
+	err := s.Decode(&tx.data)
+	if err == nil {
+		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+	}
+
+	return err
+}
+
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
@@ -186,9 +250,9 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte   { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Txtype() uint64 { return tx.data.Txtype }
-func (tx *Transaction) SetTxtype(txtype uint64)  { tx.data.Txtype = txtype }
+func (tx *Transaction) Data() []byte            { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Txtype() uint64          { return tx.data.Txtype }
+func (tx *Transaction) SetTxtype(txtype uint64) { tx.data.Txtype = txtype }
 
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
@@ -371,14 +435,14 @@ func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPrice Transactions
 
-func (s TxByPrice) Len() int           { return len(s) }
+func (s TxByPrice) Len() int { return len(s) }
 func (s TxByPrice) Less(i, j int) bool {
 	if s[j].data.Txtype != POS_TX && s[i].data.Txtype == POS_TX {
 		return true
 	}
 	return s[i].data.Price.Cmp(s[j].data.Price) > 0
 }
-func (s TxByPrice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s TxByPrice) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 func (s *TxByPrice) Push(x interface{}) {
 	*s = append(*s, x.(*Transaction))
@@ -474,7 +538,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, g
 		gasLimit:   gasLimit,
 		data:       data,
 		checkNonce: checkNonce,
-		txType:		NORMAL_TX,
+		txType:     NORMAL_TX,
 	}
 }
 
@@ -531,10 +595,11 @@ const (
 	NORMAL_TX  = 1
 	PRIVACY_TX = 6
 	POS_TX     = 7
+	JUPITER_TX = 8
 )
 
 func IsNormalTransaction(txType uint64) bool {
-	return txType == NORMAL_TX || txType == 0 ||  txType == 2// some of old tx used , which is allowed.
+	return txType == NORMAL_TX || txType == 0 || txType == 2 || txType == JUPITER_TX // some of old tx used , which is allowed.
 }
 func IsPosTransaction(txType uint64) bool {
 	return txType == POS_TX
@@ -543,5 +608,9 @@ func IsPrivacyTransaction(txType uint64) bool {
 	return txType == PRIVACY_TX
 }
 func IsValidTransactionType(txType uint64) bool {
-	return (txType == NORMAL_TX || txType == PRIVACY_TX|| txType == POS_TX)
+	return (txType == NORMAL_TX || txType == PRIVACY_TX || txType == POS_TX || txType == JUPITER_TX)
+}
+
+func IsJupiterTx(txType uint64) bool {
+	return (txType == JUPITER_TX)
 }

@@ -102,7 +102,7 @@ var (
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	InternalChainConfig = &ChainConfig{
-		ChainId: big.NewInt(4),
+		ChainId: big.NewInt(666),
 		//HomesteadBlock: big.NewInt(1),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -439,11 +439,9 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 }
 
 var (
-
-	isPosActive = false
+	isPosActive    = false
 	TestnetChainId = TestnetChainConfig.ChainId.Int64()
 	MainnetChainId = WanchainChainConfig.ChainId.Int64()
-
 )
 
 func IsPosActive() bool {

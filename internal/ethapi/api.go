@@ -1553,7 +1553,15 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return common.Hash{}, err
+		if posutil.IsJupiterForkArrived() {
+			txJupiter := new(types.TransactionJupiter)
+			if err := rlp.DecodeBytes(encodedTx, txJupiter); err != nil {
+				return common.Hash{}, err
+			}
+			tx.ConvertFromNoTxtype(txJupiter)
+		} else {
+			return common.Hash{}, err
+		}
 	}
 	return submitTransaction(ctx, s.b, tx)
 }

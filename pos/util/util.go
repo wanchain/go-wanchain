@@ -94,6 +94,11 @@ func GetCurrentBlkEpochSlotID() (epochID, slotID uint64) {
 	return GetEpochSlotIDFromDifficulty(curheader.Difficulty)
 }
 
+func IsJupiterForkArrived() bool {
+	epid, _ := GetCurrentBlkEpochSlotID()
+	return epid >= posconfig.Cfg().JupiterEpochId
+}
+
 var (
 	lastBlockEpoch     = make(map[uint64]uint64)
 	lastBlockHashEpoch = make(map[uint64]common.Hash)
