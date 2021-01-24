@@ -240,7 +240,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
 		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
-	} else if networkId == 4 {
+	} else if networkId == 666 {
 		PosOwnerAddr = PosOwnerAddrInternal
 		// TODO: for debug set to WhiteListOrig -> WhiteListDev
 		WhiteList = WhiteListDev

@@ -18,6 +18,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -137,6 +138,7 @@ func (b *EthApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 }
 
 func (b *EthApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+	fmt.Println("SendTx")
 	return b.eth.txPool.AddLocal(signedTx)
 }
 
@@ -207,11 +209,10 @@ func (b *EthApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	}
 }
 
-
 func (b *EthApiBackend) Synchronising() bool {
 	return b.eth.protocolManager.downloader.Synchronising()
 }
 
-func (b *EthApiBackend) ChainQuality(epochid uint64, slotid uint64) (uint64,error) {
-	return b.eth.blockchain.ChainQuality(epochid,slotid)
+func (b *EthApiBackend) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
+	return b.eth.blockchain.ChainQuality(epochid, slotid)
 }

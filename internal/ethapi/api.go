@@ -1341,9 +1341,14 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+	fmt.Println("submitTransaction 1")
+
 	if err := b.SendTx(ctx, tx); err != nil {
+		fmt.Println("submitTransaction 2")
 		return common.Hash{}, err
 	}
+	fmt.Println("submitTransaction 3")
+
 	if tx.To() == nil {
 		signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
 		from, err := types.Sender(signer, tx)
@@ -1353,6 +1358,8 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
+		fmt.Println("submitTransaction 4")
+
 		log.Debug("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
@@ -1552,17 +1559,28 @@ func (s *PublicTransactionPoolAPI) ComputeOTAPPKeys(ctx context.Context, address
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
+	fmt.Println("PublicTransactionPoolAPI SendRawTransaction 1")
+
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		fmt.Println("PublicTransactionPoolAPI SendRawTransaction 2")
+
 		if posutil.IsJupiterForkArrived() {
+			fmt.Println("PublicTransactionPoolAPI SendRawTransaction 3")
+
 			txJupiter := new(types.TransactionJupiter)
 			if err := rlp.DecodeBytes(encodedTx, txJupiter); err != nil {
+				fmt.Println("PublicTransactionPoolAPI SendRawTransaction 5")
+
 				return common.Hash{}, err
 			}
 			tx.ConvertFromNoTxtype(txJupiter)
 		} else {
+			fmt.Println("PublicTransactionPoolAPI SendRawTransaction 4")
 			return common.Hash{}, err
 		}
 	}
+	fmt.Println("PublicTransactionPoolAPI SendRawTransaction 6")
+
 	return submitTransaction(ctx, s.b, tx)
 }
 
