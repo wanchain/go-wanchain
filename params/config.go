@@ -34,12 +34,26 @@ var (
 
 const MainnetPow2PosUpgradeBlockNumber = 4046000
 const TestnetPow2PosUpgradeBlockNumber = 3560000
-const InternalPow2PosUpgradeBlockNumber = 20
+const InternalPow2PosUpgradeBlockNumber = 200
+
+const MAINNET_CHAIN_ID = 1
+const TESTNET_CHAIN_ID = 3
+const INTERNAL_CHAIN_ID = 4
+const PLUTO_CHAIN_ID = 6
+const PLUTODEV_CHAIN_ID = 6
+
+const JUPITER_MAINNET_CHAIN_ID = 1
+const JUPITER_TESTNET_CHAIN_ID = 3
+const JUPITER_INTERNAL_CHAIN_ID = 466
+const JUPITER_PLUTO_CHAIN_ID = 6
+const JUPITER_PLUTODEV_CHAIN_ID = 6
+
+const NOT_JUPITER_CHAIN_ID = 0xffffffff
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(1),
+		ChainId: big.NewInt(MAINNET_CHAIN_ID),
 
 		//HomesteadBlock: big.NewInt(1150000),
 		//DAOForkBlock:   big.NewInt(1920000),
@@ -61,7 +75,7 @@ var (
 	}
 
 	WanchainChainConfig = &ChainConfig{
-		ChainId: big.NewInt(1),
+		ChainId: big.NewInt(MAINNET_CHAIN_ID),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -81,7 +95,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(3),
+		ChainId: big.NewInt(TESTNET_CHAIN_ID),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -102,7 +116,7 @@ var (
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	InternalChainConfig = &ChainConfig{
-		ChainId: big.NewInt(666),
+		ChainId: big.NewInt(INTERNAL_CHAIN_ID),
 		//HomesteadBlock: big.NewInt(1),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -122,7 +136,7 @@ var (
 	}
 	// PlutoChainConfig contains the chain parameters to run a node on the Pluto test network.
 	PlutoChainConfig = &ChainConfig{
-		ChainId: big.NewInt(6),
+		ChainId: big.NewInt(PLUTO_CHAIN_ID),
 		//HomesteadBlock: big.NewInt(0),
 		//DAOForkBlock:   nil,
 		//DAOForkSupport: true,
@@ -151,7 +165,7 @@ var (
 	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(100), false, new(EthashConfig), nil, nil}
 
 	TestChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(1),
+		ChainId:        big.NewInt(MAINNET_CHAIN_ID),
 		ByzantiumBlock: big.NewInt(0),
 		Ethash:         new(EthashConfig),
 		PosFirstBlock:  big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
@@ -457,4 +471,28 @@ func IsNoStaking() bool {
 }
 func SetNoStaking() {
 	noStaking = true
+}
+
+func JupiterChainId(chainId uint64) uint64 {
+	if chainId == MAINNET_CHAIN_ID {
+		return JUPITER_MAINNET_CHAIN_ID
+	}
+
+	if chainId == TESTNET_CHAIN_ID {
+		return JUPITER_TESTNET_CHAIN_ID
+	}
+
+	if chainId == INTERNAL_CHAIN_ID {
+		return JUPITER_INTERNAL_CHAIN_ID
+	}
+
+	if chainId == PLUTO_CHAIN_ID {
+		return JUPITER_PLUTO_CHAIN_ID
+	}
+
+	if chainId == PLUTODEV_CHAIN_ID {
+		return JUPITER_PLUTODEV_CHAIN_ID
+	}
+
+	return NOT_JUPITER_CHAIN_ID
 }

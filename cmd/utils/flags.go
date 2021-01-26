@@ -1058,12 +1058,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			params.TestnetChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
 		}
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
+			cfg.NetworkId = params.TESTNET_CHAIN_ID
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevInternalFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 666
+			cfg.NetworkId = params.INTERNAL_CHAIN_ID
 		}
 		if ctx.GlobalIsSet(FirstPos.Name) {
 			params.InternalChainConfig.PosFirstBlock = new(big.Int).SetInt64(ctx.GlobalInt64(FirstPos.Name))
@@ -1072,7 +1072,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	case ctx.GlobalBool(PlutoFlag.Name):
 		posconfig.IsDev = false
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 6
+			cfg.NetworkId = params.PLUTO_CHAIN_ID
 		}
 
 		cfg.Genesis = core.DefaultPlutoGenesisBlock()
@@ -1080,7 +1080,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	case ctx.GlobalIsSet(PlutoDevFlag.Name):
 		posconfig.IsDev = true
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 6
+			cfg.NetworkId = params.PLUTODEV_CHAIN_ID
 		}
 		cfg.Genesis = core.PlutoDevGenesisBlock()
 

@@ -662,6 +662,12 @@ func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 
 // ChainId returns the chainID value for transaction replay protection.
 func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
+	if posutil.IsJupiterForkArrived() {
+		if params.JupiterChainId(s.b.ChainConfig().ChainId.Uint64()) != params.NOT_JUPITER_CHAIN_ID {
+			return (*hexutil.Big)(big.NewInt(0).SetUint64(params.JupiterChainId(s.b.ChainConfig().ChainId.Uint64())))
+		}
+	}
+
 	return (*hexutil.Big)(s.b.ChainConfig().ChainId)
 }
 
@@ -1822,6 +1828,12 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 
 // Version returns the current ethereum protocol version.
 func (s *PublicNetAPI) Version() string {
+	if posutil.IsJupiterForkArrived() {
+		if params.JupiterChainId(s.networkVersion) != params.NOT_JUPITER_CHAIN_ID {
+			return fmt.Sprintf("%d", params.JupiterChainId(s.networkVersion))
+		}
+	}
+
 	return fmt.Sprintf("%d", s.networkVersion)
 }
 

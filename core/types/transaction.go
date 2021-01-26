@@ -595,7 +595,7 @@ const (
 	NORMAL_TX  = 1
 	PRIVACY_TX = 6
 	POS_TX     = 7
-	JUPITER_TX = 8
+	JUPITER_TX = 0xffffffff
 )
 
 func IsNormalTransaction(txType uint64) bool {

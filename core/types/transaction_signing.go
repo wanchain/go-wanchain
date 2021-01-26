@@ -137,12 +137,12 @@ var big8 = big.NewInt(8)
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	fmt.Println("EIP155Signer Sender 0")
 	if !tx.Protected() {
-		fmt.Println("EIP155Signer Sender 1")
+		fmt.Println("EIP155Signer Sender 1 HomesteadSigner")
 
 		return HomesteadSigner{}.Sender(tx)
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		fmt.Println("EIP155Signer Sender 3", tx.ChainId().String(), s.chainId.String())
+	if tx.ChainId().Cmp(s.chainId) != 0 && params.JupiterChainId(tx.ChainId().Uint64()) != s.chainId.Uint64() {
+		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
 		return common.Address{}, ErrInvalidChainId
 	}
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
@@ -171,8 +171,14 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	fmt.Println("EIP155Signer Hash 1")
 
+	chainId := s.chainId
+
+	if s.chainId.Uint64() != tx.ChainId().Uint64() {
+		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+	}
+
 	if IsJupiterTx(tx.Txtype()) {
-		fmt.Println("EIP155Signer Hash 2")
+		fmt.Println("EIP155Signer Hash 2 IsJupiterTx")
 
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,
@@ -181,10 +187,10 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 			tx.data.Recipient,
 			tx.data.Amount,
 			tx.data.Payload,
-			s.chainId, uint(0), uint(0),
+			chainId, uint(0), uint(0),
 		})
 	}
-	fmt.Println("EIP155Signer Hash 3")
+	fmt.Println("EIP155Signer Hash 3 not JupiterTx")
 
 	return rlpHash([]interface{}{
 		tx.data.Txtype,
@@ -194,7 +200,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-		s.chainId, uint(0), uint(0),
+		chainId, uint(0), uint(0),
 	})
 }
 

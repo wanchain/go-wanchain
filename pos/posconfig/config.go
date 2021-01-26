@@ -10,6 +10,7 @@ import (
 	"github.com/wanchain/go-wanchain/common/hexutil"
 	"github.com/wanchain/go-wanchain/crypto"
 	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/wanchain/go-wanchain/params"
 
 	"github.com/wanchain/go-wanchain/node"
 )
@@ -218,7 +219,7 @@ func (c *Config) GetMinerBn256SK() *big.Int {
 }
 
 func Init(nodeCfg *node.Config, networkId uint64) {
-	if networkId == 1 {
+	if networkId == params.MAINNET_CHAIN_ID {
 		// this is mainnet. *****
 		WhiteList = WhiteListMainnet
 		PosOwnerAddr = PosOwnerAddrMainnet
@@ -228,7 +229,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.MarsEpochId = MainnetMarsEpochId
 		DefaultConfig.JupiterEpochId = MainnetJupiterEpochId
 
-	} else if networkId == 6 {
+	} else if networkId == params.PLUTO_CHAIN_ID {
 		PosOwnerAddr = PosOwnerAddrInternal
 		if IsDev { // --plutodev
 			// TODO: for debug change WhiteListDev -> WhiteListMainnet
@@ -240,7 +241,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
 		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
-	} else if networkId == 666 {
+	} else if networkId == params.INTERNAL_CHAIN_ID {
 		PosOwnerAddr = PosOwnerAddrInternal
 		// TODO: for debug set to WhiteListOrig -> WhiteListDev
 		WhiteList = WhiteListDev
