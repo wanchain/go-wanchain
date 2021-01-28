@@ -141,13 +141,22 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 
 		return HomesteadSigner{}.Sender(tx)
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 && params.JupiterChainId(tx.ChainId().Uint64()) != s.chainId.Uint64() {
+
+	if tx.ChainId().Cmp(s.chainId) != 0 && params.JupiterChainId(tx.ChainId().Uint64()) != s.chainId.Uint64() && tx.ChainId().Uint64() != params.JupiterChainId(s.chainId.Uint64()) {
 		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+
+	V := big.NewInt(0)
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		V = new(big.Int).Sub(tx.data.V, new(big.Int).Mul(tx.ChainId(), big.NewInt(2)))
+	} else {
+		V = new(big.Int).Sub(tx.data.V, s.chainIdMul)
+	}
+
 	V.Sub(V, big8)
-	fmt.Println("EIP155Signer Sender 2")
+
+	fmt.Println("EIP155Signer Sender 2", V.String())
 
 	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
@@ -173,12 +182,13 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 
 	chainId := s.chainId
 
-	if s.chainId.Uint64() != tx.ChainId().Uint64() {
-		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+	if s.chainId.Uint64() != tx.ChainId().Uint64() && (s.chainId.Uint64() == params.JupiterChainId(tx.ChainId().Uint64()) || params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64()) {
+		chainId = big.NewInt(0).SetUint64(tx.ChainId().Uint64())
+		fmt.Println("EIP155Signer Hash 4")
 	}
 
 	if IsJupiterTx(tx.Txtype()) {
-		fmt.Println("EIP155Signer Hash 2 IsJupiterTx")
+		fmt.Println("EIP155Signer Hash 2 IsJupiterTx", chainId.String())
 
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,
