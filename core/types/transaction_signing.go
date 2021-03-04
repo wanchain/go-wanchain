@@ -136,13 +136,18 @@ var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	fmt.Println("EIP155Signer Sender 0")
-	if !tx.Protected() {
+	if !tx.Protected() && !IsJupiterTx(tx.Txtype()) {
 		fmt.Println("EIP155Signer Sender 1 HomesteadSigner")
 
 		return HomesteadSigner{}.Sender(tx)
 	}
 
 	if tx.ChainId().Cmp(s.chainId) != 0 && params.JupiterChainId(tx.ChainId().Uint64()) != s.chainId.Uint64() && tx.ChainId().Uint64() != params.JupiterChainId(s.chainId.Uint64()) {
+		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
+		return common.Address{}, ErrInvalidChainId
+	}
+
+	if IsJupiterTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 {
 		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
 		return common.Address{}, ErrInvalidChainId
 	}
