@@ -554,12 +554,10 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Address, error) {
-	fmt.Println("TxPool validateTx 1")
 	if !types.IsValidTransactionType(tx.Txtype()) {
 		fmt.Println("TxPool validateTx 2")
 		return nil, ErrInvalidTxType
 	}
-	fmt.Println("TxPool validateTx 3")
 	// type must match to des address
 	isNormalType := types.IsNormalTransaction(tx.Txtype())
 	isPosType := types.IsPosTransaction(tx.Txtype())
@@ -568,7 +566,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Addre
 		fmt.Println("TxPool validateTx 4")
 		return nil, ErrInvalidTxType
 	}
-	fmt.Println("TxPool validateTx 5")
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 320*1024 {
 		return nil, ErrOversizedData
@@ -583,14 +580,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Addre
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
 		return nil, ErrGasLimit
 	}
-	fmt.Println("TxPool validateTx 6")
 	// Make sure the transaction is signed properly
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		fmt.Println("TxPool validateTx 7")
 		return nil, ErrInvalidSender
 	}
-	fmt.Println("TxPool validateTx 8")
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
@@ -641,14 +636,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Addre
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
-	fmt.Println("TxPool add 1")
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
 		fmt.Println("TxPool add 2")
 		// log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
-	fmt.Println("TxPool add 3")
 	var senderFrom *common.Address
 	var err error
 	// If the transaction fails basic validation, discard it
@@ -658,7 +651,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
-	fmt.Println("TxPool add 5")
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
@@ -821,31 +813,21 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	fmt.Println("TxPool addTx 1")
-
 	// Try to inject the transaction and update any state
 	replace, err := pool.add(tx, local)
-	fmt.Println("TxPool addTx 2")
 	if err != nil {
 		fmt.Println("TxPool addTx 3")
 		return err
 	}
-	fmt.Println("TxPool addTx 4")
 	// If we added a new transaction, run promotion checks and return
 	if !replace {
-		fmt.Println("TxPool addTx 5")
 		from, _ := types.Sender(pool.signer, tx) // already validated
-		fmt.Println("TxPool addTx 6")
 		pool.promoteExecutables([]common.Address{from})
-		fmt.Println("TxPool addTx 7")
 	} else { //fixing the bug that replaced tx can not be broadcast
-		fmt.Println("TxPool addTx 8")
 		if err == nil {
-			fmt.Println("TxPool addTx 9")
 			go pool.txFeed.Send(TxPreEvent{tx})
 		}
 	}
-	fmt.Println("TxPool addTx 10")
 	return nil
 }
 
