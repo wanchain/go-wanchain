@@ -76,9 +76,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	fmt.Println("Sender 1")
 	if sc := tx.from.Load(); sc != nil {
-		fmt.Println("Sender 2")
 		sigCache := sc.(sigCache)
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
@@ -87,13 +85,11 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 			return sigCache.from, nil
 		}
 	}
-	fmt.Println("Sender 3")
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		fmt.Println("Sender 5")
 		return common.Address{}, err
 	}
-	fmt.Println("Sender 4")
 	tx.from.Store(sigCache{signer: signer, from: addr})
 	return addr, nil
 }
@@ -135,10 +131,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	fmt.Println("EIP155Signer Sender 0")
 	if !tx.Protected() && !IsJupiterTx(tx.Txtype()) {
-		fmt.Println("EIP155Signer Sender 1 HomesteadSigner")
-
 		return HomesteadSigner{}.Sender(tx)
 	}
 
@@ -161,8 +154,6 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 
 	V.Sub(V, big8)
 
-	fmt.Println("EIP155Signer Sender 2", V.String())
-
 	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
@@ -183,18 +174,13 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
-	fmt.Println("EIP155Signer Hash 1")
-
 	chainId := s.chainId
 
 	if s.chainId.Uint64() != tx.ChainId().Uint64() && (s.chainId.Uint64() == params.JupiterChainId(tx.ChainId().Uint64()) || params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64()) {
 		chainId = big.NewInt(0).SetUint64(tx.ChainId().Uint64())
-		fmt.Println("EIP155Signer Hash 4")
 	}
 
 	if IsJupiterTx(tx.Txtype()) {
-		fmt.Println("EIP155Signer Hash 2 IsJupiterTx", chainId.String())
-
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,
 			tx.data.Price,
@@ -205,7 +191,6 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 			chainId, uint(0), uint(0),
 		})
 	}
-	fmt.Println("EIP155Signer Hash 3 not JupiterTx")
 
 	return rlpHash([]interface{}{
 		tx.data.Txtype,
@@ -260,9 +245,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
-	fmt.Println("FrontierSigner Hash 1")
 	if IsJupiterTx(tx.Txtype()) {
-		fmt.Println("FrontierSigner Hash 2")
 
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,
@@ -273,7 +256,6 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 			tx.data.Payload,
 		})
 	}
-	fmt.Println("FrontierSigner Hash 3")
 
 	return rlpHash([]interface{}{
 		tx.data.Txtype,
