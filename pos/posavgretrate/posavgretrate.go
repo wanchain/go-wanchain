@@ -49,6 +49,10 @@ func (p *PosAvgRet) GetPosAverageReturnRate(epochID uint64) (uint64, error) {
 		return 0, err
 	}
 
+	if amount.Int64() == 0 {
+		return 0, nil
+	}
+
 	a := reward.Mul(reward, big.NewInt(posconfig.RETURN_DIVIDE))
 
 	p2 := a.Div(a, amount).Uint64()
