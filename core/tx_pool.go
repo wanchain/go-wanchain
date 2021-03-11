@@ -555,7 +555,6 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Address, error) {
 	if !types.IsValidTransactionType(tx.Txtype()) {
-		fmt.Println("TxPool validateTx 2")
 		return nil, ErrInvalidTxType
 	}
 	// type must match to des address
@@ -563,7 +562,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Addre
 	isPosType := types.IsPosTransaction(tx.Txtype())
 	isPosAddr := vm.IsPosPrecompiledAddr(tx.To())
 	if isPosType != isPosAddr {
-		fmt.Println("TxPool validateTx 4")
 		return nil, ErrInvalidTxType
 	}
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
@@ -583,7 +581,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (*common.Addre
 	// Make sure the transaction is signed properly
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
-		fmt.Println("TxPool validateTx 7")
 		return nil, ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
@@ -638,7 +635,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
-		fmt.Println("TxPool add 2")
 		// log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
@@ -646,7 +642,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	var err error
 	// If the transaction fails basic validation, discard it
 	if senderFrom, err = pool.validateTx(tx, local); err != nil {
-		fmt.Println("TxPool add 4")
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err
@@ -816,7 +811,6 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	// Try to inject the transaction and update any state
 	replace, err := pool.add(tx, local)
 	if err != nil {
-		fmt.Println("TxPool addTx 3")
 		return err
 	}
 	// If we added a new transaction, run promotion checks and return

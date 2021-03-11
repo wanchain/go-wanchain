@@ -112,7 +112,7 @@ const (
 	TestnetMarsEpochId = 18506 //2020.09.01
 
 	MainnetJupiterEpochId = 99999
-	TestnetJupiterEpochId = 1345715
+	TestnetJupiterEpochId = 18697
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000

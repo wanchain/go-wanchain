@@ -191,7 +191,7 @@ func isProtectedV(V *big.Int) bool {
 	return true
 }
 
-// DecodeRLP implements rlp.Encoder
+// EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, &tx.data)
 }
@@ -207,7 +207,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
-// DecodeRLP implements rlp.Encoder
+// EncodeRLP implements rlp.Encoder
 func (tx *TransactionJupiter) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, &tx.data)
 }
@@ -611,6 +611,6 @@ func IsValidTransactionType(txType uint64) bool {
 	return (txType == NORMAL_TX || txType == PRIVACY_TX || txType == POS_TX || txType == JUPITER_TX)
 }
 
-func IsJupiterTx(txType uint64) bool {
+func IsEthereumTx(txType uint64) bool {
 	return (txType == JUPITER_TX)
 }

@@ -87,7 +87,6 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	}
 	addr, err := signer.Sender(tx)
 	if err != nil {
-		fmt.Println("Sender 5")
 		return common.Address{}, err
 	}
 	tx.from.Store(sigCache{signer: signer, from: addr})
@@ -131,23 +130,21 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if !tx.Protected() && !IsJupiterTx(tx.Txtype()) {
+	if !tx.Protected() && !IsEthereumTx(tx.Txtype()) {
 		return HomesteadSigner{}.Sender(tx)
 	}
 
-	if tx.ChainId().Cmp(s.chainId) != 0 && params.JupiterChainId(tx.ChainId().Uint64()) != s.chainId.Uint64() && tx.ChainId().Uint64() != params.JupiterChainId(s.chainId.Uint64()) {
-		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
+	if !(tx.ChainId().Cmp(s.chainId) == 0 || tx.ChainId().Uint64() == params.JupiterChainId(s.chainId.Uint64())) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	if IsJupiterTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 {
-		fmt.Println("EIP155Signer Sender 3 chainId not match", tx.ChainId().String(), s.chainId.String())
+	if IsEthereumTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
 
 	V := big.NewInt(0)
 	if tx.ChainId().Cmp(s.chainId) != 0 {
-		V = new(big.Int).Sub(tx.data.V, new(big.Int).Mul(tx.ChainId(), big.NewInt(2)))
+		V = new(big.Int).Sub(tx.data.V, new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64())*2))
 	} else {
 		V = new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	}
@@ -176,11 +173,11 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	chainId := s.chainId
 
-	if s.chainId.Uint64() != tx.ChainId().Uint64() && (s.chainId.Uint64() == params.JupiterChainId(tx.ChainId().Uint64()) || params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64()) {
-		chainId = big.NewInt(0).SetUint64(tx.ChainId().Uint64())
+	if params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64() {
+		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
 	}
 
-	if IsJupiterTx(tx.Txtype()) {
+	if IsEthereumTx(tx.Txtype()) {
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,
 			tx.data.Price,
@@ -245,7 +242,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
-	if IsJupiterTx(tx.Txtype()) {
+	if IsEthereumTx(tx.Txtype()) {
 
 		return rlpHash([]interface{}{
 			tx.data.AccountNonce,

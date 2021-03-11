@@ -18,7 +18,6 @@ package eth
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -138,7 +137,6 @@ func (b *EthApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 }
 
 func (b *EthApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
-	fmt.Println("SendTx")
 	return b.eth.txPool.AddLocal(signedTx)
 }
 
