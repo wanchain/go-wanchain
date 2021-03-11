@@ -67,7 +67,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 20
+	K      = 1440
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
@@ -111,8 +111,9 @@ const (
 	MainnetMarsEpochId = MainnetVenusEpochId
 	TestnetMarsEpochId = 18506 //2020.09.01
 
+	// After Jupiter fork, wanchain support ethereum tx and wallet.
 	MainnetJupiterEpochId = 99999
-	TestnetJupiterEpochId = 18697
+	TestnetJupiterEpochId = 18698
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
