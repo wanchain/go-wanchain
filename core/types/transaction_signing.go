@@ -142,6 +142,10 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
+	if !IsEthereumTx(tx.Txtype()) && tx.ChainId().Uint64() == params.JupiterChainId(s.chainId.Uint64()) {
+		return common.Address{}, ErrInvalidChainId
+	}
+
 	V := big.NewInt(0)
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		V = new(big.Int).Sub(tx.data.V, new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64())*2))
