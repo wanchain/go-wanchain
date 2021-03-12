@@ -506,3 +506,27 @@ func JupiterChainId(chainId uint64) uint64 {
 
 	return NOT_JUPITER_CHAIN_ID
 }
+
+func IsOldChainId(chainId uint64) bool {
+	if chainId == MAINNET_CHAIN_ID {
+		return true
+	}
+
+	if chainId == TESTNET_CHAIN_ID {
+		return true
+	}
+
+	if chainId == INTERNAL_CHAIN_ID {
+		return true
+	}
+
+	if chainId == PLUTO_CHAIN_ID {
+		return true
+	}
+
+	if chainId == PLUTODEV_CHAIN_ID {
+		return true
+	}
+
+	return false
+}

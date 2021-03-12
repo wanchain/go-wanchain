@@ -138,7 +138,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	if IsEthereumTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 {
+	if IsEthereumTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 && params.IsOldChainId(s.chainId.Uint64()) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
