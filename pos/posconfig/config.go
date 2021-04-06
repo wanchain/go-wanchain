@@ -112,7 +112,7 @@ const (
 	TestnetMarsEpochId = 18506 //2020.09.01
 
 	// After Jupiter fork, wanchain support ethereum tx and wallet.
-	MainnetJupiterEpochId = 99999
+	MainnetJupiterEpochId = 18732
 	TestnetJupiterEpochId = 18698
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
