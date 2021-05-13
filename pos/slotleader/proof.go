@@ -123,7 +123,7 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	if !skGtValid {
 		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID, "chainId", posconfig.ChainId, "testnetId", params.TESTNET_CHAIN_ID)
 		// Recovery for testnet short time gwan down 2021-05-13
-		if posconfig.ChainId == params.TESTNET_CHAIN_ID && (epochID >= 18757 || epochID <= 18766) {
+		if posconfig.ChainId == params.TESTNET_CHAIN_ID && (epochID >= 18757 && epochID <= 18766) {
 			return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
 		}
 		return false
