@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"math/big"
 
+	"github.com/wanchain/go-wanchain/params"
 	"github.com/wanchain/go-wanchain/pos/util"
 
 	"github.com/wanchain/go-wanchain/core/types"
@@ -120,7 +121,11 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	}
 
 	if !skGtValid {
-		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
+		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID, "chainId", posconfig.ChainId, "testnetId", params.TESTNET_CHAIN_ID)
+		// Recovery for testnet short time gwan down 2021-05-13
+		if posconfig.ChainId == params.TESTNET_CHAIN_ID && (epochID >= 18757 || epochID <= 18766) {
+			return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
+		}
 		return false
 	}
 	log.Debug("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)

@@ -25,6 +25,8 @@ var (
 	SelfTestMode = false
 	IsDev        = false
 	MineEnabled  = false
+
+	ChainId = uint64(0)
 )
 
 const (

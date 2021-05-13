@@ -63,6 +63,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	pos.NewPosAveRet()
 
+	posconfig.ChainId = s.BlockChain().Config().ChainId.Uint64()
+
 	return epochSelector
 }
 
