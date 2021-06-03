@@ -596,6 +596,29 @@ func (a PosApi) GetEpochGasPool(epochID uint64) (string, error) {
 	return incentive.GetEpochGasPool(db, epochID).String(), nil
 }
 
+func (a PosApi) GetEpochGasPoolByBlock(epochId uint64, blockNr int64) (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
+	epID, _ := util.CalEpSlbyTd(a.chain.CurrentHeader().Difficulty.Uint64())
+
+	if epochId > epID {
+		return "", errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
+	}
+
+	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
+	if err != nil {
+		return "", err
+	}
+
+	return incentive.GetEpochGasPool(state, epochId).String(), nil
+}
+
 func (a PosApi) GetRBAddress(epochID uint64) []common.Address {
 	if !isPosStage() {
 		return nil

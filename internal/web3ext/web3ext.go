@@ -276,6 +276,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getEpochGasPoolByBlock',
+			call: 'pos_getEpochGasPoolByBlock',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'getStakerInfo',
 			call: 'pos_getStakerInfo',
 			params: 1,
