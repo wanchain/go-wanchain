@@ -13,5 +13,5 @@
 #cp ./build/bin/gwan ../pos6/bin/
 #cd ../pos6
 
-docker build . -t wanchain/client-go:2.1.8
-docker push wanchain/client-go:2.1.8
+docker build . -t wanchain/client-go:2.2.1-beta.1
+docker push wanchain/client-go:2.2.1-beta.1
