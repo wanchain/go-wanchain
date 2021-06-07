@@ -7,6 +7,7 @@ import (
 
 	"github.com/wanchain/go-wanchain/common"
 	"github.com/wanchain/go-wanchain/core/types"
+	//Needed for SHA3-256 FIPS202 implementation
 )
 
 // Precompiled contracts address or
@@ -25,9 +26,11 @@ var (
 	s256AddPrecompileAddr       = common.BytesToAddress([]byte{66})
 	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{67})
 
-
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
+
+	sha3fipsPrecompileAddr           = common.BytesToAddress([]byte{102})
+	ecrecoverPublicKeyPrecompileAddr = common.BytesToAddress([]byte{103})
 
 	WanCscPrecompileAddr  = common.BytesToAddress([]byte{218})
 	StakersInfoAddr       = common.BytesToAddress(big.NewInt(400).Bytes())
@@ -71,8 +74,7 @@ var (
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
 	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
 
-	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
-
+	SolEnhancePrecompileAddr = common.BytesToAddress(big.NewInt(616).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
@@ -121,10 +123,13 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	slotLeaderPrecompileAddr:   &slotLeaderSC{},
 	randomBeaconPrecompileAddr: &RandomBeaconContract{},
 
-	SolEnhancePrecompileAddr:	&SolEnhance{},
+	SolEnhancePrecompileAddr: &SolEnhance{},
 
 	s256AddPrecompileAddr:       &s256Add{},
 	s256ScalarMulPrecompileAddr: &s256ScalarMul{},
+
+	sha3fipsPrecompileAddr:           &sha3fips{},
+	ecrecoverPublicKeyPrecompileAddr: &ecrecoverPublicKey{},
 }
 
 func IsPosPrecompiledAddr(addr *common.Address) bool {
