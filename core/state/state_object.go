@@ -333,7 +333,7 @@ func (c *stateObject) AddBalance(amount *big.Int) {
 
 		return
 	default:
-		log.Error("add balance, negative value!", "address", common.ToHex(c.address[:]), "amount", amount.Int64())
+		log.Debug("add balance, negative value!", "address", common.ToHex(c.address[:]), "amount", amount.Int64())
 		return
 	}
 }
