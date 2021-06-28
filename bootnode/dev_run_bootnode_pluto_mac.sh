@@ -10,4 +10,5 @@
 echo "run gwan in pluto bootnode testnet for MacOS"
 rm -rf ~/Library/Wanchain/pluto/gwan
 #make && build/bin/gwan --pluto --rpc --nodiscover --syncmode "full"
+echo 'wanglu' > ~/pw.txt
 make && build/bin/gwan --plutodev --nodiscover --etherbase  "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"  --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password ~/pw.txt  --mine --minerthreads=1 $@
