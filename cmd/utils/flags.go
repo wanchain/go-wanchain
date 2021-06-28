@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/wanchain/go-wanchain/common/fdlimit"
 	"github.com/wanchain/go-wanchain/pos/posconfig"
 
 	"github.com/wanchain/go-wanchain/accounts"
@@ -756,17 +757,15 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(4096); err != nil {
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
-	}
-	limit, err := getFdLimit()
+	limit, err := fdlimit.Maximum()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
-	// if limit > 2048 { // cap database file descriptors even if more is available
-	// 	limit = 2048
-	// }
-	return limit / 2 // Leave half for networking and other stuff
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		Fatalf("Failed to raise file descriptor allowance: %v", err)
+	}
+	return int(raised / 2) // Leave half for networking and other stuff
 }
 
 // MakeAddress converts an account specified directly as a hex encoded string or
