@@ -1,5 +1,12 @@
 package vm
 
+import (
+	"fmt"
+	"testing"
+
+	"github.com/wanchain/go-wanchain/common"
+)
+
 // TODO: add unit test later
 
 // import "testing"
@@ -58,3 +65,17 @@ package vm
 // 	}
 
 // }
+
+func TestEcrecoverPublicKey(t *testing.T) {
+	input := "c5d6c454e4d7a8e8a654f5ef96e8efe41d21a65b171b298925414aa3dc061e37" +
+		"0000000000000000000000000000000000000000000000000000000000000000" +
+		"4011de30c04302a2352400df3d1459d6d8799580dceb259f45db1d99243a8d0c" +
+		"64f548b7776cb93e37579b830fc3efce41e12e0958cda9f8c5fcad682c610795"
+	sc := &ecrecoverPublicKey{}
+	ret, err := sc.Run(common.Hex2Bytes(input), nil, nil)
+	fmt.Println("ret", common.ToHex(ret))
+	fmt.Println("err", err)
+	if common.ToHex(ret) != "0x0448250ebe88d77e0a12bcf530fe6a2cf1ac176945638d309b840d631940c93b78c2bd6d16f227a8877e3f1604cd75b9c5a8ab0cac95174a8a0a0f8ea9e4c10bca" {
+		t.Failed()
+	}
+}
