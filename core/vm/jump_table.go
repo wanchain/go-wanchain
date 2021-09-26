@@ -54,7 +54,47 @@ var (
 	frontierInstructionSet  = NewFrontierInstructionSet()
 	homesteadInstructionSet = NewHomesteadInstructionSet()
 	byzantiumInstructionSet = NewByzantiumInstructionSet()
+
+	constantinopleInstructionSet   = newConstantinopleInstructionSet()
+	// todo add below evm version
+	//istanbulInstructionSet         = newIstanbulInstructionSet()
+	//berlinInstructionSet           = newBerlinInstructionSet()
+	//londonInstructionSet           = newLondonInstructionSet()
 )
+
+func newConstantinopleInstructionSet() [256]operation  {
+	instructionSet := NewByzantiumInstructionSet()
+	instructionSet[SHL] = operation{
+		execute:     opSHL,
+		gasCost:       constGasFunc(GasFastestStep),
+		validateStack: makeStackFunc(2, 1),
+	}
+	instructionSet[SHR] = operation{
+		execute:     opSHR,
+		gasCost:       constGasFunc(GasFastestStep),
+		validateStack: makeStackFunc(2, 1),
+	}
+	instructionSet[SAR] = operation{
+		execute:     opSAR,
+		gasCost:       constGasFunc(GasFastestStep),
+		validateStack: makeStackFunc(2, 1),
+	}
+	instructionSet[EXTCODEHASH] = operation{
+		execute:     opExtCodeHash,
+		gasCost:       constGasFunc(params.ExtcodeHashGasConstantinople),
+		validateStack: makeStackFunc(1, 1),
+	}
+	instructionSet[CREATE2] = operation{
+		execute:     opCreate2,
+		gasCost:       constGasFunc(params.Create2Gas),
+		validateStack: makeStackFunc(4, 1),
+		//memorySize:  memoryCreate2,
+		memorySize:  memoryCreate3,
+		writes:      true,
+		returns:     true,
+	}
+	return instructionSet
+}
 
 // NewByzantiumInstructionSet returns the frontier, homestead and
 // byzantium instructions.

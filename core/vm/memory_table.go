@@ -97,3 +97,17 @@ func memoryLog(stack *Stack) *big.Int {
 	mSize, mStart := stack.Back(1), stack.Back(0)
 	return calcMemSize(mStart, mSize)
 }
+
+
+//func memoryCreate(stack *Stack) (uint64, bool) {
+//	return calcMemSize64(stack.Back(1), stack.Back(2))   //todo check why orignal memoryCreate func use calcMemSize not use calcMemSize64
+//}
+
+func memoryCreate2(stack *Stack) (uint64, bool) {
+	return calcMemSize64(stack.Back(1), stack.Back(2))
+}
+
+func memoryCreate3(stack *Stack) (*big.Int) {
+	size,_ := memoryCreate2(stack)
+	return big.NewInt(0).SetUint64(size)
+}

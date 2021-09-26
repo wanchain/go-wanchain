@@ -98,3 +98,8 @@ var (
 	//WanGasTimesFactor	   = big.NewInt(1)
 
 )
+
+const (
+	ExtcodeHashGasConstantinople uint64 = 400  // Cost of EXTCODEHASH (introduced in Constantinople)
+	Create2Gas            uint64 = 32000 // Once per CREATE2 operation
+)

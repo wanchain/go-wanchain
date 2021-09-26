@@ -79,3 +79,37 @@ func allZero(b []byte) bool {
 	}
 	return true
 }
+
+
+// calcMemSize64 calculates the required memory size, and returns
+// the size and whether the result overflowed uint64
+func calcMemSize64(off, l *big.Int) (uint64, bool) {
+	if !l.IsUint64() {
+		return 0, true
+	}
+	return calcMemSize64WithUint(off, l.Uint64())
+}
+
+// calcMemSize64WithUint calculates the required memory size, and returns
+// the size and whether the result overflowed uint64
+// Identical to calcMemSize64, but length is a uint64
+func calcMemSize64WithUint(off *big.Int, length64 uint64) (uint64, bool) {
+	// if length is zero, memsize is always zero, regardless of offset
+	if length64 == 0 {
+		return 0, false
+	}
+	// Check that offset doesn't overflow
+	//offset64, overflow := off.Uint64WithOverflow()
+	offset64 := off.Uint64()
+	overflow := false
+	if off.Cmp(big.NewInt(0).SetUint64(math.MaxUint64))>0{
+		overflow = true
+	}
+
+	if overflow {
+		return 0, true
+	}
+	val := offset64 + length64
+	// if value < either of it's parts, then it overflowed
+	return val, val < offset64
+}

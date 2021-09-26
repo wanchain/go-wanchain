@@ -29,3 +29,13 @@ var (
 	ErrInvalidPrivacyValue      = errors.New("invalid privacy transaction value")
 	ErrInvalidPosValue          = errors.New("invalid pos transaction value")
 )
+
+var (
+	ErrExecutionReverted        = errors.New("execution reverted")
+	ErrMaxCodeSizeExceeded      = errors.New("max code size exceeded")
+	ErrInvalidJump              = errors.New("invalid jump destination")
+	ErrWriteProtection          = errors.New("write protection")
+	ErrReturnDataOutOfBounds    = errors.New("return data out of bounds")
+	ErrGasUintOverflow          = errors.New("gas uint64 overflow")
+	ErrInvalidCode              = errors.New("invalid code: must not begin with 0xef")
+)

@@ -246,6 +246,106 @@ func opAnd(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 	return nil, nil
 }
 
+// opSHL implements Shift Left
+// The SHL instruction (shift left) pops 2 values from the stack, first arg1 and then arg2,
+// and pushes on the stack arg2 shifted to the left by arg1 number of bits.
+func opSHL(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	shift, value := stack.pop(), stack.pop()
+	if shift.Uint64() < uint64(256){
+		stack.push(value.Lsh(value, uint(shift.Uint64())))
+	}else{
+		stack.push(new(big.Int))
+	}
+	// todo why need to put values to intPool? What data should put into intPool
+	evm.interpreter.intPool.put(shift,value)
+	return nil, nil
+}
+
+// opSHR implements Logical Shift Right
+// The SHR instruction (logical shift right) pops 2 values from the stack, first arg1 and then arg2,
+// and pushes on the stack arg2 shifted to the right by arg1 number of bits with zero fill.
+func opSHR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	shift, value := stack.pop(), stack.pop()
+	if shift.Uint64() < uint64(256){
+		stack.push(value.Rsh(value, uint(shift.Uint64())))
+	}else{
+		stack.push(new(big.Int))
+	}
+	// todo why need to put values to intPool? What data should put into intPool
+	evm.interpreter.intPool.put(shift,value)
+	return nil, nil
+}
+
+// opSAR implements Arithmetic Shift Right
+// The SAR instruction (arithmetic shift right) pops 2 values from the stack, first arg1 and then arg2,
+// and pushes on the stack arg2 shifted to the right by arg1 number of bits with sign extension.
+func opSAR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	// todo
+	//shift, value := stack.pop(), stack.pop()
+	//if shift.Uint64() < uint64(256){
+	//	stack.push(value.Rsh(value, uint(shift.Uint64())))
+	//}else{
+	//	stack.push(big.NewInt(0).SetUint64(0))
+	//}
+	//// todo why need to put values to intPool? What data should put into intPool
+	//evm.interpreter.intPool.put(shift,value)
+	return nil, nil
+}
+
+
+func opExtCodeHash(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	slot := stack.pop()
+	address := common.BigToAddress(slot)
+	if evm.StateDB.Empty(address) {
+		stack.push(new(big.Int))
+	} else {
+		stack.push(slot.SetBytes(evm.StateDB.GetCodeHash(address).Bytes()))
+	}
+
+	evm.interpreter.intPool.put(slot)
+	return nil, nil
+}
+
+
+func opCreate2(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	var (
+		endowment    = stack.pop()
+		offset, size = stack.pop(), stack.pop()
+		salt         = stack.pop()
+		input        = memory.Get(int64(offset.Uint64()), int64(size.Uint64()))
+		gas          = contract.Gas
+	)
+
+	// Apply EIP150
+	gas -= gas / 64
+	contract.UseGas(gas)
+	// reuse size int for stackvalue
+	stackvalue := size
+	//TODO: use uint256.Int instead of converting with toBig()
+	//bigEndowment := big.NewInt(0)
+	//if !endowment.IsZero() {
+	//	bigEndowment = endowment.ToBig()
+	//}
+	bigEndowment := endowment
+
+	res, addr, returnGas, suberr := evm.Create2(contract, input, gas,
+		bigEndowment, salt)
+	// Push item on the stack based on the returned error.
+	if suberr != nil {
+		stackvalue = big.NewInt(0).SetUint64(0)
+	} else {
+		stackvalue.SetBytes(addr.Bytes())
+	}
+	stack.push(stackvalue)
+	contract.Gas += returnGas
+
+	if suberr == ErrExecutionReverted {
+		return res, nil
+	}
+	return nil, nil
+}
+
+
 func opOr(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x, y := stack.pop(), stack.pop()
 	stack.push(x.Or(x, y))
