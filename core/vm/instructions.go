@@ -251,8 +251,11 @@ func opAnd(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 // and pushes on the stack arg2 shifted to the left by arg1 number of bits.
 func opSHL(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	shift, value := stack.pop(), stack.pop()
+	//log.Info("opSHL[Jacob]","shift",shift,"value",value)
+	fmt.Printf("opSHL[Jacob] shift %v, value %v",shift,value)
 	if shift.Uint64() < uint64(256){
 		stack.push(value.Lsh(value, uint(shift.Uint64())))
+		//stack.push(shift)
 	}else{
 		stack.push(new(big.Int))
 	}

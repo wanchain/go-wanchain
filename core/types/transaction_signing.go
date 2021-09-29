@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"math/big"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -141,7 +142,8 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if IsEthereumTx(tx.Txtype()) && tx.ChainId().Cmp(s.chainId) == 0 && params.IsOldChainId(s.chainId.Uint64()) {
 		return common.Address{}, ErrInvalidChainId
 	}
-
+	//todo need delete.
+	log.SyslogInfo("EIP155Signer[Jacob]","tx.Txtype()",tx.Txtype(),"tx.ChainId()",tx.ChainId(),"s.chainId.Uint64()",s.chainId.Uint64(),params.JupiterChainId(s.chainId.Uint64()))
 	if !IsEthereumTx(tx.Txtype()) && tx.ChainId().Uint64() == params.JupiterChainId(s.chainId.Uint64()) {
 		return common.Address{}, ErrInvalidChainId
 	}

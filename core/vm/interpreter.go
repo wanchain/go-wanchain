@@ -18,6 +18,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/wanchain/go-wanchain/log"
 	"sync/atomic"
 
 	"github.com/wanchain/go-wanchain/common"
@@ -79,7 +80,9 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 
 		default:
 			//cfg.JumpTable = frontierInstructionSet
-			cfg.JumpTable = byzantiumInstructionSet //the latest is byzantium
+			//cfg.JumpTable = byzantiumInstructionSet //the latest is byzantium
+			//todo only for poc
+			cfg.JumpTable = constantinopleInstructionSet
 
 		}
 
@@ -181,13 +184,16 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		// stack and make sure there enough stack items available to perform the operation
 		operation := in.cfg.JumpTable[op]
 		if !operation.valid {
+			log.Info("RUN(Jacob)","op",op,"invalid opcode")
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
 		if err := operation.validateStack(stack); err != nil {
+			log.Info("RUN(Jacob)","op",op,"invalid validateStack",err.Error())
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
 		if err := in.enforceRestrictions(op, operation, stack); err != nil {
+			log.Info("RUN(Jacob)","op",op,"invalid enforceRestrictions",err.Error())
 			return nil, err
 		}
 
@@ -225,6 +231,10 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 
 		// execute the operation
 		res, err := operation.execute(&pc, in.evm, contract, mem, stack)
+
+		if err != nil{
+			log.Info("RUN(Jacob)","op",op,"operation.execute",err.Error())
+		}
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {

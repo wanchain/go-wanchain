@@ -68,11 +68,13 @@ func newConstantinopleInstructionSet() [256]operation  {
 		execute:     opSHL,
 		gasCost:       constGasFunc(GasFastestStep),
 		validateStack: makeStackFunc(2, 1),
+		valid:         true,
 	}
 	instructionSet[SHR] = operation{
 		execute:     opSHR,
 		gasCost:       constGasFunc(GasFastestStep),
 		validateStack: makeStackFunc(2, 1),
+		valid:         true,
 	}
 	instructionSet[SAR] = operation{
 		execute:     opSAR,
@@ -83,6 +85,7 @@ func newConstantinopleInstructionSet() [256]operation  {
 		execute:     opExtCodeHash,
 		gasCost:       constGasFunc(params.ExtcodeHashGasConstantinople),
 		validateStack: makeStackFunc(1, 1),
+		valid:         true,
 	}
 	instructionSet[CREATE2] = operation{
 		execute:     opCreate2,
@@ -90,6 +93,7 @@ func newConstantinopleInstructionSet() [256]operation  {
 		validateStack: makeStackFunc(4, 1),
 		//memorySize:  memoryCreate2,
 		memorySize:  memoryCreate3,
+		valid:       true,
 		writes:      true,
 		returns:     true,
 	}
