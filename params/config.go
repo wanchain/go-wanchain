@@ -34,7 +34,7 @@ var (
 
 const MainnetPow2PosUpgradeBlockNumber = 4046000
 const TestnetPow2PosUpgradeBlockNumber = 3560000
-const InternalPow2PosUpgradeBlockNumber = 200
+const InternalPow2PosUpgradeBlockNumber = 10
 
 const MAINNET_CHAIN_ID = 1
 const TESTNET_CHAIN_ID = 3
