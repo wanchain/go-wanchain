@@ -60,7 +60,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime =1 
+	SlotTime = 5
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -69,7 +69,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 1440*5
+	K      = 1440
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
@@ -238,7 +238,8 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 			// TODO: for debug change WhiteListDev -> WhiteListMainnet
 			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
-			WhiteList = WhiteListOrig
+			//WhiteList = WhiteListOrig
+			WhiteList = WhiteListDev
 		}
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId

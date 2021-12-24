@@ -411,12 +411,26 @@ func DefaultInternalGenesisBlock() *Genesis {
 
 // DefaultPlutoGenesisBlock returns the Pluto network genesis block.
 
+/* cancel by Jacob begin
 func DefaultPlutoGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.PlutoChainConfig,
 		Timestamp:  1561976845,
 		ExtraData:  hexutil.MustDecode("0x04dc40d03866f7335e40084e39c3446fe676b021d1fcead11f2e2715e10a399b498e8875d348ee40358545e262994318e4dcadbc865bcf9aac1fc330f22ae2c786"),
 		GasLimit:   0x47b760, // 4700000
+		Difficulty: big.NewInt(1),
+		Alloc:      jsonPrealloc(PlutoAllocJson),
+	}
+}
+
+cancel by Jacob end*/
+
+func DefaultPlutoGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.PlutoChainConfig,
+		Timestamp:  0x59f83144,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e8ffc3d0c02c0bfc39b139fa49e2c5475f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
