@@ -60,7 +60,7 @@ const (
 )
 const (
 	// SlotTime is the time span of a slot in second, So it's 1 hours for a epoch
-	SlotTime = 5
+	SlotTime = 1
 
 	//Incentive should perform delay some epochs.
 	IncentiveDelayEpochs = 1
@@ -69,7 +69,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 10
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
