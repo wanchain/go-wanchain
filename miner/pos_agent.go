@@ -110,6 +110,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
+	log.Debug("localPublicKey :" + localPublicKey)
 
 	if pluto, ok := self.engine.(*pluto.Pluto); ok {
 		pluto.Authorize(eb, wallet.SignHash, key)
