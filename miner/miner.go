@@ -65,11 +65,11 @@ type Miner struct {
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
-		eth:       eth,
-		mux:       mux,
-		engine:    engine,
-		worker:    newWorker(config, engine, common.Address{}, eth, mux),
-		canStart:  1,
+		eth:      eth,
+		mux:      mux,
+		engine:   engine,
+		worker:   newWorker(config, engine, common.Address{}, eth, mux),
+		canStart: 1,
 		//timerStop: make(chan interface{}),
 	}
 	cpuAgent := NewCpuAgent(eth.BlockChain(), engine)
@@ -94,17 +94,17 @@ out:
 		switch ev.Data.(type) {
 		case downloader.StartEvent:
 			atomic.StoreInt32(&self.canStart, 0)
-			log.Info("miner update start downloader.StartEvent")
-			log.Info("miner update", "mining", self.Mining())
+			log.Info("Miner::update miner update start downloader.StartEvent")
+			log.Info("Miner::update miner update", "mining", self.Mining())
 			if self.Mining() {
-				log.Info("befor stop: miner update", "mining", self.Mining())
+				log.Info("Miner::update befor stop: miner update", "mining", self.Mining())
 				self.Stop()
-				log.Info("after stop: miner update", "mining", self.Mining())
+				log.Info("Miner::update after stop: miner update", "mining", self.Mining())
 				atomic.StoreInt32(&self.shouldStart, 1)
-				log.Info("Mining aborted due to sync")
+				log.Info("Miner::update Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
-			log.Info("downloader.DoneEvent, downloader.FailedEvent:")
+			log.Info("Miner::update downloader.DoneEvent, downloader.FailedEvent:")
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
