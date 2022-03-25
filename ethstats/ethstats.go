@@ -19,6 +19,7 @@ package ethstats
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -283,6 +284,8 @@ func (s *Service) loop() {
 				continue
 			}
 			conf.Dialer = &net.Dialer{Timeout: 5 * time.Second}
+			//conf.Dialer = &net.Dialer{TLSClientConfig: &tls.Config{RootCAs: nil, InsecureSkipVerify: true}, HandshakeTimeout: 5 * time.Second}
+			conf.TlsConfig = &tls.Config{RootCAs: nil, InsecureSkipVerify: true}
 			if conn, err = websocket.DialConfig(conf); err == nil {
 				log.Info("connect wanstats server successful", "url", url)
 				break
