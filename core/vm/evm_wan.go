@@ -48,9 +48,17 @@ func IsWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (P
 	case s256ScalarMulPrecompileAddr:
 		return &s256ScalarMul{contract, evm}, true
 	case sha3fipsPrecompileAddr:
-		return &sha3fips{contract, evm}, true
+		if evm.chainRules.IsLondon {
+			return &sha3fips{contract, evm}, true
+		} else {
+			return nil, false
+		}
 	case ecrecoverPublicKeyPrecompileAddr:
-		return &ecrecoverPublicKey{contract, evm}, true
+		if evm.chainRules.IsLondon {
+			return &ecrecoverPublicKey{contract, evm}, true
+		} else {
+			return nil, false
+		}
 	default:
 		return nil, false
 	}
