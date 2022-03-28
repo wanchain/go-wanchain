@@ -16,16 +16,12 @@
 
 package misc
 
-/*
-import "github.com/wanchain/go-wanchain/params"
-
-
 import (
 	"fmt"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 // VerifyForkHashes verifies that blocks conforming to network hard-forks do have
@@ -45,5 +41,3 @@ func VerifyForkHashes(config *params.ChainConfig, header *types.Header, uncle bo
 	// All ok, return
 	return nil
 }
-
-*/

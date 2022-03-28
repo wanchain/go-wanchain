@@ -10,18 +10,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/log"
 
 	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -276,6 +276,7 @@ type PosAvgRetInterface interface {
 	GetPosAverageReturnRate(epochID uint64) (uint64, error)
 	GetAllStakeAndReturn(epochID uint64) (*big.Int, error)
 	GetAllIncentive(epochID uint64) (*big.Int, error)
+	GetYearReward(epochID uint64) *big.Int
 }
 
 var posavginst PosAvgRetInterface

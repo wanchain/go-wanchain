@@ -24,13 +24,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/metrics"
-	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // DatabaseReader wraps the Get method of a backing data store.
@@ -70,8 +70,11 @@ var (
 
 	ErrChainConfigNotFound = errors.New("ChainConfig not found") // general config not found error
 
-	preimageCounter    = metrics.NewCounter("db/preimage/total")
-	preimageHitCounter = metrics.NewCounter("db/preimage/hits")
+	//preimageCounter    = metrics.NewCounter("db/preimage/total")
+	//preimageHitCounter = metrics.NewCounter("db/preimage/hits")
+	//todo think it over
+	preimageCounter    = metrics.NewCounter()
+	preimageHitCounter = metrics.NewCounter()
 )
 
 // txLookupEntry is a positional metadata to help looking up the data content of
@@ -534,7 +537,7 @@ func DeleteTxLookupEntry(db DatabaseDeleter, hash common.Hash) {
 }
 
 // PreimageTable returns a Database instance with the key prefix for preimage entries.
-func PreimageTable(db ethdb.Database) ethdb.Database {
+func PreimageTable(db ethdb.Database) *ethdb.Table {
 	return ethdb.NewTable(db, preimagePrefix)
 }
 

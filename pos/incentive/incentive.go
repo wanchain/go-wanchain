@@ -5,21 +5,21 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/ethereum/go-ethereum/core/state"
 
-	posutil "github.com/wanchain/go-wanchain/pos/util"
+	posutil "github.com/ethereum/go-ethereum/pos/util"
 )
 
 var (
@@ -55,7 +55,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, header *types.Header) bool {
+func Run(chain consensus.ChainHeaderReader, stateDb *state.StateDB, epochID uint64, header *types.Header) bool {
 	if chain == nil || stateDb == nil {
 		log.SyslogErr("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false

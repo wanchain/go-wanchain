@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 func testInitDb() {

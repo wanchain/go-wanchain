@@ -2,7 +2,7 @@ package rbselection
 
 import (
 	"crypto/rand"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"math/big"
 	"testing"
 )

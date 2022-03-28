@@ -9,13 +9,13 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 	"io"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 //Parameters

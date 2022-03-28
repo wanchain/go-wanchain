@@ -11,10 +11,9 @@ import (
 
 	"strconv"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -140,8 +139,8 @@ func CheckOTALongAddrExist(statedb StateDB, otaLongAddr []byte) (exist bool, bal
 	mptAddr := OTABalance2ContractAddr(balance)
 	otaStored := statedb.GetStateByteArray(mptAddr, common.BytesToHash(otaAX))
 
-	fmt.Println(common.ToHex(mptAddr.Bytes()))
-	fmt.Println(common.ToHex(otaLongAddr))
+	//fmt.Println(common.ToHex(mptAddr.Bytes()))
+	//fmt.Println(common.ToHex(otaLongAddr))
 
 	if otaStored == nil {
 		return false, nil, nil
@@ -153,8 +152,6 @@ func CheckOTALongAddrExist(statedb StateDB, otaLongAddr []byte) (exist bool, bal
 
 	return true, balance, nil
 }
-
-
 
 func BatCheckOTAExist(statedb StateDB, otaLongAddrs [][]byte) (exist bool, balance *big.Int, unexistOta []byte, err error) {
 	if statedb == nil || len(otaLongAddrs) == 0 {
@@ -183,7 +180,6 @@ func BatCheckOTAExist(statedb StateDB, otaLongAddrs [][]byte) (exist bool, balan
 
 	return true, balance, nil, nil
 }
-
 
 func GetUnspendOTATotalBalance(statedb StateDB) (*big.Int, error) {
 	if statedb == nil {

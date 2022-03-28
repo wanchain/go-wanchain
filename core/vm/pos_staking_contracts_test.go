@@ -2,14 +2,14 @@ package vm
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -71,8 +71,8 @@ func (StakerStateDB) ForEachStorage(common.Address, func(common.Hash, common.Has
 func (StakerStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, []byte) bool) {}
 
 var (
-	stakerdb = make(map[common.Address]big.Int)
-	dirname, _ = ioutil.TempDir(os.TempDir(), "pos_staking")
+	stakerdb                        = make(map[common.Address]big.Int)
+	dirname, _                      = ioutil.TempDir(os.TempDir(), "pos_staking")
 	posStakingDB *ethdb.LDBDatabase = nil
 )
 
@@ -151,7 +151,7 @@ var (
 	stakercontract = &PosStaking{}
 )
 
-func TestStakeRegister(t *testing.T)  {
+func TestStakeRegister(t *testing.T) {
 	if !reset() {
 		t.Fatal("pos staking db init error")
 	}
@@ -340,7 +340,7 @@ func TestDelegateIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"),730000)
+	err = doStakeAppend(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 730000)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -424,7 +424,7 @@ func TestPartnerIn(t *testing.T) {
 	if err == nil {
 		t.Fatal("should be failed if realLockEpoch > PSMaxEpochNum")
 	}
-	setEpochTime(posconfig.FirstEpochId- 90 + 10)
+	setEpochTime(posconfig.FirstEpochId - 90 + 10)
 	err = doPartnerOne(common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"), 1000000)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -704,11 +704,11 @@ func TestMultiDelegateIn(b *testing.T) {
 
 	begin := time.Now()
 	begin1 := time.Now()
-	for i:=0; i<count + 5; i++ {
-		if i== count {
+	for i := 0; i < count+5; i++ {
+		if i == count {
 			begin1 = time.Now()
 		}
-		key,_ := crypto.GenerateKey()
+		key, _ := crypto.GenerateKey()
 		address := crypto.PubkeyToAddress(key.PublicKey)
 		err = doDelegateOne(address, 100)
 		if err != nil {
@@ -722,7 +722,7 @@ func TestMultiDelegateIn(b *testing.T) {
 	clearDb()
 }
 
-func TestStakeRegisterParam(t *testing.T)  {
+func TestStakeRegisterParam(t *testing.T) {
 	var input = getStakeRegisterParam()
 	// good
 	err := doStakeRegisterParam(input)
@@ -899,7 +899,7 @@ func TestUpdateFeeRateParam(t *testing.T) {
 
 	input.FeeRate = big.NewInt(-1)
 	err = doUpdateFeeRateParam(input)
-	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+	if err == nil || err.Error() != "fee rate should between 0 to 10000" {
 		t.Fatal("fee rate should between 0 to 10000")
 	}
 
@@ -917,7 +917,7 @@ func TestUpdateFeeRateParam(t *testing.T) {
 
 	input.FeeRate = big.NewInt(PSMaxFeeRate + 1)
 	err = doUpdateFeeRateParam(input)
-	if err == nil  ||  err.Error() != "fee rate should between 0 to 10000" {
+	if err == nil || err.Error() != "fee rate should between 0 to 10000" {
 		t.Fatal("fee rate should between 0 to 10000")
 	}
 }
@@ -944,15 +944,15 @@ func TestUpdateFeeRateParam(t *testing.T) {
 //}
 
 func doStakeInWithParam(amount int64, feeRate int) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
 	contract.self = &dummyContractRef{}
-	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 	stakerevm.BlockNumber = big.NewInt(10)
 
 	var input StakeInParam
@@ -991,7 +991,7 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 	}
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
-		info.Amount.Cmp(a) != 0  {
+		info.Amount.Cmp(a) != 0 {
 		return errors.New("stakeIn from amount epoch address saved wrong")
 	}
 	if posconfig.FirstEpochId == 0 {
@@ -999,7 +999,7 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 			return errors.New("StakingEpoch saved wrong, should eq 0")
 		}
 	} else {
-		if info.StakingEpoch != eidNow + 2 {
+		if info.StakingEpoch != eidNow+2 {
 			return errors.New("StakingEpoch saved wrong")
 		}
 	}
@@ -1007,15 +1007,15 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 }
 
 func doStakeRegisterWithParam(amount int64, feeRate int) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
 	contract.self = &dummyContractRef{}
-	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 	stakerevm.BlockNumber = big.NewInt(10)
 
 	var input StakeRegisterParam
@@ -1055,7 +1055,7 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 	}
 	if info.Address != secAddr ||
 		info.From != contract.CallerAddress ||
-		info.Amount.Cmp(a) != 0  {
+		info.Amount.Cmp(a) != 0 {
 		return errors.New("stakeIn from amount epoch address saved wrong")
 	}
 	if posconfig.FirstEpochId == 0 {
@@ -1063,11 +1063,10 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 			return errors.New("StakingEpoch saved wrong, should eq 0")
 		}
 	} else {
-		if info.StakingEpoch != eidNow + 2 {
+		if info.StakingEpoch != eidNow+2 {
 			return errors.New("StakingEpoch saved wrong")
 		}
 	}
-
 
 	bytes3 := stakerevm.StateDB.GetStateByteArray(StakersFeeAddr, key)
 	var fee UpdateFeeRate
@@ -1092,14 +1091,14 @@ func doStakeIn(amount int64) error {
 }
 
 func doDelegateOne(from common.Address, amount int64) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
-	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 
 	var input common.Address
 	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -1137,14 +1136,14 @@ func doDelegateOne(from common.Address, amount int64) error {
 }
 
 func doDelegateOut(from common.Address) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(0), ether)
 	contract.Value().Set(a)
-	eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 
 	var input common.Address
 	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -1175,7 +1174,7 @@ func doDelegateOut(from common.Address) error {
 	for i := 0; i < l; i++ {
 		info := infoS.Clients[i]
 		if info.Address == contract.CallerAddress {
-			if info.QuitEpoch == eidNow + QuitDelay {
+			if info.QuitEpoch == eidNow+QuitDelay {
 				return nil
 			}
 		}
@@ -1184,20 +1183,20 @@ func doDelegateOut(from common.Address) error {
 }
 
 func doPartnerOne(from common.Address, amount int64) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
-	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 
 	var input PartnerInParam
 	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
 	input.Renewal = false
 
-	bytes, err := cscAbi.Pack("partnerIn", input.Addr,input.Renewal)
+	bytes, err := cscAbi.Pack("partnerIn", input.Addr, input.Renewal)
 	if err != nil {
 		return errors.New("partnerIn pack failed")
 	}
@@ -1229,14 +1228,14 @@ func doPartnerOne(from common.Address, amount int64) error {
 }
 
 func doStakeAppend(from common.Address, amount int64) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
-	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 
 	var input common.Address
 	input = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -1268,14 +1267,14 @@ func doStakeAppend(from common.Address, amount int64) error {
 }
 
 func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 	a := new(big.Int).Mul(big.NewInt(amount), ether)
 	contract.Value().Set(a)
-	//eidNow, _ := util.CalEpochSlotID(stakerevm.Time.Uint64())
+	//eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
 
 	var input StakeUpdateParam
 	input.Addr = common.HexToAddress("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -1309,9 +1308,9 @@ func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
 }
 
 func doUpdateFeeRate(from common.Address, feeRate uint64) error {
-	stakerevm.Time = big.NewInt(time.Now().Unix())
+	stakerevm.Context.Time = big.NewInt(time.Now().Unix())
 	if evmtime != int64(0) {
-		stakerevm.Time = big.NewInt(evmtime)
+		stakerevm.Context.Time = big.NewInt(evmtime)
 	}
 	contract.CallerAddress = from
 
@@ -1408,6 +1407,7 @@ func getStakeRegisterParam() StakeRegisterParam {
 }
 
 var evmtime int64
+
 func setEpochTime(epochId uint64) {
 	epochTimespan := uint64(posconfig.SlotTime * posconfig.SlotCount)
 	evmtime = int64(epochId * epochTimespan)

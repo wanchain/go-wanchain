@@ -1,29 +1,46 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
+// Package miner implements Ethereum block creation and mining.
 package miner
 
 import (
 	"encoding/hex"
 	"fmt"
-
-	pos "github.com/wanchain/go-wanchain/pos/posavgretrate"
-
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/consensus/pluto"
-
-	//"github.com/wanchain/go-wanchain/common/hexutil"
 	"time"
+)
 
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/cfm"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/randombeacon"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rpc"
+import (
+	pos "github.com/ethereum/go-ethereum/pos/posavgretrate"
+
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/pluto"
+
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/cfm"
+	"github.com/ethereum/go-ethereum/pos/epochLeader"
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/randombeacon"
+	"github.com/ethereum/go-ethereum/pos/slotleader"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 func posWhiteList() {
@@ -42,6 +59,9 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil != h {
 		epochId, _ := util.CalEpSlbyTd(h.Difficulty.Uint64())
+		if epochId == 0 {
+			panic("epochId ->posconfig.FirstEpochId = === 0 ")
+		}
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
@@ -63,6 +83,8 @@ func PosInit(s Backend) *epochLeader.Epocher {
 
 	pos.NewPosAveRet()
 
+	posconfig.ChainId = s.BlockChain().Config().ChainID.Uint64()
+
 	return epochSelector
 }
 
@@ -75,13 +97,6 @@ func posInitMiner(s Backend, key *keystore.Key) {
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
 	randombeacon.GetRandonBeaconInst().Init(epochSelector)
-	//if posconfig.EpochBaseTime == 0 {
-	//	//todo:`switch pos from pow,the time is not 1?
-	//	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
-	//	if nil != h {
-	//		posconfig.EpochBaseTime = h.Time.Uint64()
-	//	}
-	//}
 }
 
 // backendTimerLoop is pos main time loop
@@ -108,9 +123,10 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	}
 	log.Debug("Get unlocked key success address:" + eb.Hex())
 	localPublicKey := hex.EncodeToString(crypto.FromECDSAPub(&key.PrivateKey.PublicKey))
+	log.Debug("localPublicKey :" + localPublicKey)
 
 	if pluto, ok := self.engine.(*pluto.Pluto); ok {
-		pluto.Authorize(eb, wallet.SignHash, key)
+		pluto.Authorize(eb, wallet.SignData, key)
 	}
 	posInitMiner(s, key)
 	// get rpcClient
@@ -127,20 +143,17 @@ func (self *Miner) backendTimerLoop(s Backend) {
 
 	if nil == h {
 		stop := self.posStartInit(s, localPublicKey)
+		log.Debug("backendTimerLoop", "-----------------stop------------------", stop)
 		if stop {
 			return
 		}
 	} else {
 		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochID
+		if posconfig.FirstEpochId == 0 {
+			panic("posconfig.FirstEpochId == 0")
+		}
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
-		// todo: need not reset the slot leader.
-		//if epochID > posconfig.FirstEpochId+2 {
-		//	stop := self.posRestartInit(s, localPublicKey)
-		//	if stop {
-		//		return
-		//	}
-		//}
 	}
 
 	for {
@@ -153,6 +166,7 @@ func (self *Miner) backendTimerLoop(s Backend) {
 		//case <-time.After(time.Duration(time.Second * time.Duration(sleepTime))):
 		//}
 		time.Sleep(time.Second * time.Duration(sleepTime))
+		log.Debug("backendTimerLoop", "XXXXXXXXXXXXXXXXXXXXXMiningXXXXXXXXXXXXXXXXXX", self.Mining())
 		if !self.Mining() {
 			randombeacon.GetRandonBeaconInst().Stop()
 			return
@@ -222,7 +236,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 		panic("last ppow block can't find")
 	}
 
-	epochID, slotID := util.CalEpochSlotID(h0.Time.Uint64())
+	epochID, slotID := util.CalEpochSlotID(h0.Time)
 
 	if slotID == posconfig.SlotCount-1 {
 		epochID += 1
@@ -233,7 +247,7 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 
 	leaderPub, _ := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, slotID)
 	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-	log.Info("posStartInit leader ", "leader", leader)
+	log.Info("posStartInit leader ", "leader", leader, "self.Mining()", self.Mining())
 
 	if leader == localPublicKey {
 		cur := uint64(time.Now().Unix())
@@ -248,10 +262,16 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 			//case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
 			//}
 		}
-		if !self.Mining() {
-			return true
-		}
+		//todo check it later
+		/*
+			if !self.Mining() {
+				return true
+			}
+		*/
 		posconfig.FirstEpochId = epochID
+		if posconfig.FirstEpochId == 0 {
+			panic("epochId ->posconfig.FirstEpochId = === 0 ")
+		}
 		log.Info("backendTimerLoop :", "FirstEpochId", posconfig.FirstEpochId)
 
 		self.worker.chainSlotTimer <- slotTime
@@ -259,8 +279,9 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 	}
 
 	for {
-
+		log.Info("PosStartInit", "self.Mining()", self.Mining())
 		h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
+		log.Info("PosStartInit", "GetHeaderByNumber header", h)
 
 		if nil == h {
 			//select {
@@ -277,6 +298,9 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 		} else {
 			epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 			posconfig.FirstEpochId = epochID
+			if posconfig.FirstEpochId == 0 {
+				panic("epochId ->posconfig.FirstEpochId = === 0 ")
+			}
 			log.Info("backendTimerLoop download the first pos block :", "FirstEpochId", posconfig.FirstEpochId)
 
 			break
@@ -285,106 +309,3 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 	}
 	return false
 }
-
-// todo, reture true or false ,
-//func (self *Miner) posRestartInit(s Backend, localPublicKey string) (stop bool)  {
-//	//if chain is in restarting status,then return
-//	res, _ := s.BlockChain().ChainRestartStatus()
-//	if res {
-//		return false
-//	}
-//
-//	curBlk := s.BlockChain().CurrentBlock()
-//	s.BlockChain().SetRestartBlock(curBlk, nil, true)
-//	//if stop time is short,then follow normally processs
-//	res, _ = s.BlockChain().ChainRestartStatus()
-//	if !res {
-//		s.BlockChain().SetChainRestartSuccess()
-//		return false
-//	}
-//
-//
-//	//else restart process
-//	// todo why dont use fir pos's epochID
-//	h0 := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64() - 1)
-//	if h0 == nil {
-//		panic("last ppow block can't find")
-//	}
-//
-//	epochID, slotID := util.CalEpochSlotID(h0.Time.Uint64())
-//
-//	if slotID == posconfig.SlotCount-1 {
-//		epochID += 1
-//		slotID = 0
-//	} else {
-//		slotID += 1
-//	}
-//
-//	leaderPub, _ := slotleader.GetSlotLeaderSelection().GetSlotLeader(0, slotID)
-//	leader := hex.EncodeToString(crypto.FromECDSAPub(leaderPub))
-//	log.Info("posRestartInit leader ", "leader", leader)
-//
-//	// when restart and the chainquolity low,  if not the slot leader, wait until download the block.
-//	if leader == localPublicKey {
-//
-//		cur := uint64(time.Now().Unix())
-//
-//		epochID, slotID := util.CalEpochSlotID(cur)
-//		if slotID == posconfig.SlotCount-1 {
-//			epochID += 1
-//			slotID = 0
-//		} else {
-//			slotID += 1
-//		}
-//
-//		slotTime := (epochID*posconfig.SlotCount + slotID) * posconfig.SlotTime
-//
-//		if slotTime > cur {
-//			select {
-//			case <-self.timerStop:
-//				return true
-//			case <-time.After(time.Duration(time.Second * time.Duration(slotTime-cur))):
-//			}
-//		}
-//
-//		self.worker.chainSlotTimer <- slotTime
-//
-//		for {
-//
-//			h := s.BlockChain().GetHeaderByNumber(curBlk.NumberU64() + 1)
-//
-//			if nil == h {
-//				select {
-//				case <-self.timerStop:
-//					return true
-//				case <-time.After(time.Duration(time.Second)):
-//				}
-//
-//			} else {
-//				preBlk := curBlk
-//				curBlk := s.BlockChain().CurrentBlock()
-//				s.BlockChain().SetRestartBlock(curBlk, preBlk, false)
-//				//if stop time is short,then follow normally processs
-//				res, _ = s.BlockChain().ChainRestartStatus()
-//				log.Info("restart", "result", res)
-//				break
-//			}
-//
-//		}
-//	} else {
-//		for {
-//
-//			res, _ = s.BlockChain().ChainRestartStatus()
-//			if !res {
-//				select {
-//					case <-self.timerStop:
-//						return true
-//					case <-time.After(time.Duration(time.Second)):
-//				}
-//			} else {
-//				return false
-//			}
-//		}
-//	}
-//	return false
-//}

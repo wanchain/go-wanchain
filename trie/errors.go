@@ -19,7 +19,7 @@ package trie
 import (
 	"fmt"
 
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)

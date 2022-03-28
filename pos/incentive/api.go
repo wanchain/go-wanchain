@@ -3,18 +3,18 @@ package incentive
 import (
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/consensus"
+	"github.com/ethereum/go-ethereum/consensus"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/core/state"
+	"github.com/ethereum/go-ethereum/core/state"
 
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posdb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var localDb *posdb.Db

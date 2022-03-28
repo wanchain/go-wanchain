@@ -378,7 +378,7 @@ var contractDef = eth.contract(cscDefinition);
 var cscContractAddr = "0x00000000000000000000000000000000000000DA";
 var coinContract = contractDef.at(cscContractAddr);
 
-var lockTime = 90
+var lockTime = 7
 var feeRate = 9800
 
 // add validator

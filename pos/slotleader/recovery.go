@@ -1,9 +1,9 @@
 package slotleader
 
 import (
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 // GetRecoveryEpochID used to get the recovery default epochID

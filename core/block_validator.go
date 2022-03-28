@@ -18,15 +18,14 @@ package core
 
 import (
 	"fmt"
-	"math/big"
 
-	"github.com/wanchain/go-wanchain/common/math"
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -54,16 +53,13 @@ func (v *BlockValidator) SwitchEngine(engine consensus.Engine) {
 	v.engine = engine
 }
 
-// ValidateBody validates the given block's uncles and verifies the the block
+// ValidateBody validates the given block's uncles and verifies the block
 // header's transaction and uncle roots. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Check whether the block's known, and if not, that it's linkable
-	if v.bc.HasBlockAndState(block.Hash()) {
+	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
-	}
-	if !v.bc.HasBlockAndState(block.ParentHash()) {
-		return consensus.ErrUnknownAncestor
 	}
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header()
@@ -73,28 +69,32 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.CalcUncleHash(block.Uncles()); hash != header.UncleHash {
 		return fmt.Errorf("uncle root hash mismatch: have %x, want %x", hash, header.UncleHash)
 	}
-	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
+	if hash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil)); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+	if !v.bc.HasBlockAndState(block.ParentHash(), block.NumberU64()-1) {
+		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
+			return consensus.ErrUnknownAncestor
+		}
+		return consensus.ErrPrunedAncestor
+	}
 
+	// add by Jacob begin
 	//Verify only allow one block in a slot
-	if block.NumberU64() > v.bc.config.PosFirstBlock.Uint64() {
+	if block.NumberU64() > v.bc.chainConfig.PosFirstBlock.Uint64() {
 		//parentBlock := v.bc.GetBlockByHash(block.ParentHash())
 		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
-		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time.Uint64())
-		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time.Uint64())
+		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time)
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time)
 		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
 		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
 		if epIDNew > posconfig.ApolloEpochID {
-			if flatSlotIdNew <= flatSlotIdOld {
+			if flatSlotIdNew <= flatSlotIdOld && epIDNew != 19038 { // The testnet epoch 19038 has wrong block.skit it
 				return fmt.Errorf("Invalid slot in chain.")
 			}
 		}
 	}
-
-	if err := v.engine.VerifyGenesisBlocks(v.bc, block); err != nil {
-		return err
-	}
+	// add by Jacob end
 
 	return nil
 }
@@ -103,10 +103,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // transition, such as amount of used gas, the receipt roots and the state root
 // itself. ValidateState returns a database batch if the validation was a success
 // otherwise nil and an error is returned.
-func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	header := block.Header()
-	if block.GasUsed().Cmp(usedGas) != 0 {
-		return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
+	if block.GasUsed() != usedGas {
+		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
@@ -114,57 +114,45 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	if rbloom != header.Bloom {
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
 	}
-	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
-	receiptSha := types.DeriveSha(receipts)
+	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, Rn]]))
+	receiptSha := types.DeriveSha(receipts, trie.NewStackTrie(nil))
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(true /*v.config.IsEIP158(header.Number)*/); header.Root != root {
+	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 	}
 	return nil
 }
 
-// CalcGasLimit computes the gas limit of the next block after parent.
-// The result may be modified by the caller.
-// This is miner strategy, not consensus protocol.
-func CalcGasLimit(parent *types.Block) *big.Int {
-	epId, _ := util.CalEpochSlotID(parent.Header().Time.Uint64())
+// CalcGasLimit computes the gas limit of the next block after parent. It aims
+// to keep the baseline gas close to the provided target, and increase it towards
+// the target if the baseline gas is lower.
+func CalcGasLimit(parent *types.Block, parentGasLimit, desiredLimit uint64) uint64 {
+	epId, _ := util.CalEpochSlotID(parent.Header().Time)
 	if epId >= posconfig.ApolloEpochID {
 		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
 	}
-
-	// contrib = (parentGasUsed * 3 / 2) / 1024
-	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3))
-	contrib = contrib.Div(contrib, big.NewInt(2))
-	contrib = contrib.Div(contrib, params.GasLimitBoundDivisor)
-
-	// decay = parentGasLimit / 1024 -1
-	decay := new(big.Int).Div(parent.GasLimit(), params.GasLimitBoundDivisor)
-	decay.Sub(decay, big.NewInt(1))
-
-	/*
-		strategy: gasLimit of block-to-mine is set based on parent's
-		gasUsed value.  if parentGasUsed > parentGasLimit * (2/3) then we
-		increase it, otherwise lower it (or leave it unchanged if it's right
-		at that usage) the amount increased/decreased depends on how far away
-		from parentGasLimit * (2/3) parentGasUsed is.
-	*/
-	gl := new(big.Int).Sub(parent.GasLimit(), decay)
-	gl = gl.Add(gl, contrib)
-	gl.Set(math.BigMax(gl, params.MinGasLimit))
-
-	// however, if we're now below the target (TargetGasLimit) we increase the
-	// limit as much as we can (parentGasLimit / 1024 -1)
-	if gl.Cmp(params.TargetGasLimit) < 0 {
-		gl.Add(parent.GasLimit(), decay)
-		gl.Set(math.BigMin(gl, params.TargetGasLimit))
+	delta := parentGasLimit/params.GasLimitBoundDivisor - 1
+	limit := parentGasLimit
+	if desiredLimit < params.MinGasLimit {
+		desiredLimit = params.MinGasLimit
 	}
-
-	if gl.Cmp(params.MaxGasLimit) > 0 {
-		gl.Set(params.MaxGasLimit)
+	// If we're outside our allowed gas range, we try to hone towards them
+	if limit < desiredLimit {
+		limit = parentGasLimit + delta
+		if limit > desiredLimit {
+			limit = desiredLimit
+		}
+		return limit
 	}
-	return gl
+	if limit > desiredLimit {
+		limit = parentGasLimit - delta
+		if limit < desiredLimit {
+			limit = desiredLimit
+		}
+	}
+	return limit
 }

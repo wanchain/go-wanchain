@@ -7,19 +7,21 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/common/math"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 var _ = (*genesisAccountMarshaling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (g GenesisAccount) MarshalJSON() ([]byte, error) {
 	type GenesisAccount struct {
 		Code       hexutil.Bytes               `json:"code,omitempty"`
 		Storage    map[storageJSON]storageJSON `json:"storage,omitempty"`
 		Balance    *math.HexOrDecimal256       `json:"balance" gencodec:"required"`
 		Nonce      math.HexOrDecimal64         `json:"nonce,omitempty"`
+		Staking    GenesisAccountStaking       `json:"staking,omitempty"`
 		PrivateKey hexutil.Bytes               `json:"secretKey,omitempty"`
 	}
 	var enc GenesisAccount
@@ -32,30 +34,33 @@ func (g GenesisAccount) MarshalJSON() ([]byte, error) {
 	}
 	enc.Balance = (*math.HexOrDecimal256)(g.Balance)
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
+	enc.Staking = g.Staking
 	enc.PrivateKey = g.PrivateKey
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (g *GenesisAccount) UnmarshalJSON(input []byte) error {
 	type GenesisAccountStaking struct {
-		Amount    *math.HexOrDecimal256       `json:"amount"`
-		S256pk    hexutil.Bytes               `json:"s256pk"`
-		Bn256pk   hexutil.Bytes               `json:"bn256pk"`
+		Amount  *math.HexOrDecimal256 `json:"amount"`
+		S256pk  hexutil.Bytes         `json:"s256pk"`
+		Bn256pk hexutil.Bytes         `json:"bn256pk"`
 	}
+
 	type GenesisAccount struct {
-		Code       hexutil.Bytes               `json:"code,omitempty"`
+		Code       *hexutil.Bytes              `json:"code,omitempty"`
 		Storage    map[storageJSON]storageJSON `json:"storage,omitempty"`
 		Balance    *math.HexOrDecimal256       `json:"balance" gencodec:"required"`
-		Staking    GenesisAccountStaking      `json:"Staking,omitempty"`
 		Nonce      *math.HexOrDecimal64        `json:"nonce,omitempty"`
-		PrivateKey hexutil.Bytes               `json:"secretKey,omitempty"`
+		Staking    GenesisAccountStaking       `json:"staking,omitempty"`
+		PrivateKey *hexutil.Bytes              `json:"secretKey,omitempty"`
 	}
 	var dec GenesisAccount
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
 	if dec.Code != nil {
-		g.Code = dec.Code
+		g.Code = *dec.Code
 	}
 	if dec.Storage != nil {
 		g.Storage = make(map[common.Hash]common.Hash, len(dec.Storage))
@@ -67,15 +72,17 @@ func (g *GenesisAccount) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'balance' for GenesisAccount")
 	}
 	g.Balance = (*big.Int)(dec.Balance)
+	if dec.Nonce != nil {
+		g.Nonce = uint64(*dec.Nonce)
+	}
+
+	g.Balance = (*big.Int)(dec.Balance)
 	g.Staking.Amount = (*big.Int)(dec.Staking.Amount)
 	g.Staking.Bn256pk = dec.Staking.Bn256pk
 	g.Staking.S256pk = dec.Staking.S256pk
 
-	if dec.Nonce != nil {
-		g.Nonce = uint64(*dec.Nonce)
-	}
 	if dec.PrivateKey != nil {
-		g.PrivateKey = dec.PrivateKey
+		g.PrivateKey = *dec.PrivateKey
 	}
 	return nil
 }

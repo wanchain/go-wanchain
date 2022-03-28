@@ -1,8 +1,8 @@
 package rbselection
 
 import (
-	"github.com/wanchain/go-wanchain/crypto/bn256"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/crypto/bn256"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
 )

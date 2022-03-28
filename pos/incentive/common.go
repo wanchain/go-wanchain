@@ -4,9 +4,9 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 func calcPercent(total *big.Int, percent float64) *big.Int {

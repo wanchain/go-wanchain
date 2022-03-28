@@ -9,16 +9,18 @@
 //
 // This package specifically implements the Optimal Ate pairing over a 256-bit
 // Barreto-Naehrig curve as described in
-// http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
-// with the implementation described in that paper.
+// http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is not
+// compatible with the implementation described in that paper, as different
+// parameters are chosen.
+//
+// (This package previously claimed to operate at a 128-bit security level.
+// However, recent improvements in attacks mean that is no longer true. See
+// https://moderncrypto.org/mail-archive/curves/2016/000740.html.)
 package bn256
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
-	"fmt"
-	"github.com/wanchain/go-wanchain/rlp"
 	"io"
 	"math/big"
 )
@@ -26,7 +28,7 @@ import (
 func randomK(r io.Reader) (k *big.Int, err error) {
 	for {
 		k, err = rand.Int(r, Order)
-		if k.Sign() > 0 || err != nil {
+		if err != nil || k.Sign() > 0 {
 			return
 		}
 	}
@@ -50,11 +52,6 @@ func RandomG1(r io.Reader) (*big.Int, *G1, error) {
 
 func (g *G1) String() string {
 	return "bn256.G1" + g.p.String()
-}
-
-// add by demmon
-func (e *G1) IsInfinity() bool{
-	return e.p.IsInfinity()
 }
 
 // ScalarBaseMult sets e to g*k where g is the generator of the group and then
@@ -107,6 +104,10 @@ func (e *G1) Set(a *G1) *G1 {
 func (e *G1) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
 
 	e.p.MakeAffine()
 	ret := make([]byte, numBytes*2)
@@ -164,178 +165,7 @@ func (e *G1) Unmarshal(m []byte) ([]byte, error) {
 	}
 	return m[2*numBytes:], nil
 }
-func (e *G1) UnmarshalPure(m []byte) ([]byte, error) {
-	// Each value is a 256-bit number.
-	const numBytes = 256 / 8
-	if len(m) < 2*numBytes {
-		return nil, errors.New("bn256: not enough data")
-	}
-	// Unmarshal the points and check their caps
-	if e.p == nil {
-		e.p = &curvePoint{}
-	} else {
-		e.p.x, e.p.y = gfP{0}, gfP{0}
-	}
-	var err error
-	if err = e.p.x.Unmarshal(m); err != nil {
-		return nil, err
-	}
-	if err = e.p.y.Unmarshal(m[numBytes:]); err != nil {
-		return nil, err
-	}
-	// Encode into Montgomery form and ensure it's on the curve
-	montEncode(&e.p.x, &e.p.x)
-	montEncode(&e.p.y, &e.p.y)
 
-	zero := gfP{0}
-	if e.p.x == zero && e.p.y == zero {
-		// This is the point at infinity.
-		e.p.y = *newGFp(1)
-		e.p.z = gfP{0}
-		e.p.t = gfP{0}
-	} else {
-		e.p.z = *newGFp(1)
-		e.p.t = *newGFp(1)
-	}
-	return m[2*numBytes:], nil
-}
-
-var (
-	bn256_B = big.NewInt(3)
-	bn256_q = new(big.Int).Div(new(big.Int).Add(P, big.NewInt(1)), big.NewInt(4))
-	err_ep_nil = errors.New("ep is zero")
-	err_compress = errors.New("compress failed")
-	err_decompress = errors.New("decompress failed")
-	err_decode = errors.New("decode failed")
-	err_infinity = errors.New("infinity point")
-)
-
-func GfpToBytes(p *gfP) []byte {
-	bs := make([]byte, 32)
-	for i:=0; i<4; i++ {
-		binary.LittleEndian.PutUint64(bs[i*8:], p[i])
-	}
-
-	return bs
-}
-func BytesToGfp(b []byte) *gfP {
-	var g gfP
-	for i:=0; i<4; i++ {
-		g[i] = binary.LittleEndian.Uint64(b[8*i:])
-	}
-
-	return &g
-}
-
-func (e *G1) EncodeRLP(w io.Writer) error {
-	if e.p == nil {
-		return err_ep_nil
-	}
-	b := e.Marshal()
-	return rlp.Encode(w, b)
-}
-
-// DecodeRLP implements rlp.Decoder
-func (e *G1) DecodeRLP(s *rlp.Stream) error {
-	if e.p == nil {
-		e.p = new(curvePoint)
-	}
-	var b = make([]byte, 64)
-	err := s.Decode(&b)
-	if err != nil {
-		return err
-	}
-	_, err = e.Unmarshal(b)
-	return err
-}
-
-//func (e *G1) EncodeRLP(w io.Writer) error {
-//	if e.p == nil {
-//		return err_ep_nil
-//	}
-//	if e.p.IsInfinity() {
-//		return err_infinity
-//	}
-//	b := e.Marshal()
-//	c := compress(b)
-//	if c == nil {
-//		return err_compress
-//	}
-//	return rlp.Encode(w, c)
-//}
-//
-//// DecodeRLP implements rlp.Decoder
-//func (e *G1) DecodeRLP(s *rlp.Stream) error {
-//	if e.p == nil {
-//		e.p = new(curvePoint)
-//	}
-//
-//	c := make([]byte, 33)
-//	err := s.Decode(&c)
-//	if err != nil {
-//		return err
-//	}
-//
-//	b, err := decompress(c)
-//	if err != nil {
-//		return err_decompress
-//	}
-//
-//	_, err = e.Unmarshal(b)
-//	return err
-//}
-
-func isOdd(a *big.Int) bool {
-	return a.Bit(0) == 1
-}
-// f[0~31]=x f[32~63]=y
-func compress(f []byte) []byte {
-	if len(f) != 64 {
-		return nil
-	}
-	format := byte(0x2)
-	if f[63] & 1 == 1 {
-		format |= 0x1
-	}
-	b := make([]byte, 33)
-	copy(b, f[0:32])
-	b[32] = format
-	return b
-}
-func decompress(c []byte) ([]byte, error) {
-	if len(c) < 33 {
-		return nil, fmt.Errorf("decompress c len should >= 33")
-	}
-	ybit := false
-	if c[32] & 1 == 1 {
-		ybit = true
-	}
-	x := new(big.Int).SetBytes(c[0:32])
-	x3 := new(big.Int).Mul(x, x)
-	x3.Mul(x3, x)
-	x3.Add(x3, bn256_B)
-	x3.Mod(x3, P)
-	y := new(big.Int).Exp(x3, bn256_q, P)
-
-	if ybit != isOdd(y) {
-		y.Sub(P, y)
-	}
-	y2 := new(big.Int).Mul(y, y)
-	y2.Mod(y2, P)
-	if y2.Cmp(x3) != 0 {
-		return nil, fmt.Errorf("invalid square root")
-	}
-	if ybit != isOdd(y) {
-		return nil, fmt.Errorf("ybit doesn't match oddness")
-	}
-	var b = make([]byte, 64)
-	copy(b, c[0:32])
-	copy(b[64-len(y.Bytes()):], y.Bytes())
-	return b, nil
-}
-
-//00304909d06b42ada9adb7ef89a120811441d72296e715b323f32363fba1f9c1
-//3034056910c65d7c0ea28dc6f7e037dc833f936ed18ab4da182d68b2dcdb0386
 // G2 is an abstract cyclic group. The zero value is suitable for use as the
 // output of an operation, but cannot be used as an input.
 type G2 struct {
@@ -354,11 +184,6 @@ func RandomG2(r io.Reader) (*big.Int, *G2, error) {
 
 func (e *G2) String() string {
 	return "bn256.G2" + e.p.String()
-}
-
-// add by demmon
-func (e *G2) IsInfinity() bool {
-	return e.p.IsInfinity()
 }
 
 // ScalarBaseMult sets e to g*k where g is the generator of the group and then
@@ -481,109 +306,6 @@ func (e *G2) Unmarshal(m []byte) ([]byte, error) {
 	}
 	return m[4*numBytes:], nil
 }
-func (e *G2) UnmarshalPure(m []byte) ([]byte, error) {
-	// Each value is a 256-bit number.
-	const numBytes = 256 / 8
-	if len(m) < 4*numBytes {
-		return nil, errors.New("bn256: not enough data")
-	}
-	// Unmarshal the points and check their caps
-	if e.p == nil {
-		e.p = &twistPoint{}
-	}
-	var err error
-	if err = e.p.x.x.Unmarshal(m); err != nil {
-		return nil, err
-	}
-	if err = e.p.x.y.Unmarshal(m[numBytes:]); err != nil {
-		return nil, err
-	}
-	if err = e.p.y.x.Unmarshal(m[2*numBytes:]); err != nil {
-		return nil, err
-	}
-	if err = e.p.y.y.Unmarshal(m[3*numBytes:]); err != nil {
-		return nil, err
-	}
-	// Encode into Montgomery form and ensure it's on the curve
-	montEncode(&e.p.x.x, &e.p.x.x)
-	montEncode(&e.p.x.y, &e.p.x.y)
-	montEncode(&e.p.y.x, &e.p.y.x)
-	montEncode(&e.p.y.y, &e.p.y.y)
-
-	if e.p.x.IsZero() && e.p.y.IsZero() {
-		// This is the point at infinity.
-		e.p.y.SetOne()
-		e.p.z.SetZero()
-		e.p.t.SetZero()
-	} else {
-		e.p.z.SetOne()
-		e.p.t.SetOne()
-	}
-	return m[4*numBytes:], nil
-}
-
-func (e *G2) EncodeRLP(w io.Writer) error {
-	if e.p == nil {
-		return err_ep_nil
-	}
-	if e.p.IsInfinity() {
-		return err_infinity
-	}
-
-	b := e.Marshal()
-	return rlp.Encode(w, b)
-}
-
-// DecodeRLP implements rlp.Decoder
-func (e *G2) DecodeRLP(s *rlp.Stream) error {
-	if e.p == nil {
-		e.p = new(twistPoint)
-	}
-	var b = make([]byte, 128)
-	err := s.Decode(&b)
-	if err != nil {
-		return err
-	}
-	_, err = e.Unmarshal(b)
-	return err
-}
-//func (e *G2) EncodeRLP(w io.Writer) error {
-//	b := e.Marshal()
-//	x := compress(b[0:64])
-//	y := compress(b[64:128])
-//	xy := append(x, y...)
-//	return rlp.Encode(w, xy)
-//}
-//
-//// DecodeRLP implements rlp.Decoder
-//func (e *G2) DecodeRLP(s *rlp.Stream) error {
-//	if e.p == nil {
-//		e.p = new(twistPoint)
-//	}
-//	c := make([]byte, 66)
-//	err := s.Decode(&c)
-//	if err != nil {
-//		return err_decode
-//	}
-//	x, err := decompress(c[0:33])
-//	if err != nil {
-//		return err_decompress
-//	}
-//	y, err := decompress(c[33:66])
-//	if err != nil {
-//		return err_decompress
-//	}
-//
-//	//var b = make([]byte, 128)
-//	b := append(x, y...)
-//	err = s.Decode(&b)
-//	if err != nil {
-//		return err
-//	}
-//	_, err = e.Unmarshal(b)
-//	return err
-//}
-
 
 // GT is an abstract cyclic group. The zero value is suitable for use as the
 // output of an operation, but cannot be used as an input.
@@ -668,6 +390,11 @@ func (e *GT) Finalize() *GT {
 func (e *GT) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
+	if e.p == nil {
+		e.p = &gfP12{}
+		e.p.SetOne()
+	}
 
 	ret := make([]byte, numBytes*12)
 	temp := &gfP{}

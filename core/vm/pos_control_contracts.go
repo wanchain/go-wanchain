@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	posutil "github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	posutil "github.com/ethereum/go-ethereum/pos/util"
 
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 /* the contract interface described by solidity.
@@ -82,10 +82,12 @@ func init() {
 		panic("err in posControl abi initialize ")
 	}
 
-	copy(upgradeWhiteEpochLeaderId[:], posControlAbi.Methods["upgradeWhiteEpochLeader"].Id())
+	copy(upgradeWhiteEpochLeaderId[:], posControlAbi.Methods["upgradeWhiteEpochLeader"].ID)
 }
 
 type PosControl struct {
+	contract *Contract
+	evm      *EVM
 }
 
 //
@@ -95,7 +97,9 @@ func (p *PosControl) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
-func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (p *PosControl) Run(input []byte) ([]byte, error) {
+	contract := p.contract
+	evm  := p.evm
 	if len(input) < 4 {
 		return nil, errors.New("parameter is wrong")
 	}
@@ -105,7 +109,7 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return nil, errParameters
 	}
 
-	epid, _ := posutil.CalEpochSlotID(evm.Time.Uint64())
+	epid, _ := posutil.CalEpochSlotID(evm.Context.Time.Uint64())
 	if epid >= posconfig.Cfg().MarsEpochId {
 		return nil, errors.New("pos_control_not_support_anymore")
 	}
@@ -114,7 +118,7 @@ func (p *PosControl) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 	copy(methodId[:], input[:4])
 
 	if methodId == upgradeWhiteEpochLeaderId {
-		info, err := p.upgradeWhiteEpochLeaderParseAndValid(input[4:], evm.Time.Uint64())
+		info, err := p.upgradeWhiteEpochLeaderParseAndValid(input[4:], evm.Context.Time.Uint64())
 		if err != nil {
 			return nil, err
 		}

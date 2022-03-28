@@ -1,4 +1,3 @@
-// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -30,8 +29,8 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -60,7 +59,7 @@ func TestWatchNewFile(t *testing.T) {
 
 	// Ensure the watcher is started before adding any files.
 	ks.Accounts()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	// Move in the files.
 	wantAccounts := make([]accounts.Account, len(cachetestAccounts))
@@ -97,7 +96,7 @@ func TestWatchNoDir(t *testing.T) {
 
 	// Create ks but not the directory that it watches.
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watchnodir-test-%d-%d", os.Getpid(), rand.Int()))
 	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
 
 	list := ks.Accounts()
@@ -300,7 +299,7 @@ func TestCacheFind(t *testing.T) {
 
 func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	var list []accounts.Account
-	for d := 200 * time.Millisecond; d < 60*time.Second; d *= 2 {
+	for d := 200 * time.Millisecond; d < 8*time.Second; d *= 2 {
 		list = ks.Accounts()
 		if reflect.DeepEqual(list, wantAccounts) {
 			// ks should have also received change notifications
@@ -323,9 +322,9 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 
 	// Create a temporary kesytore to test with
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("wanchain-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
-
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-updatedkeyfilecontents-test-%d-%d", os.Getpid(), rand.Int()))
 	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
+
 	list := ks.Accounts()
 	if len(list) > 0 {
 		t.Error("initial account list not empty:", list)
@@ -350,6 +349,9 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		return
 	}
 
+	// needed so that modTime of `file` is different to its current value after forceCopyFile
+	time.Sleep(1000 * time.Millisecond)
+
 	// Now replace file contents
 	if err := forceCopyFile(file, cachetestAccounts[1].URL.Path); err != nil {
 		t.Fatal(err)
@@ -363,6 +365,9 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		return
 	}
 
+	// needed so that modTime of `file` is different to its current value after forceCopyFile
+	time.Sleep(1000 * time.Millisecond)
+
 	// Now replace file contents again
 	if err := forceCopyFile(file, cachetestAccounts[2].URL.Path); err != nil {
 		t.Fatal(err)
@@ -375,6 +380,10 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
+	// needed so that modTime of `file` is different to its current value after ioutil.WriteFile
+	time.Sleep(1000 * time.Millisecond)
+
 	// Now replace file contents with crap
 	if err := ioutil.WriteFile(file, []byte("foo"), 0644); err != nil {
 		t.Fatal(err)

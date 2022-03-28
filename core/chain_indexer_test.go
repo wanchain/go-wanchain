@@ -17,14 +17,17 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // Runs multiple tests with randomized parameters.
@@ -46,7 +49,7 @@ func TestChainIndexerWithChildren(t *testing.T) {
 // multiple backends. The section size and required confirmation count parameters
 // are randomized.
 func testChainIndexer(t *testing.T, count int) {
-	db, _ := ethdb.NewMemDatabase()
+	db := rawdb.NewMemoryDatabase()
 	defer db.Close()
 
 	// Create a chain of indexers and ensure they all report empty
@@ -57,7 +60,7 @@ func testChainIndexer(t *testing.T, count int) {
 			confirmsReq = uint64(rand.Intn(10))
 		)
 		backends[i] = &testChainIndexBackend{t: t, processCh: make(chan uint64)}
-		backends[i].indexer = NewChainIndexer(db, ethdb.NewTable(db, string([]byte{byte(i)})), backends[i], sectionSize, confirmsReq, 0, fmt.Sprintf("indexer-%d", i))
+		backends[i].indexer = NewChainIndexer(db, rawdb.NewTable(db, string([]byte{byte(i)})), backends[i], sectionSize, confirmsReq, 0, fmt.Sprintf("indexer-%d", i))
 
 		if sections, _, _ := backends[i].indexer.Sections(); sections != 0 {
 			t.Fatalf("Canonical section count mismatch: have %v, want %v", sections, 0)
@@ -91,10 +94,10 @@ func testChainIndexer(t *testing.T, count int) {
 	inject := func(number uint64) {
 		header := &types.Header{Number: big.NewInt(int64(number)), Extra: big.NewInt(rand.Int63()).Bytes()}
 		if number > 0 {
-			header.ParentHash = GetCanonicalHash(db, number-1)
+			header.ParentHash = rawdb.ReadCanonicalHash(db, number-1)
 		}
-		WriteHeader(db, header)
-		WriteCanonicalHash(db, header.Hash(), number)
+		rawdb.WriteHeader(db, header)
+		rawdb.WriteCanonicalHash(db, header.Hash(), number)
 	}
 	// Start indexer with an already existing chain
 	for i := uint64(0); i <= 100; i++ {
@@ -201,19 +204,20 @@ func (b *testChainIndexBackend) assertBlocks(headNum, failNum uint64) (uint64, b
 }
 
 func (b *testChainIndexBackend) reorg(headNum uint64) uint64 {
-	firstChanged := headNum / b.indexer.sectionSize
+	firstChanged := (headNum + 1) / b.indexer.sectionSize
 	if firstChanged < b.stored {
 		b.stored = firstChanged
 	}
 	return b.stored * b.indexer.sectionSize
 }
 
-func (b *testChainIndexBackend) Reset(section uint64) {
+func (b *testChainIndexBackend) Reset(ctx context.Context, section uint64, prevHead common.Hash) error {
 	b.section = section
 	b.headerCnt = 0
+	return nil
 }
 
-func (b *testChainIndexBackend) Process(header *types.Header) {
+func (b *testChainIndexBackend) Process(ctx context.Context, header *types.Header) error {
 	b.headerCnt++
 	if b.headerCnt > b.indexer.sectionSize {
 		b.t.Error("Processing too many headers")
@@ -221,14 +225,22 @@ func (b *testChainIndexBackend) Process(header *types.Header) {
 	//t.processCh <- header.Number.Uint64()
 	select {
 	case <-time.After(10 * time.Second):
-		b.t.Fatal("Unexpected call to Process")
+		b.t.Error("Unexpected call to Process")
+		// Can't use Fatal since this is not the test's goroutine.
+		// Returning error stops the chainIndexer's updateLoop
+		return errors.New("Unexpected call to Process")
 	case b.processCh <- header.Number.Uint64():
 	}
+	return nil
 }
 
 func (b *testChainIndexBackend) Commit() error {
 	if b.headerCnt != b.indexer.sectionSize {
 		b.t.Error("Not enough headers processed")
 	}
+	return nil
+}
+
+func (b *testChainIndexBackend) Prune(threshold uint64) error {
 	return nil
 }

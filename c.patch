@@ -1,0 +1,64 @@
+diff --git a/core/types/transaction.go b/core/types/transaction.go
+index 86f0add8b..b338b5bb7 100755
+--- a/core/types/transaction.go
++++ b/core/types/transaction.go
+@@ -409,9 +409,23 @@ func (tx *Transaction) Size() common.StorageSize {
+ }
+ 
+ func (tx *Transaction) IsValidType() bool {
+-	if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == DynamicFeeTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType || tx.Type() == WanJupiterTxType {
+-		return true
++	// TODO check how many types we need.
++	if !params.IsLondonActive() {
++		if !params.IsPosActive() {
++			if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType || tx.Type() == WanJupiterTxType {
++				return true
++			}
++		} else {
++			if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType || tx.Type() == WanJupiterTxType {
++				return true
++			}
++		}
++	} else {
++		if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == DynamicFeeTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType || tx.Type() == WanJupiterTxType {
++			return true
++		}
+ 	}
++
+ 	return false
+ }
+ func (tx *Transaction) IsLegacyType() bool {
+diff --git a/core/types/transaction_wan.go b/core/types/transaction_wan.go
+index 98cf7e618..40fe6317a 100755
+--- a/core/types/transaction_wan.go
++++ b/core/types/transaction_wan.go
+@@ -6,13 +6,13 @@ import (
+ )
+ 
+ // deriveSigner makes a *best* guess about which signer to use.
+-func deriveSigner(V *big.Int) Signer {
+-	if V.Sign() != 0 && isProtectedV(V) {
+-		return NewEIP155Signer(deriveChainId(V))
+-	} else {
+-		return HomesteadSigner{}
+-	}
+-}
++//func deriveSigner(V *big.Int) Signer {
++//	if V.Sign() != 0 && isProtectedV(V) {
++//		return NewEIP155Signer(deriveChainId(V))
++//	} else {
++//		return HomesteadSigner{}
++//	}
++//}
+ 
+ ////////////////////////////////////for privacy tx ///////////////////////
+ func NewOTATransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
+@@ -31,7 +31,7 @@ const (
+ )
+ 
+ func IsNormalTransaction(txType uint64) bool {
+-	return txType == WanLegacyTxType || txType == 0 || txType == 2   || txType == JUPITER_TX || txType == 0xff // some of old tx used , which is allowed.
++	return txType == WanLegacyTxType || txType == 0 || txType == 2 || txType == JUPITER_TX || txType == 0xff // some of old tx used , which is allowed.
+ }
+ func IsPosTransaction(txType uint64) bool {
+ 	return txType == WanPosTxType

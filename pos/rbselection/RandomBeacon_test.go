@@ -5,8 +5,8 @@ package rbselection
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"math/big"
 	"testing"
 )

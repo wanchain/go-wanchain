@@ -1,6 +1,6 @@
 package posconfig
 
-import "github.com/wanchain/go-wanchain/common"
+import "github.com/ethereum/go-ethereum/common"
 
 
 var PosOwnerAddrMainnet = common.HexToAddress("0xa3d0f7227258df834f66d9f91fe4c97a223a9ec8")

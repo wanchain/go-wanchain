@@ -5,14 +5,14 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/params"
 
-	"github.com/wanchain/go-wanchain/node"
+	"github.com/ethereum/go-ethereum/node"
 )
 
 var (
@@ -25,6 +25,10 @@ var (
 	SelfTestMode = false
 	IsDev        = false
 	MineEnabled  = false
+
+	ChainId = uint64(0)
+
+	LondonForked bool = true
 )
 
 const (
@@ -110,10 +114,11 @@ const (
 
 	MainnetMarsEpochId = MainnetVenusEpochId
 	TestnetMarsEpochId = 18506 //2020.09.01
-
+	PlutoMarsEpochId   = 99998506
 	// After Jupiter fork, wanchain support ethereum tx and wallet.
 	MainnetJupiterEpochId = 18732
 	TestnetJupiterEpochId = 18698
+	PlutoJupiterEpochId   = 0
 
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
@@ -236,12 +241,12 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 			// TODO: for debug change WhiteListDev -> WhiteListMainnet
 			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
-			WhiteList = WhiteListOrig
+			WhiteList = WhiteListDev // WhiteListOrig this is multi validator, hard to config.
 		}
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
-		DefaultConfig.MarsEpochId = TestnetMarsEpochId
-		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
+		DefaultConfig.MarsEpochId = PlutoMarsEpochId
+		DefaultConfig.JupiterEpochId = PlutoJupiterEpochId
 	} else if networkId == params.INTERNAL_CHAIN_ID {
 		PosOwnerAddr = PosOwnerAddrInternal
 		// TODO: for debug set to WhiteListOrig -> WhiteListDev

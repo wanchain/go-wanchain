@@ -9,22 +9,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/pos/uleaderselection"
+	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 
-	"github.com/wanchain/go-wanchain/functrace"
+	"github.com/ethereum/go-ethereum/functrace"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -116,13 +116,17 @@ func init() {
 }
 
 type slotLeaderSC struct {
+	contract *Contract
+	evm      *EVM
 }
 
 func (c *slotLeaderSC) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
-func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *slotLeaderSC) Run(in []byte) ([]byte, error) {
+	contract := c.contract
+	evm  := c.evm
 	functrace.Enter()
 	log.Debug("slotLeaderSC run is called")
 
@@ -136,7 +140,7 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 	from = contract.CallerAddress
 
 	if methodId == stgOneIdArr {
-		vldReset := validStg1Reset(evm.StateDB, from, in[:], evm.Time.Uint64())
+		vldReset := validStg1Reset(evm.StateDB, from, in[:], evm.Context.Time.Uint64())
 		vldService := validStg1Service(from, in[:])
 
 		if !(vldReset && vldService) {
@@ -144,7 +148,7 @@ func (c *slotLeaderSC) Run(in []byte, contract *Contract, evm *EVM) ([]byte, err
 		}
 		return handleStgOne(in[:], contract, evm) //Do not use [4:] because it has do it in function
 	} else if methodId == stgTwoIdArr {
-		vldReset := validStg2Reset(evm.StateDB, from, in[:], evm.Time.Uint64())
+		vldReset := validStg2Reset(evm.StateDB, from, in[:], evm.Context.Time.Uint64())
 		vldService := validStg2Service(evm.StateDB, from, in[:])
 
 		if !(vldReset && vldService) {
@@ -452,7 +456,7 @@ func GetStage1FunctionID(abiString string) ([4]byte, error) {
 		return slotStage1ID, err
 	}
 
-	copy(slotStage1ID[:], abi.Methods["slotLeaderStage1MiSave"].Id())
+	copy(slotStage1ID[:], abi.Methods["slotLeaderStage1MiSave"].ID)
 
 	return slotStage1ID, nil
 }
@@ -466,7 +470,7 @@ func GetStage2FunctionID(abiString string) ([4]byte, error) {
 		return slotStage2ID, err
 	}
 
-	copy(slotStage2ID[:], abi.Methods["slotLeaderStage2InfoSave"].Id())
+	copy(slotStage2ID[:], abi.Methods["slotLeaderStage2InfoSave"].ID)
 
 	return slotStage2ID, nil
 }
@@ -758,7 +762,7 @@ func addSlotScCallTimes(epochID uint64) error {
 }
 
 func isInValidStage(epochID uint64, time uint64, kStart uint64, kEnd uint64) bool {
-	//eid, sid := util.CalEpochSlotID(evm.Time.Uint64())
+	//eid, sid := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	eid, sid := util.CalEpochSlotID(time)
 	if epochID != eid {
 		log.SyslogWarning("Tx epochID is not current epoch", "epochID", eid, "slotID", sid, "currentEpochID", epochID)

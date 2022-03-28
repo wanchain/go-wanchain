@@ -6,11 +6,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 func TestDbInitAll(t *testing.T) {

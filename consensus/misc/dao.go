@@ -15,19 +15,19 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package misc
-/*
+
 import (
 	"bytes"
 	"errors"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
-	// ErrBadProDAOExtra is returned if a header doens't support the DAO fork on a
+	// ErrBadProDAOExtra is returned if a header doesn't support the DAO fork on a
 	// pro-fork client.
 	ErrBadProDAOExtra = errors.New("bad DAO pro-fork extra-data")
 
@@ -83,4 +83,3 @@ func ApplyDAOHardFork(statedb *state.StateDB) {
 		statedb.SetBalance(addr, new(big.Int))
 	}
 }
-*/

@@ -30,26 +30,21 @@
 package ecies
 
 import (
-	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/binary"
 	"fmt"
 	"hash"
 	"io"
 	"math/big"
-
-	"github.com/wanchain/go-wanchain/common"
 )
 
 var (
 	ErrImport                     = fmt.Errorf("ecies: failed to import key")
 	ErrInvalidCurve               = fmt.Errorf("ecies: invalid elliptic curve")
-	ErrInvalidParams              = fmt.Errorf("ecies: invalid ECIES parameters")
 	ErrInvalidPublicKey           = fmt.Errorf("ecies: invalid public key")
 	ErrSharedKeyIsPointAtInfinity = fmt.Errorf("ecies: shared key is point at infinity")
 	ErrSharedKeyTooBig            = fmt.Errorf("ecies: shared key params are too big")
@@ -143,96 +138,39 @@ func (prv *PrivateKey) GenerateShared(pub *PublicKey, skLen, macLen int) (sk []b
 }
 
 var (
-	ErrKeyDataTooLong = fmt.Errorf("ecies: can't supply requested key data")
 	ErrSharedTooLong  = fmt.Errorf("ecies: shared secret is too long")
 	ErrInvalidMessage = fmt.Errorf("ecies: invalid message")
 )
 
-var (
-	big2To32   = new(big.Int).Exp(big.NewInt(2), big.NewInt(32), nil)
-	big2To32M1 = new(big.Int).Sub(big2To32, big.NewInt(1))
-)
-
-func incCounter(ctr []byte) {
-	if ctr[3]++; ctr[3] != 0 {
-		return
-	}
-	if ctr[2]++; ctr[2] != 0 {
-		return
-	}
-	if ctr[1]++; ctr[1] != 0 {
-		return
-	}
-	if ctr[0]++; ctr[0] != 0 {
-		return
-	}
-}
-
 // NIST SP 800-56 Concatenation Key Derivation Function (see section 5.8.1).
-func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
-	if s1 == nil {
-		s1 = make([]byte, 0)
-	}
-
-	reps := ((kdLen + 7) * 8) / (hash.BlockSize() * 8)
-	if big.NewInt(int64(reps)).Cmp(big2To32M1) > 0 {
-		fmt.Println(big2To32M1)
-		return nil, ErrKeyDataTooLong
-	}
-
-	counter := []byte{0, 0, 0, 1}
-	k = make([]byte, 0)
-
-	for i := 0; i <= reps; i++ {
-		hash.Write(counter)
+func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) []byte {
+	counterBytes := make([]byte, 4)
+	k := make([]byte, 0, roundup(kdLen, hash.Size()))
+	for counter := uint32(1); len(k) < kdLen; counter++ {
+		binary.BigEndian.PutUint32(counterBytes, counter)
+		hash.Reset()
+		hash.Write(counterBytes)
 		hash.Write(z)
 		hash.Write(s1)
-		k = append(k, hash.Sum(nil)...)
-		hash.Reset()
-		incCounter(counter)
+		k = hash.Sum(k)
 	}
-
-	k = k[:kdLen]
-	return
+	return k[:kdLen]
 }
 
-func concatKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
+// roundup rounds size up to the next multiple of blocksize.
+func roundup(size, blocksize int) int {
+	return size + blocksize - (size % blocksize)
+}
 
-	prf := hmac.New(h, password)
-	hashLen := prf.Size()
-	numBlocks := (keyLen + hashLen - 1) / hashLen
-
-	var buf [4]byte
-	dk := make([]byte, 0, numBlocks*hashLen)
-	U := make([]byte, hashLen)
-	for block := 1; block <= numBlocks; block++ {
-		// N.B.: || means concatenation, ^ means XOR
-		// for each block T_i = U_1 ^ U_2 ^ ... ^ U_iter
-		// U_1 = PRF(password, salt || uint(i))
-		prf.Reset()
-		prf.Write(salt)
-		buf[0] = byte(block >> 24)
-		buf[1] = byte(block >> 16)
-		buf[2] = byte(block >> 8)
-		buf[3] = byte(block)
-		prf.Write(buf[:4])
-		dk = prf.Sum(dk)
-		T := dk[len(dk)-hashLen:]
-		copy(U, T)
-
-		// U_n = PRF(password, U_(n-1))
-		for n := 2; n <= iter; n++ {
-			prf.Reset()
-			prf.Write(U)
-			U = U[:0]
-			U = prf.Sum(U)
-			for x := range U {
-				T[x] ^= U[x]
-			}
-		}
-	}
-
-	return dk[:keyLen]
+// deriveKeys creates the encryption and MAC keys using concatKDF.
+func deriveKeys(hash hash.Hash, z, s1 []byte, keyLen int) (Ke, Km []byte) {
+	K := concatKDF(hash, z, s1, 2*keyLen)
+	Ke = K[:keyLen]
+	Km = K[keyLen:]
+	hash.Reset()
+	hash.Write(Km)
+	Km = hash.Sum(Km[:0])
+	return Ke, Km
 }
 
 // messageTag computes the MAC of a message (called the tag) as per
@@ -253,7 +191,6 @@ func generateIV(params *ECIESParams, rand io.Reader) (iv []byte, err error) {
 }
 
 // symEncrypt carries out CTR encryption using the block cipher specified in the
-// parameters.
 func symEncrypt(rand io.Reader, params *ECIESParams, key, m []byte) (ct []byte, err error) {
 	c, err := params.Cipher(key)
 	if err != nil {
@@ -264,21 +201,17 @@ func symEncrypt(rand io.Reader, params *ECIESParams, key, m []byte) (ct []byte, 
 	if err != nil {
 		return
 	}
-
-	// fmt.Println("iv=" + common.ToHex(iv))
-
 	ctr := cipher.NewCTR(c, iv)
 
 	ct = make([]byte, len(m)+params.BlockSize)
 	copy(ct, iv)
-
 	ctr.XORKeyStream(ct[params.BlockSize:], m)
 	return
 }
 
 // symDecrypt carries out CTR decryption using the block cipher specified in
 // the parameters
-func symDecrypt(rand io.Reader, params *ECIESParams, key, ct []byte) (m []byte, err error) {
+func symDecrypt(params *ECIESParams, key, ct []byte) (m []byte, err error) {
 	c, err := params.Cipher(key)
 	if err != nil {
 		return
@@ -297,42 +230,27 @@ func symDecrypt(rand io.Reader, params *ECIESParams, key, ct []byte) (m []byte, 
 // ciphertext. s1 is fed into key derivation, s2 is fed into the MAC. If the
 // shared information parameters aren't being used, they should be nil.
 func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err error) {
-	params := pub.Params
-	if params == nil {
-		if params = ParamsFromCurve(pub.Curve); params == nil {
-			err = ErrUnsupportedECIESParameters
-			return
-		}
+	params, err := pubkeyParams(pub)
+	if err != nil {
+		return nil, err
 	}
 
 	R, err := GenerateKey(rand, pub.Curve, params)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	//fmt.Println("rbpri=" + R.D.Text(16));
-
-	hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
-	if err != nil {
-		return
-	}
-	Ke := K[:params.KeyLen]
-	Km := K[params.KeyLen:]
-
-	hash.Write(Km)
-	Km = hash.Sum(nil)
-
-	hash.Reset()
+	hash := params.Hash()
+	Ke, Km := deriveKeys(hash, z, s1, params.KeyLen)
 
 	em, err := symEncrypt(rand, params, Ke, m)
 	if err != nil || len(em) <= params.BlockSize {
-		return
+		return nil, err
 	}
 
 	d := messageTag(params.Hash, Km, em, s2)
@@ -340,25 +258,21 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 	Rb := elliptic.Marshal(pub.Curve, R.PublicKey.X, R.PublicKey.Y)
 	ct = make([]byte, len(Rb)+len(em)+len(d))
 	copy(ct, Rb)
-
 	copy(ct[len(Rb):], em)
-
 	copy(ct[len(Rb)+len(em):], d)
-	return
+	return ct, nil
 }
 
 // Decrypt decrypts an ECIES ciphertext.
-func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err error) {
+func (prv *PrivateKey) Decrypt(c, s1, s2 []byte) (m []byte, err error) {
 	if len(c) == 0 {
 		return nil, ErrInvalidMessage
 	}
-	params := prv.PublicKey.Params
-	if params == nil {
-		if params = ParamsFromCurve(prv.PublicKey.Curve); params == nil {
-			err = ErrUnsupportedECIESParameters
-			return
-		}
+	params, err := pubkeyParams(&prv.PublicKey)
+	if err != nil {
+		return nil, err
 	}
+
 	hash := params.Hash()
 
 	var (
@@ -370,14 +284,12 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 
 	switch c[0] {
 	case 2, 3, 4:
-		rLen = ((prv.PublicKey.Curve.Params().BitSize + 7) / 4)
+		rLen = (prv.PublicKey.Curve.Params().BitSize + 7) / 4
 		if len(c) < (rLen + hLen + 1) {
-			err = ErrInvalidMessage
-			return
+			return nil, ErrInvalidMessage
 		}
 	default:
-		err = ErrInvalidPublicKey
-		return
+		return nil, ErrInvalidPublicKey
 	}
 
 	mStart = rLen
@@ -387,151 +299,19 @@ func (prv *PrivateKey) Decrypt(rand io.Reader, c, s1, s2 []byte) (m []byte, err 
 	R.Curve = prv.PublicKey.Curve
 	R.X, R.Y = elliptic.Unmarshal(R.Curve, c[:rLen])
 	if R.X == nil {
-		err = ErrInvalidPublicKey
-		return
-	}
-	if !R.Curve.IsOnCurve(R.X, R.Y) {
-		err = ErrInvalidCurve
-		return
+		return nil, ErrInvalidPublicKey
 	}
 
 	z, err := prv.GenerateShared(R, params.KeyLen, params.KeyLen)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	K, err := concatKDF(hash, z, s1, params.KeyLen+params.KeyLen)
-	if err != nil {
-		return
-	}
-
-	Ke := K[:params.KeyLen]
-	Km := K[params.KeyLen:]
-	hash.Write(Km)
-	Km = hash.Sum(nil)
-	hash.Reset()
+	Ke, Km := deriveKeys(hash, z, s1, params.KeyLen)
 
 	d := messageTag(params.Hash, Km, c[mStart:mEnd], s2)
 	if subtle.ConstantTimeCompare(c[mEnd:], d) != 1 {
-		err = ErrInvalidMessage
-		return
+		return nil, ErrInvalidMessage
 	}
 
-	m, err = symDecrypt(rand, params, Ke, c[mStart:mEnd])
-	return
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-func EncryptWithRandom(rbprv *PrivateKey, pub *PublicKey, iv []byte, m, s1, s2 []byte) (ct []byte, err error) {
-
-	params := pub.Params
-	if params == nil {
-		if params = ParamsFromCurve(pub.Curve); params == nil {
-			err = ErrUnsupportedECIESParameters
-			return
-		}
-	}
-
-	shared, err := rbprv.GenerateShared(pub, 16, 16)
-	if err != nil {
-		return
-	}
-	sharedStr := common.Bytes2Hex(shared)
-
-	fmt.Println("GenerateShared=" + sharedStr)
-
-	hash := sha256.New()
-
-	K := concatKDF2([]byte(sharedStr), []byte(" "), 2, 64, sha256.New)
-
-	fmt.Println("concatKDF=" + common.Bytes2Hex(K))
-
-	Ke := K[:16]
-	Km := K[16:32]
-
-	hash.Write(Km)
-	Km = hash.Sum(nil)
-
-	fmt.Println("macKey=" + common.Bytes2Hex(Km))
-	hash.Reset()
-
-	em := AES_CBC_Encrypt(m, Ke, iv)
-	if len(em) <= params.BlockSize {
-		return
-	}
-	fmt.Println("encrypt message=" + common.Bytes2Hex(em))
-
-	d := hmacSha256(em, Km)
-
-	fmt.Println("mac=" + common.Bytes2Hex(d))
-
-	empub := elliptic.Marshal(pub.Curve, rbprv.PublicKey.X, rbprv.PublicKey.Y)
-
-	ct = make([]byte, (((len(empub)+len(iv)+len(em)+len(d))/32 + 1) * 32))
-
-	copy(ct, empub)
-	copy(ct[len(empub):], iv)
-
-	copy(ct[len(empub)+len(iv):], em)
-
-	copy(ct[len(empub)+len(iv)+len(em):], d)
-
-	fmt.Println("eccEncWhole=" + common.Bytes2Hex(ct))
-
-	return
-}
-
-func AES_CBC_Encrypt(plainText []byte, key []byte, iv []byte) []byte {
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	plainText = Padding(plainText, block.BlockSize())
-
-	blockMode := cipher.NewCBCEncrypter(block, iv)
-
-	cipherText := make([]byte, len(plainText))
-	blockMode.CryptBlocks(cipherText, plainText)
-
-	return cipherText
-}
-
-func Padding(plainText []byte, blockSize int) []byte {
-
-	n := blockSize - len(plainText)%blockSize
-
-	temp := bytes.Repeat([]byte{byte(n)}, n)
-	plainText = append(plainText, temp...)
-	return plainText
-}
-
-func UnPadding(cipherText []byte) []byte {
-
-	end := cipherText[len(cipherText)-1]
-
-	cipherText = cipherText[:len(cipherText)-int(end)]
-	return cipherText
-}
-
-func AES_CBC_Decrypt(cipherText []byte, key []byte, iv []byte) []byte {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	blockMode := cipher.NewCBCDecrypter(block, iv)
-
-	plainText := make([]byte, len(cipherText))
-	blockMode.CryptBlocks(plainText, cipherText)
-
-	plainText = UnPadding(plainText)
-	return plainText
-}
-
-func hmacSha256(data []byte, secret []byte) []byte {
-	h := hmac.New(sha256.New, secret)
-	h.Write([]byte(data))
-	return h.Sum(nil)
+	return symDecrypt(params, Ke, c[mStart:mEnd])
 }

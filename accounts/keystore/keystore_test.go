@@ -1,4 +1,3 @@
-// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -24,14 +23,15 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/event"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 var testSigData = make([]byte, 32)
@@ -40,9 +40,7 @@ func TestKeyStore(t *testing.T) {
 	dir, ks := tmpKeyStore(t, true)
 	defer os.RemoveAll(dir)
 
-	// create an account
-	auth := "wanchain_test"
-	a, err := ks.NewAccount(auth)
+	a, err := ks.NewAccount("foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,21 +57,10 @@ func TestKeyStore(t *testing.T) {
 	if !ks.HasAddress(a.Address) {
 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
 	}
-	if err := ks.Unlock(a, auth); err != nil {
-		t.Errorf("Unlock error: %v", err)
-	}
-	var wAddr common.WAddress
-	wAddr, err = ks.GetWanAddress(a)
-	if err != nil && len(wAddr) != common.WAddressLength {
-		t.Errorf("Generate waddress error: %v", err)
-	}
-	if _, err := genOTA(hexutil.Encode(wAddr[:])); err != nil {
-		t.Errorf("Generate OTA error: %v", err)
-	}
-	if err := ks.Update(a, auth, auth+"_new"); err != nil {
+	if err := ks.Update(a, "foo", "bar"); err != nil {
 		t.Errorf("Update error: %v", err)
 	}
-	if err := ks.Delete(a, auth+"_new"); err != nil {
+	if err := ks.Delete(a, "bar"); err != nil {
 		t.Errorf("Delete error: %v", err)
 	}
 	if common.FileExist(a.URL.Path) {
@@ -83,65 +70,6 @@ func TestKeyStore(t *testing.T) {
 		t.Errorf("HasAccount(%x) should've returned true after Delete", a.Address)
 	}
 }
-
-// func TestImportExportECDSAPair(t *testing.T) {
-// 	// create a keystore wo work with
-// 	dir, ks := tmpKeyStore(t, true)
-// 	defer os.RemoveAll(dir)
-
-// 	// create an account
-// 	auth := "wanchain_test"
-// 	a, err := ks.NewAccount(auth)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	if !strings.HasPrefix(a.URL.Path, dir) {
-// 		t.Errorf("account file %s doesn't have dir prefix", a.URL)
-// 	}
-// 	stat, err := os.Stat(a.URL.Path)
-// 	if err != nil {
-// 		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
-// 	}
-// 	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
-// 		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
-// 	}
-// 	if !ks.HasAddress(a.Address) {
-// 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
-// 	}
-// 	if err := ks.Unlock(a, auth); err != nil {
-// 		t.Errorf("Unlock error: %v", err)
-// 	}
-// 	fp, err := os.Create(dir + "/" + "ecdsa_key_pair_out")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	fn := fp.Name()
-// 	if !strings.HasPrefix(fn, dir) {
-// 		t.Fatalf("output file %s doesn't have dir prefix", fn)
-// 	}
-
-// 	r, r1, err := ks.ExportECDSA(a, auth)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	err = ExportECDSAPair(hex.EncodeToString(r), hex.EncodeToString(r1), fn)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	s, s1, err := LoadECDSAPair(fn)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	_, key, err := ks.getDecryptedKey(a, auth)
-
-// 	if s.D.Cmp(key.PrivateKey.D) != 0 && s1.D.Cmp(key.PrivateKey2.D) != 0 {
-// 		t.Fatal("Import ecdsa key pair error!")
-// 	}
-// }
 
 func TestSign(t *testing.T) {
 	dir, ks := tmpKeyStore(t, true)
@@ -408,9 +336,93 @@ func TestWalletNotifications(t *testing.T) {
 
 	// Shut down the event collector and check events.
 	sub.Unsubscribe()
-	<-updates
+	for ev := range updates {
+		events = append(events, walletEvent{ev, ev.Wallet.Accounts()[0]})
+	}
 	checkAccounts(t, live, ks.Wallets())
 	checkEvents(t, wantEvents, events)
+}
+
+// TestImportExport tests the import functionality of a keystore.
+func TestImportECDSA(t *testing.T) {
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", key)
+	}
+	if _, err = ks.ImportECDSA(key, "old"); err != nil {
+		t.Errorf("importing failed: %v", err)
+	}
+	if _, err = ks.ImportECDSA(key, "old"); err == nil {
+		t.Errorf("importing same key twice succeeded")
+	}
+	if _, err = ks.ImportECDSA(key, "new"); err == nil {
+		t.Errorf("importing same key twice succeeded")
+	}
+}
+
+// TestImportECDSA tests the import and export functionality of a keystore.
+func TestImportExport(t *testing.T) {
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+	acc, err := ks.NewAccount("old")
+	if err != nil {
+		t.Fatalf("failed to create account: %v", acc)
+	}
+	json, err := ks.Export(acc, "old", "new")
+	if err != nil {
+		t.Fatalf("failed to export account: %v", acc)
+	}
+	dir2, ks2 := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir2)
+	if _, err = ks2.Import(json, "old", "old"); err == nil {
+		t.Errorf("importing with invalid password succeeded")
+	}
+	acc2, err := ks2.Import(json, "new", "new")
+	if err != nil {
+		t.Errorf("importing failed: %v", err)
+	}
+	if acc.Address != acc2.Address {
+		t.Error("imported account does not match exported account")
+	}
+	if _, err = ks2.Import(json, "new", "new"); err == nil {
+		t.Errorf("importing a key twice succeeded")
+	}
+
+}
+
+// TestImportRace tests the keystore on races.
+// This test should fail under -race if importing races.
+func TestImportRace(t *testing.T) {
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+	acc, err := ks.NewAccount("old")
+	if err != nil {
+		t.Fatalf("failed to create account: %v", acc)
+	}
+	json, err := ks.Export(acc, "old", "new")
+	if err != nil {
+		t.Fatalf("failed to export account: %v", acc)
+	}
+	dir2, ks2 := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir2)
+	var atom uint32
+	var wg sync.WaitGroup
+	wg.Add(2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			defer wg.Done()
+			if _, err := ks2.Import(json, "new", "new"); err != nil {
+				atomic.AddUint32(&atom, 1)
+			}
+
+		}()
+	}
+	wg.Wait()
+	if atom != 1 {
+		t.Errorf("Import is racy")
+	}
 }
 
 // checkAccounts checks that all known live accounts are present in the wallet list.
@@ -450,87 +462,13 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := ioutil.TempDir("", "wanchain-keystore-test")
+	d, err := ioutil.TempDir("", "eth-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	new := NewPlaintextKeyStore
+	newKs := NewPlaintextKeyStore
 	if encrypted {
-		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
+		newKs = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
-	return d, new(d)
-}
-
-func genOTA(wanStr string) (string, error) {
-	wanRaw, err := hexutil.Decode(wanStr)
-	if err != nil {
-		return "", err
-	}
-
-	PK1, PK2, err := GeneratePKPairFromWAddress(wanRaw)
-	if err != nil {
-		return "", err
-	}
-
-	PKPairStr := hexutil.PKPair2HexSlice(PK1, PK2)
-	SKOTA, err := crypto.GenerateOneTimeKey(PKPairStr[0], PKPairStr[1], PKPairStr[2], PKPairStr[3])
-	if err != nil {
-		return "", err
-	}
-
-	otaStr := strings.Replace(strings.Join(SKOTA, ""), "0x", "", -1)
-	raw, err := hexutil.Decode("0x" + otaStr)
-	if err != nil {
-		return "", err
-	}
-
-	rawWanAddr, err := WaddrFromUncompressedRawBytes(raw)
-	if err != nil || rawWanAddr == nil {
-		return "", nil
-	}
-
-	return hexutil.Encode(rawWanAddr[:]), nil
-}
-
-func TestComputeOTAPPKeys(t *testing.T) {
-	dir, ks := tmpKeyStore(t, true)
-	defer os.RemoveAll(dir)
-
-	// create an account
-	auth := "wanchain_test"
-	a, err := ks.NewAccount(auth)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = ks.Unlock(a, auth)
-	if err != nil {
-		t.Errorf("unlock fail. err:%s", err.Error())
-	}
-
-	var wAddr common.WAddress
-	wAddr, err = ks.GetWanAddress(a)
-	if err != nil && len(wAddr) != common.WAddressLength {
-		t.Errorf("Generate waddress error: %v", err)
-	}
-
-	PK1, PK2, err := GeneratePKPairFromWAddress(wAddr[:])
-	if err != nil {
-		t.Errorf("generate PK pair from wan address fail. err:%s", err.Error())
-	}
-
-	PKPairStr := hexutil.PKPair2HexSlice(PK1, PK2)
-	SKOTA, err := crypto.GenerateOneTimeKey(PKPairStr[0], PKPairStr[1], PKPairStr[2], PKPairStr[3])
-	if err != nil {
-		t.Errorf("generate one time key fail. err:%s", err.Error())
-	}
-
-	pk, err := ks.ComputeOTAPPKeys(a, SKOTA[0], SKOTA[1], SKOTA[2], SKOTA[3])
-	if err != nil {
-		t.Errorf("compute ota ppkey fail. err:%s", err.Error())
-	}
-
-	if len(pk) != 4 || len(pk[0]) == 0 || len(pk[1]) == 0 || len(pk[2]) == 0 {
-		t.Errorf("invalid ota pk. pk lenght:%d", len(pk))
-	}
+	return d, newKs(d)
 }

@@ -7,19 +7,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/params"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/bn256"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 /* the contract interface described by solidity.
@@ -561,14 +561,14 @@ func init() {
 		panic("err in csc abi initialize ")
 	}
 
-	copy(stakeRegisterId[:], cscAbi.Methods["stakeRegister"].Id())
-	copy(stakeInId[:], cscAbi.Methods["stakeIn"].Id())
-	copy(stakeAppendId[:], cscAbi.Methods["stakeAppend"].Id())
-	copy(stakeUpdateId[:], cscAbi.Methods["stakeUpdate"].Id())
-	copy(partnerInId[:], cscAbi.Methods["partnerIn"].Id())
-	copy(delegateInId[:], cscAbi.Methods["delegateIn"].Id())
-	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].Id())
-	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].Id())
+	copy(stakeRegisterId[:], cscAbi.Methods["stakeRegister"].ID)
+	copy(stakeInId[:], cscAbi.Methods["stakeIn"].ID)
+	copy(stakeAppendId[:], cscAbi.Methods["stakeAppend"].ID)
+	copy(stakeUpdateId[:], cscAbi.Methods["stakeUpdate"].ID)
+	copy(partnerInId[:], cscAbi.Methods["partnerIn"].ID)
+	copy(delegateInId[:], cscAbi.Methods["delegateIn"].ID)
+	copy(delegateOutId[:], cscAbi.Methods["delegateOut"].ID)
+	copy(stakeUpdateFeeRateId[:], cscAbi.Methods["stakeUpdateFeeRate"].ID)
 }
 
 /////////////////////////////
@@ -576,6 +576,8 @@ func init() {
 // pos staking contract
 //
 type PosStaking struct {
+	contract *Contract
+	evm      *EVM
 }
 
 //
@@ -585,7 +587,9 @@ func (p *PosStaking) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
-func (p *PosStaking) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (p *PosStaking) Run(input []byte) ([]byte, error) {
+	contract := p.contract
+	evm  := p.evm
 	if len(input) < 4 {
 		return nil, errors.New("parameter is wrong")
 	}
@@ -761,7 +765,7 @@ func (p *PosStaking) StakeUpdate(payload []byte, contract *Contract, evm *EVM) (
 		return nil, errors.New("Cannot update from another account")
 	}
 
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eidNow > stakerInfo.StakingEpoch+stakerInfo.LockEpochs-UpdateDelay {
 		return nil, errors.New("cannot change at the last 3 epoch.")
 	}
@@ -786,7 +790,7 @@ func (p *PosStaking) PartnerIn(payload []byte, contract *Contract, evm *EVM) ([]
 		return nil, err
 	}
 
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eidNow >= posconfig.ApolloEpochID && eidNow < posconfig.AugustEpochID {
 		if contract.Value().Cmp(minPartnerIn) < 0 {
 			return nil, errors.New("min wan amount should >= 10000")
@@ -876,7 +880,7 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 
 	// add origen Amount
 	stakerInfo.Amount.Add(stakerInfo.Amount, contract.Value())
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	realLockEpoch := int64(stakerInfo.LockEpochs - (eidNow + JoinDelay - stakerInfo.StakingEpoch))
 	if stakerInfo.StakingEpoch == 0 {
 		realLockEpoch = int64(stakerInfo.LockEpochs)
@@ -898,7 +902,7 @@ func (p *PosStaking) StakeAppend(payload []byte, contract *Contract, evm *EVM) (
 	}
 
 	weight := CalLocktimeWeight(uint64(realLockEpoch))
-	epochid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	epochid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if epochid < posconfig.Cfg().VenusEpochId {
 		stakerInfo.StakeAmount.Mul(stakerInfo.Amount, big.NewInt(int64(weight)))
 	} else {
@@ -984,7 +988,7 @@ func (p *PosStaking) doStakeIn(contract *Contract, evm *EVM, info StakeInParam) 
 	}
 
 	// create stakeholder's information
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	weight := CalLocktimeWeight(info.LockEpochs.Uint64())
 	stakerInfo := &StakerInfo{
 		Address:        secAddr,
@@ -1093,7 +1097,7 @@ func (p *PosStaking) DelegateOut(payload []byte, contract *Contract, evm *EVM) (
 	}
 
 	length := len(stakerInfo.Clients)
-	eidNow, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eidNow, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 
 	found := false
 	for i := 0; i < length; i++ {
@@ -1142,7 +1146,7 @@ func (p *PosStaking) StakeUpdateFeeRate(payload []byte, contract *Contract, evm 
 		return nil, errors.New("cannot update fee from another account")
 	}
 
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	oldFee, err := p.getStakeFeeRate(evm, stakeInfo.Address)
 	if err != nil {
 		return nil, err
@@ -1381,12 +1385,12 @@ func (p *PosStaking) stakeRegisterLog(contract *Contract, evm *EVM, info *Staker
 	data = append(data, common.BigToHash(new(big.Int).SetUint64(info.FeeRate)).Bytes()...)
 	data = append(data, common.BigToHash(new(big.Int).SetUint64(info.LockEpochs)).Bytes()...)
 	data = append(data, common.BigToHash(new(big.Int).SetUint64(maxFeeRate)).Bytes()...)
-	sig := cscAbi.Events["stakeRegister"].Id().Bytes()
+	sig := cscAbi.Events["stakeRegister"].ID.Bytes()
 	return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 }
 
 func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid < posconfig.ApolloEpochID {
 		params := make([]common.Hash, 5)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
@@ -1394,7 +1398,7 @@ func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) 
 		params[2] = common.BigToHash(new(big.Int).SetUint64(info.FeeRate))
 		params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
 		params[4] = info.Address.Hash()
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig()))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeIn(address indexed sender, address indexed posAddress, uint indexed v, uint feeRate, uint lockEpoch);
@@ -1406,20 +1410,20 @@ func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) 
 		data := make([]byte, 0)
 		data = append(data, common.BigToHash(new(big.Int).SetUint64(info.FeeRate)).Bytes()...)
 		data = append(data, common.BigToHash(new(big.Int).SetUint64(info.LockEpochs)).Bytes()...)
-		sig := cscAbi.Events["stakeIn"].Id().Bytes()
+		sig := cscAbi.Events["stakeIn"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 	}
 }
 
 func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator common.Address) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid < posconfig.ApolloEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(contract.Value())
 		params[2] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig()))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeAppend(address indexed sender, address indexed posAddress, uint indexed v);
@@ -1428,20 +1432,20 @@ func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator comm
 		params[1] = validator.Hash()
 		params[2] = common.BigToHash(contract.Value())
 
-		sig := cscAbi.Events["stakeAppend"].Id().Bytes()
+		sig := cscAbi.Events["stakeAppend"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 }
 
 func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerInfo) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid < posconfig.ApolloEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
 		params[2] = info.Address.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig()))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeUpdate(address indexed sender, address indexed posAddress, uint indexed lockEpoch);
@@ -1450,20 +1454,20 @@ func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerIn
 		params[1] = info.Address.Hash()
 		params[2] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
 
-		sig := cscAbi.Events["stakeUpdate"].Id().Bytes()
+		sig := cscAbi.Events["stakeUpdate"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 }
 
 func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator common.Address) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid < posconfig.ApolloEpochID {
 		params := make([]common.Hash, 3)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = common.BigToHash(contract.Value())
 		params[2] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig()))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event delegateIn(address indexed sender, address indexed posAddress, uint indexed v);
@@ -1472,20 +1476,20 @@ func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator commo
 		params[1] = validator.Hash()
 		params[2] = common.BigToHash(contract.Value())
 
-		sig := cscAbi.Events["delegateIn"].Id().Bytes()
+		sig := cscAbi.Events["delegateIn"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 
 	}
 }
 
 func (p *PosStaking) delegateOutLog(contract *Contract, evm *EVM, validator common.Address) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid < posconfig.ApolloEpochID {
 		params := make([]common.Hash, 2)
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig()))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event delegateOut(address indexed sender, address indexed posAddress);
@@ -1493,13 +1497,13 @@ func (p *PosStaking) delegateOutLog(contract *Contract, evm *EVM, validator comm
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = validator.Hash()
 
-		sig := cscAbi.Events["delegateOut"].Id().Bytes()
+		sig := cscAbi.Events["delegateOut"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 }
 
 func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo *UpdateFeeRate) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid >= posconfig.ApolloEpochID {
 		// event stakeUpdateFeeRate(address indexed sender, address indexed posAddress, uint indexed feeRate);
 		params := make([]common.Hash, 3)
@@ -1511,14 +1515,14 @@ func (p *PosStaking) stakeUpdateFeeRateLog(contract *Contract, evm *EVM, feeInfo
 		//data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.MaxFeeRate)).Bytes()...)
 		//data = append(data, common.BigToHash(new(big.Int).SetUint64(feeInfo.ChangedEpoch)).Bytes()...)
 
-		sig := cscAbi.Events["stakeUpdateFeeRate"].Id().Bytes()
+		sig := cscAbi.Events["stakeUpdateFeeRate"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	}
 	return nil
 }
 
 func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Address, renew bool) error {
-	eid, _ := util.CalEpochSlotID(evm.Time.Uint64())
+	eid, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 	if eid >= posconfig.ApolloEpochID {
 		// event partnerIn(address indexed sender, address indexed posAddress, uint indexed v, bool renewal);
 		params := make([]common.Hash, 3)
@@ -1533,7 +1537,7 @@ func (p *PosStaking) partnerInLog(contract *Contract, evm *EVM, addr *common.Add
 		data := make([]byte, 0)
 		data = append(data, common.BigToHash(new(big.Int).SetUint64(renewal)).Bytes()...)
 
-		sig := cscAbi.Events["partnerIn"].Id().Bytes()
+		sig := cscAbi.Events["partnerIn"].ID.Bytes()
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, data)
 	}
 	return nil

@@ -1,6 +1,7 @@
 package posdb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -9,19 +10,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 )
 
 //Db is the wanpos leveldb class
 type Db struct {
-	db *ethdb.LDBDatabase
+	db *leveldb.Database
 }
 
 var (
@@ -29,6 +30,11 @@ var (
 	//RANDOMBEACON_DB_KEY = "PosRandomBeacon"
 
 	mu sync.RWMutex
+)
+
+const (
+	GWAN_DB_NAMESPACE = "GWAN_DB_NAMESPACE"
+	POS_DB_ERROR      = "pos db error"
 )
 
 func NewDb(fileName string) *Db {
@@ -110,7 +116,7 @@ func (s *Db) DbInit(dbPath string) {
 		inst.DbClose()
 	}
 
-	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 256)
+	s.db, err = leveldb.New(dirname, 0, 256, GWAN_DB_NAMESPACE, false)
 	if err != nil {
 		panic("failed to create wanpos_tmpdb database: " + dbPath + "_" + err.Error())
 	}
@@ -121,7 +127,8 @@ func (s *Db) put(epochID uint64, index uint64, key string, value []byte, saveKey
 
 	has, err := s.db.Has(newKey)
 	if err != nil {
-		return nil, err
+		panic(fmt.Sprintf("%s:%s", POS_DB_ERROR, err.Error()))
+		//return nil, err
 	}
 
 	if has {
@@ -132,6 +139,11 @@ func (s *Db) put(epochID uint64, index uint64, key string, value []byte, saveKey
 	if saveKey {
 		err = s.saveKey(newKey, epochID)
 	}
+	// add by Jacob begin
+	if err != nil {
+		panic(fmt.Sprintf("%s:%s", POS_DB_ERROR, err.Error()))
+	}
+	// add by Jacob end
 	return newKey, err
 }
 

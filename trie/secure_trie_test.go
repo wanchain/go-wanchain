@@ -22,22 +22,21 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/ethdb"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 )
 
 func newEmptySecure() *SecureTrie {
-	db, _ := ethdb.NewMemDatabase()
-	trie, _ := NewSecure(common.Hash{}, db, 0)
+	trie, _ := NewSecure(common.Hash{}, NewDatabase(memorydb.New()))
 	return trie
 }
 
 // makeTestSecureTrie creates a large enough secure trie for testing.
-func makeTestSecureTrie() (ethdb.Database, *SecureTrie, map[string][]byte) {
+func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
-	db, _ := ethdb.NewMemDatabase()
-	trie, _ := NewSecure(common.Hash{}, db, 0)
+	triedb := NewDatabase(memorydb.New())
+	trie, _ := NewSecure(common.Hash{}, triedb)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -58,10 +57,10 @@ func makeTestSecureTrie() (ethdb.Database, *SecureTrie, map[string][]byte) {
 			trie.Update(key, val)
 		}
 	}
-	trie.Commit()
+	trie.Commit(nil)
 
 	// Return the generated trie
-	return db, trie, content
+	return triedb, trie, content
 }
 
 func TestSecureDelete(t *testing.T) {
@@ -137,7 +136,7 @@ func TestSecureTrieConcurrency(t *testing.T) {
 					tries[index].Update(key, val)
 				}
 			}
-			tries[index].Commit()
+			tries[index].Commit(nil)
 		}(i)
 	}
 	// Wait for all threads to finish

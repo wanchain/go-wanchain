@@ -3,7 +3,7 @@ package compress
 import (
 	"testing"
 	"bytes"
-	"github.com/wanchain/go-wanchain/common"
+	"github.com/ethereum/go-ethereum/common"
 	"fmt"
 )
 func TestCompress(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 )
 

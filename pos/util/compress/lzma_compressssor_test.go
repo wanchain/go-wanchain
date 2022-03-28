@@ -3,7 +3,7 @@ package compress
 //import (
 //	"testing"
 //	"fmt"
-//	"github.com/wanchain/go-wanchain/common"
+//	"github.com/ethereum/go-ethereum/common"
 //	"bytes"
 //)
 //

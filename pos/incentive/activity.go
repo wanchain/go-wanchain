@@ -1,16 +1,16 @@
 package incentive
 
 import (
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 )
 
 var whiteList map[common.Address]int
@@ -146,7 +146,7 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	return addrs, activity
 }
 
-func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int, headerInput *types.Header) ([]common.Address, []int, float64, int) {
+func getSlotLeaderActivity(chain consensus.ChainHeaderReader, epochID uint64, slotCount int, headerInput *types.Header) ([]common.Address, []int, float64, int) {
 	if chain == nil {
 		log.SyslogErr("getSlotLeaderActivity chain reader is empty.")
 		return []common.Address{}, []int{}, float64(0), 0

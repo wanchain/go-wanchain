@@ -21,11 +21,13 @@
 package debug
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
@@ -33,7 +35,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/hashicorp/go-bexpr"
 )
 
 // Handler is the global debugging handler.
@@ -140,10 +143,9 @@ func (h *HandlerT) GoTrace(file string, nsec uint) error {
 	return nil
 }
 
-// BlockProfile turns on CPU profiling for nsec seconds and writes
-// profile data to file. It uses a profile rate of 1 for most accurate
-// information. If a different rate is desired, set the rate
-// and write the profile manually.
+// BlockProfile turns on goroutine profiling for nsec seconds and writes profile data to
+// file. It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
 func (*HandlerT) BlockProfile(file string, nsec uint) error {
 	runtime.SetBlockProfileRate(1)
 	time.Sleep(time.Duration(nsec) * time.Second)
@@ -162,6 +164,26 @@ func (*HandlerT) WriteBlockProfile(file string) error {
 	return writeProfile("block", file)
 }
 
+// MutexProfile turns on mutex profiling for nsec seconds and writes profile data to file.
+// It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
+func (*HandlerT) MutexProfile(file string, nsec uint) error {
+	runtime.SetMutexProfileFraction(1)
+	time.Sleep(time.Duration(nsec) * time.Second)
+	defer runtime.SetMutexProfileFraction(0)
+	return writeProfile("mutex", file)
+}
+
+// SetMutexProfileFraction sets the rate of mutex profiling.
+func (*HandlerT) SetMutexProfileFraction(rate int) {
+	runtime.SetMutexProfileFraction(rate)
+}
+
+// WriteMutexProfile writes a goroutine blocking profile to the given file.
+func (*HandlerT) WriteMutexProfile(file string) error {
+	return writeProfile("mutex", file)
+}
+
 // WriteMemProfile writes an allocation profile to the given file.
 // Note that the profiling rate cannot be set through the API,
 // it must be set on the command line.
@@ -169,14 +191,48 @@ func (*HandlerT) WriteMemProfile(file string) error {
 	return writeProfile("heap", file)
 }
 
-// Stacks returns a printed representation of the stacks of all goroutines.
-func (*HandlerT) Stacks() string {
-	buf := make([]byte, 1024*1024)
-	buf = buf[:runtime.Stack(buf, true)]
-	return string(buf)
+// Stacks returns a printed representation of the stacks of all goroutines. It
+// also permits the following optional filters to be used:
+//   - filter: boolean expression of packages to filter for
+func (*HandlerT) Stacks(filter *string) string {
+	buf := new(bytes.Buffer)
+	pprof.Lookup("goroutine").WriteTo(buf, 2)
+
+	// If any filtering was requested, execute them now
+	if filter != nil && len(*filter) > 0 {
+		expanded := *filter
+
+		// The input filter is a logical expression of package names. Transform
+		// it into a proper boolean expression that can be fed into a parser and
+		// interpreter:
+		//
+		// E.g. (eth || snap) && !p2p -> (eth in Value || snap in Value) && p2p not in Value
+		expanded = regexp.MustCompile(`[:/\.A-Za-z0-9_-]+`).ReplaceAllString(expanded, "`$0` in Value")
+		expanded = regexp.MustCompile("!(`[:/\\.A-Za-z0-9_-]+`)").ReplaceAllString(expanded, "$1 not")
+		expanded = strings.Replace(expanded, "||", "or", -1)
+		expanded = strings.Replace(expanded, "&&", "and", -1)
+		log.Info("Expanded filter expression", "filter", *filter, "expanded", expanded)
+
+		expr, err := bexpr.CreateEvaluator(expanded)
+		if err != nil {
+			log.Error("Failed to parse filter expression", "expanded", expanded, "err", err)
+			return ""
+		}
+		// Split the goroutine dump into segments and filter each
+		dump := buf.String()
+		buf.Reset()
+
+		for _, trace := range strings.Split(dump, "\n\n") {
+			if ok, _ := expr.Evaluate(map[string]string{"Value": trace}); ok {
+				buf.WriteString(trace)
+				buf.WriteString("\n\n")
+			}
+		}
+	}
+	return buf.String()
 }
 
-// FreeOSMemory returns unused memory to the OS.
+// FreeOSMemory forces a garbage collection.
 func (*HandlerT) FreeOSMemory() {
 	debug.FreeOSMemory()
 }

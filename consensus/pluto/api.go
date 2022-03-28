@@ -17,16 +17,17 @@
 package pluto
 
 import (
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/consensus"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // API is a user facing RPC API to allow controlling the signer and voting
 // mechanisms of the proof-of-authority scheme.
 type API struct {
-	chain  consensus.ChainReader
+	//chain consensus.ChainReader
+	chain consensus.ChainHeaderReader
 	pluto *Pluto
 }
 

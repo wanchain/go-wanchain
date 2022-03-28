@@ -25,13 +25,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/node"
-	"github.com/wanchain/go-wanchain/p2p"
-	"github.com/wanchain/go-wanchain/p2p/discover"
-	"github.com/wanchain/go-wanchain/p2p/simulations"
-	"github.com/wanchain/go-wanchain/p2p/simulations/adapters"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/simulations"
+	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
 )
 
 var adapterType = flag.String("adapter", "sim", `node adapter to use (one of "sim", "exec" or "docker")`)
@@ -45,12 +44,14 @@ func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
 	// register a single ping-pong service
-	services := map[string]adapters.ServiceFunc{
-		"ping-pong": func(ctx *adapters.ServiceContext) (node.Service, error) {
-			return newPingPongService(ctx.Config.ID), nil
+	services := map[string]adapters.LifecycleConstructor{
+		"ping-pong": func(ctx *adapters.ServiceContext, stack *node.Node) (node.Lifecycle, error) {
+			pps := newPingPongService(ctx.Config.ID)
+			stack.RegisterProtocols(pps.Protocols())
+			return pps, nil
 		},
 	}
-	adapters.RegisterServices(services)
+	adapters.RegisterLifecycles(services)
 
 	// create the NodeAdapter
 	var adapter adapters.NodeAdapter
@@ -70,14 +71,6 @@ func main() {
 		log.Info("using exec adapter", "tmpdir", tmpdir)
 		adapter = adapters.NewExecAdapter(tmpdir)
 
-	case "docker":
-		log.Info("using docker adapter")
-		var err error
-		adapter, err = adapters.NewDockerAdapter()
-		if err != nil {
-			log.Crit("error creating docker adapter", "err", err)
-		}
-
 	default:
 		log.Crit(fmt.Sprintf("unknown node adapter %q", *adapterType))
 	}
@@ -96,12 +89,12 @@ func main() {
 // sends a ping to all its connected peers every 10s and receives a pong in
 // return
 type pingPongService struct {
-	id       discover.NodeID
+	id       enode.ID
 	log      log.Logger
 	received int64
 }
 
-func newPingPongService(id discover.NodeID) *pingPongService {
+func newPingPongService(id enode.ID) *pingPongService {
 	return &pingPongService{
 		id:  id,
 		log: log.New("node.id", id),
@@ -118,11 +111,7 @@ func (p *pingPongService) Protocols() []p2p.Protocol {
 	}}
 }
 
-func (p *pingPongService) APIs() []rpc.API {
-	return nil
-}
-
-func (p *pingPongService) Start(server *p2p.Server) error {
+func (p *pingPongService) Start() error {
 	p.log.Info("ping-pong service starting")
 	return nil
 }

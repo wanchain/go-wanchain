@@ -22,29 +22,30 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/accounts/abi/bind"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Signer is an interaface defining the callback when a contract requires a
+// Signer is an interface defining the callback when a contract requires a
 // method to sign the transaction before submission.
 type Signer interface {
-	Sign(*Address, *Transaction) (tx *Transaction, _ error)
+	Sign(addr *Address, unsignedTx *Transaction) (tx *Transaction, _ error)
 }
 
-//type signer struct {
-//	sign bind.SignerFn
-//}
-//
-//func (s *signer) Sign(addr *Address, unsignedTx *Transaction) (signedTx *Transaction, _ error) {
-//	sig, err := s.sign(types.HomesteadSigner{}, addr.address, unsignedTx.tx)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return &Transaction{sig}, nil
-//}
+type MobileSigner struct {
+	sign bind.SignerFn
+}
+
+func (s *MobileSigner) Sign(addr *Address, unsignedTx *Transaction) (signedTx *Transaction, _ error) {
+	sig, err := s.sign(addr.address, unsignedTx.tx)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{sig}, nil
+}
 
 // CallOpts is the collection of options to fine tune a contract call request.
 type CallOpts struct {
@@ -66,6 +67,7 @@ func (opts *CallOpts) GetGasLimit() int64 { return 0 /* TODO(karalabe) */ }
 func (opts *CallOpts) SetPending(pending bool)     { opts.opts.Pending = pending }
 func (opts *CallOpts) SetGasLimit(limit int64)     { /* TODO(karalabe) */ }
 func (opts *CallOpts) SetContext(context *Context) { opts.opts.Context = context.context }
+func (opts *CallOpts) SetFrom(addr *Address)       { opts.opts.From = addr.address }
 
 // TransactOpts is the collection of authorization data required to create a
 // valid Ethereum transaction.
@@ -73,11 +75,30 @@ type TransactOpts struct {
 	opts bind.TransactOpts
 }
 
+// NewTransactOpts creates a new option set for contract transaction.
+func NewTransactOpts() *TransactOpts {
+	return new(TransactOpts)
+}
+
+// NewKeyedTransactOpts is a utility method to easily create a transaction signer
+// from a single private key.
+func NewKeyedTransactOpts(keyJson []byte, passphrase string, chainID *big.Int) (*TransactOpts, error) {
+	key, err := keystore.DecryptKey(keyJson, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	auth, err := bind.NewKeyedTransactorWithChainID(key.PrivateKey, chainID)
+	if err != nil {
+		return nil, err
+	}
+	return &TransactOpts{*auth}, nil
+}
+
 func (opts *TransactOpts) GetFrom() *Address    { return &Address{opts.opts.From} }
 func (opts *TransactOpts) GetNonce() int64      { return opts.opts.Nonce.Int64() }
 func (opts *TransactOpts) GetValue() *BigInt    { return &BigInt{opts.opts.Value} }
 func (opts *TransactOpts) GetGasPrice() *BigInt { return &BigInt{opts.opts.GasPrice} }
-func (opts *TransactOpts) GetGasLimit() int64   { return opts.opts.GasLimit.Int64() }
+func (opts *TransactOpts) GetGasLimit() int64   { return int64(opts.opts.GasLimit) }
 
 // GetSigner cannot be reliably implemented without identity preservation (https://github.com/golang/go/issues/16876)
 // func (opts *TransactOpts) GetSigner() Signer { return &signer{opts.opts.Signer} }
@@ -89,7 +110,7 @@ func (opts *TransactOpts) GetGasLimit() int64   { return opts.opts.GasLimit.Int6
 func (opts *TransactOpts) SetFrom(from *Address) { opts.opts.From = from.address }
 func (opts *TransactOpts) SetNonce(nonce int64)  { opts.opts.Nonce = big.NewInt(nonce) }
 func (opts *TransactOpts) SetSigner(s Signer) {
-	opts.opts.Signer = func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	opts.opts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 		sig, err := s.Sign(&Address{addr}, &Transaction{tx})
 		if err != nil {
 			return nil, err
@@ -99,7 +120,7 @@ func (opts *TransactOpts) SetSigner(s Signer) {
 }
 func (opts *TransactOpts) SetValue(value *BigInt)      { opts.opts.Value = value.bigint }
 func (opts *TransactOpts) SetGasPrice(price *BigInt)   { opts.opts.GasPrice = price.bigint }
-func (opts *TransactOpts) SetGasLimit(limit int64)     { opts.opts.GasLimit = big.NewInt(limit) }
+func (opts *TransactOpts) SetGasLimit(limit int64)     { opts.opts.GasLimit = uint64(limit) }
 func (opts *TransactOpts) SetContext(context *Context) { opts.opts.Context = context.context }
 
 // BoundContract is the base wrapper object that reflects a contract on the
@@ -138,7 +159,7 @@ func BindContract(address *Address, abiJSON string, client *EthereumClient) (con
 		return nil, err
 	}
 	return &BoundContract{
-		contract: bind.NewBoundContract(address.address, parsed, client.client, client.client),
+		contract: bind.NewBoundContract(address.address, parsed, client.client, client.client, client.client),
 		address:  address.address,
 	}, nil
 }
@@ -166,6 +187,15 @@ func (c *BoundContract) Call(opts *CallOpts, out *Interfaces, method string, arg
 // Transact invokes the (paid) contract method with params as input values.
 func (c *BoundContract) Transact(opts *TransactOpts, method string, args *Interfaces) (tx *Transaction, _ error) {
 	rawTx, err := c.contract.Transact(&opts.opts, method, args.objects...)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{rawTx}, nil
+}
+
+// RawTransact invokes the (paid) contract method with raw calldata as input values.
+func (c *BoundContract) RawTransact(opts *TransactOpts, calldata []byte) (tx *Transaction, _ error) {
+	rawTx, err := c.contract.RawTransact(&opts.opts, calldata)
 	if err != nil {
 		return nil, err
 	}

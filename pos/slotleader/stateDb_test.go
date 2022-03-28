@@ -2,16 +2,16 @@ package slotleader
 
 import (
 	"fmt"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/accounts/keystore"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 
-	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var s *SLS

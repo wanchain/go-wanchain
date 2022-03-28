@@ -3,13 +3,12 @@ package slotleader
 import (
 	"crypto/ecdsa"
 	"errors"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"math/big"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
 )
 
 func (s *SLS) ValidateBody(block *types.Block) error {
@@ -51,24 +50,23 @@ func (s *SLS) ValidateBody(block *types.Block) error {
 	return nil
 }
 
-func (s *SLS) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+func (s *SLS) ValidateState(block *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	return nil
 }
-
 
 func (s *SLS) GetAllSlotLeaders(epochID uint64) (slotLeader []*ecdsa.PublicKey) {
 	if epochID == 0 {
 		return nil
 	}
 
-	slotLeadersPtrArray := make([]*ecdsa.PublicKey,0)
+	slotLeadersPtrArray := make([]*ecdsa.PublicKey, 0)
 	// read from local db
 	for i := 0; i < posconfig.SlotCount; i++ {
 		pkByte, err := posdb.GetDb().GetWithIndex(epochID, uint64(i), SlotLeader)
 		if err != nil {
 			return nil
 		}
-		slotLeadersPtrArray = append(slotLeadersPtrArray,crypto.ToECDSAPub(pkByte))
+		slotLeadersPtrArray = append(slotLeadersPtrArray, crypto.ToECDSAPub(pkByte))
 	}
 
 	return slotLeadersPtrArray

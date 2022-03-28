@@ -21,55 +21,39 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/core/types"
-
-	"fmt"
-
 	"github.com/davecgh/go-spew/spew"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/params"
-)
-
-var (
-	MainnetGenesisHashMock = common.HexToHash("0x0376899c001618fc7d5ab4f31cfd7f57ca3a896ccc1581a57d8f129ecf40b840") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHashMock = common.HexToHash("0xa37b811609a9d1e898fb49b3901728023e5e72e18e58643d9a7a82db483bfeb0") // Testnet genesis hash to enforce below configs on
-	PlutoGenesisHashMock   = common.HexToHash("0x7b67a3f28e0d12b57e5fdaa445c4d6dbe68bffa9b808e944e5c67726669d62b6") // Pluto genesis hash to enforce below configs on
-
-	InternalGenesisHashMock = common.HexToHash("0xa88f332a08f0ff353ec1097c77ec4c58abe3173bad7ae50dca4d6efee5dba590")
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 func TestDefaultGenesisBlock(t *testing.T) {
-	var block *types.Block
-	//block, _ := DefaultGenesisBlock().ToBlock()
-	block, _ = DefaultGenesisBlock().ToBlock()
-	fmt.Println(common.ToHex(block.Hash().Bytes()))
-	if block.Hash() != MainnetGenesisHashMock {
+	block := DefaultGenesisBlock().ToBlock(nil)
+	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-
-	block, _ = DefaultTestnetGenesisBlock().ToBlock()
-	fmt.Println(common.ToHex(block.Hash().Bytes()))
-	if block.Hash() != TestnetGenesisHashMock {
-		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	block = DefaultRopstenGenesisBlock().ToBlock(nil)
+	if block.Hash() != params.RopstenGenesisHash {
+		t.Errorf("wrong ropsten genesis hash, got %v, want %v", block.Hash(), params.RopstenGenesisHash)
 	}
-
-	block, _ = DefaultInternalGenesisBlock().ToBlock()
-	fmt.Println(common.ToHex(block.Hash().Bytes()))
-	if block.Hash() != InternalGenesisHashMock {
-		//t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	block = DefaultRinkebyGenesisBlock().ToBlock(nil)
+	if block.Hash() != params.RinkebyGenesisHash {
+		t.Errorf("wrong rinkeby genesis hash, got %v, want %v", block.Hash(), params.RinkebyGenesisHash)
+	}
+	block = DefaultGoerliGenesisBlock().ToBlock(nil)
+	if block.Hash() != params.GoerliGenesisHash {
+		t.Errorf("wrong goerli genesis hash, got %v, want %v", block.Hash(), params.GoerliGenesisHash)
 	}
 }
 
-func TestDefaultTestnetGenesisBlock(t *testing.T) {
-	block, _ := DefaultGenesisBlock().ToBlock()
-	if block.Hash() != MainnetGenesisHashMock {
-		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), MainnetGenesisHashMock)
-	}
-
-	block, _ = DefaultTestnetGenesisBlock().ToBlock()
-	if block.Hash() != TestnetGenesisHashMock {
-		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), TestnetGenesisHashMock)
+func TestInvalidCliqueConfig(t *testing.T) {
+	block := DefaultGoerliGenesisBlock()
+	block.ExtraData = []byte{}
+	if _, err := block.Commit(nil); err == nil {
+		t.Fatal("Expected error on invalid clique config")
 	}
 }
 
@@ -77,14 +61,14 @@ func TestSetupGenesis(t *testing.T) {
 	var (
 		customghash = common.HexToHash("0x89c99d90b79719238d2645c7642f2c9295246e80775b38cfd162b696817fbd50")
 		customg     = Genesis{
-			Config: &params.ChainConfig{ByzantiumBlock: big.NewInt(3)},
+			Config: &params.ChainConfig{HomesteadBlock: big.NewInt(3)},
 			Alloc: GenesisAlloc{
 				{1}: {Balance: big.NewInt(1), Storage: map[common.Hash]common.Hash{{1}: {1}}},
 			},
 		}
 		oldcustomg = customg
 	)
-	oldcustomg.Config = &params.ChainConfig{ByzantiumBlock: big.NewInt(2)}
+	oldcustomg.Config = &params.ChainConfig{HomesteadBlock: big.NewInt(2)}
 	tests := []struct {
 		name       string
 		fn         func(ethdb.Database) (*params.ChainConfig, common.Hash, error)
@@ -98,14 +82,14 @@ func TestSetupGenesis(t *testing.T) {
 				return SetupGenesisBlock(db, new(Genesis))
 			},
 			wantErr:    errGenesisNoConfig,
-			wantConfig: params.AllProtocolChanges,
+			wantConfig: params.AllEthashProtocolChanges,
 		},
 		{
 			name: "no block in DB, genesis == nil",
 			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   MainnetGenesisHashMock,
+			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
@@ -114,7 +98,7 @@ func TestSetupGenesis(t *testing.T) {
 				DefaultGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   MainnetGenesisHashMock,
+			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
@@ -127,14 +111,14 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: customg.Config,
 		},
 		{
-			name: "custom block in DB, genesis == testnet",
+			name: "custom block in DB, genesis == ropsten",
 			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
 				customg.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultTestnetGenesisBlock())
+				return SetupGenesisBlock(db, DefaultRopstenGenesisBlock())
 			},
-			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.TestnetGenesisHash},
-			wantHash:   TestnetGenesisHashMock,
-			wantConfig: params.TestnetChainConfig,
+			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.RopstenGenesisHash},
+			wantHash:   params.RopstenGenesisHash,
+			wantConfig: params.RopstenChainConfig,
 		},
 		{
 			name: "compatible config in DB",
@@ -145,37 +129,35 @@ func TestSetupGenesis(t *testing.T) {
 			wantHash:   customghash,
 			wantConfig: customg.Config,
 		},
+		{
+			name: "incompatible config in DB",
+			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
+				// Commit the 'old' genesis block with Homestead transition at #2.
+				// Advance to block #4, past the homestead transition block of customg.
+				genesis := oldcustomg.MustCommit(db)
 
-		/*
-			{
-				name: "incompatible config in DB",
-				fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
-					// Commit the 'old' genesis block with Homestead transition at #2.
-					// Advance to block #4, past the homestead transition block of customg.
-					genesis := oldcustomg.MustCommit(db)
-					bc, _ := NewBlockChain(db, oldcustomg.Config, ethash.NewFullFaker(), vm.Config{})
-					defer bc.Stop()
-					bc.SetValidator(bproc{})
-					bc.InsertChain(makeBlockChainWithDiff(genesis, []int{2, 3, 4, 5}, 0))
-					bc.CurrentBlock()
-					// This should return a compatibility error.
-					return SetupGenesisBlock(db, &customg)
-				},
-				wantHash:   customghash,
-				wantConfig: customg.Config,
-				wantErr: &params.ConfigCompatError{
-					What:         "Homestead fork block",
-					StoredConfig: big.NewInt(2),
-					NewConfig:    big.NewInt(3),
-					RewindTo:     1,
-				},
+				bc, _ := NewBlockChain(db, nil, oldcustomg.Config, ethash.NewFullFaker(), vm.Config{}, nil, nil)
+				defer bc.Stop()
+
+				blocks, _ := GenerateChain(oldcustomg.Config, genesis, ethash.NewFaker(), db, 4, nil)
+				bc.InsertChain(blocks)
+				bc.CurrentBlock()
+				// This should return a compatibility error.
+				return SetupGenesisBlock(db, &customg)
 			},
-		*/
-
+			wantHash:   customghash,
+			wantConfig: customg.Config,
+			wantErr: &params.ConfigCompatError{
+				What:         "Homestead fork block",
+				StoredConfig: big.NewInt(2),
+				NewConfig:    big.NewInt(3),
+				RewindTo:     1,
+			},
+		},
 	}
 
 	for _, test := range tests {
-		db, _ := ethdb.NewMemDatabase()
+		db := rawdb.NewMemoryDatabase()
 		config, hash, err := test.fn(db)
 		// Check the return values.
 		if !reflect.DeepEqual(err, test.wantErr) {
@@ -189,10 +171,41 @@ func TestSetupGenesis(t *testing.T) {
 			t.Errorf("%s: returned hash %s, want %s", test.name, hash.Hex(), test.wantHash.Hex())
 		} else if err == nil {
 			// Check database content.
-			stored := GetBlock(db, test.wantHash, 0)
+			stored := rawdb.ReadBlock(db, test.wantHash, 0)
 			if stored.Hash() != test.wantHash {
 				t.Errorf("%s: block in DB has hash %s, want %s", test.name, stored.Hash(), test.wantHash)
 			}
+		}
+	}
+}
+
+// TestGenesisHashes checks the congruity of default genesis data to corresponding hardcoded genesis hash values.
+func TestGenesisHashes(t *testing.T) {
+	cases := []struct {
+		genesis *Genesis
+		hash    common.Hash
+	}{
+		{
+			genesis: DefaultGenesisBlock(),
+			hash:    params.MainnetGenesisHash,
+		},
+		{
+			genesis: DefaultGoerliGenesisBlock(),
+			hash:    params.GoerliGenesisHash,
+		},
+		{
+			genesis: DefaultRopstenGenesisBlock(),
+			hash:    params.RopstenGenesisHash,
+		},
+		{
+			genesis: DefaultRinkebyGenesisBlock(),
+			hash:    params.RinkebyGenesisHash,
+		},
+	}
+	for i, c := range cases {
+		b := c.genesis.MustCommit(rawdb.NewMemoryDatabase())
+		if got := b.Hash(); got != c.hash {
+			t.Errorf("case: %d, want: %s, got: %s", i, c.hash.Hex(), got.Hex())
 		}
 	}
 }

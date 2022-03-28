@@ -17,49 +17,43 @@
 package core
 
 import (
-	"fmt"
-	"math/big"
 	"runtime"
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/consensus/ethash"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
 	var (
-		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = DefaultPPOWTestingGenesisBlock()
+		testdb    = rawdb.NewMemoryDatabase()
+		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
+		blocks, _ = GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), testdb, 8, nil)
 	)
-
-	chainEngine := ethash.NewFaker(testdb)
-	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
-	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
-
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
 	}
+	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, ethash.NewFaker(), vm.Config{}, nil, nil)
+	defer chain.Stop()
 
 	for i := 0; i < len(blocks); i++ {
 		for j, valid := range []bool{true, false} {
 			var results <-chan error
 
 			if valid {
-				engine := ethash.NewFaker(testdb)
+				engine := ethash.NewFaker()
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			} else {
-				engine := ethash.NewFakeFailer(headers[i].Number.Uint64(), testdb)
+				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			}
 			// Wait for the verification result
@@ -90,19 +84,11 @@ func TestHeaderConcurrentVerification32(t *testing.T) { testHeaderConcurrentVeri
 func testHeaderConcurrentVerification(t *testing.T, threads int) {
 	// Create a simple chain to verify
 	var (
-		testdb, _ = ethdb.NewMemDatabase()
-		gspec     = DefaultPPOWTestingGenesisBlock()
+		testdb    = rawdb.NewMemoryDatabase()
+		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
-		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 8, nil)
+		blocks, _ = GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), testdb, 8, nil)
 	)
-
-	chainEngine := ethash.NewFaker(testdb)
-	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
-	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
-
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
 
@@ -120,11 +106,11 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		var results <-chan error
 
 		if valid {
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(testdb), vm.Config{})
+			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, ethash.NewFaker(), vm.Config{}, nil, nil)
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		} else {
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeFailer(uint64(len(headers)-1), testdb), vm.Config{})
+			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, ethash.NewFakeFailer(uint64(len(headers)-1)), vm.Config{}, nil, nil)
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		}
@@ -170,19 +156,11 @@ func TestHeaderConcurrentAbortion32(t *testing.T) { testHeaderConcurrentAbortion
 func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	// Create a simple chain to verify
 	var (
-		testdb, _ = ethdb.NewMemDatabase()
+		testdb    = rawdb.NewMemoryDatabase()
 		gspec     = &Genesis{Config: params.TestChainConfig}
 		genesis   = gspec.MustCommit(testdb)
-		//blocks, _ = GenerateChain(params.TestChainConfig, genesis, testdb, 1024, nil)
+		blocks, _ = GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), testdb, 1024, nil)
 	)
-
-	chainEngine := ethash.NewFaker(testdb)
-	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, chainEngine, vm.Config{})
-	defer chain.Stop()
-	chainEnv := NewChainEnv(params.TestChainConfig, gspec, chainEngine, chain, testdb)
-	blocks, _ := chainEnv.GenerateChain(genesis, 8, nil)
-
 	headers := make([]*types.Header, len(blocks))
 	seals := make([]bool, len(blocks))
 
@@ -195,7 +173,7 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	defer runtime.GOMAXPROCS(old)
 
 	// Start the verifications and immediately abort
-	chain, _ = NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond, testdb), vm.Config{})
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond), vm.Config{}, nil, nil)
 	defer chain.Stop()
 
 	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)
@@ -221,30 +199,33 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 }
 
 func TestCalcGasLimit(t *testing.T) {
-	header := &types.Header{}
-
-	header.GasLimit = params.GenesisGasLimit
-	header.GasUsed = header.GasLimit
-	header.Time = big.NewInt(1763168326)
-
-	block := types.NewBlock(header, nil, nil, nil)
-
-	gas := CalcGasLimit(block)
-
-	fmt.Println("gasLimitNew:", gas.Uint64())
-
-	for i := 0; i < 1000000; i++ {
-		header.GasLimit = gas
-		header.GasUsed = big.NewInt(header.GasLimit.Int64() / 21000 * 21000)
-
-		block = types.NewBlock(header, nil, nil, nil)
-
-		gas = CalcGasLimit(block)
-
-		fmt.Println(i, "gasLimitNew:", gas.Uint64())
-
-		if gas.Uint64() == 105000000 {
-			break
+	for i, tc := range []struct {
+		pGasLimit uint64
+		max       uint64
+		min       uint64
+	}{
+		{20000000, 20019530, 19980470},
+		{40000000, 40039061, 39960939},
+	} {
+		// Increase
+		if have, want := CalcGasLimit(tc.pGasLimit, 2*tc.pGasLimit), tc.max; have != want {
+			t.Errorf("test %d: have %d want <%d", i, have, want)
+		}
+		// Decrease
+		if have, want := CalcGasLimit(tc.pGasLimit, 0), tc.min; have != want {
+			t.Errorf("test %d: have %d want >%d", i, have, want)
+		}
+		// Small decrease
+		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit-1), tc.pGasLimit-1; have != want {
+			t.Errorf("test %d: have %d want %d", i, have, want)
+		}
+		// Small increase
+		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit+1), tc.pGasLimit+1; have != want {
+			t.Errorf("test %d: have %d want %d", i, have, want)
+		}
+		// No change
+		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit), tc.pGasLimit; have != want {
+			t.Errorf("test %d: have %d want %d", i, have, want)
 		}
 	}
 }

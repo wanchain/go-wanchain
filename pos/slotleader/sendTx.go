@@ -4,12 +4,12 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var (
@@ -25,14 +25,15 @@ func (s *SLS) sendSlotTx(payload []byte, posSender SendTxFn) error {
 
 	to := vm.GetSlotLeaderSCAddress()
 	data := hexutil.Bytes(payload)
-	gas := core.IntrinsicGas(data, &to, true)
+	//gas := core.IntrinsicGas(data, &to, true)
+	gas, _ := core.IntrinsicGasWan(data, nil, false, false, false, &to)
 
 	arg := map[string]interface{}{}
 	arg["from"] = s.key.Address
 	arg["to"] = vm.GetSlotLeaderSCAddress()
 	arg["value"] = (*hexutil.Big)(big.NewInt(0))
-	arg["gas"] = (*hexutil.Big)(gas)
-	arg["txType"] = types.POS_TX
+	arg["gas"] = (*hexutil.Big)(big.NewInt(0).SetUint64(gas))
+	arg["txType"] = types.WanPosTxType
 	arg["data"] = data
 	log.Debug("Write data of payload", "length", len(data))
 

@@ -19,54 +19,43 @@ package common
 import (
 	"bytes"
 	"testing"
-
-	checker "gopkg.in/check.v1"
 )
 
-type BytesSuite struct{}
+func TestCopyBytes(t *testing.T) {
+	input := []byte{1, 2, 3, 4}
 
-var _ = checker.Suite(&BytesSuite{})
-
-func (s *BytesSuite) TestCopyBytes(c *checker.C) {
-	data1 := []byte{1, 2, 3, 4}
-	exp1 := []byte{1, 2, 3, 4}
-	res1 := CopyBytes(data1)
-	c.Assert(res1, checker.DeepEquals, exp1)
+	v := CopyBytes(input)
+	if !bytes.Equal(v, []byte{1, 2, 3, 4}) {
+		t.Fatal("not equal after copy")
+	}
+	v[0] = 99
+	if bytes.Equal(v, input) {
+		t.Fatal("result is not a copy")
+	}
 }
 
-func (s *BytesSuite) TestIsHex(c *checker.C) {
-	data1 := "a9e67e"
-	exp1 := false
-	res1 := IsHex(data1)
-	c.Assert(res1, checker.DeepEquals, exp1)
-
-	data2 := "0xa9e67e00"
-	exp2 := true
-	res2 := IsHex(data2)
-	c.Assert(res2, checker.DeepEquals, exp2)
-
-}
-
-func (s *BytesSuite) TestLeftPadBytes(c *checker.C) {
-	val1 := []byte{1, 2, 3, 4}
-	exp1 := []byte{0, 0, 0, 0, 1, 2, 3, 4}
-
-	res1 := LeftPadBytes(val1, 8)
-	res2 := LeftPadBytes(val1, 2)
-
-	c.Assert(res1, checker.DeepEquals, exp1)
-	c.Assert(res2, checker.DeepEquals, val1)
-}
-
-func (s *BytesSuite) TestRightPadBytes(c *checker.C) {
+func TestLeftPadBytes(t *testing.T) {
 	val := []byte{1, 2, 3, 4}
-	exp := []byte{1, 2, 3, 4, 0, 0, 0, 0}
+	padded := []byte{0, 0, 0, 0, 1, 2, 3, 4}
 
-	resstd := RightPadBytes(val, 8)
-	resshrt := RightPadBytes(val, 2)
+	if r := LeftPadBytes(val, 8); !bytes.Equal(r, padded) {
+		t.Fatalf("LeftPadBytes(%v, 8) == %v", val, r)
+	}
+	if r := LeftPadBytes(val, 2); !bytes.Equal(r, val) {
+		t.Fatalf("LeftPadBytes(%v, 2) == %v", val, r)
+	}
+}
 
-	c.Assert(resstd, checker.DeepEquals, exp)
-	c.Assert(resshrt, checker.DeepEquals, val)
+func TestRightPadBytes(t *testing.T) {
+	val := []byte{1, 2, 3, 4}
+	padded := []byte{1, 2, 3, 4, 0, 0, 0, 0}
+
+	if r := RightPadBytes(val, 8); !bytes.Equal(r, padded) {
+		t.Fatalf("RightPadBytes(%v, 8) == %v", val, r)
+	}
+	if r := RightPadBytes(val, 2); !bytes.Equal(r, val) {
+		t.Fatalf("RightPadBytes(%v, 2) == %v", val, r)
+	}
 }
 
 func TestFromHex(t *testing.T) {
@@ -74,7 +63,28 @@ func TestFromHex(t *testing.T) {
 	expected := []byte{1}
 	result := FromHex(input)
 	if !bytes.Equal(expected, result) {
-		t.Errorf("Expected % x got % x", expected, result)
+		t.Errorf("Expected %x got %x", expected, result)
+	}
+}
+
+func TestIsHex(t *testing.T) {
+	tests := []struct {
+		input string
+		ok    bool
+	}{
+		{"", true},
+		{"0", false},
+		{"00", true},
+		{"a9e67e", true},
+		{"A9E67E", true},
+		{"0xa9e67e", false},
+		{"a9e67e001", false},
+		{"0xHELLO_MY_NAME_IS_STEVEN_@#$^&*", false},
+	}
+	for _, test := range tests {
+		if ok := isHex(test.input); ok != test.ok {
+			t.Errorf("isHex(%q) = %v, want %v", test.input, ok, test.ok)
+		}
 	}
 }
 
@@ -83,6 +93,34 @@ func TestFromHexOddLength(t *testing.T) {
 	expected := []byte{1}
 	result := FromHex(input)
 	if !bytes.Equal(expected, result) {
-		t.Errorf("Expected % x got % x", expected, result)
+		t.Errorf("Expected %x got %x", expected, result)
+	}
+}
+
+func TestNoPrefixShortHexOddLength(t *testing.T) {
+	input := "1"
+	expected := []byte{1}
+	result := FromHex(input)
+	if !bytes.Equal(expected, result) {
+		t.Errorf("Expected %x got %x", expected, result)
+	}
+}
+
+func TestTrimRightZeroes(t *testing.T) {
+	tests := []struct {
+		arr []byte
+		exp []byte
+	}{
+		{FromHex("0x00ffff00ff0000"), FromHex("0x00ffff00ff")},
+		{FromHex("0x00000000000000"), []byte{}},
+		{FromHex("0xff"), FromHex("0xff")},
+		{[]byte{}, []byte{}},
+		{FromHex("0x00ffffffffffff"), FromHex("0x00ffffffffffff")},
+	}
+	for i, test := range tests {
+		got := TrimRightZeroes(test.arr)
+		if !bytes.Equal(got, test.exp) {
+			t.Errorf("test %d, got %x exp %x", i, got, test.exp)
+		}
 	}
 }

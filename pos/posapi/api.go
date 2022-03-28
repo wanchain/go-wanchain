@@ -3,23 +3,24 @@ package posapi
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"sort"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/wanchain/go-wanchain/pos/cfm"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/pos/cfm"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 
-	"github.com/wanchain/go-wanchain/params"
+	"github.com/ethereum/go-ethereum/params"
 
-	"github.com/wanchain/go-wanchain/common/math"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/util"
 
 	"context"
 	"errors"
@@ -27,14 +28,14 @@ import (
 
 	"encoding/binary"
 
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/internal/ethapi"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/slotleader"
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/pos/epochLeader"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
+	"github.com/ethereum/go-ethereum/pos/slotleader"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var (
@@ -241,9 +242,9 @@ func (a PosApi) GetSlotCreateStatusByEpochID(epochID uint64) bool {
 	return slotleader.GetSlotLeaderSelection().GetSlotCreateStatusByEpochID(epochID)
 }
 
-func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
+func (a PosApi) GetRandom(epochId uint64, blockNr int64) (string, error) {
 	if !isPosStage() {
-		return nil, nil
+		return string(""), nil
 	}
 
 	if blockNr > a.chain.CurrentHeader().Number.Int64() {
@@ -253,20 +254,20 @@ func (a PosApi) GetRandom(epochId uint64, blockNr int64) (*big.Int, error) {
 	epID, _ := util.CalEpSlbyTd(a.chain.CurrentHeader().Difficulty.Uint64())
 
 	if epochId > epID {
-		return nil, errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
+		return string(""), errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
 	}
 
 	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
 	if err != nil {
-		return nil, err
+		return string(""), err
 	}
 
 	r := vm.GetStateR(state, epochId)
 	if r == nil {
-		return nil, errors.New("no random number exists")
+		return string(""), errors.New("no random number exists")
 	}
 
-	return r, nil
+	return hexutil.Encode(r.Bytes()), nil
 }
 
 func (a PosApi) GetChainQuality(epochid uint64, slotid uint64) (uint64, error) {
@@ -596,6 +597,29 @@ func (a PosApi) GetEpochGasPool(epochID uint64) (string, error) {
 	return incentive.GetEpochGasPool(db, epochID).String(), nil
 }
 
+func (a PosApi) GetEpochGasPoolByBlock(epochId uint64, blockNr int64) (string, error) {
+	if !isPosStage() {
+		return "Not POS stage.", nil
+	}
+
+	if blockNr > a.chain.CurrentHeader().Number.Int64() {
+		blockNr = -1
+	}
+
+	epID, _ := util.CalEpSlbyTd(a.chain.CurrentHeader().Difficulty.Uint64())
+
+	if epochId > epID {
+		return "", errors.New("wrong epochId (It hasn't arrived yet.):" + convert.Uint64ToString(epochId))
+	}
+
+	state, _, err := a.backend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(blockNr))
+	if err != nil {
+		return "", err
+	}
+
+	return incentive.GetEpochGasPool(state, epochId).String(), nil
+}
+
 func (a PosApi) GetRBAddress(epochID uint64) []common.Address {
 	if !isPosStage() {
 		return nil
@@ -734,7 +758,7 @@ func (a PosApi) CalProbability(amountCoin uint64, lockTime uint64) (string, erro
 	}
 
 	amountWin := big.NewInt(0).SetUint64(amountCoin)
-	amountWin.Mul(amountWin, big.NewInt(params.Wan))
+	amountWin.Mul(amountWin, big.NewInt(params.Ether))
 
 	probablity := epocherInst.CalProbability(amountWin, lockTime)
 	return biToString(probablity, nil)
@@ -793,7 +817,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 		return 0, nil
 	}
 
-	epId := a.GetEpochIDByTime(lastHeader.Time.Uint64())
+	epId := a.GetEpochIDByTime(lastHeader.Time)
 	if epId < epochId {
 		return 0, nil
 	}
@@ -807,7 +831,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId > epochId {
 			fastEdBlkNum = curNum
 		} else if epId == epochId {
@@ -853,7 +877,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId == epochId {
 			break
 		} else if epId > epochId {
@@ -871,7 +895,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId == epochId {
 			break
 		} else if epId < epochId {
@@ -933,7 +957,7 @@ func (a PosApi) GetRbStage(slotId uint64) uint64 {
 func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	header := a.chain.GetHeaderByNumber(blockNumber)
 	if header != nil {
-		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
+		ep, _ := util.CalEpochSlotID(header.Time)
 		return ep
 	}
 	return uint64(0) ^ uint64(0)
@@ -970,11 +994,11 @@ func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
 			totalTx += uint64(len(block.Transactions()))
 
 			if i == fromNumber {
-				totalSecond = block.Time().Uint64()
+				totalSecond = block.Time()
 			}
 
 			if i == toNumber {
-				totalSecond = block.Time().Uint64() - totalSecond
+				totalSecond = block.Time() - totalSecond
 			}
 		}
 	}

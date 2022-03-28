@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestUint64Convert(t *testing.T) {

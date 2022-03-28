@@ -18,45 +18,58 @@ package rpc
 
 import (
 	"context"
-	"crypto/tls"
+	"encoding/base64"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
-	"golang.org/x/net/websocket"
-	"gopkg.in/fatih/set.v0"
+	mapset "github.com/deckarep/golang-set"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/gorilla/websocket"
 )
+
+const (
+	wsReadBuffer       = 1024
+	wsWriteBuffer      = 1024
+	wsPingInterval     = 60 * time.Second
+	wsPingWriteTimeout = 5 * time.Second
+	wsPongTimeout      = 30 * time.Second
+	wsMessageSizeLimit = 15 * 1024 * 1024
+)
+
+var wsBufferPool = new(sync.Pool)
 
 // WebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
 //
 // allowedOrigins should be a comma-separated list of allowed origin URLs.
 // To allow connections with any origin, pass "*".
-func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
-	return websocket.Server{
-		Handshake: wsHandshakeValidator(allowedOrigins),
-		Handler: func(conn *websocket.Conn) {
-			srv.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
-		},
+func (s *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  wsReadBuffer,
+		WriteBufferSize: wsWriteBuffer,
+		WriteBufferPool: wsBufferPool,
+		CheckOrigin:     wsHandshakeValidator(allowedOrigins),
 	}
-}
-
-// NewWSServer creates a new websocket RPC server around an API provider.
-//
-// Deprecated: use Server.WebsocketHandler
-func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
-	return &http.Server{Handler: srv.WebsocketHandler(allowedOrigins)}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Debug("WebSocket upgrade failed", "err", err)
+			return
+		}
+		codec := newWebsocketCodec(conn)
+		s.ServeCodec(codec, 0)
+	})
 }
 
 // wsHandshakeValidator returns a handler that verifies the origin during the
 // websocket upgrade process. When a '*' is specified as an allowed origins all
 // connections are accepted.
-func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http.Request) error {
-	origins := set.New()
+func wsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
+	origins := mapset.NewSet()
 	allowAllOrigins := false
 
 	for _, origin := range allowedOrigins {
@@ -64,30 +77,128 @@ func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http
 			allowAllOrigins = true
 		}
 		if origin != "" {
-			origins.Add(strings.ToLower(origin))
+			origins.Add(origin)
 		}
 	}
-
 	// allow localhost if no allowedOrigins are specified.
-	if len(origins.List()) == 0 {
+	if len(origins.ToSlice()) == 0 {
 		origins.Add("http://localhost")
 		if hostname, err := os.Hostname(); err == nil {
-			origins.Add("http://" + strings.ToLower(hostname))
+			origins.Add("http://" + hostname)
 		}
 	}
+	log.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v", origins.ToSlice()))
 
-	log.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
-
-	f := func(cfg *websocket.Config, req *http.Request) error {
-		origin := strings.ToLower(req.Header.Get("Origin"))
-		if allowAllOrigins || origins.Has(origin) {
-			return nil
+	f := func(req *http.Request) bool {
+		// Skip origin verification if no Origin header is present. The origin check
+		// is supposed to protect against browser based attacks. Browsers always set
+		// Origin. Non-browser software can put anything in origin and checking it doesn't
+		// provide additional security.
+		if _, ok := req.Header["Origin"]; !ok {
+			return true
 		}
-		log.Debug(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
-		return fmt.Errorf("origin %s not allowed", origin)
+		// Verify origin against allow list.
+		origin := strings.ToLower(req.Header.Get("Origin"))
+		if allowAllOrigins || originIsAllowed(origins, origin) {
+			return true
+		}
+		log.Warn("Rejected WebSocket connection", "origin", origin)
+		return false
 	}
 
 	return f
+}
+
+type wsHandshakeError struct {
+	err    error
+	status string
+}
+
+func (e wsHandshakeError) Error() string {
+	s := e.err.Error()
+	if e.status != "" {
+		s += " (HTTP status " + e.status + ")"
+	}
+	return s
+}
+
+func originIsAllowed(allowedOrigins mapset.Set, browserOrigin string) bool {
+	it := allowedOrigins.Iterator()
+	for origin := range it.C {
+		if ruleAllowsOrigin(origin.(string), browserOrigin) {
+			return true
+		}
+	}
+	return false
+}
+
+func ruleAllowsOrigin(allowedOrigin string, browserOrigin string) bool {
+	var (
+		allowedScheme, allowedHostname, allowedPort string
+		browserScheme, browserHostname, browserPort string
+		err                                         error
+	)
+	allowedScheme, allowedHostname, allowedPort, err = parseOriginURL(allowedOrigin)
+	if err != nil {
+		log.Warn("Error parsing allowed origin specification", "spec", allowedOrigin, "error", err)
+		return false
+	}
+	browserScheme, browserHostname, browserPort, err = parseOriginURL(browserOrigin)
+	if err != nil {
+		log.Warn("Error parsing browser 'Origin' field", "Origin", browserOrigin, "error", err)
+		return false
+	}
+	if allowedScheme != "" && allowedScheme != browserScheme {
+		return false
+	}
+	if allowedHostname != "" && allowedHostname != browserHostname {
+		return false
+	}
+	if allowedPort != "" && allowedPort != browserPort {
+		return false
+	}
+	return true
+}
+
+func parseOriginURL(origin string) (string, string, string, error) {
+	parsedURL, err := url.Parse(strings.ToLower(origin))
+	if err != nil {
+		return "", "", "", err
+	}
+	var scheme, hostname, port string
+	if strings.Contains(origin, "://") {
+		scheme = parsedURL.Scheme
+		hostname = parsedURL.Hostname()
+		port = parsedURL.Port()
+	} else {
+		scheme = ""
+		hostname = parsedURL.Scheme
+		port = parsedURL.Opaque
+		if hostname == "" {
+			hostname = origin
+		}
+	}
+	return scheme, hostname, port, nil
+}
+
+// DialWebsocketWithDialer creates a new RPC client that communicates with a JSON-RPC server
+// that is listening on the given endpoint using the provided dialer.
+func DialWebsocketWithDialer(ctx context.Context, endpoint, origin string, dialer websocket.Dialer) (*Client, error) {
+	endpoint, header, err := wsClientHeaders(endpoint, origin)
+	if err != nil {
+		return nil, err
+	}
+	return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
+		conn, resp, err := dialer.DialContext(ctx, endpoint, header)
+		if err != nil {
+			hErr := wsHandshakeError{err: err}
+			if resp != nil {
+				hErr.status = resp.Status
+			}
+			return nil, hErr
+		}
+		return newWebsocketCodec(conn), nil
+	})
 }
 
 // DialWebsocket creates a new RPC client that communicates with a JSON-RPC server
@@ -96,72 +207,94 @@ func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http
 // The context is used for the initial connection establishment. It does not
 // affect subsequent interactions with the client.
 func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error) {
-	if origin == "" {
-		var err error
-		if origin, err = os.Hostname(); err != nil {
-			return nil, err
-		}
-		if strings.HasPrefix(endpoint, "wss") {
-			origin = "https://" + strings.ToLower(origin)
-		} else {
-			origin = "http://" + strings.ToLower(origin)
-		}
+	dialer := websocket.Dialer{
+		ReadBufferSize:  wsReadBuffer,
+		WriteBufferSize: wsWriteBuffer,
+		WriteBufferPool: wsBufferPool,
 	}
-	config, err := websocket.NewConfig(endpoint, origin)
-	if err != nil {
-		return nil, err
-	}
+	return DialWebsocketWithDialer(ctx, endpoint, origin, dialer)
+}
 
-	return newClient(ctx, func(ctx context.Context) (net.Conn, error) {
-		return wsDialContext(ctx, config)
+func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint, nil, err
+	}
+	header := make(http.Header)
+	if origin != "" {
+		header.Add("origin", origin)
+	}
+	if endpointURL.User != nil {
+		b64auth := base64.StdEncoding.EncodeToString([]byte(endpointURL.User.String()))
+		header.Add("authorization", "Basic "+b64auth)
+		endpointURL.User = nil
+	}
+	return endpointURL.String(), header, nil
+}
+
+type websocketCodec struct {
+	*jsonCodec
+	conn *websocket.Conn
+
+	wg        sync.WaitGroup
+	pingReset chan struct{}
+}
+
+func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
+	conn.SetReadLimit(wsMessageSizeLimit)
+	conn.SetPongHandler(func(appData string) error {
+		conn.SetReadDeadline(time.Time{})
+		return nil
 	})
+	wc := &websocketCodec{
+		jsonCodec: NewFuncCodec(conn, conn.WriteJSON, conn.ReadJSON).(*jsonCodec),
+		conn:      conn,
+		pingReset: make(chan struct{}, 1),
+	}
+	wc.wg.Add(1)
+	go wc.pingLoop()
+	return wc
 }
 
-func wsDialContext(ctx context.Context, config *websocket.Config) (*websocket.Conn, error) {
-	var conn net.Conn
-	var err error
-	switch config.Location.Scheme {
-	case "ws":
-		conn, err = dialContext(ctx, "tcp", wsDialAddress(config.Location))
-	case "wss":
-		dialer := contextDialer(ctx)
-		conn, err = tls.DialWithDialer(dialer, "tcp", wsDialAddress(config.Location), config.TlsConfig)
-	default:
-		err = websocket.ErrBadScheme
-	}
-	if err != nil {
-		return nil, err
-	}
-	ws, err := websocket.NewClient(config, conn)
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-	return ws, err
+func (wc *websocketCodec) close() {
+	wc.jsonCodec.close()
+	wc.wg.Wait()
 }
 
-var wsPortMap = map[string]string{"ws": "80", "wss": "443"}
-
-func wsDialAddress(location *url.URL) string {
-	if _, ok := wsPortMap[location.Scheme]; ok {
-		if _, _, err := net.SplitHostPort(location.Host); err != nil {
-			return net.JoinHostPort(location.Host, wsPortMap[location.Scheme])
+func (wc *websocketCodec) writeJSON(ctx context.Context, v interface{}) error {
+	err := wc.jsonCodec.writeJSON(ctx, v)
+	if err == nil {
+		// Notify pingLoop to delay the next idle ping.
+		select {
+		case wc.pingReset <- struct{}{}:
+		default:
 		}
 	}
-	return location.Host
+	return err
 }
 
-func dialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	d := &net.Dialer{KeepAlive: tcpKeepAliveInterval}
-	return d.DialContext(ctx, network, addr)
-}
+// pingLoop sends periodic ping frames when the connection is idle.
+func (wc *websocketCodec) pingLoop() {
+	var timer = time.NewTimer(wsPingInterval)
+	defer wc.wg.Done()
+	defer timer.Stop()
 
-func contextDialer(ctx context.Context) *net.Dialer {
-	dialer := &net.Dialer{Cancel: ctx.Done(), KeepAlive: tcpKeepAliveInterval}
-	if deadline, ok := ctx.Deadline(); ok {
-		dialer.Deadline = deadline
-	} else {
-		dialer.Deadline = time.Now().Add(defaultDialTimeout)
+	for {
+		select {
+		case <-wc.closed():
+			return
+		case <-wc.pingReset:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(wsPingInterval)
+		case <-timer.C:
+			wc.jsonCodec.encMu.Lock()
+			wc.conn.SetWriteDeadline(time.Now().Add(wsPingWriteTimeout))
+			wc.conn.WriteMessage(websocket.PingMessage, nil)
+			wc.conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+			wc.jsonCodec.encMu.Unlock()
+			timer.Reset(wsPingInterval)
+		}
 	}
-	return dialer
 }

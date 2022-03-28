@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var (

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/pos/epochLeader"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/pos/epochLeader"
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 type PosAvgRet struct {
@@ -91,4 +91,7 @@ func (p *PosAvgRet) GetAllStakeAndReturn(epochID uint64) (*big.Int, error) {
 
 func (p *PosAvgRet) GetAllIncentive(epochID uint64) (*big.Int, error) {
 	return incentive.GetEpochIncentive(epochID)
+}
+func (p *PosAvgRet) GetYearReward(epochID uint64) *big.Int {
+	return incentive.YearReward(epochID)
 }

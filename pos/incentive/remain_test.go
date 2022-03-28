@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 func TestAddRemain(t *testing.T) {

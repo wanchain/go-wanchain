@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var (

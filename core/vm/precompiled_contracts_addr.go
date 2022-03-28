@@ -5,8 +5,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Precompiled contracts address or
@@ -25,9 +24,11 @@ var (
 	s256AddPrecompileAddr       = common.BytesToAddress([]byte{66})
 	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{67})
 
-
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
+
+	sha3fipsPrecompileAddr           = common.BytesToAddress([]byte{102})
+	ecrecoverPublicKeyPrecompileAddr = common.BytesToAddress([]byte{103})
 
 	WanCscPrecompileAddr  = common.BytesToAddress([]byte{218})
 	StakersInfoAddr       = common.BytesToAddress(big.NewInt(400).Bytes())
@@ -71,61 +72,12 @@ var (
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
 	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
 
-	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
-
+	SolEnhancePrecompileAddr = common.BytesToAddress(big.NewInt(616).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
 	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr
 )
-
-// PrecompiledContract is the basic interface for native Go contracts. The implementation
-// requires a deterministic gas count based on the input size of the Run method of the
-// contract.
-type PrecompiledContract interface {
-	RequiredGas(input []byte) uint64                                // RequiredPrice calculates the contract gas use
-	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) // Run runs the precompiled contract
-	ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error
-}
-
-// PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
-// contracts used in the Frontier and Homestead releases.
-var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
-	ecrecoverPrecompileAddr:     &ecrecover{},
-	sha256hashPrecompileAddr:    &sha256hash{},
-	ripemd160hashPrecompileAddr: &ripemd160hash{},
-	dataCopyPrecompileAddr:      &dataCopy{},
-
-	wanCoinPrecompileAddr:  &wanCoinSC{},
-	wanStampPrecompileAddr: &wanchainStampSC{},
-}
-
-// PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
-// contracts used in the Byzantium release.
-var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
-	ecrecoverPrecompileAddr:      &ecrecover{},
-	sha256hashPrecompileAddr:     &sha256hash{},
-	ripemd160hashPrecompileAddr:  &ripemd160hash{},
-	dataCopyPrecompileAddr:       &dataCopy{},
-	bigModExpPrecompileAddr:      &bigModExp{},
-	bn256AddPrecompileAddr:       &bn256Add{},
-	bn256ScalarMulPrecompileAddr: &bn256ScalarMul{},
-	bn256PairingPrecompileAddr:   &bn256Pairing{},
-
-	wanCoinPrecompileAddr:  &wanCoinSC{},
-	wanStampPrecompileAddr: &wanchainStampSC{},
-
-	//pos
-	WanCscPrecompileAddr:       &PosStaking{},
-	PosControlPrecompileAddr:   &PosControl{},
-	slotLeaderPrecompileAddr:   &slotLeaderSC{},
-	randomBeaconPrecompileAddr: &RandomBeaconContract{},
-
-	SolEnhancePrecompileAddr:	&SolEnhance{},
-
-	s256AddPrecompileAddr:       &s256Add{},
-	s256ScalarMulPrecompileAddr: &s256ScalarMul{},
-}
 
 func IsPosPrecompiledAddr(addr *common.Address) bool {
 	if addr == nil {

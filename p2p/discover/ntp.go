@@ -25,12 +25,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const (
 	ntpPool   = "pool.ntp.org" // ntpPool is the NTP server to query for the current time
-	ntpChecks = 2              // Number of measurements to do against the NTP server
+	ntpChecks = 3              // Number of measurements to do against the NTP server
 )
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,
@@ -49,9 +49,8 @@ func checkClockDrift() {
 		return
 	}
 	if drift < -driftThreshold || drift > driftThreshold {
-		log.Error(fmt.Sprintf("System clock seems off by %v, which can prevent network connectivity", drift))
-		log.Error("Please enable network time synchronisation in system settings.")
-		panic("Please enable network time synchronisation in system settings.")
+		log.Warn(fmt.Sprintf("System clock seems off by %v, which can prevent network connectivity", drift))
+		log.Warn("Please enable network time synchronisation in system settings.")
 	} else {
 		log.Debug("NTP sanity check done", "drift", drift)
 	}
@@ -90,7 +89,7 @@ func sntpDrift(measurements int) (time.Duration, error) {
 			return 0, err
 		}
 		// Retrieve the reply and calculate the elapsed time
-		conn.SetDeadline(time.Now().Add(2 * time.Second))
+		conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 		reply := make([]byte, 48)
 		if _, err = conn.Read(reply); err != nil {

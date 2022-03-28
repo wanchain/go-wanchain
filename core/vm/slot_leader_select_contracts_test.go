@@ -4,17 +4,17 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/params"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
+	"github.com/ethereum/go-ethereum/pos/uleaderselection"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
+	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"os"
 	"path"
@@ -180,19 +180,18 @@ func TestIsInValidStage(t *testing.T) {
 	util.CalEpochSlotIDByNow()
 	curEpId, _ := util.GetEpochSlotID()
 
-
 	testTime := curEpId*posconfig.SlotCount*posconfig.SlotTime + 2*posconfig.K*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	kStart := uint64(2 * posconfig.K)
 	kEnd := uint64(3 * posconfig.K)
 
-	if isInValidStage(0, evm.Time.Uint64(), kStart, kEnd) {
+	if isInValidStage(0, evm.Context.Time.Uint64(), kStart, kEnd) {
 		t.Error("should out of range")
 		t.Fail()
 	}
 
-	if !isInValidStage(curEpId, evm.Time.Uint64(), kStart, kEnd) {
+	if !isInValidStage(curEpId, evm.Context.Time.Uint64(), kStart, kEnd) {
 		t.Error("should in range")
 		t.Fail()
 	}
@@ -412,7 +411,7 @@ func TestHandleStgOne(t *testing.T) {
 	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	handleStgOne(rlpPackBytes, nil, evm)
 
@@ -456,7 +455,7 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	handleStgOne(rlpPackBytes, nil, evm)
 
@@ -505,7 +504,7 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	handleStgOne(rlpPackBytes, nil, evm)
 
@@ -574,7 +573,7 @@ func TestHandleStgTwo(t *testing.T) {
 	//posconfig.EpochBaseTime = nowTime
 
 	testTime := nowTime + (posconfig.Sma1Start+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	handleStgOne(rlpPackBytes, nil, evm)
 
@@ -607,7 +606,7 @@ func TestHandleStgTwo(t *testing.T) {
 	stg2Bytes, _ := RlpPackStage2DataForTx(0, 0, &pubKey, alphaPkis[:], proof[:], GetSlotLeaderScAbiString())
 
 	testTime = nowTime + (posconfig.Sma2Start+1)*posconfig.SlotTime
-	evm.Time = big.NewInt(0).SetUint64(testTime)
+	evm.Context.Time = big.NewInt(0).SetUint64(testTime)
 
 	ret, err := handleStgTwo(stg2Bytes[:], nil, evm)
 

@@ -10,18 +10,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/pos/rbselection"
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/pos/rbselection"
+	"github.com/ethereum/go-ethereum/pos/util"
 
-	"github.com/wanchain/go-wanchain/accounts/abi"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	posutil "github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	posutil "github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
@@ -197,6 +197,8 @@ func GetRBStage(slotId uint64) (int, int, int) {
 // which will be used to generate next epoch leaders and slot leaders.
 // Random beacon protocol has 3 stages --- dkg1 (in 1k,2k slots), dkg2 (in 4k,5k slots), sigShare (in 8k, 9k slots)
 type RandomBeaconContract struct {
+	contract *Contract
+	evm      *EVM
 }
 
 //
@@ -207,12 +209,12 @@ func init() {
 		panic("err in rb smart contract abi initialize")
 	}
 
-	copy(dkg1Id[:], rbSCAbi.Methods["dkg1"].Id())
-	copy(dkg2Id[:], rbSCAbi.Methods["dkg2"].Id())
-	copy(sigShareId[:], rbSCAbi.Methods["sigShare"].Id())
-	copy(getEpochIdId[:], rbSCAbi.Methods["getEpochId"].Id())
-	copy(getRandomNumberByEpochIdId[:], rbSCAbi.Methods["getRandomNumberByEpochId"].Id())
-	copy(getRandomNumberByTimestampId[:], rbSCAbi.Methods["getRandomNumberByTimestamp"].Id())
+	copy(dkg1Id[:], rbSCAbi.Methods["dkg1"].ID)
+	copy(dkg2Id[:], rbSCAbi.Methods["dkg2"].ID)
+	copy(sigShareId[:], rbSCAbi.Methods["sigShare"].ID)
+	copy(getEpochIdId[:], rbSCAbi.Methods["getEpochId"].ID)
+	copy(getRandomNumberByEpochIdId[:], rbSCAbi.Methods["getRandomNumberByEpochId"].ID)
+	copy(getRandomNumberByTimestampId[:], rbSCAbi.Methods["getRandomNumberByTimestamp"].ID)
 }
 
 //
@@ -222,7 +224,9 @@ func (c *RandomBeaconContract) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
-func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *RandomBeaconContract) Run(input []byte) ([]byte, error) {
+	contract := c.contract
+	evm  := c.evm
 	// check data
 	if len(input) < 4 {
 		return nil, errParameters
@@ -238,7 +242,7 @@ func (c *RandomBeaconContract) Run(input []byte, contract *Contract, evm *EVM) (
 	} else if methodId == sigShareId {
 		return c.sigShare(input[4:], contract, evm)
 	} else {
-		epochId, _ := util.CalEpochSlotID(evm.Time.Uint64())
+		epochId, _ := util.CalEpochSlotID(evm.Context.Time.Uint64())
 		if epochId >= posconfig.Cfg().MercuryEpochId {
 			if methodId == getEpochIdId {
 				return c.getEpochId(input[4:], contract, evm)
@@ -992,7 +996,7 @@ var getRBProposerGroupVar = getRBProposerGroup
 // dkg1: happens in 0~2k-1 slots, send the commits to chain
 func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("dkg1")
-	dkg1FlatParam, err := validDkg1(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	dkg1FlatParam, err := validDkg1(evm.StateDB, evm.Context.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -1015,7 +1019,7 @@ func (c *RandomBeaconContract) dkg1(payload []byte, contract *Contract, evm *EVM
 // dkg2: happens in 5k~7k-1 slots, send the proof, enShare to chain
 func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("dkg2")
-	dkg2FlatParam, err := validDkg2(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	dkg2FlatParam, err := validDkg2(evm.StateDB, evm.Context.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -1038,7 +1042,7 @@ func (c *RandomBeaconContract) dkg2(payload []byte, contract *Contract, evm *EVM
 // sigShare: sign, happens in 8k~10k-1 slots, generate R if enough signers
 func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	log.Debug("sigShare")
-	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Time.Uint64(), contract.CallerAddress, payload)
+	sigShareParam, pks, dkgData, err := validSigShare(evm.StateDB, evm.Context.Time.Uint64(), contract.CallerAddress, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,7 +1068,7 @@ func (c *RandomBeaconContract) sigShare(payload []byte, contract *Contract, evm 
 				Topics:  []common.Hash{common.BigToHash(new(big.Int).SetUint64(eid)), common.BytesToHash(r.Bytes())},
 				// This is a non-consensus field, but assigned here because
 				// core/state doesn't know the current block number.
-				BlockNumber: evm.BlockNumber.Uint64(),
+				BlockNumber: evm.Context.BlockNumber.Uint64(),
 			})
 		}
 	}

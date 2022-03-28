@@ -3,9 +3,9 @@ package incentive
 import (
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
 )
 
 func addRemainIncentivePool(stateDb *state.StateDB, epochID uint64, remainValue *big.Int) {

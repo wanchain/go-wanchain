@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // manageServers displays a list of servers the user can disconnect from, and an
@@ -53,25 +53,25 @@ func (w *wizard) manageServers() {
 		w.conf.flush()
 
 		log.Info("Disconnected existing server", "server", server)
-		w.networkStats(false)
+		w.networkStats()
 		return
 	}
 	// If the user requested connecting a new server, do it
 	if w.makeServer() != "" {
-		w.networkStats(false)
+		w.networkStats()
 	}
 }
 
-// makeServer reads a single line from stdin and interprets it as a hostname to
-// connect to. It tries to establish a new SSH session and also executing some
-// baseline validations.
+// makeServer reads a single line from stdin and interprets it as
+// username:identity@hostname to connect to. It tries to establish a
+// new SSH session and also executing some baseline validations.
 //
 // If connection succeeds, the server is added to the wizards configs!
 func (w *wizard) makeServer() string {
 	fmt.Println()
-	fmt.Println("Please enter remote server's address:")
+	fmt.Println("What is the remote server's address ([username[:identity]@]hostname[:port])?")
 
-	// Read and fial the server to ensure docker is present
+	// Read and dial the server to ensure docker is present
 	input := w.readString()
 
 	client, err := dial(input, nil)
@@ -87,7 +87,7 @@ func (w *wizard) makeServer() string {
 	return input
 }
 
-// selectServer lists the user all the currnetly known servers to choose from,
+// selectServer lists the user all the currently known servers to choose from,
 // also granting the option to add a new one.
 func (w *wizard) selectServer() string {
 	// List the available server to the user and wait for a choice
@@ -115,7 +115,7 @@ func (w *wizard) selectServer() string {
 // manageComponents displays a list of network components the user can tear down
 // and an option
 func (w *wizard) manageComponents() {
-	// List all the componens we can tear down, along with an entry to deploy a new one
+	// List all the components we can tear down, along with an entry to deploy a new one
 	fmt.Println()
 
 	var serviceHosts, serviceNames []string
@@ -174,7 +174,7 @@ func (w *wizard) deployComponent() {
 	fmt.Println(" 1. Ethstats  - Network monitoring tool")
 	fmt.Println(" 2. Bootnode  - Entry point of the network")
 	fmt.Println(" 3. Sealer    - Full node minting new blocks")
-	fmt.Println(" 4. Wallet    - Browser wallet for quick sends (todo)")
+	fmt.Println(" 4. Explorer  - Chain analysis webservice")
 	fmt.Println(" 5. Faucet    - Crypto faucet to give away funds")
 	fmt.Println(" 6. Dashboard - Website listing above web-services")
 
@@ -186,6 +186,7 @@ func (w *wizard) deployComponent() {
 	case "3":
 		w.deployNode(false)
 	case "4":
+		w.deployExplorer()
 	case "5":
 		w.deployFaucet()
 	case "6":

@@ -1,17 +1,28 @@
-# Build Gwan in a stock Go builder container
-FROM golang:1.12-alpine as builder
+# Support setting various labels on the final image
+ARG COMMIT=""
+ARG VERSION=""
+ARG BUILDNUM=""
 
-RUN apk add --no-cache make gcc git musl-dev linux-headers
+# Build Geth in a stock Go builder container
+FROM golang:1.17-alpine as builder
 
-ADD . /go-wanchain
-RUN cd /go-wanchain && make gwan
+RUN apk add --no-cache gcc musl-dev linux-headers git
+
+ADD . /go-ethereum
+RUN cd /go-ethereum && go run build/ci.go install ./cmd/geth
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-RUN apk add --no-cache curl
-COPY --from=builder /go-wanchain/build/bin/gwan /usr/local/bin/
+COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 
-EXPOSE 8545 17717/tcp 17717/udp
-ENTRYPOINT ["gwan"]
+EXPOSE 8545 8546 30303 30303/udp
+ENTRYPOINT ["geth"]
+
+# Add some metadata labels to help programatic image consumption
+ARG COMMIT=""
+ARG VERSION=""
+ARG BUILDNUM=""
+
+LABEL commit="$COMMIT" version="$VERSION" buildnum="$BUILDNUM"

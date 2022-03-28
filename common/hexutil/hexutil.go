@@ -31,17 +31,15 @@ encoding may be of uneven length. The number zero encodes as "0x0".
 package hexutil
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
-
-	"github.com/wanchain/go-wanchain/common/math"
 )
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
 
+// Errors
 var (
 	ErrEmptyString   = &decError{"empty hex string"}
 	ErrSyntax        = &decError{"invalid hex string"}
@@ -56,16 +54,14 @@ var (
 
 type decError struct{ msg string }
 
-func (err decError) Error() string {
-	return string(err.msg)
-}
+func (err decError) Error() string { return err.msg }
 
 // Decode decodes a hex string with 0x prefix.
 func Decode(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	if !Has0xPrefix(input) {
+	if !has0xPrefix(input) {
 		return nil, ErrMissingPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
@@ -189,7 +185,7 @@ func EncodeBig(bigint *big.Int) string {
 	return fmt.Sprintf("%#x", bigint)
 }
 
-func Has0xPrefix(input string) bool {
+func has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
@@ -197,7 +193,7 @@ func checkNumber(input string) (raw string, err error) {
 	if len(input) == 0 {
 		return "", ErrEmptyString
 	}
-	if !Has0xPrefix(input) {
+	if !has0xPrefix(input) {
 		return "", ErrMissingPrefix
 	}
 	input = input[2:]
@@ -241,14 +237,4 @@ func mapError(err error) error {
 		return ErrOddLength
 	}
 	return err
-}
-
-// PKPair2HexSlice generate byte-slice based on given public key pair
-func PKPair2HexSlice(pk1 *ecdsa.PublicKey, pk2 *ecdsa.PublicKey) []string {
-	return []string{
-		Encode(math.PaddedBigBytes(pk1.X, 32)),
-		Encode(math.PaddedBigBytes(pk1.Y, 32)),
-		Encode(math.PaddedBigBytes(pk2.X, 32)),
-		Encode(math.PaddedBigBytes(pk2.Y, 32)),
-	}
 }

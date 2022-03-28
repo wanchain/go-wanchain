@@ -4,10 +4,10 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/log"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func YearReward(epochID uint64) *big.Int {

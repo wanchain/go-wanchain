@@ -1,5 +1,4 @@
 
-
 var posControlDefinition = [
 	{
 		"constant": false,
@@ -29,9 +28,9 @@ var contractDef = eth.contract(posControlDefinition);
 var ContractAddr = "0x0000000000000000000000000000000000000264";
 var Contract = contractDef.at(ContractAddr);
 
-var EpochId = 2
-var wlIndex = 11
-var wlCount = 26
+var EpochId = 20000
+var wlIndex = 0
+var wlCount = 0
 
 var payload = Contract.upgradeWhiteEpochLeader.getData(EpochId, wlIndex, wlCount)
 console.log("payload: ", payload)

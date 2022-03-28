@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/uleaderselection"
 
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func Wadd(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {

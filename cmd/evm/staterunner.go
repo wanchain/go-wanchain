@@ -23,12 +23,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/tests"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/tests"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var stateTestCommand = cli.Command{
@@ -38,6 +38,8 @@ var stateTestCommand = cli.Command{
 	ArgsUsage: "<file>",
 }
 
+// StatetestResult contains the execution status after running a state test, any
+// error that might have occurred and a dump of the final state if requested.
 type StatetestResult struct {
 	Name  string      `json:"name"`
 	Pass  bool        `json:"pass"`
@@ -57,8 +59,10 @@ func stateTestCmd(ctx *cli.Context) error {
 
 	// Configure the EVM logger
 	config := &vm.LogConfig{
-		DisableMemory: ctx.GlobalBool(DisableMemoryFlag.Name),
-		DisableStack:  ctx.GlobalBool(DisableStackFlag.Name),
+		EnableMemory:     !ctx.GlobalBool(DisableMemoryFlag.Name),
+		DisableStack:     ctx.GlobalBool(DisableStackFlag.Name),
+		DisableStorage:   ctx.GlobalBool(DisableStorageFlag.Name),
+		EnableReturnData: !ctx.GlobalBool(DisableReturnDataFlag.Name),
 	}
 	var (
 		tracer   vm.Tracer
@@ -66,7 +70,7 @@ func stateTestCmd(ctx *cli.Context) error {
 	)
 	switch {
 	case ctx.GlobalBool(MachineFlag.Name):
-		tracer = NewJSONLogger(config, os.Stderr)
+		tracer = vm.NewJSONLogger(config, os.Stderr)
 
 	case ctx.GlobalBool(DebugFlag.Name):
 		debugger = vm.NewStructLogger(config)
@@ -94,14 +98,20 @@ func stateTestCmd(ctx *cli.Context) error {
 		for _, st := range test.Subtests() {
 			// Run the test and aggregate the result
 			result := &StatetestResult{Name: key, Fork: st.Fork, Pass: true}
-			if state, err := test.Run(st, cfg); err != nil {
+			_, s, err := test.Run(st, cfg, false)
+			// print state root for evmlab tracing
+			if ctx.GlobalBool(MachineFlag.Name) && s != nil {
+				fmt.Fprintf(os.Stderr, "{\"stateRoot\": \"%x\"}\n", s.IntermediateRoot(false))
+			}
+			if err != nil {
 				// Test failed, mark as so and dump any state to aid debugging
 				result.Pass, result.Error = false, err.Error()
-				if ctx.GlobalBool(DumpFlag.Name) && state != nil {
-					dump := state.RawDump()
+				if ctx.GlobalBool(DumpFlag.Name) && s != nil {
+					dump := s.RawDump(nil)
 					result.State = &dump
 				}
 			}
+
 			results = append(results, *result)
 
 			// Print any structured logs collected

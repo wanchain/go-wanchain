@@ -16,70 +16,95 @@
 
 package params
 
+import "github.com/ethereum/go-ethereum/common"
+
 // MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Ethereum network.
-var MainnetBootnodes = []string{
-	//// Wanchain Foundation Bootnodes,SG NK001
-	//"enode://dfa95c2be31b3541895df452678355ef4b38988863959fe56d1a217cd9fdeee27024cb13688cab56373ac597968aa2faf0da8cd87f4238366ddb41f03fc78884@13.250.146.205:17717",
-	//// Wanchain Foundation Bootnodes,SG NK002
-	//"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@13.250.146.14:17717",
-	//
-	////Wanchain Foundation Bootnodes,US EAST NK003
-	//"enode://52d23259b4b30eb3d8e2c8cb7aaf2debac9d731476dcb516d11fa4931dd39d4158f474bb1aff47e8897b50820ba404c3927f1ec833707e594d4b9238411ac465@18.216.140.128:17717",
-	////Wanchain Foundation Bootnodes,US EAST NK004
-	//"enode://262f3b1db1652c21dfd21df7b07ad244c81d4f92dc9523281ac657b0723f64a80c8e01d8518d6fe7ca3981149234a54ab6b549005f9741e509b5c186122f6d5f@52.15.203.224:17717",
-	//
-	////Wanchain Foundation Bootnodes,US WEST NK005
-	//"enode://cd003df4a1883493b5f86c1d1d1bd6c39dc2ab171b76d66fce2526e22eda83517a892724d7b8200f0edf9e0d9c7f1b1d4e207faa68847eafd41e3fd325ecc82d@34.211.235.236:17717",
-	////Wanchain Foundation Bootnodes,US WEST NK006
-	//"enode://e82ad9b30bd10d3359c1db0d6be72a49b783b5c8bc040b3c0d09651fdc7ff0874156c89284fb70b03b0c520caf904f5f92442aad7a705e56067556ffd6f15fed@35.165.177.61:17717",
-
-	// new pos
-	"enode://9a0539d2777c33532b3450b88343266637daa93776126b580bfdabc2d7a566a553be68079e14a37d3803e5bdb65055c3ac9342b03f1939c4fb2e413ecbc102b1@52.24.132.78:17717",
-	"enode://11c018f57c1c4dbb89f57832936dacf5f7ad677b33b86fbb9fe268d3c97126a625661e06e894896613edf5167e9e77867f9c0be8620e150ac6f2b92e5c0efc3d@52.41.157.63:17717",
-	"enode://8980a56b1c1580080d2c1e96c9bbb2a9a50528cf18cbff82cc73bee1c8f3821fc65b098ac910a1a567153fd4cb7478b727f6ab0dd726afdbeec1f6b94cac4cd7@54.245.68.228:17717",
-	"enode://0b324af8b1489202f09a48f582df6c42319041f1367d8d8d4363caa105b040b8ba73561e41691e40bfcd41e849b89b077beb38dfa188517e4e67b33dd115e4a4@35.162.114.208:17717",
-	"enode://fc182f486efadf112cbb4a3e552e1f3f25811fa863352ee6b9ae3f1d9855b4018af47d55ea747d808a12159e9bbd7e7c74726cd8bc3dfe2dbb2b0a1d07a31578@54.148.77.52:17717",
-	"enode://fdbdf600ed6eb35d177d0f971360ead71f21d20b31c8924d8d61fabf07fb720b60bb3d5ced5d85a30fce8815479c520a9cc9dcbf5416fff366ba24c37cb1b980@34.218.127.55:17717",
+var MainnetBootnodesEth = []string{
+	// Ethereum Foundation Go Bootnodes
+	"enode://d860a01f9722d78051619d1e2351aba3f43f943f6f00718d1b9baa4101932a1f5011f16bb2b1bb35db20d6fe28fa0bf09636d26a87d31de9ec6203eeedb1f666@18.138.108.67:30303",   // bootnode-aws-ap-southeast-1-001
+	"enode://22a8232c3abc76a16ae9d6c3b164f98775fe226f0917b0ca871128a74a8e9630b458460865bab457221f1d448dd9791d24c4e5d88786180ac185df813a68d4de@3.209.45.79:30303",     // bootnode-aws-us-east-1-001
+	"enode://ca6de62fce278f96aea6ec5a2daadb877e51651247cb96ee310a318def462913b653963c155a0ef6c7d50048bba6e6cea881130857413d9f50a621546b590758@34.255.23.113:30303",   // bootnode-aws-eu-west-1-001
+	"enode://279944d8dcd428dffaa7436f25ca0ca43ae19e7bcf94a8fb7d1641651f92d121e972ac2e8f381414b80cc8e5555811c2ec6e1a99bb009b3f53c4c69923e11bd8@35.158.244.151:30303",  // bootnode-aws-eu-central-1-001
+	"enode://8499da03c47d637b20eee24eec3c356c9a2e6148d6fe25ca195c7949ab8ec2c03e3556126b0d7ed644675e78c4318b08691b7b57de10e5f0d40d05b09238fa0a@52.187.207.27:30303",   // bootnode-azure-australiaeast-001
+	"enode://103858bdb88756c71f15e9b5e09b56dc1be52f0a5021d46301dbbfb7e130029cc9d0d6f73f693bc29b665770fff7da4d34f3c6379fe12721b5d7a0bcb5ca1fc1@191.234.162.198:30303", // bootnode-azure-brazilsouth-001
+	"enode://715171f50508aba88aecd1250af392a45a330af91d7b90701c436b618c86aaa1589c9184561907bebbb56439b8f8787bc01f49a7c77276c58c1b09822d75e8e8@52.231.165.108:30303",  // bootnode-azure-koreasouth-001
+	"enode://5d6d7cd20d6da4bb83a1d28cadb5d409b64edf314c0335df658c1a54e32c7c4a7ab7823d57c39b6a757556e68ff1df17c748b698544a55cb488b52479a92b60f@104.42.217.25:30303",   // bootnode-azure-westus-001
 }
 
-// TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
-var TestnetBootnodes = []string{
-	//"enode://ce45ef8eb81b66c6bfdd255cd0cad8e7f75bcfea39edd130012ca6f437a9518b9d61447adab25e189fa39673a33107efa1978e332851fcb407f2fbee2fe61961@34.208.125.29:17717", //nk050
-	//"enode://23208f45ddc7c96f635459a1740011746abfc3a74c02794512d84537adfcf51e8de89391227e84a09e2a3fdc954b247a3307788bc7cb576b80c6ef3bc6e456b3@35.167.106.109:17717",//nk049
-	//"enode://01b31508ed81c2c6f1bb941faee1f6b0c5445994311a8bcc916c04f5693e19d8a4fdc7b4bfbd1aa65bcf32dc4a222fa5709e52e5fc624b81ef8edd79ca281e88@52.89.169.52:17717", //nk048
-	//"enode://84c15ab07550c70b5b96d1e40d2347a718bb08500f804a4ca621a07ad66bb78503bd1e1711ff9ae585ad5bf154d72f314aed1b49bc42f65614a4ebadeb8cba0d@35.160.61.159:17717",//nk047
-	// "enode://1618570be0da74f7c9dabe674a85cdc2f13d87808a0f51e69400a74d42180413669e5898c0a8caa7a40226a9d6c858f1419e240ecb30f14d9eb42f5bf690f356@54.193.197.153:17717",
-	"enode://e5fcbadaaa482b50c5538b8ffb6527522c98c11635bfd5d780f9a36dd96e79c08c83620e74b2b6335f9dd5a2e08b2d5d82874415925a1858e0e3fdfcebccdae1@54.203.165.174:17717",
-	//"enode://b7b52602bebb302b386ff9c419e5c09c9bb3fb43cf19cf81b47cbccc252e2b67b3826ee102f5bca71f36e5856c2901f30cc3fa123824b76453b20e25a69ed0ec@54.219.215.126:17717",
-
+// RopstenBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Ropsten test network.
+var RopstenBootnodes = []string{
+	"enode://30b7ab30a01c124a6cceca36863ece12c4f5fa68e3ba9b0b51407ccc002eeed3b3102d20a88f1c1d3c3154e2449317b8ef95090e77b312d5cc39354f86d5d606@52.176.7.10:30303",    // US-Azure geth
+	"enode://865a63255b3bb68023b6bffd5095118fcc13e79dcf014fe4e47e065c350c7cc72af2e53eff895f11ba1bbb6a2b33271c1116ee870f266618eadfc2e78aa7349c@52.176.100.77:30303",  // US-Azure parity
+	"enode://6332792c4a00e3e4ee0926ed89e0d27ef985424d97b6a45bf0f23e51f0dcb5e66b875777506458aea7af6f9e4ffb69f43f3778ee73c81ed9d34c51c4b16b0b0f@52.232.243.152:30303", // Parity
+	"enode://94c15d1b9e2fe7ce56e458b9a3b672ef11894ddedd0c6f247e0f1d3487f52b66208fb4aeb8179fce6e3a749ea93ed147c37976d67af557508d199d9594c35f09@192.81.208.223:30303", // @gpip
 }
 
-var InternalBootnodes = []string{
-	//"enode://dea09d1ded799044d3b8b5c66e28e584ea3fdaae12e0e39bb3491ac99424cc6c098f32e978c4aef1c3382c3c4492d7a33d720eabdee78cddba28541d6bef1bdc@52.53.224.4:17717", //
-	//"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@118.190.33.102:17717",
-	// "enode://f0b604a19b711d20e60912fa2acc3b4966b3f1d8339bbcdd134d51e6ef7245927c09804aba1b8f94be5f5a77f062952ae58760ee7426299c16f9d19bf47be732@54.183.96.28:17717",
-	"enode://7bf5d346d0806827fa94fd7fe09af915c0f9cbb92c73e154c8d9b2318a6af6d7d379b72b3242beb8f409f64777ba7c7a236cb14d41b6846bd2888e6c8f1e8189@192.168.1.2:9000",
+// RinkebyBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Rinkeby test network.
+var RinkebyBootnodes = []string{
+	"enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@52.169.42.101:30303", // IE
+	"enode://343149e4feefa15d882d9fe4ac7d88f885bd05ebb735e547f12e12080a9fa07c8014ca6fd7f373123488102fe5e34111f8509cf0b7de3f5b44339c9f25e87cb8@52.3.158.184:30303",  // INFURA
+	"enode://b6b28890b006743680c52e64e0d16db57f28124885595fa03a562be1d2bf0f3a1da297d56b13da25fb992888fd556d4c1a27b1f39d531bde7de1921c90061cc6@159.89.28.211:30303", // AKASHA
 }
 
-// PlutoBootnodes are the enode URLs of the P2P bootstrap nodes running on the
-// Pluto test network.
-var PlutoBootnodes = []string{
-	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717",
-	"enode://ca5496aa6eda6403f4ac41e7841d1ae6d963a321afcb8c59c0f2935f837bd2300ff258ab94bf4db375257f29898e5d0ea5903c28a0e9a41a4aba4e100b4b2ed0@34.212.171.224:17717",
-	"enode://86989aacffbc22640dee74864ac0f17fb4987ab0b6792a6fd14801557e7f7ff6447d77945d64463d5e6e0bed5ac257c842d9631abe8e68110e1aa9233ad4e3a1@54.184.26.209:27717",
-}
-var PlutoV5ootnodes = []string{
-	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717?discport=17718",
+// GoerliBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Görli test network.
+var GoerliBootnodes = []string{
+	// Upstream bootnodes
+	"enode://011f758e6552d105183b1761c5e2dea0111bc20fd5f6422bc7f91e0fabbec9a6595caf6239b37feb773dddd3f87240d99d859431891e4a642cf2a0a9e6cbb98a@51.141.78.53:30303",
+	"enode://176b9417f511d05b6b2cf3e34b756cf0a7096b3094572a8f6ef4cdcb9d1f9d00683bf0f83347eebdf3b81c3521c2332086d9592802230bf528eaf606a1d9677b@13.93.54.137:30303",
+	"enode://46add44b9f13965f7b9875ac6b85f016f341012d84f975377573800a863526f4da19ae2c620ec73d11591fa9510e992ecc03ad0751f53cc02f7c7ed6d55c7291@94.237.54.114:30313",
+	"enode://b5948a2d3e9d486c4d75bf32713221c2bd6cf86463302339299bd227dc2e276cd5a1c7ca4f43a0e9122fe9af884efed563bd2a1fd28661f3b5f5ad7bf1de5949@18.218.250.66:30303",
+
+	// Ethereum Foundation bootnode
+	"enode://a61215641fb8714a373c80edbfa0ea8878243193f57c96eeb44d0bc019ef295abd4e044fd619bfc4c59731a73fb79afe84e9ab6da0c743ceb479cbb6d263fa91@3.11.147.67:30303",
+
+	// Goerli Initiative bootnodes
+	"enode://a869b02cec167211fb4815a82941db2e7ed2936fd90e78619c53eb17753fcf0207463e3419c264e2a1dd8786de0df7e68cf99571ab8aeb7c4e51367ef186b1dd@51.15.116.226:30303",
+	"enode://807b37ee4816ecf407e9112224494b74dd5933625f655962d892f2f0f02d7fbbb3e2a94cf87a96609526f30c998fd71e93e2f53015c558ffc8b03eceaf30ee33@51.15.119.157:30303",
+	"enode://a59e33ccd2b3e52d578f1fbd70c6f9babda2650f0760d6ff3b37742fdcdfdb3defba5d56d315b40c46b70198c7621e63ffa3f987389c7118634b0fefbbdfa7fd@51.15.119.157:40303",
 }
 
-var InternalV5Bootnodes = []string{
-	"enode://81ffab14284d29f9a87737780717719666af814d78057ec4b6799b9d275c41e8041887c733a95fba13ae9fba4fb3026d5f53993143b83ab6648cae3b1e5e9c35@18.236.236.189:17717",
+var V5Bootnodes = []string{
+	// Teku team's bootnode
+	"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+	"enr:-KG4QDyytgmE4f7AnvW-ZaUOIi9i79qX4JwjRAiXBZCU65wOfBu-3Nb5I7b_Rmg3KCOcZM_C3y5pg7EBU5XGrcLTduQEhGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQ2_DUbiXNlY3AyNTZrMaEDKnz_-ps3UUOfHWVYaskI5kWYO_vtYMGYCQRAR3gHDouDdGNwgiMog3VkcIIjKA",
+	// Prylab team's bootnodes
+	"enr:-Ku4QImhMc1z8yCiNJ1TyUxdcfNucje3BGwEHzodEZUan8PherEo4sF7pPHPSIB1NNuSg5fZy7qFsjmUKs2ea1Whi0EBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQOVphkDqal4QzPMksc5wnpuC3gvSC8AfbFOnZY_On34wIN1ZHCCIyg",
+	"enr:-Ku4QP2xDnEtUXIjzJ_DhlCRN9SN99RYQPJL92TMlSv7U5C1YnYLjwOQHgZIUXw6c-BvRg2Yc2QsZxxoS_pPRVe0yK8Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQMeFF5GrS7UZpAH2Ly84aLK-TyvH-dRo0JM1i8yygH50YN1ZHCCJxA",
+	"enr:-Ku4QPp9z1W4tAO8Ber_NQierYaOStqhDqQdOPY3bB3jDgkjcbk6YrEnVYIiCBbTxuar3CzS528d2iE7TdJsrL-dEKoBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQMw5fqqkw2hHC4F5HZZDPsNmPdB1Gi8JPQK7pRc9XHh-oN1ZHCCKvg",
+	// Lighthouse team's bootnodes
+	"enr:-IS4QLkKqDMy_ExrpOEWa59NiClemOnor-krjp4qoeZwIw2QduPC-q7Kz4u1IOWf3DDbdxqQIgC4fejavBOuUPy-HE4BgmlkgnY0gmlwhCLzAHqJc2VjcDI1NmsxoQLQSJfEAHZApkm5edTCZ_4qps_1k_ub2CxHFxi-gr2JMIN1ZHCCIyg",
+	"enr:-IS4QDAyibHCzYZmIYZCjXwU9BqpotWmv2BsFlIq1V31BwDDMJPFEbox1ijT5c2Ou3kvieOKejxuaCqIcjxBjJ_3j_cBgmlkgnY0gmlwhAMaHiCJc2VjcDI1NmsxoQJIdpj_foZ02MXz4It8xKD7yUHTBx7lVFn3oeRP21KRV4N1ZHCCIyg",
+	// EF bootnodes
+	"enr:-Ku4QHqVeJ8PPICcWk1vSn_XcSkjOkNiTg6Fmii5j6vUQgvzMc9L1goFnLKgXqBJspJjIsB91LTOleFmyWWrFVATGngBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhAMRHkWJc2VjcDI1NmsxoQKLVXFOhp2uX6jeT0DvvDpPcU8FWMjQdR4wMuORMhpX24N1ZHCCIyg",
+	"enr:-Ku4QG-2_Md3sZIAUebGYT6g0SMskIml77l6yR-M_JXc-UdNHCmHQeOiMLbylPejyJsdAPsTHJyjJB2sYGDLe0dn8uYBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhBLY-NyJc2VjcDI1NmsxoQORcM6e19T1T9gi7jxEZjk_sjVLGFscUNqAY9obgZaxbIN1ZHCCIyg",
+	"enr:-Ku4QPn5eVhcoF1opaFEvg1b6JNFD2rqVkHQ8HApOKK61OIcIXD127bKWgAtbwI7pnxx6cDyk_nI88TrZKQaGMZj0q0Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhDayLMaJc2VjcDI1NmsxoQK2sBOLGcUb4AwuYzFuAVCaNHA-dy24UuEKkeFNgCVCsIN1ZHCCIyg",
+	"enr:-Ku4QEWzdnVtXc2Q0ZVigfCGggOVB2Vc1ZCPEc6j21NIFLODSJbvNaef1g4PxhPwl_3kax86YPheFUSLXPRs98vvYsoBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhDZBrP2Jc2VjcDI1NmsxoQM6jr8Rb1ktLEsVcKAPa08wCsKUmvoQ8khiOl_SLozf9IN1ZHCCIyg",
 }
 
-// DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
-// experimental RLPx v5 topic-discovery network.
-var DiscoveryV5Bootnodes = []string{
-	"enode://dfa95c2be31b3541895df452678355ef4b38988863959fe56d1a217cd9fdeee27024cb13688cab56373ac597968aa2faf0da8cd87f4238366ddb41f03fc78884@118.190.33.68:17717", // IE
-	"enode://9e41c167954d33f5f5b7740a0f6a03b90ddab423cfd4e1fc6c844feff32e3a5d82e76c20d1823915676b58505efb6d33ea1fa6f7e6e22812b1d7ae7a90874881@118.190.33.102:17717",
+const dnsPrefix = "enrtree://AKA3AM6LPBYEUDMVNU3BSVQJ5AD45Y7YPOHJLEF6W26QOE4VTUDPE@"
+
+// KnownDNSNetwork returns the address of a public DNS-based node list for the given
+// genesis hash and protocol. See https://github.com/ethereum/discv4-dns-lists for more
+// information.
+func KnownDNSNetwork(genesis common.Hash, protocol string) string {
+	var net string
+	switch genesis {
+	case MainnetGenesisHash:
+		net = "mainnet"
+	case RopstenGenesisHash:
+		net = "ropsten"
+	case TestnetGenesisHash:
+		net = "testnet"
+	case RinkebyGenesisHash:
+		net = "rinkeby"
+	case GoerliGenesisHash:
+		net = "goerli"
+	default:
+		return ""
+	}
+	return dnsPrefix + protocol + "." + net + ".ethdisco.net"
 }

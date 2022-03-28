@@ -1,4 +1,3 @@
-// Copyright 2018 Wanchain Foundation Ltd
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -25,8 +24,6 @@ import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -35,26 +32,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/event"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 var (
 	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
 	ErrNoMatch = errors.New("no key for given address or file")
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
-	ErrInvalidKmsInfo = errors.New("invalid AWS KMS info")
+	ErrDecrypt = errors.New("could not decrypt key with given password")
+
+	// ErrAccountAlreadyExists is returned if an account attempted to import is
+	// already present in the keystore.
+	ErrAccountAlreadyExists = errors.New("account already exists")
 )
 
 // KeyStoreType is the reflect type of a keystore backend.
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
 
 // KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
-var KeyStoreScheme = "keystore"
+const KeyStoreScheme = "keystore"
 
 // Maximum time between wallet refreshes (if filesystem notifications don't work).
 const walletRefreshCycle = 3 * time.Second
@@ -71,7 +70,8 @@ type KeyStore struct {
 	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
 	updating    bool                    // Whether the event notification loop is running
 
-	mu sync.RWMutex
+	mu       sync.RWMutex
+	importMu sync.Mutex // Import Mutex locks the import to prevent two insertions from racing
 }
 
 type unlocked struct {
@@ -82,7 +82,7 @@ type unlocked struct {
 // NewKeyStore creates a keystore for the given directory.
 func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	keydir, _ = filepath.Abs(keydir)
-	ks := &KeyStore{storage: &keyStorePassphrase{keydir, scryptN, scryptP}}
+	ks := &KeyStore{storage: &keyStorePassphrase{keydir, scryptN, scryptP, false}}
 	ks.init(keydir)
 	return ks
 }
@@ -141,8 +141,10 @@ func (ks *KeyStore) refreshWallets() {
 	accs := ks.cache.accounts()
 
 	// Transform the current list of wallets into the new one
-	wallets := make([]accounts.Wallet, 0, len(accs))
-	events := []accounts.WalletEvent{}
+	var (
+		wallets = make([]accounts.Wallet, 0, len(accs))
+		events  []accounts.WalletEvent
+	)
 
 	for _, account := range accs {
 		// Drop wallets while they were in front of the next account
@@ -281,30 +283,9 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-	// Depending on the presence of the chain ID, sign with EIP155 or homestead
-	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
-	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
-}
-
-func (ks *KeyStore) ComputeOTAPPKeys(a accounts.Account, AX, AY, BX, BY string) ([]string, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	unlockedKey, found := ks.unlocked[a.Address]
-	if !found {
-		return nil, ErrLocked
-	}
-
-	pub1, priv1, priv2, err := crypto.GenerteOTAPrivateKey(unlockedKey.PrivateKey, unlockedKey.PrivateKey2, AX, AY, BX, BY)
-
-	pub1X := hexutil.Encode(common.LeftPadBytes(pub1.X.Bytes(), 32))
-	pub1Y := hexutil.Encode(common.LeftPadBytes(pub1.Y.Bytes(), 32))
-	priv1D := hexutil.Encode(common.LeftPadBytes(priv1.D.Bytes(), 32))
-	priv2D := hexutil.Encode(common.LeftPadBytes(priv2.D.Bytes(), 32))
-
-	return []string{pub1X, pub1Y, priv1D, priv2D}, err
+	// Depending on the presence of the chain ID, sign with 2718 or homestead
+	signer := types.LatestSignerForChainID(chainID)
+	return types.SignTx(tx, signer, unlockedKey.PrivateKey)
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -327,23 +308,15 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 		return nil, err
 	}
 	defer zeroKey(key.PrivateKey)
-
-	// Depending on the presence of the chain ID, sign with EIP155 or homestead
-	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
-	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
+	// Depending on the presence of the chain ID, sign with or without replay protection.
+	signer := types.LatestSignerForChainID(chainID)
+	return types.SignTx(tx, signer, key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.
 func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 	return ks.TimedUnlock(a, passphrase, 0)
 }
-
-func (ks *KeyStore) UnlockMemKey(a accounts.Account, keyjson []byte, passphrase string) error {
-	return ks.TimedUnlockMemKey(a, keyjson, passphrase, 0)
-}
-
 
 // Lock removes the private key with the given address from memory.
 func (ks *KeyStore) Lock(addr common.Address) error {
@@ -393,35 +366,6 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	return nil
 }
 
-func (ks *KeyStore) TimedUnlockMemKey(a accounts.Account, keyjson []byte, passphrase string, timeout time.Duration) error {
-	a, key, err := ks.getDecryptedKeyFromMemJson(a, keyjson, passphrase)
-	if err != nil {
-		return err
-	}
-
-	ks.mu.Lock()
-	defer ks.mu.Unlock()
-	u, found := ks.unlocked[a.Address]
-	if found {
-		if u.abort == nil {
-			// The address was unlocked indefinitely, so unlocking
-			// it with a timeout would be confusing.
-			zeroKey(key.PrivateKey)
-			return nil
-		}
-		// Terminate the expire goroutine and replace it below.
-		close(u.abort)
-	}
-	if timeout > 0 {
-		u = &unlocked{Key: key, abort: make(chan struct{})}
-		go ks.expire(a.Address, u, timeout)
-	} else {
-		u = &unlocked{Key: key}
-	}
-	ks.unlocked[a.Address] = u
-	return nil
-}
-
 // Find resolves the given account into a unique entry in the keystore.
 func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	ks.cache.maybeReload()
@@ -438,25 +382,6 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	}
 	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
 	return a, key, err
-}
-
-func (ks *KeyStore) getDecryptedKeyFromMemJson(a accounts.Account, keyjson []byte, auth string) (accounts.Account, *Key, error) {
-	key, err := ks.storage.GetKeyFromKeyJson(a.Address, keyjson, auth)
-	return a, key, err
-}
-
-// getEncryptedKey loads an encrypted keyfile from the disk
-func (ks *KeyStore) getEncryptedKey(a accounts.Account) (accounts.Account, *Key, error) {
-	a, err := ks.Find(a)
-	if err != nil {
-		return a, nil, err
-	}
-	key, err := ks.storage.GetEncryptedKey(a.Address, a.URL.Path)
-	if err != nil {
-		return a, nil, err
-	}
-	return a, key, nil
-
 }
 
 func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Duration) {
@@ -517,22 +442,27 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 	if err != nil {
 		return accounts.Account{}, err
 	}
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
+
+	if ks.cache.hasAddress(key.Address) {
+		return accounts.Account{
+			Address: key.Address,
+		}, ErrAccountAlreadyExists
+	}
 	return ks.importKey(key, newPassphrase)
 }
 
-// func (ks *KeyStore) ExportECDSA(a accounts.Account, passphrase string) ([]byte, []byte, error) {
-// 	_, key, err := ks.getDecryptedKey(a, passphrase)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	return crypto.FromECDSA(key.PrivateKey), crypto.FromECDSA(key.PrivateKey2), err
-// }
-
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
-func (ks *KeyStore) ImportECDSA(priv1, priv2 *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
-	key := newKeyFromECDSA(priv1, priv2)
+func (ks *KeyStore) ImportECDSAEth(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
+
+	key := newKeyFromECDSAEth(priv)
 	if ks.cache.hasAddress(key.Address) {
-		return accounts.Account{}, fmt.Errorf("account already exists")
+		return accounts.Account{
+			Address: key.Address,
+		}, ErrAccountAlreadyExists
 	}
 	return ks.importKey(key, passphrase)
 }
@@ -547,20 +477,12 @@ func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, er
 	return a, nil
 }
 
-// Update transitions an account from a previous format to the current one, also providing the possibility to change the pass-phrase
-func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string) error {
+// Update changes the passphrase of an existing account.
+func (ks *KeyStore) UpdateEth(a accounts.Account, passphrase, newPassphrase string) error {
 	a, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return err
 	}
-	if key.PrivateKey2 == nil {
-		sk2, err := crypto.GenerateKey()
-		if err != nil {
-			return err
-		}
-		key.PrivateKey2 = sk2
-	}
-	updateWaddress(key)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 
@@ -576,44 +498,8 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	return a, nil
 }
 
-// TODO: temp add, for quickly print public keys, maybe removed later
-func (ks *KeyStore) GetKey(a accounts.Account,  passphrase string) (*Key, error) {
-	keyJSON, err := ioutil.ReadFile(a.URL.Path)
-	if err != nil {
-		return nil, err
-	}
-	key, err := DecryptKey(keyJSON, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
-
-// GetWanAddress represents the keystore to retrieve corresponding wanchain public address for a specific ordinary account/address
-func (ks *KeyStore) GetWanAddress(account accounts.Account) (common.WAddress, error) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	unlockedKey, found := ks.unlocked[account.Address]
-	if !found {
-		_, ksen, err := ks.getEncryptedKey(account)
-		if err != nil {
-			return common.WAddress{}, ErrLocked
-		}
-		return ksen.WAddress, nil
-	}
-
-	ret := unlockedKey.WAddress
-	return ret, nil
-}
-
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *ecdsa.PrivateKey) {
-	if k == nil {
-		return
-	}
-
 	b := k.D.Bits()
 	for i := range b {
 		b[i] = 0

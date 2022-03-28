@@ -6,18 +6,19 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/pos/util"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/util"
 
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/core/vm"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/uleaderselection"
-	"github.com/wanchain/go-wanchain/pos/util/convert"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/uleaderselection"
+	"github.com/ethereum/go-ethereum/pos/util/convert"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
@@ -98,11 +99,11 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 		}
 
 		log.Debug("VerifySlotLeaderProofskGT aphaiPki", "index", index, "epochID", epochID, "slotID", slotID)
-		log.Debug("VerifySlotLeaderProofskGT", "epochID", epochID, "slotID", slotID, "slotLeaderRb", rbBytes[:])
+		log.Debug("VerifySlotLeaderProofskGT", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes[:]))
 
 		smaPiecesHexStr := make([]string, 0)
 		for _, value := range smaPieces {
-			smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+			smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)[:4]))
 		}
 		log.Debug("VerifySlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
 
@@ -120,7 +121,11 @@ func (s *SLS) VerifySlotProof(block *types.Block, epochID uint64, slotID uint64,
 	}
 
 	if !skGtValid {
-		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID)
+		log.Warn("VerifySlotLeaderProof Fail skGt is not valid", "epochID", epochID, "slotID", slotID, "chainId", posconfig.ChainId, "testnetId", params.TESTNET_CHAIN_ID)
+		// Recovery for testnet short time gwan down 2021-05-13
+		if posconfig.ChainId == params.TESTNET_CHAIN_ID && (epochID >= 18757 && epochID <= 18766) {
+			return s.verifySlotProofByGenesis(block, epochID, slotID, Proof, ProofMeg)
+		}
 		return false
 	}
 	log.Debug("VerifySlotLeaderProof skGt is verified successfully.", "epochID", epochID, "slotID", slotID)
@@ -189,7 +194,25 @@ func (s *SLS) getSlotLeaderProofByGenesis(PrivateKey *ecdsa.PrivateKey, epochID 
 		if !isDefault && !isGenesis {
 			return s.getSlotLeaderProof(PrivateKey, epRecovery, slotID)
 		}
+
+		// add by Jacob begin
+		// preEpochLeader exist but build SMA error.
+		if !isDefault && isGenesis {
+			return s.getSlotLeaderProofByGenesis(PrivateKey, epRecovery, slotID)
+		}
+		// preEpochLeader not exist and build SMA error.
+		//if isDefault && isGenesis {
+		//	goto genesisDeault
+		//}
+		// preEpochLeader not exist but SMA be generated successfully
+		if isDefault && !isGenesis {
+			log.Error("getSlotLeaderProof Mars should never come here")
+			panic("preEpochLeader not exist but SMA be generated successfully")
+		}
+		// add by Jacob end
 	}
+
+	//genesisDeault:
 
 	epochID = 0
 
@@ -225,20 +248,20 @@ func (s *SLS) getSlotLeaderProof(PrivateKey *ecdsa.PrivateKey, epochID uint64,
 	rbPtr, _ = s.getRandom(nil, epochID)
 	rbBytes := rbPtr.Bytes()
 
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID)
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "slotLeaderRb", hex.EncodeToString(rbBytes))
-
 	epochLeadersHexStr := make([]string, 0)
 	for _, value := range epochLeadersPtrPre {
-		epochLeadersHexStr = append(epochLeadersHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		epochLeadersHexStr = append(epochLeadersHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)[:4]))
 	}
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "epochLeadersHexStr", epochLeadersHexStr)
 
 	smaPiecesHexStr := make([]string, 0)
 	for _, value := range smaPiecesPtr {
-		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)))
+		smaPiecesHexStr = append(smaPiecesHexStr, hex.EncodeToString(crypto.FromECDSAPub(value)[:4]))
 	}
-	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID, "smaPiecesHexStr", smaPiecesHexStr)
+
+	log.Debug("getSlotLeaderProof", "epochID", epochID, "slotID", slotID,
+		"slotLeaderRb", hex.EncodeToString(rbBytes),
+		"epochLeadersHexStr", epochLeadersHexStr,
+		"smaPiecesHexStr", smaPiecesHexStr)
 
 	profMeg, proof, err := uleaderselection.GenerateSlotLeaderProof(PrivateKey, smaPiecesPtr, epochLeadersPtrPre,
 		rbBytes[:], slotID, epochID)

@@ -17,6 +17,7 @@
 package accounts
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -25,20 +26,19 @@ import (
 )
 
 // DefaultRootDerivationPath is the root path to which custom derivation endpoints
-// are appended. As such, the first account will be at m/44'/5718350'/0'/0, the second
-// at m/44'/5718350'/0'/1, etc.
-// 5718350 decimal = 0x57414E ; ASCII for 'W' 'A' 'N'
-var DefaultRootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 5718350, 0x80000000 + 0, 0}
+// are appended. As such, the first account will be at m/44'/60'/0'/0, the second
+// at m/44'/60'/0'/1, etc.
+var DefaultRootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}
 
 // DefaultBaseDerivationPath is the base path from which custom derivation endpoints
-// are incremented. As such, the first account will be at m/44'/5718350'/0'/0, the second
-// at m/44'/5718350'/0'/1, etc.
-var DefaultBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 5718350, 0x80000000 + 0, 0, 0}
+// are incremented. As such, the first account will be at m/44'/60'/0'/0/0, the second
+// at m/44'/60'/0'/0/1, etc.
+var DefaultBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0, 0}
 
-// DefaultLedgerBaseDerivationPath is the base path from which custom derivation endpoints
-// are incremented. As such, the first account will be at m/44'/5718350'/0'/0, the second
-// at m/44'/5718350'/0'/1, etc.
-var DefaultLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 5718350, 0x80000000 + 0, 0}
+// LegacyLedgerBaseDerivationPath is the legacy base path from which custom derivation
+// endpoints are incremented. As such, the first account will be at m/44'/60'/0'/0, the
+// second at m/44'/60'/0'/1, etc.
+var LegacyLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}
 
 // DerivationPath represents the computer friendly version of a hierarchical
 // deterministic wallet account derivaion path.
@@ -52,7 +52,6 @@ var DefaultLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000
 // defines that the `purpose` be 44' (or 0x8000002C) for crypto currencies, and
 // SLIP-44 https://github.com/satoshilabs/slips/blob/master/slip-0044.md assigns
 // the `coin_type` 60' (or 0x8000003C) to Ethereum.
-// And the `coin_type` 5718350' (or 0x8057414E) to Wanchain.
 //
 // The root path for Ethereum is m/44'/60'/0'/0 according to the specification
 // from https://github.com/ethereum/EIPs/issues/84, albeit it's not set in stone
@@ -134,4 +133,48 @@ func (path DerivationPath) String() string {
 		}
 	}
 	return result
+}
+
+// MarshalJSON turns a derivation path into its json-serialized string
+func (path DerivationPath) MarshalJSON() ([]byte, error) {
+	return json.Marshal(path.String())
+}
+
+// UnmarshalJSON a json-serialized string back into a derivation path
+func (path *DerivationPath) UnmarshalJSON(b []byte) error {
+	var dp string
+	var err error
+	if err = json.Unmarshal(b, &dp); err != nil {
+		return err
+	}
+	*path, err = ParseDerivationPath(dp)
+	return err
+}
+
+// DefaultIterator creates a BIP-32 path iterator, which progresses by increasing the last component:
+// i.e. m/44'/60'/0'/0/0, m/44'/60'/0'/0/1, m/44'/60'/0'/0/2, ... m/44'/60'/0'/0/N.
+func DefaultIterator(base DerivationPath) func() DerivationPath {
+	path := make(DerivationPath, len(base))
+	copy(path[:], base[:])
+	// Set it back by one, so the first call gives the first result
+	path[len(path)-1]--
+	return func() DerivationPath {
+		path[len(path)-1]++
+		return path
+	}
+}
+
+// LedgerLiveIterator creates a bip44 path iterator for Ledger Live.
+// Ledger Live increments the third component rather than the fifth component
+// i.e. m/44'/60'/0'/0/0, m/44'/60'/1'/0/0, m/44'/60'/2'/0/0, ... m/44'/60'/N'/0/0.
+func LedgerLiveIterator(base DerivationPath) func() DerivationPath {
+	path := make(DerivationPath, len(base))
+	copy(path[:], base[:])
+	// Set it back by one, so the first call gives the first result
+	path[2]--
+	return func() DerivationPath {
+		// ledgerLivePathIterator iterates on the third component
+		path[2]++
+		return path
+	}
 }

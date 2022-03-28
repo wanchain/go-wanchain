@@ -22,12 +22,13 @@ import (
 	"math/big"
 )
 
+// Various big integer limit values.
 var (
 	tt255     = BigPow(2, 255)
 	tt256     = BigPow(2, 256)
 	tt256m1   = new(big.Int).Sub(tt256, big.NewInt(1))
-	MaxBig256 = new(big.Int).Set(tt256m1)
 	tt63      = BigPow(2, 63)
+	MaxBig256 = new(big.Int).Set(tt256m1)
 	MaxBig63  = new(big.Int).Sub(tt63, big.NewInt(1))
 )
 
@@ -40,6 +41,13 @@ const (
 
 // HexOrDecimal256 marshals big.Int as hex or decimal.
 type HexOrDecimal256 big.Int
+
+// NewHexOrDecimal256 creates a new HexOrDecimal256
+func NewHexOrDecimal256(x int64) *HexOrDecimal256 {
+	b := big.NewInt(x)
+	h := HexOrDecimal256(*b)
+	return &h
+}
 
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (i *HexOrDecimal256) UnmarshalText(input []byte) error {
@@ -57,6 +65,40 @@ func (i *HexOrDecimal256) MarshalText() ([]byte, error) {
 		return []byte("0x0"), nil
 	}
 	return []byte(fmt.Sprintf("%#x", (*big.Int)(i))), nil
+}
+
+// Decimal256 unmarshals big.Int as a decimal string. When unmarshalling,
+// it however accepts either "0x"-prefixed (hex encoded) or non-prefixed (decimal)
+type Decimal256 big.Int
+
+// NewHexOrDecimal256 creates a new Decimal256
+func NewDecimal256(x int64) *Decimal256 {
+	b := big.NewInt(x)
+	d := Decimal256(*b)
+	return &d
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (i *Decimal256) UnmarshalText(input []byte) error {
+	bigint, ok := ParseBig256(string(input))
+	if !ok {
+		return fmt.Errorf("invalid hex or decimal integer %q", input)
+	}
+	*i = Decimal256(*bigint)
+	return nil
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (i *Decimal256) MarshalText() ([]byte, error) {
+	return []byte(i.String()), nil
+}
+
+// String implements Stringer.
+func (i *Decimal256) String() string {
+	if i == nil {
+		return "0"
+	}
+	return fmt.Sprintf("%#d", (*big.Int)(i))
 }
 
 // ParseBig256 parses s as a 256 bit integer in decimal or hexadecimal syntax.
@@ -78,7 +120,7 @@ func ParseBig256(s string) (*big.Int, bool) {
 	return bigint, ok
 }
 
-// MustParseBig parses s as a 256 bit big integer and panics if the string is invalid.
+// MustParseBig256 parses s as a 256 bit big integer and panics if the string is invalid.
 func MustParseBig256(s string) *big.Int {
 	v, ok := ParseBig256(s)
 	if !ok {
@@ -176,6 +218,12 @@ func U256(x *big.Int) *big.Int {
 	return x.And(x, tt256m1)
 }
 
+// U256Bytes converts a big Int into a 256bit EVM number.
+// This operation is destructive.
+func U256Bytes(n *big.Int) []byte {
+	return PaddedBigBytes(U256(n), 32)
+}
+
 // S256 interprets x as a two's complement number.
 // x must not exceed 256 bits (the result is undefined if it does) and is not modified.
 //
@@ -186,9 +234,8 @@ func U256(x *big.Int) *big.Int {
 func S256(x *big.Int) *big.Int {
 	if x.Cmp(tt255) < 0 {
 		return x
-	} else {
-		return new(big.Int).Sub(x, tt256)
 	}
+	return new(big.Int).Sub(x, tt256)
 }
 
 // Exp implements exponentiation by squaring.

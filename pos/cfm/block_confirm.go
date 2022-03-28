@@ -2,12 +2,12 @@ package cfm
 
 import (
 	"errors"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/common/hexutil"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/crypto"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"time"
 )
 
@@ -170,7 +170,7 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) (blkStatus []*BlkStatus, stop u
 			sbs.SuffixBlockNonTrusted = sbs.SuffixBlockNonTrusted + 1
 		}
 
-		slotsCount := c.getSlotsCount(blk.Time().Uint64(), timeNow, posconfig.SlotTime)
+		slotsCount := c.getSlotsCount(blk.Time(), timeNow, posconfig.SlotTime)
 		//X				= Sx + NHX + Empty
 		//Empty			= X - Sx - NHX
 		//Sx - Empty 	= Sx - (X-Sx-NHX) = Sx -X + Sx +NHX = 2Sx+NHX-X
@@ -188,7 +188,7 @@ func (c *CFM) scanAllBlockStatus(timeNow uint64) (blkStatus []*BlkStatus, stop u
 			"Coinbase", blk.Coinbase(),
 			"wl", inWhiteList,
 			"now", timeNow,
-			"blokTime", blk.Time().Uint64(),
+			"blokTime", blk.Time(),
 			"slotCounts", slotsCount,
 			"Sx", sbs.SuffixBlockTrusted,
 			"NHx", sbs.SuffixBlockNonTrusted,

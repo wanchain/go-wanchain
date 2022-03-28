@@ -1,0 +1,22 @@
+diff --git a/core/state_processor.go b/core/state_processor.go
+index d5dc98bbb..88544198a 100755
+--- a/core/state_processor.go
++++ b/core/state_processor.go
+@@ -104,6 +104,8 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, bc ChainCon
+ 	txContext := NewEVMTxContext(msg)
+ 	evm.Reset(txContext, statedb)
+ 
++	statedb.IntermediateRoot(config.IsEIP158(blockNumber)).Bytes()
++
+ 	// Apply the transaction to the current state (included in the env).
+ 	result, err := ApplyMessage(evm, msg, gp)
+ 	if err != nil {
+@@ -114,6 +116,8 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, bc ChainCon
+ 	var root []byte
+ 	if config.IsByzantium(blockNumber) {
+ 		statedb.Finalise(true)
++		r2 := statedb.IntermediateRoot(config.IsEIP158(blockNumber)).Bytes()
++		fmt.Println("aaaaaaaaaaa:", r2)
+ 	} else {
+ 		root = statedb.IntermediateRoot(config.IsEIP158(blockNumber)).Bytes()
+ 	}

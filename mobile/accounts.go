@@ -23,10 +23,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/wanchain/go-wanchain/accounts"
-	"github.com/wanchain/go-wanchain/accounts/keystore"
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (
@@ -203,7 +203,7 @@ func (ks *KeyStore) ImportECDSAKey(key []byte, passphrase string) (account *Acco
 	if err != nil {
 		return nil, err
 	}
-	acc, err := ks.keystore.ImportECDSA(privkey, nil, passphrase)
+	acc, err := ks.keystore.ImportECDSA(privkey, passphrase)
 	if err != nil {
 		return nil, err
 	}

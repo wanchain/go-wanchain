@@ -1021,7 +1021,7 @@ var formatOutputInt = function (param) {
     var value = param.staticPart() || "0";
 
     // check if it's negative number
-    // it it is, return two's complement
+    // it is, return two's complement
     if (signedIsNegative(value)) {
         return new BigNumber(value, 16).minus(new BigNumber('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', 16)).minus(1);
     }
@@ -1761,40 +1761,40 @@ if (typeof XMLHttpRequest === 'undefined') {
 /// required to define ETH_BIGNUMBER_ROUNDING_MODE
 var BigNumber = require('bignumber.js');
 
-var WAN_UNITS = [
-    'win',
-    'kwin',
-    'Mwin',
-    'Gwin',
+var ETH_UNITS = [
+    'wei',
+    'kwei',
+    'Mwei',
+    'Gwei',
     'szabo',
     'finney',
-    'femtowan',
-    'picowan',
-    'nanowan',
-    'microwan',
-    'milliwan',
+    'femtoether',
+    'picoether',
+    'nanoether',
+    'microether',
+    'milliether',
     'nano',
     'micro',
     'milli',
-    'wan',
+    'ether',
     'grand',
-    'Mwan',
-    'Gwan',
-    'Twan',
-    'Pwan',
-    'Ewan',
-    'Zwan',
-    'Ywan',
-    'Nwan',
-    'Dwan',
-    'Vwan',
-    'Uwan'
+    'Mether',
+    'Gether',
+    'Tether',
+    'Pether',
+    'Eether',
+    'Zether',
+    'Yether',
+    'Nether',
+    'Dether',
+    'Vether',
+    'Uether'
 ];
 
 module.exports = {
     ETH_PADDING: 32,
     ETH_SIGNATURE_LENGTH: 4,
-    WAN_UNITS: WAN_UNITS,
+    ETH_UNITS: ETH_UNITS,
     ETH_BIGNUMBER_ROUNDING_MODE: { ROUNDING_MODE: BigNumber.ROUND_DOWN },
     ETH_POLLING_TIMEOUT: 1000/2,
     defaultBlock: 'latest',
@@ -1884,33 +1884,33 @@ var sha3 = require('./sha3.js');
 var utf8 = require('utf8');
 
 var unitMap = {
-    'nowan':      '0',
-    'win':          '1',
-    'kwin':         '1000',
-    'Kwin':         '1000',
+    'noether':      '0',
+    'wei':          '1',
+    'kwei':         '1000',
+    'Kwei':         '1000',
     'babbage':      '1000',
-    'femtowan':   '1000',
-    'mwin':         '1000000',
-    'Mwin':         '1000000',
+    'femtoether':   '1000',
+    'mwei':         '1000000',
+    'Mwei':         '1000000',
     'lovelace':     '1000000',
-    'picowan':    '1000000',
-    'gwin':         '1000000000',
-    'Gwin':         '1000000000',
+    'picoether':    '1000000',
+    'gwei':         '1000000000',
+    'Gwei':         '1000000000',
     'shannon':      '1000000000',
-    'nanowan':    '1000000000',
+    'nanoether':    '1000000000',
     'nano':         '1000000000',
     'szabo':        '1000000000000',
-    'microwan':   '1000000000000',
+    'microether':   '1000000000000',
     'micro':        '1000000000000',
     'finney':       '1000000000000000',
-    'milliwan':    '1000000000000000',
+    'milliether':    '1000000000000000',
     'milli':         '1000000000000000',
-    'wan':        '1000000000000000000',
-    'kwan':       '1000000000000000000000',
+    'ether':        '1000000000000000000',
+    'kether':       '1000000000000000000000',
     'grand':        '1000000000000000000000',
-    'mwan':       '1000000000000000000000000',
-    'gwan':       '1000000000000000000000000000',
-    'twan':       '1000000000000000000000000000000'
+    'mether':       '1000000000000000000000000',
+    'gether':       '1000000000000000000000000000',
+    'tether':       '1000000000000000000000000000000'
 };
 
 /**
@@ -2121,15 +2121,15 @@ var toHex = function (val) {
 };
 
 /**
- * Returns value of unit in Win
+ * Returns value of unit in Wei
  *
  * @method getValueOfUnit
  * @param {String} unit the unit to convert to, default ether
- * @returns {BigNumber} value of the unit (in Win)
+ * @returns {BigNumber} value of the unit (in Wei)
  * @throws error if the unit is not correct:w
  */
 var getValueOfUnit = function (unit) {
-    unit = unit ? unit.toLowerCase() : 'wan';
+    unit = unit ? unit.toLowerCase() : 'ether';
     var unitValue = unitMap[unit];
     if (unitValue === undefined) {
         throw new Error('This unit doesn\'t exists, please use the one of the following units' + JSON.stringify(unitMap, null, 2));
@@ -2138,62 +2138,62 @@ var getValueOfUnit = function (unit) {
 };
 
 /**
- * Takes a number of win and converts it to any other wan unit.
+ * Takes a number of wei and converts it to any other ether unit.
  *
  * Possible units are:
  *   SI Short   SI Full        Effigy       Other
- * - kwin       femtowan     babbage
- * - mwin       picowan      lovelace
- * - gwin       nanowan      shannon      nano
- * - --         microwan     szabo        micro
- * - --         milliwan     finney       milli
- * - wan      --             --
- * - kwan                    --           grand
- * - mwan
- * - gwan
- * - twan
+ * - kwei       femtoether     babbage
+ * - mwei       picoether      lovelace
+ * - gwei       nanoether      shannon      nano
+ * - --         microether     szabo        micro
+ * - --         milliether     finney       milli
+ * - ether      --             --
+ * - kether                    --           grand
+ * - mether
+ * - gether
+ * - tether
  *
- * @method fromWin
+ * @method fromWei
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert to, default wan
+ * @param {String} unit the unit to convert to, default ether
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
-var fromWin = function(number, unit) {
+var fromWei = function(number, unit) {
     var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
 
 /**
- * Takes a number of a unit and converts it to win.
+ * Takes a number of a unit and converts it to wei.
  *
  * Possible units are:
  *   SI Short   SI Full        Effigy       Other
- * - kwin       femtowan     babbage
- * - mwin       picowan      lovelace
- * - gwin       nanowan      shannon      nano
- * - --         microwan     szabo        micro
- * - --         microwan     szabo        micro
- * - --         milliwan     finney       milli
- * - wan      --             --
- * - kwan                    --           grand
- * - mwan
- * - gwan
- * - twan
+ * - kwei       femtoether     babbage
+ * - mwei       picoether      lovelace
+ * - gwei       nanoether      shannon      nano
+ * - --         microether     szabo        micro
+ * - --         microether     szabo        micro
+ * - --         milliether     finney       milli
+ * - ether      --             --
+ * - kether                    --           grand
+ * - mether
+ * - gether
+ * - tether
  *
- * @method toWin
+ * @method toWei
  * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert from, default wan
+ * @param {String} unit the unit to convert from, default ether
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
-var toWin = function(number, unit) {
+var toWei = function(number, unit) {
     var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
 
 /**
- * Takes an input and transforms it into an bignumber
+ * Takes an input and transforms it into a bignumber
  *
  * @method toBigNumber
  * @param {Number|String|BigNumber} a number, string, HEX string or BigNumber
@@ -2231,7 +2231,7 @@ var toTwosComplement = function (number) {
  * Checks if the given string is strictly an address
  *
  * @method isStrictAddress
- * @param {String} address the given HEX adress
+ * @param {String} address the given HEX address
  * @return {Boolean}
 */
 var isStrictAddress = function (address) {
@@ -2242,7 +2242,7 @@ var isStrictAddress = function (address) {
  * Checks if the given string is an address
  *
  * @method isAddress
- * @param {String} address the given HEX adress
+ * @param {String} address the given HEX address
  * @return {Boolean}
 */
 var isAddress = function (address) {
@@ -2250,7 +2250,7 @@ var isAddress = function (address) {
         // check if it has the basic requirements of an address
         return false;
     } else if (/^(0x)?[0-9a-f]{40}$/.test(address) || /^(0x)?[0-9A-F]{40}$/.test(address)) {
-        // If it's all small caps or all all caps, return true
+        // If it's all small caps or all caps, return true
         return true;
     } else {
         // Otherwise check each case
@@ -2262,7 +2262,7 @@ var isAddress = function (address) {
  * Checks if the given string is a checksummed address
  *
  * @method isChecksumAddress
- * @param {String} address the given HEX adress
+ * @param {String} address the given HEX address
  * @return {Boolean}
 */
 var isChecksumAddress = function (address) {
@@ -2272,7 +2272,7 @@ var isChecksumAddress = function (address) {
 
     for (var i = 0; i < 40; i++ ) {
         // the nth letter should be uppercase if the nth digit of casemap is 1
-        if ((parseInt(addressHash[i], 16) > 7 && address[i].toLowerCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toUpperCase() !== address[i])) {
+        if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
             return false;
         }
     }
@@ -2285,7 +2285,7 @@ var isChecksumAddress = function (address) {
  * Makes a checksum address
  *
  * @method toChecksumAddress
- * @param {String} address the given HEX adress
+ * @param {String} address the given HEX address
  * @return {String}
 */
 var toChecksumAddress = function (address) {
@@ -2297,7 +2297,7 @@ var toChecksumAddress = function (address) {
 
     for (var i = 0; i < address.length; i++ ) {
         // If ith character is 9 to f then make it uppercase
-        if (parseInt(addressHash[i], 16) <= 7) {
+        if (parseInt(addressHash[i], 16) > 7) {
           checksumAddress += address[i].toUpperCase();
         } else {
             checksumAddress += address[i];
@@ -2453,8 +2453,8 @@ module.exports = {
     transformToFullName: transformToFullName,
     extractDisplayName: extractDisplayName,
     extractTypeName: extractTypeName,
-    toWin: toWin,
-    fromWin: fromWin,
+    toWei: toWei,
+    fromWei: fromWei,
     toBigNumber: toBigNumber,
     toTwosComplement: toTwosComplement,
     toAddress: toAddress,
@@ -2577,8 +2577,8 @@ Web3.prototype.fromUtf8 = utils.fromUtf8;
 Web3.prototype.toDecimal = utils.toDecimal;
 Web3.prototype.fromDecimal = utils.fromDecimal;
 Web3.prototype.toBigNumber = utils.toBigNumber;
-Web3.prototype.toWin = utils.toWin;
-Web3.prototype.fromWin = utils.fromWin;
+Web3.prototype.toWei = utils.toWei;
+Web3.prototype.fromWei = utils.fromWei;
 Web3.prototype.isAddress = utils.isAddress;
 Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
 Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
@@ -3005,7 +3005,7 @@ var ContractFactory = function (eth, abi) {
 
         if (callback) {
 
-            // wait for the contract address adn check if the code was deployed
+            // wait for the contract address and check if the code was deployed
             this.eth.sendTransaction(options, function (err, hash) {
                 if (err) {
                     callback(err);
@@ -3058,7 +3058,7 @@ ContractFactory.prototype.at = function (address, callback) {
     var contract = new Contract(this.eth, this.abi, address);
 
     // this functions are not part of prototype,
-    // because we dont want to spoil the interface
+    // because we don't want to spoil the interface
     addFunctionsToContract(contract);
     addEventsToContract(contract);
 
@@ -3736,7 +3736,7 @@ var inputCallFormatter = function (options){
         options.to = inputAddressFormatter(options.to);
     }
 
-    ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+    ['maxFeePerGas', 'maxPriorityFeePerGas', 'gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
         return options[key] !== undefined;
     }).forEach(function(key){
         options[key] = utils.fromDecimal(options[key]);
@@ -3761,7 +3761,7 @@ var inputTransactionFormatter = function (options){
         options.to = inputAddressFormatter(options.to);
     }
 
-    ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+    ['maxFeePerGas', 'maxPriorityFeePerGas', 'gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
         return options[key] !== undefined;
     }).forEach(function(key){
         options[key] = utils.fromDecimal(options[key]);
@@ -3785,6 +3785,12 @@ var outputTransactionFormatter = function (tx){
     tx.nonce = utils.toDecimal(tx.nonce);
     tx.gas = utils.toDecimal(tx.gas);
     tx.gasPrice = utils.toBigNumber(tx.gasPrice);
+    if(tx.maxFeePerGas !== undefined) {
+      tx.maxFeePerGas = utils.toBigNumber(tx.maxFeePerGas);
+    }
+    if(tx.maxPriorityFeePerGas !== undefined) {
+      tx.maxPriorityFeePerGas = utils.toBigNumber(tx.maxPriorityFeePerGas);
+    }
     tx.value = utils.toBigNumber(tx.value);
     return tx;
 };
@@ -3803,7 +3809,9 @@ var outputTransactionReceiptFormatter = function (receipt){
         receipt.transactionIndex = utils.toDecimal(receipt.transactionIndex);
     receipt.cumulativeGasUsed = utils.toDecimal(receipt.cumulativeGasUsed);
     receipt.gasUsed = utils.toDecimal(receipt.gasUsed);
-
+    if(receipt.effectiveGasPrice !== undefined) {
+      receipt.effectiveGasPrice = utils.toBigNumber(receipt.effectiveGasPrice);
+    }
     if(utils.isArray(receipt.logs)) {
         receipt.logs = receipt.logs.map(function(log){
             return outputLogFormatter(log);
@@ -3821,8 +3829,10 @@ var outputTransactionReceiptFormatter = function (receipt){
  * @returns {Object}
 */
 var outputBlockFormatter = function(block) {
-
     // transform to number
+    if (block.baseFeePerGas !== undefined) {
+      block.baseFeePerGas = utils.toBigNumber(block.baseFeePerGas);
+    }
     block.gasLimit = utils.toDecimal(block.gasLimit);
     block.gasUsed = utils.toDecimal(block.gasUsed);
     block.size = utils.toDecimal(block.size);
@@ -5635,21 +5645,21 @@ var methods = function () {
 
     var importRawKey = new Method({
         name: 'importRawKey',
-		    call: 'personal_importRawKey',
-		    params: 3
+		call: 'personal_importRawKey',
+		params: 2
     });
 
     var sign = new Method({
         name: 'sign',
-		    call: 'personal_sign',
-		    params: 3,
-		    inputFormatter: [null, formatters.inputAddressFormatter, null]
+		call: 'personal_sign',
+		params: 3,
+		inputFormatter: [null, formatters.inputAddressFormatter, null]
     });
 
     var ecRecover = new Method({
         name: 'ecRecover',
-		    call: 'personal_ecRecover',
-		    params: 2
+		call: 'personal_ecRecover',
+		params: 2
     });
 
     var unlockAccount = new Method({
@@ -5896,7 +5906,7 @@ module.exports = Shh;
  * @author Alex Beregszaszi <alex@rtfs.hu>
  * @date 2016
  *
- * Reference: https://github.com/wanchain/go-wanchain/blob/swarm/internal/web3ext/web3ext.go#L33
+ * Reference: https://github.com/ethereum/go-ethereum/blob/swarm/internal/web3ext/web3ext.go#L33
  */
 
 "use strict";
@@ -6769,7 +6779,7 @@ var transferToAddress = function (eth, from, to, value, callback) {
  * @method deposit
  * @param {String} from
  * @param {String} to
- * @param {Value} value to be transfered
+ * @param {Value} value to be transferred
  * @param {String} client unique identifier
  * @param {Function} callback, callback
  */
@@ -13641,97 +13651,96 @@ module.exports = transfer;
 
 },{}],86:[function(require,module,exports){
 module.exports = XMLHttpRequest;
-
-},{}],87:[function(require,module,exports){
-/* wan.js */
+  },{}],87:[function(require,module,exports){
+    /* wan.js */
     var Method = require('../method');
     var formatters = require('../formatters');
 
     function Wan(web3) {
-        this._requestManager = web3._requestManager;
+      this._requestManager = web3._requestManager;
 
-        var self = this;
+      var self = this;
 
-        methods().forEach(function(method) {
-            method.attachToObject(self);
-            method.setRequestManager(self._requestManager);
-        });
+      methods().forEach(function(method) {
+        method.attachToObject(self);
+        method.setRequestManager(self._requestManager);
+      });
 
-        properties().forEach(function(p) {
-            p.attachToObject(self);
-            p.setRequestManager(self._requestManager);
-        });
+      properties().forEach(function(p) {
+        p.attachToObject(self);
+        p.setRequestManager(self._requestManager);
+      });
     }
 
     var methods = function () {
-        var getWanAddress = new Method({
-            name: 'getWanAddress',
-            call: 'wan_getWanAddress',
-            params: 1,
-            inputFormatter: [formatters.inputAddressFormatter]
-        });
+      var getWanAddress = new Method({
+        name: 'getWanAddress',
+        call: 'wan_getWanAddress',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+      });
 
-        var generateOneTimeAddress = new Method({
-            name: 'generateOneTimeAddress',
-            call: 'wan_generateOneTimeAddress',
-            params: 1,
-            inputFormatter: [null]
-        });
+      var generateOneTimeAddress = new Method({
+        name: 'generateOneTimeAddress',
+        call: 'wan_generateOneTimeAddress',
+        params: 1,
+        inputFormatter: [null]
+      });
 
-        var getOTAMixSet = new Method({
-            name: 'getOTAMixSet',
-            call: 'wan_getOTAMixSet',
-            params: 2,
-            inputFormatter: [null, null]
-        });
+      var getOTAMixSet = new Method({
+        name: 'getOTAMixSet',
+        call: 'wan_getOTAMixSet',
+        params: 2,
+        inputFormatter: [null, null]
+      });
 
-        var checkOTAUsed = new Method({
-          name: 'checkOTAUsed',
-          call: 'wan_checkOTAUsed',
-          params: 1,
-          inputFormatter: [null]
-        });
+      var checkOTAUsed = new Method({
+        name: 'checkOTAUsed',
+        call: 'wan_checkOTAUsed',
+        params: 1,
+        inputFormatter: [null]
+      });
 
-        var computeOTAPPKeys = new Method({
-            name: 'computeOTAPPKeys',
-            call: 'wan_computeOTAPPKeys',
-            params: 2,
-            inputFormatter: [formatters.inputAddressFormatter, null]
-        });
+      var computeOTAPPKeys = new Method({
+        name: 'computeOTAPPKeys',
+        call: 'wan_computeOTAPPKeys',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, null]
+      });
 
-        var getOTABalance = new Method({
-            name: 'getOTABalance',
-            call: 'wan_getOTABalance',
-            params: 2,
-            inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
-            outputFormatter: formatters.outputBigNumberFormatter
-        });
+      var getOTABalance = new Method({
+        name: 'getOTABalance',
+        call: 'wan_getOTABalance',
+        params: 2,
+        inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
+        outputFormatter: formatters.outputBigNumberFormatter
+      });
 
-        var getSupportWanCoinOTABalances = new Method ({
-            name: 'getSupportWanCoinOTABalances',
-            call: 'wan_getSupportWanCoinOTABalances',
-            params: 0,
-        });
+      var getSupportWanCoinOTABalances = new Method ({
+        name: 'getSupportWanCoinOTABalances',
+        call: 'wan_getSupportWanCoinOTABalances',
+        params: 0,
+      });
 
-        var getSupportStampOTABalances = new Method ({
-            name: 'getSupportStampOTABalances',
-            call: 'wan_getSupportStampOTABalances',
-            params: 0,
-        });
+      var getSupportStampOTABalances = new Method ({
+        name: 'getSupportStampOTABalances',
+        call: 'wan_getSupportStampOTABalances',
+        params: 0,
+      });
 
-        return [
-            computeOTAPPKeys,
-            getWanAddress,
-            generateOneTimeAddress,
-            getOTAMixSet,
-            checkOTAUsed,
-            getOTABalance,
-            getSupportWanCoinOTABalances,
-            getSupportStampOTABalances,
-        ];
+      return [
+        computeOTAPPKeys,
+        getWanAddress,
+        generateOneTimeAddress,
+        getOTAMixSet,
+        checkOTAUsed,
+        getOTABalance,
+        getSupportWanCoinOTABalances,
+        getSupportStampOTABalances,
+      ];
     };
     var properties = function () {
-        return [];
+      return [];
     };
 module.exports = Wan;
 },{"../formatters":30,"../method":36}],"bignumber.js":[function(require,module,exports){
@@ -13743,7 +13752,7 @@ module.exports = BigNumber; // jshint ignore:line
 },{}],"web3":[function(require,module,exports){
 var Web3 = require('./lib/web3');
 
-// dont override global variable
+// don't override global variable
 if (typeof window !== 'undefined' && typeof window.Web3 === 'undefined') {
     window.Web3 = Web3;
 }
@@ -13751,4 +13760,4 @@ if (typeof window !== 'undefined' && typeof window.Web3 === 'undefined') {
 module.exports = Web3;
 
 },{"./lib/web3":22}]},{},["web3"])
-//# sourceMappingURL=web3-light.js.map
+

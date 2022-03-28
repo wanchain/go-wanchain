@@ -1,7 +1,7 @@
 package slotleader
 
 import (
-	"github.com/wanchain/go-wanchain/rpc"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 

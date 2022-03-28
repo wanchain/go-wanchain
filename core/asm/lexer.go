@@ -48,7 +48,7 @@ const (
 	lineEnd                           // emitted when a line ends
 	invalidStatement                  // any invalid statement
 	element                           // any element during element parsing
-	label                             // label is emitted when a labal is found
+	label                             // label is emitted when a label is found
 	labelDef                          // label definition is emitted when a new label is found
 	number                            // number is emitted when a number is found
 	stringValue                       // stringValue is emitted when a string has been found
@@ -95,7 +95,7 @@ type lexer struct {
 
 // lex lexes the program by name with the given source. It returns a
 // channel on which the tokens are delivered.
-func Lex(name string, source []byte, debug bool) <-chan token {
+func Lex(source []byte, debug bool) <-chan token {
 	ch := make(chan token)
 	l := &lexer{
 		input:  string(source),
@@ -206,7 +206,7 @@ func lexLine(l *lexer) stateFn {
 			return lexComment
 		case isSpace(r):
 			l.ignore()
-		case isAlphaNumeric(r) || r == '_':
+		case isLetter(r) || r == '_':
 			return lexElement
 		case isNumber(r):
 			return lexNumber
@@ -234,7 +234,7 @@ func lexComment(l *lexer) stateFn {
 // the lex text state function to advance the parsing
 // process.
 func lexLabel(l *lexer) stateFn {
-	l.acceptRun(Alpha + "_")
+	l.acceptRun(Alpha + "_" + Numbers)
 
 	l.emit(label)
 
@@ -242,7 +242,7 @@ func lexLabel(l *lexer) stateFn {
 }
 
 // lexInsideString lexes the inside of a string until
-// until the state function finds the closing quote.
+// the state function finds the closing quote.
 // It returns the lex text state function.
 func lexInsideString(l *lexer) stateFn {
 	if l.acceptRunUntil('"') {
@@ -254,7 +254,7 @@ func lexInsideString(l *lexer) stateFn {
 
 func lexNumber(l *lexer) stateFn {
 	acceptance := Numbers
-	if l.accept("0") || l.accept("xX") {
+	if l.accept("xX") {
 		acceptance = HexadecimalNumbers
 	}
 	l.acceptRun(acceptance)
@@ -278,7 +278,7 @@ func lexElement(l *lexer) stateFn {
 	return lexLine
 }
 
-func isAlphaNumeric(t rune) bool {
+func isLetter(t rune) bool {
 	return unicode.IsLetter(t)
 }
 

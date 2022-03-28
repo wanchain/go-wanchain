@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 )
 
 func TestCalcBaseSubsidy(t *testing.T) {

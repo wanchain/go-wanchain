@@ -9,20 +9,21 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/pos/util"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/pos/util"
+	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core"
-	"github.com/wanchain/go-wanchain/core/state"
-	"github.com/wanchain/go-wanchain/core/vm"
-	"github.com/wanchain/go-wanchain/crypto"
-	bn256 "github.com/wanchain/go-wanchain/crypto/bn256/cloudflare"
-	"github.com/wanchain/go-wanchain/log"
-	"github.com/wanchain/go-wanchain/pos/incentive"
-	"github.com/wanchain/go-wanchain/pos/posconfig"
-	"github.com/wanchain/go-wanchain/pos/posdb"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
 )
 
 var (
@@ -736,6 +737,7 @@ func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.I
 		core.Transfer(db, sender, recipient, amount)
 	}
 }
+
 func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId uint64) bool {
 	checkCount := (uint64)(64)
 	for i := (uint64)(1); i <= checkCount; i++ {
@@ -773,7 +775,7 @@ func CleanInactiveValidator(stateDb *state.StateDB, epochID uint64) {
 		}
 	}
 }
-func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
+func StakeOutRun(stateDb *state.StateDB, epochID uint64, chainId int64) bool {
 	if vm.StakeoutIsFinished(stateDb, epochID) {
 		return true
 	}
@@ -910,5 +912,16 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 	}
 	saveStakeOut(stakeOutInfo, epochID)
+	if chainId == params.MainnetChainId {
+		// TODO fix bugs.
+		if epochID == 18146 {
+			value, _ := big.NewInt(0).SetString("2500000000000000000000", 10)
+			coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xa70e1b8F66717609305BBf288d46dd34c2328Fd9"), value)
+		}
+		if epochID == 18247 {
+			value, _ := big.NewInt(0).SetString("1000000000000000000000", 10)
+			coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xeFBd4Bf1aD83ba480865DD6de322D39FbEa445F1"), value)
+		}
+	}
 	return true
 }
