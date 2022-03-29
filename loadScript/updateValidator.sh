@@ -1,6 +1,6 @@
 #!/bin/bash
 # set -x
-DOCKERIMG=wanchain/client-go:3.0.0-beta
+DOCKERIMG=wanchain/client-go:3.0.0-beta.1
 
 echo ''
 echo ''
@@ -22,6 +22,7 @@ echo 'Please Enter your validator Address'
 read addrNew
 echo 'Please Enter your password of Validator account:'
 read -s PASSWD
+read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 echo ''
 echo ''
 echo ''
@@ -67,9 +68,13 @@ fi
 
 echo 'Please wait a few seconds...'
 
-sleep 5
+sleep 10
 
-sudo rm ~/.wanchain/pw.txt
+if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
+    sudo docker container update --restart=always gwan
+else
+    sudo rm ~/.wanchain/pw.txt
+fi
 
 if [ $? -ne 0 ]; then
     echo "rm pw.txt failed"
