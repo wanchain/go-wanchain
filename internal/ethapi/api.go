@@ -2071,6 +2071,11 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 
 // Version returns the current ethereum protocol version.
 func (s *PublicNetAPI) Version() string {
+	if posutil.IsJupiterForkArrived() {
+		if params.JupiterChainId(s.networkVersion) != params.NOT_JUPITER_CHAIN_ID {
+			return fmt.Sprintf("%d", params.JupiterChainId(s.networkVersion))
+		}
+	}
 	return fmt.Sprintf("%d", s.networkVersion)
 }
 
