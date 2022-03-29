@@ -890,9 +890,8 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	}
 	var totalIncentive *big.Int
 	if params.IsLondonActive() {
-		inst := posutil.PosAvgRetInst()
 		_totalIncentive := inst.GetYearReward(epid)
-		totalIncentive = _totalIncentive.Div(_totalIncentive, big.NewInt(365))
+		totalIncentive = inst.CalcBaseSubsidy(_totalIncentive)
 	} else {
 		_totalIncentive, err := inst.GetAllIncentive(epid)
 		if err != nil || _totalIncentive == nil {

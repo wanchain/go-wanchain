@@ -95,3 +95,6 @@ func (p *PosAvgRet) GetAllIncentive(epochID uint64) (*big.Int, error) {
 func (p *PosAvgRet) GetYearReward(epochID uint64) *big.Int {
 	return incentive.YearReward(epochID)
 }
+func (p *PosAvgRet) CalcBaseSubsidy(baseValue *big.Int) *big.Int {
+	return incentive.CalcBaseSubsidy(baseValue)
+}

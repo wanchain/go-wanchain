@@ -277,6 +277,7 @@ type PosAvgRetInterface interface {
 	GetAllStakeAndReturn(epochID uint64) (*big.Int, error)
 	GetAllIncentive(epochID uint64) (*big.Int, error)
 	GetYearReward(epochID uint64) *big.Int
+	CalcBaseSubsidy(baseValue *big.Int) *big.Int
 }
 
 var posavginst PosAvgRetInterface

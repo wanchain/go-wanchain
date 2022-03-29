@@ -25,7 +25,9 @@ func calcBaseSubsidy(baseValue *big.Int) *big.Int {
 	subsidyPerEpoch := big.NewInt(0).Div(baseValue, big.NewInt(0).SetUint64(subsidyReductionInterval))
 	return subsidyPerEpoch
 }
-
+func CalcBaseSubsidy(baseValue *big.Int) *big.Int {
+	return calcBaseSubsidy(baseValue)
+}
 // getBaseSubsidyTotalForEpoch returns the subsidy amount a epoch at the provided epoch
 // should have. This is mainly used for determining how much the incentive for
 // newly generated blocks awards as well as validating the incentive for blocks
