@@ -235,13 +235,10 @@ func signHash(data []byte) []byte {
 // ChainId returns the chainID value for transaction replay protection.
 func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
 	if posutil.IsJupiterForkArrived() {
-		fmt.Println("IsJupiterForkArrived")
 		if params.JupiterChainId(s.b.ChainConfig().ChainID.Uint64()) != params.NOT_JUPITER_CHAIN_ID {
-			fmt.Println("IsJupiterForkArrived2")
 			return (*hexutil.Big)(big.NewInt(0).SetUint64(params.JupiterChainId(s.b.ChainConfig().ChainID.Uint64())))
 		}
 	}
-	fmt.Println("IsJupiterForkArrived33")
 	return (*hexutil.Big)(s.b.ChainConfig().ChainID)
 }
 
