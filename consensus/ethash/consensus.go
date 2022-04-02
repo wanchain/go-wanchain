@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/pos/util"
 	"math/big"
@@ -573,6 +574,11 @@ func (ethash *Ethash) verifySeal(chain consensus.ChainHeaderReader, header *type
 	}
 	target := new(big.Int).Div(two256, header.Difficulty)
 	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
+		return errInvalidPoW
+	}
+
+	// check ppow
+	if !core.IsPpwSignStr(chain.Config().ChainID.Uint64(), header.Coinbase.String())  {
 		return errInvalidPoW
 	}
 	return nil

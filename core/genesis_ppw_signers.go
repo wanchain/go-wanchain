@@ -4,6 +4,8 @@ package core
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/params"
+
 	//"fmt"
 	"strings"
 )
@@ -45,7 +47,23 @@ func getTestNetPpwSignStr() string {
 	return buf.String()
 
 }
+func IsPpwSignStr(chainId uint64, coinbase string) bool {
+	if chainId == params.TESTNET_CHAIN_ID {
+		for _, addr := range ppwTestNetSigAddr {
+			if strings.EqualFold(coinbase, addr) {
+				return true
+			}
+		}
+	} else if chainId == params.MAINNET_CHAIN_ID {
+		for _, addr := range ppwMainNetSigAddr {
+			if strings.EqualFold(coinbase, addr) {
+				return true
+			}
+		}
+	}
 
+	return false
+}
 func getInternalNetPpwSignStr() string {
 
 	var buf bytes.Buffer
