@@ -69,7 +69,7 @@ type stateObject struct {
 	pendingStorageByteArray StorageByteArray
 }
 
-func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte {
+func (self *stateObject) GetStateByteArray5(db Database, key common.Hash) []byte {
 	value, exists := self.dirtyStorageByteArray[key]
 	if exists {
 		return value
@@ -77,7 +77,26 @@ func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte 
 
 	return self.GetCommittedStateByteArray(db, key)
 }
-
+func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte {
+	value, exists := self.dirtyStorageByteArray[key]
+	if exists {
+		return value
+	}
+	//todo Jacob why need to get data from pendingXX?
+	value, exists = self.pendingStorageByteArray[key]
+	if exists {
+		return value
+	}
+	if value, exists = self.originStorageByteArray[key]; exists {
+		return value
+	}
+	// Load from DB in case it is missing.
+	value, err := self.getTrie(db).TryGet(key[:])
+	if err == nil && len(value) != 0 {
+		self.originStorageByteArray[key] = value
+	}
+	return value
+}
 // GetCommittedStateByteArray retrieves a value from the committed account storage trie.
 func (s *stateObject) GetCommittedStateByteArray(db Database, key common.Hash) []byte {
 	// If we have a pending write or clean cached, return that
