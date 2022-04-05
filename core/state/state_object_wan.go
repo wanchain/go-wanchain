@@ -87,9 +87,6 @@ func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte 
 	if exists {
 		return value
 	}
-	if value, exists = self.originStorageByteArray[key]; exists {
-		return value
-	}
 	// Load from DB in case it is missing.
 	value, err := self.getTrie(db).TryGet(key[:])
 	if err == nil && len(value) != 0 {
