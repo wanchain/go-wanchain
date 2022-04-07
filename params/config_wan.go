@@ -160,7 +160,7 @@ var (
 		},
 	}
 
-	PlutoLondonBlockNumber int64 = 10000
+	PlutoLondonBlockNumber int64 = 0
 	PlutoChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(PLUTO_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
@@ -202,6 +202,7 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 var (
 	isPosActive    = false
 	isLondonForked = false
+	isBBBForked = false
 	TestnetChainId = TestnetChainConfig.ChainID.Int64()
 	MainnetChainId = MainnetChainConfig.ChainID.Int64()
 )
@@ -221,7 +222,13 @@ func IsLondonActive() bool {
 func SetLondonActive(active bool) {
 	isLondonForked = active
 }
+func IsBBBActive() bool {
+	return isBBBForked
+}
 
+func SetBBBActive(active bool) {
+	isBBBForked = active
+}
 func IsNoStaking() bool {
 	return noStaking
 }
@@ -275,4 +282,11 @@ func IsOldChainId(chainId uint64) bool {
 	}
 
 	return false
+}
+func (c *ChainConfig) IsLondonMinFee(num *big.Int) bool {
+	if c.ChainID.Uint64() == TESTNET_CHAIN_ID {
+		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnBlockNumber + 500000) )> 0
+	} else {
+		return c.IsLondon(num)
+	}
 }

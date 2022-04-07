@@ -57,7 +57,10 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 	if !config.IsLondon(parent.Number) {
 		return new(big.Int).SetUint64(params.InitialBaseFee)
 	}
-
+	baseFeeMin := common.Big0
+	if config.IsLondonMinFee(parent.Number)  {
+		baseFeeMin = new(big.Int).SetUint64(params.BaseFeeMin)
+	}
 	var (
 		parentGasTarget          = parent.GasLimit / params.ElasticityMultiplier
 		parentGasTargetBig       = new(big.Int).SetUint64(parentGasTarget)
@@ -87,7 +90,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 
 		return math.BigMax(
 			x.Sub(parent.BaseFee, baseFeeDelta),
-			common.Big0,
+			baseFeeMin,
 		)
 	}
 }

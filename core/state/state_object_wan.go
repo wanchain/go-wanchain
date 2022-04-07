@@ -18,12 +18,8 @@ package state
 
 import (
 	"bytes"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/metrics"
 )
 
 type StorageByteArray map[common.Hash][]byte
@@ -36,8 +32,8 @@ type StorageByteArray map[common.Hash][]byte
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
-	addrHash common.Hash // hash of ethereum address of the accountGetStateByteArray
-	data     types.StateAccount
+	addrHash common.Hash // hash of ethereum address of the account
+	data    types.StateAccount
 	db       *StateDB
 
 	// DB error.
@@ -64,7 +60,6 @@ type stateObject struct {
 	deleted   bool
 
 	// new
-	originStorageByteArray  StorageByteArray // Storage cache of original entries to dedup rewrites, reset for every transaction
 	dirtyStorageByteArray   StorageByteArray
 	pendingStorageByteArray StorageByteArray
 }
@@ -74,79 +69,20 @@ func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte 
 	if exists {
 		return value
 	}
-
-	return self.GetCommittedStateByteArray(db, key)
-}
-
-// GetCommittedStateByteArray retrieves a value from the committed account storage trie.
-func (s *stateObject) GetCommittedStateByteArray(db Database, key common.Hash) []byte {
-	// If we have a pending write or clean cached, return that
-	if value, pending := s.pendingStorageByteArray[key]; pending {
+	//todo Jacob why need to get data from pendingXX?
+	value, exists = self.pendingStorageByteArray[key]
+	if exists {
 		return value
 	}
-	if value, cached := s.originStorageByteArray[key]; cached {
-		return value
+	// Load from DB in case it is missing.
+	value, err := self.getTrie(db).TryGet(key[:])
+	if err == nil && len(value) != 0 {
+		self.dirtyStorageByteArray[key] = value
 	}
-	// If no live objects are available, attempt to use snapshots
-	var (
-		enc   []byte
-		err   error
-		meter *time.Duration
-	)
-	readStart := time.Now()
-	if metrics.EnabledExpensive {
-		// If the snap is 'under construction', the first lookup may fail. If that
-		// happens, we don't want to double-count the time elapsed. Thus this
-		// dance with the metering.
-		defer func() {
-			if meter != nil {
-				*meter += time.Since(readStart)
-			}
-		}()
-	}
-	if s.db.snap != nil {
-		if metrics.EnabledExpensive {
-			meter = &s.db.SnapshotStorageReads
-		}
-		// If the object was destructed in *this* block (and potentially resurrected),
-		// the storage has been cleared out, and we should *not* consult the previous
-		// snapshot about any storage values. The only possible alternatives are:
-		//   1) resurrect happened, and new slot values were set -- those should
-		//      have been handles via pendingStorage above.
-		//   2) we don't have new values, and can deliver empty response back
-		if _, destructed := s.db.snapDestructs[s.addrHash]; destructed {
-			return []byte{}
-		}
-		enc, err = s.db.snap.Storage(s.addrHash, crypto.Keccak256Hash(key.Bytes()))
-	}
-	// If the snapshot is unavailable or reading from it fails, load from the database.
-	if s.db.snap == nil || err != nil {
-		if meter != nil {
-			// If we already spent time checking the snapshot, account for it
-			// and reset the readStart
-			*meter += time.Since(readStart)
-			readStart = time.Now()
-		}
-		if metrics.EnabledExpensive {
-			meter = &s.db.StorageReads
-		}
-		if enc, err = s.getTrie(db).TryGet(key.Bytes()); err != nil {
-			s.setError(err)
-			return []byte{}
-		}
-	}
-
-	// TODO: why not rlp.split for []byte
-	s.originStorageByteArray[key] = enc
-	return enc
+	return value
 }
 
 func (self *stateObject) SetStateByteArray(db Database, key common.Hash, value []byte) {
-	// If the new value is the same as old, don't set
-	prev := self.GetStateByteArray(db, key)
-	if bytes.Equal(prev, value) {
-		return
-	}
 
 	self.db.journal.append(storageByteArrayChange{
 		account:  &self.address,
@@ -183,7 +119,6 @@ func (s *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject.dirtyCode = s.dirtyCode
 	stateObject.deleted = s.deleted
 
-	stateObject.originStorageByteArray = s.originStorageByteArray.Copy()
 	stateObject.dirtyStorageByteArray = s.dirtyStorageByteArray.Copy()
 	stateObject.pendingStorageByteArray = s.pendingStorageByteArray.Copy()
 

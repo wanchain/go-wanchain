@@ -213,7 +213,7 @@ var (
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,
 		Value: "archive",
 	}
-	SnapshotFlag = cli.BoolTFlag{
+	SnapshotFlag = cli.BoolFlag{
 		Name:  "snapshot",
 		Usage: `Enables snapshot-database mode (default = enable)`,
 	}
@@ -1557,7 +1557,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheSnapshotFlag.Name) {
 		cfg.SnapshotCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheSnapshotFlag.Name) / 100
 	}
-	if true { //!ctx.GlobalBool(SnapshotFlag.Name) {
+	if !ctx.GlobalIsSet(SnapshotFlag.Name) {
 		// If snap-sync is requested, this flag is also required
 		if cfg.SyncMode == downloader.SnapSync {
 			log.Info("Snap sync requested, enabling --snapshot")
@@ -1908,7 +1908,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		cache.Preimages = true
 		log.Info("Enabling recording of key preimages since archive mode is used")
 	}
-	if true { //!ctx.GlobalBool(SnapshotFlag.Name) {
+	if !ctx.GlobalIsSet(SnapshotFlag.Name) {
 		cache.SnapshotLimit = 0 // Disabled
 	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheTrieFlag.Name) {

@@ -1491,7 +1491,9 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	if bc.IsInPosStage() && !bc.Config().IsPosActive {
 		bc.Config().SetPosActive()
 	}
-
+	if block.Number().Uint64() == 3559077 {
+		params.SetBBBActive(true)
+	}
 	// add by Jacob begin
 	if bc.Config().IsLondon(block.Number()) {
 		if !params.IsLondonActive() {
