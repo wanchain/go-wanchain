@@ -3,6 +3,7 @@ package vm
 import (
 	"crypto/ecdsa"
 	"errors" // this is not match with other
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -701,6 +702,9 @@ func (p *PosStaking) saveStakeInfo(evm *EVM, stakerInfo *StakerInfo) error {
 		return err
 	}
 	key := GetStakeInKeyHash(stakerInfo.Address)
+	if params.IsBBBActive() {
+		fmt.Println("detail xxxxx:", key, stakerInfo)
+	}
 	res := StoreInfo(evm.StateDB, StakersInfoAddr, key, infoBytes)
 	if res != nil {
 		return res
