@@ -1614,10 +1614,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 	for i, block := range chain {
 		headers[i] = block.Header()
 		seals[i] = verifySeals
-		if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
-			epochId, _ := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
-			posconfig.FirstEpochId = epochId
-		}
 	}
 	if bc.engine == nil {
 		return 0, errors.New("engine is nil")
@@ -1791,6 +1787,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 						blockPrefetchInterruptMeter.Mark(1)
 					}
 				}(time.Now(), followup, throwaway, &followupInterrupt)
+			}
+		}
+
+		if block.NumberU64() <= posconfig.Pow2PosUpgradeBlockNumber {
+			if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
+				posconfig.FirstEpochId, _ = posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+			} else {
+				posconfig.FirstEpochId = 0
 			}
 		}
 
