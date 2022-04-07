@@ -104,6 +104,7 @@ var (
 	}
 
 	TestnetSaturnBlockNumber int64 = 18950000
+	TestnetSaturnMinFeeBlockNumber int64 = 19080000
 	TestnetLondonBlockNumber       = TestnetSaturnBlockNumber
 	TestnetChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(TESTNET_CHAIN_ID),
@@ -275,4 +276,11 @@ func IsOldChainId(chainId uint64) bool {
 	}
 
 	return false
+}
+func (c *ChainConfig) IsLondonMinFeeEnabled(num *big.Int) bool {
+	if c.ChainID.Uint64() == TESTNET_CHAIN_ID {
+		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnMinFeeBlockNumber) )> 0
+	} else {
+		return c.IsLondon(num)
+	}
 }

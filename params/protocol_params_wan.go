@@ -53,4 +53,5 @@ var (
 	WanGasTimesFactor              = big.NewInt(10)
 
 	//WanGasTimesFactor	   = big.NewInt(1)
+	BaseFeeMin uint64 = 1000000000
 )

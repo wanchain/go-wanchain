@@ -19,6 +19,8 @@ package pluto
 
 import (
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/trie"
 	"io"
 	"math"
@@ -423,6 +425,22 @@ func (c *Pluto) verifyCascadingFields(chain consensus.ChainHeaderReader, header 
 	// 	}
 	// }
 	// All basic checks passed, verify the seal and return
+	// Verify that the gasUsed is <= gasLimit
+	if header.GasUsed > header.GasLimit {
+		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
+	}
+	if !chain.Config().IsLondon(header.Number) {
+		// Verify BaseFee not present before EIP-1559 fork.
+		if header.BaseFee != nil {
+			return fmt.Errorf("invalid baseFee before fork: have %d, want <nil>", header.BaseFee)
+		}
+		if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil {
+			return err
+		}
+	} else if err := misc.VerifyEip1559Header(chain.Config(), parent, header); err != nil {
+		// Verify the header's EIP-1559 attributes.
+		return err
+	}
 	return c.verifySeal(chain, header, parents, false)
 }
 
