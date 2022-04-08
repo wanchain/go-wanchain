@@ -104,7 +104,7 @@ var (
 	}
 
 	TestnetSaturnBlockNumber int64 = 18950000
-	TestnetSaturnMinFeeBlockNumber int64 = 19080000
+	TestnetSaturnMinFeeBlockNumber int64 = 19084000
 	TestnetLondonBlockNumber       = TestnetSaturnBlockNumber
 	TestnetChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(TESTNET_CHAIN_ID),
