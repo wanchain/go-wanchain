@@ -707,45 +707,28 @@ type receiptStorageRLP struct {
 
 // DecodeRLP implements rlp.Decoder.
 func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
-	/*
-		var stored storedReceiptRLP
-		if err := s.Decode(&stored); err != nil {
-			log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
-			//return err
-			data, _ := s.Bytes()
-			var dec receiptStorageRLP
-			if err := rlp.DecodeBytes(data, &dec); err != nil {
-				log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
-				return err
-			}
 
-			//if err := s.Decode(&dec); err != nil {
-			//	log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
-			//	return err
-			//}
-
-			r.Logs = make([]*types.Log, len(dec.Logs))
-			for i, log := range dec.Logs {
-				r.Logs[i] = (*types.Log)(log)
-			}
-		} else {
-			r.Logs = make([]*types.Log, len(stored.Logs))
-			for i, log := range stored.Logs {
-				r.Logs[i] = (*types.Log)(log)
-			}
+	var stored storedReceiptRLP
+	if err := s.Decode(&stored); err != nil {
+		log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
+		//return err
+		data, _ := s.Bytes()
+		var dec receiptStorageRLP
+		decs := []*receiptStorageRLP{}
+		if err := rlp.DecodeBytes(data, &decs); err != nil {
+			log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
+			return err
 		}
-		return nil
-	*/
-
-	var dec receiptStorageRLP
-	if err := s.Decode(&dec); err != nil {
-		log.Error("DecodeRLP Jacob error", "receiptStorageRLP", err.Error())
-		return err
-	}
-
-	r.Logs = make([]*types.Log, len(dec.Logs))
-	for i, log := range dec.Logs {
-		r.Logs[i] = (*types.Log)(log)
+		dec = *(decs[0])
+		r.Logs = make([]*types.Log, len(dec.Logs))
+		for i, log := range dec.Logs {
+			r.Logs[i] = (*types.Log)(log)
+		}
+	} else {
+		r.Logs = make([]*types.Log, len(stored.Logs))
+		for i, log := range stored.Logs {
+			r.Logs[i] = (*types.Log)(log)
+		}
 	}
 	return nil
 }
