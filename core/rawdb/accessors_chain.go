@@ -711,7 +711,7 @@ func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&stored); err != nil {
 		log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
 		//return err
-		data, _ := s.Raw()
+		data, _ := s.Bytes()
 		var dec receiptStorageRLP
 		if err := rlp.DecodeBytes(data, &dec); err != nil {
 			log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
