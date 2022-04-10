@@ -709,7 +709,8 @@ func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
 }
 
 // DeriveLogFields fills the logs in receiptLogs with information such as block number, txhash, etc.
-func deriveLogFields(receipts []*receiptLogs, hash common.Hash, number uint64, txs types.Transactions) error {
+//func deriveLogFields(receipts []*receiptLogs, hash common.Hash, number uint64, txs types.Transactions) error {
+func deriveLogFields(receipts []*types.ReceiptForStorage, hash common.Hash, number uint64, txs types.Transactions) error {
 	logIndex := uint(0)
 	if len(txs) != len(receipts) {
 		return errors.New("transaction and receipt count mismatch")
@@ -738,7 +739,8 @@ func ReadLogs(db ethdb.Reader, hash common.Hash, number uint64) [][]*types.Log {
 	if len(data) == 0 {
 		return nil
 	}
-	receipts := []*receiptLogs{}
+	//receipts := []*receiptLogs{}
+	receipts := []*types.ReceiptForStorage{}
 	if err := rlp.DecodeBytes(data, &receipts); err != nil {
 		log.Error("Invalid receipt array RLP", "hash", hash, "err", err)
 		return nil
