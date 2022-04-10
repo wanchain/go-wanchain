@@ -708,11 +708,11 @@ type receiptStorageRLP struct {
 // DecodeRLP implements rlp.Decoder.
 func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
 
+	data, _ := s.Raw()
 	var stored storedReceiptRLP
 	if err := s.Decode(&stored); err != nil {
 		log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
 		//return err
-		data, _ := s.Bytes()
 		var dec receiptStorageRLP
 		decs := []*receiptStorageRLP{}
 		if err := rlp.DecodeBytes(data, &decs); err != nil {
