@@ -714,12 +714,12 @@ func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
 		log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
 		//return err
 		var dec receiptStorageRLP
-		decs := []*receiptStorageRLP{}
-		if err := rlp.DecodeBytes(data, &decs); err != nil  && err != rlp.EOL{
+		//decs := []*receiptStorageRLP{}
+		if err := rlp.DecodeBytes(data, &dec); err != nil {
 			log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
 			return err
 		}
-		dec = *(decs[0])
+		//dec = *(decs[0])
 		r.Logs = make([]*types.Log, len(dec.Logs))
 		for i, log := range dec.Logs {
 			r.Logs[i] = (*types.Log)(log)
