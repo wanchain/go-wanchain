@@ -680,46 +680,48 @@ type receiptLogs struct {
 }
 
 // add by Jacob begin
-const BloomByteLength = 256
-
-type Bloom [BloomByteLength]byte
-type v3StoredReceiptRLP struct {
-	PostStateOrStatus []byte
-	CumulativeGasUsed *big.Int
-	Bloom             Bloom
-	TxHash            common.Hash
-	ContractAddress   common.Address
-	Logs              []*types.LogForStorage
-	GasUsed           *big.Int
-}
-
-type receiptStorageRLP struct {
-	PostStateOrStatus []byte
-	CumulativeGasUsed *big.Int
-	Bloom             Bloom
-	TxHash            common.Hash
-	ContractAddress   common.Address
-	Logs              []*types.LogForStorage
-	GasUsed           *big.Int
-}
+//const BloomByteLength = 256
+//
+//type Bloom [BloomByteLength]byte
+//type v3StoredReceiptRLP struct {
+//	PostStateOrStatus []byte
+//	CumulativeGasUsed *big.Int
+//	Bloom             Bloom
+//	TxHash            common.Hash
+//	ContractAddress   common.Address
+//	Logs              []*types.LogForStorage
+//	GasUsed           *big.Int
+//}
+//
+//type receiptStorageRLP struct {
+//	PostStateOrStatus []byte
+//	CumulativeGasUsed *big.Int
+//	Bloom             Bloom
+//	TxHash            common.Hash
+//	ContractAddress   common.Address
+//	Logs              []*types.LogForStorage
+//	GasUsed           *big.Int
+//}
 
 // add by Jacob end
 
 // DecodeRLP implements rlp.Decoder.
 func (r *receiptLogs) DecodeRLP(s *rlp.Stream) error {
 
-	data, _ := s.Raw()
+	blob, err := s.Raw()
+	if err != nil {
+		return err
+	}
 	var stored storedReceiptRLP
 	if err := s.Decode(&stored); err != nil {
 		log.Error("DecodeRLP", "storedReceiptRLP", err.Error())
 		//return err
-		var dec receiptStorageRLP
-		//decs := []*receiptStorageRLP{}
-		if err := rlp.DecodeBytes(data, &dec); err != nil && err != rlp.EOL{
-			log.Error("DecodeRLP", "receiptStorageRLP", err.Error())
+
+		var dec types.ReceiptForStorage
+		if err := rlp.DecodeBytes(blob, &dec); err != nil {
+			log.Error("DecodeRLP", "ReceiptForStorage", err.Error())
 			return err
 		}
-		//dec = *(decs[0])
 		r.Logs = make([]*types.Log, len(dec.Logs))
 		for i, log := range dec.Logs {
 			r.Logs[i] = (*types.Log)(log)
