@@ -42,6 +42,10 @@ func VerifyEip1559Header(config *params.ChainConfig, parent, header *types.Heade
 	if header.BaseFee == nil {
 		return fmt.Errorf("header is missing baseFee")
 	}
+
+	if config.ChainID.Uint64() == params.TESTNET_CHAIN_ID && header.Number.Int64() < params.TestnetSaturnMinFeeBlockNumber {
+		return nil
+	}
 	// Verify the baseFee is correct based on the parent header.
 	expectedBaseFee := CalcBaseFee(config, parent)
 	if header.BaseFee.Cmp(expectedBaseFee) != 0 {
@@ -56,10 +60,6 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 	// If the current block is the first EIP-1559 block, return the InitialBaseFee.
 	if !config.IsLondon(parent.Number) {
 		return new(big.Int).SetUint64(params.InitialBaseFee)
-	}
-	baseFeeMin := common.Big0
-	if config.IsLondonMinFeeEnabled(parent.Number)  {
-		baseFeeMin = new(big.Int).SetUint64(params.BaseFeeMin)
 	}
 	var (
 		parentGasTarget          = parent.GasLimit / params.ElasticityMultiplier
@@ -90,7 +90,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 
 		return math.BigMax(
 			x.Sub(parent.BaseFee, baseFeeDelta),
-			baseFeeMin,
+			new(big.Int).SetUint64(params.BaseFeeMin),
 		)
 	}
 }
