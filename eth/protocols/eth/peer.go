@@ -187,7 +187,17 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.knownTxs.Add(tx.Hash())
 	}
-	return p2p.Send(p.rw, TransactionsMsg, txs)
+	//return p2p.Send(p.rw, TransactionsMsg, txs)
+
+	//add by Jacob begin
+	err := p2p.Send(p.rw, TransactionsMsg, txs)
+	if err != nil {
+		for _, tx := range txs {
+			p.knownTxs.Remove(tx.Hash())
+		}
+	}
+	// add by Jacob end
+	return err
 }
 
 // AsyncSendTransactions queues a list of transactions (by hash) to eventually
@@ -497,4 +507,11 @@ func (k *knownCache) Contains(hash common.Hash) bool {
 // Cardinality returns the number of elements in the set.
 func (k *knownCache) Cardinality() int {
 	return k.hashes.Cardinality()
+}
+
+// remove transactions
+func (k *knownCache) Remove(hashes ...common.Hash) {
+	for _, hash := range hashes {
+		k.hashes.Remove(hash)
+	}
 }
