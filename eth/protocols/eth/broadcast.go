@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -83,6 +84,8 @@ func (p *Peer) broadcastTransactions() {
 				if tx := p.txpool.Get(queue[i]); tx != nil {
 					txs = append(txs, tx)
 					size += tx.Size()
+				} else {
+					log.Info("broadcase broadcastTransactions txpool.Get nil", "txhash", queue[i].String())
 				}
 				hashesCount++
 			}
