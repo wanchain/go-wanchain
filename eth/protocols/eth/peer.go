@@ -194,6 +194,7 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 	//add by Jacob begin
 	err := p2p.Send(p.rw, TransactionsMsg, txs)
 	if err != nil {
+		log.Error("broadcast SendTransactions", "TransactionsMsg error", err.Error())
 		for _, tx := range txs {
 			p.knownTxs.Remove(tx.Hash())
 		}
