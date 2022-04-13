@@ -543,7 +543,10 @@ func (h *handler) txBroadcastLoop() {
 	for {
 		select {
 		case event := <-h.txsCh:
-			log.Debug("txBroadcastLoop get msg from channel", "", event.Txs[0].Hash().String())
+			log.Debug("txBroadcastLoop get msg from channel", "", event.Txs[0].Hash().String(),
+				"h.txsCh.len", len(h.txsCh),
+				"h.txCh.Cap", cap(h.txsCh),
+				"len(event.txs)", len(event.Txs))
 			go h.BroadcastTransactions(event.Txs)
 		case <-h.txsSub.Err():
 			return

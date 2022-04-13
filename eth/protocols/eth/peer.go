@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -187,6 +188,7 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.knownTxs.Add(tx.Hash())
 	}
+	log.Info("broadcast SendTransactions  [TransactionsMsg]......", "to peer", p.id, "len(txs)", len(txs), "hash", txs[0].Hash().String())
 	//return p2p.Send(p.rw, TransactionsMsg, txs)
 
 	//add by Jacob begin
