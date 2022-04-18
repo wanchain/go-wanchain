@@ -4,6 +4,7 @@ import "github.com/ethereum/go-ethereum/common"
 
 var PosOwnerAddrInternal = common.HexToAddress("0x31BC508f0F6CA9384340a6B06A046baB1C91E624")
 var PosOwnerAddrTestnet  = common.HexToAddress("0x31BC508f0F6CA9384340a6B06A046baB1C91E624")
+var PosOwnerAddrTestnet88  = common.HexToAddress("0x7521EDa00E2Ce05aC4a9d8353d096CCB970d5188")
 
 
 //2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e

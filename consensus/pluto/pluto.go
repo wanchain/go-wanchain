@@ -764,9 +764,15 @@ func (c *Pluto) Finalize(chain consensus.ChainHeaderReader, header *types.Header
 		}
 	}
 
-	if chain.Config().ChainID.Int64() == params.TestnetChainId && header.Number.Uint64() == posconfig.TestnetAdditionalBlock {
-		log.Info("Finalize testnet", "blockNumber", posconfig.TestnetAdditionalBlock)
-		state.AddBalance(posconfig.PosOwnerAddrTestnet, posconfig.TestnetAdditionalValue)
+	if chain.Config().ChainID.Int64() == params.TestnetChainId  {
+		if  header.Number.Uint64() == posconfig.TestnetAdditionalBlock {
+			log.Info("Finalize testnet", "blockNumber", posconfig.TestnetAdditionalBlock)
+			state.AddBalance(posconfig.PosOwnerAddrTestnet, posconfig.TestnetAdditionalValue)
+		}
+		if  header.Number.Uint64() == posconfig.TestnetAdditionalBlock88 {
+			log.Info("Finalize testnet", "blockNumber", posconfig.TestnetAdditionalBlock88)
+			state.AddBalance(posconfig.PosOwnerAddrTestnet88, posconfig.TestnetAdditionalValue88)
+		}
 		epochLeader.CleanInactiveValidator(state, epochID)
 		//epochLeader.ListValidator(state)
 	}
