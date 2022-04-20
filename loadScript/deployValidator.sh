@@ -19,7 +19,7 @@ echo ''
 echo ''
 read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 
-DOCKERIMG=wanchain/client-go:2.2.1-beta.1
+DOCKERIMG=wanchain/client-go:3.0.0-beta.8
 NETWORK=--testnet
 NETWORKPATH=testnet
 
@@ -67,7 +67,7 @@ fi
 
 addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
+sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1  --syncmode=full --snapshot=false --gcmode=archive  --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
@@ -105,10 +105,10 @@ echo ''
 echo '=================================================='
 echo ''
 
-if [ $(ps -ef | grep -c "gwan") -gt 1 ]; 
-then 
+if [ $(ps -ef | grep -c "gwan") -gt 1 ];
+then
     echo "Validator Start Successfully";
 else
     echo "Validator Start Failed";
-    echo "Please use command 'sudo docker logs gwan' to check reason." 
+    echo "Please use command 'sudo docker logs gwan' to check reason."
 fi
