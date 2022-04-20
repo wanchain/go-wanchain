@@ -527,6 +527,12 @@ type TxByPriceAndTime []*TxWithMinerFee
 
 func (s TxByPriceAndTime) Len() int { return len(s) }
 func (s TxByPriceAndTime) Less(i, j int) bool {
+	// add by Jacob begin
+	if s[j].tx.Type() != WanPosTxType && s[i].tx.Type() == WanPosTxType {
+		return true
+	}
+	// add by Jacob end
+
 	// If the prices are equal, use the time the transaction was first seen for
 	// deterministic sorting
 	cmp := s[i].minerFee.Cmp(s[j].minerFee)

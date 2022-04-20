@@ -27,7 +27,7 @@ func SendTx(rc *rpc.Client, tx map[string]interface{}) (common.Hash, error) {
 		return common.Hash{}, errors.New("rc is not ready")
 	}
 
-	tx["gasPrice"] = "0x" + posconfig.Cfg().DefaultGasPrice.Text(16)
+	//tx["gasPrice"] = "0x" + posconfig.Cfg().DefaultGasPrice.Text(16)
 
 	ctx := context.Background()
 	var txHash common.Hash

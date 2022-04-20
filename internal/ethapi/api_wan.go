@@ -433,6 +433,18 @@ func (s *PublicTransactionPoolAPI) SendPosTransaction(ctx context.Context, args 
 		defer s.nonceLock.UnlockAddr(args.from())
 	}
 
+	// add by Jacob begin. get pos gas price dynamically
+	head := s.b.CurrentHeader()
+	price, err := s.b.SuggestGasTipCap(ctx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if s.b.ChainConfig().IsLondon(head.Number) {
+		price.Add(price, head.BaseFee)
+	}
+	args.GasPrice = (*hexutil.Big)(price)
+	// add by Jacob end
+
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
