@@ -24,6 +24,11 @@ jobs:
           go-version: '^1.13'
       - run: git checkout v3.0.0
       - run: make
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.0.0
+        with:
+          name: gwan-linux
+          path: ./build/bin/gwan
       
   build-windows:
     # The type of runner that the job will run on
@@ -39,6 +44,11 @@ jobs:
           go-version: '^1.13'
       - run: git checkout v3.0.0
       - run: make
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.0.0
+        with:
+          name: gwan-windows
+          path: ./build/bin/gwan
           
   build-macos:
     # The type of runner that the job will run on
@@ -54,4 +64,9 @@ jobs:
           go-version: '^1.13'
       - run: git checkout v3.0.0
       - run: make
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.0.0
+        with:
+          name: gwan-macos
+          path: ./build/bin/gwan
 
