@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/wanchain/go-wanchain/common/math"
 	"github.com/wanchain/go-wanchain/consensus"
 	"github.com/wanchain/go-wanchain/core/state"
 	"github.com/wanchain/go-wanchain/core/types"
