@@ -21,8 +21,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3.0.0
         with:
-          go-version: '^1.13'
-      - run: git checkout v3.0.0
+          go-version: '^1.16'
       - run: make
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.0.0
@@ -41,8 +40,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3.0.0
         with:
-          go-version: '^1.13'
-      - run: git checkout v3.0.0
+          go-version: '^1.16'
       - run: make
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.0.0
@@ -61,8 +59,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3.0.0
         with:
-          go-version: '^1.13'
-      - run: git checkout v3.0.0
+          go-version: '^1.16'
       - run: make
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.0.0
