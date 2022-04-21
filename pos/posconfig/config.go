@@ -236,7 +236,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 			// TODO: for debug change WhiteListDev -> WhiteListMainnet
 			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
-			WhiteList = WhiteListOrig
+			WhiteList = WhiteListDev
 		}
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
