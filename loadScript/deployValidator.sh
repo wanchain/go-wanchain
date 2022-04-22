@@ -19,7 +19,7 @@ echo ''
 echo ''
 read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 
-DOCKERIMG=wanchain/client-go:3.0.0-beta.8
+DOCKERIMG=wanchain/client-go:3.0.0-beta.9
 NETWORK=--testnet
 NETWORKPATH=testnet
 
