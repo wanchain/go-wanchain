@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -190,7 +189,6 @@ func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
 	// DynamicFee txs are defined to use 0 and 1 as their recovery
 	// id, add 27 to become equivalent to unprotected Homestead signatures.
 	V = new(big.Int).Add(V, big.NewInt(27))
-	log.Info("londonSigner:Sender", "", tx.ChainId().Uint64(), "", s.chainId.Uint64())
 	if tx.ChainId().Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
