@@ -270,28 +270,30 @@ func (bc *BlockChain) ChainQualityHistory(epochid uint64, slotid uint64) (uint64
 
 func (bc *BlockChain) isWriteBlockSecure(block *types.Block) bool {
 
-	epochId, slotId := posUtil.CalEpochSlotID(block.Time())
+	//epochId, slotId := posUtil.CalEpochSlotID(block.Time())
+	//
+	//endFlatSlotId := epochId*posconfig.SlotCount + slotId
+	//startId := endFlatSlotId - posconfig.SlotSecurityParam - 1
+	//
+	//if bc.cqCache.Len() > posconfig.BlockSecurityParam {
+	//
+	//	if startId > bc.cqLastSlot {
+	//		bc.cqCache.Purge()
+	//	} else {
+	//		k := bc.cqLastSlot - posconfig.SlotSecurityParam
+	//		for ; k <= startId; k++ {
+	//			bc.cqCache.Remove(k)
+	//		}
+	//	}
+	//
+	//	blocksIn2K := bc.cqCache.Len()
+	//
+	//	return blocksIn2K > posconfig.K
+	//}
+	//
+	//return false
 
-	endFlatSlotId := epochId*posconfig.SlotCount + slotId
-	startId := endFlatSlotId - posconfig.SlotSecurityParam - 1
-
-	if bc.cqCache.Len() > posconfig.BlockSecurityParam {
-
-		if startId > bc.cqLastSlot {
-			bc.cqCache.Purge()
-		} else {
-			k := bc.cqLastSlot - posconfig.SlotSecurityParam
-			for ; k <= startId; k++ {
-				bc.cqCache.Remove(k)
-			}
-		}
-
-		blocksIn2K := bc.cqCache.Len()
-
-		return blocksIn2K > posconfig.K
-	}
-
-	return false
+	return true
 }
 
 func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
