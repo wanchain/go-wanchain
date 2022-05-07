@@ -10,6 +10,6 @@
 echo "run gwan in pluto bootnode testnet"
 make && \
 rm -rf ~/.wanchain/pluto/gwan && \
-echo -n 'wanglu' > pw.txt && \
+echo -n 'Wanchain' > pw.txt && \
 build/bin/geth --pluto --http      --nodiscover --mine --miner.etherbase  "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e"  --unlock "0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e" --password ./pw.txt --miner.threads=1 $@
 
