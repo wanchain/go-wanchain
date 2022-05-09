@@ -94,7 +94,7 @@ geth-linux-arm-7:
 	@ls -ld $(GOBIN)/geth-linux-* | grep arm-7
 
 geth-linux-arm64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/geth
+	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 --image=jacobxgo -v ./cmd/geth
 	@echo "Linux ARM64 cross compilation done:"
 	@ls -ld $(GOBIN)/geth-linux-* | grep arm64
 
@@ -142,6 +142,7 @@ geth-windows-386:
 	@ls -ld $(GOBIN)/geth-windows-* | grep 386
 
 geth-windows-amd64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/geth
+	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 --image=xgo-jacob --pkg ./cmd/geth -v ./cmd/geth
+	#$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 --image=xgo-jacob -v ./cmd/geth
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
