@@ -56,7 +56,7 @@ func IsPpwSignStr(chainId uint64, coinbase string) bool {
 		}
 	} else if chainId == params.MAINNET_CHAIN_ID {
 		for _, addr := range ppwMainNetSigAddr {
-			if strings.EqualFold(coinbase, addr) {
+			if strings.EqualFold(coinbase[2:], addr) {
 				return true
 			}
 		}
