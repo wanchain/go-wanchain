@@ -968,9 +968,11 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local, sync bool) []error {
 // addTxsLocked attempts to queue a batch of transactions if they are valid.
 // The transaction pool lock must be held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) ([]error, *accountSet) {
+
 	dirty := newAccountSet(pool.signer)
 	errs := make([]error, len(txs))
 	for i, tx := range txs {
+		log.Debug("addTxsLocked", "txhash", tx.Hash().String())
 		replaced, err := pool.add(tx, local)
 		errs[i] = err
 		if err == nil && !replaced {
