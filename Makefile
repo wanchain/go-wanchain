@@ -56,93 +56,41 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-geth-cross: geth-linux geth-darwin geth-windows geth-android geth-ios
+geth-cross: geth-linux geth-darwin geth-windows 
 	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/geth-*
+	@ls -ld $(GOBIN)/gwan-*
 
-geth-linux: geth-linux-386 geth-linux-amd64 geth-linux-arm geth-linux-mips64 geth-linux-mips64le
+geth-linux: geth-linux-arm
 	@echo "Linux cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-*
+	@ls -ld $(GOBIN)/gwan-linux-*
 
-geth-linux-386:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/geth
-	@echo "Linux 386 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep 386
-
-geth-linux-amd64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/amd64  -v ./cmd/geth
-	@echo "Linux amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep amd64
-
-geth-linux-arm: geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
+geth-linux-arm: geth-linux-arm64
 	@echo "Linux ARM cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep arm
+	@ls -ld $(GOBIN)/gwan-linux-* | grep arm
 
-geth-linux-arm-5:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/geth
-	@echo "Linux ARMv5 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep arm-5
 
-geth-linux-arm-6:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/geth
-	@echo "Linux ARMv6 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep arm-6
-
-geth-linux-arm-7:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/geth
-	@echo "Linux ARMv7 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep arm-7
 
 geth-linux-arm64:
 	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 --image=xgo-jacob --pkg=./cmd/geth  -v ./cmd/geth
 	@echo "Linux ARM64 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep arm64
+	@ls -ld $(GOBIN)/gwan-linux-* | grep arm64
 
-geth-linux-mips:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/geth
-	@echo "Linux MIPS cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep mips
 
-geth-linux-mipsle:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/geth
-	@echo "Linux MIPSle cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep mipsle
 
-geth-linux-mips64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/geth
-	@echo "Linux MIPS64 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep mips64
-
-geth-linux-mips64le:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/geth
-	@echo "Linux MIPS64le cross compilation done:"
-	@ls -ld $(GOBIN)/geth-linux-* | grep mips64le
-
-geth-darwin: geth-darwin-386 geth-darwin-amd64
+geth-darwin: geth-darwin-amd64
 	@echo "Darwin cross compilation done:"
-	@ls -ld $(GOBIN)/geth-darwin-*
-
-geth-darwin-386:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/geth
-	@echo "Darwin 386 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-darwin-* | grep 386
+	@ls -ld $(GOBIN)/gwan-darwin-*
 
 geth-darwin-amd64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/geth
+	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 --image=xgo-jacob --pkg ./cmd/geth -v ./cmd/geth
 	@echo "Darwin amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-darwin-* | grep amd64
+	@ls -ld $(GOBIN)/gwan-darwin-* | grep amd64
 
-geth-windows: geth-windows-386 geth-windows-amd64
+geth-windows: geth-windows-amd64
 	@echo "Windows cross compilation done:"
-	@ls -ld $(GOBIN)/geth-windows-*
-
-geth-windows-386:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/geth
-	@echo "Windows 386 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-windows-* | grep 386
+	@ls -ld $(GOBIN)/gwan-windows-*
 
 geth-windows-amd64:
 	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 --image=xgo-jacob --pkg ./cmd/geth -v ./cmd/geth
-	#$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 --image=xgo-jacob -v ./cmd/geth
 	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
+	@ls -ld $(GOBIN)/gwan-windows-* | grep amd64
