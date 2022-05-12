@@ -82,7 +82,7 @@ geth-darwin: geth-darwin-amd64
 	@ls -ld $(GOBIN)/gwan-darwin-*
 
 geth-darwin-amd64:
-	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 --image=xgo-jacob --pkg ./cmd/geth -v ./cmd/geth
+	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 --image=bjzhaoxiao/xgo:1.16.5 --pkg ./cmd/geth -v ./cmd/geth
 	@echo "Darwin amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gwan-darwin-* | grep amd64
 
