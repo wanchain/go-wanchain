@@ -2,6 +2,7 @@ package util
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"math/big"
@@ -22,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
 )
 
 func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
@@ -150,6 +152,9 @@ func SetEpochBlock(epochID uint64, blockNumber uint64, hash common.Hash) {
 	lastBlockEpoch[epochID] = blockNumber
 	lastBlockHashEpoch[epochID] = hash
 	lbe.Unlock()
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, blockNumber)
+	posdb.GetDb().Put(epochID, "LastBlockByEpoch", buf)
 }
 
 //this function only can return
@@ -160,6 +165,16 @@ func GetEpochBlock(epochID uint64) uint64 {
 	lbe.Unlock()
 
 	if b == 0 {
+		val, err := posdb.GetDb().Get(epochID, "LastBlockByEpoch")
+		if err == nil && val != nil {
+			blockNumber := binary.BigEndian.Uint64(val)
+			if blockNumber != 0 {
+				lbe.Lock()
+				lastBlockEpoch[epochID] = blockNumber
+				lbe.Unlock()
+				return blockNumber
+			}
+		}
 		b = selecter.GetEpochLastBlkNumber(epochID)
 	}
 

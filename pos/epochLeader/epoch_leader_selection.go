@@ -119,27 +119,29 @@ func (e *Epocher) GetEpochLastBlkNumber(targetEpochId uint64) uint64 {
 	var curBlockHeader *types.Header
 	var curEpochId uint64
 
-	curNum := e.blkChain.CurrentBlock().NumberU64()
+	end := e.blkChain.CurrentBlock().NumberU64()
+	first := e.blkChain.Config().PosFirstBlock.Uint64()
+	i := end
 	for {
-		curBlockHeader = e.blkChain.GetHeaderByNumber(curNum)
-		curEpochId, _ = util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
-		if curEpochId <= targetEpochId {
-			log.Info("GetEpochLastBlkNumber", "targetEpochId", targetEpochId, "curEpochId", curEpochId)
-			// if targetEpochId-curEpochId > 20 {
-			// 	panic("GetEpochLastBlkNumber err") // TODO debug remove
-			// }
+		if first == end {
 			break
 		}
-		curNum--
+		curBlockHeader = e.blkChain.GetHeaderByNumber(i)
+		curEpochId, _ = util.GetEpochSlotIDFromDifficulty(curBlockHeader.Difficulty)
+		if curEpochId > targetEpochId {
+			end = i - 1
+		} else {
+			first = i
+		}
+		i = (first+end)/2 + 1
 	}
 
-	targetBlkNum := curNum
+	targetBlkNum := end
 	epochid, _ := util.CalEpochSlotID(uint64(time.Now().Unix()))
 	if targetEpochId < epochid && targetEpochId >= posconfig.FirstEpochId && targetEpochId == curEpochId {
 		log.Debug("SetEpochBlock 2", "targetEpochId", targetEpochId, "targetBlkNum", targetBlkNum, "hash", curBlockHeader.Hash())
 		util.SetEpochBlock(targetEpochId, targetBlkNum, curBlockHeader.Hash())
 	}
-
 	return targetBlkNum
 }
 
