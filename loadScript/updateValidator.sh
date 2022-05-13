@@ -66,9 +66,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo 'Please wait 20 seconds...'
+echo 'Please wait 50 seconds...'
 
-sleep 20
+sleep 50
 
 if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
     sudo docker container update --restart=always gwan
