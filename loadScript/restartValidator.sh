@@ -40,9 +40,11 @@ else
 
     while true
     do
-        if [ -e $IPCFILE ]; then
+        sudo ls -l $IPCFILE > /dev/null 2>&1
+        Ret=$?
+        if [ $Ret -eq 0 ]; then
             cur=`date '+%s'`
-            ft=`stat -c %Y $IPCFILE`
+            ft=`sudo stat -c %Y $IPCFILE`
             if [ $cur -gt $((ft + 6)) ]; then
                 break
             fi
@@ -50,6 +52,7 @@ else
         echo -n '.'
         sleep 1
     done
+
     sudo rm ~/.wanchain/pw.txt
 fi
 
