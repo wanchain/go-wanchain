@@ -56,6 +56,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+IPCFILE="$HOME/.wanchain/gwan.ipc"
+rm -f $IPCFILE
+
 sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
 
 if [ $? -ne 0 ]; then
@@ -65,11 +68,24 @@ fi
 
 echo 'Please wait a few seconds...'
 
-sleep 10
+sleep 5
 
 if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
     sudo docker container update --restart=always gwan
 else
+
+    while true
+    do
+        if [ -e $IPCFILE ]; then
+            cur=`date '+%s'`
+            ft=`stat -c %Y $IPCFILE`
+            if [ $cur -gt $((ft + 6)) ]; then
+                break
+            fi
+        fi
+        echo -n '.'
+        sleep 1
+    done
     sudo rm ~/.wanchain/pw.txt
 fi
 
