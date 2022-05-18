@@ -26,7 +26,7 @@ IPCFILE="$HOME/.wanchain/gwan.ipc"
 if [ -d $HOME/.wanchain/testnet ]; then
     IPCFILE="$HOME/.wanchain/testnet/gwan.ipc"
 fi
-rm -f $IPCFILE
+sudo rm -f $IPCFILE
 
 sudo docker start gwan
 
