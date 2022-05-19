@@ -161,7 +161,7 @@ var (
 		},
 	}
 
-	PlutoLondonBlockNumber int64 = 10000
+	PlutoLondonBlockNumber int64 = 100
 	PlutoChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(PLUTO_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),

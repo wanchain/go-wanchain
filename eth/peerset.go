@@ -66,6 +66,16 @@ func newPeerSet() *peerSet {
 		snapPend: make(map[string]*snap.Peer),
 	}
 }
+func (ps *peerSet) peersAll(hash common.Hash) []*ethPeer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*ethPeer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		list = append(list, p)
+	}
+	return list
+}
 
 // registerSnapExtension unblocks an already connected `eth` peer waiting for its
 // `snap` extension, or if no such peer exists, tracks the extension for the time

@@ -43,6 +43,10 @@ func VerifyEip1559Header(config *params.ChainConfig, parent, header *types.Heade
 		return fmt.Errorf("header is missing baseFee")
 	}
 
+	if config.ChainID.Uint64() == params.PLUTO_CHAIN_ID {
+		return nil
+	}
+
 	if config.ChainID.Uint64() == params.TESTNET_CHAIN_ID && header.Number.Int64() < params.TestnetSaturnMinFeeBlockNumber {
 		return nil
 	}
