@@ -19,7 +19,6 @@ package miner
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -469,7 +468,6 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			log.Debug(fmt.Sprintf("%v", req))
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
 
 		case slotTime := <-w.chainSlotTimer:

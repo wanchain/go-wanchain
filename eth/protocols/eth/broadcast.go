@@ -85,7 +85,7 @@ func (p *Peer) broadcastTransactions() {
 					txs = append(txs, tx)
 					size += tx.Size()
 				} else {
-					log.Info("broadcase broadcastTransactions txpool.Get nil", "txhash", queue[i].String())
+					log.Debug("broadcase broadcastTransactions txpool.Get nil", "txhash", queue[i].String())
 				}
 				hashesCount++
 			}
