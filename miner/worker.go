@@ -999,6 +999,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 	commitUncles(w.localUncles)
 	commitUncles(w.remoteUncles)
 
+	w.disablePreseal()
 	// Create an empty block based on temporary copied state for
 	// sealing in advance without waiting block execution finished.
 	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
