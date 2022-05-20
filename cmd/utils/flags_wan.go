@@ -6,7 +6,7 @@ import (
 var (
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
-		Usage: "Testnet network: pre-configured proof-of-work test network",
+		Usage: "Testnet network: pre-configured POS test network",
 	}
 	PlutoFlag = cli.BoolFlag{
 		Name:  "pluto",
