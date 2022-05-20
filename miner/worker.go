@@ -398,12 +398,15 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		case <-w.startCh:
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
-			commit(false, commitInterruptNewHead)
+
+			// use the last parameter of commitNewWork isPush to control whether mine or not
+			commit(true, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
-			commit(false, commitInterruptNewHead)
+			// use the last parameter of commitNewWork isPush to control whether mine or not
+			commit(true, commitInterruptNewHead)
 
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
@@ -471,7 +474,7 @@ func (w *worker) mainLoop() {
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
 
 		case slotTime := <-w.chainSlotTimer:
-			w.commitNewWork(nil, false, int64(slotTime), true)
+			w.commitNewWork(nil, true, int64(slotTime), true)
 
 		case ev := <-w.chainSideCh:
 			// Short circuit for duplicate side blocks
@@ -551,8 +554,7 @@ func (w *worker) mainLoop() {
 				// submit mining work here since all empty submission will be rejected
 				// by clique. Of course the advance sealing(empty submission) is disabled.
 				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 {
-					// todo it is about block produce, change later
-					// w.commitNewWork(nil, true, time.Now().Unix())
+					 w.commitNewWork(nil, true, time.Now().Unix(),false)
 				}
 			}
 			atomic.AddInt32(&w.newTxs, int32(len(ev.Txs)))
@@ -999,10 +1001,9 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 
 	// Create an empty block based on temporary copied state for
 	// sealing in advance without waiting block execution finished.
-	w.disablePreseal()
-	//if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
-	//	w.commit(uncles, nil, false, tstart)
-	//}
+	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
+		w.commit(uncles, nil, false, tstart,false)
+	}
 
 	// Fill the block with all available pending transactions.
 	pending := w.eth.TxPool().Pending(false) // change by Jacob for 1gwei gaspirce can not be on blockchain
