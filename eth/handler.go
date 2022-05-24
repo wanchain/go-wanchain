@@ -546,7 +546,7 @@ func (h *handler) txBroadcastLoop() {
 				"h.txsCh.len", len(h.txsCh),
 				"h.txCh.Cap", cap(h.txsCh),
 				"len(event.txs)", len(event.Txs))
-			go h.BroadcastTransactions(event.Txs)
+			h.BroadcastTransactions(event.Txs)
 		case <-h.txsSub.Err():
 			return
 		}
