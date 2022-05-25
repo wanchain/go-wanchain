@@ -315,9 +315,6 @@ func geth(ctx *cli.Context) error {
 	stack, backend := makeFullNode(ctx)
 	defer stack.Close()
 
-	//set pos gas price
-	posconfig.Cfg().DefaultGasPrice = utils.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
-
 	startNode(ctx, stack, backend)
 	stack.Wait()
 	return nil
