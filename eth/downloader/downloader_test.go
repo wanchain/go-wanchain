@@ -93,6 +93,10 @@ func newTester() *downloadTester {
 	return tester
 }
 
+func (dl *downloadTester) GetFirstPosBlockNumber() uint64 {
+	return 3560000
+}
+
 // terminate aborts any operations on the embedded downloader and releases all
 // held resources.
 func (dl *downloadTester) terminate() {

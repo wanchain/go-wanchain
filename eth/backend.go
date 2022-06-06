@@ -20,13 +20,14 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus/pluto"
-	"github.com/ethereum/go-ethereum/pos/posapi"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ethereum/go-ethereum/consensus/pluto"
+	"github.com/ethereum/go-ethereum/pos/posapi"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -158,7 +159,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	log.Info("Initialised chain configuration", "config", chainConfig)
-	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+	var posEngine *pluto.Pluto
+	if chainConfig.Pluto != nil {
+		posEngine = pluto.New(chainConfig.Pluto, chainDb)
+	}
 
 	inPosStage := false
 	if chainConfig.IsPosActive ||
@@ -249,19 +253,19 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	// jacob pos start
-        if inPosStage {
-                miner.PosInit(eth)
-                chainConfig.SetPosActive()
-        }
+	if inPosStage {
+		miner.PosInit(eth)
+		chainConfig.SetPosActive()
+	}
 
-        // add by Jacob begin
-        if chainConfig.IsLondon(big.NewInt(0).SetUint64(core.PeekChainHeight(chainDb))) {
-                if !params.IsLondonActive() {
-                        params.SetLondonActive(true)
-                        log.SyslogInfo("london forked........")
-                }
-        }
-        // add by Jacob end
+	// add by Jacob begin
+	if chainConfig.IsLondon(big.NewInt(0).SetUint64(core.PeekChainHeight(chainDb))) {
+		if !params.IsLondonActive() {
+			params.SetLondonActive(true)
+			log.SyslogInfo("london forked........")
+		}
+	}
+	// add by Jacob end
 
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))

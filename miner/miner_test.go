@@ -18,9 +18,11 @@
 package miner
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/core"
@@ -29,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/downloader"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/trie"
@@ -37,6 +40,9 @@ import (
 type mockBackend struct {
 	bc     *core.BlockChain
 	txPool *core.TxPool
+
+	accountManager *accounts.Manager
+	chainDb        ethdb.Database
 }
 
 func NewMockBackend(bc *core.BlockChain, txPool *core.TxPool) *mockBackend {
@@ -44,6 +50,18 @@ func NewMockBackend(bc *core.BlockChain, txPool *core.TxPool) *mockBackend {
 		bc:     bc,
 		txPool: txPool,
 	}
+}
+
+func (m *mockBackend) AccountManager() *accounts.Manager {
+	return m.accountManager
+}
+
+func (m *mockBackend) ChainDb() ethdb.Database {
+	return m.chainDb
+}
+
+func (m *mockBackend) Etherbase() (common.Address, error) {
+	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
 }
 
 func (m *mockBackend) BlockChain() *core.BlockChain {

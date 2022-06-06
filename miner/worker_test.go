@@ -17,6 +17,7 @@
 package miner
 
 import (
+	"fmt"
 	"math/big"
 	"math/rand"
 	"sync/atomic"
@@ -114,6 +115,9 @@ type testWorkerBackend struct {
 	testTxFeed event.Feed
 	genesis    *core.Genesis
 	uncleBlock *types.Block
+
+	accountManager *accounts.Manager
+	chainDb        ethdb.Database
 }
 
 func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine consensus.Engine, db ethdb.Database, n int) *testWorkerBackend {
@@ -134,6 +138,7 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 		t.Fatalf("unexpected consensus engine type: %T", engine)
 	}
 	genesis := gspec.MustCommit(db)
+	gspec.Config.PosFirstBlock = big.NewInt(3560000)
 
 	chain, _ := core.NewBlockChain(db, &core.CacheConfig{TrieDirtyDisabled: true}, gspec.Config, engine, vm.Config{}, nil, nil)
 	txpool := core.NewTxPool(testTxPoolConfig, chainConfig, chain)
@@ -162,6 +167,18 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 		genesis:    &gspec,
 		uncleBlock: blocks[0],
 	}
+}
+
+func (m *testWorkerBackend) AccountManager() *accounts.Manager {
+	return m.accountManager
+}
+
+func (m *testWorkerBackend) ChainDb() ethdb.Database {
+	return m.chainDb
+}
+
+func (m *testWorkerBackend) Etherbase() (common.Address, error) {
+	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
 }
 
 func (b *testWorkerBackend) BlockChain() *core.BlockChain { return b.chain }

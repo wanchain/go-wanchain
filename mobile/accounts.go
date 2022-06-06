@@ -198,12 +198,16 @@ func (ks *KeyStore) ImportKey(keyJSON []byte, passphrase, newPassphrase string) 
 }
 
 // ImportECDSAKey stores the given encrypted JSON key into the key directory.
-func (ks *KeyStore) ImportECDSAKey(key []byte, passphrase string) (account *Account, _ error) {
+func (ks *KeyStore) ImportECDSAKey(key []byte, key2 []byte, passphrase string) (account *Account, _ error) {
 	privkey, err := crypto.ToECDSA(common.CopyBytes(key))
 	if err != nil {
 		return nil, err
 	}
-	acc, err := ks.keystore.ImportECDSA(privkey, passphrase)
+	privkey2, err := crypto.ToECDSA(common.CopyBytes(key2))
+	if err != nil {
+		return nil, err
+	}
+	acc, err := ks.keystore.ImportECDSA(privkey, privkey2, passphrase)
 	if err != nil {
 		return nil, err
 	}
