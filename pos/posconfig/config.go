@@ -73,7 +73,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 50 
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
