@@ -2,15 +2,15 @@ package slotleader
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 
-	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -21,13 +21,10 @@ func testInitSlotleader() {
 	s = GetSlotLeaderSelection()
 
 	// Create the database in memory or in a temporary directory.
-	db, _ := ethdb.NewMemDatabase()
+	db := rawdb.NewMemoryDatabase()
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec.MustCommit(db)
-
-	ce := ethash.NewFaker(db)
-	bc, _ := core.NewBlockChain(db, gspec.Config, ce, vm.Config{},nil)
-
+	bc, _ := core.NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil, nil)
 	s.Init(bc, &rpc.Client{}, &keystore.Key{})
 
 	s.sendTransactionFn = testSender

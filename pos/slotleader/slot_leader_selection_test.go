@@ -4,20 +4,21 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/pos/uleaderselection"
 	"math/big"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
-	"github.com/ethereum/go-ethereum/pos/uleaderselection"
 	"github.com/ethereum/go-ethereum/pos/util/convert"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -275,6 +276,11 @@ func TestGetSMAPieces(t *testing.T) {
 }
 
 func TestDump(t *testing.T) {
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	t.Log("Current dir path ", dir)
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
 	SlsInit()
 	s := GetSlotLeaderSelection()
 	epochID := s.getWorkingEpochID()
@@ -294,6 +300,8 @@ func TestDump(t *testing.T) {
 
 	s.setWorkingEpochID(epochID)
 	posconfig.SelfTestMode = false
+
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
 
 func TestClearData(t *testing.T) {
@@ -341,8 +349,8 @@ func TestGetSlotLeader(t *testing.T) {
 		t.Fail()
 	}
 
-	////ErrSlotLeaderGroupNotReady
-	_, err = s.GetSlotLeader(4, posconfig.SlotCount-1)
+	////ErrSlotIDOutOfRange
+	_, err = s.GetSlotLeader(4, posconfig.SlotCount)
 	if err != nil {
 		t.Fail()
 	}
@@ -610,8 +618,8 @@ func TestBuildEpochLeaderGroup(t *testing.T) {
 
 func TestGetRandom(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db         = rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	)
 
 	if stateDb == nil {
@@ -622,7 +630,7 @@ func TestGetRandom(t *testing.T) {
 	vmcfg := vm.Config{}
 	gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec.MustCommit(db)
-	chain, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg, nil)
+	chain, err := core.NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vmcfg, nil, nil, nil)
 	s.blockChain = chain
 
 	if err != nil {
@@ -723,8 +731,8 @@ func TestBuildSecurityPieces(t *testing.T) {
 func TestGenerateSecurityMsg(t *testing.T) {
 	// init
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db         = rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	)
 
 	if stateDb == nil {
@@ -738,7 +746,7 @@ func TestGenerateSecurityMsg(t *testing.T) {
 	//gspec := core.DefaultPPOWTestingGenesisBlock()
 	gspec := core.DefaultGenesisBlock()
 	gspec.MustCommit(db)
-	_, err := core.NewBlockChain(db, gspec.Config, nil, vmcfg, nil)
+	_, err := core.NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vmcfg, nil, nil, nil)
 
 	if err != nil {
 		t.Fail()

@@ -1,16 +1,16 @@
 package randombeacon
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	accBn256 "github.com/ethereum/go-ethereum/accounts/keystore/bn256"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/pos/epochLeader"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/pos/rbselection"
@@ -23,18 +23,34 @@ import (
 	"time"
 )
 
+type PublicKeyBn256 struct {
+	// g1, g2
+	G1 *bn256.G1
+}
+
+type PrivateKeyBn256 struct {
+	PublicKeyBn256
+	D *big.Int
+}
+
+func GenerateBn256() (*PrivateKeyBn256, error) {
+	pri, g1, err := bn256.RandomG1(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	privateKeyBn256 := new(PrivateKeyBn256)
+	privateKeyBn256.D = pri
+	privateKeyBn256.G1 = g1
+	return privateKeyBn256, nil
+}
+
 var (
-	//selfPrivate      *accBn256.PrivateKeyBn256 = &accBn256.PrivateKeyBn256{}
-	//commityPrivate   *accBn256.PrivateKeyBn256
-
-	selfPrivate      = &accBn256.PrivateKeyBn256{}
-	commityPrivate   = &accBn256.PrivateKeyBn256{}
-	hbase            = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
-	ens              = make([][]*bn256.G1, 0)
-	commit           [][]bn256.G2
+	selfPrivate    = &PrivateKeyBn256{}
+	commityPrivate = &PrivateKeyBn256{}
+	hbase          = new(bn256.G2).ScalarBaseMult(big.NewInt(int64(1)))
+	ens            = make([][]*bn256.G1, 0)
+	commit         [][]bn256.G2
 )
-
-
 
 func initKeystore(rb *RandomBeacon) error {
 	var key keystore.Key
@@ -56,7 +72,7 @@ func initKeystore(rb *RandomBeacon) error {
 }
 
 func callRBLoop(rb *RandomBeacon, wg *sync.WaitGroup) {
-	defer func(){
+	defer func() {
 		wg.Done()
 	}()
 
@@ -66,14 +82,14 @@ func callRBLoop(rb *RandomBeacon, wg *sync.WaitGroup) {
 	}
 
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-		epochId = uint64(0)
-		slotId = uint64(0)
-		rc = new(rpc.Client)
+		db         = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+		epochId    = uint64(0)
+		slotId     = uint64(0)
+		rc         = new(rpc.Client)
 	)
 
-	for ;; {
+	for {
 		err := rb.Loop(statedb, rc, epochId, slotId)
 		if err != nil {
 			fmt.Println("callRbLoop break loop, err:", err)
@@ -81,7 +97,7 @@ func callRBLoop(rb *RandomBeacon, wg *sync.WaitGroup) {
 		}
 		epochId++
 		slotId++
-		time.Sleep(time.Second*10)
+		time.Sleep(time.Second * 10)
 	}
 }
 
@@ -94,11 +110,10 @@ func tmpGetRBProposerGroup(epochId uint64) []bn256.G1 {
 	return ret
 }
 
-
 var (
 	dkg1sCallTimes = 0
 	dkg2sCallTimes = 0
-	sigsCallTimes = 0
+	sigsCallTimes  = 0
 )
 
 func DoDKG1sSuc() error {
@@ -130,7 +145,6 @@ func DoSIGsFail() error {
 	sigsCallTimes++
 	return errors.New("fail")
 }
-
 
 func tmpGetEnsFunc(db vm.StateDB, epochId uint64, proposerId uint32) ([]*bn256.G1, error) {
 	return ens[proposerId], nil
@@ -165,8 +179,8 @@ func TestRandomBeacon_GetMyRBProposerId(t *testing.T) {
 	}
 
 	posconfig.Cfg().MinerKey = &key
-	commityPrivate.D	 = posconfig.Cfg().GetMinerBn256SK()
-	commityPrivate.G1 	 = posconfig.Cfg().GetMinerBn256PK()
+	commityPrivate.D = posconfig.Cfg().GetMinerBn256SK()
+	commityPrivate.G1 = posconfig.Cfg().GetMinerBn256PK()
 
 	fmt.Println(len(commityPrivate.G1.Marshal()))
 
@@ -588,15 +602,15 @@ func TestRandomBeacon_GenerateSIG(t *testing.T) {
 func TestRandomBeacon_doLoop(t *testing.T) {
 	posconfig.SelfTestMode = true
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
-		epochId    = uint64(0)
-		slotId     = uint64(0)
-		rc         = new(rpc.Client)
-		epocher    epochLeader.Epocher
+		db                   = rawdb.NewMemoryDatabase()
+		statedb, _           = state.New(common.Hash{}, state.NewDatabase(db), nil)
+		epochId              = uint64(0)
+		slotId               = uint64(0)
+		rc                   = new(rpc.Client)
+		epocher              epochLeader.Epocher
 		actureDkg1sCallTimes = 0
 		actureDkg2sCallTimes = 0
-		actureSIGsCallTimes = 0
+		actureSIGsCallTimes  = 0
 	)
 
 	rb := GetRandonBeaconInst()
@@ -611,7 +625,7 @@ func TestRandomBeacon_doLoop(t *testing.T) {
 	rb.fDoSIGs = DoSIGsSuc
 
 	{
-		private, err := accBn256.GenerateBn256()
+		private, err := GenerateBn256()
 		if err != nil {
 			t.Error("generate Bn256 fail")
 		}
@@ -671,7 +685,6 @@ func TestRandomBeacon_doLoop(t *testing.T) {
 		}
 
 	}
-
 
 	{
 		slotId++
@@ -764,7 +777,6 @@ func TestRandomBeacon_doLoop(t *testing.T) {
 			t.Error("invalid stage work run times")
 		}
 	}
-
 
 	{
 		slotId++
@@ -996,7 +1008,7 @@ func TestRandomBeacon_doLoop(t *testing.T) {
 			t.Error("invalid my propserIds len, expect:", posconfig.RandomProperCount, ", acture:", len(rb.myPropserIds))
 		}
 
-		if rb.epochId != epochId + 1 || rb.epochStage != vm.RbDkg1Stage {
+		if rb.epochId != epochId+1 || rb.epochStage != vm.RbDkg1Stage {
 			t.Error("invalid random beacon state")
 		}
 
@@ -1126,9 +1138,9 @@ func TestPolyMap_DecodeRLP(t *testing.T) {
 func BenchmarkRandomBeacon_Stop(b *testing.B) {
 	var (
 		epocher epochLeader.Epocher
-		key keystore.Key
-		rb RandomBeacon
-		wg sync.WaitGroup
+		key     keystore.Key
+		rb      RandomBeacon
+		wg      sync.WaitGroup
 	)
 
 	var err error
@@ -1145,7 +1157,6 @@ func BenchmarkRandomBeacon_Stop(b *testing.B) {
 
 	commityPrivate = selfPrivate
 
-
 	rb.getRBProposerGroupF = tmpGetRBProposerGroup
 	rb.getCji = tmpGetCji
 
@@ -1155,7 +1166,7 @@ func BenchmarkRandomBeacon_Stop(b *testing.B) {
 
 		wg.Add(1)
 		go callRBLoop(&rb, &wg)
-		time.Sleep(time.Second*3)
+		time.Sleep(time.Second * 3)
 		rb.Stop()
 		wg.Wait()
 	}
