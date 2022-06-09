@@ -1,6 +1,7 @@
 package posdb
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -10,8 +11,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
-	"github.com/ethereum/go-ethereum/pos/util"
+	//"github.com/ethereum/go-ethereum/pos/util"
 )
+
+//PkEqual only can use in same curve. return whether the two points equal
+func PkEqual(pk1, pk2 *ecdsa.PublicKey) bool {
+	if pk1 == nil || pk2 == nil {
+		return false
+	}
+
+	if hex.EncodeToString(pk1.X.Bytes()) == hex.EncodeToString(pk2.X.Bytes()) &&
+		hex.EncodeToString(pk1.Y.Bytes()) == hex.EncodeToString(pk2.Y.Bytes()) {
+		return true
+	}
+	return false
+}
 
 func TestDbInitAll(t *testing.T) {
 	os.RemoveAll("/tmp/gwan")
@@ -36,7 +50,7 @@ func TestDbInitAll(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		key, _ := crypto.GenerateKey()
 		keys[i] = crypto.FromECDSAPub(&key.PublicKey)
-		if !util.PkEqual(&key.PublicKey, &key.PublicKey) {
+		if !PkEqual(&key.PublicKey, &key.PublicKey) {
 			t.Fail()
 		}
 	}
