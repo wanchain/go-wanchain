@@ -50,6 +50,7 @@ var (
 	ErrUnsupportedECDHAlgorithm   = fmt.Errorf("ecies: unsupported ECDH algorithm")
 	ErrUnsupportedECIESParameters = fmt.Errorf("ecies: unsupported ECIES parameters")
 	ErrInvalidKeyLen              = fmt.Errorf("ecies: invalid key size (> %d) in ECIESParams", maxKeyLen)
+	ErrInvalidParamBlockSize      = fmt.Errorf("ecies: invalid block size")
 )
 
 // KeyLen is limited to prevent overflow of the counter

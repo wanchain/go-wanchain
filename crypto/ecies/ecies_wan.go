@@ -113,8 +113,12 @@ func EncryptWithRandom(rbprv *PrivateKey, pub *PublicKey, iv []byte, m, s1, s2 [
 	fmt.Println("macKey=" + common.Bytes2Hex(Km))
 	hash.Reset()
 
-	em := AES_CBC_Encrypt(m, Ke, iv)
+	em, err := AES_CBC_Encrypt(m, Ke, iv)
+	if err != nil {
+		return
+	}
 	if len(em) <= params.BlockSize {
+		err = ErrInvalidParamBlockSize
 		return
 	}
 	fmt.Println("encrypt message=" + common.Bytes2Hex(em))
@@ -139,11 +143,12 @@ func EncryptWithRandom(rbprv *PrivateKey, pub *PublicKey, iv []byte, m, s1, s2 [
 	return
 }
 
-func AES_CBC_Encrypt(plainText []byte, key []byte, iv []byte) []byte {
+func AES_CBC_Encrypt(plainText []byte, key []byte, iv []byte) ([]byte, error) {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		//panic(err) // delete panic because gwan will core when contract call solEnhance pre-compile contract.
+		return nil, err
 	}
 
 	plainText = Padding(plainText, block.BlockSize())
@@ -153,7 +158,7 @@ func AES_CBC_Encrypt(plainText []byte, key []byte, iv []byte) []byte {
 	cipherText := make([]byte, len(plainText))
 	blockMode.CryptBlocks(cipherText, plainText)
 
-	return cipherText
+	return cipherText, nil
 }
 
 func Padding(plainText []byte, blockSize int) []byte {
@@ -173,10 +178,11 @@ func UnPadding(cipherText []byte) []byte {
 	return cipherText
 }
 
-func AES_CBC_Decrypt(cipherText []byte, key []byte, iv []byte) []byte {
+func AES_CBC_Decrypt(cipherText []byte, key []byte, iv []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		//panic(err) // delete panic because gwan will core when contract call solEnhance pre-compile contract.
+		return nil, err
 	}
 
 	blockMode := cipher.NewCBCDecrypter(block, iv)
@@ -185,7 +191,7 @@ func AES_CBC_Decrypt(cipherText []byte, key []byte, iv []byte) []byte {
 	blockMode.CryptBlocks(plainText, cipherText)
 
 	plainText = UnPadding(plainText)
-	return plainText
+	return plainText, nil
 }
 
 func hmacSha256(data []byte, secret []byte) []byte {
