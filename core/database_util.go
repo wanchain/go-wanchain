@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -536,6 +535,10 @@ func DeleteTxLookupEntry(db DatabaseDeleter, hash common.Hash) {
 	db.Delete(append(lookupPrefix, hash.Bytes()...))
 }
 
+/*
+// cancel by Jacob begin
+// using rawdb.table rawdb.newBatch
+
 // PreimageTable returns a Database instance with the key prefix for preimage entries.
 func PreimageTable(db ethdb.Database) *ethdb.Table {
 	return ethdb.NewTable(db, preimagePrefix)
@@ -562,6 +565,8 @@ func WritePreimages(db ethdb.Database, number uint64, preimages map[common.Hash]
 	}
 	return nil
 }
+// cancel by Jacob end
+*/
 
 // GetBlockChainVersion reads the version number from db.
 func GetBlockChainVersion(db DatabaseReader) int {
