@@ -141,7 +141,7 @@ func testAccessList(t *testing.T, client *rpc.Client) {
 		From:     testAddr,
 		To:       &common.Address{},
 		Gas:      21000,
-		GasPrice: big.NewInt(765625000),
+		GasPrice: big.NewInt(1000000000),
 		Value:    big.NewInt(1),
 	}
 	al, gas, vmErr, err := ec.CreateAccessList(context.Background(), msg)
@@ -250,6 +250,7 @@ func testSetHead(t *testing.T, client *rpc.Client) {
 }
 
 func testSubscribePendingTransactions(t *testing.T, client *rpc.Client) {
+	t.Skip("gwan legacy hash != geth legacy hash")
 	ec := New(client)
 	ethcl := ethclient.NewClient(client)
 	// Subscribe to Transactions

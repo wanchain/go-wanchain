@@ -40,7 +40,7 @@ import (
 func TestSimulatedBackend(t *testing.T) {
 	var gasLimit uint64 = 8000029
 	key, _ := crypto.GenerateKey() // nolint: gosec
-	auth, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(6))
 	genAlloc := make(core.GenesisAlloc)
 	genAlloc[auth.From] = core.GenesisAccount{Balance: big.NewInt(9223372036854775807)}
 
@@ -428,7 +428,7 @@ func TestEstimateGas(t *testing.T) {
 
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	opts, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(1337))
+	opts, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(6))
 
 	sim := NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: big.NewInt(params.Ether)}}, 10000000)
 	defer sim.Close()
@@ -938,7 +938,7 @@ func TestPendingCodeAt(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(6))
 	contractAddr, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
@@ -974,7 +974,7 @@ func TestCodeAt(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(6))
 	contractAddr, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
@@ -1006,7 +1006,7 @@ func TestPendingAndCallContract(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(6))
 	addr, _, _, err := bind.DeployContract(contractAuth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v", err)
@@ -1093,7 +1093,7 @@ func TestCallContractRevert(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(6))
 	addr, _, _, err := bind.DeployContract(contractAuth, parsed, common.FromHex(reverterBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v", err)
@@ -1234,7 +1234,7 @@ func TestForkLogsReborn(t *testing.T) {
 	defer sim.Close()
 	// 1.
 	parsed, _ := abi.JSON(strings.NewReader(callableAbi))
-	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(6))
 	_, _, contract, err := bind.DeployContract(auth, parsed, common.FromHex(callableBin), sim)
 	if err != nil {
 		t.Errorf("deploying contract: %v", err)

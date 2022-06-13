@@ -39,7 +39,7 @@ func TestChainIterator(t *testing.T) {
 	WriteCanonicalHash(chainDb, block.Hash(), block.NumberU64())
 	for i := uint64(1); i <= 10; i++ {
 		var tx *types.Transaction
-		if i%2 == 0 {
+		if true { // gwan donot support accesslist i%2 == 0 {
 			tx = types.NewTx(&types.LegacyTx{
 				Nonce:    i,
 				GasPrice: big.NewInt(11111),
@@ -117,7 +117,7 @@ func TestIndexTransactions(t *testing.T) {
 
 	for i := uint64(1); i <= 10; i++ {
 		var tx *types.Transaction
-		if i%2 == 0 {
+		if true { // gwan don't supprot accesslist i%2 == 0 {
 			tx = types.NewTx(&types.LegacyTx{
 				Nonce:    i,
 				GasPrice: big.NewInt(11111),

@@ -79,7 +79,9 @@ func NewSimulatedBackendWithDatabase(database ethdb.Database, alloc core.Genesis
 	genesis := core.Genesis{Config: params.AllEthashProtocolChanges, GasLimit: gasLimit, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, ethash.NewFaker(), vm.Config{}, nil, nil)
-
+	if blockchain.Config().IsLondon(big.NewInt(0)) {
+		params.SetLondonActive(true)
+	}
 	backend := &SimulatedBackend{
 		database:   database,
 		blockchain: blockchain,

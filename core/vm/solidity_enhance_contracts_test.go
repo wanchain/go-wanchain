@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/crypto"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 /*

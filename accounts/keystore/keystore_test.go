@@ -351,13 +351,13 @@ func TestImportECDSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to generate key: %v", key)
 	}
-	if _, err = ks.ImportECDSA(key, "old"); err != nil {
+	if _, err = ks.ImportECDSA(key, key, "old"); err != nil {
 		t.Errorf("importing failed: %v", err)
 	}
-	if _, err = ks.ImportECDSA(key, "old"); err == nil {
+	if _, err = ks.ImportECDSA(key, key,"old"); err == nil {
 		t.Errorf("importing same key twice succeeded")
 	}
-	if _, err = ks.ImportECDSA(key, "new"); err == nil {
+	if _, err = ks.ImportECDSA(key, key,"new"); err == nil {
 		t.Errorf("importing same key twice succeeded")
 	}
 }

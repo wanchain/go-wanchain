@@ -385,7 +385,7 @@ func testChainID(t *testing.T, client *rpc.Client) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if id == nil || id.Cmp(params.AllEthashProtocolChanges.ChainID) != 0 {
+	if id == nil || id.Cmp(params.AllEthashProtocolChanges.ChainID) != 0 && id.Cmp(big.NewInt(0).SetUint64(params.JupiterChainId(params.AllEthashProtocolChanges.ChainID.Uint64()))) != 0{
 		t.Fatalf("ChainID returned wrong number: %+v", id)
 	}
 }
@@ -458,7 +458,7 @@ func testStatusFunctions(t *testing.T, client *rpc.Client) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gasPrice.Cmp(big.NewInt(1875000000)) != 0 { // 1 gwei tip + 0.875 basefee after a 1 gwei fee empty block
+	if gasPrice.Cmp(big.NewInt(2000000000)) != 0 { // 1gwei tip +1gwei baseFee of wanchain min. // 1 gwei tip + 0.875 basefee after a 1 gwei fee empty block
 		t.Fatalf("unexpected gas price: %v", gasPrice)
 	}
 	// SuggestGasTipCap (should suggest 1 Gwei)

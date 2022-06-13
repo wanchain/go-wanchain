@@ -22,11 +22,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/wanchain/go-wanchain/common"
-	"github.com/wanchain/go-wanchain/core/types"
-	"github.com/wanchain/go-wanchain/crypto/sha3"
-	"github.com/wanchain/go-wanchain/ethdb"
-	"github.com/wanchain/go-wanchain/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"golang.org/x/crypto/sha3"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Tests block header storage and retrieval operations.

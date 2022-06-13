@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/consensus/pluto"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -85,8 +86,9 @@ func init() {
 	}
 
 	signer := types.LatestSigner(params.TestChainConfig)
-	tx1 := types.MustSignNewTx(testBankKey, signer, &types.AccessListTx{
-		ChainID:  params.TestChainConfig.ChainID,
+	tx1 := types.MustSignNewTx(testBankKey, signer, &types.WanLegacyTx{
+		//ChainID:  params.TestChainConfig.ChainID,
+		Txtype:   1,
 		Nonce:    0,
 		To:       &testUserAddress,
 		Value:    big.NewInt(1000),
@@ -95,7 +97,8 @@ func init() {
 	})
 	pendingTxs = append(pendingTxs, tx1)
 
-	tx2 := types.MustSignNewTx(testBankKey, signer, &types.LegacyTx{
+	tx2 := types.MustSignNewTx(testBankKey, signer, &types.WanLegacyTx{
+		Txtype:   1,
 		Nonce:    1,
 		To:       &testUserAddress,
 		Value:    big.NewInt(1000),
@@ -140,7 +143,7 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 	genesis := gspec.MustCommit(db)
 	gspec.Config.PosFirstBlock = big.NewInt(3560000)
 
-	chain, _ := core.NewBlockChain(db, &core.CacheConfig{TrieDirtyDisabled: true}, gspec.Config, engine, vm.Config{}, nil, nil)
+	chain, _ := core.NewBlockChain(db, &core.CacheConfig{TrieDirtyDisabled: true}, gspec.Config, engine, vm.Config{}, nil, nil, pluto.New(chainConfig.Pluto, db))
 	txpool := core.NewTxPool(testTxPoolConfig, chainConfig, chain)
 
 	// Generate a small n-block chain and an uncle block for it
@@ -249,7 +252,7 @@ func testGenerateBlockAndImport(t *testing.T, isClique bool) {
 	// This test chain imports the mined blocks.
 	db2 := rawdb.NewMemoryDatabase()
 	b.genesis.MustCommit(db2)
-	chain, _ := core.NewBlockChain(db2, nil, b.chain.Config(), engine, vm.Config{}, nil, nil)
+	chain, _ := core.NewBlockChain(db2, nil, b.chain.Config(), engine, vm.Config{}, nil, nil, pluto.New(chainConfig.Pluto, db2))
 	defer chain.Stop()
 
 	// Ignore empty commit here for less noise.
@@ -302,7 +305,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	checkEqual := func(t *testing.T, task *task, index int) {
 		// The first empty work without any txs included
 		receiptLen, balance := 0, big.NewInt(0)
-		if index == 1 {
+		if index == 0 { // gwan donot generate empty. only 1 task.
 			// The second full work with 1 tx included
 			receiptLen, balance = 1, big.NewInt(1000)
 		}
@@ -325,7 +328,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 		time.Sleep(100 * time.Millisecond)
 	}
 	w.start() // Start mining!
-	for i := 0; i < 2; i += 1 {
+	for i := 0; i < 1; i += 1 { // gwan do not generate empty block. so this should change to 1.
 		select {
 		case <-taskCh:
 		case <-time.NewTimer(3 * time.Second).C:
@@ -333,7 +336,12 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 		}
 	}
 }
-
+func (w *worker) postTmpBlock() {
+	select {
+	case w.chainSlotTimer <- 1:
+	case <-w.exitCh:
+	}
+}
 func TestStreamUncleBlock(t *testing.T) {
 	ethash := ethash.NewFaker()
 	defer ethash.Close()
@@ -368,7 +376,7 @@ func TestStreamUncleBlock(t *testing.T) {
 	}
 	w.start()
 
-	for i := 0; i < 2; i += 1 {
+	for i := 0; i < 1; i += 1 { // gwan don't generate empty. so change to 1
 		select {
 		case <-taskCh:
 		case <-time.NewTimer(time.Second).C:
@@ -376,7 +384,9 @@ func TestStreamUncleBlock(t *testing.T) {
 		}
 	}
 
-	w.postSideBlock(core.ChainSideEvent{Block: b.uncleBlock})
+	// gwan don't genereate uncle block.
+	//w.postSideBlock(core.ChainSideEvent{Block: b.uncleBlock})
+	w.postTmpBlock()
 
 	select {
 	case <-taskCh:
@@ -428,7 +438,7 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 
 	w.start()
 	// Ignore the first two works
-	for i := 0; i < 2; i += 1 {
+	for i := 0; i < 1; i += 1 {
 		select {
 		case <-taskCh:
 		case <-time.NewTimer(time.Second).C:

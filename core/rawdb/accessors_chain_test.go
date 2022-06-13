@@ -806,7 +806,7 @@ func TestDeriveLogFields(t *testing.T) {
 		}),
 	}
 	// Create the corresponding receipts
-	receipts := []*receiptLogs{
+	receipts := []*types.ReceiptForStorage{
 		{
 			Logs: []*types.Log{
 				{Address: common.BytesToAddress([]byte{0x11})},

@@ -91,7 +91,7 @@ func main() {
 
 		// Inject the signer key and start sealing with it
 		ks := keystore.NewKeyStore(stack.KeyStoreDir(), keystore.LightScryptN, keystore.LightScryptP)
-		signer, err := ks.ImportECDSA(sealer, "")
+		signer, err := ks.ImportECDSA(sealer,sealer, "")
 		if err != nil {
 			panic(err)
 		}

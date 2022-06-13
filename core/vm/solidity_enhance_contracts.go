@@ -452,6 +452,7 @@ func init() {
 	copy(checkSigid[:], solenhanceAbi.Methods["checkSig"].ID)
 	copy(checkSigid2[:], common.Hex2Bytes("861731d5"))
 	copy(encid[:], solenhanceAbi.Methods["enc"].ID)
+	fmt.Println("EEEEEEEEEEEEEEEe:", common.Bytes2Hex(encid[:]) )
 	copy(hardCapid[:], solenhanceAbi.Methods["getHardCap"].ID)
 	copy(s256MulPkid[:], solenhanceAbi.Methods["mulPk"].ID)
 
