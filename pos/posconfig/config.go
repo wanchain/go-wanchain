@@ -27,8 +27,6 @@ var (
 	MineEnabled  = false
 
 	ChainId = uint64(0)
-
-	LondonForked bool = true
 )
 
 const (
