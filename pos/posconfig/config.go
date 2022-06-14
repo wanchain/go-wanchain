@@ -114,7 +114,7 @@ const (
 
 	MainnetMarsEpochId = MainnetVenusEpochId
 	TestnetMarsEpochId = 18506 //2020.09.01
-	PlutoMarsEpochId   = 549500
+	PlutoMarsEpochId   = 18506
 	// After Jupiter fork, wanchain support ethereum tx and wallet.
 	MainnetJupiterEpochId = 18732
 	TestnetJupiterEpochId = 18698
