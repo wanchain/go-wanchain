@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/trie"
-	"io"
 	"math"
 	"math/big"
 
