@@ -329,12 +329,7 @@ func NewEIP155Signer(chainId *big.Int) EIP155Signer {
 }
 
 func (s EIP155Signer) ChainID() *big.Int {
-	chainId := s.chainId
-
-	if params.JupiterChainId(s.chainId.Uint64()) == chainId.Uint64() {
-		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
-	}
-	return chainId
+	return s.chainId
 }
 
 func (s EIP155Signer) Equal(s2 Signer) bool {

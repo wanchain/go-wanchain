@@ -486,6 +486,8 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	// add by jacob begin
 	posFirst := d.blockchain.GetFirstPosBlockNumber()
+	// if the common ancestor (origin)'s next block is in pow stage, and the target height > posFist.
+	// download pow's blocks [origin+1,posFirst-1]
 	if origin+1 < posFirst {
 		if height > posFirst {
 			height = posFirst - 1

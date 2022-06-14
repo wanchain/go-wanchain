@@ -449,7 +449,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	cpy := tx.inner.copy()
 	//cpy.setSignatureValues(signer.ChainID(), v, r, s)
 	if params.IsLondonActive() && tx.Type() == DynamicFeeTxType {
-		cpy.setSignatureValues(tx.ChainId(), v, r, s)
+		cpy.setSignatureValues(new(big.Int).SetUint64(params.JupiterChainId(signer.ChainID().Uint64())), v, r, s)
 	} else {
 		cpy.setSignatureValues(signer.ChainID(), v, r, s)
 	}

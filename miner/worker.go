@@ -471,7 +471,13 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
+			//w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
+
+			if w.chain.IsInPosStage() {
+				w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
+			} else {
+				w.commitNewWork(req.interrupt, req.noempty, req.timestamp, true)
+			}
 
 		case slotTime := <-w.chainSlotTimer:
 			w.commitNewWork(nil, true, int64(slotTime), true)
