@@ -1,6 +1,6 @@
 #!/bin/bash
 # set -x
-DOCKERIMG=wanchain/client-go:3.0.0-beta.13
+DOCKERIMG=wanchain/client-go:3.0.0
 
 echo ''
 echo ''
@@ -63,7 +63,7 @@ fi
 IPCFILE="$HOME/.wanchain/testnet/gwan.ipc"
 sudo rm -f $IPCFILE
 
-sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1   --syncmode=full --snapshot=false --gcmode=archive  --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
+sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1   --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"

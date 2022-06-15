@@ -18,7 +18,7 @@ echo ''
 read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 
 
-DOCKERIMG=wanchain/client-go:2.2.0
+DOCKERIMG=wanchain/client-go:3.0.0
 
 if [ ${PASSWD} != ${PASSWD2} ]
 then
@@ -64,7 +64,7 @@ fi
 
 addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
-sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
+sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1 --ethstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
