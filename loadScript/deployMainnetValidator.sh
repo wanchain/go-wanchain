@@ -15,6 +15,8 @@ read -s PASSWD
 echo 'Confirm your password of validator account:'
 read -s PASSWD2
 echo ''
+
+echo ''
 read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 
 
@@ -64,6 +66,8 @@ fi
 
 addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 
+IPCFILE="$HOME/.wanchain/gwan.ipc"
+sudo rm -f $IPCFILE
 sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1 --ethstats ${YOUR_NODE_NAME}:wanchainmainnetvalidator@wanstats.io
 
 if [ $? -ne 0 ]; then
@@ -78,6 +82,20 @@ sleep 5
 if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
     sudo docker container update --restart=always gwan
 else
+    while true
+    do
+        sudo ls -l $IPCFILE > /dev/null 2>&1
+        Ret=$?
+        if [ $Ret -eq 0 ]; then
+            cur=`date '+%s'`
+            ft=`sudo stat -c %Y $IPCFILE`
+            if [ $cur -gt $((ft + 6)) ]; then
+                break
+            fi
+        fi
+        echo -n '.'
+        sleep 1
+    done
     sudo rm ~/.wanchain/pw.txt
 fi
 
