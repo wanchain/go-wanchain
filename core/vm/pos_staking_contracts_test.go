@@ -86,12 +86,12 @@ func clearDb() {
 }
 
 func initDb() bool {
-	dbTmp, err := rawdb.NewLevelDBDatabase(dirname, 0, 0,"/tmp/", true)
-	if err != nil {
-		println(err.Error())
-		return false
-	}
-	posStakingDB = dbTmp
+	//dbTmp, err := rawdb.NewLevelDBDatabase(dirname, 0, 0,"/tmp/", false)
+	//if err != nil {
+	//	println(err.Error())
+	//	return false
+	//}
+	posStakingDB =  rawdb.NewMemoryDatabase()
 	return true
 }
 
