@@ -6,9 +6,9 @@ import (
 	"bytes"
 	//"bytes"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 	"testing"
 )
@@ -138,8 +138,8 @@ func TestOTABalance2ContractAddr(t *testing.T) {
 
 func TestGetOtaBalance(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaShortAddr = common.FromHex(otaShortAddrs[0])
 	)
@@ -179,8 +179,8 @@ func TestGetOtaBalance(t *testing.T) {
 
 func TestCheckOTAExist(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaShortAddr = common.FromHex(otaShortAddrs[1])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -224,8 +224,8 @@ func TestBatCheckOTAExist(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaShortAddrBytes = [][]byte{
 				common.FromHex(otaShortAddrs[1]),
@@ -260,8 +260,8 @@ func TestBatCheckOTAExist(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaShortAddrBytes = [][]byte{
 				common.FromHex(otaShortAddrs[1]),
@@ -361,8 +361,8 @@ func TestBatCheckOTAExist(t *testing.T) {
 
 func TestSetOTA(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaShortAddr = common.FromHex(otaShortAddrs[3])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -388,8 +388,8 @@ func TestSetOTA(t *testing.T) {
 
 func TestAddOTAIfNotExist(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaShortAddr = common.FromHex(otaShortAddrs[4])
 		otaAX        = otaShortAddr[1 : 1+common.HashLength]
@@ -434,8 +434,8 @@ func TestSetOtaBalanceToAX(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 		)
 
 		err := SetOtaBalanceToAX(statedb, make([]byte, common.HashLength-1), big1)
@@ -446,8 +446,8 @@ func TestSetOtaBalanceToAX(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 		)
 
 		err := SetOtaBalanceToAX(statedb, make([]byte, common.HashLength), nil)
@@ -459,8 +459,8 @@ func TestSetOtaBalanceToAX(t *testing.T) {
 
 func TestGetOTAInfoFromAX(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaShortAddr = common.FromHex(otaShortAddrs[4])
 		otaAX        = otaShortAddr[0 : 1+common.HashLength]
@@ -507,8 +507,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //func TestGetOTASet(t *testing.T) {
 //	{
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr = common.FromHex(otaShortAddrs[6])
 //			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -523,8 +523,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	{
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr = common.FromHex(otaShortAddrs[6])
 //			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -547,8 +547,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 100; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr = common.FromHex(otaShortAddrs[6])
 //			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -593,8 +593,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 100; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr = common.FromHex(otaShortAddrs[6])
 //			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -639,8 +639,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 100; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr = common.FromHex(otaShortAddrs[6])
 //			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -685,8 +685,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 100; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -741,8 +741,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 30; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -809,8 +809,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 30; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -877,8 +877,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 30; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -945,8 +945,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	for i := 0; i < 30; i++ {
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -1015,8 +1015,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 //
 //	{
 //		var (
-//			db, _      = ethdb.NewMemDatabase()
-//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+//			db     = rawdb.NewMemoryDatabase()
+//			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 //
 //			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 //			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -1094,8 +1094,8 @@ func TestGetOTAInfoFromAX(t *testing.T) {
 func TestGetOTASet(t *testing.T) {
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1111,8 +1111,8 @@ func TestGetOTASet(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1135,8 +1135,8 @@ func TestGetOTASet(t *testing.T) {
 
 	{
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1159,8 +1159,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1200,8 +1200,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1222,8 +1222,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1264,8 +1264,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1318,8 +1318,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1341,8 +1341,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr = common.FromHex(otaShortAddrs[6])
 			otaAX      = otaWanAddr[1 : 1+common.HashLength]
@@ -1364,8 +1364,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -1433,8 +1433,8 @@ func TestGetOTASet(t *testing.T) {
 
 	for i := 0; i < 30; i++ {
 		var (
-			db, _      = ethdb.NewMemDatabase()
-			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+			db     = rawdb.NewMemoryDatabase()
+			statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 			otaWanAddr         = common.FromHex(otaShortAddrs[6])
 			otaMixSetAddrBytes = make([][]byte, 0, 100)
@@ -1537,8 +1537,8 @@ func TestGetOTASet(t *testing.T) {
 
 func TestCheckOTAImageExist(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaWanAddr = common.FromHex(otaShortAddrs[7])
 		balanceSet = big.NewInt(10)
@@ -1585,8 +1585,8 @@ func TestCheckOTAImageExist(t *testing.T) {
 
 func TestAddOTAImage(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     = rawdb.NewMemoryDatabase()
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 		otaWanAddr = common.FromHex(otaShortAddrs[7])
 		balanceSet = big.NewInt(10)

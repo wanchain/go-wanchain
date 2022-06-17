@@ -5,11 +5,11 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/pos/rbselection"
@@ -17,7 +17,6 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"testing"
-	"time"
 )
 
 type CTStateDB struct {
@@ -102,10 +101,10 @@ var (
 	nr    = 21
 	thres = posconfig.Cfg().PolymDegree + 1
 
-	db, _      = ethdb.NewMemDatabase()
-	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	db     = rawdb.NewMemoryDatabase()
+	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	ref        = &dummyCtRef{}
-	evm        = NewEVM(Context{Time: big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+	evm        = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{Time: big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	rbcontract      = &RandomBeaconContract{}
 	rbcontractParam = &Contract{self: &dummyCtRef{false}}
@@ -282,7 +281,7 @@ func TestRBDkg1(t *testing.T) {
 	rbepochId = 0
 	epochTimeSpan := uint64(posconfig.SlotTime*posconfig.SlotCount) * rbepochId
 	evm.Context.Time = big.NewInt(0).SetUint64(epochTimeSpan + posconfig.SlotTime*(posconfig.Cfg().Dkg1End-2))
-	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
+	//evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
 
 	rbgroupdb[rbepochId] = pubs
 
@@ -301,7 +300,9 @@ func TestRBDkg1(t *testing.T) {
 
 		hashCij := GetRBKeyHash(kindCij, dkgParam.EpochId, dkgParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err := rbcontract.Run(payload)
 		if err != nil {
 			t.Error(err)
 		}
@@ -341,7 +342,9 @@ func TestRBDkg2(t *testing.T) {
 
 		hashEns := GetRBKeyHash(kindEns, dkgParam.EpochId, dkgParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err := rbcontract.Run(payload)
 		if err != nil {
 			t.Error(err)
 		}
@@ -376,7 +379,9 @@ func TestRBSig(t *testing.T) {
 		payload := buildSig(payloadBytes)
 		hash := GetRBKeyHash(sigShareId[:], sigShareParam.EpochId, sigShareParam.ProposerId)
 
-		_, err := rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err := rbcontract.Run(payload)
 		if err != nil {
 			t.Error(err)
 		}
@@ -400,7 +405,7 @@ func TestRBSig(t *testing.T) {
 
 func TestValidPosTx(t *testing.T) {
 	clearDB()
-	evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
+	//evm.BlockNumber = big.NewInt(0).SetUint64(uint64(100))
 	rbgroupdb[rbepochId] = pubs
 
 	for i := 0; i < nr; i++ {
@@ -418,7 +423,9 @@ func TestValidPosTx(t *testing.T) {
 			t.Error("verify pos tx fail. err:", err)
 		}
 
-		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err = rbcontract.Run(payload)
 		if err != nil {
 			t.Error("rb contract run fail. err:", err)
 		}
@@ -440,7 +447,9 @@ func TestValidPosTx(t *testing.T) {
 			t.Error("verify pos tx fail. err:", err)
 		}
 
-		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err = rbcontract.Run(payload)
 		if err != nil {
 			t.Error("rb contract run fail. err:", err)
 		}
@@ -462,7 +471,9 @@ func TestValidPosTx(t *testing.T) {
 			t.Error("verify pos tx fail. err:", err)
 		}
 
-		_, err = rbcontract.Run(payload, rbcontractParam, evm)
+		rbcontract.contract = rbcontractParam
+		rbcontract.evm = evm
+		_, err = rbcontract.Run(payload)
 		if err != nil {
 			t.Error("rb contract run fail. err:", err)
 		}

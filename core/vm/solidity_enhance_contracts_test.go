@@ -133,9 +133,9 @@ func TestAadd_4(t *testing.T) {
 	input = append(input, common.FromHex(x2)...)
 	input = append(input, common.FromHex(y2)...)
 
-	s := &bn256Add{}
+	s := &bn256AddByzantium{}
 
-	ret, err := s.Run(input, nil, nil)
+	ret, err := s.Run(input)
 	if err != nil {
 		t.Fatalf("error happens")
 	}
@@ -160,7 +160,7 @@ func sec256Mul(x, y, k *big.Int, t *testing.T) (x3, y3 *big.Int) {
 	input = append(input, common.LeftPadBytes(y.Bytes(), 32)...)
 
 	s := &s256ScalarMul{}
-	res, err := s.Run(input, nil, nil)
+	res, err := s.Run(input)
 
 	if err != nil {
 		t.Fatalf("sec256Mul failed,error happens")
@@ -178,7 +178,7 @@ func sec256Add(x1, y1, x2, y2 *big.Int, i, j int, t *testing.T) (x3, y3 *big.Int
 
 	seh := &s256Add{}
 
-	res, err := seh.Run(input, nil, nil)
+	res, err := seh.Run(input)
 
 	if err != nil {
 		fmt.Println(i, j)
@@ -551,7 +551,7 @@ func TestS256Add_1(t *testing.T) {
 	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	res, err := s.Run(input, nil, nil)
+	res, err := s.Run(input)
 
 	if err != nil {
 		t.Fatalf("error happens")
@@ -580,7 +580,7 @@ func TestS256Add_2(t *testing.T) {
 	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_, err := s.Run(input, nil, nil)
+	_, err := s.Run(input)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -606,7 +606,7 @@ func TestS256Add_3(t *testing.T) {
 	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_, err := s.Run(input, nil, nil)
+	_, err := s.Run(input)
 
 	if err == nil {
 		t.Fatalf("error happens")
@@ -632,7 +632,7 @@ func TestS256Add_4(t *testing.T) {
 	input = append(input, common.FromHex(y2)...)
 
 	s := &s256Add{}
-	_, err := s.Run(input, nil, nil)
+	_, err := s.Run(input)
 
 	if err != nil {
 		t.Fatalf("error happens")
@@ -654,7 +654,7 @@ func TestS256ScalarMul_1(t *testing.T) {
 	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	res, err := s.Run(input, nil, nil)
+	res, err := s.Run(input)
 
 	if err != nil {
 		t.Fatalf("test failed,error happens")
@@ -681,7 +681,7 @@ func TestS256ScalarMul_2(t *testing.T) {
 	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	_, err := s.Run(input, nil, nil)
+	_, err := s.Run(input)
 	if err == nil {
 		t.Fatalf("test failed,no error happens")
 	}
@@ -702,7 +702,7 @@ func TestS256ScalarMul_3(t *testing.T) {
 	input = append(input, common.FromHex(yPk)...)
 
 	s := &s256ScalarMul{}
-	_, err := s.Run(input, nil, nil)
+	_, err := s.Run(input)
 
 	if err == nil {
 		t.Fatalf("test failed,no error happens")

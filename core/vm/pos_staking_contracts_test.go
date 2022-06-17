@@ -3,6 +3,7 @@ package vm
 import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -73,7 +74,7 @@ func (StakerStateDB) ForEachStorageByteArray(common.Address, func(common.Hash, [
 var (
 	stakerdb                        = make(map[common.Address]big.Int)
 	dirname, _                      = ioutil.TempDir(os.TempDir(), "pos_staking")
-	posStakingDB *ethdb.LDBDatabase = nil
+	posStakingDB ethdb.Database = nil
 )
 
 func clearDb() {
@@ -85,7 +86,7 @@ func clearDb() {
 }
 
 func initDb() bool {
-	dbTmp, err := ethdb.NewLDBDatabase(dirname, 0, 0)
+	dbTmp, err := rawdb.NewLevelDBDatabase(dirname, 0, 0,"/tmp/", true)
 	if err != nil {
 		println(err.Error())
 		return false
@@ -145,7 +146,7 @@ var (
 	stakerAddr = crypto.PubkeyToAddress(*pb)
 
 	stakerref = &dummyStakerRef{}
-	stakerevm = NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+	stakerevm = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	contract       = &Contract{value: big.NewInt(0).Mul(big.NewInt(10), ether), CallerAddress: stakerAddr}
 	stakercontract = &PosStaking{}
@@ -953,7 +954,7 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 	contract.Value().Set(a)
 	contract.self = &dummyContractRef{}
 	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
-	stakerevm.BlockNumber = big.NewInt(10)
+	//stakerevm.BlockNumber = big.NewInt(10)
 
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -967,7 +968,9 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 		return errors.New("stakeIn pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 
 	if err != nil {
 		return errors.New("stakeIn called failed " + err.Error())
@@ -1016,7 +1019,7 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 	contract.Value().Set(a)
 	contract.self = &dummyContractRef{}
 	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
-	stakerevm.BlockNumber = big.NewInt(10)
+	//stakerevm.BlockNumber = big.NewInt(10)
 
 	var input StakeRegisterParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")
@@ -1031,8 +1034,9 @@ func doStakeRegisterWithParam(amount int64, feeRate int) error {
 		return errors.New("stakeIn pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("stakeIn called failed " + err.Error())
 	}
@@ -1108,8 +1112,9 @@ func doDelegateOne(from common.Address, amount int64) error {
 		return errors.New("delegateIn pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("delegateIn called failed " + err.Error())
 	}
@@ -1153,8 +1158,9 @@ func doDelegateOut(from common.Address) error {
 		return errors.New("delegateOut pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("delegateOut called failed " + err.Error())
 	}
@@ -1201,8 +1207,9 @@ func doPartnerOne(from common.Address, amount int64) error {
 		return errors.New("partnerIn pack failed")
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("partnerIn called failed " + err.Error())
 	}
@@ -1245,8 +1252,9 @@ func doStakeAppend(from common.Address, amount int64) error {
 		return errors.New("stakeAppend pack failed " + err.Error())
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("stakeAppend called failed " + err.Error())
 	}
@@ -1285,8 +1293,9 @@ func doStakeUpdate(from common.Address, amount int64, deltaEpoch int64) error {
 		return errors.New("stakeUpdate pack failed " + err.Error())
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("stakeUpdate called failed " + err.Error())
 	}
@@ -1323,8 +1332,9 @@ func doUpdateFeeRate(from common.Address, feeRate uint64) error {
 		return errors.New("updateFeeRate pack failed " + err.Error())
 	}
 
-	_, err = stakercontract.Run(bytes, contract, stakerevm)
-
+	stakercontract.contract = contract
+	stakercontract.evm = stakerevm
+	_, err = stakercontract.Run(bytes)
 	if err != nil {
 		return errors.New("updateFeeRate called failed " + err.Error())
 	}

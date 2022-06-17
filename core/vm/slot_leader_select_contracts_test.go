@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/pos/posdb"
@@ -175,7 +175,7 @@ func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 }
 
 func TestIsInValidStage(t *testing.T) {
-	evm := NewEVM(Context{}, nil, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, nil, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	util.CalEpochSlotIDByNow()
 	curEpId, _ := util.GetEpochSlotID()
@@ -219,13 +219,13 @@ func TestAddSlotScCallTimes(t *testing.T) {
 
 func TestUpdateSlotLeaderStageIndex(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		//db     =  rawdb.NewMemoryDatabase()
+		//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	var sendtransGet [posconfig.EpochLeaderCount]bool
 
-	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 	epochIDBuf := convert.Uint64ToBytes(uint64(0))
 
 	var index uint64
@@ -399,12 +399,12 @@ func TestHandleStgOne(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
 
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		//db     =  rawdb.NewMemoryDatabase()
+		//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	// put data into state db
-	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -443,12 +443,12 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
 
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     =  rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	// put data into state db
-	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -492,12 +492,12 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
 
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     =  rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	// put data into state db
-	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -561,12 +561,12 @@ func TestHandleStgTwo(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
 
 	var (
-		db, _      = ethdb.NewMemDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		db     =  rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	// put data into state db
-	evm := NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
