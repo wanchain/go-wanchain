@@ -16,6 +16,13 @@ echo 'gwan binary URL: https://github.com/wanchain/go-wanchain/releases'
 echo 'gwan docker image: ' ${DOCKERIMG}
 echo ''
 echo ''
+
+freeDisk=$(df -k $HOME | sed -n 2p | awk '{print $4}')
+if [ $freeDisk -lt 20000000 ] ; then
+	echo " Your disk free storage is not enough(less than 20G), please check and try again"
+	exit -1
+fi
+
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
 echo 'Please Enter your validator Address'
