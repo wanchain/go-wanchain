@@ -75,7 +75,7 @@ func (c *PlutoConfig) String() string {
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainneLondonBlockNumber int64 = 21385700
+	MainneLondonBlockNumber int64 = 21454700
 	MainnetChainConfig            = &ChainConfig{
 		ChainID:             big.NewInt(MAINNET_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
