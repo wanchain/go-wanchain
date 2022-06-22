@@ -13,11 +13,15 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/ethereum/go-ethereum/pos/epochLeader"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
 	"github.com/ethereum/go-ethereum/pos/rbselection"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"io"
 	"math/big"
+	"os"
+	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -314,6 +318,11 @@ func TestRandomBeacon_Init(t *testing.T) {
 	}
 
 	rb.Init(&epocher)
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	t.Log("Current dir path ", dir)
+	os.RemoveAll(path.Join(dir, "random_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "random_test"))
 }
 
 func TestRandomBeacon_DoGenerateDKG1(t *testing.T) {

@@ -1,11 +1,11 @@
 package incentive
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"math/big"
 	"math/rand"
 	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestAddEpochGas(t *testing.T) {
@@ -37,7 +37,7 @@ func TestAddEpochGas(t *testing.T) {
 }
 
 func TestAddEpochGasFail(t *testing.T) {
-	statedb.Reset(common.Hash{})
+	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testTimes := 100
 	randNums := make([]*big.Int, 0)
 	random := rand.NewSource(0)

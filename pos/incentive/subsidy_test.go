@@ -2,11 +2,12 @@ package incentive
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"math"
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 )
 
@@ -25,7 +26,7 @@ func TestCalcBaseSubsidy(t *testing.T) {
 }
 
 func TestGetBaseSubsidyTotal(t *testing.T) {
-	statedb.Reset(common.Hash{})
+	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	year := big.NewInt(0).Mul(big.NewInt(2.5e6), big.NewInt(1e18))
 	base := calcBaseSubsidy(year)
 	fmt.Println(subsidyReductionInterval)

@@ -35,7 +35,7 @@ func testgetRProposer(stateDb vm.StateDB, epochID uint64) ([]common.Address, []i
 	return rpAddrs, rpActs
 }
 
-func testgetSltLeader(chain consensus.ChainReader, epochID uint64, slotCount int, header *types.Header) ([]common.Address, []int, float64, int) {
+func testgetSltLeader(chain consensus.ChainHeaderReader, epochID uint64, slotCount int, header *types.Header) ([]common.Address, []int, float64, int) {
 	return epAddrs, slBlks, 1, 0
 }
 

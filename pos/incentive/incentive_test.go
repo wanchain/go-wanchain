@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 )
 
 // Prepare a simulate stateDB ---------------------------------------------
 var (
-	db, _      = ethdb.NewMemDatabase()
+	db         = rawdb.NewMemoryDatabase()
 	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 )
 

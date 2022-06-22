@@ -2,6 +2,7 @@ package incentive
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/state"
 	"math/big"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func TestAddRemain(t *testing.T) {
-	statedb.Reset(common.Hash{})
+	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 
 	remainConst := big.NewInt(0).SetUint64(99885844748858447)
 
