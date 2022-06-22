@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"math/big"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/pos/util"
 	//"github.com/ethereum/go-ethereum/log"
@@ -132,41 +132,33 @@ func testGenesisBlock1() *core.Genesis {
 type bproc struct{}
 
 func (bproc) ValidateBody(*types.Block) error { return nil }
-func (bproc) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+func (bproc) ValidateState(block *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	return nil
 }
-func (bproc) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, *big.Int, error) {
-	return nil, nil, new(big.Int), nil
-}
 
-func newTestBlockChain(fake bool) (*core.BlockChain, *core.ChainEnv) {
+func newTestBlockChain() *core.BlockChain {
 
-	db, _ := ethdb.NewMemDatabase()
+	db := rawdb.NewMemoryDatabase()
 	gspec := testGenesisBlock1()
 	gspec.Difficulty = big.NewInt(1)
 	gspec.MustCommit(db)
-	engine := ethash.NewFullFaker(db)
-	if !fake {
-		engine = ethash.NewTester(db)
-	}
-	blockchain, err := core.NewBlockChain(db, gspec.Config, engine, vm.Config{},nil)
+	engine := ethash.NewFullFaker()
+	blockchain, err := core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil, nil, engine)
 	if err != nil {
 		panic(err)
 	}
-	chainEnv := core.NewChainEnv(params.TestChainConfig, gspec, engine, blockchain, db)
-	blockchain.SetValidator(bproc{})
-
-	return blockchain, chainEnv
+	blockchain.SetSlotValidator(bproc{})
+	return blockchain
 }
 
 func TestGetEpochLeaders(t *testing.T) {
 	var networkId uint64
 	networkId = 6
-	posconfig.Init(nil,networkId)
+	posconfig.Init(nil, networkId)
 	epochID, slotID := util.GetEpochSlotID()
 	fmt.Println("epochID:", epochID, " slotID:", slotID)
 
-	blkChain, _ := newTestBlockChain(true)
+	blkChain := newTestBlockChain()
 
 	epocher1 := NewEpocherWithLBN(blkChain, "rb1", "epdb1")
 	epocher2 := NewEpocherWithLBN(blkChain, "rb2", "epdb2")
@@ -358,7 +350,7 @@ func TestGetEpochLeaders(t *testing.T) {
 //	log.Println(total)
 //}
 func TestCalProbability(t *testing.T) {
-	blkChain, _ := newTestBlockChain(true)
+	blkChain := newTestBlockChain()
 	epocherInst := NewEpocherWithLBN(blkChain, "countrb1", "countepdb1")
 	addr := common.Address{}
 	addr.SetString("0xd1d1079cdb7249eee955ce34d90f215571c0781d")
