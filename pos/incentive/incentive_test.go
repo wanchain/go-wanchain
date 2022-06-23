@@ -95,9 +95,11 @@ func TestCheckTotalValue(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
+	posconfig.Init(nil, 4)
 	Init(getInfo, setInfo, testGetRBAddress)
 }
 
 func TestInitFail(t *testing.T) {
+	posconfig.Init(nil, 4)
 	Init(nil, nil, nil)
 }

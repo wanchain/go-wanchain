@@ -119,6 +119,9 @@ func TestOtherApiSuccess(t *testing.T) {
 }
 
 func TestOtherApiFail(t *testing.T) {
+
+	testInitDb()
+
 	ret := GetEpochGasPool(nil, 0)
 	if ret.String() != "0" {
 		t.FailNow()
@@ -147,7 +150,7 @@ func TestOtherApiFail(t *testing.T) {
 		t.FailNow()
 	}
 
-	addrs, cnt, actf, ctrlCnt := GetSlotLeaderActivity(nil, 0)
+	addrs, cnt, actf, ctrlCnt := GetSlotLeaderActivity(&TestChainReader{}, 0)
 	if len(addrs) != 0 || len(cnt) != 0 || actf != float64(0) || ctrlCnt != 0 {
 		t.FailNow()
 	}

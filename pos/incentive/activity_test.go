@@ -28,12 +28,69 @@ func (t *TestChainReader) CurrentHeader() *types.Header {
 func (t *TestChainReader) GetHeaderByNumber(number uint64) *types.Header {
 	return &types.Header{Number: big.NewInt(int64(100)), Difficulty: big.NewInt(0), Coinbase: slAddrs[int(number)%len(slAddrs)]}
 }
-
 func (t *TestChainReader) Config() *params.ChainConfig                             { return nil }
 func (t *TestChainReader) GetHeader(hash common.Hash, number uint64) *types.Header { return nil }
 func (t *TestChainReader) GetHeaderByHash(hash common.Hash) *types.Header          { return nil }
 func (t *TestChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
-func (t *TestSelectLead) GetCurrentHeader() *types.Header                          { return nil }
+
+type TestChain struct {
+	Headers map[common.Hash]*types.Header
+	Number  map[uint64]common.Hash
+}
+
+func (t *TestChain) CurrentHeader() *types.Header {
+	return t.GetHeaderByNumber(uint64(100))
+}
+func (t *TestChain) GetHeaderByNumber(number uint64) *types.Header {
+	return t.Headers[t.Number[number]]
+}
+func (t *TestChain) Config() *params.ChainConfig { return nil }
+func (t *TestChain) GetHeader(hash common.Hash, number uint64) *types.Header {
+	return t.GetHeaderByNumber(number)
+}
+func (t *TestChain) GetHeaderByHash(hash common.Hash) *types.Header        { return t.Headers[hash] }
+func (t *TestChain) GetBlock(hash common.Hash, number uint64) *types.Block { return nil }
+func (t *TestChain) Init() {
+
+	t.Headers = make(map[common.Hash]*types.Header)
+	t.Number = make(map[uint64]common.Hash)
+
+	key, _ := crypto.GenerateKey()
+	genesisMinerCoinbase := crypto.PubkeyToAddress(key.PublicKey)
+	genesisHeader := &types.Header{
+		Number:   big.NewInt(int64(0)),
+		Coinbase: genesisMinerCoinbase,
+	}
+	t.Headers[genesisHeader.Hash()] = genesisHeader
+	t.Number[uint64(0)] = genesisHeader.Hash()
+
+	fmt.Println(fmt.Sprintf("Number:%v,Hash:%s", genesisHeader.Number.Uint64(), genesisHeader.Hash().String()))
+	for i := 1; i <= 100; i++ {
+		var parentHash common.Hash
+		if i == 1 {
+			parentHash = genesisHeader.Hash()
+		} else {
+			parentHash = t.GetHeaderByNumber(uint64(i - 1)).Hash()
+		}
+
+		epochSlotId := uint64(1)
+		epochSlotId += uint64(i) << 8  //slot
+		epochSlotId += uint64(0) << 32 //epoch 0
+
+		header := &types.Header{
+			Number:     big.NewInt(int64(i)),
+			ParentHash: parentHash,
+			Coinbase:   slAddrs[(i-1)%addrsCount],
+			Difficulty: big.NewInt(0).SetUint64(epochSlotId),
+		}
+
+		fmt.Println(fmt.Sprintf("Number:%v,Hash:%s", header.Number.Uint64(), header.Hash().String()))
+		t.Headers[header.Hash()] = header
+		t.Number[uint64(i)] = header.Hash()
+	}
+}
+
+func (t *TestSelectLead) GetCurrentHeader() *types.Header { return nil }
 
 func TestGetSlotLeaderActivity(t *testing.T) {
 	posconfig.Init(nil, 4)
@@ -41,7 +98,10 @@ func TestGetSlotLeaderActivity(t *testing.T) {
 	generateTestAddrs()
 	generateTestStaker()
 
-	chain := &TestChainReader{}
+	//chain := &TestChainReader{}
+	chain := &TestChain{}
+	chain.Init()
+
 	addrs, blks, activity, _ := getSlotLeaderActivity(chain, 0, 100, chain.CurrentHeader())
 	fmt.Println(addrs, blks, activity)
 
