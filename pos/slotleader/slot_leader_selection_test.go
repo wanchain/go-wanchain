@@ -305,6 +305,12 @@ func TestDump(t *testing.T) {
 }
 
 func TestClearData(t *testing.T) {
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	t.Log("Current dir path ", dir)
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
+	posdb.GetDb().DbInit(path.Join(dir, "sl_leader_test"))
+
 	SlsInit()
 	s := GetSlotLeaderSelection()
 	epochID := s.getWorkingEpochID()
@@ -328,6 +334,7 @@ func TestClearData(t *testing.T) {
 
 	s.setWorkingEpochID(epochID)
 	posconfig.SelfTestMode = false
+	os.RemoveAll(path.Join(dir, "sl_leader_test"))
 }
 
 func TestGetSlotLeader(t *testing.T) {
@@ -351,7 +358,7 @@ func TestGetSlotLeader(t *testing.T) {
 
 	////ErrSlotIDOutOfRange
 	_, err = s.GetSlotLeader(4, posconfig.SlotCount)
-	if err != nil {
+	if err == nil {
 		t.Fail()
 	}
 
