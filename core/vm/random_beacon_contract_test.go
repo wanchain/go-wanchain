@@ -65,6 +65,8 @@ func clearDB() {
 	rbdb = make(map[common.Hash][]byte)
 	rbgroupdb = make(map[uint64][]bn256.G1)
 	rbranddb = make(map[uint64]*big.Int)
+	statedb2, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	evm.StateDB = statedb2
 }
 
 func (CTStateDB) GetStateByteArray(addr common.Address, hs common.Hash) []byte {
@@ -104,7 +106,8 @@ var (
 	db     = rawdb.NewMemoryDatabase()
 	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	ref        = &dummyCtRef{}
-	evm        = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{Time: big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+
+	evm        = NewEVM(vmctx, TxContext{}, statedb, params.TestChainConfig, Config{}) //NewEVM(Context{Time: big.NewInt(time.Now().Unix())}, dummyCtDB{ref: ref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	rbcontract      = &RandomBeaconContract{}
 	rbcontractParam = &Contract{self: &dummyCtRef{false}}

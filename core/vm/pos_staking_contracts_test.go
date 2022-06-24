@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -86,12 +87,14 @@ func clearDb() {
 }
 
 func initDb() bool {
-	//dbTmp, err := rawdb.NewLevelDBDatabase(dirname, 0, 0,"/tmp/", false)
-	//if err != nil {
-	//	println(err.Error())
-	//	return false
-	//}
-	posStakingDB =  rawdb.NewMemoryDatabase()
+	dbTmp, err := rawdb.NewLevelDBDatabase(dirname, 0, 0,"xxxx", false)
+	if err != nil {
+		println(err.Error())
+		return false
+	}
+	posStakingDB =  dbTmp
+	statedb2, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	stakerevm.StateDB = statedb2
 	return true
 }
 
@@ -146,7 +149,16 @@ var (
 	stakerAddr = crypto.PubkeyToAddress(*pb)
 
 	stakerref = &dummyStakerRef{}
-	stakerevm = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
+	statedb2, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	vmctx = BlockContext{
+		BlockNumber: big.NewInt(10),
+		Time: big.NewInt(time.Now().Unix()) ,
+		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
+		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
+	}
+	stakerevm = NewEVM(vmctx, TxContext{}, statedb2, params.AllEthashProtocolChanges, Config{ExtraEips: []int{2200}})
+
+	//stakerevm = NewEVM(BlockContext{}, TxContext{}, statedb, params.TestChainConfig, Config{}) //NewEVM(Context{}, dummyStakerDB{ref: stakerref}, params.TestChainConfig, Config{EnableJit: false, ForceJit: false})
 
 	contract       = &Contract{value: big.NewInt(0).Mul(big.NewInt(10), ether), CallerAddress: stakerAddr}
 	stakercontract = &PosStaking{}
@@ -954,7 +966,7 @@ func doStakeInWithParam(amount int64, feeRate int) error {
 	contract.Value().Set(a)
 	contract.self = &dummyContractRef{}
 	eidNow, _ := util.CalEpochSlotID(stakerevm.Context.Time.Uint64())
-	//stakerevm.BlockNumber = big.NewInt(10)
+	stakerevm.Context.BlockNumber = big.NewInt(10)
 
 	var input StakeInParam
 	//input.SecPk = common.FromHex("0x2d0e7c0813a51d3bd1d08246af2a8a7a57d8922e")

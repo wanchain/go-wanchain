@@ -175,7 +175,7 @@ func TestGetSlotLeaderStageIndexesKeyHash(t *testing.T) {
 }
 
 func TestIsInValidStage(t *testing.T) {
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, nil, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, statedb2, params.TestChainConfig, Config{}) //NewEVM(Context{}, nil, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	util.CalEpochSlotIDByNow()
 	curEpId, _ := util.GetEpochSlotID()
@@ -203,6 +203,7 @@ func TestAddSlotScCallTimes(t *testing.T) {
 	t.Log("Current dir path ", dir)
 	os.RemoveAll(path.Join(dir, "sl_contract_test"))
 	posdb.NewDb(path.Join(dir, "sl_contract_test"))
+	posdb.DbInitAll(dir)
 
 	epochID := uint64(0)
 	loopCount := 10
@@ -225,7 +226,7 @@ func TestUpdateSlotLeaderStageIndex(t *testing.T) {
 
 	var sendtransGet [posconfig.EpochLeaderCount]bool
 
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, statedb2, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 	epochIDBuf := convert.Uint64ToBytes(uint64(0))
 
 	var index uint64
@@ -404,7 +405,7 @@ func TestHandleStgOne(t *testing.T) {
 	)
 
 	// put data into state db
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, statedb2, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -436,7 +437,7 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-
+	posdb.DbInitAll("/tmp")
 	pubKey := prvKey.PublicKey
 
 	// pack
@@ -448,7 +449,7 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	)
 
 	// put data into state db
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, stateDb, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -497,7 +498,7 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	)
 
 	// put data into state db
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, stateDb, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime
@@ -566,7 +567,7 @@ func TestHandleStgTwo(t *testing.T) {
 	)
 
 	// put data into state db
-	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
+	evm := NewEVM(BlockContext{}, TxContext{}, stateDb, params.TestChainConfig, Config{}) //NewEVM(Context{}, stateDb, &params.ChainConfig{ChainId: big1}, Config{Debug: true})
 
 	nowTime := uint64(time.Now().Unix())
 	//baseTime := posconfig.EpochBaseTime

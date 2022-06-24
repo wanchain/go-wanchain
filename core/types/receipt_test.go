@@ -219,20 +219,20 @@ func TestDeriveFields(t *testing.T) {
 	to2 := common.HexToAddress("0x2")
 	to3 := common.HexToAddress("0x3")
 	txs := Transactions{
-		NewTx(&LegacyTx{
+		NewTx(&WanLegacyTx{
 			Nonce:    1,
 			Value:    big.NewInt(1),
 			Gas:      1,
 			GasPrice: big.NewInt(1),
 		}),
-		NewTx(&LegacyTx{
+		NewTx(&WanLegacyTx{
 			To:       &to2,
 			Nonce:    2,
 			Value:    big.NewInt(2),
 			Gas:      2,
 			GasPrice: big.NewInt(2),
 		}),
-		NewTx(&AccessListTx{
+		NewTx(&WanLegacyTx{
 			To:       &to3,
 			Nonce:    3,
 			Value:    big.NewInt(3),

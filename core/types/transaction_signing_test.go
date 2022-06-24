@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -30,7 +31,7 @@ func TestEIP155Signing(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewWanTransaction(1, 0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,11 +46,12 @@ func TestEIP155Signing(t *testing.T) {
 }
 
 func TestEIP155ChainId(t *testing.T) {
+	// EIP155 use NewWanTransaction, insteadof eth lagacy transaction
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewWanTransaction(1, 0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,6 +79,7 @@ func TestEIP155ChainId(t *testing.T) {
 }
 
 func TestEIP155SigningVitalik(t *testing.T) {
+	t.Skip("wanchain don't support eth legacy tx with chainID 1")
 	// Test vectors come from http://vitalik.ca/files/eip155_testvec.txt
 	for i, test := range []struct {
 		txRlp, addr string
@@ -118,14 +121,14 @@ func TestEIP155SigningVitalik(t *testing.T) {
 func TestChainId(t *testing.T) {
 	key, _ := defaultTestKey()
 
-	tx := NewTransaction(0, common.Address{}, new(big.Int), 0, new(big.Int), nil)
+	tx := NewWanTransaction(1, 0, common.Address{}, new(big.Int), 0, new(big.Int), nil)
 
 	var err error
 	tx, err = SignTx(tx, NewEIP155Signer(big.NewInt(1)), key)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	tx.ChainId().SetUint64(888)
 	_, err = Sender(NewEIP155Signer(big.NewInt(2)), tx)
 	if err != ErrInvalidChainId {
 		t.Error("expected error:", ErrInvalidChainId)
@@ -135,4 +138,28 @@ func TestChainId(t *testing.T) {
 	if err != nil {
 		t.Error("expected no error")
 	}
+}
+
+func TestTransaction(t *testing.T) {
+	const rawhex = `0xF8AA17843B9ACA0082E286948B9F9F4AA70B1B0D586BE8ADFB19C1AC38E05E9A80B844A9059CBB000000000000000000000000F68EF2B5D2BE01998FE22CB67C885F755B1C0C9F00000000000000000000000000000000000000000000009FF5CDA322FCAAC000820713A0D8F8A58C6928DEB0150895B62243BE0CCC9C33818370EA63E80AF1E971F7F8C5A06579EAF99C03B205532B39E9AAE0E5BF4A3DA3BD2302705E440195E7A67A7059`
+
+	raw := hexutil.MustDecode(rawhex)
+	tx := new(Transaction)
+	if err := tx.UnmarshalBinary(raw); err != nil {
+		t.Fatal(err)
+	}
+	data := &WanLegacyTx{
+		Txtype:   uint64(JUPITER_TX),
+		To:       tx.To(),
+		Nonce:    tx.Nonce(),
+		Gas:      tx.Gas(),
+		GasPrice: tx.GasPrice(),
+		Value:    tx.Value(),
+		Data:     tx.Data(),
+	}
+	data.V, data.R, data.S = tx.RawSignatureValues()
+	tx1 := NewTx(data)
+
+	t.Logf("tx type: %v", tx1.Type())
+	t.Logf("tx id : %v", tx1.Hash().Hex())
 }
