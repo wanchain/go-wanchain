@@ -18,10 +18,11 @@ package core
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/pos/incentive"
-	"github.com/ethereum/go-ethereum/pos/util"
 	"math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/util"
 
 	"github.com/ethereum/go-ethereum/common"
 	cmath "github.com/ethereum/go-ethereum/common/math"

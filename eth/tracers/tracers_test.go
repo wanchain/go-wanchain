@@ -278,9 +278,9 @@ func testCallTracer(tracer string, dirPath string, t *testing.T) {
 
 			if !jsonEqual(ret, test.Result) {
 				// uncomment this for easier debugging
-				//have, _ := json.MarshalIndent(ret, "", " ")
-				//want, _ := json.MarshalIndent(test.Result, "", " ")
-				//t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
+				have, _ := json.MarshalIndent(ret, "", " ")
+				want, _ := json.MarshalIndent(test.Result, "", " ")
+				t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
 				t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", ret, test.Result)
 			}
 		})

@@ -288,6 +288,7 @@ func doTest(cmdline []string) {
 		verbose  = flag.Bool("v", false, "Whether to log verbosely")
 		race     = flag.Bool("race", false, "Execute the race detector")
 	)
+
 	flag.CommandLine.Parse(cmdline)
 
 	// Configure the toolchain.

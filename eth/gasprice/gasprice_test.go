@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -104,9 +105,11 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 			Config: &config,
 			Alloc:  core.GenesisAlloc{addr: {Balance: big.NewInt(math.MaxInt64)}},
 		}
-		signer = types.LatestSigner(gspec.Config)
+		// signer = types.LatestSigner(gspec.Config)
 	)
 	config.LondonBlock = londonBlock
+	config.ChainID = new(big.Int).SetUint64(params.JupiterChainId(config.ChainID.Uint64()))
+	signer := types.LatestSigner(&config)
 	engine := ethash.NewFaker()
 	db := rawdb.NewMemoryDatabase()
 	genesis, _ := gspec.Commit(db)
@@ -117,8 +120,12 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 
 		var txdata types.TxData
 		if londonBlock != nil && b.Number().Cmp(londonBlock) >= 0 {
+			if !params.IsLondonActive() {
+				params.SetLondonActive(true)
+			}
+			interChainId := params.JupiterChainId(gspec.Config.ChainID.Uint64())
 			txdata = &types.DynamicFeeTx{
-				ChainID:   gspec.Config.ChainID,
+				ChainID:   new(big.Int).SetUint64(interChainId),
 				Nonce:     b.TxNonce(addr),
 				To:        &common.Address{},
 				Gas:       30000,
@@ -127,6 +134,9 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 				Data:      []byte{},
 			}
 		} else {
+			if params.IsLondonActive() {
+				params.SetLondonActive(false)
+			}
 			txdata = &types.LegacyTx{
 				Nonce:    b.TxNonce(addr),
 				To:       &common.Address{},
@@ -141,6 +151,7 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 	// Construct testing chain
 	diskdb := rawdb.NewMemoryDatabase()
 	gspec.Commit(diskdb)
+	posconfig.Pow2PosUpgradeBlockNumber = uint64(3600000)
 	chain, err := core.NewBlockChain(diskdb, &core.CacheConfig{TrieCleanNoPrefetch: true}, &config, engine, vm.Config{}, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
