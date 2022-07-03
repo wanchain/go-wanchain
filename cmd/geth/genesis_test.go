@@ -31,40 +31,84 @@ var customGenesisTests = []struct {
 	// Genesis file with an empty chain configuration (ensure missing fields work)
 	{
 		genesis: `{
-			"alloc"      : {},
-			"coinbase"   : "0x0000000000000000000000000000000000000000",
-			"difficulty" : "0x20000",
-			"extraData"  : "",
-			"gasLimit"   : "0x2fefd8",
-			"nonce"      : "0x0000000000001338",
-			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00",
-			"config"     : {}
-		}`,
-		query:  "eth.getBlock(0).nonce",
-		result: "0x0000000000001338",
+	"config": {
+		"chainId": 6,
+		"homesteadBlock": 0,
+		"daoForkBlock": 0,
+		"eip150Block": 0,
+		"eip150Hash": "0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0",
+		"eip155Block": 0,
+		"eip158Block": 0,
+		"byzantiumBlock": 0,
+		"constantinopleBlock": 10000,
+		"petersburgBlock": 10000,
+		"istanbulBlock": 10000,
+		"muirGlacierBlock": 10000,
+		"berlinBlock": 10000,
+		"londonBlock": 10000,
+		"ethash": {},
+		"posFirstBlock": 1,
+		"pluto": {
+			"period": 10,
+			"epoch": 100
+		}
 	},
-	// Genesis file with specific chain configurations
+	"nonce": "0x0",
+	"timestamp": "0x59f83144",
+	"extraData": "0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	"gasLimit": "0x2cd29c0",
+	"difficulty": "0x1",
+	"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"coinbase": "0x0000000000000000000000000000000000000000",
+	"alloc": {},
+	"number": "0x0",
+	"gasUsed": "0x0",
+	"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"baseFeePerGas": null
+}`,
+		query:  "eth.getBlock(0).difficulty",
+		result: "1",
+	},
+	//Genesis file with specific chain configurations
 	{
 		genesis: `{
-			"alloc"      : {},
-			"coinbase"   : "0x0000000000000000000000000000000000000000",
-			"difficulty" : "0x20000",
-			"extraData"  : "",
-			"gasLimit"   : "0x2fefd8",
-			"nonce"      : "0x0000000000001339",
-			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00",
-			"config"     : {
-				"homesteadBlock" : 42,
-				"daoForkBlock"   : 141,
-				"daoForkSupport" : true
-			}
-		}`,
-		query:  "eth.getBlock(0).nonce",
-		result: "0x0000000000001339",
+	"config": {
+		"chainId": 6,
+		"homesteadBlock": 0,
+		"daoForkBlock": 0,
+		"eip150Block": 0,
+		"eip150Hash": "0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0",
+		"eip155Block": 0,
+		"eip158Block": 0,
+		"byzantiumBlock": 0,
+		"constantinopleBlock": 10000,
+		"petersburgBlock": 10000,
+		"istanbulBlock": 10000,
+		"muirGlacierBlock": 10000,
+		"berlinBlock": 10000,
+		"londonBlock": 10000,
+		"ethash": {},
+		"posFirstBlock": 1,
+		"pluto": {
+			"period": 10,
+			"epoch": 100
+		}
+	},
+	"nonce": "0x0",
+	"timestamp": "0x59f83149",
+	"extraData": "0x00000000000000000000000000000000000000000000000000000000000000002d0e7c0813a51d3bd1d08246af2a8a7a57d8922e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	"gasLimit": "0x2cd29c0",
+	"difficulty": "0x2",
+	"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"coinbase": "0x0000000000000000000000000000000000000000",
+	"alloc": {},
+	"number": "0x0",
+	"gasUsed": "0x0",
+	"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"baseFeePerGas": null
+}`,
+		query:  "eth.getBlock(0).difficulty",
+		result: "2",
 	},
 }
 
