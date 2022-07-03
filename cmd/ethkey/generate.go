@@ -94,6 +94,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 			Id:         UUID,
 			Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
 			PrivateKey: privateKey,
+			PrivateKey2:privateKey,		// add by Jacob
 		}
 
 		// Encrypt key with passphrase.
