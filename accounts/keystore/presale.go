@@ -48,6 +48,7 @@ func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accou
 			Path:   keyStore.JoinPath(keyFileName(key.Address)),
 		},
 	}
+	//fmt.Printf("XXXXXXXaddress=%s",key.Address.String())
 	err = keyStore.StoreKey(a.URL.Path, key, password)
 	return a, key, err
 }
@@ -92,6 +93,7 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 		Id:         uuid.UUID{},
 		Address:    crypto.PubkeyToAddress(ecKey.PublicKey),
 		PrivateKey: ecKey,
+		PrivateKey2: ecKey,			// add by Jacob
 	}
 	derivedAddr := hex.EncodeToString(key.Address.Bytes()) // needed because .Hex() gives leading "0x"
 	expectedAddr := preSaleKeyStruct.EthAddr

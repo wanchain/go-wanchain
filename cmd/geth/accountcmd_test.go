@@ -17,6 +17,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -98,7 +100,7 @@ func TestAccountImport(t *testing.T) {
 		{
 			name:   "invalid character",
 			key:    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef1",
-			output: "Fatal: Failed to load the private key: invalid character '1' at end of key file\n",
+			output: "Fatal: Failed to load the private key: encoding/hex: odd length hex string\n",
 		},
 	}
 	for _, test := range tests {
@@ -110,10 +112,40 @@ func TestAccountImport(t *testing.T) {
 	}
 }
 
+// Used to import and export raw keypair
+type keyPair struct {
+	D  string `json:"privateKey"`
+	D1 string `json:"privateKey1"`
+}
+
+func TestPrivatePair(t *testing.T) {
+	key := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	key1 := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	r, err := buildPairKeystr(key, key1)
+	if err != nil {
+		t.Fail()
+	}
+	fmt.Println(r)
+}
+
+func buildPairKeystr(key, key1 string) (string, error) {
+	kp := keyPair{
+		D:  key,
+		D1: key1,
+	}
+	r, err := json.Marshal(kp)
+	if err != nil {
+		return "", err
+	}
+	return string(r), nil
+}
+
 func importAccountWithExpect(t *testing.T, key string, expected string) {
 	dir := tmpdir(t)
 	keyfile := filepath.Join(dir, "key.prv")
-	if err := ioutil.WriteFile(keyfile, []byte(key), 0600); err != nil {
+
+	twoKeys, _ := buildPairKeystr(key, key)
+	if err := ioutil.WriteFile(keyfile, []byte(twoKeys), 0600); err != nil {
 		t.Error(err)
 	}
 	passwordFile := filepath.Join(dir, "password.txt")
