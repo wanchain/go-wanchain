@@ -18,10 +18,12 @@ package core
 
 import (
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/ppw"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -41,7 +43,7 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      98,
-		ExtraData:  hexutil.MustDecode(getMainNetPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(ppw.GetMainNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
 		//Difficulty: big.NewInt(17179869184),
@@ -54,7 +56,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
 		Nonce:      28, //same with the version
-		ExtraData:  hexutil.MustDecode(getTestNetPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(ppw.GetTestNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),
@@ -66,7 +68,7 @@ func DefaultInternalGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.InternalChainConfig,
 		Nonce:      20,
-		ExtraData:  hexutil.MustDecode(getInternalNetPpwSignStr()),
+		ExtraData:  hexutil.MustDecode(ppw.GetInternalNetPpwSignStr()),
 		GasLimit:   0x2fefd8,
 		Difficulty: big.NewInt(1),
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),

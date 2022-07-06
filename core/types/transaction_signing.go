@@ -412,7 +412,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	}
 
 	return rlpHash([]interface{}{
-		tx.Type(), // TODO MERGE gwan
+		// tx.Type(), // TODO MERGE gwan
 		tx.Nonce(),
 		tx.GasPrice(),
 		tx.Gas(),
@@ -483,7 +483,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.Type(),
+		// tx.Type(),
 		tx.Nonce(),
 		tx.GasPrice(),
 		tx.Gas(),

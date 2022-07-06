@@ -20,18 +20,19 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/pos/posconfig"
-	"github.com/ethereum/go-ethereum/pos/util"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/core/ppw"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -260,7 +261,7 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header, uncle bool, seal bool, unixNow int64) error {
 	// Ensure that the header's extra-data section is of a reasonable size
-	if uint64(len(header.Extra)) > params.MaximumExtraDataSize  && header.Number.Uint64() != 0 {
+	if uint64(len(header.Extra)) > params.MaximumExtraDataSize && header.Number.Uint64() != 0 {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
 	// Verify the header's timestamp
@@ -578,8 +579,10 @@ func (ethash *Ethash) verifySeal(chain consensus.ChainHeaderReader, header *type
 	}
 
 	// check ppow
-	if !core.IsPpwSignStr(chain.Config().ChainID.Uint64(), header.Coinbase.String())  {
-		return errInvalidPoW
+	if chain != nil {
+		if !ppw.IsPpwSignStr(chain.Config().ChainID.Uint64(), header.Coinbase.String()) {
+			return errInvalidPoW
+		}
 	}
 	return nil
 }

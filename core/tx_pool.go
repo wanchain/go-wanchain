@@ -18,13 +18,14 @@ package core
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"math"
 	"math/big"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ethereum/go-ethereum/core/vm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
@@ -177,9 +178,9 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	AccountSlots: 16*128,
+	AccountSlots: 16 * 128,
 	GlobalSlots:  40960 + 10240, // urgent + floating queue capacity with 4:1 ratio
-	AccountQueue: 64*128,
+	AccountQueue: 64 * 128,
 	GlobalQueue:  10240,
 
 	Lifetime: 3 * time.Hour,
@@ -628,7 +629,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {
+	pendingBaseFee := pool.priced.urgent.baseFee
+	if !local && tx.EffectiveGasTipIntCmp(pool.gasPrice, pendingBaseFee) < 0 {
 		return ErrUnderpriced
 	}
 	// Ensure the transaction adheres to nonce ordering

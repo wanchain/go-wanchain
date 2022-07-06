@@ -1,16 +1,17 @@
 // Copyright 2018 Wanchain Foundation Ltd
 
-package core
+package ppw
 
 import (
 	"bytes"
+
 	"github.com/ethereum/go-ethereum/params"
 
 	//"fmt"
 	"strings"
 )
 
-func getMainNetPpwSignStr() string {
+func GetMainNetPpwSignStr() string {
 
 	var buf bytes.Buffer
 	buf.WriteString("0x")
@@ -29,7 +30,7 @@ func getMainNetPpwSignStr() string {
 
 }
 
-func getTestNetPpwSignStr() string {
+func GetTestNetPpwSignStr() string {
 
 	var buf bytes.Buffer
 	buf.WriteString("0x")
@@ -64,7 +65,7 @@ func IsPpwSignStr(chainId uint64, coinbase string) bool {
 
 	return false
 }
-func getInternalNetPpwSignStr() string {
+func GetInternalNetPpwSignStr() string {
 
 	var buf bytes.Buffer
 	buf.WriteString("0x")

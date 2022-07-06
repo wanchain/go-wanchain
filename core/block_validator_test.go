@@ -199,6 +199,8 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 }
 
 func TestCalcGasLimit(t *testing.T) {
+	header := &types.Header{Time: 0}
+	parent := types.NewBlock(header, nil, nil, nil, nil)
 	for i, tc := range []struct {
 		pGasLimit uint64
 		max       uint64
@@ -208,23 +210,23 @@ func TestCalcGasLimit(t *testing.T) {
 		{40000000, 40039061, 39960939},
 	} {
 		// Increase
-		if have, want := CalcGasLimit(tc.pGasLimit, 2*tc.pGasLimit), tc.max; have != want {
+		if have, want := CalcGasLimit(parent, tc.pGasLimit, 2*tc.pGasLimit), tc.max; have != want {
 			t.Errorf("test %d: have %d want <%d", i, have, want)
 		}
 		// Decrease
-		if have, want := CalcGasLimit(tc.pGasLimit, 0), tc.min; have != want {
+		if have, want := CalcGasLimit(parent, tc.pGasLimit, 0), tc.min; have != want {
 			t.Errorf("test %d: have %d want >%d", i, have, want)
 		}
 		// Small decrease
-		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit-1), tc.pGasLimit-1; have != want {
+		if have, want := CalcGasLimit(parent, tc.pGasLimit, tc.pGasLimit-1), tc.pGasLimit-1; have != want {
 			t.Errorf("test %d: have %d want %d", i, have, want)
 		}
 		// Small increase
-		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit+1), tc.pGasLimit+1; have != want {
+		if have, want := CalcGasLimit(parent, tc.pGasLimit, tc.pGasLimit+1), tc.pGasLimit+1; have != want {
 			t.Errorf("test %d: have %d want %d", i, have, want)
 		}
 		// No change
-		if have, want := CalcGasLimit(tc.pGasLimit, tc.pGasLimit), tc.pGasLimit; have != want {
+		if have, want := CalcGasLimit(parent, tc.pGasLimit, tc.pGasLimit), tc.pGasLimit; have != want {
 			t.Errorf("test %d: have %d want %d", i, have, want)
 		}
 	}
