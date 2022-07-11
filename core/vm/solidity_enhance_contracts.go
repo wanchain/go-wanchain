@@ -893,9 +893,13 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	}
 	var totalIncentive *big.Int
 	if params.IsLondonActive() {
-		_totalIncentive := inst.GetYearReward(epid)
-		totalIncentive = inst.CalcBaseSubsidy(_totalIncentive)
-	} else {
+		londonEpoch, _ := posutil.CalEpochSlotID(params.GetLondonTime())
+		if epid >= londonEpoch {
+			_totalIncentive := inst.GetYearReward(epid)
+			totalIncentive = inst.CalcBaseSubsidy(_totalIncentive)
+		}
+	}
+	if totalIncentive == nil {
 		_totalIncentive, err := inst.GetAllIncentive(epid)
 		if err != nil || _totalIncentive == nil {
 			log.Warn("GetAllIncentive failed", "err", err, "time", time, "epid", epid)

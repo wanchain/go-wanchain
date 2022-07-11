@@ -203,6 +203,7 @@ func (c *ChainConfig) IsPosBlockNumber(n *big.Int) bool {
 var (
 	isPosActive    = false
 	isLondonForked = false
+	londonForkTime uint64 = 0
 	TestnetChainId = TestnetChainConfig.ChainID.Int64()
 	MainnetChainId = MainnetChainConfig.ChainID.Int64()
 )
@@ -218,8 +219,11 @@ func SetPosActive(active bool) {
 func IsLondonActive() bool {
 	return isLondonForked
 }
-
-func SetLondonActive(active bool) {
+func GetLondonTime() uint64 {
+	return londonForkTime
+}
+func SetLondonActive(active bool, t uint64) {
+	londonForkTime = t
 	isLondonForked = active
 }
 
