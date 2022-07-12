@@ -894,7 +894,7 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	var totalIncentive *big.Int
 	if params.IsLondonActive() {
 		londonEpoch, _ := posutil.CalEpochSlotID(params.GetLondonTime())
-		if epid >= londonEpoch {
+		if epid+1 >= londonEpoch {
 			_totalIncentive := inst.GetYearReward(epid)
 			totalIncentive = inst.CalcBaseSubsidy(_totalIncentive)
 		}
