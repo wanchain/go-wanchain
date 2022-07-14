@@ -105,11 +105,9 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 			Config: &config,
 			Alloc:  core.GenesisAlloc{addr: {Balance: big.NewInt(math.MaxInt64)}},
 		}
-		// signer = types.LatestSigner(gspec.Config)
+		signer = types.LatestSigner(gspec.Config)
 	)
 	config.LondonBlock = londonBlock
-	config.ChainID = new(big.Int).SetUint64(params.JupiterChainId(config.ChainID.Uint64()))
-	signer := types.LatestSigner(&config)
 	engine := ethash.NewFaker()
 	db := rawdb.NewMemoryDatabase()
 	genesis, _ := gspec.Commit(db)
@@ -123,9 +121,8 @@ func newTestBackend(t *testing.T, londonBlock *big.Int, pending bool) *testBacke
 			if !params.IsLondonActive() {
 				params.SetLondonActive(true)
 			}
-			interChainId := params.JupiterChainId(gspec.Config.ChainID.Uint64())
 			txdata = &types.DynamicFeeTx{
-				ChainID:   new(big.Int).SetUint64(interChainId),
+				ChainID:   gspec.Config.ChainID,
 				Nonce:     b.TxNonce(addr),
 				To:        &common.Address{},
 				Gas:       30000,

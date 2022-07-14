@@ -103,10 +103,10 @@ var (
 		},
 	}
 
-	TestnetSaturnBlockNumber int64 = 18950000
+	TestnetSaturnBlockNumber       int64 = 18950000
 	TestnetSaturnMinFeeBlockNumber int64 = 19084006
-	TestnetLondonBlockNumber       = TestnetSaturnBlockNumber
-	TestnetChainConfig             = &ChainConfig{
+	TestnetLondonBlockNumber             = TestnetSaturnBlockNumber
+	TestnetChainConfig                   = &ChainConfig{
 		ChainID:             big.NewInt(TESTNET_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
@@ -251,6 +251,10 @@ func JupiterChainId(chainId uint64) uint64 {
 		return JUPITER_PLUTODEV_CHAIN_ID
 	}
 
+	if chainId == 1337 {
+		return 1337
+	}
+
 	return NOT_JUPITER_CHAIN_ID
 }
 
@@ -279,7 +283,7 @@ func IsOldChainId(chainId uint64) bool {
 }
 func (c *ChainConfig) IsLondonMinFeeEnabled(num *big.Int) bool {
 	if c.ChainID.Uint64() == TESTNET_CHAIN_ID {
-		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnMinFeeBlockNumber) )> 0
+		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnMinFeeBlockNumber)) > 0
 	} else {
 		return c.IsLondon(num)
 	}

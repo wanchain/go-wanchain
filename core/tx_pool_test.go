@@ -102,7 +102,7 @@ func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Tr
 }
 
 func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
-	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice.Mul(gasprice,big.NewInt(1e9)), nil), types.HomesteadSigner{}, key)
+	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil), types.HomesteadSigner{}, key)
 	return tx
 }
 
@@ -117,10 +117,10 @@ func pricedDataTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key
 func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx, err := types.SignNewTx(key, signer, &types.DynamicFeeTx{
-		ChainID:    big.NewInt(0).SetUint64(params.JupiterChainId(params.TestChainConfig.ChainID.Uint64()))  ,
+		ChainID:    big.NewInt(0).SetUint64(params.JupiterChainId(params.TestChainConfig.ChainID.Uint64())),
 		Nonce:      nonce,
-		GasTipCap:  big.NewInt(0).Mul(tip,big.NewInt(1e9)) ,//tip,
-		GasFeeCap:  big.NewInt(0).Mul(gasFee,big.NewInt(1e9)),//gasFee,
+		GasTipCap:  tip,    //big.NewInt(0).Mul(tip, big.NewInt(1e9)),
+		GasFeeCap:  gasFee, //big.NewInt(0).Mul(gasFee, big.NewInt(1e9)),
 		Gas:        gaslimit,
 		To:         &common.Address{},
 		Value:      big.NewInt(100),
@@ -302,7 +302,7 @@ func TestInvalidTransactions(t *testing.T) {
 	tx := transaction(0, 100, key)
 	from, _ := deriveSender(tx)
 
-	testAddBalance(pool, from, new(big.Int).Add(big.NewInt(1), big.NewInt(1e9)))
+	testAddBalance(pool, from, big.NewInt(1))
 	if err := pool.AddRemote(tx); !errors.Is(err, ErrInsufficientFunds) {
 		t.Error("expected", ErrInsufficientFunds)
 	}
@@ -571,7 +571,7 @@ func TestTransactionDropping(t *testing.T) {
 	defer pool.Stop()
 
 	account := crypto.PubkeyToAddress(key.PublicKey)
-	testAddBalance(pool, account, big.NewInt(1000000000000000))
+	testAddBalance(pool, account, big.NewInt(1000))
 
 	// Add some pending and some queued transactions
 	var (
@@ -685,7 +685,7 @@ func TestTransactionPostponing(t *testing.T) {
 		keys[i], _ = crypto.GenerateKey()
 		accs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 
-		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000000000000))
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(50100))
 	}
 	// Add a batch consecutive pending transactions for validation
 	txs := []*types.Transaction{}
@@ -736,6 +736,9 @@ func TestTransactionPostponing(t *testing.T) {
 	// ones are either filtered out, or queued up for later.
 	if _, ok := pool.pending[accs[0]].txs.items[txs[0].Nonce()]; !ok {
 		t.Errorf("tx %d: valid and funded transaction missing from pending pool: %v", 0, txs[0])
+	}
+	if len(pool.queue) == 0 {
+		t.Errorf("pool.queue length is zero")
 	}
 	if _, ok := pool.queue[accs[0]].txs.items[txs[0].Nonce()]; ok {
 		t.Errorf("tx %d: valid and funded transaction present in future queue: %v", 0, txs[0])
@@ -1702,7 +1705,7 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 	// Import the batch and that both pending and queued transactions match up
 	errR := pool.AddRemotes(txs)
 	errL := pool.AddLocal(ltx)
-	if len(errR)==0 && errL != nil {
+	if len(errR) == 0 && errL != nil {
 		fmt.Println("xxx erer")
 	}
 	pending, queued := pool.Stats()
@@ -1844,6 +1847,7 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 func TestTransactionPoolUnderpricingDynamicFee(t *testing.T) {
 	//t.Parallel()
 	params.SetLondonActive(true)
+	params.BaseFeeMin = 0
 	pool, _ := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
 

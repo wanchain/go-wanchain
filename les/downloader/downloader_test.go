@@ -305,7 +305,9 @@ func (dl *downloadTester) InsertChain(blocks types.Blocks) (i int, err error) {
 		}
 		dl.ownBlocks[block.Hash()] = block
 		dl.ownReceipts[block.Hash()] = make(types.Receipts, 0)
-		dl.stateDb.Put(block.Root().Bytes(), []byte{0x00})
+		if _, err := dl.stateDb.Get(block.Root().Bytes()); err != nil {
+			dl.stateDb.Put(block.Root().Bytes(), []byte{0x00})
+		}
 		td := dl.getTd(block.ParentHash())
 		dl.ownChainTd[block.Hash()] = new(big.Int).Add(td, block.Difficulty())
 	}

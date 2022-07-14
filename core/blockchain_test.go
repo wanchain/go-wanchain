@@ -37,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -1413,6 +1414,7 @@ func TestEIP161AccountRemoval(t *testing.T) {
 		}
 		genesis = gspec.MustCommit(db)
 	)
+	posconfig.Pow2PosUpgradeBlockNumber = uint64(3600000)
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil)
 	defer blockchain.Stop()
 
@@ -3143,6 +3145,7 @@ func TestEIP2718Transition(t *testing.T) {
 		genesis = gspec.MustCommit(db)
 	)
 
+	params.SetLondonActive(true)
 	blocks, _ := GenerateChain(gspec.Config, genesis, engine, db, 1, func(i int, b *BlockGen) {
 		b.SetCoinbase(common.Address{1})
 
@@ -3230,6 +3233,7 @@ func TestEIP1559Transition(t *testing.T) {
 	)
 
 	gspec.Config.BerlinBlock = common.Big0
+	params.SetLondonActive(true)
 	gspec.Config.LondonBlock = common.Big0
 	genesis := gspec.MustCommit(db)
 	signer := types.LatestSigner(gspec.Config)
@@ -3284,7 +3288,8 @@ func TestEIP1559Transition(t *testing.T) {
 	// 3: Ensure that miner received only the tx's tip.
 	actual := state.GetBalance(block.Coinbase())
 	expected := new(big.Int).Add(
-		new(big.Int).SetUint64(block.GasUsed()*block.Transactions()[0].GasTipCap().Uint64()),
+		// new(big.Int).SetUint64(block.GasUsed()*block.Transactions()[0].GasTipCap().Uint64()),
+		new(big.Int),
 		ethash.ConstantinopleBlockReward,
 	)
 	if actual.Cmp(expected) != 0 {
@@ -3324,7 +3329,8 @@ func TestEIP1559Transition(t *testing.T) {
 	// 6+5: Ensure that miner received only the tx's effective tip.
 	actual = state.GetBalance(block.Coinbase())
 	expected = new(big.Int).Add(
-		new(big.Int).SetUint64(block.GasUsed()*effectiveTip),
+		// new(big.Int).SetUint64(block.GasUsed()*effectiveTip),
+		new(big.Int),
 		ethash.ConstantinopleBlockReward,
 	)
 	if actual.Cmp(expected) != 0 {
