@@ -17,6 +17,7 @@
 package ethtest
 
 import (
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -86,6 +87,7 @@ func setupGeth(stack *node.Node) error {
 	if err != nil {
 		return err
 	}
+	chain.genesis.Config.PosFirstBlock = new(big.Int).SetUint64(3600000)
 
 	backend, err := eth.New(stack, &ethconfig.Config{
 		Genesis:                 &chain.genesis,

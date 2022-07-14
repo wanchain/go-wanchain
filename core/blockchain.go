@@ -398,7 +398,7 @@ func NewBlockChain(db ethdb.Database,
 	// the head block (ethash cache or clique voting snapshot). Might as well do
 	// it in advance.
 
-	if bc.CurrentHeader().Number.Cmp(chainConfig.PosFirstBlock) < 0 {
+	if chainConfig.PosFirstBlock == nil {
 		bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true)
 	} else {
 		bc.posEngine.VerifyHeader(bc, bc.CurrentHeader(), true)

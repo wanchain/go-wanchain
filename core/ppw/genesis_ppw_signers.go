@@ -61,6 +61,8 @@ func IsPpwSignStr(chainId uint64, coinbase string) bool {
 				return true
 			}
 		}
+	} else {
+		return true
 	}
 
 	return false

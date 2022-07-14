@@ -164,6 +164,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		posEngine = pluto.New(chainConfig.Pluto, chainDb)
 	}
 
+	if chainConfig.PosFirstBlock == nil {
+		chainConfig.PosFirstBlock = big.NewInt(36000000)
+	}
+
 	inPosStage := false
 	if chainConfig.IsPosActive ||
 		(core.PeekChainHeight(chainDb)+1) >= chainConfig.PosFirstBlock.Uint64() {
