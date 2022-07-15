@@ -2,7 +2,7 @@
   "sealEngine": "Ethash",
   "params": {
     "accountStartNonce": "0x0",
-    "maximumExtraDataSize": "0x20",
+    "maximumExtraDataSize": "0x190",
     "homesteadForkBlock": "0x2710",
     "daoHardforkBlock": "0x0",
     "EIP150ForkBlock": "0x3a98",

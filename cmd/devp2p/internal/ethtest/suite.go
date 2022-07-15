@@ -17,6 +17,7 @@
 package ethtest
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -39,6 +40,7 @@ type Suite struct {
 // data.
 func NewSuite(dest *enode.Node, chainfile string, genesisfile string) (*Suite, error) {
 	chain, err := loadChain(chainfile, genesisfile)
+	chain.chainConfig.PosFirstBlock = new(big.Int).SetUint64(3600000)
 	if err != nil {
 		return nil, err
 	}

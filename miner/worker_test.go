@@ -28,8 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/pluto"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/pluto"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -141,7 +141,7 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 		t.Fatalf("unexpected consensus engine type: %T", engine)
 	}
 	genesis := gspec.MustCommit(db)
-	gspec.Config.PosFirstBlock = big.NewInt(3560000)
+	gspec.Config.PosFirstBlock = big.NewInt(3600000)
 
 	chain, _ := core.NewBlockChain(db, &core.CacheConfig{TrieDirtyDisabled: true}, gspec.Config, engine, vm.Config{}, nil, nil, pluto.New(chainConfig.Pluto, db))
 	txpool := core.NewTxPool(testTxPoolConfig, chainConfig, chain)
@@ -327,7 +327,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	w.fullTaskHook = func() {
 		time.Sleep(100 * time.Millisecond)
 	}
-	w.start() // Start mining!
+	w.start()                   // Start mining!
 	for i := 0; i < 1; i += 1 { // gwan do not generate empty block. so this should change to 1.
 		select {
 		case <-taskCh:

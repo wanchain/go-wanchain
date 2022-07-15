@@ -81,7 +81,7 @@ func TestParitySturebyConverter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed creating chainspec: %v", err)
 	}
-	enc, err := json.MarshalIndent(spec, "", "  ")
+	encBlob, err := json.MarshalIndent(spec, "", "  ")
 	if err != nil {
 		t.Fatalf("failed encoding chainspec: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestParitySturebyConverter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not read file: %v", err)
 	}
-	if !bytes.Equal(expBlob, enc) {
+	if !bytes.Equal(expBlob, encBlob) {
 		t.Fatalf("chainspec mismatch")
 	}
 }
