@@ -284,7 +284,7 @@ func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
 	}
-	signer := LatestSignerForChainID(big.NewInt(6))
+	signer := LatestSignerForChainID(big.NewInt(1337))
 	params.SetLondonActive(true)
 	// Generate a batch of transactions with overlapping values, but shifted nonces
 	groups := map[common.Address]Transactions{}
