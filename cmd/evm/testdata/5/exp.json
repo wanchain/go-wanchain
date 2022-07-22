@@ -1,13 +1,28 @@
 {
   "alloc": {
     "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
-      "balance": "0x88"
+      "balance": "0x88",
+      "staking": {
+        "amount": null,
+        "s256pk": null,
+        "bn256pk": null
+      }
     },
     "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": {
-      "balance": "0x70"
+      "balance": "0x70",
+      "staking": {
+        "amount": null,
+        "s256pk": null,
+        "bn256pk": null
+      }
     },
     "0xcccccccccccccccccccccccccccccccccccccccc": {
-      "balance": "0x60"
+      "balance": "0x60",
+      "staking": {
+        "amount": null,
+        "s256pk": null,
+        "bn256pk": null
+      }
     }
   },
   "result": {

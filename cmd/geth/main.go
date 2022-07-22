@@ -19,12 +19,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"

@@ -1238,7 +1238,7 @@ func RPCMarshalBlock(block *types.Block, inclTx bool, fullTx bool, config *param
 	fields["uncles"] = uncleHashes
 
 	// add by Jacob begin
-	if block.NumberU64() >= config.PosFirstBlock.Uint64() {
+	if config.PosFirstBlock != nil && block.NumberU64() >= config.PosFirstBlock.Uint64() {
 		epochid, slotid := posutil.CalEpSlbyTd(block.Difficulty().Uint64())
 		fields["epochId"] = epochid
 		fields["slotId"] = slotid
