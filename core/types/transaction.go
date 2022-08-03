@@ -429,6 +429,7 @@ func (tx *Transaction) IsValidType() bool {
 
 	return false
 }
+
 func (tx *Transaction) IsLegacyType() bool {
 	if !params.IsLondonActive() {
 		return true

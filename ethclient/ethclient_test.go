@@ -385,7 +385,7 @@ func testChainID(t *testing.T, client *rpc.Client) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if id == nil || id.Cmp(params.AllEthashProtocolChanges.ChainID) != 0 && id.Cmp(big.NewInt(0).SetUint64(params.JupiterChainId(params.AllEthashProtocolChanges.ChainID.Uint64()))) != 0{
+	if id == nil || id.Cmp(params.AllEthashProtocolChanges.ChainID) != 0 && id.Cmp(big.NewInt(0).SetUint64(params.JupiterChainId(params.AllEthashProtocolChanges.ChainID.Uint64()))) != 0 {
 		t.Fatalf("ChainID returned wrong number: %+v", id)
 	}
 }

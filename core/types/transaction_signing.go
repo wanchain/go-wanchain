@@ -226,7 +226,6 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 		tx.Type(),
 		[]interface{}{
 			params.JupiterChainId(s.chainId.Uint64()),
-			s.chainId,
 			tx.Nonce(),
 			tx.GasTipCap(),
 			tx.GasFeeCap(),

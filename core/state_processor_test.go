@@ -58,7 +58,6 @@ func TestStateProcessorErrors(t *testing.T) {
 		signer     = types.LatestSigner(config)
 		testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	)
-	params.SetLondonActive(true)
 	var makeTx = func(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Transaction {
 		tx, _ := types.SignTx(types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data), signer, testKey)
 		return tx
@@ -89,6 +88,7 @@ func TestStateProcessorErrors(t *testing.T) {
 			genesis       = gspec.MustCommit(db)
 			blockchain, _ = NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil)
 		)
+		params.SetLondonActive(true)
 		params.BaseFeeMin = 0
 		defer blockchain.Stop()
 		bigNumber := new(big.Int).SetBytes(common.FromHex("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
@@ -149,25 +149,25 @@ func TestStateProcessorErrors(t *testing.T) {
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, big.NewInt(0), big.NewInt(0)),
 				},
-				want: "could not apply tx 0 [0x7e280191d638da4af2bc2bc173b19ab66c7a57109792b2b8ffc2c3a5672f9f76]: max fee per gas less than block base fee: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxFeePerGas: 0 baseFee: 875000000",
+				want: "could not apply tx 0 [0x80bfe833d79011a234eb3291501c0ee87ebb37c00674fb0152712c10ae6915b1]: max fee per gas less than block base fee: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxFeePerGas: 0 baseFee: 875000000",
 			},
 			{ // ErrTipVeryHigh
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, tooBigNumber, big.NewInt(1)),
 				},
-				want: "could not apply tx 0 [0x829d2f593721b7c7e1be0ce2e6aa8369ed8f7faef8a770f000d11631f7d98310]: max priority fee per gas higher than 2^256-1: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxPriorityFeePerGas bit length: 257",
+				want: "could not apply tx 0 [0xc0dca0c5ffdc19a7a968aadddb33012c0d4b71dcb4bd4ebc11f656c77fe65e86]: max priority fee per gas higher than 2^256-1: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxPriorityFeePerGas bit length: 257",
 			},
 			{ // ErrFeeCapVeryHigh
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, big.NewInt(1), tooBigNumber),
 				},
-				want: "could not apply tx 0 [0xd89cc9280f6408b2c409a959817239702959f43ca4cdb29d02b7b165adfe646d]: max fee per gas higher than 2^256-1: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxFeePerGas bit length: 257",
+				want: "could not apply tx 0 [0xf4344de3d587f1029a28c6a83ba853e113090689d2b34dff4008cb4830e0fc6c]: max fee per gas higher than 2^256-1: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxFeePerGas bit length: 257",
 			},
 			{ // ErrTipAboveFeeCap
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, big.NewInt(2), big.NewInt(1)),
 				},
-				want: "could not apply tx 0 [0xb20dadd3f1bc2ecb6cb89bb9212fa31ddb87e1db8144c98de5982314af8254b3]: max priority fee per gas higher than max fee per gas: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxPriorityFeePerGas: 2, maxFeePerGas: 1",
+				want: "could not apply tx 0 [0x9be80eb694c7621457746fa48b7277134855ef0f0a89c9494851a6ca7c50c91b]: max priority fee per gas higher than max fee per gas: address 0x71562b71999873DB5b286dF957af199Ec94617F7, maxPriorityFeePerGas: 2, maxFeePerGas: 1",
 			},
 			{ // ErrInsufficientFunds
 				// Available balance:           1000000000000000000
@@ -178,13 +178,13 @@ func TestStateProcessorErrors(t *testing.T) {
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, big.NewInt(1), big.NewInt(50000000000000)),
 				},
-				want: "could not apply tx 0 [0x99983fdfd86a109f735167b2f1360984bc108d7aa8eb703930f965d1a87c36d9]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 1000000000000000000 want 1050000000000000000",
+				want: "could not apply tx 0 [0x7a88a2d5eb7ab14706682d6201ee87b27ca0886240b72ac84fed5ea9f124e761]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 1000000000000000000 want 1050000000000000000",
 			},
 			{ // Another ErrInsufficientFunds, this one to ensure that feecap/tip of max u256 is allowed
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas, bigNumber, bigNumber),
 				},
-				want: "could not apply tx 0 [0xbdf330dc8d2f26e05f5cc00894c7720a87a997655bb60be7e84ebe37b02110b9]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 1000000000000000000 want 2431633873983640103894990685182446064918669677978451844828609264166175722438635000",
+				want: "could not apply tx 0 [0xadb0614b034c7892c37cc108ae97c187a3f1b19ad9fd66debafd47c83bea9d7e]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 1000000000000000000 want 2431633873983640103894990685182446064918669677978451844828609264166175722438635000",
 			},
 		} {
 			block := GenerateBadBlock(genesis, ethash.NewFaker(), tt.txs, gspec.Config)
@@ -204,7 +204,7 @@ func TestStateProcessorErrors(t *testing.T) {
 			db    = rawdb.NewMemoryDatabase()
 			gspec = &Genesis{
 				Config: &params.ChainConfig{
-					ChainID:             big.NewInt(1),
+					ChainID:             big.NewInt(1337),
 					HomesteadBlock:      big.NewInt(0),
 					EIP150Block:         big.NewInt(0),
 					EIP155Block:         big.NewInt(0),
@@ -226,17 +226,18 @@ func TestStateProcessorErrors(t *testing.T) {
 			genesis       = gspec.MustCommit(db)
 			blockchain, _ = NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil)
 		)
+		params.SetLondonActive(false)
 		defer blockchain.Stop()
 		for i, tt := range []struct {
 			txs  []*types.Transaction
 			want string
 		}{
-			// { // ErrTxTypeNotSupported
-			// 	txs: []*types.Transaction{
-			// 		mkDynamicTx(0, common.Address{}, params.TxGas-1000, big.NewInt(0), big.NewInt(0)),
-			// 	},
-			// 	want: "could not apply tx 0 [0xf708992b011a200b3fcc7acfc1b915897cd0cbfbee1304fa6dc9194f176e53f7]: transaction type not supported",
-			// },
+			{ // ErrTxTypeNotSupported
+				txs: []*types.Transaction{
+					mkDynamicTx(0, common.Address{}, params.TxGas-1000, big.NewInt(0), big.NewInt(0)),
+				},
+				want: "could not apply tx 0 [0x93b6b125dfabb127c94fa61572437c13417cc954ea0153e68e31e89a0d658105]: invalid transaction v, r, s values",
+			},
 		} {
 			block := GenerateBadBlock(genesis, ethash.NewFaker(), tt.txs, gspec.Config)
 			_, err := blockchain.InsertChain(types.Blocks{block})
@@ -266,6 +267,7 @@ func TestStateProcessorErrors(t *testing.T) {
 			genesis       = gspec.MustCommit(db)
 			blockchain, _ = NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil)
 		)
+		params.SetLondonActive(true)
 		defer blockchain.Stop()
 		for i, tt := range []struct {
 			txs  []*types.Transaction
@@ -275,7 +277,7 @@ func TestStateProcessorErrors(t *testing.T) {
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas-1000, big.NewInt(0), big.NewInt(0)),
 				},
-				want: "could not apply tx 0 [0xf708992b011a200b3fcc7acfc1b915897cd0cbfbee1304fa6dc9194f176e53f7]: sender not an eoa: address 0x71562b71999873DB5b286dF957af199Ec94617F7, codehash: 0x9280914443471259d4570a8661015ae4a5b80186dbc619658fb494bebc3da3d1",
+				want: "could not apply tx 0 [0xb3a8f07f415e7836554dc2291af495391af9bc6b9473e5fba880f69484e080a7]: sender not an eoa: address 0x71562b71999873DB5b286dF957af199Ec94617F7, codehash: 0x9280914443471259d4570a8661015ae4a5b80186dbc619658fb494bebc3da3d1",
 			},
 		} {
 			block := GenerateBadBlock(genesis, ethash.NewFaker(), tt.txs, gspec.Config)
