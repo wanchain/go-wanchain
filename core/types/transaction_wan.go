@@ -45,6 +45,10 @@ func IsPrivacyTransaction(txType uint64) bool {
 //	return (txType == NORMAL_TX || txType == PRIVACY_TX || txType == POS_TX || txType == JUPITER_TX)
 //}
 
+var (
+	G_b_eth_tx = true
+)
+
 func IsEthereumTx(chainId uint64) bool {
 	return (chainId > 100)
 }

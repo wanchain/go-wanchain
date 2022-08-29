@@ -3,10 +3,20 @@
     "balance": "0x5ffd4878be161d74",
     "code": "0x",
     "nonce": "0xac",
+		"staking":{
+			"amount":"5000000000000000000000000",
+			"s256pk":"0x04d7dffe5e06d2c7024d9bb93f675b8242e71901ee66a1bfe3fe5369324c0a75bf6f033dc4af65f5d0fe7072e98788fcfa670919b5bdc046f1ca91f28dff59db70",
+			"bn256pk":"0x2b18624b28a714be61ca85bbbcc22dd47717494493fdb86fcae04928119fb00d15cd5544da7c76d347d4d27b2552e5044ae0e4cff2836ad7bb0de6afe46124a9"
+		},
     "storage": {}
   },
   "0x8a8eafb1cf62bfbeb1741769dae1a9dd47996192":{
     "balance": "0xfeedbead",
-    "nonce" : "0x00"
+    "nonce" : "0x00",
+    "staking":{
+			"amount":"5000000000000000000000000",
+			"s256pk":"0x04048540a242e72ffcaf0b76a159bf2044582865a9cf10241cb092425d56d98ff7ade1e9c73c7f9278fa098070392dd46c0e67f957bb85377d465c8f79e2e25543",
+			"bn256pk":"0x21bd3b98b56bf93518e146ca52a2eb0afea66e1a2bbc555ad64f43f8de9558b801a13bb22420d846c7c3c33c2316f4fb4d9b618256c0fae9c0cce7bfe8c40165"
+		}
   }
 }

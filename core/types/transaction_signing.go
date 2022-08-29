@@ -170,7 +170,7 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
-type londonSigner struct{ EIP155Signer }
+type londonSigner struct{ eip2930Signer }
 
 // NewLondonSigner returns a signer that accepts
 // - EIP-1559 dynamic fee transactions
@@ -178,21 +178,24 @@ type londonSigner struct{ EIP155Signer }
 // - EIP-155 replay protected transactions, and
 // - legacy Homestead transactions.
 func NewLondonSigner(chainId *big.Int) Signer {
-	return londonSigner{NewEIP155Signer(chainId)}
+	return londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}
 }
 
 func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != DynamicFeeTxType {
-		return s.EIP155Signer.Sender(tx)
+	switch tx.inner.(type) {
+	case *DynamicFeeTx:
+		V, R, S := tx.RawSignatureValues()
+		// DynamicFee txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V = new(big.Int).Add(V, big.NewInt(27))
+		if tx.ChainId().Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 &&
+			tx.ChainId().Cmp(s.chainId) != 0 {
+			return common.Address{}, ErrInvalidChainId
+		}
+		return recoverPlain(s.Hash(tx), R, S, V, true)
+	default:
+		return s.eip2930Signer.Sender(tx)
 	}
-	V, R, S := tx.RawSignatureValues()
-	// DynamicFee txs are defined to use 0 and 1 as their recovery
-	// id, add 27 to become equivalent to unprotected Homestead signatures.
-	V = new(big.Int).Add(V, big.NewInt(27))
-	if tx.ChainId().Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-	return recoverPlain(s.Hash(tx), R, S, V, true)
 }
 
 func (s londonSigner) Equal(s2 Signer) bool {
@@ -203,12 +206,14 @@ func (s londonSigner) Equal(s2 Signer) bool {
 func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	txdata, ok := tx.inner.(*DynamicFeeTx)
 	if !ok {
-		return s.EIP155Signer.SignatureValues(tx, sig)
+		return s.eip2930Signer.SignatureValues(tx, sig)
 	}
 	// Check that chain ID of tx matches the signer. We also accept ID zero here,
 	// because it indicates that the chain ID was not specified in the tx.
 	//if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-	if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 {
+	if txdata.ChainID.Sign() != 0 &&
+		txdata.ChainID.Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 &&
+		txdata.ChainID.Cmp(s.chainId) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 	R, S, _ = decodeSignature(sig)
@@ -219,22 +224,30 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != DynamicFeeTxType {
+	chainId := params.JupiterChainId(s.chainId.Uint64())
+	switch tx.inner.(type) {
+	case *DynamicFeeTx:
+		if G_b_eth_tx {
+			chainId = s.chainId.Uint64()
+		}
+		return prefixedRlpHash(
+			tx.Type(),
+			[]interface{}{
+				chainId,
+				tx.Nonce(),
+				tx.GasTipCap(),
+				tx.GasFeeCap(),
+				tx.Gas(),
+				tx.To(),
+				tx.Value(),
+				tx.Data(),
+				tx.AccessList(),
+			})
+	case *LegacyTx:
 		return s.EIP155Signer.Hash(tx)
+	default:
+		return s.eip2930Signer.Hash(tx)
 	}
-	return prefixedRlpHash(
-		tx.Type(),
-		[]interface{}{
-			params.JupiterChainId(s.chainId.Uint64()),
-			tx.Nonce(),
-			tx.GasTipCap(),
-			tx.GasFeeCap(),
-			tx.Gas(),
-			tx.To(),
-			tx.Value(),
-			tx.Data(),
-			tx.AccessList(),
-		})
 }
 
 type eip2930Signer struct{ EIP155Signer }
@@ -255,12 +268,26 @@ func (s eip2930Signer) Equal(s2 Signer) bool {
 }
 
 func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
-	return s.EIP155Signer.Sender(tx)
+	switch tx.inner.(type) {
+	case *AccessListTx:
+		V, R, S := tx.RawSignatureValues()
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V = new(big.Int).Add(V, big.NewInt(27))
+		if tx.ChainId().Cmp(s.chainId) != 0 && tx.ChainId().Cmp(new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64()))) != 0 {
+			return common.Address{}, ErrInvalidChainId
+		}
+		return recoverPlain(s.Hash(tx), R, S, V, true)
+	case *LegacyTx, *WanLegacyTx:
+		return s.EIP155Signer.Sender(tx)
+	default:
+		return common.Address{}, ErrTxTypeNotSupported
+	}
 }
 
 func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	switch txdata := tx.inner.(type) {
-	case *LegacyTx:
+	case *LegacyTx, *WanLegacyTx:
 		return s.EIP155Signer.SignatureValues(tx, sig)
 	case *AccessListTx:
 		// Check that chain ID of tx matches the signer. We also accept ID zero here,
@@ -279,18 +306,10 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
-	switch tx.Type() {
-	case LegacyTxType:
-		return rlpHash([]interface{}{
-			tx.Nonce(),
-			tx.GasPrice(),
-			tx.Gas(),
-			tx.To(),
-			tx.Value(),
-			tx.Data(),
-			s.chainId, uint(0), uint(0),
-		})
-	case AccessListTxType:
+	switch tx.inner.(type) {
+	case *LegacyTx, *WanLegacyTx:
+		return s.EIP155Signer.Hash(tx)
+	case *AccessListTx:
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
@@ -378,6 +397,10 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	switch tx.inner.(type) {
+	case *AccessListTx, *DynamicFeeTx:
+		return nil, nil, nil, ErrTxTypeNotSupported
+	}
 	if !tx.IsValidType() {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
@@ -395,11 +418,14 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 
 	chainId := s.chainId
 
-	if params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64() {
-		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+	eTx, ok := tx.inner.(*LegacyTx)
+	if !ok || eTx.V.Cmp(big.NewInt(0)) != 0 {
+		if params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64() {
+			chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+		}
 	}
-
-	if IsEthereumTx(tx.ChainId().Uint64()) && tx.Type() != 1 && tx.Type() != 7 { // TODO how to
+	switch tx.inner.(type) {
+	case *LegacyTx:
 		return rlpHash([]interface{}{
 			tx.Nonce(),
 			tx.GasPrice(),
@@ -409,18 +435,20 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 			tx.Data(),
 			chainId, uint(0), uint(0),
 		})
+	case *WanLegacyTx:
+		return rlpHash([]interface{}{
+			tx.Type(), // TODO MERGE gwan
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			chainId, uint(0), uint(0),
+		})
+	default:
+		return common.Hash{}
 	}
-
-	return rlpHash([]interface{}{
-		// tx.Type(), // TODO MERGE gwan
-		tx.Nonce(),
-		tx.GasPrice(),
-		tx.Gas(),
-		tx.To(),
-		tx.Value(),
-		tx.Data(),
-		chainId, uint(0), uint(0),
-	})
 }
 
 // HomesteadTransaction implements TransactionInterface using the
@@ -443,6 +471,10 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
+	switch tx.inner.(type) {
+	case *AccessListTx, *DynamicFeeTx:
+		return common.Address{}, ErrTxTypeNotSupported
+	}
 	if !tx.IsValidType() {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
@@ -462,6 +494,10 @@ func (s FrontierSigner) Equal(s2 Signer) bool {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
+	switch tx.inner.(type) {
+	case *AccessListTx, *DynamicFeeTx:
+		return common.Address{}, ErrTxTypeNotSupported
+	}
 	if tx.Type() != LegacyTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
@@ -472,6 +508,10 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+	switch tx.inner.(type) {
+	case *AccessListTx, *DynamicFeeTx:
+		return nil, nil, nil, ErrTxTypeNotSupported
+	}
 	if tx.Type() != LegacyTxType {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
@@ -482,15 +522,30 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
-	return rlpHash([]interface{}{
-		// tx.Type(),
-		tx.Nonce(),
-		tx.GasPrice(),
-		tx.Gas(),
-		tx.To(),
-		tx.Value(),
-		tx.Data(),
-	})
+	var h common.Hash
+
+	switch tx.inner.(type) {
+	case *LegacyTx:
+		h = rlpHash([]interface{}{
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+		})
+	case *WanLegacyTx:
+		h = rlpHash([]interface{}{
+			tx.Type(),
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+		})
+	}
+	return h
 }
 
 func decodeSignature(sig []byte) (r, s, v *big.Int) {

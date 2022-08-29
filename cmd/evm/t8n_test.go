@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/ethereum/go-ethereum/internal/cmdtest"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 func TestMain(m *testing.M) {
@@ -138,14 +139,15 @@ func TestT8n(t *testing.T) {
 			output: t8nOutput{alloc: true, result: true},
 			expOut: "exp.json",
 		},
-		{ // Sign json transactions
-			base: "./testdata/13",
-			input: t8nInput{
-				"alloc.json", "txs.json", "env.json", "London", "",
-			},
-			output: t8nOutput{body: true},
-			expOut: "exp.json",
-		},
+		// { // Sign json transactions
+		// 	// DynamicFeeTxType, evm should be build with G_b_eth_tx = true
+		// 	base: "./testdata/13",
+		// 	input: t8nInput{
+		// 		"alloc.json", "txs.json", "env.json", "London", "",
+		// 	},
+		// 	output: t8nOutput{body: true},
+		// 	expOut: "exp.json",
+		// },
 		// { // Already signed transactions
 		// 	base: "./testdata/13",
 		// 	input: t8nInput{
@@ -171,11 +173,14 @@ func TestT8n(t *testing.T) {
 			expOut: "exp2.json",
 		},
 	} {
-
 		args := []string{"t8n"}
 		args = append(args, tc.output.get()...)
 		if tc.base == "./testdata/13" {
-			args = append(args, "--state.chainid", "1337")
+			params.SetLondonActive(true)
+			// args = append(args, "--state.chainid", "1337")
+			// types.G_b_eth_tx = true
+		} else {
+			params.SetLondonActive(false)
 		}
 		args = append(args, tc.input.get(tc.base)...)
 		tt.Run("evm-test", args...)
@@ -220,6 +225,7 @@ func (args *t9nInput) get(base string) []string {
 }
 
 func TestT9n(t *testing.T) {
+	// t.Skip("if evm build with G_b_eth_tx = true, all test case will be pass")
 	tt := new(testT8n)
 	tt.TestCmd = cmdtest.NewTestCmd(t, tt)
 	for i, tc := range []struct {
@@ -228,38 +234,38 @@ func TestT9n(t *testing.T) {
 		expExitCode int
 		expOut      string
 	}{
-		// { // London txs on homestead
-		// 	base: "./testdata/15",
-		// 	input: t9nInput{
-		// 		inTxs:  "signed_txs.rlp",
-		// 		stFork: "Homestead",
-		// 	},
-		// 	expOut: "exp.json",
-		// },
-		// { // London txs on London
-		// 	base: "./testdata/15",
-		// 	input: t9nInput{
-		// 		inTxs:  "signed_txs.rlp",
-		// 		stFork: "London",
-		// 	},
-		// 	expOut: "exp2.json",
-		// },
-		// { // An RLP list (a blockheader really)
-		// 	base: "./testdata/15",
-		// 	input: t9nInput{
-		// 		inTxs:  "blockheader.rlp",
-		// 		stFork: "London",
-		// 	},
-		// 	expOut: "exp3.json",
-		// },
-		// { // Transactions with too low gas
-		// 	base: "./testdata/16",
-		// 	input: t9nInput{
-		// 		inTxs:  "signed_txs.rlp",
-		// 		stFork: "London",
-		// 	},
-		// 	expOut: "exp.json",
-		// },
+		{ // London txs on homestead
+			base: "./testdata/15",
+			input: t9nInput{
+				inTxs:  "signed_txs.rlp",
+				stFork: "Homestead",
+			},
+			expOut: "exp.json",
+		},
+		{ // London txs on London
+			base: "./testdata/15",
+			input: t9nInput{
+				inTxs:  "signed_txs.rlp",
+				stFork: "London",
+			},
+			expOut: "exp2.json",
+		},
+		{ // An RLP list (a blockheader really)
+			base: "./testdata/15",
+			input: t9nInput{
+				inTxs:  "blockheader.rlp",
+				stFork: "London",
+			},
+			expOut: "exp3.json",
+		},
+		{ // Transactions with too low gas
+			base: "./testdata/16",
+			input: t9nInput{
+				inTxs:  "signed_txs.rlp",
+				stFork: "London",
+			},
+			expOut: "exp.json",
+		},
 		{ // Transactions with value exceeding 256 bits
 			base: "./testdata/17",
 			input: t9nInput{
@@ -269,10 +275,8 @@ func TestT9n(t *testing.T) {
 			expOut: "exp.json",
 		},
 	} {
-
 		args := []string{"t9n"}
 		args = append(args, tc.input.get(tc.base)...)
-
 		tt.Run("evm-test", args...)
 		tt.Logf("args:\n go run . %v\n", strings.Join(args, " "))
 		// Compare the expected output, if provided

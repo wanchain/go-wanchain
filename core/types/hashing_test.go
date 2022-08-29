@@ -53,7 +53,7 @@ func TestDeriveSha(t *testing.T) {
 
 // TestEIP2718DeriveSha tests that the input to the DeriveSha function is correct.
 func TestEIP2718DeriveSha(t *testing.T) {
-	t.Skip("wanchain donot support access list tx")
+	// t.Skip("wanchain donot support access list tx")
 	for _, tc := range []struct {
 		rlpData string
 		exp     string

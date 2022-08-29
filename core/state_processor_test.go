@@ -236,7 +236,7 @@ func TestStateProcessorErrors(t *testing.T) {
 				txs: []*types.Transaction{
 					mkDynamicTx(0, common.Address{}, params.TxGas-1000, big.NewInt(0), big.NewInt(0)),
 				},
-				want: "could not apply tx 0 [0x93b6b125dfabb127c94fa61572437c13417cc954ea0153e68e31e89a0d658105]: invalid transaction v, r, s values",
+				want: "could not apply tx 0 [0xb3a8f07f415e7836554dc2291af495391af9bc6b9473e5fba880f69484e080a7]: invalid transaction v, r, s values",
 			},
 		} {
 			block := GenerateBadBlock(genesis, ethash.NewFaker(), tt.txs, gspec.Config)

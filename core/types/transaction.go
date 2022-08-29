@@ -388,11 +388,13 @@ func (tx *Transaction) Hash() common.Hash {
 	}
 
 	var h common.Hash
-	if tx.IsLegacyType() {
-		h = rlpHash(tx.inner)
-	} else {
+	switch tx.inner.(type) {
+	case *AccessListTx, *DynamicFeeTx:
 		h = prefixedRlpHash(tx.Type(), tx.inner)
+	default:
+		h = rlpHash(tx.inner)
 	}
+
 	tx.hash.Store(h)
 	return h
 }
@@ -454,8 +456,13 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	}
 	cpy := tx.inner.copy()
 	//cpy.setSignatureValues(signer.ChainID(), v, r, s)
-	if params.IsLondonActive() && tx.Type() == DynamicFeeTxType {
-		cpy.setSignatureValues(new(big.Int).SetUint64(params.JupiterChainId(signer.ChainID().Uint64())), v, r, s)
+	// if params.IsLondonActive() && tx.Type() == DynamicFeeTxType {
+	if tx.Type() == DynamicFeeTxType {
+		chainId := new(big.Int).SetUint64(params.JupiterChainId(signer.ChainID().Uint64()))
+		if G_b_eth_tx {
+			chainId = signer.ChainID()
+		}
+		cpy.setSignatureValues(chainId, v, r, s)
 	} else {
 		cpy.setSignatureValues(signer.ChainID(), v, r, s)
 	}

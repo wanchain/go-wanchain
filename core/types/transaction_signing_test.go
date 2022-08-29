@@ -79,7 +79,7 @@ func TestEIP155ChainId(t *testing.T) {
 }
 
 func TestEIP155SigningVitalik(t *testing.T) {
-	t.Skip("wanchain don't support eth legacy tx with chainID 1")
+	// t.Skip("wanchain don't support eth legacy tx with chainID 1")
 	// Test vectors come from http://vitalik.ca/files/eip155_testvec.txt
 	for i, test := range []struct {
 		txRlp, addr string

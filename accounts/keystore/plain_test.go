@@ -101,7 +101,7 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 }
 
 func TestImportPreSaleKey(t *testing.T) {
-	t.Skip("donot support presale key")
+	// t.Skip("donot support presale key")
 	dir, ks := tmpKeyStoreIface(t, true)
 	defer os.RemoveAll(dir)
 
@@ -208,7 +208,7 @@ func TestV1_2(t *testing.T) {
 }
 
 func testDecryptV3(test KeyStoreTestV3, t *testing.T) {
-	privBytes,_, _, err := decryptKeyV3(&test.Json, test.Password)
+	privBytes, _, _, err := decryptKeyV3(&test.Json, test.Password)
 	if err != nil {
 		t.Fatal(err)
 	}

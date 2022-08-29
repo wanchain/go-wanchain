@@ -84,7 +84,7 @@ func TestDecodeEmptyTypedTx(t *testing.T) {
 }
 
 func TestTransactionSigHash(t *testing.T) {
-	t.Skip("wanchain homestead/frontier hash has an extra type, skip the hash test")
+	// t.Skip("wanchain homestead/frontier hash has an extra type, skip the hash test")
 	var homestead HomesteadSigner
 	if homestead.Hash(emptyTx) != common.HexToHash("c775b99e7ad12f50d819fcd602390467e28141316969f4b57f0626f74fe3b386") {
 		t.Errorf("empty transaction hash mismatch, got %x", emptyTx.Hash())
@@ -117,7 +117,7 @@ func TestEIP2718TransactionSigHash(t *testing.T) {
 
 // This test checks signature operations on access list transactions.
 func TestEIP2930Signer(t *testing.T) {
-	t.Skip("wanchain donot support EIP2930")
+	// t.Skip("wanchain donot support EIP2930")
 	var (
 		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
@@ -193,7 +193,7 @@ func TestEIP2930Signer(t *testing.T) {
 }
 
 func TestEIP2718TransactionEncode(t *testing.T) {
-	t.Skip("wanchain don't support access list tx")
+	// t.Skip("wanchain don't support access list tx")
 	// RLP representation
 	{
 		have, err := rlp.EncodeToBytes(signedEip2718Tx)
@@ -231,7 +231,7 @@ func defaultTestKey() (*ecdsa.PrivateKey, common.Address) {
 }
 
 func TestRecipientEmpty(t *testing.T) {
-	t.Skip("wanchain has an extra txtype field, the decodeTx cannot run")
+	// t.Skip("wanchain has an extra txtype field, the decodeTx cannot run")
 	_, addr := defaultTestKey()
 	tx, err := decodeTx(common.Hex2Bytes("f8498080808080011ca09b16de9d5bdee2cf56c28d16275a4da68cd30273e2525f3959f5d62557489921a0372ebd8fb3345f7db7b5a86d42e24d36e983e259b0664ceb8c227ec9af572f3d"))
 	if err != nil {
@@ -248,7 +248,7 @@ func TestRecipientEmpty(t *testing.T) {
 }
 
 func TestRecipientNormal(t *testing.T) {
-	t.Skip("wanchain has an extra txtype field, the decodeTx cannot run")
+	// t.Skip("wanchain has an extra txtype field, the decodeTx cannot run")
 	_, addr := defaultTestKey()
 
 	tx, err := decodeTx(common.Hex2Bytes("f85d80808094000000000000000000000000000000000000000080011ca0527c0d8f5c63f7b9f41324a7c8a563ee1190bcbf0dac8ab446291bdbf32f5c79a0552c4ef0a09a04395074dab9ed34d3fbfb843c2f2546cc30fe89ec143ca94ca6"))
