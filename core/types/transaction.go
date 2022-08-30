@@ -437,14 +437,12 @@ func (tx *Transaction) IsLegacyType() bool {
 		return true
 	}
 
-	if tx.Type() == DynamicFeeTxType {
+	switch tx.inner.(type) {
+	case *WanLegacyTx, *LegacyTx:
+		return true
+	default:
 		return false
 	}
-	_, ok := tx.inner.(*AccessListTx)
-	if ok {
-		return false
-	}
-	return true
 }
 
 // WithSignature returns a new transaction with the given signature.

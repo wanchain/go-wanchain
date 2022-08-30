@@ -368,7 +368,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		// st.refundGas(params.RefundQuotient)
 		var requiredGas uint64
 		if types.IsNormalTransaction(tyType) || types.IsPosTransaction(tyType) {
-			requiredGas = st.gasUsed()
 			st.refundGas(params.RefundQuotient)
 			usedGas = st.gasUsed()
 			//log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
@@ -382,15 +381,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.refundGas(params.RefundQuotientEIP3529)
 		usedGas = st.gasUsed() // add by Jacob for fix issue of empty gas used of receipt.
 	}
-	effectiveTip := st.gasPrice
-	if london {
-		epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
-		effectiveTip = cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
-		incentive.AddEpochGas(st.state, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip), epochID)
-		//st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip))
+	if !params.IsPosActive() {
+		effectiveTip := st.gasPrice
+		if london {
+			effectiveTip = cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
+		}
+		st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip))
 	} else {
-		if !params.IsPosActive() {
-			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
+		if london {
+			effectiveTip := cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
+			epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
+			incentive.AddEpochGas(st.state, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip), epochID)
 		} else {
 			epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
 			incentive.AddEpochGas(st.state, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice), epochID)
