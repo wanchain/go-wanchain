@@ -68,23 +68,6 @@ var (
 			"\t<file> - into the file <file> ",
 		Value: "result.json",
 	}
-	// InputAllocFlag = cli.StringFlag{
-	// 	Name:  "input.alloc",
-	// 	Usage: "`stdin` or file name of where to find the prestate alloc to use.",
-	// 	Value: "/home/jsw/go/src/github.com/wanchain/go-wanchain/cmd/evm/testdata/1/alloc.json",
-	// }
-	// InputEnvFlag = cli.StringFlag{
-	// 	Name:  "input.env",
-	// 	Usage: "`stdin` or file name of where to find the prestate env to use.",
-	// 	Value: "/home/jsw/go/src/github.com/wanchain/go-wanchain/cmd/evm/testdata/1/env.json",
-	// }
-	// InputTxsFlag = cli.StringFlag{
-	// 	Name: "input.txs",
-	// 	Usage: "`stdin` or file name of where to find the transactions to apply. " +
-	// 		"If the file prefix is '.rlp', then the data is interpreted as an RLP list of signed transactions." +
-	// 		"The '.rlp' format is identical to the output.body format.",
-	// 	Value: "/home/jsw/go/src/github.com/wanchain/go-wanchain/cmd/evm/testdata/1/txs.json",
-	// }
 	InputAllocFlag = cli.StringFlag{
 		Name:  "input.alloc",
 		Usage: "`stdin` or file name of where to find the prestate alloc to use.",

@@ -452,7 +452,6 @@ func init() {
 	copy(checkSigid[:], solenhanceAbi.Methods["checkSig"].ID)
 	copy(checkSigid2[:], common.Hex2Bytes("861731d5"))
 	copy(encid[:], solenhanceAbi.Methods["enc"].ID)
-	//fmt.Println("EEEEEEEEEEEEEEEe:", common.Bytes2Hex(encid[:]) )
 	copy(hardCapid[:], solenhanceAbi.Methods["getHardCap"].ID)
 	copy(s256MulPkid[:], solenhanceAbi.Methods["mulPk"].ID)
 
@@ -815,7 +814,10 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 	iv := payload[32:64]
 	msg := payload[64:96]
 
-	prv := hexKey(common.Bytes2Hex(rb))
+	prv, err := hexKey(common.Bytes2Hex(rb))
+	if err != nil {
+		return []byte{0},err
+	}
 
 	pkb := payload[96:]
 	pk := new(ecdsa.PublicKey)
@@ -911,12 +913,13 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	return common.LeftPadBytes(buf, 32), nil
 }
 
-func hexKey(prv string) *ecies.PrivateKey {
+func hexKey(prv string) (*ecies.PrivateKey, error){
 	key, err := crypto.HexToECDSA(prv)
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return nil,err
 	}
-	return ecies.ImportECDSA(key)
+	return ecies.ImportECDSA(key),nil
 }
 
 // bn256Add implements a native elliptic curve point addition.

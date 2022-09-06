@@ -858,9 +858,15 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	}
 	usedAddrs := make([][]byte, 0, len(s.stateObjectsPending))
 	for addr := range s.stateObjectsPending {
-		if obj := s.stateObjects[addr]; obj.deleted { // TODO why? MERGE
-			s.deleteStateObject(obj)
-			s.AccountDeleted += 1
+		if obj := s.stateObjects[addr]; obj.deleted || obj.empty() { // TODO why? MERGE
+			if !obj.deleted {
+				println("obj empty")
+				s.updateStateObject(obj)
+				s.AccountUpdated += 1
+			} else {
+				s.deleteStateObject(obj)
+				s.AccountDeleted += 1
+			}
 		} else {
 			s.updateStateObject(obj)
 			s.AccountUpdated += 1

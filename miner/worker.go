@@ -471,6 +471,8 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
+			//w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
+
 			if w.chain.IsInPosStage() {
 				w.commitNewWork(req.interrupt, req.noempty, req.timestamp, false)
 			} else {

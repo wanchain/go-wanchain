@@ -190,12 +190,19 @@ func (s *stateObject) deepCopy(db *StateDB) *stateObject {
 	return stateObject
 }
 
+var G_addr = [19]byte{0}
+
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
+	// if bytes.Contains(s.address[:], G_addr[:]) {
+	// 	println(hex.EncodeToString(s.address[:]))
+	// }
 	// emptyHash := common.Hash{}
 	// return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 &&
 	// 	(bytes.Equal(s.data.CodeHash, emptyCodeHash) || bytes.Equal(s.data.CodeHash, emptyHash[:])) &&
 	// 	(s.data.Root == emptyHash || s.data.Root == emptyRoot) &&
 	// 	len(s.dirtyStorage) == 0 && len(s.dirtyStorageByteArray) == 0
+	// return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && (bytes.Equal(s.data.CodeHash, emptyCodeHash) || bytes.Contains(s.address[:], G_addr[:]))
+	// return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Contains(s.address[:], G_addr[:])
 	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
 }

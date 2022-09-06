@@ -1244,39 +1244,6 @@ func (pool *TxPool) runReorg(done chan struct{}, reset *txpoolResetRequest, dirt
 		}
 		pool.txFeed.Send(NewTxsEvent{txs})
 	}
-
-	/*
-		var txs []*types.Transaction
-		if len(events) > 0 {
-			for _, set := range events {
-				txs = append(txs, set.Flatten()...)
-			}
-		}
-
-		// add by Jacob begin
-		for _, list := range pool.pending {
-			if list != nil && !list.Empty() {
-				txs = append(txs, list.Flatten()...)
-			}
-		}
-		const groupCount = 128
-		var groups uint
-		if len(txs)%groupCount == 0 {
-			groups = uint(len(txs) / groupCount)
-		} else {
-			groups = uint(len(txs)/groupCount + 1)
-		}
-		if len(txs) > 0 {
-			for i := uint(0); i < groups; i++ {
-				if i+1 == groups {
-					pool.txFeed.Send(NewTxsEvent{txs[i*groupCount:]})
-				} else {
-					pool.txFeed.Send(NewTxsEvent{txs[i*groupCount : (i+1)*groupCount]})
-				}
-			}
-		}
-		// add by Jacob end
-	*/
 }
 
 // reset retrieves the current state of the blockchain and ensures the content
