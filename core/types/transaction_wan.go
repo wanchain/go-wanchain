@@ -46,7 +46,7 @@ func IsPrivacyTransaction(txType uint64) bool {
 //}
 
 var (
-	G_b_eth_tx = true
+	G_b_eth_tx = false
 )
 
 func IsEthereumTx(chainId uint64) bool {

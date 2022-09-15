@@ -424,20 +424,33 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 			chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
 		}
 	}
+
 	switch tx.inner.(type) {
+	case *WanLegacyTx:
+		if IsEthereumTx(tx.ChainId().Uint64()) && tx.Type() != 1 && tx.Type() != 7 {
+			return rlpHash([]interface{}{
+				tx.Nonce(),
+				tx.GasPrice(),
+				tx.Gas(),
+				tx.To(),
+				tx.Value(),
+				tx.Data(),
+				chainId, uint(0), uint(0),
+			})
+		} else {
+			return rlpHash([]interface{}{
+				tx.Type(), // TODO MERGE gwan
+				tx.Nonce(),
+				tx.GasPrice(),
+				tx.Gas(),
+				tx.To(),
+				tx.Value(),
+				tx.Data(),
+				chainId, uint(0), uint(0),
+			})
+		}
 	case *LegacyTx:
 		return rlpHash([]interface{}{
-			tx.Nonce(),
-			tx.GasPrice(),
-			tx.Gas(),
-			tx.To(),
-			tx.Value(),
-			tx.Data(),
-			chainId, uint(0), uint(0),
-		})
-	case *WanLegacyTx:
-		return rlpHash([]interface{}{
-			tx.Type(), // TODO MERGE gwan
 			tx.Nonce(),
 			tx.GasPrice(),
 			tx.Gas(),

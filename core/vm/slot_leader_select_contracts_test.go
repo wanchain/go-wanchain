@@ -4,6 +4,13 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"os"
+	"path"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -15,12 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/pos/util/convert"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"os"
-	"path"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 func TestStage1RlpCompress(t *testing.T) {
@@ -220,8 +221,8 @@ func TestAddSlotScCallTimes(t *testing.T) {
 
 func TestUpdateSlotLeaderStageIndex(t *testing.T) {
 	var (
-		//db     =  rawdb.NewMemoryDatabase()
-		//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
+	//db     =  rawdb.NewMemoryDatabase()
+	//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	var sendtransGet [posconfig.EpochLeaderCount]bool
@@ -400,8 +401,8 @@ func TestHandleStgOne(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
 
 	var (
-		//db     =  rawdb.NewMemoryDatabase()
-		//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
+	//db     =  rawdb.NewMemoryDatabase()
+	//stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
 	)
 
 	// put data into state db
@@ -444,8 +445,8 @@ func TestGetStg1StateDbInfo(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, &pubKey, GetSlotLeaderScAbiString())
 
 	var (
-		db     =  rawdb.NewMemoryDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
+		db         = rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	)
 
 	// put data into state db
@@ -493,8 +494,8 @@ func TestGetStg2TxAlphaPki(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
 
 	var (
-		db     =  rawdb.NewMemoryDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
+		db         = rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	)
 
 	// put data into state db
@@ -562,8 +563,8 @@ func TestHandleStgTwo(t *testing.T) {
 	rlpPackBytes, err := RlpPackStage1DataForTx(0, 0, mi0, GetSlotLeaderScAbiString())
 
 	var (
-		db     =  rawdb.NewMemoryDatabase()
-		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db),nil)
+		db         = rawdb.NewMemoryDatabase()
+		stateDb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	)
 
 	// put data into state db
