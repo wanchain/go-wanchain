@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -416,22 +417,158 @@ var (
 		"payable": false,
 		"stateMutability": "view",
 		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "ed25519CalPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519MulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519Add",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]`
 	// pos staking contract abi object
 	solenhanceAbi, errInit = abi.JSON(strings.NewReader(solEnhanceDef))
 
-	getPosAvgReturnId    [4]byte
-	s256Addid            [4]byte
-	s256MulGid           [4]byte
-	checkSigid           [4]byte
-	checkSigid2          [4]byte
-	encid                [4]byte
-	hardCapid            [4]byte
-	s256MulPkid          [4]byte
-	s256CalPolyCommitid  [4]byte
-	bn256CalPolyCommitid [4]byte
-	bn256MulGid          [4]byte
+	getPosAvgReturnId      [4]byte
+	s256Addid              [4]byte
+	s256MulGid             [4]byte
+	checkSigid             [4]byte
+	checkSigid2            [4]byte
+	encid                  [4]byte
+	hardCapid              [4]byte
+	s256MulPkid            [4]byte
+	s256CalPolyCommitid    [4]byte
+	bn256CalPolyCommitid   [4]byte
+	bn256MulGid            [4]byte
+	ed25519Addid           [4]byte
+	ed25519MulGid          [4]byte
+	ed25519MulPkid         [4]byte
+	ed25519CalPolyCommitid [4]byte
 )
 
 const (
@@ -458,6 +595,11 @@ func init() {
 	copy(s256CalPolyCommitid[:], solenhanceAbi.Methods["s256CalPolyCommit"].ID)
 	copy(bn256CalPolyCommitid[:], solenhanceAbi.Methods["bn256CalPolyCommit"].ID)
 	copy(bn256MulGid[:], solenhanceAbi.Methods["bn256MulG"].ID)
+
+	copy(ed25519Addid[:], solenhanceAbi.Methods["ed25519Add"].ID)
+	copy(ed25519MulGid[:], solenhanceAbi.Methods["ed25519MulG"].ID)
+	copy(ed25519MulPkid[:], solenhanceAbi.Methods["ed25519MulPk"].ID)
+	copy(ed25519CalPolyCommitid[:], solenhanceAbi.Methods["ed25519CalPolyCommit"].ID)
 }
 
 /////////////////////////////
@@ -479,7 +621,7 @@ func (s *SolEnhance) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Tra
 
 func (s *SolEnhance) Run(input []byte) ([]byte, error) {
 	contract := s.contract
-	evm  := s.evm
+	evm := s.evm
 	epid, _ := posutil.CalEpochSlotID(evm.Time().Uint64())
 	if epid < posconfig.Cfg().MarsEpochId {
 		// return nil,errors.New("not reach forked epochid")
@@ -513,6 +655,14 @@ func (s *SolEnhance) Run(input []byte) ([]byte, error) {
 		return s.bn256CalPolyCommit(input[4:], contract, evm)
 	} else if methodId == bn256MulGid {
 		return s.bn256MulG(input[4:], contract, evm)
+	} else if methodId == ed25519MulGid {
+		return s.ed25519MulG(input[4:], contract, evm)
+	} else if methodId == ed25519Addid {
+		return s.ed25519Add(input[4:], contract, evm)
+	} else if methodId == ed25519MulPkid {
+		return s.ed25519MulPk(input[4:], contract, evm)
+	} else if methodId == ed25519CalPolyCommitid {
+		return s.ed25519CalPolyCommit(input[4:], contract, evm)
 	}
 
 	mid := common.Bytes2Hex(methodId[:])
@@ -642,6 +792,131 @@ func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]b
 
 	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
 	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
+
+	return buf, nil
+}
+
+//todo 25519
+func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) < 32 {
+		return []byte{0}, errors.New("the data length is not correct")
+	}
+
+	k := payload[:32]
+	rx, ry := edwards.Edwards().ScalarBaseMult(k)
+
+	if rx == nil || ry == nil {
+		return []byte{0}, errors.New("k value is not correct")
+	}
+
+	var buf = make([]byte, 64)
+
+	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
+	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
+
+	return buf, nil
+}
+func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) < 96 {
+		return []byte{0}, errors.New("the data length is not correct")
+	}
+
+	scalar := payload[:32]
+	xPK := payload[32:64]
+	yPK := payload[64:96]
+	edCurve := edwards.Edwards()
+	if !edCurve.IsOnCurve(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK)) {
+		return []byte{0}, errors.New("the point is not on curve")
+	}
+
+	//fmt.Println("x="+common.ToHex(xPK))
+	//fmt.Println("y="+common.ToHex(yPK))
+	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
+
+	rx, ry := edCurve.ScalarMult(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK), scalar)
+	if rx == nil || ry == nil {
+		return []byte{0}, errors.New("errors in caculation")
+	}
+
+	var buf = make([]byte, 64)
+
+	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
+	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
+
+	return buf, nil
+}
+func (s *SolEnhance) ed25519Add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	if len(payload) < 128 {
+		return []byte{0}, errors.New("the point is not on curve")
+	}
+
+	x1 := big.NewInt(0).SetBytes(payload[:32])
+	y1 := big.NewInt(0).SetBytes(payload[32:64])
+
+	x2 := big.NewInt(0).SetBytes(payload[64:96])
+	y2 := big.NewInt(0).SetBytes(payload[96:128])
+
+	edCurve := edwards.Edwards()
+	if !(edCurve.IsOnCurve(x1, y1)) || !(edCurve.IsOnCurve(x2, y2)) {
+		return []byte{0}, errors.New("the point is not on edwards curve")
+	}
+
+	var rx, ry *big.Int
+	if bytes.Equal(x1.Bytes(), x2.Bytes()) && bytes.Equal(y1.Bytes(), y2.Bytes()) {
+		rx, ry = edCurve.Double(x1, y1)
+	} else {
+		rx, ry = edCurve.Add(x1, y1, x2, y2)
+	}
+
+	if rx == nil || ry == nil {
+		return []byte{0}, errors.New("errors in caculation")
+	}
+
+	var buf = make([]byte, 64)
+	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
+	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
+
+	return buf, nil
+
+}
+func (s *SolEnhance) ed25519CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	len := len(payload)
+	//4 point and one ok
+	if len < 64*4 || len%64 != 0 {
+		return []byte{0}, errors.New("payload length is not correct")
+	}
+
+	degree := len/64 - 1
+
+	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
+		return []byte{0}, errors.New("payload is not enough")
+	}
+
+	f := make([][]byte, degree)
+	i := 0
+
+	for ; i < degree; i++ { //set the oxo4 prevalue for publickey
+		f[i] = append(f[i], payload[i*POLY_CIMMIT_ITEM_LEN:(i+1)*POLY_CIMMIT_ITEM_LEN]...)
+	}
+
+	hashx := sha256.Sum256(payload[i*POLY_CIMMIT_ITEM_LEN : (i+1)*POLY_CIMMIT_ITEM_LEN])
+	bigx := big.NewInt(0).SetBytes(hashx[:])
+	bigx = bigx.Mod(bigx, crypto.S256().Params().N)
+
+	retX, retY, err := s.ed25519EvalByPolyG(f, degree-1, bigx)
+	if err != nil {
+		return []byte{0}, errors.New("error in caculate poly")
+	}
+
+	//fmt.Println(common.Bytes2Hex(crypto.FromECDSAPub(res)))
+
+	var buf = make([]byte, 64)
+	copy(buf, common.LeftPadBytes(retX.Bytes(), 32))
+	copy(buf[32:], common.LeftPadBytes(retY.Bytes(), 32))
 
 	return buf, nil
 }
@@ -804,6 +1079,42 @@ func (s *SolEnhance) bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) 
 
 }
 
+func (s *SolEnhance) ed25519EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) (*big.Int, *big.Int, error) {
+	if len(pkbytes) == 0 || x.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil, errors.New("len(pks)==0 or xvalue is zero")
+	}
+
+	if len(pkbytes) != int(degree+1) {
+		return nil, nil, errors.New("degree is not content with the len(pks)")
+	}
+
+	edCurve := edwards.Edwards()
+
+	bigXs := make([]*big.Int, len(pkbytes))
+	bigYs := make([]*big.Int, len(pkbytes))
+	for i, val := range pkbytes {
+		bigXs[i] = big.NewInt(0).SetBytes(val[0:32])
+		bigYs[i] = big.NewInt(0).SetBytes(val[32:64])
+		if !edCurve.IsOnCurve(bigXs[i], bigYs[i]) {
+			return nil, nil, errors.New("the point is not on ed25519 curve")
+		}
+	}
+
+	retBigx := bigXs[0]
+	retBigY := bigYs[0]
+
+	for i := 1; i < int(degree)+1; i++ {
+
+		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), edCurve.Params().N)
+		temp1.Mod(temp1, edCurve.Params().N)
+		tempBigX, tempBigY := edCurve.ScalarMult(bigXs[i], bigYs[i], temp1.Bytes())
+		retBigx, retBigY = edCurve.Add(retBigx, retBigY, tempBigX, tempBigY)
+	}
+
+	return retBigx, retBigY, nil
+
+}
+
 func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 160 {
@@ -816,7 +1127,7 @@ func (s *SolEnhance) encrypt(payload []byte, contract *Contract, evm *EVM) ([]by
 
 	prv, err := hexKey(common.Bytes2Hex(rb))
 	if err != nil {
-		return []byte{0},err
+		return []byte{0}, err
 	}
 
 	pkb := payload[96:]
@@ -913,17 +1224,17 @@ func (s *SolEnhance) getPosTotalRet(payload []byte, contract *Contract, evm *EVM
 	return common.LeftPadBytes(buf, 32), nil
 }
 
-func hexKey(prv string) (*ecies.PrivateKey, error){
+func hexKey(prv string) (*ecies.PrivateKey, error) {
 	key, err := crypto.HexToECDSA(prv)
 	if err != nil {
 		//panic(err)
-		return nil,err
+		return nil, err
 	}
-	return ecies.ImportECDSA(key),nil
+	return ecies.ImportECDSA(key), nil
 }
 
 // bn256Add implements a native elliptic curve point addition.
-type s256Add struct{
+type s256Add struct {
 	contract *Contract
 	evm      *EVM
 }
@@ -935,7 +1246,7 @@ func (s *s256Add) RequiredGas(input []byte) uint64 {
 
 func (s *s256Add) Run(payload []byte) ([]byte, error) {
 	//contract := s.contract
-	evm  := s.evm
+	evm := s.evm
 	if evm != nil {
 		epid, _ := posutil.CalEpochSlotID(evm.Time().Uint64())
 		if epid < posconfig.Cfg().MarsEpochId {
@@ -981,7 +1292,7 @@ func (s *s256Add) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transa
 }
 
 // bn256ScalarMul implements a native elliptic curve scalar multiplication.
-type s256ScalarMul struct{
+type s256ScalarMul struct {
 	contract *Contract
 	evm      *EVM
 }
@@ -993,7 +1304,7 @@ func (s *s256ScalarMul) RequiredGas(input []byte) uint64 {
 
 func (s *s256ScalarMul) Run(payload []byte) ([]byte, error) {
 	//contract := s.contract
-	evm  := s.evm
+	evm := s.evm
 	if evm != nil {
 		epid, _ := posutil.CalEpochSlotID(evm.Time().Uint64())
 		if epid < posconfig.Cfg().MarsEpochId {
