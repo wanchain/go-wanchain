@@ -150,6 +150,544 @@ func TestReader(t *testing.T) {
 	}
 }
 
+func TestReaderTemp(t *testing.T) {
+	json := `[
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "input",
+				"type": "bytes"
+			}
+		],
+		"name": "bn256Pairing",
+		"outputs": [
+			{
+				"name": "result",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "bn256MulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "hash",
+				"type": "bytes32"
+			},
+			{
+				"name": "r",
+				"type": "bytes32"
+			},
+			{
+				"name": "s",
+				"type": "bytes32"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "checkSig",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "s256CalPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "bn256CalPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "targetSecond",
+				"type": "uint256"
+			}
+		],
+		"name": "getPosAvgReturn",
+		"outputs": [
+			{
+				"name": "result",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "s256ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "rbpri",
+				"type": "bytes32"
+			},
+			{
+				"name": "iv",
+				"type": "bytes32"
+			},
+			{
+				"name": "mes",
+				"type": "uint256"
+			},
+			{
+				"name": "pub",
+				"type": "bytes"
+			}
+		],
+		"name": "enc",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "mulPk",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "time",
+				"type": "uint256"
+			}
+		],
+		"name": "getHardCap",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "mulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "add",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "bn256ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "polyCommit",
+				"type": "bytes"
+			},
+			{
+				"name": "pk",
+				"type": "bytes"
+			}
+		],
+		"name": "ed25519CalPolyCommit",
+		"outputs": [
+			{
+				"name": "sx",
+				"type": "uint256"
+			},
+			{
+				"name": "sy",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519MulG",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "scalar",
+				"type": "uint256"
+			},
+			{
+				"name": "xPk",
+				"type": "uint256"
+			},
+			{
+				"name": "yPk",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519ScalarMul",
+		"outputs": [
+			{
+				"name": "x",
+				"type": "uint256"
+			},
+			{
+				"name": "y",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "x1",
+				"type": "uint256"
+			},
+			{
+				"name": "y1",
+				"type": "uint256"
+			},
+			{
+				"name": "x2",
+				"type": "uint256"
+			},
+			{
+				"name": "y2",
+				"type": "uint256"
+			}
+		],
+		"name": "ed25519Add",
+		"outputs": [
+			{
+				"name": "retx",
+				"type": "uint256"
+			},
+			{
+				"name": "rety",
+				"type": "uint256"
+			},
+			{
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
+]`
+
+	exp, err := JSON(strings.NewReader(json))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, expM := range exp.Methods {
+		fmt.Printf("%v,%v,%v\n", name, expM, common.ToHex(common.RightPadBytes(expM.ID, 32)))
+	}
+
+}
+
 func TestInvalidABI(t *testing.T) {
 	json := `[{ "type" : "function", "name" : "", "constant" : fals }]`
 	_, err := JSON(strings.NewReader(json))

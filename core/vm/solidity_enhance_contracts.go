@@ -598,7 +598,7 @@ func init() {
 
 	copy(ed25519Addid[:], solenhanceAbi.Methods["ed25519Add"].ID)
 	copy(ed25519MulGid[:], solenhanceAbi.Methods["ed25519MulG"].ID)
-	copy(ed25519MulPkid[:], solenhanceAbi.Methods["ed25519MulPk"].ID)
+	copy(ed25519MulPkid[:], solenhanceAbi.Methods["ed25519ScalarMul"].ID)
 	copy(ed25519CalPolyCommitid[:], solenhanceAbi.Methods["ed25519CalPolyCommit"].ID)
 }
 
@@ -797,8 +797,9 @@ func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]b
 }
 
 func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
-
+	log.Error("Entering ed25519MulG")
 	if len(payload) < 32 {
+		log.Error("1")
 		return []byte{0}, errors.New("the data length is not correct")
 	}
 
@@ -806,19 +807,27 @@ func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) (
 	rx, ry := edwards.Edwards().ScalarBaseMult(k)
 
 	if rx == nil || ry == nil {
+		log.Error("2")
 		return []byte{0}, errors.New("k value is not correct")
 	}
 
+	if !edwards.Edwards().IsOnCurve(rx, ry) {
+		log.Error("3")
+		return []byte{0}, errors.New("not on ed25519 curve")
+	}
 	var buf = make([]byte, 64)
 
 	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
 	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
 
+	log.Error(common.ToHex(rx.Bytes()))
+	log.Error(common.ToHex(ry.Bytes()))
 	return buf, nil
 }
 
 func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+	log.Error("Entering ed25519MulPk")
 	if len(payload) < 96 {
 		return []byte{0}, errors.New("the data length is not correct")
 	}
@@ -828,11 +837,15 @@ func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) 
 	yPK := payload[64:96]
 	edCurve := edwards.Edwards()
 	if !edCurve.IsOnCurve(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK)) {
+		log.Error("xPK", common.ToHex(xPK[:]))
+		log.Error("yPK", common.ToHex(yPK[:]))
+		log.Error("11")
 		return []byte{0}, errors.New("the point is not on curve")
 	}
 
 	rx, ry := edCurve.ScalarMult(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK), scalar)
 	if rx == nil || ry == nil {
+		log.Error("12")
 		return []byte{0}, errors.New("errors in caculation")
 	}
 
@@ -840,6 +853,13 @@ func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) 
 
 	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
 	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
+
+	log.Error("", "scalar", common.ToHex(scalar))
+	log.Error("", "13", common.ToHex(rx.Bytes()))
+	log.Error("", "14", common.ToHex(ry.Bytes()))
+
+	log.Error("", "15buf", common.ToHex(buf[:32]))
+	log.Error("", "16buf", common.ToHex(buf[32:]))
 
 	return buf, nil
 }
