@@ -796,7 +796,6 @@ func (s *SolEnhance) s256MulG(payload []byte, contract *Contract, evm *EVM) ([]b
 	return buf, nil
 }
 
-//todo 25519
 func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 32 {
@@ -817,6 +816,7 @@ func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) (
 
 	return buf, nil
 }
+
 func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	if len(payload) < 96 {
@@ -831,10 +831,6 @@ func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) 
 		return []byte{0}, errors.New("the point is not on curve")
 	}
 
-	//fmt.Println("x="+common.ToHex(xPK))
-	//fmt.Println("y="+common.ToHex(yPK))
-	//fmt.Println("scalar=" + common.Bytes2Hex(scalar))
-
 	rx, ry := edCurve.ScalarMult(big.NewInt(0).SetBytes(xPK), big.NewInt(0).SetBytes(yPK), scalar)
 	if rx == nil || ry == nil {
 		return []byte{0}, errors.New("errors in caculation")
@@ -847,8 +843,8 @@ func (s *SolEnhance) ed25519MulPk(payload []byte, contract *Contract, evm *EVM) 
 
 	return buf, nil
 }
-func (s *SolEnhance) ed25519Add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
+func (s *SolEnhance) ed25519Add(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	if len(payload) < 128 {
 		return []byte{0}, errors.New("the point is not on curve")
 	}
@@ -882,6 +878,7 @@ func (s *SolEnhance) ed25519Add(payload []byte, contract *Contract, evm *EVM) ([
 	return buf, nil
 
 }
+
 func (s *SolEnhance) ed25519CalPolyCommit(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
 
 	len := len(payload)
@@ -919,6 +916,42 @@ func (s *SolEnhance) ed25519CalPolyCommit(payload []byte, contract *Contract, ev
 	copy(buf[32:], common.LeftPadBytes(retY.Bytes(), 32))
 
 	return buf, nil
+}
+
+func (s *SolEnhance) ed25519EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) (*big.Int, *big.Int, error) {
+	if len(pkbytes) == 0 || x.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil, errors.New("len(pks)==0 or xvalue is zero")
+	}
+
+	if len(pkbytes) != int(degree+1) {
+		return nil, nil, errors.New("degree is not content with the len(pks)")
+	}
+
+	edCurve := edwards.Edwards()
+
+	bigXs := make([]*big.Int, len(pkbytes))
+	bigYs := make([]*big.Int, len(pkbytes))
+	for i, val := range pkbytes {
+		bigXs[i] = big.NewInt(0).SetBytes(val[0:32])
+		bigYs[i] = big.NewInt(0).SetBytes(val[32:64])
+		if !edCurve.IsOnCurve(bigXs[i], bigYs[i]) {
+			return nil, nil, errors.New("the point is not on ed25519 curve")
+		}
+	}
+
+	retBigx := bigXs[0]
+	retBigY := bigYs[0]
+
+	for i := 1; i < int(degree)+1; i++ {
+
+		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), edCurve.Params().N)
+		temp1.Mod(temp1, edCurve.Params().N)
+		tempBigX, tempBigY := edCurve.ScalarMult(bigXs[i], bigYs[i], temp1.Bytes())
+		retBigx, retBigY = edCurve.Add(retBigx, retBigY, tempBigX, tempBigY)
+	}
+
+	return retBigx, retBigY, nil
+
 }
 
 func (s *SolEnhance) bn256MulG(payload []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1076,42 +1109,6 @@ func (s *SolEnhance) bn256EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) 
 	}
 
 	return sumPk.Marshal(), nil
-
-}
-
-func (s *SolEnhance) ed25519EvalByPolyG(pkbytes [][]byte, degree int, x *big.Int) (*big.Int, *big.Int, error) {
-	if len(pkbytes) == 0 || x.Cmp(big.NewInt(0)) == 0 {
-		return nil, nil, errors.New("len(pks)==0 or xvalue is zero")
-	}
-
-	if len(pkbytes) != int(degree+1) {
-		return nil, nil, errors.New("degree is not content with the len(pks)")
-	}
-
-	edCurve := edwards.Edwards()
-
-	bigXs := make([]*big.Int, len(pkbytes))
-	bigYs := make([]*big.Int, len(pkbytes))
-	for i, val := range pkbytes {
-		bigXs[i] = big.NewInt(0).SetBytes(val[0:32])
-		bigYs[i] = big.NewInt(0).SetBytes(val[32:64])
-		if !edCurve.IsOnCurve(bigXs[i], bigYs[i]) {
-			return nil, nil, errors.New("the point is not on ed25519 curve")
-		}
-	}
-
-	retBigx := bigXs[0]
-	retBigY := bigYs[0]
-
-	for i := 1; i < int(degree)+1; i++ {
-
-		temp1 := new(big.Int).Exp(x, big.NewInt(int64(i)), edCurve.Params().N)
-		temp1.Mod(temp1, edCurve.Params().N)
-		tempBigX, tempBigY := edCurve.ScalarMult(bigXs[i], bigYs[i], temp1.Bytes())
-		retBigx, retBigY = edCurve.Add(retBigx, retBigY, tempBigX, tempBigY)
-	}
-
-	return retBigx, retBigY, nil
 
 }
 
