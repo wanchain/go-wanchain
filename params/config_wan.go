@@ -75,8 +75,9 @@ func (c *PlutoConfig) String() string {
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainneLondonBlockNumber int64 = 21454700
-	MainnetChainConfig            = &ChainConfig{
+	MainneLondonBlockNumber  int64 = 21454700
+	MainnetUranusBlockNumber int64 = 2145700
+	MainnetChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(MAINNET_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
@@ -92,6 +93,7 @@ var (
 		MuirGlacierBlock:    big.NewInt(MainneLondonBlockNumber),
 		BerlinBlock:         big.NewInt(MainneLondonBlockNumber),
 		LondonBlock:         big.NewInt(MainneLondonBlockNumber),
+		UrunusBlock:         big.NewInt(MainnetUranusBlockNumber),
 		Ethash:              new(EthashConfig),
 
 		// add by Jacob
@@ -103,10 +105,11 @@ var (
 		},
 	}
 
-	TestnetSaturnBlockNumber int64 = 18950000
+	TestnetSaturnBlockNumber       int64 = 18950000
 	TestnetSaturnMinFeeBlockNumber int64 = 19084006
-	TestnetLondonBlockNumber       = TestnetSaturnBlockNumber
-	TestnetChainConfig             = &ChainConfig{
+	TestnetLondonBlockNumber             = TestnetSaturnBlockNumber
+	TestnetUrunusBlockNumber             = TestnetSaturnBlockNumber
+	TestnetChainConfig                   = &ChainConfig{
 		ChainID:             big.NewInt(TESTNET_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
@@ -122,6 +125,7 @@ var (
 		MuirGlacierBlock:    big.NewInt(TestnetLondonBlockNumber),
 		BerlinBlock:         big.NewInt(TestnetLondonBlockNumber),
 		LondonBlock:         big.NewInt(TestnetLondonBlockNumber),
+		UrunusBlock:         big.NewInt(TestnetUrunusBlockNumber),
 		Ethash:              new(EthashConfig),
 
 		// add by Jacob
@@ -134,6 +138,7 @@ var (
 	}
 
 	InternalLondonBlockNumber int64 = 22000000
+	InternalUrunusBlockNumber int64 = 22000000
 	InternalChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(INTERNAL_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
@@ -150,6 +155,7 @@ var (
 		MuirGlacierBlock:    big.NewInt(InternalLondonBlockNumber),
 		BerlinBlock:         big.NewInt(InternalLondonBlockNumber),
 		LondonBlock:         big.NewInt(InternalLondonBlockNumber),
+		UrunusBlock:         big.NewInt(InternalUrunusBlockNumber),
 		Ethash:              new(EthashConfig),
 
 		// add by Jacob
@@ -162,6 +168,7 @@ var (
 	}
 
 	PlutoLondonBlockNumber int64 = 10000
+	PlutoUrunusBlockNumber int64 = 10000
 	PlutoChainConfig             = &ChainConfig{
 		ChainID:             big.NewInt(PLUTO_CHAIN_ID),
 		HomesteadBlock:      big.NewInt(0),
@@ -178,6 +185,7 @@ var (
 		MuirGlacierBlock:    big.NewInt(PlutoLondonBlockNumber),
 		BerlinBlock:         big.NewInt(PlutoLondonBlockNumber),
 		LondonBlock:         big.NewInt(PlutoLondonBlockNumber),
+		UrunusBlock:         big.NewInt(PlutoUrunusBlockNumber),
 		Ethash:              new(EthashConfig),
 
 		// add by Jacob
@@ -279,7 +287,7 @@ func IsOldChainId(chainId uint64) bool {
 }
 func (c *ChainConfig) IsLondonMinFeeEnabled(num *big.Int) bool {
 	if c.ChainID.Uint64() == TESTNET_CHAIN_ID {
-		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnMinFeeBlockNumber) )> 0
+		return num.Cmp(new(big.Int).SetInt64(TestnetSaturnMinFeeBlockNumber)) > 0
 	} else {
 		return c.IsLondon(num)
 	}

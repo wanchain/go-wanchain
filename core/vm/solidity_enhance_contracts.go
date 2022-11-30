@@ -635,6 +635,12 @@ func (s *SolEnhance) Run(input []byte) ([]byte, error) {
 	var methodId [4]byte
 	copy(methodId[:], input[:4])
 
+	if methodId == ed25519MulGid || methodId == ed25519Addid || methodId == ed25519MulPkid || methodId == ed25519CalPolyCommitid{
+		if !evm.ChainConfig().IsUrunus(evm.BlockNumber()){
+			return nil, nil
+		}
+	}
+
 	if methodId == getPosAvgReturnId {
 		return s.getPosAvgReturn(input[4:], contract, evm)
 	} else if methodId == s256Addid {

@@ -27,6 +27,10 @@ func (evm *EVM) Time() *big.Int {
 	return evm.Context.Time
 }
 
+func (evm *EVM) BlockNumber() *big.Int {
+	return evm.Context.BlockNumber
+}
+
 func IsWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContract, bool) { // TODO delete it????
 	switch addr {
 	case wanCoinPrecompileAddr:
