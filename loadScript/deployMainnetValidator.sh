@@ -18,7 +18,7 @@ echo ''
 read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 
 
-DOCKERIMG=wanchain/client-go:2.2.0
+DOCKERIMG=wanchain/client-go:3.0.1
 
 if [ ${PASSWD} != ${PASSWD2} ]
 then
