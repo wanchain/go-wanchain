@@ -70,7 +70,7 @@ addrNew=`echo ${ADDR} | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/'`
 IPCFILE="$HOME/.wanchain/testnet/gwan.ipc"
 sudo rm -f $IPCFILE
 
-sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1  --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
+sudo docker run --privileged -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1  --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
