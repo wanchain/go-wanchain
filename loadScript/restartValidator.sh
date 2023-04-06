@@ -22,6 +22,12 @@ sudo docker stop gwan
 
 echo ${PASSWD} | sudo tee ~/.wanchain/pw.txt > /dev/null
 
+IPCFILE="$HOME/.wanchain/gwan.ipc"
+if [ -d $HOME/.wanchain/testnet ]; then
+    IPCFILE="$HOME/.wanchain/testnet/gwan.ipc"
+fi
+sudo rm -f $IPCFILE
+
 sudo docker start gwan
 
 echo 'Please wait a few seconds...'
@@ -31,6 +37,22 @@ sleep 5
 if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
     sudo docker container update --restart=always gwan
 else
+
+    while true
+    do
+        sudo ls -l $IPCFILE > /dev/null 2>&1
+        Ret=$?
+        if [ $Ret -eq 0 ]; then
+            cur=`date '+%s'`
+            ft=`sudo stat -c %Y $IPCFILE`
+            if [ $cur -gt $((ft + 6)) ]; then
+                break
+            fi
+        fi
+        echo -n '.'
+        sleep 1
+    done
+
     sudo rm ~/.wanchain/pw.txt
 fi
 

@@ -16,12 +16,20 @@ echo 'gwan binary URL: https://github.com/wanchain/go-wanchain/releases'
 echo 'gwan docker image: ' ${DOCKERIMG}
 echo ''
 echo ''
+
+freeDisk=$(df -k $HOME | sed -n 2p | awk '{print $4}')
+if [ $freeDisk -lt 20000000 ] ; then
+	echo " Your disk free storage is not enough(less than 20G), please check and try again"
+	exit -1
+fi
+
 echo 'Please Enter your validator Name:'
 read YOUR_NODE_NAME
 echo 'Please Enter your validator Address'
 read addrNew
 echo 'Please Enter your password of Validator account:'
 read -s PASSWD
+read -p "Do you want save your password to disk for auto restart? (N/y): " savepasswd
 echo ''
 echo ''
 echo ''
@@ -58,7 +66,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo docker run -d --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --minerthreads=1 --wanstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
+
+IPCFILE="$HOME/.wanchain/testnet/gwan.ipc"
+sudo rm -f $IPCFILE
+
+sudo docker run -d --log-opt max-size=100m --log-opt max-file=3 --name gwan -p 17717:17717 -p 17717:17717/udp -v ~/.wanchain:/root/.wanchain ${DOCKERIMG} /bin/gwan ${NETWORK} --miner.etherbase ${addrNew} --unlock ${addrNew} --password /root/.wanchain/pw.txt --mine --miner.threads=1   --ethstats ${YOUR_NODE_NAME}:admin@testnet.wanstats.io
 
 if [ $? -ne 0 ]; then
     echo "docker run failed"
@@ -69,7 +81,26 @@ echo 'Please wait a few seconds...'
 
 sleep 5
 
-sudo rm ~/.wanchain/pw.txt
+if [ "$savepasswd" == "Y" ] || [ "$savepasswd" == "y" ]; then
+    sudo docker container update --restart=always gwan
+else
+
+    while true
+    do
+        sudo ls -l $IPCFILE > /dev/null 2>&1
+        Ret=$?
+        if [ $Ret -eq 0 ]; then
+            cur=`date '+%s'`
+            ft=`sudo stat -c %Y $IPCFILE`
+            if [ $cur -gt $((ft + 6)) ]; then
+                break
+            fi
+        fi
+        echo -n '.'
+        sleep 1
+    done
+    sudo rm ~/.wanchain/pw.txt
+fi
 
 if [ $? -ne 0 ]; then
     echo "rm pw.txt failed"
@@ -88,4 +119,3 @@ else
     echo "Validator Start Failed";
     echo "Please use command 'sudo docker logs gwan' to check reason." 
 fi
-
