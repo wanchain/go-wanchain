@@ -41,7 +41,7 @@ const (
 	ApolloEpochID = 18104
 	AugustEpochID = 18116 //TODO change it as mainnet 8.8
 
-	TestnetAdditionalBlock = 6661460
+	TestnetAdditionalBlock   = 6661460
 	TestnetAdditionalBlock88 = 19300000
 )
 
@@ -120,6 +120,10 @@ const (
 	TestnetJupiterEpochId = 18698
 	PlutoJupiterEpochId   = 0
 
+	MainnetUrunusEpochId = 19471
+	TestnetUrunusEpochId = 19471
+	PlutoUrunusEpochId   = 19471
+
 	TARGETS_LOCKED_EPOCH = 90 //90 DAYS,90 EPOCH
 	RETURN_DIVIDE        = 10000
 
@@ -159,6 +163,7 @@ type Config struct {
 	VenusEpochId    uint64
 	MarsEpochId     uint64
 	JupiterEpochId  uint64
+	UrunusEpochId   uint64
 	DefaultGasPrice *big.Int
 
 	SyncTargetBlokcNum uint64
@@ -178,6 +183,7 @@ var DefaultConfig = Config{
 	Stage6K - 1,
 	Stage8K,
 	Stage10K - 1,
+	0,
 	0,
 	0,
 	0,
@@ -234,6 +240,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = MainnetVenusEpochId
 		DefaultConfig.MarsEpochId = MainnetMarsEpochId
 		DefaultConfig.JupiterEpochId = MainnetJupiterEpochId
+		DefaultConfig.UrunusEpochId = MainnetUrunusEpochId
 
 	} else if networkId == params.PLUTO_CHAIN_ID {
 		PosOwnerAddr = PosOwnerAddrInternal
@@ -247,6 +254,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = PlutoMarsEpochId
 		DefaultConfig.JupiterEpochId = PlutoJupiterEpochId
+		DefaultConfig.UrunusEpochId = PlutoUrunusEpochId
 	} else if networkId == params.INTERNAL_CHAIN_ID {
 		PosOwnerAddr = PosOwnerAddrInternal
 		// TODO: for debug set to WhiteListOrig -> WhiteListDev
@@ -255,6 +263,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
 		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
+		DefaultConfig.UrunusEpochId = TestnetUrunusEpochId
 	} else { // testnet
 		PosOwnerAddr = PosOwnerAddrTestnet
 		WhiteList = WhiteListTestnet
@@ -263,6 +272,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId
 		DefaultConfig.MarsEpochId = TestnetMarsEpochId
 		DefaultConfig.JupiterEpochId = TestnetJupiterEpochId
+		DefaultConfig.UrunusEpochId = TestnetUrunusEpochId
 	}
 
 	EpochLeadersHold = make([][]byte, len(WhiteList))

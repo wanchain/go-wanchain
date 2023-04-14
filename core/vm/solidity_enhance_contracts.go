@@ -636,8 +636,12 @@ func (s *SolEnhance) Run(input []byte) ([]byte, error) {
 	copy(methodId[:], input[:4])
 
 	if methodId == ed25519MulGid || methodId == ed25519Addid || methodId == ed25519MulPkid || methodId == ed25519CalPolyCommitid {
-		if !evm.ChainConfig().IsUrunus(evm.BlockNumber()) {
-			return nil, nil
+		//if !evm.ChainConfig().IsUrunus(evm.BlockNumber()) {
+		//	return nil, nil
+		//}
+		if epid < posconfig.Cfg().UrunusEpochId {
+			// return nil,errors.New("not reach forked epochid")
+			return nil, errMethodId
 		}
 	}
 
