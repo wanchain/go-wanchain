@@ -891,11 +891,11 @@ func (s *SolEnhance) ed25519CalPolyCommit(payload []byte, contract *Contract, ev
 
 	len := len(payload)
 	//4 point and one ok
-	if len < 64*4 || len%64 != 0 {
+	if len < POLY_CIMMIT_ITEM_LEN*4 || len%POLY_CIMMIT_ITEM_LEN != 0 {
 		return []byte{0}, errors.New("payload length is not correct")
 	}
 
-	degree := len/64 - 1
+	degree := len/POLY_CIMMIT_ITEM_LEN - 1
 
 	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
 		return []byte{0}, errors.New("payload is not enough")
@@ -981,11 +981,11 @@ func (s *SolEnhance) s256CalPolyCommit(payload []byte, contract *Contract, evm *
 
 	len := len(payload)
 	//4 point and one ok
-	if len < 64*4 || len%64 != 0 {
+	if len < POLY_CIMMIT_ITEM_LEN*4 || len%POLY_CIMMIT_ITEM_LEN != 0 {
 		return []byte{0}, errors.New("payload length is not correct")
 	}
 
-	degree := len/64 - 1
+	degree := len/POLY_CIMMIT_ITEM_LEN - 1
 
 	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
 		return []byte{0}, errors.New("payload is not enough")
@@ -1057,11 +1057,11 @@ func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm 
 	//fmt.Println(common.Bytes2Hex(payload))
 
 	//4 point and one ok
-	if len < 64*4 || len%64 != 0 {
+	if len < POLY_CIMMIT_ITEM_LEN*4 || len%POLY_CIMMIT_ITEM_LEN != 0 {
 		return []byte{0}, errors.New("payload length is not correct")
 	}
 
-	degree := len/64 - 1
+	degree := len/POLY_CIMMIT_ITEM_LEN - 1
 	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
 		return []byte{0}, errors.New("payload is not enough")
 	}
