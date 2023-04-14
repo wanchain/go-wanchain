@@ -822,8 +822,6 @@ func (s *SolEnhance) ed25519MulG(payload []byte, contract *Contract, evm *EVM) (
 	copy(buf, common.LeftPadBytes(rx.Bytes(), 32))
 	copy(buf[32:], common.LeftPadBytes(ry.Bytes(), 32))
 
-	log.Error(common.ToHex(rx.Bytes()))
-	log.Error(common.ToHex(ry.Bytes()))
 	return buf, nil
 }
 
