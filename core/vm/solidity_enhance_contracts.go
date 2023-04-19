@@ -899,10 +899,6 @@ func (s *SolEnhance) ed25519CalPolyCommit(payload []byte, contract *Contract, ev
 
 	degree := len/POLY_CIMMIT_ITEM_LEN - 1
 
-	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
-		return []byte{0}, errors.New("payload is not enough")
-	}
-
 	f := make([][]byte, degree)
 	i := 0
 
@@ -989,10 +985,6 @@ func (s *SolEnhance) s256CalPolyCommit(payload []byte, contract *Contract, evm *
 
 	degree := len/POLY_CIMMIT_ITEM_LEN - 1
 
-	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
-		return []byte{0}, errors.New("payload is not enough")
-	}
-
 	f := make([]*ecdsa.PublicKey, degree)
 	i := 0
 
@@ -1062,11 +1054,7 @@ func (s *SolEnhance) bn256CalPolyCommit(payload []byte, contract *Contract, evm 
 	if len < POLY_CIMMIT_ITEM_LEN*4 || len%POLY_CIMMIT_ITEM_LEN != 0 {
 		return []byte{0}, errors.New("payload length is not correct")
 	}
-
 	degree := len/POLY_CIMMIT_ITEM_LEN - 1
-	if len < (degree+1)*POLY_CIMMIT_ITEM_LEN {
-		return []byte{0}, errors.New("payload is not enough")
-	}
 
 	f := make([][]byte, degree)
 	i := 0
