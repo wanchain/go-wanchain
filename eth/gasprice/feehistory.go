@@ -305,6 +305,15 @@ func (oracle *Oracle) FeeHistory(ctx context.Context, blocks int, unresolvedLast
 	} else {
 		reward = nil
 	}
+
+	for i := 0; i < len(reward); i++ {
+		for j := 0; j < len(reward[i]); j++ {
+			if (reward[i][j] == nil) || (reward[i][j].Cmp(big.NewInt(0)) == 0) {
+				reward[i][j] = big.NewInt(0).SetUint64(uint64(1000000000))
+			}
+		}
+	}
+
 	baseFee, gasUsedRatio = baseFee[:firstMissing+1], gasUsedRatio[:firstMissing]
 	return new(big.Int).SetUint64(oldestBlock), reward, baseFee, gasUsedRatio, nil
 }
