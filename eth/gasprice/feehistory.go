@@ -306,6 +306,8 @@ func (oracle *Oracle) FeeHistory(ctx context.Context, blocks int, unresolvedLast
 		reward = nil
 	}
 
+	// add by Jacob  begin
+	// to fix issue hardhat can not get priority fee by default
 	for i := 0; i < len(reward); i++ {
 		for j := 0; j < len(reward[i]); j++ {
 			if (reward[i][j] == nil) || (reward[i][j].Cmp(big.NewInt(0)) == 0) {
@@ -313,6 +315,8 @@ func (oracle *Oracle) FeeHistory(ctx context.Context, blocks int, unresolvedLast
 			}
 		}
 	}
+	// add by Jacob  end
+
 
 	baseFee, gasUsedRatio = baseFee[:firstMissing+1], gasUsedRatio[:firstMissing]
 	return new(big.Int).SetUint64(oldestBlock), reward, baseFee, gasUsedRatio, nil
