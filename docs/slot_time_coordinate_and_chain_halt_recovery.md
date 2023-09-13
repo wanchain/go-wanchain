@@ -11,7 +11,7 @@ We make a proposal:
 * all honest miner node(foundation and partners node), restart the node,using the last valid block of honest nodes, Cross epoch concat the blocks.
 
 ### advantage
-* the epoch is seems continuous for common user, whole chain keeps growning continously
+* the epoch is seems continuous for common user, whole chain keeps growning continuously
 
 ### disadvantage
 * slot time is offset time, the calculation turns complicated
@@ -34,4 +34,4 @@ We make a proposal:
 * do not need to care about if partners nodes is online or offline
 
 ### disadvantage
-* epoch is not continous and the epoch that chain stop is not completed
+* epoch is not continuous and the epoch that chain stop is not completed
