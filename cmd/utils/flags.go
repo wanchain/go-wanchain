@@ -205,12 +205,14 @@ var (
 	defaultSyncMode = ethconfig.Defaults.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast", "full", "snap" or "light")`,
+		//Usage: `Blockchain sync mode ("fast", "full", "snap" or "light")`,
+		Usage: `Blockchain sync mode ("full")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
 		Name:  "gcmode",
-		Usage: `Blockchain garbage collection mode ("full", "archive")`,
+//		Usage: `Blockchain garbage collection mode ("full", "archive")`,
+		Usage: `Blockchain garbage collection mode ("archive")`,
 		Value: "archive",
 	}
 	SnapshotFlag = cli.BoolTFlag{
@@ -1524,8 +1526,11 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		cfg.DatabaseFreezer = ctx.GlobalString(AncientFlag.Name)
 	}
 
-	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	// if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+	// 	Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	// }
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "archive" {
+		Fatalf("--%s must be 'archive'", GCModeFlag.Name)
 	}
 	//if ctx.GlobalIsSet(GCModeFlag.Name) { // gwan default is archive.
 		cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"

@@ -42,11 +42,11 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.SmartCardDaemonPathFlag,
 			utils.NetworkIdFlag,
 			utils.MainnetFlag,
-			utils.GoerliFlag,
-			utils.RinkebyFlag,
+			// utils.GoerliFlag,
+			// utils.RinkebyFlag,
 			utils.TestnetFlag,
 			utils.PlutoFlag,
-			utils.RopstenFlag,
+			// utils.RopstenFlag,
 			utils.SyncModeFlag,
 			utils.ExitWhenSyncedFlag,
 			utils.GCModeFlag,
@@ -57,20 +57,20 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.WhitelistFlag,
 		},
 	},
-	{
-		Name: "LIGHT CLIENT",
-		Flags: []cli.Flag{
-			utils.LightServeFlag,
-			utils.LightIngressFlag,
-			utils.LightEgressFlag,
-			utils.LightMaxPeersFlag,
-			utils.UltraLightServersFlag,
-			utils.UltraLightFractionFlag,
-			utils.UltraLightOnlyAnnounceFlag,
-			utils.LightNoPruneFlag,
-			utils.LightNoSyncServeFlag,
-		},
-	},
+	// {
+	// 	Name: "LIGHT CLIENT",
+	// 	Flags: []cli.Flag{
+	// 		utils.LightServeFlag,
+	// 		utils.LightIngressFlag,
+	// 		utils.LightEgressFlag,
+	// 		utils.LightMaxPeersFlag,
+	// 		utils.UltraLightServersFlag,
+	// 		utils.UltraLightFractionFlag,
+	// 		utils.UltraLightOnlyAnnounceFlag,
+	// 		utils.LightNoPruneFlag,
+	// 		utils.LightNoSyncServeFlag,
+	// 	},
+	// },
 	{
 		Name: "DEVELOPER CHAIN",
 		Flags: []cli.Flag{
@@ -78,19 +78,19 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.DeveloperPeriodFlag,
 		},
 	},
-	{
-		Name: "ETHASH",
-		Flags: []cli.Flag{
-			utils.EthashCacheDirFlag,
-			utils.EthashCachesInMemoryFlag,
-			utils.EthashCachesOnDiskFlag,
-			utils.EthashCachesLockMmapFlag,
-			utils.EthashDatasetDirFlag,
-			utils.EthashDatasetsInMemoryFlag,
-			utils.EthashDatasetsOnDiskFlag,
-			utils.EthashDatasetsLockMmapFlag,
-		},
-	},
+	// {
+	// 	Name: "ETHASH",
+	// 	Flags: []cli.Flag{
+	// 		utils.EthashCacheDirFlag,
+	// 		utils.EthashCachesInMemoryFlag,
+	// 		utils.EthashCachesOnDiskFlag,
+	// 		utils.EthashCachesLockMmapFlag,
+	// 		utils.EthashDatasetDirFlag,
+	// 		utils.EthashDatasetsInMemoryFlag,
+	// 		utils.EthashDatasetsOnDiskFlag,
+	// 		utils.EthashDatasetsLockMmapFlag,
+	// 	},
+	// },
 	{
 		Name: "TRANSACTION POOL",
 		Flags: []cli.Flag{
@@ -226,7 +226,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 	{
 		Name: "MISC",
 		Flags: []cli.Flag{
-			utils.SnapshotFlag,
+			// utils.SnapshotFlag,
 			utils.BloomFilterSizeFlag,
 			cli.HelpFlag,
 			utils.CatalystFlag,
